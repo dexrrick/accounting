@@ -1,0 +1,1662 @@
+{
+  "schemaVersion": 1,
+  "runId": "live-d8480e44-20261024-01",
+  "appSourceSha": "d8480e44d9234f07658edd9743a54774d8d24eae",
+  "verificationCommitSha": "66f36889f060d46878cfa73a85e9e6e5d661cfb0",
+  "actualAppTreeSha256": "71bdffdaa5d3b01d382f6f46854ca9034c67288e8621475869e3cfa60d56316e",
+  "manifestSha256": "2f436a4bedb578d051f0cd0eaacda46a8ab53b4489c1f24128fb1685c35b04e1",
+  "remoteArtifactCount": 69,
+  "remoteArtifactHashesAndLengthsVerified": true,
+  "reconstructedReceiptCount": 10,
+  "exportStatusCounts": {
+    "EXPORTED": 10
+  },
+  "totalModelDispatches": 13,
+  "totalSourceDispatches": 93,
+  "browserWholeAuthorityAcceptance": "NOT_RUN",
+  "wholeAuthorityParity": "NOT_ESTABLISHED",
+  "receipts": [
+    {
+      "id": "acra",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 5,
+        "other": 0
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "VERIFIED",
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_7b48089d",
+              "authorities": [
+                "ACRA"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "ACRA",
+            "status": null,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 0,
+            "issues": [
+              {
+                "id": "issue_7b48089d",
+                "authorities": [
+                  "ACRA"
+                ],
+                "status": null,
+                "evidenceStatus": "VERIFIED",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 1817,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 5,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 149742,
+            "responseBodyBytesCaptured": 149742,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 426763,
+            "responseBodyBytesCaptured": 426763,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 522469,
+            "responseBodyBytesCaptured": 522469,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 547696,
+            "responseBodyBytesCaptured": 547696,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 625627,
+            "responseBodyBytesCaptured": 625627,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "cpf",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 2,
+        "other": 0
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "VERIFIED",
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_d254fd9e",
+              "authorities": [
+                "CPF"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "CPF",
+            "status": null,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 0,
+            "issues": [
+              {
+                "id": "issue_d254fd9e",
+                "authorities": [
+                  "CPF"
+                ],
+                "status": null,
+                "evidenceStatus": "VERIFIED",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 1773,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 2,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 251313,
+            "responseBodyBytesCaptured": 251313,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 231112,
+            "responseBodyBytesCaptured": 231112,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mom",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 7,
+        "other": 0
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "VERIFIED",
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_3827c6a5",
+              "authorities": [
+                "MOM"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "MOM",
+            "status": null,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 0,
+            "issues": [
+              {
+                "id": "issue_3827c6a5",
+                "authorities": [
+                  "MOM"
+                ],
+                "status": null,
+                "evidenceStatus": "VERIFIED",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 1895,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 7,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 590,
+            "responseBodyBytesCaptured": 590,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 0,
+            "responseBodyBytesCaptured": 0,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 60089,
+            "responseBodyBytesCaptured": 60089,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 0,
+            "responseBodyBytesCaptured": 0,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 28795,
+            "responseBodyBytesCaptured": 28795,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 0,
+            "responseBodyBytesCaptured": 0,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 67706,
+            "responseBodyBytesCaptured": 67706,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mas",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 3,
+        "other": 5
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 6,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_3f215c24",
+              "authorities": [
+                "MAS"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "MAS",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 6,
+            "issues": [
+              {
+                "id": "issue_3f215c24",
+                "authorities": [
+                  "MAS"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 0,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 1870,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 3,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 853817,
+            "responseBodyBytesCaptured": 853817,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 853817,
+            "responseBodyBytesCaptured": 853817,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 853817,
+            "responseBodyBytesCaptured": 853817,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "iras-residency",
+      "answerStatus": "RETRIEVED_SUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "METADATA_ONLY",
+      "dispatches": {
+        "model": 2,
+        "source": 1,
+        "other": 0
+      },
+      "semanticPlanSource": "NOT_EXPOSED",
+      "workstreams": {
+        "status": null,
+        "evidenceStatus": null,
+        "applicationStatus": null,
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": []
+        },
+        "workstreams": []
+      },
+      "capture": {
+        "modelResponseCount": 2,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 1929,
+            "retainedRawBody": true
+          },
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 15903,
+            "retainedRawBody": false
+          }
+        ],
+        "sourceResponseCount": 1,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 261737,
+            "responseBodyBytesCaptured": 261737,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "iras-relief",
+      "answerStatus": "LIMITED",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "METADATA_ONLY",
+      "dispatches": {
+        "model": 2,
+        "source": 28,
+        "other": 20
+      },
+      "semanticPlanSource": "NOT_EXPOSED",
+      "workstreams": {
+        "status": null,
+        "evidenceStatus": null,
+        "applicationStatus": null,
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": []
+        },
+        "workstreams": []
+      },
+      "capture": {
+        "modelResponseCount": 2,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 2182,
+            "retainedRawBody": true
+          },
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 8868,
+            "retainedRawBody": false
+          }
+        ],
+        "sourceResponseCount": 28,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 297274,
+            "responseBodyBytesCaptured": 297274,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 412516,
+            "responseBodyBytesCaptured": 412516,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 215,
+            "responseBodyBytesCaptured": 215,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 275562,
+            "responseBodyBytesCaptured": 275562,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 176,
+            "responseBodyBytesCaptured": 176,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 289135,
+            "responseBodyBytesCaptured": 289135,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 215,
+            "responseBodyBytesCaptured": 215,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 275562,
+            "responseBodyBytesCaptured": 275562,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 215,
+            "responseBodyBytesCaptured": 215,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 275562,
+            "responseBodyBytesCaptured": 275562,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "iras-gst",
+      "answerStatus": "LIMITED",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "METADATA_ONLY",
+      "dispatches": {
+        "model": 2,
+        "source": 12,
+        "other": 6
+      },
+      "semanticPlanSource": "NOT_EXPOSED",
+      "workstreams": {
+        "status": null,
+        "evidenceStatus": null,
+        "applicationStatus": null,
+        "presentationStatus": null,
+        "gapCount": 0,
+        "issuePlan": {
+          "status": null,
+          "issues": []
+        },
+        "workstreams": []
+      },
+      "capture": {
+        "modelResponseCount": 2,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 2117,
+            "retainedRawBody": true
+          },
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 17467,
+            "retainedRawBody": false
+          }
+        ],
+        "sourceResponseCount": 12,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 327552,
+            "responseBodyBytesCaptured": 327552,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 300669,
+            "responseBodyBytesCaptured": 300669,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 266897,
+            "responseBodyBytesCaptured": 266897,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 251026,
+            "responseBodyBytesCaptured": 251026,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 254310,
+            "responseBodyBytesCaptured": 254310,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 279466,
+            "responseBodyBytesCaptured": 279466,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 279466,
+            "responseBodyBytesCaptured": 279466,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 263121,
+            "responseBodyBytesCaptured": 263121,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 297491,
+            "responseBodyBytesCaptured": 297491,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 266390,
+            "responseBodyBytesCaptured": 266390,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 251026,
+            "responseBodyBytesCaptured": 251026,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 263121,
+            "responseBodyBytesCaptured": 263121,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed-acra-cpf",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 1,
+        "other": 0
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 3,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_0570e5e2",
+              "authorities": [
+                "ACRA"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            },
+            {
+              "id": "issue_10ad2669",
+              "authorities": [
+                "CPF"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "ACRA",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 3,
+            "issues": [
+              {
+                "id": "issue_0570e5e2",
+                "authorities": [
+                  "ACRA"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 0,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          },
+          {
+            "authority": "CPF",
+            "status": null,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 0,
+            "issues": [
+              {
+                "id": "issue_10ad2669",
+                "authorities": [
+                  "CPF"
+                ],
+                "status": null,
+                "evidenceStatus": "VERIFIED",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 2225,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 1,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 426763,
+            "responseBodyBytesCaptured": 426763,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed-mom-mas",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 3,
+        "other": 8
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 6,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_4be504d7",
+              "authorities": [
+                "MOM"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            },
+            {
+              "id": "issue_29a8b13b",
+              "authorities": [
+                "MAS"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "MOM",
+            "status": null,
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 0,
+            "issues": [
+              {
+                "id": "issue_4be504d7",
+                "authorities": [
+                  "MOM"
+                ],
+                "status": null,
+                "evidenceStatus": "VERIFIED",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          },
+          {
+            "authority": "MAS",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 6,
+            "issues": [
+              {
+                "id": "issue_29a8b13b",
+                "authorities": [
+                  "MAS"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 0,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 2437,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 3,
+        "sourceResponses": [
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 0,
+            "responseBodyBytesCaptured": 0,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 67707,
+            "responseBodyBytesCaptured": 67707,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 853817,
+            "responseBodyBytesCaptured": 853817,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "mixed-iras-three",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+      "dispatches": {
+        "model": 1,
+        "source": 31,
+        "other": 20
+      },
+      "semanticPlanSource": "SEMANTIC_ISSUES",
+      "workstreams": {
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "presentationStatus": null,
+        "gapCount": 4,
+        "issuePlan": {
+          "status": null,
+          "issues": [
+            {
+              "id": "issue_73e27a29",
+              "authorities": [
+                "IRAS"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            },
+            {
+              "id": "issue_0d7f393c",
+              "authorities": [
+                "IRAS"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            },
+            {
+              "id": "issue_e7c499a7",
+              "authorities": [
+                "IRAS"
+              ],
+              "status": "MAPPED",
+              "evidenceStatus": null,
+              "coverageStatus": null,
+              "coveredConcepts": [],
+              "missingConcepts": [],
+              "verifiedClaimCount": 0
+            }
+          ]
+        },
+        "workstreams": [
+          {
+            "authority": "IRAS",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 2,
+            "issues": [
+              {
+                "id": "issue_73e27a29",
+                "authorities": [
+                  "IRAS"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 1,
+            "issues": [
+              {
+                "id": "issue_0d7f393c",
+                "authorities": [
+                  "IRAS"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 1,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          },
+          {
+            "authority": "IRAS",
+            "status": null,
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "gapCount": 1,
+            "issues": [
+              {
+                "id": "issue_e7c499a7",
+                "authorities": [
+                  "IRAS"
+                ],
+                "status": null,
+                "evidenceStatus": "INSUFFICIENT",
+                "coverageStatus": null,
+                "coveredConcepts": [],
+                "missingConcepts": [],
+                "verifiedClaimCount": 4,
+                "admissionDiagnostics": {
+                  "status": null,
+                  "candidateCount": null,
+                  "admittedCount": null,
+                  "rejectedCount": null,
+                  "topicCount": null
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "capture": {
+        "modelResponseCount": 1,
+        "modelResponsesRetainingRawBody": 1,
+        "modelResponses": [
+          {
+            "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 2786,
+            "retainedRawBody": true
+          }
+        ],
+        "sourceResponseCount": 31,
+        "sourceResponses": [
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 251009,
+            "responseBodyBytesCaptured": 251009,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 262140,
+            "responseBodyBytesCaptured": 262140,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 176,
+            "responseBodyBytesCaptured": 176,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 289135,
+            "responseBodyBytesCaptured": 289135,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 260013,
+            "responseBodyBytesCaptured": 260013,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 262140,
+            "responseBodyBytesCaptured": 262140,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 176,
+            "responseBodyBytesCaptured": 176,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 289135,
+            "responseBodyBytesCaptured": 289135,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 215,
+            "responseBodyBytesCaptured": 215,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 275562,
+            "responseBodyBytesCaptured": 275562,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 262140,
+            "responseBodyBytesCaptured": 262140,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 176,
+            "responseBodyBytesCaptured": 176,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 289135,
+            "responseBodyBytesCaptured": 289135,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 575997,
+            "responseBodyBytesCaptured": 575997,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 215,
+            "responseBodyBytesCaptured": 215,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 275562,
+            "responseBodyBytesCaptured": 275562,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 301,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 212,
+            "responseBodyBytesCaptured": 212,
+            "retainedBodyAvailable": true
+          },
+          {
+            "httpStatus": 200,
+            "captureStatus": "COMPLETE",
+            "responseBodyHashScope": "complete_response",
+            "responseBodyBytesRead": 256529,
+            "responseBodyBytesCaptured": 256529,
+            "retainedBodyAvailable": true
+          }
+        ]
+      }
+    }
+  ]
+}

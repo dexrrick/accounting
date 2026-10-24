@@ -1,0 +1,2813 @@
+{
+  "schemaVersion": 1,
+  "caseId": "iras-gst",
+  "answerStatus": "LIMITED",
+  "providerStatus": "SUCCEEDED",
+  "semanticPlanSource": "NOT_EXPOSED",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "METADATA_ONLY",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "34c8edc829a13c0bd6dc37c260bdded2ad340f28ee4e69ddd8ca30a161d2dbd8",
+      "encoding": "utf8",
+      "byteLength": 2117,
+      "artifactPath": "bodies/34c8edc829a13c0bd6dc37c260bdded2ad340f28ee4e69ddd8ca30a161d2dbd8.gz",
+      "declaredResponseBodySha256": "34c8edc829a13c0bd6dc37c260bdded2ad340f28ee4e69ddd8ca30a161d2dbd8",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 2117,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "encoding": "base64",
+      "byteLength": 327552,
+      "artifactPath": "bodies/261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc.gz",
+      "declaredResponseBodySha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 327552,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyText",
+      "sha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "encoding": "utf8",
+      "byteLength": 327552,
+      "artifactPath": "bodies/261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc.gz",
+      "declaredResponseBodySha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 327552,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyBase64",
+      "sha256": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+      "encoding": "base64",
+      "byteLength": 300669,
+      "artifactPath": "bodies/3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758.gz",
+      "declaredResponseBodySha256": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 300669,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyText",
+      "sha256": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+      "encoding": "utf8",
+      "byteLength": 300669,
+      "artifactPath": "bodies/3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758.gz",
+      "declaredResponseBodySha256": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 300669,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyBase64",
+      "sha256": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+      "encoding": "base64",
+      "byteLength": 266897,
+      "artifactPath": "bodies/4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f.gz",
+      "declaredResponseBodySha256": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 266897,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyText",
+      "sha256": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+      "encoding": "utf8",
+      "byteLength": 266897,
+      "artifactPath": "bodies/4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f.gz",
+      "declaredResponseBodySha256": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 266897,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/3/bodyBase64",
+      "sha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "encoding": "base64",
+      "byteLength": 251026,
+      "artifactPath": "bodies/fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2.gz",
+      "declaredResponseBodySha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251026,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/3/bodyText",
+      "sha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "encoding": "utf8",
+      "byteLength": 251026,
+      "artifactPath": "bodies/fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2.gz",
+      "declaredResponseBodySha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251026,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/4/bodyBase64",
+      "sha256": "15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70",
+      "encoding": "base64",
+      "byteLength": 254310,
+      "artifactPath": "bodies/15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70.gz",
+      "declaredResponseBodySha256": "15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 254310,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/4/bodyText",
+      "sha256": "15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70",
+      "encoding": "utf8",
+      "byteLength": 254310,
+      "artifactPath": "bodies/15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70.gz",
+      "declaredResponseBodySha256": "15f1c9a94f8d3f2bdc6d29043c1fb08236fdad8d916b8ea4a277052d130abf70",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 254310,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/5/bodyBase64",
+      "sha256": "2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7",
+      "encoding": "base64",
+      "byteLength": 279466,
+      "artifactPath": "bodies/2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7.gz",
+      "declaredResponseBodySha256": "2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 279466,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/6/bodyBase64",
+      "sha256": "2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7",
+      "encoding": "base64",
+      "byteLength": 279466,
+      "artifactPath": "bodies/2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7.gz",
+      "declaredResponseBodySha256": "2aa92da74234b65cbbb687b5f22ccf2d1676afe9d9db9f4f53198130f6df67f7",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 279466,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/7/bodyBase64",
+      "sha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "encoding": "base64",
+      "byteLength": 263121,
+      "artifactPath": "bodies/867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40.gz",
+      "declaredResponseBodySha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 263121,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/7/bodyText",
+      "sha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "encoding": "utf8",
+      "byteLength": 263121,
+      "artifactPath": "bodies/867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40.gz",
+      "declaredResponseBodySha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 263121,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/8/bodyBase64",
+      "sha256": "9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32",
+      "encoding": "base64",
+      "byteLength": 297491,
+      "artifactPath": "bodies/9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32.gz",
+      "declaredResponseBodySha256": "9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 297491,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/8/bodyText",
+      "sha256": "9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32",
+      "encoding": "utf8",
+      "byteLength": 297491,
+      "artifactPath": "bodies/9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32.gz",
+      "declaredResponseBodySha256": "9969a76807a4ef6c10d952abeabfc68123f3688d9d0b3d74d4b559671a0bcc32",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 297491,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/9/bodyBase64",
+      "sha256": "5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28",
+      "encoding": "base64",
+      "byteLength": 266390,
+      "artifactPath": "bodies/5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28.gz",
+      "declaredResponseBodySha256": "5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 266390,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/9/bodyText",
+      "sha256": "5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28",
+      "encoding": "utf8",
+      "byteLength": 266390,
+      "artifactPath": "bodies/5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28.gz",
+      "declaredResponseBodySha256": "5d44bb0f90ae19398f78f8c77c421f47b394f5a73ec02bc1d578c5d1b6e39f28",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 266390,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/10/bodyBase64",
+      "sha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "encoding": "base64",
+      "byteLength": 251026,
+      "artifactPath": "bodies/fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2.gz",
+      "declaredResponseBodySha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251026,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/10/bodyText",
+      "sha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "encoding": "utf8",
+      "byteLength": 251026,
+      "artifactPath": "bodies/fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2.gz",
+      "declaredResponseBodySha256": "fca83436e4c83d185ce8e0176abbf4f6c5ae66782fa3141c8f744eff829cf6f2",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 251026,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/11/bodyBase64",
+      "sha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "encoding": "base64",
+      "byteLength": 263121,
+      "artifactPath": "bodies/867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40.gz",
+      "declaredResponseBodySha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 263121,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/11/bodyText",
+      "sha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "encoding": "utf8",
+      "byteLength": 263121,
+      "artifactPath": "bodies/867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40.gz",
+      "declaredResponseBodySha256": "867e679bcabc8ce92483f44a0fa252cb2fe475ede9af6cd820c665319b3a1a40",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 263121,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/modelResponses/1",
+      "payloadStatus": "METADATA_ONLY",
+      "declaredResponseBodySha256": "01b7d73cd15f0915e9d64433d74a0449ae6c7e4d722cce992d7b4bc6365d665e",
+      "declaredHashScope": "complete_response",
+      "captureStatus": "COMPLETE",
+      "declaredCaptureBytes": 17467,
+      "bodyBytesPresent": false
+    }
+  ],
+  "issuePlan": "UNOBSERVED",
+  "issues": "UNOBSERVED",
+  "presentationIssues": "UNOBSERVED",
+  "conceptOwnership": "UNOBSERVED",
+  "admissionDiagnostics": "UNOBSERVED",
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.\"]",
+    "inputLength": 268,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 268
+          }
+        }
+      ],
+      "inputLength": 268
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_GST",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax claimability on private passenger motor car",
+        "concepts": [
+          {
+            "concept": "input tax claimability",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "private passenger motor car",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "GST-registered business",
+            "role": "CONTEXT_ONLY"
+          },
+          {
+            "concept": "IRAS restriction and exceptions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Singapore GST-registered business",
+          "Purchases a private passenger motor car for business use"
+        ],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "GST input tax claimability on private passenger motor car",
+            "population": "COMPANY",
+            "domain": "IRAS_GST",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 1
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 1,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "GST input tax claimability on private passenger motor car"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "GST input tax claimability on private passenger motor car",
+          "population": "COMPANY",
+          "operation": "CHECK_ELIGIBILITY"
+        }
+      ]
+    }
+  },
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "GST",
+      "domains": [
+        "IRAS_GST"
+      ],
+      "topicIds": [
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles",
+        "iras-gst-input-tax"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Semantic interpretation routed this company question to IRAS for GST input tax claimability on private passenger motor car."
+    },
+    "userFacts": [
+      "Transaction type: asset_purchase",
+      "Ownership context: not_applicable",
+      "Transaction subject: property, plant and equipment acquisition"
+    ],
+    "missingFacts": [],
+    "assumptions": [],
+    "primaryEvidence": [],
+    "officialGuidance": [
+      {
+        "id": "GST_REG26_BLOCKED_INPUT_TAX",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "GST (General) Regulations",
+        "standardOrActCode": "GSTA1993",
+        "paragraphOrSection": "Regulation 26 & 27",
+        "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "blocked input tax",
+          "regulation 26",
+          "regulation 27",
+          "gst car claim",
+          "medical insurance gst",
+          "club subscriptions"
+        ],
+        "sourceStatus": "VERIFIED",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-26",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT",
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-09-26",
+        "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+        "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+        "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "input tax claim",
+        "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:39.255Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "contentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "IRAS | Conditions for Claiming Input Tax",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "input tax claim",
+        "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:39.785Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+        "contentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Invoicing Customers",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "Blocked Input Tax",
+        "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-blocked-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:40.219Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Motor Vehicles Expenses",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "GST on Motor Vehicles",
+        "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-motor-vehicles"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:40.219Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Motor Vehicles Expenses",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "curatedSummaries": [],
+    "applicationRules": [],
+    "currentInformationRequired": true,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [
+          "ownership_context:not_applicable",
+          "transaction_type:asset_purchase"
+        ],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-10-24T08:53:39.212Z"
+      },
+      "reportingEntity": {
+        "type": "unknown"
+      },
+      "transactionType": "asset_purchase",
+      "subject": "property, plant and equipment acquisition",
+      "instrument": "property_plant_equipment",
+      "paymentStatus": "unknown",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [],
+      "assumptions": [],
+      "confidence": 0.45,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "SEMANTIC_PLUS_RULES",
+      "assessmentStatus": "PASSED",
+      "transportAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1750,
+          "retryScheduled": false
+        }
+      ],
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "IRAS_GST",
+        "population": "COMPANY",
+        "primarySubject": "GST input tax claimability on private passenger motor car",
+        "concepts": [
+          {
+            "concept": "input tax claimability",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "private passenger motor car",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "GST-registered business",
+            "role": "CONTEXT_ONLY"
+          },
+          {
+            "concept": "IRAS restriction and exceptions",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "CHECK_ELIGIBILITY",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "Singapore GST-registered business",
+          "Purchases a private passenger motor car for business use"
+        ],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "GST input tax claimability on private passenger motor car",
+            "population": "COMPANY",
+            "domain": "IRAS_GST",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "CHECK_ELIGIBILITY",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.\"]",
+      "inputLength": 268,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 268
+            }
+          }
+        ],
+        "inputLength": 268
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "IRAS_GST",
+          "population": "COMPANY",
+          "primarySubject": "GST input tax claimability on private passenger motor car",
+          "concepts": [
+            {
+              "concept": "input tax claimability",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "private passenger motor car",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "GST-registered business",
+              "role": "CONTEXT_ONLY"
+            },
+            {
+              "concept": "IRAS restriction and exceptions",
+              "role": "RELATED"
+            }
+          ],
+          "requestedOperation": "CHECK_ELIGIBILITY",
+          "requiresUserSpecificFacts": false,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [
+            "Singapore GST-registered business",
+            "Purchases a private passenger motor car for business use"
+          ],
+          "confidence": 1,
+          "issues": [
+            {
+              "subject": "GST input tax claimability on private passenger motor car",
+              "population": "COMPANY",
+              "domain": "IRAS_GST",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "CHECK_ELIGIBILITY",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 1
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 1
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 1,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "GST input tax claimability on private passenger motor car"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "GST input tax claimability on private passenger motor car",
+            "population": "COMPANY",
+            "operation": "CHECK_ELIGIBILITY"
+          }
+        ]
+      }
+    },
+    "evidenceQuality": {
+      "status": "LIMITED",
+      "eligibleRecords": [
+        {
+          "id": "GST_REG26_BLOCKED_INPUT_TAX",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "GST (General) Regulations",
+          "standardOrActCode": "GSTA1993",
+          "paragraphOrSection": "Regulation 26 & 27",
+          "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "blocked input tax",
+            "regulation 26",
+            "regulation 27",
+            "gst car claim",
+            "medical insurance gst",
+            "club subscriptions"
+          ],
+          "sourceStatus": "VERIFIED",
+          "sourceType": "CURATED_SUMMARY",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-09-26",
+          "reviewAuditCycleDays": 90,
+          "provenance": "LOCAL_STATIC",
+          "lifecycleState": "ACTIVE",
+          "version": "2026.09",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-09-01T00:00:00Z",
+          "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+          "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "extractionStatus": "PARTIAL",
+          "freshnessStatus": "ACTIVE_CURRENT",
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-09-26",
+          "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+          "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+          "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        },
+        {
+          "id": "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "IRAS Administrative Guidance",
+          "standardOrActCode": "IRAS",
+          "paragraphOrSection": "input tax claim",
+          "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-gst-input-tax"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:53:39.255Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+          "contentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "IRAS | Conditions for Claiming Input Tax",
+            "sourceType": "HTML"
+          }
+        },
+        {
+          "id": "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "IRAS Administrative Guidance",
+          "standardOrActCode": "IRAS",
+          "paragraphOrSection": "input tax claim",
+          "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-gst-input-tax"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:53:39.785Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+          "contentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "Invoicing Customers",
+            "sourceType": "HTML"
+          }
+        },
+        {
+          "id": "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "IRAS Administrative Guidance",
+          "standardOrActCode": "IRAS",
+          "paragraphOrSection": "Blocked Input Tax",
+          "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-gst-blocked-input-tax"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:53:40.219Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+          "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "Motor Vehicles Expenses",
+            "sourceType": "HTML"
+          }
+        },
+        {
+          "id": "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "IRAS Administrative Guidance",
+          "standardOrActCode": "IRAS",
+          "paragraphOrSection": "GST on Motor Vehicles",
+          "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-gst-motor-vehicles"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:53:40.219Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+          "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "Motor Vehicles Expenses",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "rejectedRecords": [],
+      "coveredTopicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles",
+        "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+        "iras-authority-query-concept-semantic-private-passenger-motor-car",
+        "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+      ],
+      "uncoveredTopicIds": [
+        "iras-authority-query-concept-semantic-input-tax-claimability"
+      ],
+      "uncoveredConceptGroups": {
+        "iras-authority-query-concept-semantic-input-tax-claimability": [
+          [
+            "input tax claimability"
+          ]
+        ]
+      },
+      "requestedConcepts": [
+        "Blocked input tax on passenger motor cars",
+        "input tax claimability",
+        "private passenger motor car",
+        "IRAS restriction and exceptions"
+      ],
+      "coveredConcepts": [
+        "Blocked input tax on passenger motor cars",
+        "private passenger motor car",
+        "IRAS restriction and exceptions"
+      ],
+      "uncoveredConcepts": [
+        "input tax claimability"
+      ],
+      "acceptedSourceGroups": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+      ],
+      "missingFacts": [],
+      "targetDateConfidence": "LOW"
+    },
+    "sourceMapFallbackTrace": {
+      "path": "MAPPED_SOURCE",
+      "sourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "IRAS_GST_INVOICING_SOURCE_MAP",
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
+      ],
+      "selectedRecordIds": [
+        "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+        "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+        "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+        "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+      ],
+      "finalVerifiedUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+      ],
+      "candidateOnly": true,
+      "attempts": [
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        },
+        {
+          "topicId": "iras-gst-input-tax",
+          "sourceMapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+          "pageTitle": "Invoicing Customers",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        },
+        {
+          "topicId": "iras-gst-blocked-input-tax",
+          "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "pageTitle": "Motor Vehicles Expenses",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "pageTitle": "Motor Vehicles Expenses",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "pageTitle": "IRAS | Claiming GST (Input Tax)",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst",
+          "pageTitle": "Common scenarios - Do I claim GST",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/media/docs/default-source/e-tax/gst-guide-on-non-business-receipts-business-tests-and-the-effect-of-non-business-receipts-on-input-tax-claims-(second-edition).pdf?sfvrsn=ca493b14_18",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "INVALID_CONTENT",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/docs/default-source/e-tax/gst-guide-on-non-business-receipts-business-tests-and-the-effect-of-non-business-receipts-on-input-tax-claims-(second-edition).pdf?sfvrsn=ca493b14_23",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "INVALID_CONTENT",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+          "pageTitle": "Non-Business or Private Use of Business Assets",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/importing-of-goods",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/importing-of-goods",
+          "pageTitle": "IRAS | Importing of goods",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/claim-input-tax-in-the-correct-accounting-period",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/claim-input-tax-in-the-correct-accounting-period",
+          "pageTitle": "Claim Input Tax in the Correct Accounting Period",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+          "searchQueryVariant": "TOPIC_HINT_1"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+          "pageTitle": "IRAS | Claiming GST (Input Tax)",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+          "searchQueryVariant": "TOPIC_HINT_2"
+        },
+        {
+          "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+          "pageTitle": "Non-Business or Private Use of Business Assets",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "error": "Fetched page title or content does not identify the mapped standard/source",
+          "searchQueryVariant": "FULL_QUERY"
+        }
+      ],
+      "discoveryFetchAttempts": [],
+      "coverageDecisions": [
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-private-passenger-motor-car"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-private-passenger-motor-car"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+            "iras-authority-query-concept-semantic-input-tax-claimability",
+            "iras-authority-query-concept-semantic-private-passenger-motor-car",
+            "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-input-tax",
+            "iras-gst-blocked-input-tax",
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+            "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+            "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+            "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-authority-query-concept-semantic-input-tax-claimability"
+          ],
+          "uncoveredConcepts": [
+            "input tax claimability"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "EXHAUSTED",
+          "reason": "Local retrieval was insufficient for at least one routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SUFFICIENT",
+          "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "EXHAUSTED",
+          "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "EXHAUSTED",
+          "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+        },
+        {
+          "stage": "INSUFFICIENT",
+          "status": "EXHAUSTED",
+          "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+        }
+      ]
+    }
+  },
+  "evidenceQuality": {
+    "status": "LIMITED",
+    "eligibleRecords": [
+      {
+        "id": "GST_REG26_BLOCKED_INPUT_TAX",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "GST (General) Regulations",
+        "standardOrActCode": "GSTA1993",
+        "paragraphOrSection": "Regulation 26 & 27",
+        "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "blocked input tax",
+          "regulation 26",
+          "regulation 27",
+          "gst car claim",
+          "medical insurance gst",
+          "club subscriptions"
+        ],
+        "sourceStatus": "VERIFIED",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-26",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT",
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-09-26",
+        "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+        "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+        "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "input tax claim",
+        "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:39.255Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "contentHash": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "IRAS | Conditions for Claiming Input Tax",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "input tax claim",
+        "principleSummary": "IRAS input-tax conditions and disallowed or blocked input-tax scenarios.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:39.785Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+        "contentHash": "3a41e773cf644173335068b3200927ba5ca3ccc3990a355e231b0f3b5bbf6758",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Invoicing Customers",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "Blocked Input Tax",
+        "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-blocked-input-tax"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:40.219Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Motor Vehicles Expenses",
+          "sourceType": "HTML"
+        }
+      },
+      {
+        "id": "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "IRAS Administrative Guidance",
+        "standardOrActCode": "IRAS",
+        "paragraphOrSection": "GST on Motor Vehicles",
+        "principleSummary": "IRAS motor-vehicle GST guidance on blocked motor-car input tax and relevant exceptions.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-gst-motor-vehicles"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:40.219Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "contentHash": "4c280395af900ce1843a967819993b154ef860f5d29e6979bc7283652abec37f",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "Motor Vehicles Expenses",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "rejectedRecords": [],
+    "coveredTopicIds": [
+      "iras-gst-input-tax",
+      "iras-gst-blocked-input-tax",
+      "iras-gst-motor-vehicles",
+      "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+      "iras-authority-query-concept-semantic-private-passenger-motor-car",
+      "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+    ],
+    "uncoveredTopicIds": [
+      "iras-authority-query-concept-semantic-input-tax-claimability"
+    ],
+    "uncoveredConceptGroups": {
+      "iras-authority-query-concept-semantic-input-tax-claimability": [
+        [
+          "input tax claimability"
+        ]
+      ]
+    },
+    "requestedConcepts": [
+      "Blocked input tax on passenger motor cars",
+      "input tax claimability",
+      "private passenger motor car",
+      "IRAS restriction and exceptions"
+    ],
+    "coveredConcepts": [
+      "Blocked input tax on passenger motor cars",
+      "private passenger motor car",
+      "IRAS restriction and exceptions"
+    ],
+    "uncoveredConcepts": [
+      "input tax claimability"
+    ],
+    "acceptedSourceGroups": [
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+    ],
+    "missingFacts": [],
+    "targetDateConfidence": "LOW"
+  },
+  "sourceMapFallbackTrace": {
+    "path": "MAPPED_SOURCE",
+    "sourceMapIds": [
+      "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+      "IRAS_GST_INVOICING_SOURCE_MAP",
+      "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
+    ],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+      "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+      "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+      "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-gst-input-tax",
+        "sourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      },
+      {
+        "topicId": "iras-gst-input-tax",
+        "sourceMapId": "IRAS_GST_INVOICING_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers",
+        "pageTitle": "Invoicing Customers",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      },
+      {
+        "topicId": "iras-gst-blocked-input-tax",
+        "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "pageTitle": "Motor Vehicles Expenses",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      },
+      {
+        "topicId": "iras-gst-motor-vehicles",
+        "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+        "pageTitle": "Motor Vehicles Expenses",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+        "pageTitle": "IRAS | Claiming GST (Input Tax)",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst",
+        "pageTitle": "Common scenarios - Do I claim GST",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/media/docs/default-source/e-tax/gst-guide-on-non-business-receipts-business-tests-and-the-effect-of-non-business-receipts-on-input-tax-claims-(second-edition).pdf?sfvrsn=ca493b14_18",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "INVALID_CONTENT",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/docs/default-source/e-tax/gst-guide-on-non-business-receipts-business-tests-and-the-effect-of-non-business-receipts-on-input-tax-claims-(second-edition).pdf?sfvrsn=ca493b14_23",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "INVALID_CONTENT",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+        "pageTitle": "Non-Business or Private Use of Business Assets",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/importing-of-goods",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/importing-of-goods",
+        "pageTitle": "IRAS | Importing of goods",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/claim-input-tax-in-the-correct-accounting-period",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/claim-input-tax-in-the-correct-accounting-period",
+        "pageTitle": "Claim Input Tax in the Correct Accounting Period",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "pageTitle": "IRAS | Conditions for Claiming Input Tax",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+        "searchQueryVariant": "TOPIC_HINT_1"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)",
+        "pageTitle": "IRAS | Claiming GST (Input Tax)",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+        "searchQueryVariant": "TOPIC_HINT_2"
+      },
+      {
+        "topicId": "iras-authority-query-concept-semantic-input-tax-claimability",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/non-business-or-private-use-of-business-assets",
+        "pageTitle": "Non-Business or Private Use of Business Assets",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "error": "Fetched page title or content does not identify the mapped standard/source",
+        "searchQueryVariant": "FULL_QUERY"
+      }
+    ],
+    "discoveryFetchAttempts": [],
+    "coverageDecisions": [
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-private-passenger-motor-car"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-private-passenger-motor-car"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles",
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax",
+          "iras-authority-query-concept-semantic-input-tax-claimability",
+          "iras-authority-query-concept-semantic-private-passenger-motor-car",
+          "iras-authority-query-concept-semantic-iras-restriction-and-exceptions"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-gst-blocked-motor-car-input-tax"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "admissionTopicIds": [
+          "iras-gst-input-tax",
+          "iras-gst-blocked-input-tax",
+          "iras-gst-motor-vehicles"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-gst-input-tax_261cbe8d471c",
+          "LIVE_TOPIC_iras-gst-input-tax_3a41e773cf64",
+          "LIVE_TOPIC_iras-gst-blocked-input-tax_4c280395af90",
+          "LIVE_TOPIC_iras-gst-motor-vehicles_4c280395af90"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-authority-query-concept-semantic-input-tax-claimability"
+        ],
+        "uncoveredConcepts": [
+          "input tax claimability"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "SUFFICIENT",
+        "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "EXHAUSTED",
+        "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "EXHAUSTED",
+        "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+      },
+      {
+        "stage": "INSUFFICIENT",
+        "status": "EXHAUSTED",
+        "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+      }
+    ]
+  },
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "UNOBSERVED",
+    "evidenceStatus": "UNOBSERVED",
+    "applicationStatus": "UNOBSERVED",
+    "presentationStatus": "UNOBSERVED",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": "UNOBSERVED"
+}

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "runId": "live-d8480e44-20261024-01",
+  "files": [
+    {
+      "path": "diagnostics/acra.json",
+      "sha256": "6123a9e4edba7f152ef55848126aac6e00f1daafb6455b97b2e1c6061a041eb5",
+      "byteLength": 91711,
+      "originalCompressedSha256": "8f80be0fac6780c276491fb9a3afbd8046bf523ca05b05fc762e0005ce79586b",
+      "originalCompressedByteLength": 7057,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/cpf.json",
+      "sha256": "9b811fdad6bfba3041ebf65702ed92357f9b0b418a95e9e1aff817e28cc7c8e5",
+      "byteLength": 56690,
+      "originalCompressedSha256": "d728af3ec07c9242c853512eb0b42b7548d997e4180e6283a5e7fdf972264849",
+      "originalCompressedByteLength": 4534,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/iras-gst.json",
+      "sha256": "fdfdd041f0ff6a0906265f2458885e5df8c51bbeca0107846e6fbd22e9a47368",
+      "byteLength": 122431,
+      "originalCompressedSha256": "b3e012efda7b37ce9e030fd1c46ddb93ee338f7ffe02c0dbcd323d39a53cf8a9",
+      "originalCompressedByteLength": 10241,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/iras-relief.json",
+      "sha256": "73b4f12dc2236371c35dea80490bd07c687932c55d026d665dd50a3290745726",
+      "byteLength": 125043,
+      "originalCompressedSha256": "57c15db56633c0bff2b6ff75a7f8f7245453f97e76b4de90b8b43784cb5f69e7",
+      "originalCompressedByteLength": 8136,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/iras-residency.json",
+      "sha256": "59b8a86022e9d29cf555b70f8da3353d19cebf681699db2549cd02a6c2ffac2b",
+      "byteLength": 38193,
+      "originalCompressedSha256": "a71366d1b64cc10a6ca1a58424f9acafe1084b70eaa43456a3daf31deb86cba0",
+      "originalCompressedByteLength": 4619,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/mas.json",
+      "sha256": "53dd03a748573e3579da0e735f0111673c9f171defb098ce8e79f815f9c11398",
+      "byteLength": 52819,
+      "originalCompressedSha256": "a258c5a00fee9e554ab2f075025764bc7393c7aac6d95b758e2d025d3b70c090",
+      "originalCompressedByteLength": 4413,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/mixed-acra-cpf.json",
+      "sha256": "e359f5a72001b165aa5299c2025a27644329ffcbf3965e1b17bc70cf1086e5d7",
+      "byteLength": 138524,
+      "originalCompressedSha256": "577780397195108ebafe0a08d9c0469a0f6879e43a61b86c4d243c2db2718b2a",
+      "originalCompressedByteLength": 9406,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/mixed-iras-three.json",
+      "sha256": "7ae23f5d5a0b2d5e57e697010314c4e210200de5f1bb091ba38dbc068abe5eb7",
+      "byteLength": 205618,
+      "originalCompressedSha256": "71bceae724467846f5a4c20406aeeb58a03ec3a59962a310497646ccb8595a5d",
+      "originalCompressedByteLength": 13208,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/mixed-mom-mas.json",
+      "sha256": "37bc3edfc2285f9c508fdc58d9e5745c990ff3964b0856a2809c80f2b05a9c25",
+      "byteLength": 170979,
+      "originalCompressedSha256": "5a3d1e6394e3a153c2000429d49f00b7d07dcadcd00637bbd0098307a343c106",
+      "originalCompressedByteLength": 9756,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "diagnostics/mom.json",
+      "sha256": "7e1638e75e3e8796b382dce3f3cbc338ba13fa5c4be1269aba0adb37b544a071",
+      "byteLength": 130235,
+      "originalCompressedSha256": "38bb048a645e50ee3dd092b10f20a182cb73654d1ef708937d34b262e85f8e42",
+      "originalCompressedByteLength": 6893,
+      "projection": "Exact decompressed original diagnostic bytes; not reserialized"
+    },
+    {
+      "path": "manifest.json",
+      "sha256": "2f436a4bedb578d051f0cd0eaacda46a8ab53b4489c1f24128fb1685c35b04e1",
+      "byteLength": 71315
+    },
+    {
+      "path": "questions.json",
+      "sha256": "7d25d41d96ee9bbf3b58b1f9eaca27f1c22d665815525f9f8c7d54140cd44326",
+      "byteLength": 6382
+    },
+    {
+      "path": "results-summary.json",
+      "sha256": "6977d0b1fd28ecd96990c0c4e1069b6c65a924e3b34e0e194c9425c57461d41c",
+      "byteLength": 3520
+    },
+    {
+      "path": "runtime-capture-summary.json",
+      "sha256": "c3ac4f1a77da1c5f85d200ac05dffe5e48d44f47ede3bc7dba8b3c8bf00802dd",
+      "byteLength": 54864
+    },
+    {
+      "path": "validation-summary.json",
+      "sha256": "8c46fe732710d7d29d64c7373fc07723fb509b7bcbaf6c88a70aba861334c89e",
+      "byteLength": 2252
+    }
+  ],
+  "scope": "Hashes cover the published JSON files; excludes this index itself. Full raw source/model bodies remain private."
+}

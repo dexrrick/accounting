@@ -1,0 +1,114 @@
+[
+  {
+    "id": "acra",
+    "question": "Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.",
+    "authorities": [
+      "ACRA"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:51:55.009Z",
+    "observedAtUTC": "2026-10-24T08:52:03.159Z"
+  },
+  {
+    "id": "cpf",
+    "question": "Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.",
+    "authorities": [
+      "CPF_BOARD"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:52:14.068Z",
+    "observedAtUTC": "2026-10-24T08:52:17.701Z"
+  },
+  {
+    "id": "mom",
+    "question": "Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.",
+    "authorities": [
+      "MOM"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:52:24.971Z",
+    "observedAtUTC": "2026-10-24T08:52:28.860Z"
+  },
+  {
+    "id": "mas",
+    "question": "Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.",
+    "authorities": [
+      "MAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:52:38.305Z",
+    "observedAtUTC": "2026-10-24T08:52:43.589Z"
+  },
+  {
+    "id": "iras-residency",
+    "question": "For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.",
+    "authorities": [
+      "IRAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:52:52.121Z",
+    "observedAtUTC": "2026-10-24T08:52:56.133Z"
+  },
+  {
+    "id": "iras-relief",
+    "question": "Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.",
+    "authorities": [
+      "IRAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:53:01.891Z",
+    "observedAtUTC": "2026-10-24T08:53:23.755Z"
+  },
+  {
+    "id": "iras-gst",
+    "question": "A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.",
+    "authorities": [
+      "IRAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:53:37.353Z",
+    "observedAtUTC": "2026-10-24T08:53:54.958Z"
+  },
+  {
+    "id": "mixed-acra-cpf",
+    "question": "Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries. Separately, Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.",
+    "authorities": [
+      "ACRA",
+      "CPF_BOARD"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:54:08.830Z",
+    "observedAtUTC": "2026-10-24T08:54:10.844Z"
+  },
+  {
+    "id": "mixed-mom-mas",
+    "question": "Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries. Separately, Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.",
+    "authorities": [
+      "MOM",
+      "MAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:54:15.711Z",
+    "observedAtUTC": "2026-10-24T08:54:23.281Z"
+  },
+  {
+    "id": "mixed-iras-three",
+    "question": "For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries. Separately, Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries. Separately, A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.",
+    "authorities": [
+      "IRAS"
+    ],
+    "executionEnvironment": "CLOUDFLARE_BUILD_NODE",
+    "sourceTransport": "NODE_DIRECT_OFFICIAL_SOURCE",
+    "startedAtUTC": "2026-10-24T08:54:29.922Z",
+    "observedAtUTC": "2026-10-24T08:54:41.560Z"
+  }
+]

@@ -1,0 +1,57 @@
+{
+  "applicationCommit": "d8480e44d9234f07658edd9743a54774d8d24eae",
+  "reviewedReceiptFixParent": "37e314ecdbc1ca0de9a824f820935eddf90078a5",
+  "localNode": "22.23.3",
+  "cloudflareNode": "22.23.4",
+  "receiptFixValidation": {
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "frontendAndWorkerBuild": "PASS",
+    "fullRun": {
+      "passed": 147,
+      "failed": 1,
+      "failure": "New harness regression double-encoded stub receipt"
+    },
+    "correction": "Test-only scrub stub changed to identity; corrected harness suite PASS on targeted rerun. Full suite was not repeated after this test-only correction.",
+    "focusedSuites": [
+      "test_cloudflare_verification_receipt_sink.mjs PASS",
+      "test_verification_receipt_exporter.mjs PASS",
+      "test_r2_verification_harness.mjs PASS"
+    ],
+    "independentReview": "No remaining material implementation findings"
+  },
+  "runtimePreparation": {
+    "syntaxChecks": "PASS",
+    "frozenTenQuestionsAndTreeDigestChecks": "PASS",
+    "independentReview": "No material findings",
+    "portableBinaryRoundTripAndCorruptionNegative": "PASS"
+  },
+  "storageOnly": {
+    "commit": "97815550d95a71fe83ad9cfb40c691e90bae6841",
+    "buildUuid": "bcd6efe7-1ccf-4ba6-802f-56f38e5a6853",
+    "result": "PASS: actual bucket-scoped SigV4 export/readback; remove local copy; exact recovery using fresh sink; no model/source calls"
+  },
+  "live": {
+    "commit": "66f36889f060d46878cfa73a85e9e6e5d661cfb0",
+    "buildUuid": "67801bd8-5729-49a0-b1ab-abc3f95bbe82",
+    "buildOutcome": "success",
+    "runId": "live-d8480e44-20261024-01",
+    "caseCount": 10,
+    "modelRequests": 13,
+    "sourceRequests": 93,
+    "recoveredOriginalArtifacts": 69,
+    "recoveredOriginalBytes": 2336904,
+    "allHashesAndLengthsVerified": true,
+    "allTenReceiptsReconstructed": true
+  },
+  "production": {
+    "unchanged": true,
+    "activeDeploymentId": "287c41b3-ff98-4510-896f-31917479fa6d",
+    "activeVersionId": "c88601e0-ee33-43ca-827e-2cab6e3ae5ee"
+  },
+  "persistentLiveGatePresent": false,
+  "newGithubActionsResult": "NOT_CLAIMED",
+  "browserAcceptance": "NOT_RUN",
+  "wholeAuthorityParity": "NOT_ESTABLISHED",
+  "publication": "Documentation/evidence only; no new live dispatch or application-source change"
+}

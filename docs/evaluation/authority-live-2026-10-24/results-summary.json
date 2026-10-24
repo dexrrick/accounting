@@ -1,0 +1,100 @@
+{
+  "runId": "live-d8480e44-20261024-01",
+  "applicationCommit": "d8480e44d9234f07658edd9743a54774d8d24eae",
+  "verificationCommit": "66f36889f060d46878cfa73a85e9e6e5d661cfb0",
+  "buildUuid": "67801bd8-5729-49a0-b1ab-abc3f95bbe82",
+  "buildOutcome": "success",
+  "realNodeS3StorageExportAndFreshSinkRecovery": "PASS",
+  "independentPostBuildRecovery": "PASS",
+  "originalArtifactHashesAndLengthsVerified": 69,
+  "originalManifestSha256": "2f436a4bedb578d051f0cd0eaacda46a8ab53b4489c1f24128fb1685c35b04e1",
+  "portableIndexSha256": "0500744b6a489c826b8dcd0c4366ab520d7ef437de2b54a302a35c19054c4e84",
+  "receiptsReconstructed": 10,
+  "modelRequests": 13,
+  "sourceRequests": 93,
+  "sourceBodiesFullyRetained": 93,
+  "fullModelBodiesRetained": 10,
+  "additionalModelRepliesMetadataOnly": 3,
+  "modelCapturePolicy": "Existing harness retains full body only for first model reply per case; no missing body was fabricated.",
+  "answerStatusCounts": {
+    "VERIFIED": 3,
+    "INSUFFICIENT": 4,
+    "RETRIEVED_SUFFICIENT": 1,
+    "LIMITED": 2
+  },
+  "cases": [
+    {
+      "id": "acra",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "cpf",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "mom",
+      "answerStatus": "VERIFIED",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "mas",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "iras-residency",
+      "answerStatus": "RETRIEVED_SUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "METADATA_ONLY"
+    },
+    {
+      "id": "iras-relief",
+      "answerStatus": "LIMITED",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "METADATA_ONLY"
+    },
+    {
+      "id": "iras-gst",
+      "answerStatus": "LIMITED",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "METADATA_ONLY"
+    },
+    {
+      "id": "mixed-acra-cpf",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "mixed-mom-mas",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "id": "mixed-iras-three",
+      "answerStatus": "INSUFFICIENT",
+      "exportStatus": "EXPORTED",
+      "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED"
+    }
+  ],
+  "freshVerifiedDiagnosticFindings": [
+    "MAS local candidates failed LOCAL_SOURCE_NOT_VERIFIED; fetched licence and guideline pages returned Maintenance/TOPIC_MISMATCH. No evidence admitted or verified.",
+    "Mixed ACRA/CPF verified and covered CPF. ACRA selected a late-filing penalties page but lacked a verified annual-return filing-duty claim. Current failure is ACRA, not CPF.",
+    "Fresh findings do not reconstruct unknown historical rejection causes."
+  ],
+  "productionUnchanged": true,
+  "persistentLiveGatePresent": false,
+  "mainMerged": false,
+  "sourceActivated": false,
+  "wholeAuthorityParity": "NOT_ESTABLISHED",
+  "browserAcceptance": "NOT_RUN",
+  "reviewDiagnostics": "diagnostics/",
+  "recordType": "Observed Node live-run results; not whole-authority parity or browser acceptance"
+}

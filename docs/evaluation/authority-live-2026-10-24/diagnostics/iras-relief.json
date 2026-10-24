@@ -1,0 +1,2816 @@
+{
+  "schemaVersion": 1,
+  "caseId": "iras-relief",
+  "answerStatus": "LIMITED",
+  "providerStatus": "SUCCEEDED",
+  "semanticPlanSource": "NOT_EXPOSED",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "METADATA_ONLY",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "3d3e65addca7fc675c85eb76ff811ca129acba078ebe1fe9c3c77f9861ffbf1a",
+      "encoding": "utf8",
+      "byteLength": 2182,
+      "artifactPath": "bodies/3d3e65addca7fc675c85eb76ff811ca129acba078ebe1fe9c3c77f9861ffbf1a.gz",
+      "declaredResponseBodySha256": "3d3e65addca7fc675c85eb76ff811ca129acba078ebe1fe9c3c77f9861ffbf1a",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 2182,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+      "encoding": "base64",
+      "byteLength": 297274,
+      "artifactPath": "bodies/d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c.gz",
+      "declaredResponseBodySha256": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 297274,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyText",
+      "sha256": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+      "encoding": "utf8",
+      "byteLength": 297274,
+      "artifactPath": "bodies/d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c.gz",
+      "declaredResponseBodySha256": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 297274,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyBase64",
+      "sha256": "1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430",
+      "encoding": "base64",
+      "byteLength": 412516,
+      "artifactPath": "bodies/1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430.gz",
+      "declaredResponseBodySha256": "1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 412516,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyText",
+      "sha256": "1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430",
+      "encoding": "utf8",
+      "byteLength": 412516,
+      "artifactPath": "bodies/1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430.gz",
+      "declaredResponseBodySha256": "1f3861ade0891506f7163f76a18fa3282b30bd86dacbea4525317a9bbb559430",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 412516,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/3/bodyBase64",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "base64",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/3/bodyText",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "utf8",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/4/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/4/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/5/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/5/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/6/bodyBase64",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "base64",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/6/bodyText",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "utf8",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/7/bodyBase64",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "base64",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/7/bodyText",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "utf8",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/8/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/8/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/9/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/9/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/10/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/10/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/11/bodyBase64",
+      "sha256": "a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d",
+      "encoding": "base64",
+      "byteLength": 176,
+      "artifactPath": "bodies/a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d.gz",
+      "declaredResponseBodySha256": "a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 176,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/11/bodyText",
+      "sha256": "a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d",
+      "encoding": "utf8",
+      "byteLength": 176,
+      "artifactPath": "bodies/a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d.gz",
+      "declaredResponseBodySha256": "a058db70480d6be9b76144645678e052da99001faf0a1f17e9f54207927cfa0d",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 176,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/12/bodyBase64",
+      "sha256": "597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3",
+      "encoding": "base64",
+      "byteLength": 289135,
+      "artifactPath": "bodies/597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3.gz",
+      "declaredResponseBodySha256": "597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 289135,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/12/bodyText",
+      "sha256": "597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3",
+      "encoding": "utf8",
+      "byteLength": 289135,
+      "artifactPath": "bodies/597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3.gz",
+      "declaredResponseBodySha256": "597aae93eb1540716c16627025b840ec068c19a6a478c68e36adbb935d9502f3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 289135,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/13/bodyBase64",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "base64",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/13/bodyText",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "utf8",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/14/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/14/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/15/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/15/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/16/bodyBase64",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "base64",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/16/bodyText",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "utf8",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/17/bodyBase64",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "base64",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/17/bodyText",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "utf8",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/18/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/18/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/19/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/19/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/20/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/20/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/21/bodyBase64",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "base64",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/21/bodyText",
+      "sha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "encoding": "utf8",
+      "byteLength": 575997,
+      "artifactPath": "bodies/29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331.gz",
+      "declaredResponseBodySha256": "29e0c146ebfdf1185a1efaf7c026e48c41f7c4b6bac6b497b9e3f2dab25c9331",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 575997,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/22/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/22/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/23/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/23/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/24/bodyBase64",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "base64",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/24/bodyText",
+      "sha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "encoding": "utf8",
+      "byteLength": 215,
+      "artifactPath": "bodies/6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc.gz",
+      "declaredResponseBodySha256": "6ac74c83ca1e5182cb07968cb8ac7e219eec72a10cbdfd87fe3aa5bc7bcf3dfc",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 215,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/25/bodyBase64",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "base64",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/25/bodyText",
+      "sha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "encoding": "utf8",
+      "byteLength": 275562,
+      "artifactPath": "bodies/13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3.gz",
+      "declaredResponseBodySha256": "13c8db789fad042d1efd712195cf3a79808c5feac7a2ba354634db0de5a2bfa3",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 275562,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/26/bodyBase64",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "base64",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/26/bodyText",
+      "sha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "encoding": "utf8",
+      "byteLength": 212,
+      "artifactPath": "bodies/b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882.gz",
+      "declaredResponseBodySha256": "b4335401bae3c73fe0134e842f6c6bb0155273b8a9719b44ef8ae06e9e021882",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 212,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/27/bodyBase64",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "base64",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/27/bodyText",
+      "sha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "encoding": "utf8",
+      "byteLength": 256529,
+      "artifactPath": "bodies/026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9.gz",
+      "declaredResponseBodySha256": "026d57b65a6c815bd25955f6f862b0f8919a791dc02be5c39e7dd0c6a2cb34c9",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 256529,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/modelResponses/1",
+      "payloadStatus": "METADATA_ONLY",
+      "declaredResponseBodySha256": "15ce4e2a8d41b6c6a4b5fef93532ae13005790a2ea6ff90c5049645bfc97f548",
+      "declaredHashScope": "complete_response",
+      "captureStatus": "COMPLETE",
+      "declaredCaptureBytes": 8868,
+      "bodyBytesPresent": false
+    }
+  ],
+  "issuePlan": "UNOBSERVED",
+  "issues": "UNOBSERVED",
+  "presentationIssues": "UNOBSERVED",
+  "conceptOwnership": "UNOBSERVED",
+  "admissionDiagnostics": "UNOBSERVED",
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.\"]",
+    "inputLength": 295,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 295
+          }
+        }
+      ],
+      "inputLength": 295
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "CPF cash top-up tax relief eligibility",
+        "concepts": [
+          {
+            "concept": "CPF cash top-up",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "tax relief",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "eligibility conditions",
+            "role": "RELATED"
+          },
+          {
+            "concept": "relief limits",
+            "role": "RELATED"
+          },
+          {
+            "concept": "Special Account",
+            "role": "CONTEXT_ONLY"
+          },
+          {
+            "concept": "Retirement Account",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "CPF cash top-up tax relief general eligibility conditions and limits",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 1
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 1,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "CPF cash top-up tax relief general eligibility conditions and limits"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "CPF cash top-up tax relief general eligibility conditions and limits",
+          "population": "INDIVIDUAL",
+          "operation": "EXPLAIN_RULE"
+        }
+      ]
+    }
+  },
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "TAX",
+      "domains": [
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "topicIds": [
+        "iras-individual-cpf-cash-top-up-relief"
+      ],
+      "authorities": [
+        "IRAS"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": false,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": false,
+      "missingFacts": [],
+      "intent": "STATUTORY_ADVISORY",
+      "reasoning": "Semantic interpretation routed this individual question to IRAS for CPF cash top-up tax relief eligibility."
+    },
+    "userFacts": [
+      "Numerical quantities stated: ,"
+    ],
+    "missingFacts": [],
+    "assumptions": [],
+    "primaryEvidence": [],
+    "officialGuidance": [
+      {
+        "id": "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "CPF Cash Top-up Relief",
+        "standardOrActCode": "CPF Cash Top-up Relief",
+        "paragraphOrSection": "CPF Cash Top-up Relief",
+        "principleSummary": "IRAS guidance on tax relief for qualifying CPF cash top-ups.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "domain": "IRAS_TAX",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:03.855Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+        "contentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "curatedSummaries": [],
+    "applicationRules": [],
+    "currentInformationRequired": true,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-10-24T08:53:03.810Z"
+      },
+      "reportingEntity": {
+        "type": "unknown"
+      },
+      "transactionType": "unclassified_transaction",
+      "paymentStatus": "unknown",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [],
+      "assumptions": [],
+      "confidence": 0.3,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "SEMANTIC_PLUS_RULES",
+      "assessmentStatus": "PASSED",
+      "transportAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 1868,
+          "retryScheduled": false
+        }
+      ],
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "IRAS"
+        ],
+        "contextualAuthorities": [
+          "CPF"
+        ],
+        "domain": "IRAS_INCOME_TAX",
+        "population": "INDIVIDUAL",
+        "primarySubject": "CPF cash top-up tax relief eligibility",
+        "concepts": [
+          {
+            "concept": "CPF cash top-up",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "tax relief",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "eligibility conditions",
+            "role": "RELATED"
+          },
+          {
+            "concept": "relief limits",
+            "role": "RELATED"
+          },
+          {
+            "concept": "Special Account",
+            "role": "CONTEXT_ONLY"
+          },
+          {
+            "concept": "Retirement Account",
+            "role": "CONTEXT_ONLY"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 1,
+        "issues": [
+          {
+            "subject": "CPF cash top-up tax relief general eligibility conditions and limits",
+            "population": "INDIVIDUAL",
+            "domain": "IRAS_INCOME_TAX",
+            "governingAuthorities": [
+              "IRAS"
+            ],
+            "contextualAuthorities": [
+              "CPF"
+            ],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 1
+          }
+        ]
+      }
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.\"]",
+      "inputLength": 295,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 295
+            }
+          }
+        ],
+        "inputLength": 295
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "IRAS"
+          ],
+          "contextualAuthorities": [
+            "CPF"
+          ],
+          "domain": "IRAS_INCOME_TAX",
+          "population": "INDIVIDUAL",
+          "primarySubject": "CPF cash top-up tax relief eligibility",
+          "concepts": [
+            {
+              "concept": "CPF cash top-up",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "tax relief",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "eligibility conditions",
+              "role": "RELATED"
+            },
+            {
+              "concept": "relief limits",
+              "role": "RELATED"
+            },
+            {
+              "concept": "Special Account",
+              "role": "CONTEXT_ONLY"
+            },
+            {
+              "concept": "Retirement Account",
+              "role": "CONTEXT_ONLY"
+            }
+          ],
+          "requestedOperation": "EXPLAIN_RULE",
+          "requiresUserSpecificFacts": false,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [],
+          "confidence": 1,
+          "issues": [
+            {
+              "subject": "CPF cash top-up tax relief general eligibility conditions and limits",
+              "population": "INDIVIDUAL",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [
+                "CPF"
+              ],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 1
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 1
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 1,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "CPF cash top-up tax relief general eligibility conditions and limits"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "CPF cash top-up tax relief general eligibility conditions and limits",
+            "population": "INDIVIDUAL",
+            "operation": "EXPLAIN_RULE"
+          }
+        ]
+      }
+    },
+    "evidenceQuality": {
+      "status": "LIMITED",
+      "eligibleRecords": [
+        {
+          "id": "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "CPF Cash Top-up Relief",
+          "standardOrActCode": "CPF Cash Top-up Relief",
+          "paragraphOrSection": "CPF Cash Top-up Relief",
+          "principleSummary": "IRAS guidance on tax relief for qualifying CPF cash top-ups.",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "domain": "IRAS_TAX",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-10-24T08:53:03.855Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+          "contentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "rejectedRecords": [],
+      "coveredTopicIds": [
+        "iras-authority-query-concept-cpf-cash-top-up-relief",
+        "iras-authority-query-concept-semantic-cpf-cash-top-up",
+        "iras-authority-query-concept-semantic-tax-relief"
+      ],
+      "uncoveredTopicIds": [
+        "iras-individual-cpf-cash-top-up-relief",
+        "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+      ],
+      "uncoveredConceptGroups": {
+        "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility": [
+          [
+            "Eligibility for CPF cash top-up tax relief"
+          ]
+        ],
+        "iras-authority-query-concept-cpf-cash-top-up-relief-limits": [
+          [
+            "Limits on CPF cash top-up tax relief"
+          ]
+        ]
+      },
+      "requestedConcepts": [
+        "CPF cash top-up tax relief",
+        "Eligibility for CPF cash top-up tax relief",
+        "Limits on CPF cash top-up tax relief",
+        "CPF cash top-up",
+        "tax relief"
+      ],
+      "coveredConcepts": [
+        "CPF cash top-up tax relief",
+        "CPF cash top-up",
+        "tax relief"
+      ],
+      "uncoveredConcepts": [
+        "Eligibility for CPF cash top-up tax relief",
+        "Limits on CPF cash top-up tax relief"
+      ],
+      "acceptedSourceGroups": [
+        "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief"
+      ],
+      "missingFacts": [],
+      "targetDateConfidence": "LOW"
+    },
+    "sourceMapFallbackTrace": {
+      "path": "DISCOVERED_SOURCE",
+      "sourceMapIds": [
+        "IRAS_CPF_CASH_TOP_UP_RELIEF_SOURCE_MAP"
+      ],
+      "selectedRecordIds": [
+        "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9",
+        "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+      ],
+      "finalVerifiedUrls": [
+        "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief"
+      ],
+      "candidateOnly": true,
+      "attempts": [
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "sourceMapId": "IRAS_CPF_CASH_TOP_UP_RELIEF_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "MAPPED_SOURCE"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "pageTitle": "IRAS | Tax reliefs",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+          "pageTitle": "IRAS | SRS contributions and tax relief",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/deductions-for-self-employed-partnership-trade-business-profession-or-vocation",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships",
+          "pageTitle": "IRAS | Self-Employed Individuals including Platform Workers and Partnerships",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "pageTitle": "IRAS | Tax reliefs",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+          "pageTitle": "IRAS | SRS contributions and tax relief",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+          "pageTitle": "IRAS | Tax reliefs",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page title or content does not identify the mapped standard/source"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+          "pageTitle": "IRAS | SRS contributions and tax relief",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+          "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "SITEMAP_DISCOVERY",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+        },
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "fetchStatus": "SUCCESS",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "titleMatched": true,
+          "contentMatched": true,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_1"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+          "searchQueryVariant": "TOPIC_HINT_3"
+        },
+        {
+          "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "fetchStatus": "TOPIC_MISMATCH",
+          "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+          "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+          "searchQueryVariant": "TOPIC_HINT_3"
+        }
+      ],
+      "discoveryFetchAttempts": [
+        {
+          "topicId": "iras-individual-cpf-cash-top-up-relief",
+          "fetchStatus": "SUCCESS"
+        }
+      ],
+      "coverageDecisions": [
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-cpf-cash-top-up"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-cpf-cash-top-up"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+            "iras-authority-query-concept-semantic-cpf-cash-top-up",
+            "iras-authority-query-concept-semantic-tax-relief"
+          ],
+          "admissionTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief"
+          ],
+          "eligibleRecordIds": [
+            "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+          ],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-individual-cpf-cash-top-up-relief",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+            "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+          ],
+          "uncoveredConcepts": [
+            "Eligibility for CPF cash top-up tax relief",
+            "Limits on CPF cash top-up tax relief"
+          ]
+        }
+      ],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "EXHAUSTED",
+          "reason": "Local retrieval was insufficient for at least one routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "EXHAUSTED",
+          "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "EXHAUSTED",
+          "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "EXHAUSTED",
+          "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+        },
+        {
+          "stage": "INSUFFICIENT",
+          "status": "EXHAUSTED",
+          "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+        }
+      ]
+    }
+  },
+  "evidenceQuality": {
+    "status": "LIMITED",
+    "eligibleRecords": [
+      {
+        "id": "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "CPF Cash Top-up Relief",
+        "standardOrActCode": "CPF Cash Top-up Relief",
+        "paragraphOrSection": "CPF Cash Top-up Relief",
+        "principleSummary": "IRAS guidance on tax relief for qualifying CPF cash top-ups.",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "domain": "IRAS_TAX",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "OFFICIAL_GUIDANCE",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-10-24",
+        "provenance": "LIVE_EXTERNAL",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-10-24T08:53:03.855Z",
+        "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+        "extractionStatus": "PARTIAL",
+        "documentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+        "contentHash": "d9d725554cd954fc8ad1dcf7fa498a032bdaf2e3caea63a4fdc2d613ee96457c",
+        "lifecycleState": "CANDIDATE",
+        "recordRole": "DISCOVERED_EVIDENCE",
+        "groundingEligible": true,
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-10-24",
+        "sourceLocator": {
+          "heading": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+          "sourceType": "HTML"
+        }
+      }
+    ],
+    "rejectedRecords": [],
+    "coveredTopicIds": [
+      "iras-authority-query-concept-cpf-cash-top-up-relief",
+      "iras-authority-query-concept-semantic-cpf-cash-top-up",
+      "iras-authority-query-concept-semantic-tax-relief"
+    ],
+    "uncoveredTopicIds": [
+      "iras-individual-cpf-cash-top-up-relief",
+      "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+      "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+    ],
+    "uncoveredConceptGroups": {
+      "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility": [
+        [
+          "Eligibility for CPF cash top-up tax relief"
+        ]
+      ],
+      "iras-authority-query-concept-cpf-cash-top-up-relief-limits": [
+        [
+          "Limits on CPF cash top-up tax relief"
+        ]
+      ]
+    },
+    "requestedConcepts": [
+      "CPF cash top-up tax relief",
+      "Eligibility for CPF cash top-up tax relief",
+      "Limits on CPF cash top-up tax relief",
+      "CPF cash top-up",
+      "tax relief"
+    ],
+    "coveredConcepts": [
+      "CPF cash top-up tax relief",
+      "CPF cash top-up",
+      "tax relief"
+    ],
+    "uncoveredConcepts": [
+      "Eligibility for CPF cash top-up tax relief",
+      "Limits on CPF cash top-up tax relief"
+    ],
+    "acceptedSourceGroups": [
+      "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief"
+    ],
+    "missingFacts": [],
+    "targetDateConfidence": "LOW"
+  },
+  "sourceMapFallbackTrace": {
+    "path": "DISCOVERED_SOURCE",
+    "sourceMapIds": [
+      "IRAS_CPF_CASH_TOP_UP_RELIEF_SOURCE_MAP"
+    ],
+    "selectedRecordIds": [
+      "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9",
+      "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+    ],
+    "finalVerifiedUrls": [
+      "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief"
+    ],
+    "candidateOnly": true,
+    "attempts": [
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "sourceMapId": "IRAS_CPF_CASH_TOP_UP_RELIEF_SOURCE_MAP",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "MAPPED_SOURCE"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "pageTitle": "IRAS | Tax reliefs",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+        "pageTitle": "IRAS | SRS contributions and tax relief",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/deductions-for-self-employed-partnership-trade-business-profession-or-vocation",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships",
+        "pageTitle": "IRAS | Self-Employed Individuals including Platform Workers and Partnerships",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "pageTitle": "IRAS | Tax reliefs",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+        "pageTitle": "IRAS | SRS contributions and tax relief",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "discoverySourceUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs",
+        "pageTitle": "IRAS | Tax reliefs",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page title or content does not identify the mapped standard/source"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/employees/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/schemes/individual-income-tax/srs-contributions-and-tax-relief",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/special-tax-schemes/srs-contributions",
+        "pageTitle": "IRAS | SRS contributions and tax relief",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/self-employed-and-partnerships/tax-reliefs-rebates-deductions",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions",
+        "pageTitle": "IRAS | Tax reliefs, rebates and deductions",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "SITEMAP_DISCOVERY",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+      },
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "fetchStatus": "SUCCESS",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+        "titleMatched": true,
+        "contentMatched": true,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "searchQueryVariant": "TOPIC_HINT_1"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+        "searchQueryVariant": "TOPIC_HINT_3"
+      },
+      {
+        "topicId": "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+        "candidateUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "fetchStatus": "TOPIC_MISMATCH",
+        "finalUrl": "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/tax-reliefs-rebates-and-deductions/tax-reliefs/central-provident-fund-(cpf)-cash-top-up-relief",
+        "pageTitle": "IRAS | Central Provident Fund (CPF) Cash Top-up Relief",
+        "titleMatched": false,
+        "contentMatched": false,
+        "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic",
+        "searchQueryVariant": "TOPIC_HINT_3"
+      }
+    ],
+    "discoveryFetchAttempts": [
+      {
+        "topicId": "iras-individual-cpf-cash-top-up-relief",
+        "fetchStatus": "SUCCESS"
+      }
+    ],
+    "coverageDecisions": [
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-cpf-cash-top-up"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-cpf-cash-top-up"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "TOPIC",
+        "targetTopicIds": [
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      },
+      {
+        "scope": "REGISTERED",
+        "targetTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits",
+          "iras-authority-query-concept-semantic-cpf-cash-top-up",
+          "iras-authority-query-concept-semantic-tax-relief"
+        ],
+        "admissionTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief"
+        ],
+        "eligibleRecordIds": [
+          "LIVE_TOPIC_iras-individual-cpf-cash-top-up-relief_d9d725554cd9"
+        ],
+        "rejectedRecords": [],
+        "uncoveredTopicIds": [
+          "iras-individual-cpf-cash-top-up-relief",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-eligibility",
+          "iras-authority-query-concept-cpf-cash-top-up-relief-limits"
+        ],
+        "uncoveredConcepts": [
+          "Eligibility for CPF cash top-up tax relief",
+          "Limits on CPF cash top-up tax relief"
+        ]
+      }
+    ],
+    "stages": [
+      {
+        "stage": "LOCAL_VERIFIED",
+        "status": "EXHAUSTED",
+        "reason": "Local retrieval was insufficient for at least one routed topic."
+      },
+      {
+        "stage": "MAPPED_SOURCE",
+        "status": "EXHAUSTED",
+        "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+      },
+      {
+        "stage": "SITEMAP_DISCOVERY",
+        "status": "EXHAUSTED",
+        "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+      },
+      {
+        "stage": "OFFICIAL_DOMAIN_SEARCH",
+        "status": "EXHAUSTED",
+        "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+      },
+      {
+        "stage": "INSUFFICIENT",
+        "status": "EXHAUSTED",
+        "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+      }
+    ]
+  },
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "UNOBSERVED",
+    "evidenceStatus": "UNOBSERVED",
+    "applicationStatus": "UNOBSERVED",
+    "presentationStatus": "UNOBSERVED",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": "UNOBSERVED"
+}

@@ -1,5 +1,7 @@
 # Authority evidence repair and durable receipt export — review handoff
 
+Latest follow-up: [receipt repair and completed Node live-run handoff](authority_live_review_handoff_2026-10-24.md). It records real R2 authentication/recovery and the ten-case live results. The earlier validation and pre-live limitations below describe the original review stage.
+
 Date: 24/10/2026 (Singapore)
 
 Repository: `dexrrick/accounting`
