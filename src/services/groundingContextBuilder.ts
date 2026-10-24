@@ -1007,6 +1007,20 @@ export function completeScopedIrasConceptPassage(
   const scopedConcepts = concepts.filter(item => item.topicIds.includes(topic.id));
   if (scopedConcepts.length === 0 || scopedConcepts.some(item => !profile.conceptIds.has(item.id))) return undefined;
   const requiredConcepts = scopedConcepts;
+
+  const blocks: Array<{ start: number; end: number }> = [];
+  let searchFrom = 0;
+  for (const block of pageText.split(/\r?\n[\t ]*\r?\n+/)) {
+    const text = block.trim();
+    if (!text) continue;
+    const start = pageText.indexOf(text, searchFrom);
+    if (start < 0) continue;
+    const end = start + text.length;
+    blocks.push({ start, end });
+    searchFrom = end;
+  }
+  if (blocks.length > IRAS_CONCEPT_PASSAGE_MAX_BLOCKS) return undefined;
+
   if (!requiredConcepts.every(concept => supportGeneralIrasRuleConcept({
     sourceText: pageText,
     domainId: topic.domainId,
@@ -1024,13 +1038,35 @@ export function completeScopedIrasConceptPassage(
     if (exactSupportingQuotes.length !== 3 || exactSupportingQuotes.some(quote => !quote)) return undefined;
     const spans = exactSupportingQuotes.map(quote => findExactSourceBlockSpan(pageText, quote!));
     if (spans.some(span => !span)) return undefined;
-    const endMarkerBlocks = pageText.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim())
-      .filter(block => /^to check your top[ -]?up limit\b/i.test(block));
-    if (endMarkerBlocks.length !== 1) return undefined;
-    const tableEndMarker = findExactSourceBlockSpan(pageText, endMarkerBlocks[0]);
     const tableQuoteSpan = spans[2]!;
-    if (!tableEndMarker || tableEndMarker.start < tableQuoteSpan.end) return undefined;
-    spans[2] = { ...tableQuoteSpan, end: tableEndMarker.end };
+    const markerMatches = [...pageText.matchAll(/\bto check your top[ -]?up limit\b/gi)];
+    if (markerMatches.length !== 1) return undefined;
+    const marker = markerMatches[0];
+    const markerStart = marker.index;
+    const markerEnd = markerStart + marker[0].length;
+    const markerBlockIndex = blocks.findIndex(block => block.start <= markerStart && markerEnd <= block.end);
+    if (markerBlockIndex < 0) return undefined;
+    const markerBlock = blocks[markerBlockIndex];
+
+    if (markerBlock.start >= tableQuoteSpan.end &&
+        /^\s*to check your top[ -]?up limit\b/i.test(pageText.slice(markerBlock.start, markerBlock.end))) {
+      // The page extractor may preserve the table end instruction as its own
+      // paragraph. Keep that paragraph in the contiguous preferred passage.
+      spans[2] = { ...tableQuoteSpan, end: markerBlock.end };
+    } else {
+      const tableBlocks = blocks
+        .map((block, index) => ({ block, index }))
+        .filter(({ block }) => block.start >= tableQuoteSpan.start && block.end <= tableQuoteSpan.end);
+      const finalTableBlock = tableBlocks.at(-1);
+      // Some extractors append the instruction to the final table row. Accept
+      // it only when that exact quoted row is the final table block.
+      if (markerStart < tableQuoteSpan.start || markerEnd > tableQuoteSpan.end ||
+          finalTableBlock?.index !== markerBlockIndex) return undefined;
+      // Validate the source as it existed at the boundary. This prevents a
+      // marker in an otherwise complete final block from preceding conditions
+      // or qualifications that occur later in that same block.
+      if (completeIrasCpfCashTopUpLimitQuotes(pageText.slice(0, markerEnd)).length !== 2) return undefined;
+    }
     const start = Math.min(...spans.map(span => span!.start));
     const end = Math.max(...spans.map(span => span!.end));
     if (end - start > maxChars) return undefined;
@@ -1044,19 +1080,6 @@ export function completeScopedIrasConceptPassage(
       concepts: [concept]
     }) === true) ? completePassage : undefined;
   }
-
-  const blocks: Array<{ start: number; end: number }> = [];
-  let searchFrom = 0;
-  for (const block of pageText.split(/\r?\n[\t ]*\r?\n+/)) {
-    const text = block.trim();
-    if (!text) continue;
-    const start = pageText.indexOf(text, searchFrom);
-    if (start < 0) continue;
-    const end = start + text.length;
-    blocks.push({ start, end });
-    searchFrom = end;
-  }
-  if (blocks.length > IRAS_CONCEPT_PASSAGE_MAX_BLOCKS) return undefined;
 
   const conceptSpans: Array<{ start: number; end: number }> = [];
   let windowChecks = 0;

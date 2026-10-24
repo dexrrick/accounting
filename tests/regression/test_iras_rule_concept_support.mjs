@@ -432,7 +432,8 @@ for (const incompleteCurrentMotorCar of [
 }
 
 const knownCpfTopic = getCoverageTopicsByIds(cpfReliefTopicIds)[0];
-const completeCpfReliefSource = [cpfEligibilitySource, cpfLimitSource].join('\n\n');
+const cpfSourceExcerpt = JSON.parse(await readFile(new URL('../fixtures/iras_cpf_cash_top_up_current_excerpt.json', import.meta.url), 'utf8'));
+const completeCpfReliefSource = cpfSourceExcerpt.sourceLines.join('\n\n');
 const longCpfPage = `${'CPF relief navigation and unrelated tax headings.\n'.repeat(700)}\n\n${completeCpfReliefSource}\n\n${'Other tax guidance.\n'.repeat(700)}`;
 const completeCpfPassage = completeScopedIrasConceptPassage(longCpfPage, knownCpfTopic,
   'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]);
@@ -445,6 +446,62 @@ assert.ok(completeCpfPassage.includes('personal income tax relief cap of $80,000
 assert.ok(completeCpfPassage.includes('For recipients aged 55 years and above'));
 assert.equal(completeCpfPassage.includes('CPF relief navigation'), false,
   'The selected passage excludes unrelated page content outside the supported source envelope.');
+const embeddedMarkerCpfSourceBlocks = completeCpfReliefSource.split('\n\n');
+const cpfTableHeaderIndex = embeddedMarkerCpfSourceBlocks.indexOf('Age of recipients | Limit on cash top-up amount for computing tax relief');
+assert.ok(cpfTableHeaderIndex >= 0, 'The current CPF fixture includes the expected limits table header.');
+const embeddedMarkerCpfSource = [
+  ...embeddedMarkerCpfSourceBlocks.slice(0, cpfTableHeaderIndex),
+  embeddedMarkerCpfSourceBlocks.slice(cpfTableHeaderIndex).join(' ')
+].join('\n\n');
+const embeddedCpfTableText = embeddedMarkerCpfSourceBlocks.slice(cpfTableHeaderIndex).join(' ');
+const cpfTableEndMarker = cpfSourceExcerpt.sourceLines.at(-1);
+const embeddedCpfTableWithoutEndMarker = embeddedCpfTableText.replace(` ${cpfTableEndMarker}`, '');
+const embeddedMarkerPassage = completeScopedIrasConceptPassage(embeddedMarkerCpfSource, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]);
+assert.ok(embeddedMarkerPassage && embeddedMarkerCpfSource.includes(embeddedMarkerPassage),
+  'A uniquely embedded end marker in the final table block preserves the complete original source span.');
+const embeddedMarkerBeforeRows = [
+  ...embeddedMarkerCpfSourceBlocks.slice(0, cpfTableHeaderIndex),
+  embeddedCpfTableWithoutEndMarker.replace(
+    'Age of recipients | Limit on cash top-up amount for computing tax relief',
+    `Age of recipients | Limit on cash top-up amount for computing tax relief ${cpfTableEndMarker}`
+  )
+].join('\n\n');
+assert.equal(completeScopedIrasConceptPassage(embeddedMarkerBeforeRows, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'An embedded marker before the table rows does not establish a complete limits passage.');
+const embeddedMarkerBeforeRetirementRow = [
+  ...embeddedMarkerCpfSourceBlocks.slice(0, cpfTableHeaderIndex),
+  embeddedCpfTableWithoutEndMarker.replace(
+    'For recipients aged 55 years and above',
+    `${cpfTableEndMarker} For recipients aged 55 years and above`
+  )
+].join('\n\n');
+assert.equal(completeScopedIrasConceptPassage(embeddedMarkerBeforeRetirementRow, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'An embedded marker before the retirement-account row does not establish a complete limits passage.');
+const embeddedMarkerWithoutRetirementFootnote = embeddedMarkerCpfSource.replace(
+  '^{**}^{**}RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn',
+  ''
+);
+assert.equal(completeScopedIrasConceptPassage(embeddedMarkerWithoutRetirementFootnote, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'An embedded marker cannot exclude the retirement-account savings qualification.');
+const duplicateMarkerCpfSource = `${completeCpfReliefSource}\n\n${cpfSourceExcerpt.sourceLines.at(-1)}`;
+assert.equal(completeScopedIrasConceptPassage(duplicateMarkerCpfSource, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'Duplicate table end markers make the source boundary ambiguous and are rejected.');
+const missingMarkerCpfSource = completeCpfReliefSource.replace(`\n\n${cpfSourceExcerpt.sourceLines.at(-1)}`, '');
+assert.equal(completeScopedIrasConceptPassage(missingMarkerCpfSource, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'A complete-looking table without its verifiable end marker is rejected.');
+const missingCpfTableQualification = completeCpfReliefSource.replace(
+  '^{**}^{**}RA savings refers to the cash set aside in the RA (excluding amounts such as interest earned, any government grants received) plus amounts withdrawn',
+  ''
+);
+assert.equal(completeScopedIrasConceptPassage(missingCpfTableQualification, knownCpfTopic,
+  'Individual CPF cash top-up relief', 'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'A table with a missing account-row footnote remains incomplete.');
 const selectedCpfExcerpt = selectRelevantFetchedText(longCpfPage, ['CPF cash top-up relief', 'tax relief'], 12_000,
   'CPF cash top-up relief eligibility and limits', [completeCpfPassage]);
 for (const concept of [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]) {
@@ -455,6 +512,18 @@ for (const concept of [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfRe
 assert.equal(completeScopedIrasConceptPassage(longCpfPage, knownCpfTopic, 'Individual CPF cash top-up relief',
   'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept], 1_000), undefined,
 'A requested known-profile passage that exceeds the explicit bound remains incomplete.');
+const completeCpfBlocks = completeCpfReliefSource.split(/\r?\n[\t ]*\r?\n+/).filter(block => block.trim()).length;
+const exactly256ParagraphCpfPage = [
+  ...Array.from({ length: 256 - completeCpfBlocks }, (_, index) => `Unrelated CPF navigation item ${index}.`),
+  completeCpfReliefSource
+].join('\n\n');
+assert.ok(completeScopedIrasConceptPassage(exactly256ParagraphCpfPage, knownCpfTopic, 'Individual CPF cash top-up relief',
+  'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]),
+'A complete CPF page at the 256 paragraph boundary remains eligible.');
+const cpfPage257Paragraphs = `Unrelated CPF navigation item.\n\n${exactly256ParagraphCpfPage}`;
+assert.equal(completeScopedIrasConceptPassage(cpfPage257Paragraphs, knownCpfTopic, 'Individual CPF cash top-up relief',
+  'INDIVIDUAL', [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
+'The CPF preferred-passage path rejects pages above the shared 256 paragraph boundary.');
 assert.equal(completeScopedIrasConceptPassage(completeCpfReliefSource.replace('1. be a Singapore Citizen/Permanent Resident; and\n\n', ''),
   knownCpfTopic, 'Individual CPF cash top-up relief', 'INDIVIDUAL',
   [cpfReliefIntroConcept, cpfReliefEligibilityConcept, cpfReliefLimitsConcept]), undefined,
