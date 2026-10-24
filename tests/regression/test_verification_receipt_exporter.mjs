@@ -311,6 +311,44 @@ await writeFile(corruptReceipt, 'tampered');
 await assert.rejects(readVerificationReceiptExport(cli.runDirectory), /hash mismatch/i,
   'The reader refuses corrupted or manually changed receipt artifacts.');
 
+async function assertExpansionBound(kind) {
+  const bombId = `bomb-${kind}`;
+  const bombExporter = await createVerificationReceiptExporter({
+    outputDirectory: path.join(temporaryRoot, `decompression-${kind}`), runId: `decompression-${kind}`,
+    plannedCaseIds: [bombId], stdout: () => true
+  });
+  await bombExporter.exportReceipt({
+    id: bombId, status: 'VERIFIED',
+    ...(kind === 'body' ? { sourceResponses: [{ bodyText: 'original captured payload' }] } : {})
+  });
+  await bombExporter.finish();
+  const manifestPath = path.join(bombExporter.runDirectory, 'manifest.json');
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  if (kind === 'receipt' || kind === 'diagnostic') {
+    const artifactPath = path.join(bombExporter.runDirectory, kind === 'receipt'
+      ? manifest.cases[bombId].receiptArtifact.path : manifest.cases[bombId].diagnosticArtifact.path);
+    const compressed = gzipSync(Buffer.alloc(1025, 0x78));
+    await writeFile(artifactPath, compressed);
+    manifest.cases[bombId][kind === 'receipt' ? 'receiptArtifact' : 'diagnosticArtifact'].sha256 = createHashFor(compressed);
+    await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  } else {
+    const recordPath = path.join(bombExporter.runDirectory, manifest.cases[bombId].receiptArtifact.path);
+    const record = JSON.parse(gunzipSync(await readFile(recordPath)).toString('utf8'));
+    const bodyPath = path.join(bombExporter.runDirectory, record.bodyReferences[0].artifactPath);
+    await writeFile(bodyPath, gzipSync(Buffer.alloc(1025, 0x78)));
+  }
+  const options = kind === 'receipt' ? { maxReceiptBytes: 1024 }
+    : kind === 'diagnostic' ? { maxDiagnosticBytes: 1024 }
+      : { maxCapturedBodyBytes: 1024 };
+  await assert.rejects(readVerificationReceiptExport(bombExporter.runDirectory, options), /exceeds the configured decompressed size limit/i,
+    `A small ${kind} gzip expansion is rejected before parsing or reconstruction.`);
+}
+await assertExpansionBound('receipt');
+await assertExpansionBound('diagnostic');
+await assertExpansionBound('body');
+await assert.rejects(readVerificationReceiptExport(cli.runDirectory, { maxReceiptBytes: 1023 }), /between 1024/i,
+  'Recovery limits reject unsafe or invalid values.');
+
 await rm(temporaryRoot, { recursive: true, force: true });
 console.log('Verification receipt exporter durability, integrity, status separation, stdout bounds, interruption and CLI regressions passed.');
 

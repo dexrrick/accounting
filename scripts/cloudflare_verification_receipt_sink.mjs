@@ -91,8 +91,9 @@ export function createCloudflareVerificationReceiptSink({
   const verifiedArtifacts = new Map();
   let preflight = undefined;
   let preflightAttempted = false;
-  let manifestPublished = false;
+  let manifestSnapshot;
   let publishingManifest = false;
+  let terminalWriteState;
 
   function objectUrl(key) {
     const safeKey = safeRelativePath(key);
@@ -152,7 +153,7 @@ export function createCloudflareVerificationReceiptSink({
     return response;
   }
 
-  async function getObject(key) {
+  async function getObjectSnapshot(key) {
     const response = await send('GET', key);
     if (response.status === 404) {
       await response.body?.cancel().catch(() => {});
@@ -162,7 +163,11 @@ export function createCloudflareVerificationReceiptSink({
       await response.body?.cancel().catch(() => {});
       throw new Error(`R2_GET_REJECTED_${response.status}`);
     }
-    return readBoundedBody(response, maxArtifactBytes);
+    return { bytes: await readBoundedBody(response, maxArtifactBytes), etag: response.headers?.get('etag') || undefined };
+  }
+
+  async function getObject(key) {
+    return (await getObjectSnapshot(key))?.bytes;
   }
 
   async function putObject(key, bytes, extraHeaders = {}) {
@@ -176,13 +181,40 @@ export function createCloudflareVerificationReceiptSink({
     const expectedHash = sha256(bytes);
     const existing = await getObject(key);
     if (existing) {
-      if (existing.length !== bytes.length || sha256(existing) !== expectedHash) throw new Error('R2_IMMUTABLE_OBJECT_CONFLICT');
+      if (existing.length !== bytes.length || sha256(existing) !== expectedHash) {
+        terminalWriteState = terminalWriteState || 'REMOTE_UNCERTAIN';
+        const conflict = new Error('R2_IMMUTABLE_OBJECT_CONFLICT');
+        conflict.reconciliation = terminalWriteState;
+        throw conflict;
+      }
     } else {
-      await putObject(key, bytes);
+      try {
+        await putObject(key, bytes, { 'if-none-match': '*' });
+      } catch (error) {
+        let observed;
+        try {
+          observed = await getObject(key);
+        } catch {
+          observed = undefined;
+        }
+        if (observed && observed.length === bytes.length && sha256(observed) === expectedHash) {
+          // A competing create-once PUT may have committed identical bytes.
+        } else {
+          terminalWriteState = terminalWriteState || 'REMOTE_UNCERTAIN';
+          const uncertain = new Error('R2_IMMUTABLE_OBJECT_REMOTE_UNCERTAIN');
+          uncertain.reconciliation = terminalWriteState;
+          uncertain.cause = error;
+          throw uncertain;
+        }
+      }
     }
     const readback = await getObject(key);
-    if (!readback) throw new Error('R2_READBACK_MISSING');
-    if (readback.length !== bytes.length || sha256(readback) !== expectedHash) throw new Error('R2_READBACK_MISMATCH');
+    if (!readback || readback.length !== bytes.length || sha256(readback) !== expectedHash) {
+      terminalWriteState = terminalWriteState || 'REMOTE_UNCERTAIN';
+      const uncertain = new Error(readback ? 'R2_READBACK_MISMATCH_REMOTE_UNCERTAIN' : 'R2_READBACK_MISSING_REMOTE_UNCERTAIN');
+      uncertain.reconciliation = terminalWriteState;
+      throw uncertain;
+    }
     const result = { key, sha256: expectedHash, byteLength: bytes.length, verified: true };
     verifiedArtifacts.set(key, result);
     return result;
@@ -227,6 +259,11 @@ export function createCloudflareVerificationReceiptSink({
     },
     async putArtifact(relativePath, bytes, { immutable = true } = {}) {
       if (!preflight) throw new Error('R2_PREFLIGHT_REQUIRED');
+      if (terminalWriteState) {
+        const fenced = new Error(`R2_RUN_WRITE_FENCED_${terminalWriteState}`);
+        fenced.reconciliation = terminalWriteState;
+        throw fenced;
+      }
       if (immutable !== true) throw new Error('R2_CASE_ARTIFACTS_MUST_BE_IMMUTABLE');
       const safePath = safeRelativePath(relativePath);
       if (safePath.startsWith('preflight/') || safePath === 'manifest.json' || safePath === 'writer-lock.json' || safePath.startsWith('manifest-history/')) {
@@ -236,6 +273,11 @@ export function createCloudflareVerificationReceiptSink({
     },
     async publishManifest(bytes, { requiredArtifacts = [] } = {}) {
       if (!preflight) throw new Error('R2_PREFLIGHT_REQUIRED');
+      if (terminalWriteState) {
+        const fenced = new Error(`R2_RUN_WRITE_FENCED_${terminalWriteState}`);
+        fenced.reconciliation = terminalWriteState;
+        throw fenced;
+      }
       if (publishingManifest) throw new Error('R2_CONCURRENT_MANIFEST_PUBLICATION_REJECTED');
       publishingManifest = true;
       try {
@@ -247,37 +289,87 @@ export function createCloudflareVerificationReceiptSink({
         }
       }
 
-      const previous = await getObject(manifestKey);
+      const previous = await getObjectSnapshot(manifestKey);
       let previousManifestKey;
+      let condition;
       if (previous) {
-        if (!manifestPublished) throw new Error('R2_RUN_PREFIX_ALREADY_PUBLISHED');
-        previousManifestKey = `${prefix}/manifest-history/${sha256(previous)}.json`;
-        await putImmutable(previousManifestKey, previous);
-      } else if (manifestPublished) {
-        throw new Error('R2_CURRENT_MANIFEST_DISAPPEARED');
+        const previousHash = sha256(previous.bytes);
+        if (!manifestSnapshot) throw new Error('R2_RUN_PREFIX_ALREADY_PUBLISHED');
+        if (previousHash !== manifestSnapshot.sha256 || previous.bytes.length !== manifestSnapshot.byteLength) {
+          terminalWriteState = 'REMOTE_UNCERTAIN';
+          const conflict = new Error('R2_MANIFEST_REMOTE_UNCERTAIN');
+          conflict.reconciliation = terminalWriteState;
+          conflict.observedHash = previousHash;
+          throw conflict;
+        }
+        if (!previous.etag) {
+          terminalWriteState = 'REMOTE_UNCERTAIN';
+          const missingEtag = new Error('R2_MANIFEST_ETAG_REQUIRED');
+          missingEtag.reconciliation = terminalWriteState;
+          throw missingEtag;
+        }
+        condition = { 'if-match': previous.etag };
+        previousManifestKey = `${prefix}/manifest-history/${previousHash}.json`;
+        await putImmutable(previousManifestKey, previous.bytes);
+      } else if (manifestSnapshot) {
+        terminalWriteState = 'REMOTE_UNCERTAIN';
+        const missing = new Error('R2_MANIFEST_REMOTE_UNCERTAIN');
+        missing.reconciliation = terminalWriteState;
+        throw missing;
+      } else {
+        condition = { 'if-none-match': '*' };
       }
       const expectedHash = sha256(bytes);
+      const expectedLength = bytes.length;
+      let publicationError;
       try {
-        await putObject(manifestKey, bytes);
-        const readback = await getObject(manifestKey);
-        if (!readback) throw new Error('R2_MANIFEST_READBACK_MISSING');
-        if (readback.length !== bytes.length || sha256(readback) !== expectedHash) throw new Error('R2_MANIFEST_READBACK_MISMATCH');
+        await putObject(manifestKey, bytes, condition);
       } catch (error) {
-        if (previous) {
-          try {
-            await putObject(manifestKey, previous);
-            const restored = await getObject(manifestKey);
-            if (!restored || restored.length !== previous.length || sha256(restored) !== sha256(previous)) {
-              throw new Error('R2_MANIFEST_ROLLBACK_UNVERIFIED');
-            }
-          } catch {
-            throw new Error('R2_MANIFEST_ROLLBACK_UNVERIFIED');
-          }
-        }
-        throw error;
+        publicationError = error;
       }
-      manifestPublished = true;
-      return { key: manifestKey, sha256: expectedHash, byteLength: bytes.length, verified: true, previousManifestKey };
+      let observed;
+      let reconciliationReadError;
+      try {
+        observed = await getObjectSnapshot(manifestKey);
+      } catch (error) {
+        reconciliationReadError = error;
+      }
+      const matchesProposal = snapshot => snapshot?.bytes.length === expectedLength && sha256(snapshot.bytes) === expectedHash;
+      if (!matchesProposal(observed)) {
+        // A second read is read-only reconciliation after a failed/mismatched
+        // verification read. It does not retry the possibly in-flight PUT.
+        try {
+          observed = await getObjectSnapshot(manifestKey);
+        } catch (error) {
+          reconciliationReadError = error;
+        }
+      }
+      const observedHash = observed ? sha256(observed.bytes) : undefined;
+      if (!matchesProposal(observed)) {
+        const previousHash = previous ? sha256(previous.bytes) : undefined;
+        terminalWriteState = observed && previous && observedHash === previousHash && observed.bytes.length === previous.bytes.length
+          ? 'REMOTE_PREVIOUS'
+          : 'REMOTE_UNCERTAIN';
+        const uncertain = new Error(`R2_MANIFEST_${terminalWriteState}`);
+        uncertain.reconciliation = terminalWriteState;
+        uncertain.proposedHash = expectedHash;
+        uncertain.observedHash = observedHash;
+        uncertain.cause = publicationError || reconciliationReadError;
+        throw uncertain;
+      }
+      manifestSnapshot = { sha256: expectedHash, byteLength: expectedLength, etag: observed.etag };
+      if (!observed.etag) {
+        terminalWriteState = 'REMOTE_UNCERTAIN';
+        const missingEtag = new Error('R2_MANIFEST_ETAG_REQUIRED');
+        missingEtag.reconciliation = 'REMOTE_VERIFIED';
+        missingEtag.terminal = true;
+        missingEtag.proposedHash = expectedHash;
+        throw missingEtag;
+      }
+      return {
+        key: manifestKey, sha256: expectedHash, byteLength: expectedLength, verified: true, previousManifestKey,
+        reconciliation: 'REMOTE_VERIFIED'
+      };
       } finally {
         publishingManifest = false;
       }

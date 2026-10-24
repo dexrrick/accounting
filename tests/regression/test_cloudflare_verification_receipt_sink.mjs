@@ -18,7 +18,7 @@ function hash(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-function makeR2({ beforeRequest } = {}) {
+function makeR2({ beforeRequest, omitEtag = false } = {}) {
   const objects = new Map();
   const requests = [];
   const fetchImpl = async (url, init) => {
@@ -40,10 +40,14 @@ function makeR2({ beforeRequest } = {}) {
     if (override) return override;
     if (init.method === 'GET') {
       const bytes = objects.get(key);
-      return bytes ? new Response(Buffer.from(bytes), { status: 200 }) : new Response(null, { status: 404 });
+      return bytes ? new Response(Buffer.from(bytes), {
+        status: 200,
+        headers: (typeof omitEtag === 'function' ? omitEtag(key) : omitEtag) ? {} : { etag: `"${hash(bytes)}"` }
+      }) : new Response(null, { status: 404 });
     }
     assert.equal(init.method, 'PUT');
     if (init.headers['if-none-match'] === '*' && objects.has(key)) return new Response(null, { status: 412 });
+    if (init.headers['if-match'] && init.headers['if-match'] !== `"${hash(objects.get(key) || Buffer.alloc(0))}"`) return new Response(null, { status: 412 });
     if (!init.headers['if-none-match']) assert.equal(init.headers['content-type'], 'application/octet-stream');
     objects.set(key, Buffer.from(init.body));
     return new Response(null, { status: 200 });
@@ -87,6 +91,7 @@ assert.equal(fake.objects.get(sink.manifestKey) && JSON.parse(fake.objects.get(s
 assert.equal(fake.requests.filter(request => request.method === 'PUT').length, 3,
   'Preflight atomically claims the writer lock, writes one probe and publishes the initial manifest before cases.');
 assert.ok(fake.requests.some(request => request.key.includes('/preflight/')));
+assert.ok(fake.requests.some(request => request.method === 'PUT' && request.key === sink.manifestKey && request.init.headers['if-none-match'] === '*'));
 assert.ok(fake.requests.some(request => request.key.endsWith('/writer-lock.json') && request.init.headers['if-none-match'] === '*'),
   'Preflight atomically claims a permanent single-writer lock before any case dispatch.');
 assert.equal(fake.requests.some(request => request.url.hostname !== `${ACCOUNT_ID}.r2.cloudflarestorage.com`), false);
@@ -144,18 +149,21 @@ const bodyKey = `${sink.prefix}/bodies/${hash(capturedBytes)}.gz`;
 assert.equal(fake.requests.filter(request => request.method === 'PUT' && request.key === bodyKey).length, 1,
   'A shared captured body is uploaded and verified once across cases.');
 const beforeFailureManifest = Buffer.from(fake.objects.get(sink.manifestKey));
-await assert.rejects(exporter.exportReceipt({ id: 'case-fail', status: 'VERIFIED' }), /R2_PUT_REJECTED_503/);
+await assert.rejects(exporter.exportReceipt({ id: 'case-fail', status: 'VERIFIED' }), /R2_IMMUTABLE_OBJECT_REMOTE_UNCERTAIN/);
 assert.deepEqual(fake.objects.get(sink.manifestKey), beforeFailureManifest,
   'A failed case upload does not publish or replace the previous manifest.');
 assert.equal(JSON.parse(beforeFailureManifest.toString()).cases['case-fail'].exportStatus, 'UNOBSERVED');
 const recordedFailure = await exporter.recordExportFailure('case-fail', 'R2_PUT_REJECTED_503');
-assert.deepEqual(recordedFailure, { exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_AND_LOCAL_VERIFIED' });
-assert.equal(JSON.parse(fake.objects.get(sink.manifestKey).toString()).cases['case-fail'].exportStatus, 'EXPORT_FAILED',
-  'An attempted case with a failed export can be recorded without touching earlier verified cases.');
-const finalManifest = await exporter.finish();
-assert.equal(finalManifest.status, 'INCOMPLETE');
+assert.deepEqual(recordedFailure, { exportStatus: 'UNOBSERVED', persistence: 'REMOTE_UNCERTAIN' });
+assert.deepEqual(fake.objects.get(sink.manifestKey), beforeFailureManifest,
+  'An ambiguous artifact write leaves the previous manifest authoritative and fences the run.');
+await assert.rejects(exporter.finish(), /R2_RUN_TERMINATED_REMOTE_UNCERTAIN/);
+const finalManifest = JSON.parse(await readFile(path.join(exporter.runDirectory, 'manifest.json'), 'utf8'));
+assert.equal(finalManifest.status, 'IN_PROGRESS');
 assert.equal(finalManifest.cases['case-metadata'].payloadAvailability, 'METADATA_ONLY');
-assert.equal(finalManifest.cases['case-fail'].exportStatus, 'EXPORT_FAILED');
+assert.equal(finalManifest.cases['case-fail'].exportStatus, 'UNOBSERVED');
+assert.ok(fake.requests.some(request => request.method === 'PUT' && request.key === sink.manifestKey && request.init.headers['if-match']),
+  'Every manifest replacement uses the ETag from the previously verified version.');
 
 const downloadedRoot = path.join(temporaryRoot, 'downloaded');
 await rm(localRoot, { recursive: true });
@@ -167,7 +175,7 @@ assert.equal(fake.requests.filter(request => request.method === 'PUT').length, w
 assert.deepEqual(downloaded.receipts['case-one'].receipt, firstReceipt);
 assert.deepEqual(downloaded.receipts['case-two'].receipt, secondReceipt);
 assert.equal(downloaded.receipts['case-metadata'].diagnostic.payloadAvailability, 'METADATA_ONLY');
-assert.equal(downloaded.manifest.cases['case-fail'].exportStatus, 'EXPORT_FAILED');
+assert.equal(downloaded.manifest.cases['case-fail'].exportStatus, 'UNOBSERVED');
 assert.equal((await readFile(path.join(downloaded.runDirectory, 'bodies', `${hash(capturedBytes)}.gz`))).length,
   fake.objects.get(bodyKey).length);
 assert.ok(stdout.every(line => Buffer.byteLength(line) <= 2048));
@@ -280,11 +288,16 @@ const failureStatusExporter = await createVerificationReceiptExporter({
   outputDirectory: path.join(temporaryRoot, 'failure-status-not-saved'), runId: 'failed-status-not-saved',
   plannedCaseIds: ['failed-case'], stdout: () => true, durableSink: failureStatusSink
 });
-await assert.rejects(failureStatusExporter.exportReceipt({ id: 'failed-case', status: 'VERIFIED' }), /R2_PUT_REJECTED_503/);
-await assert.rejects(failureStatusExporter.recordExportFailure('failed-case', 'R2_PUT_REJECTED_503'), /R2_MANIFEST_ROLLBACK_UNVERIFIED/);
+await assert.rejects(failureStatusExporter.exportReceipt({ id: 'failed-case', status: 'VERIFIED' }), /R2_IMMUTABLE_OBJECT_REMOTE_UNCERTAIN/);
+assert.deepEqual(await failureStatusExporter.recordExportFailure('failed-case', 'R2_PUT_REJECTED_503'),
+  { exportStatus: 'UNOBSERVED', persistence: 'REMOTE_UNCERTAIN' });
 const uncertainFailureStatus = JSON.parse((await readFile(path.join(failureStatusExporter.runDirectory, 'manifest.json'))).toString('utf8'));
 assert.equal(uncertainFailureStatus.cases['failed-case'].exportStatus, 'UNOBSERVED',
   'When both artifact and failure-status writes fail, the manifest retains uncertainty instead of inventing a saved failure.');
+const uncertainManifestWrites = failureStatusUnavailable.requests.filter(request => request.method === 'PUT' && request.key.endsWith('/manifest.json')).length;
+await assert.rejects(failureStatusExporter.finish(), /R2_RUN_TERMINATED_REMOTE_UNCERTAIN/);
+assert.equal(failureStatusUnavailable.requests.filter(request => request.method === 'PUT' && request.key.endsWith('/manifest.json')).length,
+  uncertainManifestWrites, 'An uncertain artifact write fences further manifest changes.');
 
 const racedPrefix = makeR2();
 const racedSink = createSink(racedPrefix, { runId: 'raced-prefix-run' });
@@ -310,7 +323,7 @@ const mismatch = makeR2({
 });
 const mismatchSink = createSink(mismatch, { runId: 'mismatch-run' });
 await mismatchSink.preflight({ runId: 'mismatch-run', plannedCaseIds: ['a'] });
-await assert.rejects(mismatchSink.putArtifact('receipts/a.json.gz', Buffer.from('receipt'), { immutable: true }), /R2_READBACK_MISMATCH/);
+await assert.rejects(mismatchSink.putArtifact('receipts/a.json.gz', Buffer.from('receipt'), { immutable: true }), /R2_READBACK_MISMATCH_REMOTE_UNCERTAIN/);
 
 const missingReadback = makeR2({
   beforeRequest: request => request.method === 'GET' && request.key.endsWith('/receipts/a.json.gz')
@@ -318,7 +331,7 @@ const missingReadback = makeR2({
 });
 const missingSink = createSink(missingReadback, { runId: 'missing-run' });
 await missingSink.preflight({ runId: 'missing-run', plannedCaseIds: ['a'] });
-await assert.rejects(missingSink.putArtifact('receipts/a.json.gz', Buffer.from('receipt'), { immutable: true }), /R2_READBACK_MISSING/);
+await assert.rejects(missingSink.putArtifact('receipts/a.json.gz', Buffer.from('receipt'), { immutable: true }), /R2_READBACK_MISSING_REMOTE_UNCERTAIN/);
 
 const timeoutFake = makeR2({ beforeRequest: request => new Promise((_resolve, reject) => {
   request.init.signal.addEventListener('abort', () => reject(new Error('synthetic timeout')), { once: true });
@@ -329,13 +342,13 @@ await assert.rejects(timeoutSink.preflight({ runId: 'timeout-run', plannedCaseId
 clearTimeout(timeoutKeepAlive);
 
 let failManifestReadbackOnce = true;
-let mismatchNextManifestReadback = false;
+let mismatchedManifestReadbacks = 0;
 const rollbackFake = makeR2({ beforeRequest: request => {
   if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key) && failManifestReadbackOnce) {
     failManifestReadbackOnce = false;
-    mismatchNextManifestReadback = true;
-  } else if (request.method === 'GET' && request.key.endsWith('/manifest.json') && mismatchNextManifestReadback) {
-    mismatchNextManifestReadback = false;
+    mismatchedManifestReadbacks = 2;
+  } else if (request.method === 'GET' && request.key.endsWith('/manifest.json') && mismatchedManifestReadbacks > 0) {
+    mismatchedManifestReadbacks -= 1;
     return new Response(Buffer.from('unverified manifest readback'), { status: 200 });
   }
   return undefined;
@@ -349,12 +362,17 @@ const rollbackExporter = await createVerificationReceiptExporter({
   durableSink: rollbackSink
 });
 const priorRemoteManifest = Buffer.from(rollbackFake.objects.get(rollbackSink.manifestKey));
-await assert.rejects(rollbackExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_MANIFEST_READBACK_MISMATCH/);
-assert.deepEqual(rollbackFake.objects.get(rollbackSink.manifestKey), priorRemoteManifest,
-  'An unverifiable manifest replacement restores and verifies the prior manifest.');
-assert.equal(JSON.parse(priorRemoteManifest.toString()).cases['case-one'].exportStatus, 'UNOBSERVED');
+await assert.rejects(rollbackExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_MANIFEST_REMOTE_UNCERTAIN/);
+assert.notDeepEqual(rollbackFake.objects.get(rollbackSink.manifestKey), priorRemoteManifest,
+  'A mismatched readback is reported as uncertain without overwriting a possibly committed proposal.');
 const localRollbackManifest = JSON.parse(await readFile(path.join(rollbackExporter.runDirectory, 'manifest.json'), 'utf8'));
 assert.equal(localRollbackManifest.cases['case-one'].exportStatus, 'UNOBSERVED', 'A failed remote publish cannot promote the local case.');
+assert.deepEqual(await rollbackExporter.recordExportFailure('case-one'),
+  { exportStatus: 'UNOBSERVED', persistence: 'REMOTE_UNCERTAIN' });
+const uncertainPublishCount = rollbackFake.requests.filter(request => request.method === 'PUT' && request.key === rollbackSink.manifestKey).length;
+await assert.rejects(rollbackExporter.finish(), /R2_RUN_TERMINATED_REMOTE_UNCERTAIN/);
+assert.equal(rollbackFake.requests.filter(request => request.method === 'PUT' && request.key === rollbackSink.manifestKey).length,
+  uncertainPublishCount, 'An uncertain manifest replacement cannot trigger rollback or finalization writes.');
 
 let failAcceptedManifestWriteOnce = true;
 const transportRollbackFake = makeR2({ beforeRequest: request => {
@@ -374,14 +392,171 @@ const transportRollbackExporter = await createVerificationReceiptExporter({
   durableSink: transportRollbackSink
 });
 const priorTransportManifest = Buffer.from(transportRollbackFake.objects.get(transportRollbackSink.manifestKey));
-await assert.rejects(transportRollbackExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_PUT_REQUEST_FAILED/);
-assert.deepEqual(transportRollbackFake.objects.get(transportRollbackSink.manifestKey), priorTransportManifest,
-  'A transport error after an accepted manifest PUT restores the earlier current manifest.');
+await transportRollbackExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' });
+assert.notDeepEqual(transportRollbackFake.objects.get(transportRollbackSink.manifestKey), priorTransportManifest,
+  'A lost acknowledgement is reconciled against the proposed manifest with a read-only exact-hash read.');
 const priorHistoryKey = `${transportRollbackSink.prefix}/manifest-history/${hash(priorTransportManifest)}.json`;
 assert.deepEqual(transportRollbackFake.objects.get(priorHistoryKey), priorTransportManifest,
   'The previous manifest remains recoverable in immutable history.');
 const localTransportManifest = JSON.parse(await readFile(path.join(transportRollbackExporter.runDirectory, 'manifest.json'), 'utf8'));
-assert.equal(localTransportManifest.cases['case-one'].exportStatus, 'UNOBSERVED');
+assert.equal(localTransportManifest.cases['case-one'].exportStatus, 'EXPORTED');
+
+let failFirstManifestReadback = false;
+const secondReadFake = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key)) {
+    failFirstManifestReadback = true;
+  } else if (request.method === 'GET' && request.key.endsWith('/manifest.json') && failFirstManifestReadback) {
+    failFirstManifestReadback = false;
+    return new Response(null, { status: 503 });
+  }
+  return undefined;
+} });
+const secondReadSink = createSink(secondReadFake, { runId: 'manifest-readonly-reconcile-run' });
+const secondReadExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'manifest-readonly-reconcile-local'), runId: 'manifest-readonly-reconcile-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: secondReadSink
+});
+await secondReadExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' });
+assert.equal(JSON.parse(secondReadFake.objects.get(secondReadSink.manifestKey).toString()).cases['case-one'].exportStatus, 'EXPORTED',
+  'A bounded read-only reconciliation can verify a manifest after the first acknowledgement read fails.');
+assert.equal(secondReadFake.requests.filter(request => request.method === 'PUT' && request.key === secondReadSink.manifestKey).length, 2,
+  'A failed manifest read triggers no additional PUT attempt.');
+
+let delayedManifestCommit = true;
+const delayedCommitFake = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key) && delayedManifestCommit) {
+    delayedManifestCommit = false;
+    const delayedBytes = Buffer.from(request.init.body);
+    setTimeout(() => request.objects.set(request.key, delayedBytes), 25);
+    return new Response(null, { status: 503 });
+  }
+  return undefined;
+} });
+const delayedCommitSink = createSink(delayedCommitFake, { runId: 'manifest-delayed-commit-run' });
+const delayedCommitExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'manifest-delayed-commit-local'), runId: 'manifest-delayed-commit-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: delayedCommitSink
+});
+const priorDelayedManifest = Buffer.from(delayedCommitFake.objects.get(delayedCommitSink.manifestKey));
+await assert.rejects(delayedCommitExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_MANIFEST_REMOTE_PREVIOUS/);
+const delayedManifestWrites = delayedCommitFake.requests.filter(request => request.method === 'PUT' && request.key === delayedCommitSink.manifestKey).length;
+assert.deepEqual(await delayedCommitExporter.recordExportFailure('case-one'),
+  { exportStatus: 'UNOBSERVED', persistence: 'REMOTE_PREVIOUS' });
+await assert.rejects(delayedCommitExporter.finish(), /R2_RUN_TERMINATED_REMOTE_PREVIOUS/);
+assert.equal(delayedCommitFake.requests.filter(request => request.method === 'PUT' && request.key === delayedCommitSink.manifestKey).length,
+  delayedManifestWrites, 'No rollback or finalization PUT races a delayed manifest commit.');
+await new Promise(resolve => setTimeout(resolve, 35));
+assert.notDeepEqual(delayedCommitFake.objects.get(delayedCommitSink.manifestKey), priorDelayedManifest,
+  'The earlier manifest update can land after reconciliation reports REMOTE_PREVIOUS.');
+
+const immutableRaceFake = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/receipts/collision.json.gz') && !request.objects.has(request.key)) {
+    request.objects.set(request.key, Buffer.from('competing bytes'));
+  }
+  return undefined;
+} });
+const immutableRaceSink = createSink(immutableRaceFake, { runId: 'immutable-race-run' });
+await immutableRaceSink.preflight({ runId: 'immutable-race-run', plannedCaseIds: ['collision'] });
+await assert.rejects(immutableRaceSink.putArtifact('receipts/collision.json.gz', Buffer.from('ours')),
+  /R2_IMMUTABLE_OBJECT_REMOTE_UNCERTAIN/);
+assert.equal(immutableRaceFake.objects.get(`${immutableRaceSink.prefix}/receipts/collision.json.gz`).toString(), 'competing bytes',
+  'Conditional immutable create does not overwrite a racing writer.');
+assert.ok(immutableRaceFake.requests.some(request => request.key.endsWith('/receipts/collision.json.gz') && request.init.headers['if-none-match'] === '*'));
+
+const manifestRaceFake = makeR2();
+const manifestRaceSink = createSink(manifestRaceFake, { runId: 'manifest-race-run' });
+const manifestRaceExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'manifest-race-local'), runId: 'manifest-race-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: manifestRaceSink
+});
+const competingManifest = Buffer.from('{"runId":"competing"}');
+manifestRaceFake.objects.set(manifestRaceSink.manifestKey, competingManifest);
+await assert.rejects(manifestRaceExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_MANIFEST_REMOTE_UNCERTAIN/);
+assert.deepEqual(manifestRaceFake.objects.get(manifestRaceSink.manifestKey), competingManifest,
+  'A manifest changed by another actor is neither replaced nor rolled back.');
+
+const initialCasCompetitor = Buffer.from('{"runId":"raced-initial-create"}');
+const initialCasRaceFake = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && !request.objects.has(request.key)) {
+    request.objects.set(request.key, initialCasCompetitor);
+  }
+  return undefined;
+} });
+const initialCasRaceSink = createSink(initialCasRaceFake, { runId: 'initial-cas-race-run' });
+await assert.rejects(createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'initial-cas-race-local'), runId: 'initial-cas-race-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: initialCasRaceSink
+}), /R2_MANIFEST_REMOTE_UNCERTAIN/);
+assert.deepEqual(initialCasRaceFake.objects.get(initialCasRaceSink.manifestKey), initialCasCompetitor,
+  'If-None-Match rejects a competing manifest created after the negative read.');
+
+const replacementCasCompetitor = Buffer.from('{"runId":"raced-replacement"}');
+const replacementCasRaceFake = makeR2({ beforeRequest: request => {
+  if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.init.headers['if-match']) {
+    request.objects.set(request.key, replacementCasCompetitor);
+  }
+  return undefined;
+} });
+const replacementCasRaceSink = createSink(replacementCasRaceFake, { runId: 'replacement-cas-race-run' });
+const replacementCasRaceExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'replacement-cas-race-local'), runId: 'replacement-cas-race-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: replacementCasRaceSink
+});
+await assert.rejects(replacementCasRaceExporter.exportReceipt({ id: 'case-one', status: 'VERIFIED' }), /R2_MANIFEST_REMOTE_UNCERTAIN/);
+assert.deepEqual(replacementCasRaceFake.objects.get(replacementCasRaceSink.manifestKey), replacementCasCompetitor,
+  'If-Match rejects a competing manifest written after the previous-version GET.');
+
+const missingEtagFake = makeR2({ omitEtag: true });
+const missingEtagSink = createSink(missingEtagFake, { runId: 'missing-manifest-etag-run' });
+await assert.rejects(createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'missing-manifest-etag-local'), runId: 'missing-manifest-etag-run',
+  plannedCaseIds: ['case-one'], stdout: () => true, durableSink: missingEtagSink
+}), /R2_MANIFEST_ETAG_REQUIRED/);
+assert.ok(missingEtagFake.objects.has(missingEtagSink.manifestKey), 'The observed initial manifest is retained after continuation fails closed without an ETag.');
+
+let hideManifestEtag = false;
+const replacementMissingEtagFake = makeR2({
+  omitEtag: key => hideManifestEtag && key.endsWith('/manifest.json'),
+  beforeRequest: request => {
+    if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key)) hideManifestEtag = true;
+    return undefined;
+  }
+});
+const replacementMissingEtagSink = createSink(replacementMissingEtagFake, { runId: 'replacement-missing-etag-run' });
+const replacementMissingEtagExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'replacement-missing-etag-local'), runId: 'replacement-missing-etag-run',
+  plannedCaseIds: ['last-case'], stdout: () => true, durableSink: replacementMissingEtagSink
+});
+await assert.rejects(replacementMissingEtagExporter.exportReceipt({ id: 'last-case', status: 'VERIFIED' }), /R2_MANIFEST_ETAG_REQUIRED/);
+const preservedLastCase = JSON.parse(await readFile(path.join(replacementMissingEtagExporter.runDirectory, 'manifest.json'), 'utf8'));
+assert.equal(preservedLastCase.cases['last-case'].exportStatus, 'EXPORTED',
+  'An exact-hash but non-CAS-verifiable final case remains recorded as remotely accepted.');
+const lastCaseManifestWrites = replacementMissingEtagFake.requests.filter(request => request.method === 'PUT' && request.key === replacementMissingEtagSink.manifestKey).length;
+await assert.rejects(replacementMissingEtagExporter.finish(), /R2_RUN_TERMINATED_REMOTE_VERIFIED/);
+assert.equal(replacementMissingEtagFake.requests.filter(request => request.method === 'PUT' && request.key === replacementMissingEtagSink.manifestKey).length,
+  lastCaseManifestWrites, 'The final case cannot be presented as a successfully finalized run.');
+
+let hideFailureStatusEtag = false;
+const failureStatusMissingEtagFake = makeR2({
+  omitEtag: key => hideFailureStatusEtag && key.endsWith('/manifest.json'),
+  beforeRequest: request => {
+    if (request.method === 'PUT' && request.key.endsWith('/manifest.json') && request.objects.has(request.key)) hideFailureStatusEtag = true;
+    return undefined;
+  }
+});
+const failureStatusMissingEtagSink = createSink(failureStatusMissingEtagFake, { runId: 'failure-status-missing-etag-run' });
+const failureStatusMissingEtagExporter = await createVerificationReceiptExporter({
+  outputDirectory: path.join(temporaryRoot, 'failure-status-missing-etag-local'), runId: 'failure-status-missing-etag-run',
+  plannedCaseIds: ['failed-case'], stdout: () => true, durableSink: failureStatusMissingEtagSink
+});
+assert.deepEqual(await failureStatusMissingEtagExporter.recordExportFailure('failed-case', 'TEST_CASE_FAILURE'),
+  { exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_VERIFIED' },
+  'A remotely verified failure status reports its terminal condition, not a local-mirror failure.');
+assert.equal(JSON.parse(failureStatusMissingEtagFake.objects.get(failureStatusMissingEtagSink.manifestKey).toString())
+  .cases['failed-case'].exportStatus, 'EXPORT_FAILED');
+assert.equal(JSON.parse(await readFile(path.join(failureStatusMissingEtagExporter.runDirectory, 'manifest.json'), 'utf8'))
+  .cases['failed-case'].exportStatus, 'EXPORT_FAILED', 'The exact remotely verified failure status is mirrored locally.');
+await assert.rejects(failureStatusMissingEtagExporter.finish(), /R2_RUN_TERMINATED_REMOTE_VERIFIED/);
 
 assert.throws(() => createSink(makeR2(), { accountId: 'wrong-account' }), /account ID/);
 assert.throws(() => createSink(makeR2(), { bucketName: '../wrong-bucket' }), /bucket name/);

@@ -38,7 +38,7 @@ assert.ok(generated.includes('globalThis.fetch = nativeFetch;'));
   const exportEndMarker = '      break;\n    }';
   const exportEnd = generated.indexOf(exportEndMarker, exportStart) + exportEndMarker.length;
   const finishStart = generated.indexOf('  try {\n    await exporter.finish();', exportEnd);
-  const finishErrorMarker = '    terminalExportFailure ||= { caseId:';
+  const finishErrorMarker = '    terminalExportFailure ||= terminalStatus';
   const finishError = generated.indexOf(finishErrorMarker, finishStart);
   const finishEnd = generated.indexOf('\n  }', finishError) + '\n  }'.length;
   const terminalStart = generated.indexOf('if (terminalExportFailure) {', finishEnd);
@@ -84,7 +84,39 @@ assert.ok(generated.includes('globalThis.fetch = nativeFetch;'));
   }
   await checkFailure({ exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_AND_LOCAL_VERIFIED' }, false, 'EXPORT_FAILED_RECORDED');
   await checkFailure({ exportStatus: 'EXPORTED', persistence: 'PREVIOUSLY_VERIFIED_EXPORT_PRESERVED' }, false, 'EXPORTED_PRESERVED');
+  await checkFailure({ exportStatus: 'UNOBSERVED', persistence: 'REMOTE_PREVIOUS' }, false, 'EXPORT_FAILURE_STATUS_REMOTE_PREVIOUS');
+  await checkFailure({ exportStatus: 'UNOBSERVED', persistence: 'REMOTE_UNCERTAIN' }, false, 'EXPORT_FAILURE_STATUS_REMOTE_UNCERTAIN');
+  await checkFailure({ exportStatus: 'EXPORTED', persistence: 'REMOTE_VERIFIED' }, false, 'EXPORT_FAILURE_STATUS_REMOTE_VERIFIED_TERMINAL');
   await checkFailure(undefined, true, 'EXPORT_FAILURE_STATUS_UNVERIFIED');
+
+  const calls = [];
+  const exporter = {
+    async exportReceipt(receipt) {
+      calls.push('export:' + receipt.id);
+      const error = new Error('R2_MANIFEST_ETAG_REQUIRED');
+      error.reconciliation = 'REMOTE_VERIFIED';
+      error.terminal = true;
+      throw error;
+    },
+    async recordExportFailure(caseId, code) {
+      calls.push('record:' + caseId + ':' + code);
+      return { exportStatus: 'EXPORTED', persistence: 'REMOTE_VERIFIED' };
+    },
+    async finish() {
+      calls.push('finish');
+      const error = new Error('R2_RUN_TERMINATED_REMOTE_VERIFIED');
+      error.reconciliation = 'REMOTE_VERIFIED';
+      throw error;
+    }
+  };
+  const run = new AsyncFunction('exporter', 'receipts', 'scrub', behaviorSource);
+  await assert.rejects(run(exporter, [{ id: 'last-case' }], value => value), error =>
+    error.message.includes('EXPORT_FAILURE_STATUS_REMOTE_VERIFIED_TERMINAL') &&
+    error.message.includes('R2_MANIFEST_ETAG_REQUIRED') &&
+    !error.message.includes('private remote error body'));
+  assert.deepEqual(calls, [
+    'export:last-case', 'record:last-case:R2_MANIFEST_ETAG_REQUIRED', 'finish'
+  ], 'A last-case REMOTE_VERIFIED result stops dispatch and cannot exit as successful completion.');
 }
 assert.throws(() => prepareR2VerificationHarness(fixture + '\n', metadata), /template differs/);
 assert.throws(() => prepareR2VerificationHarness(fixture, { ...metadata, appSourceSha: 'unreviewed' }));

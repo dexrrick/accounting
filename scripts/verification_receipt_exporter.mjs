@@ -12,6 +12,9 @@ const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const BODY_FIELDS = new Set(['rawResponseBodyText', 'bodyText', 'bodyBase64']);
 const CASE_LINE_LIMIT = 2_048;
 const RUN_LINE_LIMIT = 32_768;
+const DEFAULT_MAX_RECEIPT_BYTES = 16 * 1024 * 1024;
+const DEFAULT_MAX_DIAGNOSTIC_BYTES = 16 * 1024 * 1024;
+const DEFAULT_MAX_CAPTURED_BODY_BYTES = 64 * 1024 * 1024;
 
 export const VERIFICATION_RECEIPT_EXPORT_SCHEMA = 'accounting-verification-receipt-export/v1';
 
@@ -242,10 +245,13 @@ async function assertNoSymlinkComponents(root, target) {
   }
 }
 
-async function inflateArtifact(bytes, kind) {
+async function inflateArtifact(bytes, kind, maximumOutputBytes) {
   try {
-    return await gunzipAsync(bytes);
-  } catch {
+    return await gunzipAsync(bytes, { maxOutputLength: maximumOutputBytes });
+  } catch (error) {
+    if (error?.code === 'ERR_BUFFER_TOO_LARGE') {
+      throw new Error(`${kind} artifact exceeds the configured decompressed size limit.`);
+    }
     throw new Error(`${kind} artifact is not valid gzip data.`);
   }
 }
@@ -345,15 +351,40 @@ export async function createVerificationReceiptExporter({
     cases: Object.fromEntries(plan.map(id => [id, { exportStatus: 'UNOBSERVED', answerStatus: 'UNOBSERVED', declaredCaptureStatus: 'UNOBSERVED', payloadAvailability: 'UNOBSERVED' }]))
   };
   const state = { stdoutBytes: 0, caseLineBytes: new Map(), finished: false, remoteArtifacts: new Map() };
+  state.remotePublication = undefined;
   const saveManifest = async (candidate, { publishRemote = true } = {}) => {
     candidate.updatedAtUTC = new Date().toISOString();
     const bytes = Buffer.from(`${JSON.stringify(candidate, null, 2)}\n`, 'utf8');
     if (durableSink && publishRemote) {
       const requiredArtifacts = Object.values(candidate.remoteArtifacts || {});
-      const result = await durableSink.publishManifest(bytes, { requiredArtifacts });
+      let result;
+      try {
+        result = await durableSink.publishManifest(bytes, { requiredArtifacts });
+      } catch (error) {
+        const reconciliation = error?.reconciliation;
+        if (reconciliation === 'REMOTE_VERIFIED') {
+          // The sink read back the proposed bytes after an ambiguous write, so
+          // that manifest remains authoritative even though future CAS may stop.
+          Object.assign(manifest, candidate);
+          state.remotePublication = { status: reconciliation, terminal: error.terminal === true };
+          if (error.terminal !== true) throw error;
+          await atomicReplace(manifestPath, bytes);
+          const saved = await readFile(manifestPath);
+          if (sha256(saved) !== sha256(bytes)) throw new Error('Manifest readback hash mismatch.');
+          // The case is durably accepted, but this run cannot safely advance.
+          // Preserve its local EXPORTED record and stop the caller from
+          // dispatching another question.
+          throw error;
+        }
+        if (reconciliation === 'REMOTE_PREVIOUS' || reconciliation === 'REMOTE_UNCERTAIN') {
+          state.remotePublication = { status: reconciliation, terminal: true };
+        }
+        throw error;
+      }
       if (result?.verified !== true || result.sha256 !== sha256(bytes) || result.byteLength !== bytes.length) {
         throw new Error('Remote manifest publication was not verified.');
       }
+      state.remotePublication = { status: result.reconciliation || 'REMOTE_VERIFIED', terminal: result.terminal === true };
       // Once the remote manifest is verified, it is authoritative even if the local mirror fails.
       Object.assign(manifest, candidate);
     }
@@ -371,7 +402,7 @@ export async function createVerificationReceiptExporter({
       }
     }
   } catch (error) {
-    await rm(runDirectory, { recursive: true, force: true });
+    if (!error?.reconciliation) await rm(runDirectory, { recursive: true, force: true });
     throw error;
   }
 
@@ -379,6 +410,7 @@ export async function createVerificationReceiptExporter({
     runDirectory,
     async exportReceipt(receipt) {
       if (state.finished) throw new Error('The receipt export run is already finished.');
+      if (state.remotePublication?.terminal) throw new Error(`R2_RUN_WRITE_FENCED_${state.remotePublication.status}`);
       if (!asObject(receipt)) throw new Error('A receipt must be a JSON object.');
       const caseId = assertSafeId(receipt.id, 'receipt case ID');
       if (!plan.includes(caseId)) throw new Error('Receipt case ID is outside the frozen run plan.');
@@ -463,13 +495,26 @@ export async function createVerificationReceiptExporter({
     async recordExportFailure(caseId, code = 'RECEIPT_EXPORT_FAILED') {
       if (state.finished) throw new Error('The receipt export run is already finished.');
       if (!plan.includes(assertSafeId(caseId, 'case ID'))) throw new Error('Case ID is outside the frozen run plan.');
+      if (state.remotePublication?.terminal) {
+        return {
+          exportStatus: manifest.cases[caseId].exportStatus,
+          persistence: state.remotePublication.status
+        };
+      }
       const next = structuredClone(manifest);
       if (next.cases[caseId].exportStatus === 'UNOBSERVED') {
         next.cases[caseId] = { ...next.cases[caseId], exportStatus: 'EXPORT_FAILED', failureCode: String(code).replace(/[^A-Z0-9_]/gi, '_').slice(0, 64) };
         try {
           await saveManifest(next);
         } catch (error) {
-          // A durable manifest is authoritative even when only its local mirror failed.
+          if (state.remotePublication?.terminal) {
+            return {
+              exportStatus: manifest.cases[caseId].exportStatus,
+              persistence: state.remotePublication.status
+            };
+          }
+          // A verified remote failure status remains authoritative when only
+          // its local mirror failed.
           if (manifest.cases[caseId].exportStatus === 'EXPORT_FAILED' && durableSink) {
             return { exportStatus: 'EXPORT_FAILED', persistence: 'REMOTE_VERIFIED_LOCAL_MIRROR_FAILED' };
           }
@@ -484,6 +529,21 @@ export async function createVerificationReceiptExporter({
       };
     },
     async finish() {
+      if (state.remotePublication?.terminal) {
+        state.finished = true;
+        const terminal = structuredClone(manifest);
+        terminal.remotePublication = structuredClone(state.remotePublication);
+        if (!state.terminalReported) {
+          addSummaryLine(stdout, state, undefined, {
+            event: 'RUN_FINISHED', runId, exportStatus: 'TERMINAL',
+            remotePublication: state.remotePublication.status, manifestArtifact: 'manifest.json'
+          });
+          state.terminalReported = true;
+        }
+        const error = new Error(`R2_RUN_TERMINATED_${state.remotePublication.status}`);
+        error.reconciliation = state.remotePublication.status;
+        throw error;
+      }
       if (state.finished) return structuredClone(manifest);
       const next = structuredClone(manifest);
       next.status = next.plannedCaseIds.every(id => next.cases[id].exportStatus === 'EXPORTED') ? 'COMPLETE' : 'INCOMPLETE';
@@ -497,8 +557,17 @@ export async function createVerificationReceiptExporter({
   };
 }
 
-export async function readVerificationReceiptExport(runDirectory) {
+export async function readVerificationReceiptExport(runDirectory, {
+  maxReceiptBytes = DEFAULT_MAX_RECEIPT_BYTES,
+  maxDiagnosticBytes = DEFAULT_MAX_DIAGNOSTIC_BYTES,
+  maxCapturedBodyBytes = DEFAULT_MAX_CAPTURED_BODY_BYTES
+} = {}) {
   if (typeof runDirectory !== 'string' || !path.isAbsolute(runDirectory)) throw new Error('runDirectory must be an absolute local path.');
+  for (const [label, limit] of Object.entries({ maxReceiptBytes, maxDiagnosticBytes, maxCapturedBodyBytes })) {
+    if (!Number.isSafeInteger(limit) || limit < 1024 || limit > 256 * 1024 * 1024) {
+      throw new Error(`${label} must be between 1024 and 268435456 bytes.`);
+    }
+  }
   const root = await realpath(runDirectory);
   const rootInfo = await lstat(runDirectory);
   if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) throw new Error('Export run must be a local directory, not a symbolic link.');
@@ -527,8 +596,8 @@ export async function readVerificationReceiptExport(runDirectory) {
     const receiptGzip = await readFile(receiptArtifactPath);
     const diagnosticGzip = await readFile(diagnosticArtifactPath);
     if (sha256(receiptGzip) !== entry.receiptArtifact.sha256 || sha256(diagnosticGzip) !== entry.diagnosticArtifact.sha256) throw new Error('Receipt or diagnostic artifact hash mismatch.');
-    const record = JSON.parse(await inflateArtifact(receiptGzip, 'Receipt'));
-    const diagnostic = JSON.parse(await inflateArtifact(diagnosticGzip, 'Diagnostic'));
+    const record = JSON.parse(await inflateArtifact(receiptGzip, 'Receipt', maxReceiptBytes));
+    const diagnostic = JSON.parse(await inflateArtifact(diagnosticGzip, 'Diagnostic', maxDiagnosticBytes));
     if (record.schemaVersion !== 1 || record.receipt?.id !== caseId || diagnostic.caseId !== caseId) throw new Error('Receipt artifact identity mismatch.');
     const bodyMap = new Map();
     for (const reference of record.bodyReferences) {
@@ -537,7 +606,7 @@ export async function readVerificationReceiptExport(runDirectory) {
       const bodyPath = path.resolve(root, reference.artifactPath);
       if (!bodyPath.startsWith(`${root}${path.sep}`)) throw new Error('Captured-body artifact path escapes the run directory.');
       await assertNoSymlinkComponents(root, bodyPath);
-      const bytes = await inflateArtifact(await readFile(bodyPath), 'Captured body');
+      const bytes = await inflateArtifact(await readFile(bodyPath), 'Captured body', maxCapturedBodyBytes);
       if (sha256(bytes) !== reference.sha256 || bytes.length !== reference.byteLength) throw new Error('Captured-body artifact hash mismatch.');
       bodyMap.set(reference.sha256, bytes);
     }
@@ -574,7 +643,7 @@ export async function readVerificationReceiptExport(runDirectory) {
     referencedArtifactPaths.add(entry.receiptArtifact.path);
     referencedArtifactPaths.add(entry.diagnosticArtifact.path);
     const compressed = await readFile(path.join(root, entry.receiptArtifact.path));
-    const record = JSON.parse(await inflateArtifact(compressed, 'Receipt'));
+    const record = JSON.parse(await inflateArtifact(compressed, 'Receipt', maxReceiptBytes));
     for (const reference of record.bodyReferences) referencedArtifactPaths.add(reference.artifactPath);
   }
   const orphanArtifactPaths = allArtifactPaths.filter(file => !referencedArtifactPaths.has(file));
