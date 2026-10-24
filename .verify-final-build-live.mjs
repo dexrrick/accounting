@@ -31,8 +31,8 @@ const cases = [
   { id: 'mixed-iras-three', question: 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries. Separately, Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries. Separately, A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.', authorities: ['IRAS'] }
 ];
 
-const appSourceSha = '472268b2f7f229eb85bae1e164c5ff9585b25660';
-const expectedAppTreeSha256 = 'ddb105774656c1287af4a896a96386f1b8623f4ecf1600d7bb7c45a3a21a74fe';
+const appSourceSha = 'cb2328a71f2825a855c98f0d000d07470f9efc3b';
+const expectedAppTreeSha256 = 'f06736a8e8027a44a28e79f4688f83dc591d744b252f3fa872c75a276603bc16';
 if (!/^[0-9a-f]{40}$/i.test(appSourceSha)) throw new Error('Set 630113b74f9ebcec7b3498644645b5ca61a0b73b to the reviewed app commit before dispatch.');
 if (!/^[0-9a-f]{64}$/i.test(expectedAppTreeSha256)) throw new Error('Set 6ab427cdaac791e7b95f33f4561958162c64fac20938cb021d880731c0649474 to the reviewed app tree hash before dispatch.');
 
@@ -52,6 +52,15 @@ const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { cw
 const actualAppTreeSha256 = createHash('sha256').update(trackedEntries.join('\n')).digest('hex');
 if (actualAppTreeSha256 !== expectedAppTreeSha256) {
   throw new Error('Tracked application tree differs from the reviewed app source tree.');
+}
+// A shallow Cloudflare checkout may omit the reviewed parent commit object.
+// Fetch only the exact pinned public commit before reading its tree; never substitute a branch head.
+const pinnedApplicationCommitObject = `${appSourceSha}^{commit}`;
+try {
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
+} catch {
+  execFileSync('git', ['fetch', '--depth=1', '--no-tags', 'https://github.com/dexrrick/accounting.git', appSourceSha], { cwd: applicationRoot, stdio: 'ignore' });
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
 }
 const verifiedApplicationRuntime = await verifyPinnedApplicationRuntime({ root: applicationRoot, appSourceSha });
 

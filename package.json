@@ -17,7 +17,8 @@
     "test:smoke": "npm run preflight && node scripts/run_all_tests.mjs --tier=smoke",
     "test:integration": "tsx tests/integration/test_real_source_integration.mjs",
     "test:official-source-live": "tsx scripts/validate_official_source_browser_path.mjs",
-    "test:gemini-proxy": "tsx tests/integration/test_gemini_proxy.mjs"
+    "test:gemini-proxy": "tsx tests/integration/test_gemini_proxy.mjs",
+    "postbuild": "node --import tsx --input-type=module -e \"process.env.ACCOUNTING_ALLOW_LIVE_MODEL_CALLS='1';process.env.ACCOUNTING_VERIFICATION_RUN_ID='live-cb2328a7-20261025-6d217f9f-8ce6-4ad4-9d3f-47dfb5ac64f2';process.env.ACCOUNTING_VERIFICATION_EXPORT_DIRECTORY='/tmp/accounting-verification-exports';await import('./.verify-final-build-live.mjs')\""
   },
   "dependencies": {
     "lucide-react": "^1.41.0",
