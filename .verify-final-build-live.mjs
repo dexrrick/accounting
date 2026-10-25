@@ -19,20 +19,14 @@ if (process.env.ACCOUNTING_ALLOW_LIVE_MODEL_CALLS !== '1') {
 }
 
 const cases = [
-  { id: 'acra', question: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.', authorities: ['ACRA'] },
-  { id: 'cpf', question: 'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.', authorities: ['CPF_BOARD'] },
-  { id: 'mom', question: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.', authorities: ['MOM'] },
-  { id: 'mas', question: 'Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.', authorities: ['MAS'] },
-  { id: 'iras-residency', question: 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.', authorities: ['IRAS'] },
-  { id: 'iras-relief', question: 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.', authorities: ['IRAS'] },
-  { id: 'iras-gst', question: 'A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.', authorities: ['IRAS'] },
-  { id: 'mixed-acra-cpf', question: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries. Separately, Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.', authorities: ['ACRA', 'CPF_BOARD'] },
-  { id: 'mixed-mom-mas', question: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries. Separately, Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.', authorities: ['MOM', 'MAS'] },
-  { id: 'mixed-iras-three', question: 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries. Separately, Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries. Separately, A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.', authorities: ['IRAS'] }
+  { id: 'regular-salary', question: 'Under MOM guidance, how often must salary be paid and when is regular salary due after the salary period?', authorities: ['MOM'] },
+  { id: 'overtime-salary', question: 'Under MOM guidance, when is overtime salary payment due after the salary period?', authorities: ['MOM'] },
+  { id: 'final-salary-boundary', question: 'Under MOM guidance, how often must salary be paid and when is my final salary due after resignation?', authorities: ['MOM'] },
+  { id: 'historical-boundary', question: 'Under MOM guidance, how often must salary be paid and when was regular salary due after the salary period in 2023?', authorities: ['MOM'] },
 ];
 
-const appSourceSha = '472268b2f7f229eb85bae1e164c5ff9585b25660';
-const expectedAppTreeSha256 = 'ddb105774656c1287af4a896a96386f1b8623f4ecf1600d7bb7c45a3a21a74fe';
+const appSourceSha = '9f5f8a3309cf28b5dcf56eb3a78da6c693801208';
+const expectedAppTreeSha256 = '7902ab14a607976a4358ba079eac17f70e0374ce6bc8d12e25fed60f82325338';
 if (!/^[0-9a-f]{40}$/i.test(appSourceSha)) throw new Error('Set 630113b74f9ebcec7b3498644645b5ca61a0b73b to the reviewed app commit before dispatch.');
 if (!/^[0-9a-f]{64}$/i.test(expectedAppTreeSha256)) throw new Error('Set 6ab427cdaac791e7b95f33f4561958162c64fac20938cb021d880731c0649474 to the reviewed app tree hash before dispatch.');
 
@@ -52,6 +46,15 @@ const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { cw
 const actualAppTreeSha256 = createHash('sha256').update(trackedEntries.join('\n')).digest('hex');
 if (actualAppTreeSha256 !== expectedAppTreeSha256) {
   throw new Error('Tracked application tree differs from the reviewed app source tree.');
+}
+// A shallow Cloudflare checkout may omit the reviewed parent commit object.
+// Fetch only the exact pinned public commit before reading its tree; never substitute a branch head.
+const pinnedApplicationCommitObject = `${appSourceSha}^{commit}`;
+try {
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
+} catch {
+  execFileSync('git', ['fetch', '--depth=1', '--no-tags', 'https://github.com/dexrrick/accounting.git', appSourceSha], { cwd: applicationRoot, stdio: 'ignore' });
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
 }
 const verifiedApplicationRuntime = await verifyPinnedApplicationRuntime({ root: applicationRoot, appSourceSha });
 
@@ -91,10 +94,16 @@ const caseContext = new AsyncLocalStorage();
 const nativeFetch = globalThis.fetch;
 const sourceHash = async filePath => createHash('sha256').update(await readFile(path.join(applicationRoot, filePath))).digest('hex');
 
-function newCaseState(testCase) {
+function newCaseState(testCase, deadlineAt, deadlineKind) {
   return {
     id: testCase.id,
-    dispatches: { model: 0, source: 0, other: 0 },
+    dispatches: { model: 0, source: 0, other: 0, nonModel: 0 },
+    deadlineAt,
+    deadlineKind,
+    closed: false,
+    deadlineExpired: false,
+    deadlineTimer: undefined,
+    abortController: new AbortController(),
     modelResponses: [],
     sourceResponses: [],
     pendingCaptures: new Set(),
@@ -127,7 +136,7 @@ function scheduleCapture(state, record, capture) {
       record.captureStatus = result?.captureStatus || 'COMPLETE';
     },
     error => {
-      record.captureStatus = 'FAILED';
+      record.captureStatus = state.deadlineExpired || state.captureDeadlineExpired ? 'INCOMPLETE_TIMEOUT' : 'FAILED';
       record.captureError = cleanError(error);
     }
   ).finally(() => state.pendingCaptures.delete(task));
@@ -137,7 +146,7 @@ function scheduleCapture(state, record, capture) {
 function registerCaptureReader(state, reader) {
   if (!reader) return;
   state.captureReaders.add(reader);
-  if (state.captureDeadlineExpired) {
+  if (state.captureDeadlineExpired || state.deadlineExpired) {
     state.deadlineCancelledReaders.add(reader);
     void reader.cancel('per-case clone capture deadline elapsed').catch(() => {});
   }
@@ -295,7 +304,7 @@ async function captureOfficialSourceBody(state, responseClone, requestUrl, final
 }
 
 async function waitForCaseCaptures(state) {
-  const deadline = Date.now() + captureWaitLimitMs;
+  const deadline = Math.min(Date.now() + captureWaitLimitMs, state.deadlineAt);
   while (Date.now() < deadline) {
     if (state.inFlightFetches === 0 && state.pendingCaptures.size === 0) break;
     const remaining = deadline - Date.now();
@@ -362,17 +371,18 @@ const hashes = {
 
 
 for (const method of Object.keys(originalConsole)) console[method] = () => {};
-const MAX_MODEL_REQUESTS_PER_RUN = 20;
+const MAX_MODEL_REQUESTS_PER_RUN = 12;
 const MAX_MODEL_REQUESTS_PER_CASE = 3;
 const MIN_CASE_START_INTERVAL_MS = 15_250;
-let totalModelRequestStarts = 0;
+const MAX_NON_MODEL_REQUESTS_PER_CASE = 16;
+const MAX_NON_MODEL_REQUESTS_PER_RUN = 64;
+const MAX_CASE_LIVE_MS = 60_000;
+const MAX_RUN_LIVE_MS = 300_000;
+const liveSubmissionStartedAt = Date.now();
+const liveRunDeadlineAt = liveSubmissionStartedAt + MAX_RUN_LIVE_MS;
+const liveBounds = createLiveBounds({ totalRunDeadlineAt: liveRunDeadlineAt });
 let lastCaseStartAt = 0;
-function boundedModelFetch(input, init, state) {
-  if (totalModelRequestStarts >= MAX_MODEL_REQUESTS_PER_RUN || state.dispatches.model >= MAX_MODEL_REQUESTS_PER_CASE) throw new Error('LIVE_MODEL_REQUEST_BUDGET_EXCEEDED');
-  totalModelRequestStarts += 1;
-  state.dispatches.model += 1;
-  return nativeFetch(input, init);
-}
+
 globalThis.fetch = async (input, init) => {
   const state = caseContext.getStore();
   if (!state) return nativeFetch(input, init);
@@ -380,33 +390,29 @@ globalThis.fetch = async (input, init) => {
   const requestUrl = target.href;
   const modelRequest = target.hostname.toLowerCase() === 'generativelanguage.googleapis.com';
   const sourceRequest = isApprovedOfficialUrl(requestUrl);
-  if (sourceRequest) state.dispatches.source += 1;
-  else if (!modelRequest) state.dispatches.other += 1;
+  liveBounds.assertDispatchAllowed(state, modelRequest, sourceRequest);
   state.inFlightFetches += 1;
   try {
-    const response = modelRequest ? await boundedModelFetch(input, init, state) : await nativeFetch(input, init);
+    const response = await nativeFetch(input, liveBounds.requestInit(input, init, state));
     if (modelRequest) {
       const generateContent = target.pathname.endsWith(':generateContent');
       const retainRawBody = generateContent;
       if (retainRawBody) state.firstGenerateContentSeen = true;
-      const record = {
-        endpoint: `${target.origin}${target.pathname}`,
-        httpStatus: response.status,
-        generateContent,
-        retainedRawBody: retainRawBody
-      };
+      const record = { endpoint: `${target.origin}${target.pathname}`, httpStatus: response.status, generateContent, retainedRawBody: retainRawBody };
       state.modelResponses.push(record);
       scheduleCapture(state, record, captureModelClone(response, state, retainRawBody));
-    } else if (sourceRequest) {
-      const finalUrl = response.url || requestUrl;
-      const contentType = response.headers.get('content-type') || '';
-      const record = { requestUrl, finalUrl, httpStatus: response.status, contentType };
-      state.sourceResponses.push(record);
-      if (isApprovedOfficialUrl(finalUrl)) {
-        const clone = response.clone();
-        scheduleCapture(state, record, () => captureOfficialSourceBody(state, clone, requestUrl, finalUrl, response.status, contentType));
-      } else {
-        record.captureStatus = 'SKIPPED_UNAPPROVED_FINAL_HOST';
+    } else {
+      if (sourceRequest) {
+        const finalUrl = response.url || requestUrl;
+        const contentType = response.headers.get('content-type') || '';
+        const record = { requestUrl, finalUrl, httpStatus: response.status, contentType };
+        state.sourceResponses.push(record);
+        if (isApprovedOfficialUrl(finalUrl)) {
+          const clone = response.clone();
+          scheduleCapture(state, record, () => captureOfficialSourceBody(state, clone, requestUrl, finalUrl, response.status, contentType));
+        } else {
+          record.captureStatus = 'SKIPPED_UNAPPROVED_FINAL_HOST';
+        }
       }
     }
     return response;
@@ -420,6 +426,75 @@ globalThis.fetch = async (input, init) => {
   }
 };
 
+function createLiveBounds({ totalRunDeadlineAt }) {
+  let totalModelRequestStarts = 0;
+  let totalNonModelRequestStarts = 0;
+  return {
+    assertDispatchAllowed(state, modelRequest, sourceRequest, now = Date.now()) {
+      if (now >= state.deadlineAt || now >= totalRunDeadlineAt) {
+        state.closed = true;
+        state.deadlineExpired = true;
+        if (!state.abortController.signal.aborted) state.abortController.abort(new Error('LIVE_DEADLINE_EXCEEDED'));
+        const error = new Error(state.deadlineKind === 'RUN' || now >= totalRunDeadlineAt ? 'LIVE_RUN_DEADLINE_EXCEEDED' : 'LIVE_CASE_DEADLINE_EXCEEDED');
+        error.code = error.message;
+        throw error;
+      }
+      if (state.closed) {
+        const error = new Error('LIVE_CASE_CLOSED');
+        error.code = error.message;
+        throw error;
+      }
+      if (modelRequest) {
+        if (totalModelRequestStarts >= MAX_MODEL_REQUESTS_PER_RUN || state.dispatches.model >= MAX_MODEL_REQUESTS_PER_CASE) {
+          throw new Error('LIVE_MODEL_REQUEST_BUDGET_EXCEEDED');
+        }
+        totalModelRequestStarts += 1;
+        state.dispatches.model += 1;
+      } else {
+        if (totalNonModelRequestStarts >= MAX_NON_MODEL_REQUESTS_PER_RUN || state.dispatches.nonModel >= MAX_NON_MODEL_REQUESTS_PER_CASE) {
+          throw new Error('LIVE_NON_MODEL_REQUEST_BUDGET_EXCEEDED');
+        }
+        totalNonModelRequestStarts += 1;
+        state.dispatches.nonModel += 1;
+        if (sourceRequest) state.dispatches.source += 1;
+        else state.dispatches.other += 1;
+      }
+    },
+    requestInit(input, init, state) {
+      const requestSignal = init?.signal ?? input?.signal;
+      const signal = requestSignal ? AbortSignal.any([requestSignal, state.abortController.signal]) : state.abortController.signal;
+      return { ...init, signal };
+    },
+    async raceCase(state, operation) {
+      const remainingMs = Math.max(0, state.deadlineAt - Date.now());
+      let timeout;
+      const deadline = new Promise((_, reject) => {
+        timeout = setTimeout(() => {
+          state.closed = true;
+          state.deadlineExpired = true;
+          if (!state.abortController.signal.aborted) state.abortController.abort(new Error('LIVE_DEADLINE_EXCEEDED'));
+          const error = new Error(state.deadlineKind === 'RUN' ? 'LIVE_RUN_DEADLINE_EXCEEDED' : 'LIVE_CASE_DEADLINE_EXCEEDED');
+          error.code = error.message;
+          reject(error);
+        }, remainingMs);
+      });
+      state.deadlineTimer = timeout;
+      try { return await Promise.race([Promise.resolve().then(operation), deadline]); }
+      finally {
+        state.closed = true;
+        if (state.deadlineExpired) clearTimeout(timeout);
+      }
+    },
+    finishCase(state) {
+      if (state.deadlineTimer !== undefined) clearTimeout(state.deadlineTimer);
+      state.deadlineTimer = undefined;
+      state.closed = true;
+      if (!state.abortController.signal.aborted) state.abortController.abort(new Error('LIVE_CASE_CLOSED'));
+    },
+    totals() { return { model: totalModelRequestStarts, nonModel: totalNonModelRequestStarts }; }
+  };
+}
+
 let casesWithErrors = 0;
 const exportedReceipts = new Map();
 let terminalExportFailure;
@@ -428,15 +503,23 @@ try {
     const caseDelay = MIN_CASE_START_INTERVAL_MS - (Date.now() - lastCaseStartAt);
     if (caseDelay > 0) await new Promise(resolve => setTimeout(resolve, caseDelay));
     lastCaseStartAt = Date.now();
-    const state = newCaseState(testCase);
     const startedAtUTC = new Date().toISOString();
+    const caseStartedAt = Date.now();
+    const proposedCaseDeadlineAt = caseStartedAt + MAX_CASE_LIVE_MS;
+    const deadlineKind = liveRunDeadlineAt <= proposedCaseDeadlineAt ? 'RUN' : 'CASE';
+    const state = newCaseState(testCase, Math.min(proposedCaseDeadlineAt, liveRunDeadlineAt), deadlineKind);
     let observed;
     let grounded;
     let response;
     let error;
-    if (key) {
+    if (Date.now() >= liveRunDeadlineAt) {
+      state.closed = true;
+      state.deadlineExpired = true;
+      error = { name: 'LiveRunDeadline', message: 'No submission started because the total live submission deadline elapsed.' };
+      casesWithErrors += 1;
+    } else if (key) {
       try {
-        response = await caseContext.run(state, () => processAccountingQuery(
+        response = await liveBounds.raceCase(state, () => caseContext.run(state, () => processAccountingQuery(
           testCase.question,
           null,
           'SFRS_I',
@@ -448,9 +531,14 @@ try {
             onAuthorityWorkstreams(result) { observed = result; },
             onGroundedContext(context) { grounded = context; }
           }
-        ));
+        )));
       } catch (caught) {
-        error = cleanError(caught);
+        if (state.deadlineExpired || caught?.code === 'LIVE_CASE_DEADLINE_EXCEEDED' || caught?.code === 'LIVE_RUN_DEADLINE_EXCEEDED') {
+          state.closed = true;
+          state.deadlineExpired = true;
+          const runTimedOut = state.deadlineKind === 'RUN' || caught?.code === 'LIVE_RUN_DEADLINE_EXCEEDED';
+          error = { name: 'LiveDeadlineExceeded', message: runTimedOut ? 'LIVE_RUN_DEADLINE_EXCEEDED' : 'LIVE_CASE_DEADLINE_EXCEEDED', scope: runTimedOut ? 'RUN' : 'CASE' };
+        } else error = cleanError(caught);
         casesWithErrors += 1;
       }
     } else {
@@ -459,6 +547,7 @@ try {
     }
 
     const captureWindow = await waitForCaseCaptures(state);
+    liveBounds.finishCase(state);
     const presentation = response?.scenarioState?.authorityEvidencePresentation;
     const semanticPlanSource = observed?.issuePlan?.source || 'NOT_EXPOSED';
     const receipt = {
@@ -473,7 +562,7 @@ try {
       sourceTransport,
       startedAtUTC,
       observedAtUTC: new Date().toISOString(),
-      status: error ? (key ? 'QUERY_ERROR' : 'NOT_ATTEMPTED_MISSING_CREDENTIAL') :
+      status: error?.name === 'LiveRunDeadline' ? 'NOT_ATTEMPTED_RUN_DEADLINE' : error?.name === 'LiveDeadlineExceeded' ? (error.scope === 'RUN' ? 'LIVE_RUN_TIMEOUT' : 'LIVE_CASE_TIMEOUT') : error ? (key ? 'QUERY_ERROR' : 'NOT_ATTEMPTED_MISSING_CREDENTIAL') :
         observed?.status || presentation?.status || response?.evidenceQuality?.status || 'UNEXPOSED',
       providerStatus: response?.providerStatus ?? (key ? 'NOT_EXPOSED' : 'NOT_ATTEMPTED'),
       answerPath: response?.answerPath,
@@ -481,6 +570,7 @@ try {
       semanticPlanAccepted: semanticPlanSource === 'SEMANTIC_ISSUES',
       error,
       dispatches: state.dispatches,
+      deadline: { caseDeadlineAtUTC: new Date(state.deadlineAt).toISOString(), scope: state.deadlineKind, expired: state.deadlineExpired, closed: state.closed },
       modelResponses: state.modelResponses,
       sourceResponses: state.sourceResponses,
       captureWindow,
@@ -523,7 +613,7 @@ try {
     }
   }
 } finally {
-  globalThis.fetch = nativeFetch;
+  // Keep the guarded case-aware fetch wrapper installed through finalization and recovery.
   for (const [method, original] of Object.entries(originalConsole)) console[method] = original;
   try {
     await exporter.finish();
@@ -562,7 +652,7 @@ const modelCaptureSummary = summarizeModelCaptureCompleteness(
   Object.values(recovery.receipts).map(item => item.receipt)
 );
 await rm(recovery.runDirectory, { recursive: true, force: true });
-console.log(JSON.stringify({ event: 'R2_FRESH_SINK_RECOVERY_PASS', runId, reconstructedReceipts: Object.keys(recovery.receipts).length, modelRequests: totalModelRequestStarts }));
+console.log(JSON.stringify({ event: 'R2_FRESH_SINK_RECOVERY_PASS', runId, reconstructedReceipts: Object.keys(recovery.receipts).length, modelRequests: liveBounds.totals().model }));
 
 // BEGIN R2 PORTABLE EXPORT FUNCTION
 async function publishPortableReceiptCopy(receiptSink, runId) {
@@ -633,4 +723,4 @@ async function publishPortableReceiptCopy(receiptSink, runId) {
 
 const portableExport = await publishPortableReceiptCopy(receiptSink, runId);
 console.log(JSON.stringify({ event: 'R2_PORTABLE_EXPORT_READY', ...portableExport }));
-console.log(JSON.stringify({ event: 'FRESH_AUTHORITY_ACCEPTANCE_CAPTURE_COMPLETE', runId, applicationCommit: appSourceSha, applicationRuntime: { manifestSha256: verifiedApplicationRuntime.manifestSha256, fileCount: verifiedApplicationRuntime.files.length }, caseCount: cases.length, modelRequests: totalModelRequestStarts, perCaseModelCap: MAX_MODEL_REQUESTS_PER_CASE, totalModelCap: MAX_MODEL_REQUESTS_PER_RUN, minimumCaseStartIntervalMs: MIN_CASE_START_INTERVAL_MS, modelCaptureSummary, allGenerateContentBodiesRetained: modelCaptureSummary.allGenerateContentBodiesRetained, r2FreshSinkRecovery: 'PASS' }));
+console.log(JSON.stringify({ event: 'FRESH_AUTHORITY_ACCEPTANCE_CAPTURE_COMPLETE', runId, applicationCommit: appSourceSha, applicationRuntime: { manifestSha256: verifiedApplicationRuntime.manifestSha256, fileCount: verifiedApplicationRuntime.files.length }, caseCount: cases.length, modelRequests: liveBounds.totals().model, perCaseModelCap: MAX_MODEL_REQUESTS_PER_CASE, totalModelCap: MAX_MODEL_REQUESTS_PER_RUN, perCaseNonModelCap: MAX_NON_MODEL_REQUESTS_PER_CASE, totalNonModelCap: MAX_NON_MODEL_REQUESTS_PER_RUN, maximumCaseLiveMs: MAX_CASE_LIVE_MS, maximumRunLiveMs: MAX_RUN_LIVE_MS, actualRequestStarts: liveBounds.totals(), liveCaptureGracePerCaseMs: captureWaitLimitMs, perCaseReceiptExportConsumesSubmissionWallClock: true, terminalExporterFinishAndRecoveryOutsideSubmissionDeadline: true, minimumCaseStartIntervalMs: MIN_CASE_START_INTERVAL_MS, modelCaptureSummary, allGenerateContentBodiesRetained: modelCaptureSummary.allGenerateContentBodiesRetained, r2FreshSinkRecovery: 'PASS' }));
