@@ -1,0 +1,136 @@
+{
+  "dateSingapore": "25/10/2026",
+  "scope": "Incremental practical coverage batch; not a complete inventory or authority-wide acceptance claim",
+  "baseCommit": "9f5f8a3309cf28b5dcf56eb3a78da6c693801208",
+  "productionHold": true,
+  "liveAcceptanceAuthorizedForThisBatch": false,
+  "validationStatus": "IMPLEMENTED_OFFLINE_VALIDATED_REVIEWED_LIVE_NOT_RUN_PRODUCTION_HELD",
+  "authorities": {
+    "IRAS": {
+      "topics": [
+        {
+          "id": "iras-cit-eci",
+          "scope": "General EXPLAIN_RULE ECI filing timeline with both filing-waiver and specific non-filing exceptions; official ordered-list and inline layouts",
+          "implemented": "IMPLEMENTED",
+          "offlineValidated": true,
+          "independentReview": "PASS_NO_MATERIAL_FINDINGS",
+          "liveAccepted": false,
+          "officialSource": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+        }
+      ],
+      "unsupportedInThisBatch": [
+        "Personal waiver eligibility",
+        "Computed filing dates",
+        "Historical applicability",
+        "Procedural FILING_REQUIREMENT operation is outside this bounded general-explanation batch"
+      ],
+      "priorAcceptanceGaps": [
+        "CPF relief, GST and residency cases remain separately unresolved; this ECI batch does not establish their live acceptance"
+      ]
+    },
+    "CPF": {
+      "topics": [
+        {
+          "id": "cpf-additional-wages",
+          "scope": "General Additional Wages definition, including the official native action-card layout; no rate, ceiling or contribution calculation",
+          "implemented": "IMPLEMENTED",
+          "offlineValidated": true,
+          "independentReview": "PASS_NO_MATERIAL_FINDINGS",
+          "liveAccepted": false,
+          "officialSource": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+        }
+      ],
+      "unsupportedInThisBatch": [
+        "Numeric contribution schedules",
+        "Personal wage classification or amount calculations"
+      ],
+      "priorLiveEvidence": "Ordinary Wages had scoped evidence support on earlier revisions; repeated-CPF live binding isolation remains unexercised"
+    },
+    "MOM": {
+      "topics": [
+        {
+          "id": "mom-salary-payment",
+          "scope": "General ongoing Employment Act salary frequency and regular/overtime payment timing; discovery, regular-salary alias and same-revision evidence binding repaired",
+          "implemented": "IMPLEMENTED",
+          "offlineValidated": true,
+          "independentReview": "PASS_NO_MATERIAL_FINDINGS",
+          "liveAccepted": false,
+          "officialSource": "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+        }
+      ],
+      "unsupportedInThisBatch": [
+        "Final salary",
+        "Resignation or termination",
+        "Commission",
+        "Tax clearance",
+        "Overtime entitlement, rates or amounts",
+        "Historical applicability"
+      ],
+      "priorLiveEvidence": "On base 9f5f8a3, regular salary failed discovery; overtime had a qualified mapped explanation only. Whole-request completeness remained uncertain. No browser acceptance."
+    },
+    "ACRA": {
+      "topics": [
+        {
+          "id": "acra_company-secretary",
+          "scope": "General local-company secretary appointment timeline; explicit general explanation can coexist with unresolved case applicability, which remains visible",
+          "implemented": "IMPLEMENTED",
+          "offlineValidated": true,
+          "independentReview": "PASS_NO_MATERIAL_FINDINGS",
+          "liveAccepted": false,
+          "officialSource": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+        }
+      ],
+      "unsupportedInThisBatch": [
+        "Particular secretary eligibility",
+        "Calculated appointment dates",
+        "Historical annual-return applicability and deadline acceptance"
+      ],
+      "priorLiveEvidence": "General annual-return filing duty had scoped support on earlier revisions; it is separate from historical filing acceptance"
+    },
+    "MAS": {
+      "topics": [
+        {
+          "id": "mas-lfmc",
+          "scope": "General regulated fund-management licensing duty with existing-class-exemption qualification",
+          "implemented": "IMPLEMENTED",
+          "offlineValidated": true,
+          "independentReview": "PASS_NO_MATERIAL_FINDINGS",
+          "liveAccepted": false,
+          "officialSource": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+        }
+      ],
+      "unsupportedInThisBatch": [
+        "Particular business licensing or exemption eligibility",
+        "Capital requirements",
+        "Fees",
+        "Historical applicability"
+      ]
+    }
+  },
+  "evidencePolicy": "Explanations require independently fetched official body evidence, full-source premise checks, admitted exact quotes bound to the same issue and one formal or fetched document revision, and applicable scope. Fetched bindings identify verified retrieval records; they do not imply formal document approval or activation. Mapped evidence does not establish full-request completeness. Explicitly general ACRA explanations may be shown while case application remains unresolved; the status and reason remain visible.",
+  "liveBatchState": "NOT_FROZEN_NOT_DISPATCHED; use a fresh bounded reviewed plan and separate authorization after offline completion",
+  "priorEvidencePaths": [
+    "D:/Accounting/artifacts/live-mom-salary-2026-10-25/scoped-adjudication.json",
+    "D:/Accounting/artifacts/live-review-repair-2026-10-25-v2/summary.json"
+  ],
+  "implementationFiles": [
+    "src/retrieval/cpfMasPracticalRules.ts",
+    "src/retrieval/irasAcraPracticalRules.ts",
+    "src/retrieval/momSalaryPaymentRule.ts",
+    "src/retrieval/officialSitemapDiscovery.ts",
+    "src/retrieval/statutoryAdvisorySupport.ts",
+    "src/retrieval/externalSourceValidator.ts",
+    "src/services/authorityEvidenceResponse.ts",
+    "src/services/authorityWorkstreams.ts",
+    "src/services/groundingContextBuilder.ts",
+    "src/services/irasEvidencePolicy.ts",
+    "src/utils/authorityEvidencePresentation.ts",
+    "src/verification/claimEvidenceVerifier.ts"
+  ],
+  "finalValidation": {
+    "fullSuitesPassed": 151,
+    "sourceHashesUnchanged": true,
+    "smokeSuitesPassed": 128,
+    "summary": "D:\\Accounting\\artifacts\\practical-coverage-2026-10-25\\resumed-final\\validation-summary.json"
+  }
+}

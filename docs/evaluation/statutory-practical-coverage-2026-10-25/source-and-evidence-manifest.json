@@ -1,0 +1,190 @@
+[
+  {
+    "path": "source/docs/statutory_practical_coverage.json",
+    "sha256": "81917d838743fe91bf08c839381d5dbc82fc46366e8f89b2e0a95ed1e54a8108"
+  },
+  {
+    "path": "source/scripts/evaluate_statutory_coverage.mjs",
+    "sha256": "4df05f6463a145a3d2a5e4a3507739d23ff98a11830f3833cad6e812be904e5c"
+  },
+  {
+    "path": "source/scripts/generate_statutory_coverage_fixture.mjs",
+    "sha256": "c48e375e3c832c225aaf1d2d38bb99f9d72a9de974ff3de433ef35b460cfa644"
+  },
+  {
+    "path": "source/scripts/replay_statutory_coverage.mjs",
+    "sha256": "3132a2e96c5938b6635b909709992a7f384e29134ae10bfcc117b79b1fdc6882"
+  },
+  {
+    "path": "source/scripts/run_all_tests.mjs",
+    "sha256": "b4f0aeb5558624ad48955d8113a59d1a3e54bf1926c64387b809c9fda99de423"
+  },
+  {
+    "path": "source/src/retrieval/cpfMasPracticalRules.ts",
+    "sha256": "6ee52f934dadf17725a4d3b98259dd3c840a2e96be6bb173d74bf57e39074876"
+  },
+  {
+    "path": "source/src/retrieval/externalSourceValidator.ts",
+    "sha256": "1e1b76f2dd70a2d1ae519dfb6c60d0049d0fc9be9132e93b5a08b7cb08cd40e2"
+  },
+  {
+    "path": "source/src/retrieval/irasAcraPracticalRules.ts",
+    "sha256": "bb4623f691406f368081781f27e084311dc4a0b736c387eb2ca474a938a1349d"
+  },
+  {
+    "path": "source/src/retrieval/momSalaryPaymentRule.ts",
+    "sha256": "6905b69045d9cb252ed35ea5d22128042596bbd7733ae3663ad941122fdf7b9b"
+  },
+  {
+    "path": "source/src/retrieval/officialSitemapDiscovery.ts",
+    "sha256": "386b75f931b166a7be33f356864a0940fed16fba2856ddb5c5d852eecc4dca8d"
+  },
+  {
+    "path": "source/src/retrieval/queryTopicResolver.ts",
+    "sha256": "30064107726fcac10261ef3dea915b8d157bfadb46b5db037b5bc794243297fd"
+  },
+  {
+    "path": "source/src/retrieval/statutoryAdvisorySupport.ts",
+    "sha256": "e3b1a6390bf309384b9b4ea3871c372bc2b72389309e1fba64e5b9f387d215e5"
+  },
+  {
+    "path": "source/src/services/authorityEvidenceResponse.ts",
+    "sha256": "5e4950d224d7ba5a1ed813a46611fe37dee960746ec2bcd3ac7fdd97b3af8edc"
+  },
+  {
+    "path": "source/src/services/authorityWorkstreams.ts",
+    "sha256": "2bbdfd3b24da94a775309cf075e744157051f4ff461978d62c39444ad4910218"
+  },
+  {
+    "path": "source/src/services/groundingContextBuilder.ts",
+    "sha256": "bc2fabe71f6fcab9343b6bc9544795d9b386864fe1ca030ec51b643c2d3b0080"
+  },
+  {
+    "path": "source/src/services/irasEvidencePolicy.ts",
+    "sha256": "d0b234573ccac134f056dda03af0a97ac0d9bac0c59015f2ef1bc157a589d6ee"
+  },
+  {
+    "path": "source/src/services/semanticQuestionUnderstanding.ts",
+    "sha256": "138aa65465c27566c51bf24e920ecd161849a4a6e8e4227d56c7f334f15bc030"
+  },
+  {
+    "path": "source/src/standards/coverageRegistry.ts",
+    "sha256": "f588c8bbfa5621aa18ce17d5509e7c01f0ae588baea56cb194a95bd5408f4202"
+  },
+  {
+    "path": "source/src/utils/authorityEvidencePresentation.ts",
+    "sha256": "e307323f837b467395e8d8907aaff325862f65ccbe1f81f2d236e002e75ea8c6"
+  },
+  {
+    "path": "source/src/verification/claimEvidenceVerifier.ts",
+    "sha256": "872f64d5c386329a4f009fc50eee3ffae426f565e3ee95ff84e987a6401730da"
+  },
+  {
+    "path": "source/tests/evaluation/statutory_coverage_offline_replay_2026-10-25.json",
+    "sha256": "1243173882327bcfad47a4a62a605da324c6de22c74744f9826d01917ea85fc8"
+  },
+  {
+    "path": "source/tests/evaluation/statutory_coverage_wave_2026-10-25.json",
+    "sha256": "1e7afa7ec324cbf734c90efae3727a797f68e37ca6407360efbc3e9050edbd71"
+  },
+  {
+    "path": "source/tests/fixtures/statutoryCoverageOfficialPages.mjs",
+    "sha256": "e61490c2be79800073f17a60b8727d29e77ce10f08e6b765eb17f0c7b19cfd4f"
+  },
+  {
+    "path": "source/tests/regression/test_authority_evidence_presentation.mjs",
+    "sha256": "95f34c39302fffb6bd2e4214ccbf0dae81fd9337250fae9996e4f32115cecdc8"
+  },
+  {
+    "path": "source/tests/regression/test_cpf_mas_practical_rules.mjs",
+    "sha256": "3e9f27f7e73b26d1cb157f6ef6352cd7c029dbb6b1bf51e89b3ac1f9bafbfb7d"
+  },
+  {
+    "path": "source/tests/regression/test_iras_acra_practical_rules.mjs",
+    "sha256": "e29c8034dd448ce30e6108f110daa650b1caaa08e9a809cbb9484751a37f22ac"
+  },
+  {
+    "path": "source/tests/regression/test_iras_gst_opening_locator.mjs",
+    "sha256": "53077a7fcd1a866e920a0c0d4451355aed122dde9e2e1470ef7b199bca629b6d"
+  },
+  {
+    "path": "source/tests/regression/test_statutory_advisory_support.mjs",
+    "sha256": "010176a73ad19b09db1726913eab6042ea70a8b8516d142897cd0f75792177c0"
+  },
+  {
+    "path": "source/tests/regression/test_statutory_coverage_benchmark.mjs",
+    "sha256": "cef6dd949e310d1740de80bb93b04aa44c5163c74b2f65aa4b84fbbfdc9671be"
+  },
+  {
+    "path": "source/tests/regression/test_statutory_coverage_replay.mjs",
+    "sha256": "fd1d0cf6844b6ad798c5b7f1560b6180935741b175cf7389f54b222c3ea844b4"
+  },
+  {
+    "path": "source/tests/regression/test_statutory_source_discovery.mjs",
+    "sha256": "5d81f23477bba0df0609f9e151d8e7338bf85f9f83323fa87fea1afc103a2867"
+  },
+  {
+    "path": "evidence/statutory-coverage-replay-2026-10-25.json",
+    "sha256": "5d12a393d889fb9a7f9c437602c5053487cca2ac18edf952075bca426cbc4ce3"
+  },
+  {
+    "path": "evidence/statutory-coverage-answers-2026-10-25.json",
+    "sha256": "c0bf6aa4c9bd36403b78adf466dd1b9c43fee04a7875921214c508b7fd2de446"
+  },
+  {
+    "path": "evidence/statutory-coverage-benchmark-actual-replay-2026-10-25.json",
+    "sha256": "0668925c3f3a3250f69f18389d8f66f631ad0713e15b2f2e3c168f661e6b8e6c"
+  },
+  {
+    "path": "evidence/checkpoint.json",
+    "sha256": "2a496a3060f23eb81bd49639b5b0c42ce9fa3e071b2be5d711483044bb0a5ca3"
+  },
+  {
+    "path": "evidence/independent-answer-review.json",
+    "sha256": "55991127ec2419d372f412903a2e82bc8de499bd94d7a2a27e4f0926493c48f1"
+  },
+  {
+    "path": "evidence/pre-mom-scope-fix-replay.json",
+    "sha256": "84d656d27978d00d2d5554b75e3601e4efde31840ac31f7cd9b28efbfb9700eb"
+  },
+  {
+    "path": "evidence/full.log",
+    "sha256": "5a7155166d4cd2093b71acdc9a3adf9256e6a32ffbe3733ef9bb67c036d5c1b7"
+  },
+  {
+    "path": "evidence/lint.log",
+    "sha256": "f78748392e491702152f852d8d49864a60b9cdd0aec21ba87f8b49f35be31c11"
+  },
+  {
+    "path": "evidence/preflight.log",
+    "sha256": "26899d3813a180a056fb3ec5f7b1e0e29fd1b8f6ee7d95bb1514c682696ba0f8"
+  },
+  {
+    "path": "evidence/replay.log",
+    "sha256": "594aa3bf69ba13e931f00e074f7b4e7fde54b40c6bd28561630b2db62c3b82fa"
+  },
+  {
+    "path": "evidence/smoke.log",
+    "sha256": "04592db57272018ba648c5d9cf49389dca8d33a7668beaf2ef60fda7f031eb0c"
+  },
+  {
+    "path": "evidence/typecheck.log",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "path": "evidence/validate.ps1",
+    "sha256": "0dfa8bed015ade2b9c1cce4449d4234b100ecb64effaed415ce91e329d2fc86b"
+  },
+  {
+    "path": "evidence/validation-results.json",
+    "sha256": "6275e2af87c20484a89442e4a00d0165e78dee1d195aa6734361726fcead350d"
+  },
+  {
+    "path": "evidence/vite-build.log",
+    "sha256": "2cf12ddc1b71f27eec1dbb5e23369024a223be6ab10f7bc70673e6285ceb974c"
+  },
+  {
+    "path": "evidence/worker-build.log",
+    "sha256": "054de12b439fd9fc1164c562240b40a37d72d6acf5640369e714de636b8ae6a2"
+  }
+]

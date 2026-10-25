@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createAuthorityEvidencePresentation, hasCompleteRequestRepresentation, hasCurrentAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import {
+  createAuthorityEvidencePresentation,
+  groupExactIssueClaimsByDocument,
+  hasCompleteRequestRepresentation,
+  hasCurrentAuthorityEvidencePresentation
+} from '../../src/utils/authorityEvidencePresentation.ts';
 import {
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
@@ -18,6 +23,7 @@ import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding } from '..
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../../src/retrieval/queryTopicResolver.ts';
 import { getAcraAnnualReturnDeadlineMonths } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { SINGAPORE_COVERAGE_REGISTRY } from '../../src/standards/coverageRegistry.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
 function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', sourceText = 'A complete paragraph from the reviewed source.', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
@@ -310,6 +316,26 @@ for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
     evidenceStatus: 'VERIFIED', applicationStatus: 'NOT_REQUIRED', status: 'VERIFIED', gaps: []
   };
   const liveResult = createAuthorityEvidencePresentation(liveAuthorityResult);
+  const livePresentedSource = liveResult.workstreams[0].sources[0];
+  assert.deepEqual(groupExactIssueClaimsByDocument(livePresentedSource, livePlan.id), [],
+    `${authority} live-looking claims without fetched revision metadata do not group by URL alone.`);
+  const malformedFormalFallback = structuredClone(livePresentedSource);
+  const malformedClaim = malformedFormalFallback.claims.find(claim => claim.issueIds.includes(livePlan.id));
+  malformedClaim.fetchedSourceBinding = {
+    recordId: liveEvidence.id,
+    documentHash: 'a'.repeat(64),
+    canonicalUrl: officialUrl,
+    retrievedAt: '2026-10-25T00:00:00.000Z'
+  };
+  malformedClaim.sourceBinding = {
+    recordId: liveEvidence.id,
+    versionId: 'formal-version',
+    documentHash: 'invalid-hash',
+    provisionHash: 'b'.repeat(64),
+    sourceLocator: {}
+  };
+  assert.deepEqual(groupExactIssueClaimsByDocument(malformedFormalFallback, livePlan.id), [],
+    `${authority} malformed formal binding blocks fallback to fetched metadata.`);
   const livePanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
     citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: liveResult
   }));
@@ -862,6 +888,62 @@ for (const operation of ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATM
   assert.deepEqual(plan.issues[0].mappedTopicIds, ['acra_annual-returns'],
     `${operation} maps the ordinary-company annual-return label to its independently recognized ACRA topic`);
 }
+const separateAcraExtensionQuery = 'For a Singapore-incorporated non-listed company, what is its annual-return filing deadline? Separately, can we request an extension of time?';
+const separateAcraExtensionTopics = defaultQueryTopicResolver.decomposeQuery(separateAcraExtensionQuery);
+assert.ok(separateAcraExtensionTopics.topics.some(topic => topic.id === 'acra_annual-returns'),
+  'a separate extension question does not suppress the independently asked annual-return deadline');
+assert.ok(separateAcraExtensionTopics.unresolvedTopics.some(fragment => /extension of time/i.test(fragment)),
+  'an extension question remains unresolved when the current annual-return topic does not cover it');
+const separateAgmExtensionTopics = defaultQueryTopicResolver.decomposeQuery(
+  'For a Singapore-incorporated non-listed company, what is its annual-return filing deadline? Separately, what is the AGM extension deadline?'
+).topics.map(topic => topic.id);
+assert.ok(separateAgmExtensionTopics.includes('acra_annual-returns') && separateAgmExtensionTopics.includes('acra_agm'),
+  'annual-return and AGM-extension questions remain independently routable');
+const acraOfficerParticularsTopic = SINGAPORE_COVERAGE_REGISTRY.find(topic => topic.id === 'acra-annual-return-officer-particulars');
+assert.ok(acraOfficerParticularsTopic, 'the annual-return officer particulars family has a separate governed topic');
+assert.equal(acraOfficerParticularsTopic.status, 'MISSING', 'the new officer topic is not marked as evidence-validated');
+assert.equal(acraOfficerParticularsTopic.effectiveFrom, '2026-10-20', 'the notice-derived scope starts on its stated commencement date');
+assert.equal(acraOfficerParticularsTopic.urlVerificationStatus, 'CANDIDATE', 'the commencement notice remains a discovery candidate');
+const acraOfficerParticularsQuery = 'From 20 October 2026, what officer particulars are confirmed when filing a company annual return?';
+assert.ok(defaultQueryTopicResolver.decomposeQuery(acraOfficerParticularsQuery).topics
+  .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+  'annual-return and officer-confirmation wording routes to its bounded topic without requiring a Singapore literal');
+const acraOfficerSemanticPlan = b1IssuePlanFor(acraOfficerParticularsQuery,
+  annualReturnUnderstanding('FILING_REQUIREMENT', 'annual return officer particulars confirmation'));
+assert.ok(acraOfficerSemanticPlan.issues[0].mappedTopicIds.includes('acra-annual-return-officer-particulars'),
+  'the narrow semantic subject maps to the separate officer-confirmation topic');
+assert.ok(!defaultQueryTopicResolver.decomposeQuery(b2AnnualReturnQuery).topics
+  .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+  'ordinary filing-deadline questions remain outside officer-particular confirmation scope');
+for (const query of [
+  'For a VCC, what officer particulars must be confirmed when filing its annual return?',
+  'For a foreign-incorporated company, what officer particulars must be confirmed when filing its annual return?',
+  'How do I change a company director without filing an annual return?'
+]) {
+  assert.ok(!defaultQueryTopicResolver.decomposeQuery(query).topics
+    .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+    `officer changes without an ordinary company annual-return confirmation remain outside the new topic: ${query}`);
+}
+const preCommencementOfficerQuery = 'On 19 October 2026, what officer particulars must a local company confirm when filing its annual return?';
+const preCommencementOfficerPlan = b1IssuePlanFor(preCommencementOfficerQuery,
+  annualReturnUnderstanding('FILING_REQUIREMENT', 'annual return officer particulars confirmation'));
+const preCommencementOfficerSource = source({
+  id: 'TEST_ACRA_OFFICER_PARTICULARS_PRECOMMENCEMENT', authority: 'ACRA',
+  title: acraOfficerParticularsTopic.pageTitle,
+  validFrom: acraOfficerParticularsTopic.effectiveFrom,
+  officialSourceUrl: acraOfficerParticularsTopic.canonicalSourceUrl,
+  sourceText: 'From 20 October 2026, a company must confirm the latest particulars of its officers when filing an annual return.',
+  domain: 'ACRA_CORP'
+});
+const preCommencementOfficerWorkstreams = await buildAuthorityWorkstreams(preCommencementOfficerQuery,
+  preCommencementOfficerPlan, {
+    referenceDate: '2026-10-19', localOnly: true,
+    providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({ candidates: [preCommencementOfficerSource] }) } }
+  });
+const preCommencementOfficerIssue = preCommencementOfficerWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.ok(preCommencementOfficerIssue, 'the pre-commencement issue remains represented');
+assert.deepEqual(preCommencementOfficerIssue.verifiedClaims, [],
+  'the notice effective 20 October 2026 is not verified for a 19 October 2026 question');
 const b2FyeAliasUnderstanding = annualReturnUnderstanding();
 b2FyeAliasUnderstanding.interpretation.concepts = [
   ...b2FyeAliasUnderstanding.interpretation.concepts,

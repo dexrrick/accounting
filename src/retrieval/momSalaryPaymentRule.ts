@@ -3,8 +3,9 @@ import type {
   AuthorityPresentedWorkstream,
   AuthorityPresentedSource
 } from '../utils/authorityEvidencePresentation';
+import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
 
-export type MomSalaryPaymentRuleKind = 'REGULAR_SALARY' | 'OVERTIME_SALARY';
+export type MomSalaryPaymentRuleKind = 'REGULAR_SALARY' | 'OVERTIME_SALARY' | 'FINAL_SALARY';
 
 export interface MomSalaryPaymentRuleEvidence {
   kind: MomSalaryPaymentRuleKind;
@@ -14,18 +15,45 @@ export interface MomSalaryPaymentRuleEvidence {
 
 function requestedRule(query: string): MomSalaryPaymentRuleKind | undefined {
   if (/\b(?:19|20)\d{2}\b|\b(?:historical|previous|former|old|superseded|before\s+\d{4})\b/i.test(query) ||
-      /\b(?:calculate|compute|estimate|how much|my salary|our salary|final salary|commission|tax clearance|termination|resignation)\b/i.test(query)) {
+      /\b(?:calculate|compute|estimate|how much|my salary|our salary|commission|tax clearance)\b/i.test(query)) {
     return undefined;
   }
+  const hasPaymentTimingIntent = /\b(?:when|how soon|due|deadline|timing|what date|by what date)\b/i.test(query);
+  const mentionsSalary = /\b(?:salary|salaries|pay)\b/i.test(query);
+  const asksFinalSalaryTiming = hasPaymentTimingIntent && mentionsSalary &&
+    (/\b(?:final|last)\s+(?:salary|pay(?:ment)?)\b/i.test(query) ||
+      /\b(?:resign\w*|dismiss\w*|terminat\w*)\b/i.test(query));
+  if (asksFinalSalaryTiming) return 'FINAL_SALARY';
+
   const asksOvertimeDeadline = /\b(?:when|what(?:\s+is)?\s+the\s+deadline|how\s+soon)\b/i.test(query) &&
     /\bovertime\s+(?:salary|pay)\b/i.test(query) && /\bsalary\s+period\b/i.test(query);
-  const asksRegularDeadline = /\b(?:how\s+often|frequency(?:\s+of)?)\b/i.test(query) &&
+  const hasOvertimeContext = /\bovertime\b/i.test(query);
+  const explicitlyRegularSalary = /\bregular\s+salary\b/i.test(query);
+  const asksRegularFrequency = /\b(?:how\s+often|frequency(?:\s+of)?)\b/i.test(query) &&
+    /\b(?:regular\s+)?salary\b/i.test(query) && /\b(?:pay|paid|payment|paying)\b/i.test(query) &&
+    (!hasOvertimeContext || explicitlyRegularSalary);
+  const asksRegularDate = /\b(?:when|due|deadline|how\s+soon|what date|by what date)\b/i.test(query) &&
     /\b(?:regular\s+)?salary\b/i.test(query) &&
-    /\b(?:when|due|payment\s+period|after\s+the\s+salary\s+period)\b/i.test(query);
+    /\b(?:pay|paid|payment|payable|salary\s+period)\b/i.test(query) &&
+    (!hasOvertimeContext || explicitlyRegularSalary);
+  const asksRegularDeadline = asksRegularFrequency || asksRegularDate;
   if (asksOvertimeDeadline && asksRegularDeadline) return undefined;
   if (asksRegularDeadline) return 'REGULAR_SALARY';
   if (asksOvertimeDeadline) return 'OVERTIME_SALARY';
   return undefined;
+}
+
+type FinalSalaryScenario = 'SERVED_NOTICE' | 'WITHOUT_NOTICE' | 'EMPLOYER_TERMINATION';
+
+function requestedFinalSalaryScenario(query: string): FinalSalaryScenario | undefined {
+  const scenarios = new Set<FinalSalaryScenario>();
+  if (/\b(?:serve\w*|after serving)\b[^.!?]{0,55}\b(?:full|required|contractual)?\s*notice(?:\s+period)?\b/i.test(query) ||
+      /\b(?:full|required|contractual)\s+notice(?:\s+period)?\b/i.test(query)) scenarios.add('SERVED_NOTICE');
+  if (/\bwithout\s+notice\b|\bno\s+notice\b/i.test(query)) scenarios.add('WITHOUT_NOTICE');
+  if (/\b(?:employer\s+(?:termination|dismissal|terminat\w*|dismiss\w*)|termination\s+by\s+(?:the\s+)?employer|dismissal)\b/i.test(query)) {
+    scenarios.add('EMPLOYER_TERMINATION');
+  }
+  return scenarios.size === 1 ? [...scenarios][0] : undefined;
 }
 
 function momSalaryPaymentSource(source: AuthorityPresentedSource): boolean {
@@ -51,13 +79,49 @@ function isPositive(statement: string): boolean {
   return !/\b(?:not|never|cannot|must\s+not|does\s+not|do\s+not|is\s+not|are\s+not|isn't|aren't)\b/i.test(statement);
 }
 
+function hasFullSourceTaxClearanceCaveat(text: string): boolean {
+  return /\bforeign[ -]employees?\b/i.test(text) && /\btax[ -]clearance\b/i.test(text) &&
+    /\b(?:up to\s+)?30 days\b/i.test(text) && /\bnotice to (?:the )?comptroller\b/i.test(text);
+}
+
+function isCompleteFinalSalaryEvidence(
+  claimTexts: readonly string[],
+  query: string,
+  requireFullSourceCaveat: boolean
+): boolean {
+  const scenario = requestedFinalSalaryScenario(query);
+  if (!scenario) return false;
+  const statements = claimTexts.flatMap(sourceStatements);
+  if (requireFullSourceCaveat && !hasFullSourceTaxClearanceCaveat(claimTexts.join(' '))) return false;
+
+  if (scenario === 'SERVED_NOTICE') {
+    return statements.some(statement => isPositive(statement) &&
+      /\bresign\w*\b[^.!?]{0,80}\bafter serving\b[^.!?]{0,50}\b(?:full|required|contractual)?\s*notice\b/i.test(statement) &&
+      /\b(?:final\s+salary|salary)\b[^.!?]{0,80}\b(?:due|payable|paid)\b[^.!?]{0,60}\blast (?:day of )?(?:employment|work)\b/i.test(statement));
+  }
+  if (scenario === 'WITHOUT_NOTICE') {
+    return statements.some(statement => isPositive(statement) &&
+      /\bresign\w*\b[^.!?]{0,60}\bwithout\s+notice\b/i.test(statement) &&
+      /\bwithin\s+7\s+days\b[^.!?]{0,60}\blast (?:day of )?(?:employment|work)\b/i.test(statement));
+  }
+  return statements.some(statement => isPositive(statement) &&
+    /\b(?:employer\s+(?:termination|dismissal|terminat\w*|dismiss\w*)|termination\s+by\s+(?:the\s+)?employer|dismissal)\b/i.test(statement) &&
+    /\blast day\b[^.!?]{0,80}\bif (?:that is )?not possible\b[^.!?]{0,50}\bwithin\s+3\s+working\s+days\b/i.test(statement));
+}
+
 function hasConflictingGeneralSalaryDeadline(statements: readonly string[], expectedDays: number): boolean {
   return statements.some(statement => /\bwithin\s+(\d+)\s+days\s+after\s+the\s+end\s+of\s+the\s+salary\s+period\b/i.test(statement) &&
     !/\bovertime\b/i.test(statement) &&
     Number(statement.match(/\bwithin\s+(\d+)\s+days\s+after\s+the\s+end\s+of\s+the\s+salary\s+period\b/i)?.[1]) !== expectedDays);
 }
 
-function isCompleteSalaryPaymentEvidence(claimTexts: readonly string[], kind: MomSalaryPaymentRuleKind): boolean {
+function isCompleteSalaryPaymentEvidence(
+  claimTexts: readonly string[],
+  kind: MomSalaryPaymentRuleKind,
+  query: string,
+  requireFullSourceCaveat = false
+): boolean {
+  if (kind === 'FINAL_SALARY') return isCompleteFinalSalaryEvidence(claimTexts, query, requireFullSourceCaveat);
   const statements = claimTexts.flatMap(sourceStatements);
   const hasNegatedSalaryDeadlineHeading = claimTexts.some(claim =>
     /\bsalary\s+(?:must\s+not|should\s+not|mustn['’]t)\s+be\s+paid\s*:/i.test(claim) &&
@@ -93,7 +157,82 @@ function isCompleteSalaryPaymentEvidence(claimTexts: readonly string[], kind: Mo
  */
 export function provesMomSalaryPaymentSource(query: string, sourceText: string): boolean | undefined {
   const kind = requestedRule(query);
-  return kind ? isCompleteSalaryPaymentEvidence([sourceText], kind) : undefined;
+  return kind ? isCompleteSalaryPaymentEvidence([sourceText], kind, query, kind === 'FINAL_SALARY') : undefined;
+}
+
+function normalizedSalaryConcept(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+}
+
+function isCompatibleSalaryIssueSubject(query: string, subject: string, kind: MomSalaryPaymentRuleKind): boolean {
+  if (!/\bsalary\b/i.test(subject) || !/\b(?:payment|period|deadline|timing|due)\b/i.test(subject)) return false;
+  if (kind === 'FINAL_SALARY') return Boolean(requestedFinalSalaryScenario(query));
+  if (/\b(?:final|commission|tax\s+clearance|resignation|termination|calculate|amount|historical|previous|former|old)\b/i.test(subject)) return false;
+  if (kind === 'OVERTIME_SALARY') return /\bovertime\s+(?:salary|pay)\b/i.test(subject);
+  return /\bregular\s+salary\b/i.test(subject) ||
+    /\bsalary\s+payment\s+frequency\s+and\s+due\s+dates?\b/i.test(subject) &&
+    /\bregular\s+salary\b/i.test(query);
+}
+
+/**
+ * Supports only the current, general regular/overtime salary timing rules.
+ * A recognized request with an incompatible issue label or incomplete source
+ * quote fails closed; unrelated queries remain outside this helper.
+ */
+export function supportMomSalaryPaymentIssue(query: string, subject: string, sourceText: string): boolean | undefined {
+  const kind = requestedRule(query);
+  if (!kind) return undefined;
+  if (!isCompatibleSalaryIssueSubject(query, subject, kind)) return false;
+  return isCompleteSalaryPaymentEvidence([sourceText], kind, query);
+}
+
+/** Restricts topicless semantic labels to the concepts covered by the proof above. */
+export function supportMomSalaryPaymentConcept(
+  query: string,
+  subject: string,
+  conceptLabel: string,
+  conceptTerms: readonly string[],
+  sourceText: string
+): boolean | undefined {
+  const kind = requestedRule(query);
+  if (!kind) return undefined;
+  if (!isCompatibleSalaryIssueSubject(query, subject, kind)) return false;
+  const label = normalizedSalaryConcept(conceptLabel);
+  const supportedConcepts = kind === 'FINAL_SALARY'
+    ? new Set([
+        'final salary deadline',
+        'final salary payment deadline',
+        'final salary due date',
+        'final salary payment due date',
+        'last salary payment deadline',
+        'last salary due date',
+        'final pay deadline',
+        'final pay due date'
+      ])
+    : kind === 'REGULAR_SALARY'
+    ? new Set([
+        'salary period',
+        'salary payment frequency',
+        'salary due date',
+        'salary due dates',
+        'salary payment deadline',
+        'regular salary due date',
+        'regular salary payment deadline',
+        'regular salary payment period and deadline',
+        'salary payment period and regular salary deadline',
+        'salary payment frequency and due date',
+        'salary payment frequency and due dates'
+      ])
+    : new Set([
+        'overtime salary payment due date',
+        'overtime salary due date',
+        'overtime salary payment period deadline',
+        'overtime payment due date',
+        'overtime payment deadline'
+      ]);
+  if (!supportedConcepts.has(label)) return false;
+  if (conceptTerms.some(term => !supportedConcepts.has(normalizedSalaryConcept(term)))) return false;
+  return isCompleteSalaryPaymentEvidence([sourceText], kind, query);
 }
 
 /**
@@ -107,13 +246,11 @@ export function getMomSalaryPaymentRuleEvidence(
 ): MomSalaryPaymentRuleEvidence | undefined {
   const kind = requestedRule(query);
   if (!kind || stream.authority !== 'MOM' || stream.domain !== 'MOM_EMPLOYMENT' ||
+      kind === 'FINAL_SALARY' ||
       stream.evidenceStatus !== 'VERIFIED' || stream.applicationStatus === 'UNRESOLVED' ||
       issue.evidenceStatus !== 'VERIFIED' || issue.applicationStatus === 'UNRESOLVED' ||
       issue.operation !== 'EXPLAIN_RULE' || !['Employee', 'Employer'].includes(issue.population) ||
-      !/\bsalary\b/i.test(issue.subject) || !/\b(?:payment|period|deadline)\b/i.test(issue.subject) ||
-      /\b(?:final|commission|tax\s+clearance|resignation|termination|calculate|amount|historical|previous|former|old)\b/i.test(issue.subject)) return undefined;
-  if (kind === 'REGULAR_SALARY' && !/\bregular\s+salary\b/i.test(issue.subject) ||
-      kind === 'OVERTIME_SALARY' && !/\bovertime\s+(?:salary|pay)\b/i.test(issue.subject)) return undefined;
+      !isCompatibleSalaryIssueSubject(query, issue.subject, kind)) return undefined;
 
   // A single scoped issue must own the question; otherwise a deadline asked
   // about one salary category could be emitted beside a separate payroll issue.
@@ -121,11 +258,10 @@ export function getMomSalaryPaymentRuleEvidence(
 
   for (const source of stream.sources) {
     if (!momSalaryPaymentSource(source)) continue;
-    const exactSupportingClaims = source.claims.filter(claim =>
-      claim.issueIds.includes(issue.id) && claim.supportKind === 'EXACT_SOURCE_QUOTE' &&
-      claim.provenance === 'LIVE_EXTERNAL' && !claim.validTo);
-    if (isCompleteSalaryPaymentEvidence(exactSupportingClaims.map(claim => claim.text), kind)) {
-      return { kind, title: source.title, officialUrl: source.officialUrl! };
+    for (const exactSupportingClaims of groupExactIssueClaimsByDocument(source, issue.id)) {
+      if (isCompleteSalaryPaymentEvidence(exactSupportingClaims.map(claim => claim.text), kind, query)) {
+        return { kind, title: source.title, officialUrl: source.officialUrl! };
+      }
     }
   }
   return undefined;

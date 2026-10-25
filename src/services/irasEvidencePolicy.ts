@@ -5,6 +5,7 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
 import {
+  completeIrasEciFilingDeadlineQuote,
   completeIrasGstMotorCarConnectedPersonExceptionQuote,
   completeIrasCpfCashTopUpEligibilityQuote,
   completeIrasCpfCashTopUpLimitQuotes,
@@ -689,6 +690,17 @@ function selectEvidenceOnlyQuotes(
           sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
           requestedSupportConceptIds: [], requestedSupportTopicIds: [] });
       }
+    }
+    if (hasValidatedRuleIntent && selectedTopicIds.includes('iras-cit-eci') &&
+        record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+        recordHasRequestedTopicAssociation(record, 'iras-cit-eci')) {
+      const filingDeadlineQuote = completeIrasEciFilingDeadlineQuote(record.sourceText);
+      if (filingDeadlineQuote) candidates.push({
+        text: filingDeadlineQuote, quote: filingDeadlineQuote, recordId: record.id, kind: 'RULE', score: 120,
+        recordOrder, paragraphOrder: sourceBlocks.findIndex(block => block === filingDeadlineQuote.split(/\r?\n/)[0]),
+        sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: ['iras-cit-eci'],
+        requestedSupportConceptIds: [], requestedSupportTopicIds: ['iras-cit-eci']
+      });
     }
     if (hasValidatedRuleIntent && selectedTopicIds.includes('iras-individual-cpf-cash-top-up-relief')) {
       const eligibilityQuote = completeCpfCashTopUpEligibilityQuote(record);

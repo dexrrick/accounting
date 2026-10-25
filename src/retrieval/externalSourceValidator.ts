@@ -79,6 +79,8 @@ export interface TopicContentExpectation {
   requireAcraAnnualReturnDeadlineTable?: boolean;
   /** Enables one native CPF wage-definition card only for the exact bounded request. */
   cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Enables the native Additional Wages definition card only for its bounded request. */
+  cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -499,7 +501,7 @@ function isInsideElement(element: BalancedMarkupElement, ancestor: BalancedMarku
  * and only when its complete criteria satisfy the bounded request. The source
  * card is replaced in place so body order and the source wording stay intact.
  */
-function preserveSupportedCpfOrdinaryWageCard(
+function preserveSupportedCpfWageCard(
   mainMarkup: string,
   request: BoundedStatutoryAdvisoryRequest
 ): string {
@@ -679,6 +681,7 @@ function extractVisiblePageText(
     requireSubstantiveBody?: boolean;
     requireAcraAnnualReturnDeadlineTable?: boolean;
     cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
   } = {}
 ): string {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
@@ -690,7 +693,8 @@ function extractVisiblePageText(
     withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
-  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && options.cpfOrdinaryWageDefinitionRequest &&
+  const cpfWageDefinitionRequest = options.cpfAdditionalWageDefinitionRequest || options.cpfOrdinaryWageDefinitionRequest;
+  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && cpfWageDefinitionRequest &&
       !/<\/?main\b/i.test(contentMatch[1])) {
     const mainMarkup = rawDocument
       .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -719,7 +723,7 @@ function extractVisiblePageText(
     if (visibleMain && mainOpen && mainClosings[0]) {
       const mainContentStart = mainOpenIndex + mainOpen[0].length;
       const originalMainContent = mainMarkup.slice(mainContentStart, mainCloseIndex);
-      visibleMarkup = preserveSupportedCpfOrdinaryWageCard(originalMainContent, options.cpfOrdinaryWageDefinitionRequest)
+      visibleMarkup = preserveSupportedCpfWageCard(originalMainContent, cpfWageDefinitionRequest)
         .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
         .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
     }
@@ -927,16 +931,19 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
+    const cpfWageDefinitionRequest = expectation.cpfAdditionalWageDefinitionRequest ||
+      expectation.cpfOrdinaryWageDefinitionRequest;
     const substantiveText = extractVisiblePageText(rawDocument, {
       preferMainContent: expectation.preferMainContent,
       requireSubstantiveBody: expectation.requireSubstantiveBody,
       requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
-      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest
+      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
+      cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest
     });
-    if (expectation.cpfOrdinaryWageDefinitionRequest &&
-        (!isBoundedStatutoryAdvisoryRequest(expectation.cpfOrdinaryWageDefinitionRequest) ||
+    if (cpfWageDefinitionRequest &&
+        (!isBoundedStatutoryAdvisoryRequest(cpfWageDefinitionRequest) ||
          supportBoundedStatutoryAdvisory({
-           ...expectation.cpfOrdinaryWageDefinitionRequest,
+           ...cpfWageDefinitionRequest,
            sourceText: substantiveText
          }) !== true)) {
       return {

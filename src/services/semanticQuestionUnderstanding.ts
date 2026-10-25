@@ -411,7 +411,7 @@ const ACRA_ANNUAL_RETURN_SUBJECT_WORDS = new Set([
   'company', 'companies', 'singapore', 'acra', 'rule', 'rules', 'and', 'requirement', 'requirements'
 ]);
 
-function canonicalAcraAnnualReturnSubjectIfBounded(
+function isBoundedAcraAnnualReturnSubject(
   query: string,
   subject: string,
   domain: SemanticQuestionDomain,
@@ -420,7 +420,7 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
   governingAuthorities: SemanticAuthority[],
   independentlyRecognizedTopicIds: ReadonlySet<string>,
   issueCount: number
-): string {
+): boolean {
   const subjectWords = subject.toLowerCase().normalize('NFKD')
     .replace(/[^a-z0-9]+/g, ' ').split(/\s+/).filter(Boolean);
   const boundedOrdinarySubject = subjectWords.length > 0 &&
@@ -431,8 +431,24 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
       governingAuthorities.length !== 1 || governingAuthorities[0] !== 'ACRA' ||
       issueCount !== 1 || !independentlyRecognizedTopicIds.has('acra_annual-returns') ||
       independentlyRecognizedTopicIds.has('acra_vcc') || vccScope.test(query) || vccScope.test(subject)) {
-    return subject;
+    return false;
   }
+
+  return true;
+}
+
+function canonicalAcraAnnualReturnSubjectIfBounded(
+  query: string,
+  subject: string,
+  domain: SemanticQuestionDomain,
+  population: SemanticPopulation,
+  operation: SemanticQuestionOperation,
+  governingAuthorities: SemanticAuthority[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>,
+  issueCount: number
+): string {
+  if (!isBoundedAcraAnnualReturnSubject(query, subject, domain, population, operation,
+    governingAuthorities, independentlyRecognizedTopicIds, issueCount)) return subject;
 
   // Resolve bounded annual-return labels (including due-date wording) through
   // the existing topic resolver without rewriting the provider's diagnostics.
@@ -453,7 +469,13 @@ function resolveIssueTopicIds(
   const subjectForTopicResolution = canonicalAcraAnnualReturnSubjectIfBounded(
     query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds, issueCount
   );
-  const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subjectForTopicResolution).topics.map(topic => topic.id);
+  const constrainB3AnnualReturnSubject = isBoundedAcraAnnualReturnMissingFactsQuestion(query);
+  const boundedAcraAnnualReturnSubject = !constrainB3AnnualReturnSubject ||
+    isBoundedAcraAnnualReturnSubject(query, subject, domain, population, operation,
+      governingAuthorities, independentlyRecognizedTopicIds, issueCount);
+  const subjectTopicIds = defaultQueryTopicResolver.decomposeQuery(subjectForTopicResolution).topics
+    .map(topic => topic.id)
+    .filter(topicId => topicId !== 'acra_annual-returns' || boundedAcraAnnualReturnSubject);
   const subjectTopics = getCoverageTopicsByIds(subjectTopicIds);
   const bindRecognizedGstTopic = domain === 'IRAS_GST' && population === 'COMPANY' && operation === 'EXPLAIN_RULE' &&
     governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' && issueCount === 1 &&

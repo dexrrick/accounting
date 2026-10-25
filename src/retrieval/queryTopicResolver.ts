@@ -120,10 +120,20 @@ function filterContextualTopics<T extends QueryTopic>(query: string, topics: rea
   const hasSeparateCompulsoryCpfReliefRequest = /\bcpf\s+relief\s+for\s+employees?\b|\bemployee\s+cpf\s+relief\b/i.test(q) ||
     /\b(?:compulsory|mandatory)\b[^.!?;]{0,80}\bcpf\b/i.test(q) ||
     /\bcpf\b[^.!?;]{0,80}\b(?:compulsory|mandatory)\b/i.test(q);
+  const cmsLicenseClauses = query.split(/[.!?;]|\band\b|\balso\b|\bbut\b|\bas well as\b/i)
+    .map(clause => clause.trim())
+    .filter(clause => /\b(?:cms|capital markets services)\b/i.test(clause) &&
+      /\blicen[cs](?:e|ing)\b/i.test(clause));
+  const cmsClauseAsksDistinctActivity = (clause: string): boolean =>
+    /\b(?:deal(?:ing)?\s+(?:in\s+)?(?:securities|capital markets products?)|advis(?:e|ing)\s+(?:on|about)\s+(?:investment|securities)|investment advice|custod(?:y|ian)|other\s+(?:regulated\s+)?activities)\b/i.test(clause);
+  const cmsLicensingIsLfmcScoped = cmsLicenseClauses.length > 0 &&
+    cmsLicenseClauses.every(clause => /\b(?:lfmc|licensed fund management company)\b/i.test(clause) &&
+      !cmsClauseAsksDistinctActivity(clause));
   return topics.filter(topic =>
     !(passengerCarInputTaxContext && !hasSeparateGstWorkstream && topic.domainId === 'IRAS_GST' &&
       !['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id)) &&
-    !(hasCashTopUpReliefRequest && !hasSeparateCompulsoryCpfReliefRequest && topic.id === 'iras-individual-cpf-relief')
+    !(hasCashTopUpReliefRequest && !hasSeparateCompulsoryCpfReliefRequest && topic.id === 'iras-individual-cpf-relief') &&
+    !(cmsLicensingIsLfmcScoped && topic.id === 'mas-cms-licence')
   );
 }
 

@@ -1,0 +1,4782 @@
+{
+  "generatedFrom": "scripts/generate_statutory_coverage_fixture.mjs",
+  "preparedAt": "2026-10-25",
+  "referenceDate": "2026-10-25",
+  "scope": "Practical question coverage benchmark; answer quality requires real captured responses and independent legal review.",
+  "authorityCounts": {
+    "IRAS": 20,
+    "CPF": 20,
+    "MOM": 20,
+    "ACRA": 20,
+    "MAS": 20
+  },
+  "cases": [
+    {
+      "id": "iras-input-tax-01",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "question": "When can a Singapore business recover input GST on purchases?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "gst registered",
+              "registered for gst"
+            ]
+          },
+          {
+            "anyOf": [
+              "supplied to you",
+              "supplied to it",
+              "imported by you",
+              "imported by it"
+            ]
+          },
+          {
+            "anyOf": [
+              "purpose of your business",
+              "business purpose",
+              "business purposes"
+            ]
+          },
+          {
+            "anyOf": [
+              "tax invoice",
+              "import permit"
+            ]
+          },
+          {
+            "anyOf": [
+              "taxable supplies",
+              "standard-rated supplies",
+              "zero-rated supplies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "input-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 1
+    },
+    {
+      "id": "iras-input-tax-02",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "question": "What conditions must a GST-registered business satisfy before claiming GST input tax?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "gst registered",
+              "registered for gst"
+            ]
+          },
+          {
+            "anyOf": [
+              "supplied to you",
+              "supplied to it",
+              "imported by you",
+              "imported by it"
+            ]
+          },
+          {
+            "anyOf": [
+              "purpose of your business",
+              "business purpose",
+              "business purposes"
+            ]
+          },
+          {
+            "anyOf": [
+              "tax invoice",
+              "import permit"
+            ]
+          },
+          {
+            "anyOf": [
+              "taxable supplies",
+              "standard-rated supplies",
+              "zero-rated supplies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "input-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 2
+    },
+    {
+      "id": "iras-input-tax-03",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "question": "Can a GST-registered company claim input tax on business purchases, and what records are needed?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "gst registered",
+              "registered for gst"
+            ]
+          },
+          {
+            "anyOf": [
+              "supplied to you",
+              "supplied to it",
+              "imported by you",
+              "imported by it"
+            ]
+          },
+          {
+            "anyOf": [
+              "purpose of your business",
+              "business purpose",
+              "business purposes"
+            ]
+          },
+          {
+            "anyOf": [
+              "tax invoice",
+              "import permit"
+            ]
+          },
+          {
+            "anyOf": [
+              "taxable supplies",
+              "standard-rated supplies",
+              "zero-rated supplies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "input-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 3
+    },
+    {
+      "id": "iras-input-tax-04",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "question": "Explain when a business may recover GST input tax on purchases used to make taxable supplies.",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "gst registered",
+              "registered for gst"
+            ]
+          },
+          {
+            "anyOf": [
+              "purpose of your business",
+              "business purpose",
+              "business purposes"
+            ]
+          },
+          {
+            "anyOf": [
+              "taxable supplies",
+              "standard-rated supplies",
+              "zero-rated supplies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "input-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 4
+    },
+    {
+      "id": "iras-input-tax-05",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "question": "What checks should accounts perform before posting an input GST claim?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-gst-input-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "gst registered",
+              "registered for gst"
+            ]
+          },
+          {
+            "anyOf": [
+              "supplied to you",
+              "supplied to it",
+              "imported by you",
+              "imported by it"
+            ]
+          },
+          {
+            "anyOf": [
+              "purpose of your business",
+              "business purpose",
+              "business purposes"
+            ]
+          },
+          {
+            "anyOf": [
+              "tax invoice",
+              "import permit"
+            ]
+          },
+          {
+            "anyOf": [
+              "taxable supplies",
+              "standard-rated supplies",
+              "zero-rated supplies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "input-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 5
+    },
+    {
+      "id": "iras-gst-filing-01",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "question": "When is a Singapore GST return due after each quarter?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "one month",
+              "1 month"
+            ]
+          },
+          {
+            "anyOf": [
+              "end of the accounting period",
+              "accounting period ends"
+            ]
+          },
+          {
+            "anyOf": [
+              "file every return",
+              "submit the return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "gst-filing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 6
+    },
+    {
+      "id": "iras-gst-filing-02",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "question": "What is the GST filing deadline for an F5 return?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "one month",
+              "1 month"
+            ]
+          },
+          {
+            "anyOf": [
+              "end of the accounting period",
+              "accounting period ends"
+            ]
+          },
+          {
+            "anyOf": [
+              "file every return",
+              "submit the return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "gst-filing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 7
+    },
+    {
+      "id": "iras-gst-filing-03",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "question": "Must we file a nil GST return if there was no activity this quarter?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "nil return",
+              "nil returns"
+            ]
+          },
+          {
+            "anyOf": [
+              "file every return",
+              "submit the return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "gst-filing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 8
+    },
+    {
+      "id": "iras-gst-filing-04",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "question": "What is the normal GST filing deadline and can a business seek an extension?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "one month",
+              "1 month"
+            ]
+          },
+          {
+            "anyOf": [
+              "end of the accounting period",
+              "accounting period ends"
+            ]
+          },
+          {
+            "anyOf": [
+              "file every return",
+              "submit the return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "gst-filing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 9
+    },
+    {
+      "id": "iras-gst-filing-05",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "question": "When is the GST return due after an accounting period ends?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "iras-gst-filing-deadlines"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "one month",
+              "1 month"
+            ]
+          },
+          {
+            "anyOf": [
+              "end of the accounting period",
+              "accounting period ends"
+            ]
+          },
+          {
+            "anyOf": [
+              "file every return",
+              "submit the return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "gst-filing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 10
+    },
+    {
+      "id": "iras-eci-01",
+      "authority": "IRAS",
+      "family": "eci",
+      "question": "When should a company file its Estimated Chargeable Income?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "iras-cit-eci"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "three months",
+              "3 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "eci",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 11
+    },
+    {
+      "id": "iras-eci-02",
+      "authority": "IRAS",
+      "family": "eci",
+      "question": "What is the ECI filing deadline after financial year end?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "iras-cit-eci"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "three months",
+              "3 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "eci",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 12
+    },
+    {
+      "id": "iras-eci-03",
+      "authority": "IRAS",
+      "family": "eci",
+      "question": "Is there a general waiver from filing ECI and what conditions apply?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "iras-cit-eci"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "three months",
+              "3 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          },
+          {
+            "anyOf": [
+              "annual revenue of $5 million or below",
+              "revenue is $5 million or below",
+              "revenue does not exceed $5 million"
+            ]
+          },
+          {
+            "anyOf": [
+              "eci is nil",
+              "nil eci",
+              "estimated chargeable income is nil"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "eci",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 13
+    },
+    {
+      "id": "iras-eci-04",
+      "authority": "IRAS",
+      "family": "eci",
+      "question": "Our company had no accounting profit this year. Can it skip ECI, or what facts determine whether the filing waiver applies?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "iras-cit-eci"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "annual revenue",
+              "revenue for the financial year"
+            ]
+          },
+          {
+            "anyOf": [
+              "estimated chargeable income",
+              "eci amount",
+              "whether eci is nil"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "eci",
+      "clarificationExpected": true,
+      "uniqueOrdinal": 14
+    },
+    {
+      "id": "iras-eci-05",
+      "authority": "IRAS",
+      "family": "eci",
+      "question": "By when must a Singapore company submit its ECI?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "iras-cit-eci"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "three months",
+              "3 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing",
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "eci",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 15
+    },
+    {
+      "id": "iras-withholding-tax-01",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "question": "Does Singapore withholding tax apply to a payment made overseas?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "non-resident",
+              "nonresident"
+            ]
+          },
+          {
+            "anyOf": [
+              "type of payment",
+              "payment type"
+            ]
+          },
+          {
+            "anyOf": [
+              "withholding tax",
+              "wht"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "withholding-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 16
+    },
+    {
+      "id": "iras-withholding-tax-02",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "question": "We are paying a foreign consultant; how do we determine whether WHT is due?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "non-resident",
+              "nonresident"
+            ]
+          },
+          {
+            "anyOf": [
+              "type of payment",
+              "payment type"
+            ]
+          },
+          {
+            "anyOf": [
+              "withholding tax",
+              "wht"
+            ]
+          },
+          {
+            "anyOf": [
+              "treaty",
+              "double taxation agreement",
+              "dta"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "withholding-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 17
+    },
+    {
+      "id": "iras-withholding-tax-03",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "question": "What facts decide if a payment to a non-resident attracts withholding tax?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "non-resident",
+              "nonresident"
+            ]
+          },
+          {
+            "anyOf": [
+              "type of payment",
+              "payment type"
+            ]
+          },
+          {
+            "anyOf": [
+              "withholding tax",
+              "wht"
+            ]
+          },
+          {
+            "anyOf": [
+              "treaty",
+              "double taxation agreement",
+              "dta"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "withholding-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 18
+    },
+    {
+      "id": "iras-withholding-tax-04",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "question": "How do tax treaties affect withholding tax on payments to non-residents?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "non-resident",
+              "nonresident"
+            ]
+          },
+          {
+            "anyOf": [
+              "type of payment",
+              "payment type"
+            ]
+          },
+          {
+            "anyOf": [
+              "treaty",
+              "double taxation agreement",
+              "dta"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "withholding-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 19
+    },
+    {
+      "id": "iras-withholding-tax-05",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "question": "What WHT checks should finance make before paying a non-resident company for services?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "iras-withholding-tax"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "non-resident",
+              "nonresident"
+            ]
+          },
+          {
+            "anyOf": [
+              "type of payment",
+              "payment type"
+            ]
+          },
+          {
+            "anyOf": [
+              "withholding tax",
+              "wht"
+            ]
+          },
+          {
+            "anyOf": [
+              "treaty",
+              "double taxation agreement",
+              "dta"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "withholding-tax",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 20
+    },
+    {
+      "id": "cpf-additional-wages-definition-01",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "question": "What does CPF mean by Additional Wages?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "additional-wages-definition",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 1
+    },
+    {
+      "id": "cpf-additional-wages-definition-02",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "question": "How can payroll distinguish AW from Ordinary Wages?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-ordinary-wages",
+        "cpf-additional-wages"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "not classified as ordinary wages",
+              "not ordinary wages"
+            ]
+          },
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "for the month",
+              "that month"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "additional-wages-definition",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 2
+    },
+    {
+      "id": "cpf-additional-wages-definition-03",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "question": "What kind of wage payment is an Additional Wage for CPF?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "performance bonus"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "additional-wages-definition",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 3
+    },
+    {
+      "id": "cpf-additional-wages-definition-04",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "question": "Is an annual performance bonus treated as AW or OW?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages",
+        "cpf-bonus-backpay"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "performance bonus"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "additional-wages-definition",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 4
+    },
+    {
+      "id": "cpf-cpf-due-date-01",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "question": "When must employers pay the CPF contributions for a month?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "cpf-contribution-due-dates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "end of the month",
+              "month end"
+            ]
+          },
+          {
+            "anyOf": [
+              "14th of the following month",
+              "14th day of the following month",
+              "14th of next month"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+        "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-due-date",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 5
+    },
+    {
+      "id": "cpf-cpf-due-date-02",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "question": "What is the CPF contribution remittance deadline?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "cpf-contribution-due-dates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "end of the month",
+              "month end"
+            ]
+          },
+          {
+            "anyOf": [
+              "14th of the following month",
+              "14th day of the following month",
+              "14th of next month"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+        "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-due-date",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 6
+    },
+    {
+      "id": "cpf-cpf-due-date-03",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "question": "We paid salary in September; when are the CPF contributions due?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "cpf-contribution-due-dates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "end of the month",
+              "month end"
+            ]
+          },
+          {
+            "anyOf": [
+              "14th of the following month",
+              "14th day of the following month",
+              "14th of next month"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+        "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-due-date",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 7
+    },
+    {
+      "id": "cpf-cpf-due-date-04",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "question": "By which date should the employer settle monthly CPF?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "cpf-contribution-due-dates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "end of the month",
+              "month end"
+            ]
+          },
+          {
+            "anyOf": [
+              "14th of the following month",
+              "14th day of the following month",
+              "14th of next month"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+        "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-due-date",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 8
+    },
+    {
+      "id": "cpf-cpf-rate-factors-01",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "question": "What information determines the CPF contribution rate for an employee?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "citizenship",
+              "citizen or permanent resident",
+              "permanent resident status"
+            ]
+          },
+          {
+            "anyOf": [
+              "age",
+              "age group"
+            ]
+          },
+          {
+            "anyOf": [
+              "wage amount",
+              "wages"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable year",
+              "year of contribution",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-rate-factors",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 9
+    },
+    {
+      "id": "cpf-cpf-rate-factors-02",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "question": "For an employee paid during 2024, what facts determine the applicable CPF contribution rate schedule?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "citizenship",
+              "citizen or permanent resident",
+              "permanent resident status"
+            ]
+          },
+          {
+            "anyOf": [
+              "age",
+              "age group"
+            ]
+          },
+          {
+            "anyOf": [
+              "wage amount",
+              "wages"
+            ]
+          },
+          {
+            "anyOf": [
+              "2024 contribution schedule",
+              "2024 rate schedule",
+              "rate schedule applicable in 2024"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ],
+      "temporal": {
+        "targetDate": "2024-01-01",
+        "status": "REQUIRES_HISTORICAL_OFFICIAL_RATE_SOURCE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-rate-factors",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 10
+    },
+    {
+      "id": "cpf-cpf-rate-factors-03",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "question": "Why do two employees with different ages or PR status have different CPF rates?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "citizenship",
+              "citizen or permanent resident",
+              "permanent resident status"
+            ]
+          },
+          {
+            "anyOf": [
+              "age",
+              "age group"
+            ]
+          },
+          {
+            "anyOf": [
+              "wage amount",
+              "wages"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable year",
+              "year of contribution",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-rate-factors",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 11
+    },
+    {
+      "id": "cpf-cpf-rate-factors-04",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "question": "Our employee earns S$4,000 a month. Can you calculate the CPF contributions, and what other payroll facts do you need?",
+      "operation": "CALCULATE",
+      "requiredTopicIds": [
+        "cpf_contribution_rates"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "employee age",
+              "age of the employee"
+            ]
+          },
+          {
+            "anyOf": [
+              "citizenship or permanent resident status",
+              "citizen or pr status",
+              "permanent resident status"
+            ]
+          },
+          {
+            "anyOf": [
+              "contribution month or year",
+              "applicable contribution year",
+              "contribution year",
+              "date the wages were earned"
+            ]
+          },
+          {
+            "anyOf": [
+              "ordinary and additional wages",
+              "wage type and amount",
+              "ordinary wages and additional wages",
+              "ordinary versus additional wage breakdown"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "REQUIRES_INDEPENDENT_CALCULATION_REVIEW",
+        "requiredInputs": [
+          "age",
+          "citizenship or permanent-resident status",
+          "contribution period",
+          "ordinary-wage and additional-wage breakdown"
+        ]
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-rate-factors",
+      "clarificationExpected": true,
+      "uniqueOrdinal": 12
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-01",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "question": "How is the CPF Additional Wage ceiling for bonuses worked out?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wage-ceiling"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "$102,000",
+              "102,000"
+            ]
+          },
+          {
+            "anyOf": [
+              "ordinary wages subject to cpf",
+              "ow subject to cpf"
+            ]
+          },
+          {
+            "anyOf": [
+              "calendar year",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-aw-ceiling",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 13
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-02",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "question": "What formula determines how much AW can attract CPF?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wage-ceiling"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "$102,000",
+              "102,000"
+            ]
+          },
+          {
+            "anyOf": [
+              "ordinary wages subject to cpf",
+              "ow subject to cpf"
+            ]
+          },
+          {
+            "anyOf": [
+              "calendar year",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-aw-ceiling",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 14
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-03",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "question": "How do OW payments affect the Additional Wage limit?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wage-ceiling"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "ordinary wages subject to cpf",
+              "ow subject to cpf"
+            ]
+          },
+          {
+            "anyOf": [
+              "calendar year",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-aw-ceiling",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 15
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-04",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "question": "Explain the CPF Additional Wage ceiling for an employee who receives a bonus.",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wage-ceiling"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "$102,000",
+              "102,000"
+            ]
+          },
+          {
+            "anyOf": [
+              "ordinary wages subject to cpf",
+              "ow subject to cpf"
+            ]
+          },
+          {
+            "anyOf": [
+              "calendar year",
+              "year"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-aw-ceiling",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 16
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-01",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "question": "Does an annual bonus attract CPF contributions?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages",
+        "cpf-bonus-backpay"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "bonus"
+            ]
+          },
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "subject to applicable additional wage ceiling",
+              "additional wage ceiling"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-bonus-classification",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 17
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-02",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "question": "How should payroll classify a performance bonus under CPF?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages",
+        "cpf-bonus-backpay"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "bonus"
+            ]
+          },
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "subject to applicable additional wage ceiling",
+              "additional wage ceiling"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-bonus-classification",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 18
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-03",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "question": "Is an annual wage supplement ordinary or additional wages?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "bonus"
+            ]
+          },
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "subject to applicable additional wage ceiling",
+              "additional wage ceiling"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-bonus-classification",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 19
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-04",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "question": "Does a bonus count as AW for CPF ceiling purposes?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "cpf-additional-wages",
+        "cpf-additional-wage-ceiling"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual performance bonus",
+              "bonus"
+            ]
+          },
+          {
+            "anyOf": [
+              "additional wages",
+              "aw"
+            ]
+          },
+          {
+            "anyOf": [
+              "subject to applicable additional wage ceiling",
+              "additional wage ceiling"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "cpf-bonus-classification",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 20
+    },
+    {
+      "id": "mom-salary-timing-01",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "question": "How often must an employer pay salary under the Employment Act?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "at least once a month",
+              "once a month"
+            ]
+          },
+          {
+            "anyOf": [
+              "within 7 days",
+              "7 days"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-timing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 1
+    },
+    {
+      "id": "mom-salary-timing-02",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "question": "What is the usual deadline for monthly salary after the salary period?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "within 7 days",
+              "7 days"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-timing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 2
+    },
+    {
+      "id": "mom-salary-timing-03",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "question": "When is overtime pay due after the salary period ends?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "overtime",
+              "within 14 days",
+              "14 days"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-timing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 3
+    },
+    {
+      "id": "mom-salary-timing-04",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "question": "Our payroll pays monthly; what is the statutory salary payment timing?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "at least once a month",
+              "once a month"
+            ]
+          },
+          {
+            "anyOf": [
+              "within 7 days",
+              "7 days"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-timing",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 4
+    },
+    {
+      "id": "mom-final-salary-01",
+      "authority": "MOM",
+      "family": "final-salary",
+      "question": "When is final salary due if an employee serves the full notice period?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "last day of employment",
+              "last day"
+            ]
+          },
+          {
+            "anyOf": [
+              "resignation",
+              "dismissal",
+              "termination"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "final-salary",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 5
+    },
+    {
+      "id": "mom-final-salary-02",
+      "authority": "MOM",
+      "family": "final-salary",
+      "question": "How soon must salary be paid after a resignation without notice?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "within 7 days",
+              "7 days"
+            ]
+          },
+          {
+            "anyOf": [
+              "resignation",
+              "dismissal",
+              "termination"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "final-salary",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 6
+    },
+    {
+      "id": "mom-final-salary-03",
+      "authority": "MOM",
+      "family": "final-salary",
+      "question": "What timing applies to final salary after dismissal for misconduct?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "last day of employment",
+              "last day"
+            ]
+          },
+          {
+            "anyOf": [
+              "resignation",
+              "dismissal",
+              "termination"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "final-salary",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 7
+    },
+    {
+      "id": "mom-final-salary-04",
+      "authority": "MOM",
+      "family": "final-salary",
+      "question": "Does employer termination change when the last salary is paid?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "last day of employment",
+              "last day"
+            ]
+          },
+          {
+            "anyOf": [
+              "resignation",
+              "dismissal",
+              "termination"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "final-salary",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 8
+    },
+    {
+      "id": "mom-annual-leave-01",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "question": "When does statutory paid annual leave begin under the Employment Act?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_annual_leave"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "at least 3 months",
+              "three months"
+            ]
+          },
+          {
+            "anyOf": [
+              "7 days",
+              "seven days"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-leave",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 9
+    },
+    {
+      "id": "mom-annual-leave-02",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "question": "What is the minimum annual leave entitlement and how does it increase?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_annual_leave"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "7 days",
+              "seven days"
+            ]
+          },
+          {
+            "anyOf": [
+              "14 days",
+              "fourteen days"
+            ]
+          },
+          {
+            "anyOf": [
+              "year of service",
+              "each year of service",
+              "completed years of service"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-leave",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 10
+    },
+    {
+      "id": "mom-annual-leave-03",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "question": "How many days of annual leave does an eligible employee receive after eight years?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_annual_leave"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "14 days",
+              "fourteen days"
+            ]
+          },
+          {
+            "anyOf": [
+              "year of service",
+              "each year of service",
+              "completed years of service"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-leave",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 11
+    },
+    {
+      "id": "mom-annual-leave-04",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "question": "For an eligible employee in the 2018 leave year, what statutory annual leave rule applied?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_annual_leave"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "official MOM guidance in force in 2018",
+              "dated official source for 2018",
+              "historical official guidance"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ],
+      "temporal": {
+        "targetDate": "2018-01-01",
+        "status": "REQUIRES_HISTORICAL_OFFICIAL_SOURCE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-leave",
+      "clarificationExpected": true,
+      "uniqueOrdinal": 12,
+      "clarificationAssessmentIsHeuristic": true
+    },
+    {
+      "id": "mom-salary-deductions-01",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "question": "Can an employer deduct a staff shortage from salary?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "reason for the deduction",
+              "type of deduction",
+              "deduction category"
+            ]
+          },
+          {
+            "anyOf": [
+              "authorized",
+              "authorised",
+              "allowed by law"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-deductions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 13
+    },
+    {
+      "id": "mom-salary-deductions-02",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "question": "What kinds of salary deductions are permitted by MOM?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "reason for the deduction",
+              "type of deduction",
+              "deduction category"
+            ]
+          },
+          {
+            "anyOf": [
+              "authorized",
+              "authorised",
+              "allowed by law"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-deductions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 14
+    },
+    {
+      "id": "mom-salary-deductions-03",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "question": "Our employee damaged a company item; what can payroll deduct?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "reason for the deduction",
+              "type of deduction",
+              "deduction category"
+            ]
+          },
+          {
+            "anyOf": [
+              "authorized",
+              "authorised",
+              "allowed by law"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-deductions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 15
+    },
+    {
+      "id": "mom-salary-deductions-04",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "question": "What facts determine whether a salary deduction is lawful?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom-salary-payment"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "reason for the deduction",
+              "type of deduction",
+              "deduction category"
+            ]
+          },
+          {
+            "anyOf": [
+              "authorized",
+              "authorised",
+              "allowed by law"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "salary-deductions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 16
+    },
+    {
+      "id": "mom-overtime-eligibility-01",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "question": "Which employees are covered by Part IV overtime rules?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_overtime"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "part iv",
+              "part 4"
+            ]
+          },
+          {
+            "anyOf": [
+              "workman",
+              "manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "non-workman",
+              "non-manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "basic monthly salary",
+              "basic salary"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days/overtime"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "overtime-eligibility",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 17
+    },
+    {
+      "id": "mom-overtime-eligibility-02",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "question": "Does every employee in Singapore have a statutory overtime entitlement?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_overtime"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "part iv",
+              "part 4"
+            ]
+          },
+          {
+            "anyOf": [
+              "workman",
+              "manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "non-workman",
+              "non-manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "basic monthly salary",
+              "basic salary"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days/overtime"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "overtime-eligibility",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 18
+    },
+    {
+      "id": "mom-overtime-eligibility-03",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "question": "How does MOM decide whether a worker qualifies for overtime pay?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_overtime"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "part iv",
+              "part 4"
+            ]
+          },
+          {
+            "anyOf": [
+              "workman",
+              "manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "non-workman",
+              "non-manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "basic monthly salary",
+              "basic salary"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days/overtime"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "overtime-eligibility",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 19
+    },
+    {
+      "id": "mom-overtime-eligibility-04",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "question": "Are managers and executives covered by Part IV hours and overtime limits?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mom_overtime"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "part iv",
+              "part 4"
+            ]
+          },
+          {
+            "anyOf": [
+              "workman",
+              "manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "non-workman",
+              "non-manual worker"
+            ]
+          },
+          {
+            "anyOf": [
+              "basic monthly salary",
+              "basic salary"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days/overtime"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "overtime-eligibility",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 20
+    },
+    {
+      "id": "acra-agm-deadlines-01",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "question": "How long after FYE must a company hold its AGM?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_agm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "four months",
+              "4 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "six months",
+              "6 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "agm-deadlines",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 1
+    },
+    {
+      "id": "acra-agm-deadlines-02",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "question": "What is the AGM deadline for listed and non-listed Singapore companies?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_agm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "four months",
+              "4 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "six months",
+              "6 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          },
+          {
+            "anyOf": [
+              "listed company",
+              "listed companies"
+            ]
+          },
+          {
+            "anyOf": [
+              "non-listed company",
+              "unlisted company",
+              "other companies"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "agm-deadlines",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 2
+    },
+    {
+      "id": "acra-agm-deadlines-03",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "question": "When should directors schedule the annual general meeting?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_agm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "four months",
+              "4 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "six months",
+              "6 months"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "agm-deadlines",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 3
+    },
+    {
+      "id": "acra-agm-deadlines-04",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "question": "What information do you need to work out our company’s next AGM deadline?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_agm"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "financial year end date",
+              "fye date"
+            ]
+          },
+          {
+            "anyOf": [
+              "whether the company is listed",
+              "listed or non-listed status",
+              "listing status"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "agm-deadlines",
+      "clarificationExpected": true,
+      "uniqueOrdinal": 4
+    },
+    {
+      "id": "acra-annual-returns-01",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "question": "How does a Singapore private company file its annual return with ACRA?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_annual-returns"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual return",
+              "ar"
+            ]
+          },
+          {
+            "anyOf": [
+              "file with acra",
+              "file an annual return",
+              "submit annual return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/filing-and-business-updates/annual-returns",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-returns",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 5
+    },
+    {
+      "id": "acra-annual-returns-02",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "question": "When is a Singapore private company’s annual return due after its financial year end?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_annual-returns"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual return",
+              "ar"
+            ]
+          },
+          {
+            "anyOf": [
+              "file with acra",
+              "file an annual return",
+              "submit annual return"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          },
+          {
+            "anyOf": [
+              "listed company",
+              "non-listed company",
+              "unlisted company"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/filing-and-business-updates/annual-returns",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-returns",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 6
+    },
+    {
+      "id": "acra-annual-returns-03",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "question": "Does a dormant Singapore private company still file its annual return if it had no transactions?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_annual-returns"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual return",
+              "ar"
+            ]
+          },
+          {
+            "anyOf": [
+              "file with acra",
+              "file an annual return",
+              "submit annual return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/filing-and-business-updates/annual-returns",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-returns",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 7
+    },
+    {
+      "id": "acra-annual-returns-04",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "question": "Does the annual return deadline differ for a listed and non-listed Singapore company?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_annual-returns"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "annual return",
+              "ar"
+            ]
+          },
+          {
+            "anyOf": [
+              "financial year end",
+              "financial year-end",
+              "fye"
+            ]
+          },
+          {
+            "anyOf": [
+              "listed company",
+              "non-listed company",
+              "unlisted company"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/filing-and-business-updates/annual-returns",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-returns",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 8
+    },
+    {
+      "id": "acra-audit-exemption-01",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "question": "What tests make a Singapore private company a small company for audit exemption?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "acra_small_company"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "private company",
+              "private"
+            ]
+          },
+          {
+            "anyOf": [
+              "two of the three",
+              "at least 2 of 3",
+              "two criteria"
+            ]
+          },
+          {
+            "anyOf": [
+              "$10 million",
+              "10 million"
+            ]
+          },
+          {
+            "anyOf": [
+              "50 employees",
+              "50 or fewer employees"
+            ]
+          },
+          {
+            "anyOf": [
+              "two consecutive financial years",
+              "immediate past two consecutive financial years"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "audit-exemption",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 9
+    },
+    {
+      "id": "acra-audit-exemption-02",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "question": "How many small company criteria must be met to qualify for audit exemption?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "acra_small_company"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "private company",
+              "private"
+            ]
+          },
+          {
+            "anyOf": [
+              "two of the three",
+              "at least 2 of 3",
+              "two criteria"
+            ]
+          },
+          {
+            "anyOf": [
+              "two consecutive financial years",
+              "immediate past two consecutive financial years"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "audit-exemption",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 10
+    },
+    {
+      "id": "acra-audit-exemption-03",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "question": "Do the audit exemption thresholds have to be met for one year or two?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "acra_small_company"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "two consecutive financial years",
+              "immediate past two consecutive financial years"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "audit-exemption",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 11
+    },
+    {
+      "id": "acra-audit-exemption-04",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "question": "What financial and employee measures are used for the small company audit test?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "acra_small_company"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "$10 million",
+              "10 million"
+            ]
+          },
+          {
+            "anyOf": [
+              "50 employees",
+              "50 or fewer employees"
+            ]
+          },
+          {
+            "anyOf": [
+              "two consecutive financial years",
+              "immediate past two consecutive financial years"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "audit-exemption",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 12
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-01",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "question": "From 20 October 2026, what officer particulars must a local company confirm when it files its annual return?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra-annual-return-officer-particulars"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "20 october 2026",
+              "20/10/2026"
+            ]
+          },
+          {
+            "anyOf": [
+              "confirm",
+              "confirmation"
+            ]
+          },
+          {
+            "anyOf": [
+              "latest particulars",
+              "particulars are accurate"
+            ]
+          },
+          {
+            "anyOf": [
+              "directors",
+              "secretaries",
+              "auditors",
+              "ceo"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026",
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ],
+      "temporal": {
+        "targetDate": "2026-10-21",
+        "effectiveDate": "2026-10-20",
+        "status": "REQUIRES_SOURCE_VALIDITY_FROM_COMMENCEMENT"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-return-officer-particulars",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 13
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-02",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "question": "Does the 20 October 2026 change require a local company to check officer details when filing its annual return?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra-annual-return-officer-particulars"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "20 october 2026",
+              "20/10/2026"
+            ]
+          },
+          {
+            "anyOf": [
+              "confirm",
+              "confirmation"
+            ]
+          },
+          {
+            "anyOf": [
+              "latest particulars",
+              "particulars are accurate"
+            ]
+          },
+          {
+            "anyOf": [
+              "directors",
+              "secretaries",
+              "auditors",
+              "ceo"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026",
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ],
+      "temporal": {
+        "targetDate": "2026-10-21",
+        "effectiveDate": "2026-10-20",
+        "status": "REQUIRES_SOURCE_VALIDITY_FROM_COMMENCEMENT"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-return-officer-particulars",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 14
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-03",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "question": "Which officers’ latest particulars must a local company confirm when it files its annual return from October 2026?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra-annual-return-officer-particulars"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "20 october 2026",
+              "20/10/2026"
+            ]
+          },
+          {
+            "anyOf": [
+              "confirm",
+              "confirmation"
+            ]
+          },
+          {
+            "anyOf": [
+              "latest particulars",
+              "particulars are accurate"
+            ]
+          },
+          {
+            "anyOf": [
+              "directors",
+              "secretaries",
+              "auditors",
+              "ceo"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026",
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ],
+      "temporal": {
+        "targetDate": "2026-10-21",
+        "effectiveDate": "2026-10-20",
+        "status": "REQUIRES_SOURCE_VALIDITY_FROM_COMMENCEMENT"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-return-officer-particulars",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 15
+    },
+    {
+      "id": "acra-annual-return-officer-particulars-04",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "question": "What officer information should be checked when a local company files its annual return under the October 2026 change?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra-annual-return-officer-particulars"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "20 october 2026",
+              "20/10/2026"
+            ]
+          },
+          {
+            "anyOf": [
+              "confirm",
+              "confirmation"
+            ]
+          },
+          {
+            "anyOf": [
+              "latest particulars",
+              "particulars are accurate"
+            ]
+          },
+          {
+            "anyOf": [
+              "directors",
+              "secretaries",
+              "auditors",
+              "ceo"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026",
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ],
+      "temporal": {
+        "targetDate": "2026-10-21",
+        "effectiveDate": "2026-10-20",
+        "status": "REQUIRES_SOURCE_VALIDITY_FROM_COMMENCEMENT"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "annual-return-officer-particulars",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 16
+    },
+    {
+      "id": "acra-secretary-appointment-01",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "question": "By when must a new local company appoint its company secretary?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_company-secretary"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "within 6 months",
+              "within six months"
+            ]
+          },
+          {
+            "anyOf": [
+              "incorporation",
+              "incorporated"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers",
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "secretary-appointment",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 17
+    },
+    {
+      "id": "acra-secretary-appointment-02",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "question": "What are the basic company secretary appointment requirements?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_company-secretary"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "within 6 months",
+              "within six months"
+            ]
+          },
+          {
+            "anyOf": [
+              "incorporation",
+              "incorporated"
+            ]
+          },
+          {
+            "anyOf": [
+              "ordinarily resident",
+              "resident in singapore"
+            ]
+          },
+          {
+            "anyOf": [
+              "sole director",
+              "only director"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers",
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "secretary-appointment",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 18
+    },
+    {
+      "id": "acra-secretary-appointment-03",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "question": "Can the sole director also act as the company secretary?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_company-secretary"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "sole director",
+              "only director"
+            ]
+          },
+          {
+            "anyOf": [
+              "company secretary"
+            ],
+            "polarity": "NEGATIVE"
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers",
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "secretary-appointment",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 19
+    },
+    {
+      "id": "acra-secretary-appointment-04",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "question": "Must the company secretary ordinarily reside in Singapore?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "acra_company-secretary"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "ordinarily resident",
+              "resident in singapore"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers",
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "secretary-appointment",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 20
+    },
+    {
+      "id": "mas-fund-management-licence-01",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "question": "Does an LFMC need a CMS licence?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mas-lfmc"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "fund management activities",
+              "fund management"
+            ]
+          },
+          {
+            "anyOf": [
+              "securities and futures act 2001",
+              "sfa"
+            ]
+          },
+          {
+            "anyOf": [
+              "licensed fund management company",
+              "lfmc"
+            ]
+          },
+          {
+            "anyOf": [
+              "capital markets services licence",
+              "cms licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "fund-management-licence",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 1
+    },
+    {
+      "id": "mas-fund-management-licence-02",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "question": "If our firm manages funds, when is an MAS licence generally required?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mas-lfmc"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "fund management activities",
+              "fund management"
+            ]
+          },
+          {
+            "anyOf": [
+              "securities and futures act 2001",
+              "sfa"
+            ]
+          },
+          {
+            "anyOf": [
+              "licensed fund management company",
+              "lfmc"
+            ]
+          },
+          {
+            "anyOf": [
+              "capital markets services licence",
+              "cms licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "fund-management-licence",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 2
+    },
+    {
+      "id": "mas-fund-management-licence-03",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "question": "Does conducting regulated fund management require an LFMC licence?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mas-lfmc"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "fund management activities",
+              "fund management"
+            ]
+          },
+          {
+            "anyOf": [
+              "securities and futures act 2001",
+              "sfa"
+            ]
+          },
+          {
+            "anyOf": [
+              "licensed fund management company",
+              "lfmc"
+            ]
+          },
+          {
+            "anyOf": [
+              "capital markets services licence",
+              "cms licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "fund-management-licence",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 3
+    },
+    {
+      "id": "mas-fund-management-licence-04",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "question": "What is the general licensing rule for fund management under the SFA?",
+      "operation": "EXPLAIN_RULE",
+      "requiredTopicIds": [
+        "mas-lfmc"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "fund management activities",
+              "fund management"
+            ]
+          },
+          {
+            "anyOf": [
+              "securities and futures act 2001",
+              "sfa"
+            ]
+          },
+          {
+            "anyOf": [
+              "licensed fund management company",
+              "lfmc"
+            ]
+          },
+          {
+            "anyOf": [
+              "capital markets services licence",
+              "cms licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "fund-management-licence",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 4
+    },
+    {
+      "id": "mas-vcfm-01",
+      "authority": "MAS",
+      "family": "vcfm",
+      "question": "What is MAS’s VCFM regime for venture capital fund managers?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-vcfm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "venture capital funds",
+              "venture capital fund"
+            ]
+          },
+          {
+            "anyOf": [
+              "simplified",
+              "simplified regime"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligibility",
+              "eligible",
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "vcfm",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 5
+    },
+    {
+      "id": "mas-vcfm-02",
+      "authority": "MAS",
+      "family": "vcfm",
+      "question": "Can a firm that manages VC funds use a simplified licensing path?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-vcfm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "venture capital funds",
+              "venture capital fund"
+            ]
+          },
+          {
+            "anyOf": [
+              "simplified",
+              "simplified regime"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligibility",
+              "eligible",
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "vcfm",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 6
+    },
+    {
+      "id": "mas-vcfm-03",
+      "authority": "MAS",
+      "family": "vcfm",
+      "question": "How does an MAS venture capital fund manager differ from an LFMC?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-vcfm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "venture capital funds",
+              "venture capital fund"
+            ]
+          },
+          {
+            "anyOf": [
+              "simplified",
+              "simplified regime"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligibility",
+              "eligible",
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "vcfm",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 7
+    },
+    {
+      "id": "mas-vcfm-04",
+      "authority": "MAS",
+      "family": "vcfm",
+      "question": "What facts determine whether a manager can use the VCFM regime?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-vcfm"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "venture capital funds",
+              "venture capital fund"
+            ]
+          },
+          {
+            "anyOf": [
+              "simplified",
+              "simplified regime"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligibility",
+              "eligible",
+              "criteria"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "vcfm",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 8
+    },
+    {
+      "id": "mas-class-exemptions-01",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "question": "Are there class exemptions from the fund management licensing requirement?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-fund-management-exemptions"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          },
+          {
+            "anyOf": [
+              "does not require a licence",
+              "does not require a license",
+              "no licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligible",
+              "able to operate"
+            ]
+          },
+          {
+            "anyOf": [
+              "related corporations",
+              "related family members",
+              "accredited and institutional investors"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "class-exemptions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 9
+    },
+    {
+      "id": "mas-class-exemptions-02",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "question": "When can a fund manager operate without an MAS licence?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-fund-management-exemptions"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          },
+          {
+            "anyOf": [
+              "does not require a licence",
+              "does not require a license",
+              "no licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligible",
+              "able to operate"
+            ]
+          },
+          {
+            "anyOf": [
+              "related corporations",
+              "related family members",
+              "accredited and institutional investors"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "class-exemptions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 10
+    },
+    {
+      "id": "mas-class-exemptions-03",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "question": "Does managing money for a related corporation automatically exempt a firm?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-fund-management-exemptions"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          },
+          {
+            "anyOf": [
+              "does not require a licence",
+              "does not require a license",
+              "no licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligible",
+              "able to operate"
+            ]
+          },
+          {
+            "anyOf": [
+              "related corporations",
+              "related family members",
+              "accredited and institutional investors"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "class-exemptions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 11
+    },
+    {
+      "id": "mas-class-exemptions-04",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "question": "What are examples of fund management activities that may be class exempt?",
+      "operation": "CHECK_ELIGIBILITY",
+      "requiredTopicIds": [
+        "mas-fund-management-exemptions"
+      ],
+      "expected": {
+        "disposition": "ANSWER",
+        "requiredFactGroups": [
+          {
+            "anyOf": [
+              "existing class exemption",
+              "class exemption"
+            ]
+          },
+          {
+            "anyOf": [
+              "does not require a licence",
+              "does not require a license",
+              "no licence"
+            ]
+          },
+          {
+            "anyOf": [
+              "eligible",
+              "able to operate"
+            ]
+          },
+          {
+            "anyOf": [
+              "related corporations",
+              "related family members",
+              "accredited and institutional investors"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "class-exemptions",
+      "clarificationExpected": false,
+      "uniqueOrdinal": 12
+    },
+    {
+      "id": "mas-qdc-reporting-01",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "question": "What QDC return does our fund need to submit to MAS?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-quarterly-fund-data-collection"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "fund manager type"
+            ]
+          },
+          {
+            "anyOf": [
+              "reporting obligation",
+              "qdc obligation",
+              "applicable return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "qdc-reporting",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 13
+    },
+    {
+      "id": "mas-qdc-reporting-02",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "question": "How often is a quarterly fund data collection return due?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-quarterly-fund-data-collection"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "fund manager type"
+            ]
+          },
+          {
+            "anyOf": [
+              "reporting period",
+              "reporting frequency",
+              "period"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "qdc-reporting",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 14
+    },
+    {
+      "id": "mas-qdc-reporting-03",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "question": "Are all MAS regulated fund managers included in QDC reporting?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-quarterly-fund-data-collection"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "fund manager type"
+            ]
+          },
+          {
+            "anyOf": [
+              "reporting obligation",
+              "qdc obligation",
+              "applicable return"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "qdc-reporting",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 15
+    },
+    {
+      "id": "mas-qdc-reporting-04",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "question": "Which QDC return should a VCFM submit through MAS-Tx?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-quarterly-fund-data-collection",
+        "mas-vcfm"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "applicable QDC obligation",
+              "MAS notice that applies to this VCFM",
+              "fund reporting requirement"
+            ]
+          },
+          {
+            "anyOf": [
+              "reporting period",
+              "reporting frequency"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "qdc-reporting",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 16
+    },
+    {
+      "id": "mas-regulatory-notifications-01",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "question": "Which regulatory returns must our MAS fund manager file?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "licence type"
+            ]
+          },
+          {
+            "anyOf": [
+              "report or notification",
+              "filing type",
+              "change"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable notice",
+              "applicable requirement",
+              "due date"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "regulatory-notifications",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 17
+    },
+    {
+      "id": "mas-regulatory-notifications-02",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "question": "When should a licensed fund manager notify MAS about a material change?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "licence type"
+            ]
+          },
+          {
+            "anyOf": [
+              "report or notification",
+              "filing type",
+              "change"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable notice",
+              "applicable requirement",
+              "due date"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "regulatory-notifications",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 18
+    },
+    {
+      "id": "mas-regulatory-notifications-03",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "question": "What filings are due for an LFMC each year?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "licence type"
+            ]
+          },
+          {
+            "anyOf": [
+              "report or notification",
+              "filing type",
+              "change"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable notice",
+              "applicable requirement",
+              "due date"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "regulatory-notifications",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 19
+    },
+    {
+      "id": "mas-regulatory-notifications-04",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "question": "Does an MAS reporting requirement depend on the licence and fund type?",
+      "operation": "FILING_REQUIREMENT",
+      "requiredTopicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "expected": {
+        "disposition": "CLARIFY",
+        "missingFactGroups": [
+          {
+            "anyOf": [
+              "regulated entity type",
+              "licence type"
+            ]
+          },
+          {
+            "anyOf": [
+              "report or notification",
+              "filing type",
+              "change"
+            ]
+          },
+          {
+            "anyOf": [
+              "applicable notice",
+              "applicable requirement",
+              "due date"
+            ]
+          }
+        ]
+      },
+      "officialSources": [
+        "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities"
+      ],
+      "temporal": {
+        "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"
+      },
+      "calculation": {
+        "status": "NOT_APPLICABLE"
+      },
+      "sourceBasis": "Official first-party authority page; routing labels are not answer acceptance.",
+      "scope": "regulatory-notifications",
+      "clarificationExpected": true,
+      "clarificationAssessmentIsHeuristic": true,
+      "uniqueOrdinal": 20
+    }
+  ]
+}

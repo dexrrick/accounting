@@ -11,7 +11,7 @@ export interface BoundedStatutoryAdvisorySupportInput {
 
 export type BoundedStatutoryAdvisoryRequest = Omit<BoundedStatutoryAdvisorySupportInput, 'sourceText'>;
 
-type AdvisoryProfile = 'CPF_ORDINARY_WAGES' | 'MOM_PART_IV_OVERTIME';
+type AdvisoryProfile = 'CPF_ORDINARY_WAGES' | 'CPF_ADDITIONAL_WAGES' | 'MOM_PART_IV_OVERTIME';
 
 function compact(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -75,6 +75,22 @@ function hasCpfDefinitionAsk(subject: string, originalQuery: string | undefined)
   return hasTargetAsk(subject) || hasTargetAsk(originalQuery ?? '');
 }
 
+function hasCpfAdditionalWagesDefinitionAsk(subject: string, originalQuery: string | undefined): boolean {
+  const query = originalQuery ?? '';
+  if (hasNegatedRequestCue(query) || /\b(?:19|20)\d{2}\b|\b(?:historical|historic|previous|prior|former)\b/i.test(query) ||
+      /\b(?:calculate|calculation|compute|estimate|how\s+much|amount|rate|ceiling|limit|threshold|eligib(?:le|ility)|qualif(?:y|ies|ication)|exempt(?:ion)?|my\s+(?:company|employee|bonus|wages)|our\s+(?:company|employee|bonus|wages))\b/i.test(query)) {
+    return false;
+  }
+
+  const hasTargetDefinitionAsk = (value: string): boolean => value
+    .split(/[?!.;]|\band\b/i)
+    .some(clause => /\b(?:additional\s+wages?|aw)\b/i.test(clause)
+      && /\b(?:what\s+(?:are|is|counts\s+as)|define|definition|meaning|classif\w*)\b/i.test(clause)
+      && !hasNegatedRequestCue(clause));
+  return /\b(?:additional\s+wages?|aw)\b/i.test(subject)
+    && hasTargetDefinitionAsk(query);
+}
+
 function hasMomCoverageAsk(subject: string, originalQuery: string | undefined): boolean {
   const hasPartIvContext = (value: string): boolean =>
     /\bpart\s+(?:iv|4)\b|\bovertime\b/i.test(value);
@@ -107,6 +123,12 @@ function recognizeProfile(input: BoundedStatutoryAdvisorySupportInput): Advisory
     && topicId === 'cpfordinarywages'
     && hasCpfDefinitionAsk(input.subject, input.originalQuery)) {
     return 'CPF_ORDINARY_WAGES';
+  }
+
+  if (['cpf', 'cpfboard', 'centralprovidentfundboard'].includes(authority)
+    && topicId === 'cpfadditionalwages'
+    && hasCpfAdditionalWagesDefinitionAsk(input.subject, input.originalQuery)) {
+    return 'CPF_ADDITIONAL_WAGES';
   }
 
   if (['mom', 'ministryofmanpower'].includes(authority)
@@ -170,6 +192,21 @@ function supportsCpfOrdinaryWages(text: string): boolean {
       && hasMonthOfEmploymentCondition(linkedContext)
       && hasFollowingMonthPaymentCondition(linkedContext);
   });
+}
+
+/** Supports only the official general definition of CPF Additional Wages. */
+export function supportsCpfAdditionalWages(sourceText: string): boolean {
+  const text = sourceBodyText(sourceText);
+  if (text.length === 0) return false;
+
+  const affirmativeRule = /\bwages?\b[^.!?]{0,90}\bnot\s+classified\s+as\s+ordinary\s+wages?\b[^.!?]{0,100}\b(?:will\s+be|are)\s+additional\s+wages?\b/;
+  const contradictions = [
+    /\b(?:there\s+are\s+)?no\s+wages?\b[^.!?]{0,100}\bnot\s+classified\s+as\s+ordinary\s+wages?\b[^.!?]{0,100}\b(?:will\s+be|are)\s+additional\s+wages?\b/,
+    /\bwages?\b[^.!?]{0,100}\bnot\s+classified\s+as\s+ordinary\s+wages?\b[^.!?]{0,100}\b(?:are\s+not|will\s+not\s+be)\s+additional\s+wages?\b/,
+    /\bwages?\b[^.!?]{0,100}\b(?<!not\s)classified\s+as\s+ordinary\s+wages?\b[^.!?]{0,100}\b(?:are|will\s+be)\s+additional\s+wages?\b/
+  ];
+  return !contradictions.some(pattern => pattern.test(text))
+    && passages(text).some(statement => affirmativeRule.test(statement));
 }
 
 const basicMonthlySalary = String.raw`\b(?:basic\s+monthly|monthly\s+basic)\s+salary\b`;
@@ -290,9 +327,9 @@ export function supportBoundedStatutoryAdvisory(
   const text = sourceBodyText(input.sourceText);
   if (text.length === 0) return false;
 
-  return profile === 'CPF_ORDINARY_WAGES'
-    ? supportsCpfOrdinaryWages(text)
-    : supportsMomPartIvOvertime(text);
+  if (profile === 'CPF_ORDINARY_WAGES') return supportsCpfOrdinaryWages(text);
+  if (profile === 'CPF_ADDITIONAL_WAGES') return supportsCpfAdditionalWages(input.sourceText);
+  return supportsMomPartIvOvertime(text);
 }
 
 /**

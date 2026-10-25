@@ -43,6 +43,12 @@ import {
 import { getGstMotorCarInputTaxExceptionKinds, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
 import { supportMasCmsDefinition, supportMasCmsRule } from '../retrieval/masCmsRuleSupport';
+import { isCpfMasPracticalRuleComponentQuote } from '../retrieval/cpfMasPracticalRules';
+import { supportIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
+import {
+  supportMomSalaryPaymentConcept,
+  supportMomSalaryPaymentIssue
+} from '../retrieval/momSalaryPaymentRule';
 import {
   isAcraAnnualReturnDeadlineIssue,
   isAcraAnnualReturnDeadlineQuestion,
@@ -1480,6 +1486,49 @@ function generalIrasRuleConceptSupport(
   return undefined;
 }
 
+function practicalRuleAuthorityForTopic(topic: SingaporeCoverageTopic): SemanticAuthority | undefined {
+  if (topic.id === 'iras-cit-eci' && topic.domainId === 'IRAS_CORPORATE_TAX') return 'IRAS';
+  if (topic.id === 'acra_company-secretary' && topic.domainId === 'ACRA_COMPANIES') return 'ACRA';
+  return undefined;
+}
+
+function practicalRuleIssueScopeMatches(
+  issue: ReconciledSemanticQuestionIssue,
+  topic: SingaporeCoverageTopic,
+  authority: SemanticAuthority
+): boolean {
+  const expectedIssueDomain = authority === 'IRAS' ? 'IRAS_INCOME_TAX' : 'ACRA_CORPORATE';
+  return issue.status === 'MAPPED' && issue.domain === expectedIssueDomain && issue.population === 'COMPANY' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === authority && issue.mappedTopicIds.includes(topic.id);
+}
+
+function practicalRuleIssueTextSupport(
+  text: string,
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topic: SingaporeCoverageTopic,
+  concept?: RequestedQuestionConcept
+): boolean | undefined {
+  const authority = practicalRuleAuthorityForTopic(topic);
+  if (!authority) return undefined;
+  const issueSubjectProof = supportIrasAcraPracticalRuleSource(query, authority, topic.id, issue.subject, text);
+  if (issueSubjectProof === undefined) return undefined;
+  if (!practicalRuleIssueScopeMatches(issue, topic, authority)) return false;
+  if (issueSubjectProof !== true) return false;
+  if (concept) {
+    if (concept.role === 'CONTEXT_ONLY' || !concept.topicIds.includes(topic.id) ||
+        concept.semanticDomain !== undefined && concept.semanticDomain !== issue.domain ||
+        concept.semanticPopulation !== undefined && concept.semanticPopulation !== issue.population ||
+        concept.semanticAuthorities !== undefined &&
+          (concept.semanticAuthorities.length !== 1 || concept.semanticAuthorities[0] !== authority)) return false;
+    const conceptSubjectProof = supportIrasAcraPracticalRuleSource(query, authority, topic.id,
+      [concept.label, ...concept.terms].join(' '), text);
+    if (conceptSubjectProof !== true) return false;
+  }
+  return true;
+}
+
 function supportsIssueSubject(
   text: string,
   issue: ReconciledSemanticQuestionIssue,
@@ -1487,6 +1536,13 @@ function supportsIssueSubject(
   concepts: RequestedQuestionConcept[] = [],
   originalQuery = ''
 ): boolean {
+  const practicalRuleSupport = practicalRuleIssueTextSupport(text, originalQuery, issue, topic);
+  if (practicalRuleSupport !== undefined) return practicalRuleSupport;
+  if (topic.id === 'mom-salary-payment' && topic.domainId === 'MOM_EMPLOYMENT' &&
+      issue.mappedTopicIds.includes(topic.id)) {
+    const momSalarySupport = momSalaryPaymentIssueSupport(text, issue, 'MOM', originalQuery);
+    if (momSalarySupport !== undefined) return momSalarySupport;
+  }
   const requestedCmsDefinition = concepts.some(isMasCmsDefinitionConcept);
   if (requestedCmsDefinition &&
       masCmsDefinitionSupport(text, issue, [topic], originalQuery) === true) return true;
@@ -1500,6 +1556,35 @@ function supportsIssueSubject(
     return hasCompanyTaxResidencyAnchors(text);
   }
   return textSupportsPhrase(text, issue.subject);
+}
+
+function momSalaryPaymentIssueSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  query: string
+): boolean | undefined {
+  if (authority !== 'MOM' || issue.domain !== 'MOM_EMPLOYMENT' || issue.operation !== 'EXPLAIN_RULE' ||
+      !issue.mappedTopicIds.includes('mom-salary-payment') || /\bovertime\b/i.test(query)) return undefined;
+  const sourceSupport = supportMomSalaryPaymentIssue(query, issue.subject, text);
+  if (sourceSupport === undefined) return undefined;
+  if (issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM') return false;
+  return sourceSupport;
+}
+
+function momSalaryPaymentConceptSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  query: string,
+  concept: RequestedQuestionConcept
+): boolean | undefined {
+  if (authority !== 'MOM' || issue.domain !== 'MOM_EMPLOYMENT' || issue.operation !== 'EXPLAIN_RULE' ||
+      !issue.mappedTopicIds.includes('mom-salary-payment') || /\bovertime\b/i.test(query)) return undefined;
+  const sourceSupport = supportMomSalaryPaymentConcept(query, issue.subject, concept.label, concept.terms, text);
+  if (sourceSupport === undefined) return undefined;
+  if (issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM') return false;
+  return sourceSupport;
 }
 
 function passesBoundedStatutoryAdvisorySupport(
@@ -1946,12 +2031,20 @@ function issueClaimCoverage(
       const momCanonicalAliasClaim = Boolean(record && supportsMomPartIvCanonicalAliasClaim(
         record, topic, claim.quote, authority, issue, originalQuery
       ));
-      const supportsTopic = acraAnnualReturnDutyScope
+      const momSalarySupport = momSalaryPaymentIssueSupport(claim.quote, issue, authority, originalQuery);
+      const practicalRuleSupport = record && topicBoundToRecord(record, topic)
+        ? practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic)
+        : undefined;
+      const supportsTopic = momSalarySupport !== undefined
+        ? momSalarySupport
+        : acraAnnualReturnDutyScope
         ? isExactAcraAnnualReturnDutyParagraph(record?.sourceText || '', claim.quote)
-        : textSupportsTopic(claim.quote, topic, requireAcraDeadlineTable) &&
-          supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery) ||
-          authority === 'IRAS' && concepts.some(concept => concept.topicIds.includes(topic.id) &&
-            generalIrasRuleConceptSupport(claim.quote, issue, [topic], [concept]) === true);
+        : practicalRuleSupport !== undefined
+          ? practicalRuleSupport
+          : textSupportsTopic(claim.quote, topic, requireAcraDeadlineTable) &&
+            supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery) ||
+            authority === 'IRAS' && concepts.some(concept => concept.topicIds.includes(topic.id) &&
+              generalIrasRuleConceptSupport(claim.quote, issue, [topic], [concept]) === true);
       return Boolean(record && passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery) &&
         (topicBoundToRecord(record, topic) && (tableOwnsDeadlineIssue || supportsTopic) || momCanonicalAliasClaim));
     });
@@ -1960,8 +2053,15 @@ function issueClaimCoverage(
   for (const concept of concepts) {
     const conceptClaim = claims.some(claim => {
       if (!passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery)) return false;
+      const record = recordById.get(claim.recordId);
+      if (record) {
+        for (const topic of topics) {
+          if (!topicBoundToRecord(record, topic)) continue;
+          const practicalRuleConceptSupport = practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic, concept);
+          if (practicalRuleConceptSupport !== undefined) return practicalRuleConceptSupport;
+        }
+      }
       if (acraAnnualReturnDutyScope) {
-        const record = recordById.get(claim.recordId);
         return isGenericAcraAnnualReturnDutyConcept(concept) && record !== undefined &&
           isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote);
       }
@@ -1973,6 +2073,8 @@ function issueClaimCoverage(
         return topics.some(topic => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id) &&
           hasCompleteVerifiedGstMotorCarExceptionEvidence(claims, records, topic, issue, concept, originalQuery));
       }
+      const momSalarySupport = momSalaryPaymentConceptSupport(claim.quote, issue, authority, originalQuery, concept);
+      if (momSalarySupport !== undefined) return momSalarySupport;
       const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, topics, originalQuery);
       if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;
       const masRuleSupport = masCmsGeneralRuleSupport(claim.quote, issue, topics, originalQuery);
@@ -2307,6 +2409,12 @@ async function evaluateIssue(
   const verifiedClaims = cpfRateScheduleUnverified ? [] : acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
+    if (plan.authority === 'MAS' && issue.domain === 'MAS_FUNDS' && issue.status === 'MAPPED' &&
+        issue.operation === 'EXPLAIN_RULE' && issue.governingAuthorities.length === 1 &&
+        issue.governingAuthorities[0] === 'MAS' && evidenceTopics.some(topic =>
+          topic.id === 'mas-lfmc' && topicBoundToRecord(record, topic)) &&
+        isCpfMasPracticalRuleComponentQuote({ authority: 'MAS', topicId: 'mas-lfmc',
+          subject: issue.subject, query, sourceText: record.sourceText }, claim.quote)) return true;
     if (!passesBoundedStatutoryAdvisorySupport(claim.quote, plan.authority, issue, evidenceTopics, query)) return false;
     if (acraAnnualReturnDutyScope && !isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote)) return false;
     if (requireAcraDeadlineEvidence && (!supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
@@ -2315,14 +2423,24 @@ async function evaluateIssue(
       supportsAcraAnnualReturnDeadlineTable(claim.quote) && evidenceTopics.some(topic =>
         topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic));
     if (tableOwnsDeadlineIssue) return true;
-    const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
-      (acraAnnualReturnDutyScope
-        ? isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote)
-        : textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts, query)));
+    const momSalarySupport = momSalaryPaymentIssueSupport(claim.quote, issue, plan.authority, query);
+    if (momSalarySupport !== undefined) return momSalarySupport;
+    const supportsTopic = evidenceTopics.some(topic => {
+      if (!topicBoundToRecord(record, topic)) return false;
+      if (acraAnnualReturnDutyScope) return isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote);
+      const practicalRuleSupport = practicalRuleIssueTextSupport(claim.quote, query, issue, topic);
+      if (practicalRuleSupport !== undefined) return practicalRuleSupport;
+      return textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts, query);
+    });
     const supportsConcept = concepts.some(concept => {
       if (acraAnnualReturnDutyScope) {
         return isGenericAcraAnnualReturnDutyConcept(concept) &&
           supportsAcraAnnualReturnFilingRule(claim.quote);
+      }
+      for (const topic of evidenceTopics) {
+        if (!topicBoundToRecord(record, topic)) continue;
+        const practicalRuleConceptSupport = practicalRuleIssueTextSupport(claim.quote, query, issue, topic, concept);
+        if (practicalRuleConceptSupport !== undefined) return practicalRuleConceptSupport;
       }
       if (concept.id === 'cpf_cash_top_up_relief_limits') {
         return isCpfCashTopUpLimitComponentQuote(record, claim.quote);
@@ -2331,6 +2449,8 @@ async function evaluateIssue(
         return isGstMotorCarExceptionComponentQuote(record, claim.quote, 'THIRD_PARTY') ||
           isGstMotorCarExceptionComponentQuote(record, claim.quote, 'CONNECTED_PERSON');
       }
+      const momSalarySupport = momSalaryPaymentConceptSupport(claim.quote, issue, plan.authority, query, concept);
+      if (momSalarySupport !== undefined) return momSalarySupport;
       const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, evidenceTopics, query);
       if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;
       const masRuleSupport = masCmsGeneralRuleSupport(claim.quote, issue, evidenceTopics, query);

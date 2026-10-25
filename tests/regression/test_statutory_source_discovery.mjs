@@ -11,13 +11,22 @@ import { resolveMappedOfficialSourceFallback } from '../../src/services/groundin
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import {
+  getRequestedQuestionConcepts,
   reconcileQuestionUnderstanding,
   validateSemanticQuestionInterpretation
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { shouldUseAuthorityEvidenceRuntime } from '../../src/utils/authorityEvidenceRouting.ts';
-import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import {
+  createAuthorityEvidencePresentation,
+  groupExactIssueClaimsByDocument
+} from '../../src/utils/authorityEvidencePresentation.ts';
 import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import {
+  getMomSalaryPaymentRuleEvidence,
+  supportMomSalaryPaymentConcept,
+  supportMomSalaryPaymentIssue
+} from '../../src/retrieval/momSalaryPaymentRule.ts';
 
 const acraAnnualPage = JSON.parse(await readFile(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'))
   .find(page => page.name === 'annual');
@@ -106,9 +115,9 @@ const salaryPaymentSamples = [
   {
     key: 'regular-salary',
     authority: 'MOM', topicId: 'mom-salary-payment',
-    query: 'How often must salary be paid and when is regular salary due after the salary period?',
+    query: 'Under MOM guidance, how often must salary be paid and when is regular salary due after the salary period?',
     runtimeQuery: 'Under MOM guidance, how often must salary be paid and when is regular salary due after the salary period?',
-    subject: 'salary payment period and regular salary deadline', domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
+    subject: 'salary payment frequency and due dates', domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
     url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary',
     title: 'Paying salary | Ministry of Manpower',
     paragraph: 'If you are covered by the Employment Act, your employer must pay your salary at least once a month.',
@@ -128,6 +137,21 @@ const salaryPaymentSamples = [
     expectedExplanation: /for employees covered by the Employment Act, overtime pay must be paid within 14 days after the salary period ends/i
   }
 ];
+const regularSalaryQuery = salaryPaymentSamples[0].query;
+const regularSalarySubject = salaryPaymentSamples[0].subject;
+const completeRegularSalaryProof = 'In accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period.';
+assert.equal(supportMomSalaryPaymentIssue(regularSalaryQuery, regularSalarySubject, completeRegularSalaryProof), true);
+assert.equal(supportMomSalaryPaymentIssue(regularSalaryQuery, regularSalarySubject,
+  'Your final salary payment could vary depending on the reason employment ends.'), false,
+  'A final-salary caveat alone cannot establish regular salary timing.');
+assert.equal(supportMomSalaryPaymentConcept(regularSalaryQuery, regularSalarySubject,
+  'salary payment frequency and due dates', ['salary payment frequency and due dates'], completeRegularSalaryProof), true,
+  'The bounded semantic frequency/due-date alias is accepted with complete same-source rule proof.');
+assert.equal(supportMomSalaryPaymentConcept(regularSalaryQuery, regularSalarySubject,
+  'salary payment frequency and due dates', ['salary payment frequency and due dates', 'final salary amount'], completeRegularSalaryProof), false,
+  'A supported alias label cannot carry an out-of-scope final-salary amount term.');
+assert.equal(supportMomSalaryPaymentIssue(regularSalaryQuery, 'overtime salary payment period deadline', completeRegularSalaryProof), false,
+  'A regular salary rule cannot support the separate overtime issue.');
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mas.gov.sg/regulation/guidelines', 'MAS').isValid, true);
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mom.gov.sg/employment-practices', 'MAS').isValid, false);
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://sso.agc.gov.sg/Act/SFA2001', 'MAS').isValid, true);
@@ -336,6 +360,18 @@ const cpfDefinitionExpectation = {
   requireSubstantiveBody: true,
   cpfOrdinaryWageDefinitionRequest: cpfDefinitionRequest
 };
+const cpfAdditionalWageDefinitionRequest = {
+  authority: 'CPF',
+  topicId: 'cpf-additional-wages',
+  subject: 'CPF Treatment of Additional Wages',
+  originalQuery: 'Under CPF Board guidance, what are Additional Wages?'
+};
+const cpfAdditionalWageDefinitionExpectation = {
+  ...cpfDefinitionExpectation,
+  topicTerms: ['additional wages'],
+  cpfOrdinaryWageDefinitionRequest: undefined,
+  cpfAdditionalWageDefinitionRequest
+};
 const cpfDefinitionPage = (card, { main = true, title = 'CPF Board | What constitutes wages for CPF contributions', wrapper = '' } = {}) =>
   `<html><head><title>${title}</title></head><body>${main ? '<main>' : ''}<h1>What constitutes wages for CPF contributions</h1><p>${cpfIntroOnlyParagraph}</p>${wrapper}${card}${main ? '</main>' : ''}</body></html>`;
 const cpfNativePositive = defaultExternalSourceValidator.validateTopicContent(
@@ -344,6 +380,42 @@ const cpfNativePositive = defaultExternalSourceValidator.validateTopicContent(
 assert.equal(cpfNativePositive.isValid, true, JSON.stringify(cpfNativePositive));
 assert.ok(cpfNativePositive.substantiveText?.includes('They are given to an employee for their employment in that month,'));
 assert.ok(cpfNativePositive.substantiveText?.includes('They are payable by the 14th of the following month.'));
+const cpfNativeAdditionalWageCard = `<div class="action-card carousel panelcontainer"><div class="teaser cmp-action-card"><div class="cmp-teaser cmp-action-card--transparent"><div class="cmp-teaser__content">
+  <div class="action-card-header headline-5">What are Additional Wages?</div>
+  <div class="cmp-teaser__description"><p>Wages which are not classified as Ordinary Wages will be Additional Wages for the month.</p><p>For example, annual performance bonus.</p></div>
+</div></div></div></div>`;
+const cpfNativeAdditionalWagePositive = defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeAdditionalWageCard), cpfAdditionalWageDefinitionExpectation
+);
+assert.equal(cpfNativeAdditionalWagePositive.isValid, true, JSON.stringify(cpfNativeAdditionalWagePositive));
+assert.match(cpfNativeAdditionalWagePositive.substantiveText || '', /Wages which are not classified as Ordinary Wages will be Additional Wages for the month\./i);
+const defaultCpfAdditionalCard = defaultExternalSourceValidator.validateTopicContent(cpfDefinitionPage(cpfNativeAdditionalWageCard), {
+  ...cpfAdditionalWageDefinitionExpectation,
+  cpfAdditionalWageDefinitionRequest: undefined
+});
+assert.equal(defaultCpfAdditionalCard.isValid, false,
+  'Without the bounded Additional Wages definition request, the native card remains stripped.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeAdditionalWageCard.replace('<div class="cmp-teaser__description">', '<div class="cmp-teaser__description" hidden>')),
+  cpfAdditionalWageDefinitionExpectation
+).isValid, false, 'Hidden Additional Wages card descriptions remain excluded.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeAdditionalWageCard.replace(
+    '<p>Wages which are not classified as Ordinary Wages will be Additional Wages for the month.</p>',
+    '<p><a href="/definition">Wages which are not classified as Ordinary Wages will be Additional Wages for the month.</a></p>'
+  )), cpfAdditionalWageDefinitionExpectation
+).isValid, false, 'Link-wrapped Additional Wages definitions remain excluded.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(
+  cpfDefinitionPage(cpfNativeAdditionalWageCard.replace(
+    '<p>For example, annual performance bonus.</p></div>',
+    '<p>For example, annual performance bonus.</p><p>No wages which are not classified as Ordinary Wages will be Additional Wages for the month.</p></div>'
+  )), cpfAdditionalWageDefinitionExpectation
+).isValid, false, 'Contradictory native-card text blocks the Additional Wages exception.');
+assert.equal(defaultExternalSourceValidator.validateTopicContent(cpfDefinitionPage(cpfNativeDefinitionCard), {
+  ...cpfDefinitionExpectation,
+  cpfOrdinaryWageDefinitionRequest: undefined,
+  cpfAdditionalWageDefinitionRequest
+}).isValid, false, 'The Additional Wages request cannot enable the Ordinary Wages card.');
 const defaultCpfCard = defaultExternalSourceValidator.validateTopicContent(cpfDefinitionPage(cpfNativeDefinitionCard), {
   ...cpfDefinitionExpectation,
   cpfOrdinaryWageDefinitionRequest: undefined
@@ -430,6 +502,34 @@ const result = await adapter.discoverOfficialSourceCandidates({
 });
 assert.deepEqual(result, [cases.find(sample => sample.authority === 'MOM').url],
   'An unrelated but approved Singapore government host is not an authorised authority source.');
+
+const salaryPageUrl = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
+const unrelatedEmploymentPracticeUrl = 'https://www.mom.gov.sg/employment-practices/leave-and-holidays/annual-leave';
+const salaryCandidateAdapter = new OfficialSitemapDiscoveryAdapter({
+  async fetchOfficialSource(url) {
+    assert.equal(url, provider.sitemapUrls[0]);
+    return { status: 'SUCCESS', finalUrl: url, content: `<urlset>
+      <url><loc>https://www.mom.gov.sg/passes-and-permits/s-pass/paying-salaries</loc></url>
+      <url><loc>https://www.mom.gov.sg/employment-practices/salary</loc></url>
+      <url><loc>${salaryPageUrl}</loc></url>
+      <url><loc>${unrelatedEmploymentPracticeUrl}</loc></url>
+      <url><loc>https://www.mom.gov.sg/faq/work-permit/salary-period</loc></url>
+    </urlset>` };
+  }
+});
+const salaryCandidates = await salaryCandidateAdapter.discoverOfficialSourceCandidates({
+  ...provider,
+  topicId: 'mom-salary-payment',
+  topicDomainId: 'MOM_EMPLOYMENT',
+  topicTitle: 'Salary Periods, Payment and Deductions',
+  topicHints: ['salary payment', 'salary period', 'when must salary be paid'],
+  standardOrAct: 'Employment Act',
+  query: 'Under MOM guidance, how often must salary be paid and when is regular salary due after the salary period?'
+});
+assert.ok(salaryCandidates.length <= 4 && salaryCandidates.includes(salaryPageUrl),
+  `The Employment Act salary page stays within the bounded candidate set despite similarly worded work-pass pages: ${JSON.stringify(salaryCandidates)}`);
+assert.equal(salaryCandidates.includes(unrelatedEmploymentPracticeUrl), false,
+  'An Employment Practices route receives no relevance score without salary/topic overlap.');
 
 const offlineRetriever = {
   retrieveSources: async () => [],
@@ -804,7 +904,10 @@ for (const sample of salaryPaymentSamples) {
   assert.ok(result.workstreams.some(stream => stream.authority === 'MOM'));
   const workstream = result.workstreams.find(stream => stream.authority === 'MOM');
   const evidenceIssue = workstream.issues[0];
-  assert.equal(evidenceIssue.evidenceStatus, 'VERIFIED');
+  assert.equal(evidenceIssue.evidenceStatus, 'VERIFIED',
+    JSON.stringify({ issue: { subject: evidenceIssue.subject, gaps: evidenceIssue.gaps, diagnostics: evidenceIssue.admissionDiagnostics },
+      concepts: getRequestedQuestionConcepts(routeQuery, oracle),
+      claims: evidenceIssue.verifiedClaims.map(claim => claim.quote), sources: evidenceIssue.sources.map(source => source.sourceText) }, null, 2));
   assert.ok(evidenceIssue.verifiedClaims.some(claim => {
     const source = evidenceIssue.sources.find(record => record.id === claim.recordId);
     return source?.officialSourceUrl === sample.url && source.sourcePublisher === sample.sourcePublisher &&
@@ -812,8 +915,80 @@ for (const sample of salaryPaymentSamples) {
   }), 'Every rule explanation has an exact verified quote bound to the fetched current MOM source.');
 
   const presentation = createAuthorityEvidencePresentation(result);
+  const presentedStream = presentation.workstreams.find(stream => stream.authority === 'MOM');
+  const presentedIssue = presentedStream.issues[0];
+  const presentedSource = presentedStream.sources.find(source => source.officialUrl === sample.url);
+  assert.ok(presentedSource);
+  const sourceRecord = evidenceIssue.sources.find(source => source.officialSourceUrl === sample.url);
+  assert.ok(sourceRecord);
+  const fetchedClaim = presentedSource.claims.find(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE');
+  assert.ok(fetchedClaim?.fetchedSourceBinding,
+    'A real verified LIVE_EXTERNAL quote receives a separate fetched-source binding.');
+  const expectedSourceHash = sourceRecord.documentHash || sourceRecord.contentHash;
+  assert.match(expectedSourceHash, /^[a-f0-9]{64}$/i);
+  assert.deepEqual(fetchedClaim.fetchedSourceBinding, {
+    recordId: sourceRecord.id,
+    documentHash: expectedSourceHash.toLowerCase(),
+    canonicalUrl: sourceRecord.canonicalSourceUrl,
+    retrievedAt: sourceRecord.retrievedAt
+  }, 'The fetched binding carries the actual admitted record identity, hash, canonical URL and retrieval revision.');
+  assert.ok(groupExactIssueClaimsByDocument(presentedSource, presentedIssue.id).length > 0,
+    'Pipeline-created exact claims group by their actual fetched source revision.');
   const rendered = renderAuthorityEvidenceResponseText(presentation, false);
   assert.match(rendered, sample.expectedExplanation);
+  if (sample.key === 'regular-salary') {
+    const caveatOnlyPage = `<html><head><title>${sample.title}</title></head><body><main>
+      <h1>Paying salary</h1><p>${sample.paragraph}</p>
+      <p>Your final salary payment could vary depending on the reason employment ends.</p>
+    </main></body></html>`;
+    const caveatOnlyResult = await runWorkstreams([sample], {
+      query: routeQuery,
+      issuePlan: reconciled.issuePlan,
+      pageOverrides: { [sample.url]: caveatOnlyPage }
+    });
+    const caveatOnlyIssue = caveatOnlyResult.workstreams.find(stream => stream.authority === 'MOM').issues[0];
+    assert.notEqual(caveatOnlyIssue.evidenceStatus, 'VERIFIED',
+      'Monthly pay and a final-salary caveat do not establish the ordinary salary due date.');
+    assert.deepEqual(caveatOnlyIssue.verifiedClaims, [],
+      'The final-salary caveat cannot become a verified claim for the regular salary timing issue.');
+    assert.doesNotMatch(renderAuthorityEvidenceResponseText(createAuthorityEvidencePresentation(caveatOnlyResult), false),
+      /MOM rule explanation:/, 'A caveat-only salary page cannot render a regular-salary rule explanation.');
+
+    const equivalentLabel = structuredClone(presentation);
+    equivalentLabel.workstreams.find(stream => stream.authority === 'MOM').issues[0].subject =
+      'salary payment frequency and due dates';
+    assert.match(renderAuthorityEvidenceResponseText(equivalentLabel, false), sample.expectedExplanation,
+      'A validated regular-salary query can explain the same verified rule under the equivalent semantic issue label.');
+  }
+  if (sample.key === 'overtime-salary') {
+    assert.ok(getMomSalaryPaymentRuleEvidence(routeQuery, presentedStream, presentedIssue),
+      'Overtime salary explanation still passes with grouped claims from the actual fetched source revision.');
+    const splitClaimBinding = (changeOvertimeBinding) => {
+      const mutated = structuredClone(presentation);
+      const source = mutated.workstreams.find(stream => stream.authority === 'MOM').sources.find(item => item.officialUrl === sample.url);
+      const monthlyClaim = source.claims.find(claim => /(?:if you are covered by|in accordance with) the employment act/i.test(claim.text) &&
+        /at least once a month/i.test(claim.text) && !/for overtime work.{0,100}within 14 days/i.test(claim.text));
+      const overtimeClaim = source.claims.find(claim => /for overtime work.{0,100}within 14 days after the end of the salary period/i.test(claim.text) &&
+        !/(?:if you are covered by|in accordance with) the employment act/i.test(claim.text));
+      assert.ok(monthlyClaim && overtimeClaim, 'The live pipeline keeps the monthly premise and overtime deadline as separate exact claims.');
+      changeOvertimeBinding(overtimeClaim.fetchedSourceBinding);
+      const stream = mutated.workstreams.find(item => item.authority === 'MOM');
+      return getMomSalaryPaymentRuleEvidence(routeQuery, stream, stream.issues[0]);
+    };
+    assert.equal(splitClaimBinding(binding => { binding.documentHash = 'a'.repeat(64); }), undefined,
+      'Same-URL claims fetched with different hashes cannot combine their rule premises.');
+    assert.equal(splitClaimBinding(binding => { binding.recordId = 'different-live-record'; }), undefined,
+      'Claims from different live records cannot combine their rule premises.');
+    assert.equal(splitClaimBinding(binding => { binding.canonicalUrl = 'https://www.mom.gov.sg/employment-practices/salary/other'; }), undefined,
+      'Claims with a mismatched canonical URL cannot combine their rule premises.');
+    assert.equal(splitClaimBinding(binding => { binding.documentHash = undefined; }), undefined,
+      'A claim without a valid fetched-source hash cannot complete the rule proof.');
+    const noBinding = structuredClone(presentation);
+    const noBindingStream = noBinding.workstreams.find(stream => stream.authority === 'MOM');
+    noBindingStream.sources.find(item => item.officialUrl === sample.url).claims.forEach(claim => { delete claim.fetchedSourceBinding; });
+    assert.equal(getMomSalaryPaymentRuleEvidence(routeQuery, noBindingStream, noBindingStream.issues[0]), undefined,
+      'Exact live quotes with no formal or fetched binding cannot be combined.');
+  }
   assert.match(rendered, /full request coverage unconfirmed|resolved material issues have verified evidence|Source coverage is verified|Evidence is incomplete for one or more material issues/i,
     'The explanatory answer retains the existing qualified completeness status.');
 
@@ -873,6 +1048,14 @@ for (const sample of salaryPaymentSamples) {
     ? 'overtime salary payment deadline' : 'regular salary payment deadline'; });
   mustSuppress(() => {}, `${routeQuery} in 2023`);
   mustSuppress(() => {}, `${routeQuery} when is my final salary due?`);
+  if (sample.key === 'regular-salary') {
+    const unqualifiedAlias = structuredClone(presentation);
+    unqualifiedAlias.query = routeQuery.replace('regular salary', 'salary');
+    unqualifiedAlias.workstreams.find(stream => stream.authority === 'MOM').issues[0].subject =
+      'salary payment frequency and due dates';
+    assert.doesNotMatch(renderAuthorityEvidenceResponseText(unqualifiedAlias, false), /MOM rule explanation:/,
+      'The equivalent issue label alone does not turn a generic salary query into a regular-salary explanation.');
+  }
   mustSuppress(() => {}, sample.key === 'regular-salary'
     ? `${routeQuery} and when is overtime pay due after the salary period?`
     : `${routeQuery} and how often is regular salary paid and when is it due?`);

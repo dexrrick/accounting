@@ -37,7 +37,13 @@ import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retr
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { provesMomSalaryPaymentSource } from '../retrieval/momSalaryPaymentRule';
-import { completeIrasCpfCashTopUpEligibilityQuote, completeIrasCpfCashTopUpLimitQuotes } from '../verification/claimEvidenceVerifier';
+import { provesIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
+import { provesCpfMasPracticalRuleSource } from '../retrieval/cpfMasPracticalRules';
+import {
+  completeIrasCpfCashTopUpEligibilityQuote,
+  completeIrasCpfCashTopUpLimitQuotes,
+  completeIrasEciFilingDeadlineQuote
+} from '../verification/claimEvidenceVerifier';
 import {
   isBoundedStatutoryAdvisoryRequest,
   selectBoundedStatutoryAdvisoryPassage,
@@ -804,6 +810,7 @@ const ACRA_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = 
   'acra_audit-requirements': ['Audit exemptions: Small company concept'],
   acra_directors: ['Company directors’ duties & key obligations'],
   'acra_share-allotments': ['Allotment of shares', 'Filing a return of allotment of shares'],
+  'acra_company-secretary': ['Choosing company directors & other key officers'],
   acra_rorc: ['Register of registrable controllers'],
   'acra_nominee-arrangements': ['Registers of nominee directors and nominee shareholders'],
   'acra_accounting-records': ['Company directors’ duties & key obligations'],
@@ -1008,6 +1015,13 @@ export function completeScopedIrasConceptPassage(
   concepts: RequestedQuestionConcept[],
   maxChars = IRAS_CONCEPT_PASSAGE_LIMIT_CHARS
 ): string | undefined {
+  if (topic.id === 'iras-cit-eci') {
+    if (topic.domainId !== 'IRAS_CORPORATE_TAX' || !subject || population !== 'COMPANY' ||
+        !/\b(?:eci|estimated chargeable income)\b/i.test(subject) ||
+        !/\b(?:filing|file|deadline|due|period)\b/i.test(subject)) return undefined;
+    const filingDeadlineQuote = completeIrasEciFilingDeadlineQuote(pageText);
+    return filingDeadlineQuote && filingDeadlineQuote.length <= maxChars ? filingDeadlineQuote : undefined;
+  }
   const profile = IRAS_CONCEPT_PASSAGE_PROFILES.get(topic.id);
   if (!profile || topic.domainId !== profile.domainId || !subject || population !== profile.population) return undefined;
   const scopedConcepts = concepts.filter(item => item.topicIds.includes(topic.id));
@@ -1573,6 +1587,10 @@ export async function resolveMappedOfficialSourceFallback(
       topic.id === 'cpf-ordinary-wages' && isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest)
       ? boundedAdvisoryRequest
       : undefined;
+    const cpfAdditionalWageDefinitionRequest = topic.domainId.startsWith('CPF_') &&
+      topic.id === 'cpf-additional-wages' && isBoundedStatutoryAdvisoryRequest(boundedAdvisoryRequest)
+      ? boundedAdvisoryRequest
+      : undefined;
     const expectation = {
       preferMainContent: topic.domainId === 'ACRA_COMPANIES',
       standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...statutoryIdentifiers],
@@ -1586,7 +1604,8 @@ export async function resolveMappedOfficialSourceFallback(
       requireAcraAnnualReturnDeadlineTable: topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query),
       requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
         topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_'),
-      cpfOrdinaryWageDefinitionRequest
+      cpfOrdinaryWageDefinitionRequest,
+      cpfAdditionalWageDefinitionRequest
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
@@ -1660,6 +1679,20 @@ export async function resolveMappedOfficialSourceFallback(
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = 'Fetched MOM salary guidance contains negated, contradictory, or incomplete evidence for the requested payment deadline.';
+      return undefined;
+    }
+
+    const practicalSourceProofs = [
+      provesIrasAcraPracticalRuleSource(query, topic.authorities[0], topic.id, contentValidation.substantiveText || ''),
+      provesCpfMasPracticalRuleSource({
+        authority: topic.authorities[0], topicId: topic.id, subject: topic.title,
+        query, sourceText: contentValidation.substantiveText || ''
+      })
+    ];
+    if (practicalSourceProofs.includes(false)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched guidance does not establish complete, consistent premises for the requested statutory rule.';
       return undefined;
     }
 

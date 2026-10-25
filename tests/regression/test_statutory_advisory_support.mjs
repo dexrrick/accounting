@@ -59,6 +59,34 @@ assert.equal(supportBoundedStatutoryAdvisory({
   sourceText: `Ordinary Wages. For more information about payroll, visit the employers page.`
 }), false, 'a heading or navigation text does not support the definition');
 
+const cpfAdditionalWagesRule = 'Wages which are not classified as Ordinary Wages will be Additional Wages for the month.';
+const cpfAdditionalWagesRequest = {
+  authority: 'CPF Board',
+  topicId: 'cpf-additional-wages',
+  subject: 'CPF Treatment of Additional Wages',
+  originalQuery: 'Under CPF Board guidance, what are Additional Wages?',
+  sourceText: `${cpfAdditionalWagesRule} For example, annual performance bonus.`
+};
+assert.equal(supportBoundedStatutoryAdvisory(cpfAdditionalWagesRequest), true);
+assert.equal(isBoundedStatutoryAdvisoryRequest(cpfAdditionalWagesRequest), true,
+  'the bounded CPF Additional Wages profile recognizes a general definition question');
+for (const outOfScopeQuery of [
+  'How much CPF is due on my bonus?',
+  'What was the Additional Wages ceiling in 2023?',
+  'What CPF rate applies to Additional Wages?'
+]) {
+  assert.equal(isBoundedStatutoryAdvisoryRequest({ ...cpfAdditionalWagesRequest, originalQuery: outOfScopeQuery }), false,
+    `the bounded Additional Wages profile declines out-of-scope request: ${outOfScopeQuery}`);
+}
+for (const contradictoryRule of [
+  'No wages which are not classified as Ordinary Wages will be Additional Wages for the month.',
+  'Wages which are not classified as Ordinary Wages will not be Additional Wages for the month.',
+  'Wages classified as Ordinary Wages will be Additional Wages for the month.'
+]) {
+  assert.equal(supportBoundedStatutoryAdvisory({ ...cpfAdditionalWagesRequest, sourceText: contradictoryRule }), false,
+    `a contradictory Additional Wages definition is rejected: ${contradictoryRule}`);
+}
+
 // Source context: https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days
 const momCompleteCoverage = `Part IV of the Employment Act applies to hours of work and overtime. You can claim overtime if you are:\nWorkmen who earn a basic monthly salary of $4,500 or less.\nNon-workmen who earn a basic monthly salary of $2,600 or less.\nManagers and executives are not covered under Part IV.`;
 const momRequest = {

@@ -2,6 +2,8 @@ import type { AuthorityEvidencePresentation, AuthorityPresentedWorkstream } from
 import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { getMomSalaryPaymentRuleEvidence } from '../retrieval/momSalaryPaymentRule';
+import { getIrasAcraPracticalRuleEvidence } from '../retrieval/irasAcraPracticalRules';
+import { getCpfMasPracticalRuleEvidence } from '../retrieval/cpfMasPracticalRules';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
   if (stream.evidenceStatus === 'INSUFFICIENT') return 'Evidence incomplete';
@@ -35,6 +37,11 @@ export function renderAuthorityEvidenceResponseText(
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
     for (const issue of stream.issues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
+      const practicalRule = getIrasAcraPracticalRuleEvidence(presentation.query, stream, issue) ||
+        getCpfMasPracticalRuleEvidence(presentation.query, stream, issue);
+      if (practicalRule) {
+        lines.push(`- **${practicalRule.authority} rule explanation:** ${practicalRule.text} [${practicalRule.title}](${practicalRule.officialUrl})`);
+      }
       const momSalaryRule = getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue);
       if (momSalaryRule?.kind === 'REGULAR_SALARY') {
         lines.push(`- **MOM rule explanation:** For employees covered by the Employment Act, regular salary must be paid at least once a month and within 7 days after the salary period ends. [${momSalaryRule.title}](${momSalaryRule.officialUrl})`);

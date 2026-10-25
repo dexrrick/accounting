@@ -107,6 +107,102 @@ function isCompleteIndividualOverseasIncomeListQuote(sourceText: string, quote: 
   return normalizeEvidenceText(section.join(' ')) === normalizedQuote;
 }
 
+function parseIrasEciDeadlineListItem(block: string, position: 1 | 2): 'WAIVER' | 'NON_FILING' | undefined {
+  const match = /^(?:(•)\s+|([1-2])[.)]\s+)(.+)$/u.exec(block.trim());
+  if (!match || (match[2] && Number(match[2]) !== position)) return undefined;
+  const text = match[3].trim();
+  if (position === 1 && /^your company qualifies for the eci filing waiver;\s*or$/i.test(text)) return 'WAIVER';
+  if (position === 2 && /^your company is specifically not required to file eci\.?$/i.test(text)) return 'NON_FILING';
+  return undefined;
+}
+
+function irasEciDeadlineBlocks(sourceText: string): { blocks: string[]; introIndex: number } | undefined {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const introIndexes = blocks.flatMap((block, index) =>
+    normalizeEvidenceText(block).toLowerCase() ===
+      'your company has to file eci within 3 months from the end of your financial year unless:'
+      ? [index] : []);
+  return introIndexes.length === 1 ? { blocks, introIndex: introIndexes[0] } : undefined;
+}
+
+function hasIrasEciColonEndedIntro(sourceText: string): boolean {
+  return sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .some(block => normalizeEvidenceText(block).toLowerCase() ===
+      'your company has to file eci within 3 months from the end of your financial year unless:');
+}
+
+function isIrasEciDeadlineListComponentQuote(sourceText: string, quote: string): boolean {
+  const blocks = sourceText
+    .normalize('NFC')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim())
+    .filter(Boolean);
+  const normalizedQuote = normalizeEvidenceText(quote);
+  const introIndexes = blocks.flatMap((block, index) =>
+    normalizeEvidenceText(block).toLowerCase() ===
+      'your company has to file eci within 3 months from the end of your financial year unless:'
+      ? [index] : []);
+  for (const introIndex of introIndexes) {
+    let listEnd = introIndex;
+    while (listEnd + 1 < blocks.length && /^(?:•|◦|▪|[1-9][.)])\s/.test(blocks[listEnd + 1])) listEnd += 1;
+    for (let start = introIndex; start <= listEnd; start += 1) {
+      for (let end = start; end <= listEnd; end += 1) {
+        if (normalizeEvidenceText(blocks.slice(start, end + 1).join(' ')) === normalizedQuote) return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Returns the exact bounded IRAS ECI filing paragraph and its two ordered
+ * exceptions. List markers are retained by the official-page text validator;
+ * an incomplete, reordered, expanded, or changed list is not quotable.
+ */
+export function completeIrasEciFilingDeadlineQuote(sourceText: string): string | undefined {
+  const source = irasEciDeadlineBlocks(sourceText);
+  if (!source) return undefined;
+  const { blocks, introIndex } = source;
+  if (parseIrasEciDeadlineListItem(blocks[introIndex + 1] || '', 1) !== 'WAIVER' ||
+      parseIrasEciDeadlineListItem(blocks[introIndex + 2] || '', 2) !== 'NON_FILING' ||
+      /^(?:•|◦|▪|[1-9][.)])\s/.test(blocks[introIndex + 3] || '') ||
+      startsAttachedEvidenceQualification(blocks[introIndex + 3] || '')) return undefined;
+  const quote = blocks.slice(introIndex, introIndex + 3).join('\n\n');
+  return quote.length <= 3_200 ? quote : undefined;
+}
+
+function isPartialIrasEciFilingDeadlineQuote(sourceText: string, quote: string): boolean {
+  const source = irasEciDeadlineBlocks(sourceText);
+  if (!source) return false;
+  const { blocks, introIndex } = source;
+  const normalizedQuote = normalizeEvidenceText(quote);
+  if (normalizedQuote === normalizeEvidenceText(blocks[introIndex])) return true;
+  const firstItem = blocks[introIndex + 1] || '';
+  const secondItem = blocks[introIndex + 2] || '';
+  if (parseIrasEciDeadlineListItem(firstItem, 1) === 'WAIVER' &&
+      normalizedQuote === normalizeEvidenceText([blocks[introIndex], firstItem].join(' '))) return true;
+  if (parseIrasEciDeadlineListItem(secondItem, 2) === 'NON_FILING' &&
+      normalizedQuote === normalizeEvidenceText(secondItem)) return true;
+  if (parseIrasEciDeadlineListItem(firstItem, 1) === 'WAIVER' &&
+      normalizedQuote === normalizeEvidenceText(firstItem)) return true;
+  return false;
+}
+
+function isIrasEciFilingDeadlineRecord(record: AuthoritativeSourceRecord): boolean {
+  return record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || [])]
+      .includes('iras-cit-eci');
+}
+
 /**
  * IRAS CPF top-up eligibility is one source section: a two-item numbered
  * qualification list, followed by the current MRSS and MMSS exclusions. Keep
@@ -499,6 +595,15 @@ function quoteIsWholeSourceSpan(record: AuthoritativeSourceRecord, quote: string
     .map(paragraph => paragraph.trim())
     .filter(Boolean);
   const normalizedQuote = normalizeEvidenceText(quote);
+  const eciDeadlineDutyAnchor = /\b(?:file|furnish)\s+eci\s+within\s+(?:3|three)\s+months?\b/i.test(quote);
+  if (isIrasEciFilingDeadlineRecord(record) && hasIrasEciColonEndedIntro(sourceText) &&
+      (eciDeadlineDutyAnchor || isIrasEciDeadlineListComponentQuote(sourceText, quote))) {
+    const completeQuote = completeIrasEciFilingDeadlineQuote(sourceText);
+    if (completeQuote && normalizeEvidenceText(completeQuote) === normalizedQuote) return 'MATCH';
+    return isPartialIrasEciFilingDeadlineQuote(sourceText, quote) || isIncompleteColonEndedQuote(normalizedQuote)
+      ? 'OMITS_ATTACHED_QUALIFICATION'
+      : 'NO_MATCH';
+  }
   if (isCompleteIndividualFtcConditionsQuote(sourceText, quote)) return 'MATCH';
   if (isCompleteIndividualOverseasIncomeListQuote(sourceText, quote)) return 'MATCH';
   const cpfEligibilityRecord = record.authority === 'IRAS' && record.domain === 'IRAS_TAX' &&

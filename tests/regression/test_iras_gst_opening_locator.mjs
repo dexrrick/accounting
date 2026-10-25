@@ -39,9 +39,13 @@ assert.equal(topic.domainId, 'IRAS_GST');
 assert.deepEqual(topic.paragraphHints.slice(0, 4), [
   'input tax claim', 'claim input tax', 'claiming input tax', 'recover input tax'
 ]);
-assert.deepEqual(topic.keywords, [
+const previousInputTaxKeywords = [
   'input tax claim', 'tax invoice requirements', 'claim input gst', 'input gst', 'claimed tax invoices', 'input taxes'
-]);
+];
+assert.ok(previousInputTaxKeywords.every(keyword => topic.keywords.includes(keyword)),
+  'The existing IRAS input-tax retrieval terms remain available.');
+assert.ok(topic.keywords.includes('input tax recovery conditions'));
+assert.ok(topic.keywords.includes('recover gst on business purchases'));
 assert.deepEqual(topic.queryPatterns, [
   String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?)\b`,
   String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`,
