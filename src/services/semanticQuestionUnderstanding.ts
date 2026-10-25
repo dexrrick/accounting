@@ -841,8 +841,8 @@ function companyResidencyGeneralRuleBindings(
   const issues = interpretation.issues || [];
   if (issues.length === 0) return [];
   const clauses = queryClauses(query);
-  const ruleClauses = clauses.filter(hasSemanticCompanyTaxResidencyAnchors)
-    .map(clause => semanticIssueClauseWithFollowOns(query, clauses, clause, 'company tax residency determination'))
+  const ruleClauses = clauses.map((clause, index) => ({ clause, index })).filter(({ clause }) => hasSemanticCompanyTaxResidencyAnchors(clause))
+    .map(({ index }) => semanticIssueClauseWithFollowOns(query, clauses, index, 'company tax residency determination'))
     .filter((clause): clause is string => Boolean(clause) &&
       hasSemanticCompanyTaxResidencyAnchors(clause) && isGeneralCompanyTaxResidencyRuleQuestion(clause));
   const bindings: Array<{ issueIndex: number; issue: SemanticQuestionIssue; clause: string }> = [];
@@ -908,7 +908,7 @@ function normalizeIssueLocalCpfTaxOutcome(
         /\b(?:not|never|no)\b[^.!?]{0,50}\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(issueQuery) ||
         explicitlyRequestsCpfPayrollOutcome(issues.length === 1 ? query : issueQuery) ||
         issue.population === 'UNKNOWN' && !/\b(?:personal|individual|my\s+own|own\s+(?:cpf|central provident fund)|employee['’]s\s+own)\b/i.test(issueQuery)) return issue;
-    const generalRuleFollowOn = isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery);
+    const generalRuleFollowOn = isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery, query);
     if (['COMPANY', 'EMPLOYER'].includes(issue.population)) return issue;
     changed = true;
     const normalizedPopulation = issue.population === 'UNKNOWN' ? 'INDIVIDUAL' : issue.population;
@@ -939,13 +939,25 @@ function normalizeIssueLocalCpfTaxOutcome(
   }, query) || interpretation;
 }
 
-function isBoundedCpfCashTopUpGeneralRuleQuery(query: string): boolean {
+function isBoundedCpfCashTopUpGeneralRuleQuery(query: string, fullQuery = query): boolean {
+  const statesGeneralEligibility = /\b(?:explain|describe|outline|summari[sz]e)\b[^.!?;]{0,100}\b(?:general\s+)?eligib\w*\s+conditions?\b/i.test(query);
+  const statesReliefLimits = /\b(?:relief\s+limits?|limits?\s+(?:on\s+)?relief|maximum\s+relief|relief\s+caps?)\b/i.test(query);
+  const ruleOnlyIntent = /\b(?:this\s+is|this\s+remains)\s+a\s+general\s+rules?\s+question\b/i.test(query) ||
+    statesGeneralEligibility && statesReliefLimits;
+  const executableRequestText = fullQuery.replace(
+    /\b(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate)\b(?:(?!\b(?:but|and)\s+(?:please\s+)?(?:calculate|compute|estimate)\b)(?!\b(?:rather\s+(?:than\s+)?|instead(?:\s+of)?\s*)(?:please\s+)?(?:calculate|compute|estimate)\b)[^,;.!?])*/gi,
+    ' '
+  );
+  const requestsCaseAmount = /\b(?:calculate|compute|estimate|how\s+much\s+(?:relief|tax\s+relief)|my\s+(?:personal\s+)?(?:relief|tax\s+relief)\s+amount)\b/i.test(executableRequestText);
+  const statesPersonalTopUpAmount = queryClauseSpans(fullQuery).some(({ text }) =>
+    /\b(?:cash\s+)?top[ -]?ups?\b/i.test(text) && /\b\d[\d,]*(?:\.\d+)?\b/.test(text));
+  const explicitCaseFacts = hasCaseLinkedCircumstances(fullQuery) ||
+    statesPersonalTopUpAmount ||
+    /\b(?:can|could|do|does|will|would|should)\s+i\b[^.!?;]{0,100}\b(?:qualif\w*|eligib\w*|claim\w*)\b|\b(?:am\s+i|are\s+we)\s+(?:eligible|qualif\w*|able\s+to\s+claim)\b/i.test(fullQuery);
   return /\b(?:cpf|central provident fund)\b/i.test(query) &&
     /\bcash\s+top[ -]?ups?\b/i.test(query) &&
     /\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(query) &&
-    /\b(?:explain|describe|outline|summari[sz]e)\b[^.!?;]{0,100}\b(?:general\s+)?(?:eligib\w*|conditions?|criteria|limits?|caps?|relief)\b/i.test(query) &&
-    /\b(?:this\s+is|this\s+remains)\s+a\s+general\s+rules?\s+question\b/i.test(query) &&
-    /\b(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate)\b[^.!?;]{0,100}\b(?:my|our|personal)\s+(?:income\s+)?tax\b/i.test(query);
+    ruleOnlyIntent && !requestsCaseAmount && !explicitCaseFacts;
 }
 
 function isGeneralAcraAnnualReturnMonthCountRuleQuestion(query: string): boolean {
@@ -1015,8 +1027,31 @@ function hasCaseLinkedCircumstances(query: string): boolean {
 }
 
 function queryClauses(query: string): string[] {
-  return query.split(/[?!;]+|\.(?=\s+(?:please\s+)?(?:explain|describe|outline|summari[sz]e|do\s+not|don['’]?t|never|under|according\s+to|based\s+on|using|this\s+is\s+a\s+general|what|which|who|how|can|could|do|does|is|are|will|would|should)\b)|(?<!\d),(?!\d)|\b(?:however|whereas|but also|also|separately)\b|\band\s+(?=(?:what|how|who|explain|compare|whether|do|does|is|are|can|could|may)\b)/i)
-    .map(clause => clause.trim()).filter(Boolean);
+  return queryClauseSpans(query).map(clause => clause.text);
+}
+
+interface QueryClauseSpan {
+  text: string;
+  start: number;
+  end: number;
+}
+
+function queryClauseSpans(query: string): QueryClauseSpan[] {
+  const clauses: QueryClauseSpan[] = [];
+  const separator = /[?!;]+|\.(?=\s+(?:please\s+)?(?:explain|describe|outline|summari[sz]e|do\s+not|don['’]?t|never|under|according\s+to|based\s+on|using|this\s+is\s+a\s+general|what|which|who|how|can|could|do|does|is|are|will|would|should)\b)|(?<!\d),(?!\d)|\b(?:however|whereas|but also|also|separately)\b|\band\s+(?=(?:what|how|who|explain|compare|whether|do|does|is|are|can|could|may)\b)/gi;
+  let start = 0;
+  const append = (end: number) => {
+    const raw = query.slice(start, end);
+    const leading = raw.length - raw.trimStart().length;
+    const text = raw.trim();
+    if (text) clauses.push({ text, start: start + leading, end: start + leading + text.length });
+  };
+  for (const match of query.matchAll(separator)) {
+    append(match.index);
+    start = match.index + match[0].length;
+  }
+  append(query.length);
+  return clauses;
 }
 
 function isBoundedSemanticIssueFollowOn(clause: string): boolean {
@@ -1033,12 +1068,12 @@ function semanticIssueFollowOnCanAttach(
   followOnIndex: number,
   subject?: string
 ): boolean {
-  const baseClause = clauses[baseIndex];
-  const next = clauses[followOnIndex];
+  const spans = queryClauseSpans(query);
+  const baseClause = spans[baseIndex]?.text;
+  const next = spans[followOnIndex]?.text;
   if (!baseClause || !next) return false;
-  const previousEnd = query.indexOf(baseClause) + baseClause.length;
-  const nextStart = query.indexOf(next, previousEnd);
-  if (nextStart < 0) return false;
+  const previousEnd = spans[baseIndex].end;
+  const nextStart = spans[followOnIndex].start;
   const bridge = query.slice(previousEnd, nextStart);
   if (/\b(?:separately|also|however|whereas|but\s+also|independently)\b/i.test(bridge)) return false;
   const sourceContextClause = baseIndex > 0 && STANDALONE_SOURCE_AUTHORITY_PREFACE.test(clauses[baseIndex - 1])
@@ -1060,10 +1095,9 @@ function semanticIssueFollowOnCanAttach(
   return isBoundedSemanticIssueFollowOn(next) || continuesIssueQuestion;
 }
 
-function semanticIssueClauseWithFollowOns(query: string, clauses: string[], baseClause: string, subject?: string): string {
-  const baseIndex = clauses.indexOf(baseClause);
-  if (baseIndex < 0) return baseClause;
-  const bound = [baseClause];
+function semanticIssueClauseWithFollowOns(query: string, clauses: string[], baseIndex: number, subject?: string): string {
+  if (baseIndex < 0 || baseIndex >= clauses.length) return '';
+  const bound = [clauses[baseIndex]];
   for (let index = baseIndex + 1; index < clauses.length; index += 1) {
     const next = clauses[index];
     if (!semanticIssueFollowOnCanAttach(query, clauses, baseIndex, index, subject)) break;
@@ -1076,15 +1110,16 @@ function semanticIssueClauseGroups(
   query: string,
   clauses: string[],
   subject?: string
-): Array<{ startIndex: number; clauses: string[] }> {
-  const groups: Array<{ startIndex: number; clauses: string[] }> = [];
+): Array<{ startIndex: number; endIndex: number; clauses: string[] }> {
+  const groups: Array<{ startIndex: number; endIndex: number; clauses: string[] }> = [];
   for (let index = 0; index < clauses.length; index += 1) {
     const current = groups.at(-1);
     if (current && isBoundedSemanticIssueFollowOn(clauses[index]) &&
         semanticIssueFollowOnCanAttach(query, clauses, current.startIndex, index, subject)) {
       current.clauses.push(clauses[index]);
+      current.endIndex = index;
     } else {
-      groups.push({ startIndex: index, clauses: [clauses[index]] });
+      groups.push({ startIndex: index, endIndex: index, clauses: [clauses[index]] });
     }
   }
   return groups;
@@ -1096,41 +1131,48 @@ export function getSemanticQueryClauses(query: string): string[] {
 }
 
 /** Selects one raw clause only when its original wording uniquely matches the issue. */
-function queryClauseForSemanticIssue(query: string, subject: string): string | undefined {
+function queryClauseIndexForSemanticIssue(query: string, subject: string): number | undefined {
   const clauses = queryClauses(query);
-  if (clauses.length < 2) return query;
+  if (clauses.length < 2) return 0;
   if (hasSemanticCompanyTaxResidencyAnchors(subject)) {
     const issueNeedsFacts = hasExplicitCaseReference(subject) || hasCaseLinkedCircumstances(subject) ||
       hasFirstPersonOutcomeApplication(subject);
-    const matchingClauses = clauses.filter(hasSemanticCompanyTaxResidencyAnchors).map(clause => ({
+    const matchingClauses = clauses.map((clause, index) => ({ clause, index })).filter(({ clause }) => hasSemanticCompanyTaxResidencyAnchors(clause)).map(({ clause, index }) => ({
       clause,
-      scoped: semanticIssueClauseWithFollowOns(query, clauses, clause, subject)
+      index,
+      scoped: semanticIssueClauseWithFollowOns(query, clauses, index, subject)
     })).filter(({ scoped }) => scoped !== undefined &&
       (hasExplicitCaseReference(scoped) || hasCaseLinkedCircumstances(scoped) ||
         hasFirstPersonOutcomeApplication(scoped)) === issueNeedsFacts);
-    if (matchingClauses.length === 1) return matchingClauses[0].clause;
+    if (matchingClauses.length === 1) return matchingClauses[0].index;
     return undefined;
   }
   const subjectTerms = semanticConceptAnchors(subject);
   if (subjectTerms.length === 0) return undefined;
-  const scored = semanticIssueClauseGroups(query, clauses, subject).map((group, index) => {
+  const scored = semanticIssueClauseGroups(query, clauses, subject).map(group => {
     const clause = clauses[group.startIndex];
     const scopedClause = group.clauses.join('. ');
     const clauseTerms = new Set(semanticConceptAnchors(scopedClause));
     return {
       clause,
-      index,
+      index: group.startIndex,
       score: subjectTerms.filter(term => clauseTerms.has(term)).length
     };
   }).sort((left, right) => right.score - left.score || left.index - right.index);
-  return scored[0].score >= 2 && scored[0].score > scored[1]?.score ? scored[0].clause : undefined;
+  return scored[0].score >= 2 && (scored.length === 1 || scored[0].score > scored[1].score)
+    ? scored[0].index : undefined;
+}
+
+function queryClauseForSemanticIssue(query: string, subject: string): string | undefined {
+  const index = queryClauseIndexForSemanticIssue(query, subject);
+  return index === undefined ? undefined : queryClauses(query)[index];
 }
 
 /** Bounded issue-local text includes only the selected request and its attached follow-on context. */
 function queryWithSemanticIssueFollowOns(query: string, subject: string): string | undefined {
   const clauses = queryClauses(query);
-  const requestClause = queryClauseForSemanticIssue(query, subject);
-  return requestClause ? semanticIssueClauseWithFollowOns(query, clauses, requestClause, subject) : undefined;
+  const requestIndex = queryClauseIndexForSemanticIssue(query, subject);
+  return requestIndex === undefined ? undefined : semanticIssueClauseWithFollowOns(query, clauses, requestIndex, subject);
 }
 
 function semanticCompanyResidencyLabelBelongsToIssue(
@@ -1281,21 +1323,19 @@ function semanticIrasRestrictionFollowOnBelongsToIssue(
 ): boolean {
   if (normalizeSemanticAnchorText(label) !== 'iras restriction' || issue.domain !== 'IRAS_GST' ||
       issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS') return false;
-  const subjectClause = queryClauseForSemanticIssue(query, issue.subject);
-  if (!subjectClause || !semanticConceptMatchesIssueClause(issue.subject, query, issue.subject)) return false;
+  const subjectIndex = queryClauseIndexForSemanticIssue(query, issue.subject);
+  if (subjectIndex === undefined || !semanticConceptMatchesIssueClause(issue.subject, query, issue.subject)) return false;
   const clauses = queryClauses(query);
-  const subjectIndex = clauses.findIndex(clause => subjectClause === clause || subjectClause.startsWith(`${clause}. `));
-  if (subjectIndex < 0) return false;
-  const subjectStart = query.indexOf(clauses[subjectIndex]);
-  if (subjectStart < 0) return false;
-  const subjectEnd = subjectStart + clauses[subjectIndex].length;
+  const clauseSpans = queryClauseSpans(query);
+  const subjectEnd = clauseSpans[subjectIndex]?.end;
+  if (subjectEnd === undefined) return false;
   const followOn = clauses[subjectIndex + 1];
+  const followOnStart = clauseSpans[subjectIndex + 1]?.start;
   if (!followOn || !/\b(?:explain|describe|outline|summari[sz]e)\b/i.test(followOn) ||
       !/\biras\b/i.test(followOn) || !/\brestrictions?\b/i.test(followOn) ||
       !/\bexceptions?\b/i.test(followOn) ||
       /\b(?:acra|cpf|mas|mom)\b/i.test(followOn)) return false;
-  const followOnStart = query.indexOf(followOn, subjectEnd);
-  if (followOnStart < 0) return false;
+  if (followOnStart === undefined) return false;
   const interveningText = query.slice(subjectEnd, followOnStart);
   return !/\b(?:separately|also|however|whereas|but also|acra|cpf|mas|mom)\b/i.test(interveningText);
 }
@@ -1791,7 +1831,7 @@ function explicitCpfCashTopUpReliefClauses(query: string): Array<{ clause: strin
     if (!/\b(?:cpf|central\s+provident\s+fund)\b/i.test(clause) ||
         !/\bcash\s+top[ -]?ups?\b/i.test(clause) ||
         !/\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief|qualif\w*\s+for\s+(?:tax\s+)?relief)\b/i.test(clause)) return [];
-    return [{ clause, index, scoped: semanticIssueClauseWithFollowOns(query, clauses, clause, 'CPF cash top-up tax relief eligibility and limits') }];
+    return [{ clause, index, scoped: semanticIssueClauseWithFollowOns(query, clauses, index, 'CPF cash top-up tax relief eligibility and limits') }];
   });
 }
 

@@ -2497,8 +2497,9 @@ export async function buildAuthorityWorkstreams(
   const applicationStatus: AuthorityApplicationStatus = allIssues.some(issue => issue.applicationStatus === 'UNRESOLVED')
     ? 'UNRESOLVED' : allIssues.some(issue => issue.applicationStatus === 'VERIFIED') ? 'VERIFIED' : 'NOT_REQUIRED';
   const gaps = [...topLevelGaps, ...workstreams.flatMap(workstream => workstream.gaps)];
+  const requestRepresentationComplete = requestCompletenessContext.evaluation.status === 'COMPLETE';
   const status: AuthorityOverallStatus = gaps.length > 0 || evidenceStatus !== 'VERIFIED'
     ? 'INSUFFICIENT'
-    : applicationStatus === 'UNRESOLVED' ? 'CONDITIONAL' : 'VERIFIED';
+    : applicationStatus === 'UNRESOLVED' || !requestRepresentationComplete ? 'CONDITIONAL' : 'VERIFIED';
   return { query, issuePlan, requestCompletenessContext, workstreams, evidenceStatus, applicationStatus, status, gaps };
 }

@@ -597,6 +597,7 @@ function governedDiagnostic(result, candidateGroups, fetchObservations, observat
     status: result?.status,
     evidenceStatus: result?.evidenceStatus,
     applicationStatus: result?.applicationStatus,
+    requestCompletenessStatus: result?.requestCompletenessContext?.evaluation?.status,
     workstreams,
     topLevelGaps: (result?.gaps || []).filter(gap => gap.issueId === 'issue-plan').map(gap => gap.code).slice(0, 32),
     candidateGroupCount: candidateGroups.length,

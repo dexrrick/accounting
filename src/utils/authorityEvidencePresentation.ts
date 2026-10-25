@@ -174,6 +174,8 @@ function workstreamStatus(stream: AuthorityWorkstreamResult): { evidenceStatus: 
 }
 
 function overallStatus(result: AuthorityWorkstreamsResult): AuthorityOverallStatus {
+  const requestRepresentationComplete = isCurrentRequestCompletenessContext(result.requestCompletenessContext, result.query) &&
+    result.requestCompletenessContext.evaluation.status === 'COMPLETE';
   const everyIssueCovered = result.workstreams.length > 0 &&
     result.workstreams.every(stream => stream.issues.length > 0 && stream.issues.every(isCovered));
   const resultIssueScopes = new Set(result.workstreams.flatMap(stream => stream.issues.map(issue =>
@@ -191,6 +193,7 @@ function overallStatus(result: AuthorityWorkstreamsResult): AuthorityOverallStat
     stream.applicationStatus === 'UNRESOLVED' || stream.issues.some(issue => issue.applicationStatus === 'UNRESOLVED'))) {
     return 'CONDITIONAL';
   }
+  if (!requestRepresentationComplete) return 'CONDITIONAL';
   return result.status === 'VERIFIED' ? 'VERIFIED' : 'INSUFFICIENT';
 }
 
@@ -317,6 +320,12 @@ export function createAuthorityEvidencePresentation(result: AuthorityWorkstreams
   const frozen = freezeOwnedPresentation(presentation);
   if (requestCompletenessContext) trustedPresentations.add(frozen as object);
   return frozen;
+}
+
+/** True only when the presentation carries a trusted, exact-query COMPLETE evaluation. */
+export function hasCompleteRequestRepresentation(presentation: AuthorityEvidencePresentation): boolean {
+  return isCurrentRequestCompletenessContext(presentation.requestCompletenessContext, presentation.query) &&
+    presentation.requestCompletenessContext.evaluation.status === 'COMPLETE';
 }
 
 export function hasCurrentAuthorityEvidencePresentation(

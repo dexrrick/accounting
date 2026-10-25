@@ -258,6 +258,7 @@ function compactIssueDiagnostics(result) {
     status: governed.status,
     evidenceStatus: governed.evidenceStatus,
     applicationStatus: governed.applicationStatus,
+    requestCompletenessStatus: governed.requestCompletenessStatus,
     topLevelGaps: governed.topLevelGaps || [],
     issues,
     requestedConceptCoverage: observations.map(item => ({

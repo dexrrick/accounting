@@ -697,8 +697,12 @@ try {
     retriever: answerRetriever, questionUnderstanding: singleLicensingPlan.understanding,
     localOnly: true, referenceDate: htmlDate
   });
-  assert.equal(singleLicensingRuntime.status, 'VERIFIED',
-    `a single bounded licensing issue is verified through the ledger-backed runtime: ${singleLicensingRuntime.gaps.map(gap => gap.code).join(', ')}`);
+  assert.equal(singleLicensingRuntime.evidenceStatus, 'VERIFIED',
+    `the single bounded licensing issue has verified source evidence: ${singleLicensingRuntime.gaps.map(gap => gap.code).join(', ')}`);
+  assert.ok(['UNCERTAIN', 'INCOMPLETE'].includes(singleLicensingRuntime.requestCompletenessContext.evaluation.status),
+    'the runtime records the unresolved request representation status');
+  assert.equal(singleLicensingRuntime.status, 'CONDITIONAL',
+    'Whole-question status stays conditional while request completeness is unconfirmed.');
   assert.ok(singleLicensingRuntime.workstreams.flatMap(workstream => workstream.verifiedClaims)
     .some(claim => claim.recordId === htmlId && claim.sourceBinding?.versionId === versioning.getActiveVersionId(htmlId)));
 
@@ -760,7 +764,8 @@ try {
   const activeAuthorityPanel = renderAuthorityEvidenceFor(activeHtml, firstHtmlProof);
   assert.match(activeAuthorityPanel, /Current verified official source excerpt/);
   assert.match(activeAuthorityPanel, /CURRENT_VERSION_MATCH/);
-  assert.match(activeAuthorityPanel, /All requested evidence verified/);
+  assert.match(activeAuthorityPanel, /Evidence verified for mapped issues; full request coverage unconfirmed/,
+    'a synthetic presentation without an authentic completeness evaluation cannot claim full-question verification');
   const assembledFirstPdfCitation = assembleBoundCitation(firstPdfProof.citation, activePdf).find(citation => citation.standard === firstPdfProof.citation.standard);
   assert.ok(assembledFirstPdfCitation?.sourceBinding,
     'response assembly preserves the verified source binding on the final StandardCitation');
@@ -948,7 +953,7 @@ try {
   assert.match(replacedAuthorityPanel, /Source version changed; review required/);
   assert.doesNotMatch(replacedAuthorityPanel, /\bCovered\b/,
     'an issue whose source binding is stale cannot retain its covered badge');
-  assert.doesNotMatch(replacedAuthorityPanel, /All requested evidence verified|Evidence verified/,
+  assert.doesNotMatch(replacedAuthorityPanel, /All requested evidence verified/,
     'a historical binding cannot retain a current verified whole-question badge');
   assert.equal(assembleBoundCitation(firstHtmlProof.citation, replacementActiveHtml).length, 0,
     'response assembly rejects a citation bound to the replaced document version');
@@ -981,8 +986,8 @@ try {
     'response assembly binds the restored version after rollback');
   const restoredAuthorityPanel = renderAuthorityEvidenceFor(restoredHtml, firstHtmlProof);
   assert.match(restoredAuthorityPanel, /Current verified official source excerpt/);
-  assert.match(restoredAuthorityPanel, /All requested evidence verified/,
-    'rollback restores the old binding and its current status in the authority workstream view');
+  assert.match(restoredAuthorityPanel, /Evidence verified for mapped issues; full request coverage unconfirmed/,
+    'the restored binding remains mapped evidence while full request coverage is unconfirmed');
   assert.match(restoredAuthorityPanel, /\bCovered\b/,
     'the restored issue returns to the covered state when its bound version is active again');
 
@@ -1006,7 +1011,7 @@ try {
   assert.match(rolledBackAuthorityPanel, /SOURCE_NOT_FOUND/);
   assert.doesNotMatch(rolledBackAuthorityPanel, /\bCovered\b/,
     'rollback of the original activation clears the issue covered badge');
-  assert.doesNotMatch(rolledBackAuthorityPanel, /All requested evidence verified|Evidence verified/,
+  assert.doesNotMatch(rolledBackAuthorityPanel, /All requested evidence verified/,
     'rolling back activation removes the current verified badge while preserving historical receipt details');
   assert.doesNotMatch(renderManualMasReviewPanel(), /Activated manual MAS package/,
     'rolling back all active MAS packages clears their active-package panel entries');

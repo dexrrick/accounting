@@ -1,4 +1,5 @@
 import type { AuthorityEvidencePresentation, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
+import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
@@ -13,9 +14,13 @@ export function renderAuthorityEvidenceResponseText(
   presentation: AuthorityEvidencePresentation,
   hasBalancedJournal: boolean
 ): string {
+  const requestComplete = hasCompleteRequestRepresentation(presentation);
+  const evidenceVerified = presentation.evidenceStatus === 'VERIFIED';
   const overall = presentation.status === 'INSUFFICIENT'
     ? 'Evidence is incomplete for one or more material issues.'
-    : presentation.status === 'CONDITIONAL'
+    : !requestComplete && evidenceVerified
+      ? `Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved' : '.'}`
+      : presentation.status === 'CONDITIONAL'
       ? 'Source coverage is verified, but application to the case remains unresolved.'
       : 'The resolved material issues have verified evidence.';
   const lines = [

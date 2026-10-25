@@ -58,7 +58,7 @@ function canonicalJsonWithoutHarnessPostbuild(bytes) {
 function normalizeCheckoutBytes(bytes, relativePath) {
   if (relativePath.replaceAll('\\', '/') === 'package.json') return canonicalJsonWithoutHarnessPostbuild(bytes);
   const extension = path.posix.extname(relativePath).toLowerCase();
-  if (!TEXT_RUNTIME_EXTENSIONS.has(extension) && path.posix.basename(relativePath) !== '.nvmrc') return bytes;
+  if (!TEXT_RUNTIME_EXTENSIONS.has(extension) && !['.nvmrc', '.gitattributes'].includes(path.posix.basename(relativePath))) return bytes;
   const normalized = Buffer.from(bytes.toString('utf8').replace(/\r\n/g, '\n'), 'utf8');
   if (normalized.includes(0) || normalized.includes(13)) throw new Error(`PINNED_RUNTIME_TEXT_ENCODING_UNSUPPORTED:${relativePath}`);
   return normalized;

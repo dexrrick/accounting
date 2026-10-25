@@ -808,6 +808,66 @@ assert.deepEqual(getRequestedQuestionConcepts(cpfCashTopUpQuery, normalizedCpfCa
   'cpf_cash_top_up_relief', 'cpf_cash_top_up_relief_eligibility', 'cpf_cash_top_up_relief_limits'
 ]);
 
+const noAuthorityPrefaceCpfQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedNoAuthorityPrefaceCpf = await interpretSemanticQuestion(noAuthorityPrefaceCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedNoAuthorityPrefaceCpf.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A qualifying sole CPF relief group keeps its attached general-rule follow-on without an authority preface.');
+assert.equal(normalizedNoAuthorityPrefaceCpf.interpretation.requiresUserSpecificFacts, false,
+  'A sole group with a general eligibility and limits follow-on does not retain case-fact requirements.');
+const personalCpfAmountQuery = 'Can cash top-ups to my CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax. Calculate my relief amount.';
+const normalizedPersonalCpfAmount = await interpretSemanticQuestion(personalCpfAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedPersonalCpfAmount.interpretation.requiresUserSpecificFacts, true,
+  'A separate positive amount request remains case-specific even beside a negative instruction.');
+assert.equal(normalizedPersonalCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'A positive relief amount request is not normalized into a general-rule answer.');
+const commaSeparatedCpfAmountQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax, but calculate my relief amount.';
+const normalizedCommaSeparatedCpfAmount = await interpretSemanticQuestion(commaSeparatedCpfAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCommaSeparatedCpfAmount.interpretation.requiresUserSpecificFacts, true,
+  'A positive relief calculation after a comma remains case-specific despite an adjacent negative instruction.');
+assert.equal(normalizedCommaSeparatedCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+for (const conjunction of ['but calculate', 'and compute', 'rather than estimate', 'instead calculate']) {
+  const conjunctionCpfAmountQuery = `Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax ${conjunction} my relief amount.`;
+  const normalizedConjunctionCpfAmount = await interpretSemanticQuestion(conjunctionCpfAmountQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedConjunctionCpfAmount.interpretation.requiresUserSpecificFacts, true,
+    `The affirmative request after “${conjunction}” remains case-specific.`);
+  assert.equal(normalizedConjunctionCpfAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+}
+const negativeReliefControl = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax or relief.';
+const normalizedNegativeReliefControl = await interpretSemanticQuestion(negativeReliefControl, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedNegativeReliefControl.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A prohibitive reference to relief without an affirmative calculation remains a general-rule request.');
+assert.equal(normalizedNegativeReliefControl.interpretation.requiresUserSpecificFacts, false);
+const factSpecificCpfQuery = 'I topped up SGD 8,000 to my CPF Special Account. Explain the general eligibility conditions and relief limits.';
+const normalizedFactSpecificCpf = await interpretSemanticQuestion(factSpecificCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedFactSpecificCpf.interpretation.requiresUserSpecificFacts, true,
+  'Stated contribution facts keep the question on a case-specific path.');
+const amountBeforeCpfQuery = 'Can cash top-ups of SGD 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedAmountBeforeCpf = await interpretSemanticQuestion(amountBeforeCpfQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedAmountBeforeCpf.interpretation.requiresUserSpecificFacts, true,
+  'A stated personal top-up amount remains case-specific when it precedes the CPF account wording.');
+const personalCpfEligibilityQuery = 'Can I qualify for tax relief on my CPF cash top-up? Explain the general eligibility conditions and relief limits.';
+const normalizedPersonalCpfEligibility = await interpretSemanticQuestion(personalCpfEligibilityQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedPersonalCpfEligibility.interpretation.requiresUserSpecificFacts, true,
+  'A direct request to decide the individual’s own eligibility remains case-specific.');
+const repeatedCpfPrompt = 'Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions and relief limits for Special Account top-ups. Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions for Retirement Account top-ups.';
+const repeatedCpfMeaning = structuredClone(cpfCashTopUpMeaning);
+repeatedCpfMeaning.primarySubject = 'CPF Retirement Account cash top-up tax relief eligibility';
+repeatedCpfMeaning.issues[0].subject = repeatedCpfMeaning.primarySubject;
+const normalizedRepeatedCpfPrompt = await interpretSemanticQuestion(repeatedCpfPrompt, provider,
+  async () => JSON.stringify(repeatedCpfMeaning));
+assert.equal(normalizedRepeatedCpfPrompt.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'Repeated identical request wording binds the Retirement Account issue to its own follow-on, not the earlier Special Account limits.');
+assert.equal(normalizedRepeatedCpfPrompt.interpretation.requiresUserSpecificFacts, true,
+  'The first question’s relief-limit follow-on cannot erase the second request’s distinct context.');
+
 const mixedCpfPayrollQuery = `${cpfCashTopUpQuery} Separately, how much must the employer contribute to CPF?`;
 const mixedCpfMeaning = interpretation({
   authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',

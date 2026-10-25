@@ -52,7 +52,7 @@ const testSuites = [
   { name: 'IRAS Defined Foreign-income Rule', file: 'test_iras_foreign_defined_income_rule.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS GST Opening Locator', file: 'test_iras_gst_opening_locator.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Supported Rule Quote Priority', file: 'test_iras_rule_quote_priority.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
-  { name: 'IRAS WHT Overview Topic Binding', file: 'test_iras_wht_overview_topic_binding.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'IRAS WHT Overview Topic Binding', file: 'test_iras_wht_overview_topic_binding_current_scope.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS WHT Topicless Concept Ownership', file: 'test_iras_wht_topicless_concept_ownership.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Scoped Concept Coverage', file: 'test_iras_scoped_concept_coverage.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Requested Concept Fallback', file: 'test_iras_requested_concept_fallback.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

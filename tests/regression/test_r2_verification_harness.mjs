@@ -162,7 +162,9 @@ try {
   const runtimeSourcePath = path.join(runtimeRoot, 'src', 'nested', 'module.ts');
   const runtimeAssetPath = path.join(runtimeRoot, 'src', 'asset.png');
   const originalRuntimeSource = 'export const answer = 42;\n';
+  const attributesText = '* text=auto\n';
   await writeFile(runtimeSourcePath, originalRuntimeSource);
+  await writeFile(path.join(runtimeRoot, '.gitattributes'), attributesText);
   await writeFile(runtimeAssetPath, Buffer.from([0, 1, 2, 255]));
   await writeFile(path.join(runtimeRoot, 'docs', 'note.md'), 'retained documentation\n');
   const packageJson = { name: 'runtime-fixture', type: 'module', scripts: { build: 'tsc -b' } };
@@ -180,11 +182,11 @@ try {
   gitAt('init', '--quiet');
   gitAt('config', 'user.email', 'harness-test@example.invalid');
   gitAt('config', 'user.name', 'Harness Test');
-  gitAt('add', 'src', 'docs', 'package.json', 'package-lock.json', 'tsconfig.json', '.nvmrc');
+  gitAt('add', 'src', 'docs', 'package.json', 'package-lock.json', 'tsconfig.json', '.nvmrc', '.gitattributes');
   gitAt('commit', '--quiet', '-m', 'pinned runtime fixture');
   const runtimeCommit = gitAt('rev-parse', 'HEAD');
   const runtimeManifest = await verifyPinnedApplicationRuntime({ root: runtimeRoot, appSourceSha: runtimeCommit });
-  assert.equal(runtimeManifest.files.length, 6);
+  assert.equal(runtimeManifest.files.length, 7);
   assert.match(runtimeManifest.manifestSha256, /^[a-f0-9]{64}$/);
   assert.ok(runtimeManifest.files.every(file => /^[a-f0-9]{64}$/.test(file.diskSha256)));
 
@@ -257,11 +259,15 @@ try {
     'Binary runtime assets are compared byte-for-byte.');
   await writeFile(runtimeAssetPath, Buffer.from([0, 1, 2, 255]));
   await writeFile(runtimeSourcePath, originalRuntimeSource.replace('\n', '\r\n'));
+  await writeFile(path.join(runtimeRoot, '.gitattributes'), attributesText.replaceAll('\n', '\r\n'));
   const crlfRuntime = await verifyPinnedApplicationRuntime({ root: runtimeRoot, appSourceSha: runtimeCommit });
   assert.notEqual(crlfRuntime.manifestSha256, runtimeManifest.manifestSha256,
     'The receipt digest retains the raw disk hash even when Git checkout line endings are normalized for comparison.');
   assert.match(crlfRuntime.comparisonPolicy, /CRLF-to-LF/,
     'The permitted checkout normalization is stated alongside the retained manifest.');
+  await writeFile(path.join(runtimeRoot, '.gitattributes'), '* text=auto\n*.png binary\n');
+  await assert.rejects(verifyPinnedApplicationRuntime({ root: runtimeRoot, appSourceSha: runtimeCommit }), /PINNED_RUNTIME_CONTENT_MISMATCH:\.gitattributes/,
+    'Only CRLF checkout conversion is ignored; substantive .gitattributes edits remain pinned.');
 
   const bodyReference = { $capturedBody: {
     sha256: 'a'.repeat(64), encoding: 'utf8', byteLength: 25,

@@ -413,7 +413,9 @@ assert.equal(cpfResult.workstreams[0].evidenceStatus, 'VERIFIED');
 assert.equal(cpfResult.workstreams[0].issues[0].evidenceStatus, 'VERIFIED');
 assert.equal(cpfResult.workstreams[0].sources[0].id, 'CPF_WAGE_CEILINGS_2026');
 assert.equal(cpfResult.workstreams[0].verifiedClaims[0].supportKind, 'EXACT_SOURCE_QUOTE');
-assert.equal(cpfResult.status, 'VERIFIED');
+assert.equal(cpfResult.evidenceStatus, 'VERIFIED');
+assert.notEqual(cpfResult.requestCompletenessContext.evaluation.status, 'COMPLETE');
+assert.equal(cpfResult.status, 'CONDITIONAL');
 const conditionalCase = await buildAuthorityWorkstreams(
   'Check whether the CPF ordinary wage monthly ceiling applies in 2026.',
   issuePlan([issue('cpf-case-facts', {

@@ -3,6 +3,12 @@ import { createHash } from 'node:crypto';
 import { compactReplay, inspectRetainedCaseRecord, replayAllRetainedGeminiBatches, replayRetainedGeminiBatch }
   from '../../scripts/replay_gemini_downstream_repairs.mjs';
 
+function isExplicitCompletenessConditional(row) {
+  return row.stageVerdicts?.OVERALL_STATUS === false && row.governed?.status === 'CONDITIONAL' &&
+    row.governed?.evidenceStatus === 'VERIFIED' &&
+    ['UNCERTAIN', 'INCOMPLETE'].includes(row.governed?.requestCompletenessStatus);
+}
+
 const invalidInventoryReplay = compactReplay('inventory-violation', { sha256: 'test', bytes: 1 }, { attempts: [] },
   undefined, 'capture inventory mismatch', false);
 assert.equal(invalidInventoryReplay.stageVerdicts.INTEGRITY, false,
@@ -68,8 +74,16 @@ for (const report of combined.reports) {
   assert.deepEqual(report.protectedInputSha256.before, report.protectedInputSha256.after);
   assert.equal(report.replays.length, 9);
   const replayedResponses = report.replays.filter(row => row.disposition === 'REPLAYED_RESPONSE');
-  assert.equal(replayedResponses.every(row => !row.replayError && !row.firstFailure && row.inventoryHealthy), true,
-    `Every available response in ${report.batchId} passes downstream stages and exact captured inventory checks.`);
+  assert.equal(replayedResponses.every(row => {
+    const completenessConditional = isExplicitCompletenessConditional(row);
+    const downstreamPassed = Object.entries(row.stageVerdicts || {}).every(([stage, passed]) =>
+      stage === 'OVERALL_STATUS' && completenessConditional || passed === true);
+    const firstFailureExplained = completenessConditional
+      ? row.firstFailure === 'OVERALL_STATUS'
+      : row.firstFailure === undefined;
+    return !row.replayError && firstFailureExplained && downstreamPassed && row.inventoryHealthy;
+  }), true,
+  `Every available response in ${report.batchId} passes evidence and captured-inventory checks; only an explicit non-COMPLETE request may keep overall status conditional.`);
   assert.equal(report.replays.filter(row => row.disposition === 'NOT_ASSESSED').every(row =>
     row.assessmentStatus === 'NOT_ASSESSED' && row.transportUnavailable && !row.semanticReplayInvoked &&
     row.offlineCaptureLookups === 0 && row.firstFailure === undefined), true,
@@ -92,8 +106,15 @@ for (const report of combined.reports) {
   }
 
   const gst = report.replays.find(row => row.caseId === 'gst-input-tax-general-rule');
-  assert.ok(gst.stageVerdicts?.GOVERNED_RETRIEVAL && gst.stageVerdicts.REQUESTED_CONCEPT_COVERAGE && gst.stageVerdicts.OVERALL_STATUS,
-    'The registered-company GST input-tax answer closes the complete governed retrieval path.');
+  assert.equal(gst.stageVerdicts?.GOVERNED_RETRIEVAL, true,
+    'The registered-company GST input-tax answer passes governed retrieval.');
+  assert.equal(gst.stageVerdicts?.REQUESTED_CONCEPT_COVERAGE, true,
+    'The registered-company GST input-tax answer covers its requested concepts.');
+  assert.ok(gst.stageVerdicts.OVERALL_STATUS === true ||
+    gst.stageVerdicts.OVERALL_STATUS === false && gst.governed?.status === 'CONDITIONAL' &&
+      gst.governed?.evidenceStatus === 'VERIFIED' &&
+      ['UNCERTAIN', 'INCOMPLETE'].includes(gst.governed?.requestCompletenessStatus),
+  'Whole-question verification is conditional only when the replay records a non-COMPLETE request representation.');
   assert.equal(gst.governed?.issues?.every(issue => issue.requestedConceptCoverage === true), true,
     'The captured GST source still covers requested concepts, including PRIMARY input tax.');
 }
@@ -102,8 +123,12 @@ const latest = combined.reports.at(-1);
 const primaryLabelsBatch = combined.reports.find(report => report.batchId === 'live-rerun-primary-labels-2026-10-09');
 assert.deepEqual(primaryLabelsBatch.replays.filter(row => row.disposition === 'NOT_ASSESSED').map(row => row.caseId),
   ['A-paraphrase-2', 'wht-royalty-general-rule']);
-assert.equal(primaryLabelsBatch.replays.find(row => row.caseId === 'gst-input-tax-general-rule').stageVerdicts.OVERALL_STATUS, true,
-  'The shortened GST issue passes downstream replay from its retained response.');
+const shortGstReplay = primaryLabelsBatch.replays.find(row => row.caseId === 'gst-input-tax-general-rule');
+assert.equal(shortGstReplay.stageVerdicts.GOVERNED_RETRIEVAL, true);
+assert.equal(shortGstReplay.stageVerdicts.REQUESTED_CONCEPT_COVERAGE, true);
+assert.ok(shortGstReplay.stageVerdicts.OVERALL_STATUS === true || isExplicitCompletenessConditional(shortGstReplay),
+  'The shortened GST replay passes downstream evidence checks; any conditional whole-question status records non-COMPLETE representation.');
+assert.equal(shortGstReplay.governed?.issues?.every(issue => issue.requestedConceptCoverage === true), true);
 const foreignDividend = latest.replays.find(row => row.caseId === 'foreign-dividend-receipt-treatment');
 assert.equal(foreignDividend.stageVerdicts.OVERALL_STATUS, true,
   'The latest retained foreign-dividend response passes with its RELATED subsidiary descriptor owned.');

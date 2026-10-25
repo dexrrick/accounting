@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createAuthorityEvidencePresentation, hasCurrentAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import { createAuthorityEvidencePresentation, hasCompleteRequestRepresentation, hasCurrentAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
 import {
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
@@ -180,7 +180,9 @@ const result = {
 };
 
 const presentation = createAuthorityEvidencePresentation(result);
-assert.equal(presentation.status, 'VERIFIED');
+assert.equal(presentation.status, 'CONDITIONAL',
+  'Mapped evidence cannot confirm whole-question acceptance while the exact-query representation is uncertain.');
+assert.equal(presentation.evidenceStatus, 'VERIFIED', 'Evidence status remains separate from request completeness.');
 assert.equal(presentation.workstreams.length, 2);
 assert.equal(presentation.workstreams[0].issues[0].population, 'Company');
 assert.equal(presentation.workstreams[1].issues[0].population, 'Employer');
@@ -190,6 +192,7 @@ assert.deepEqual(presentation.workstreams[0].sources[0].claims[0].issueIds, ['ir
 assert.equal(presentation.workstreams[0].sources[0].claims[1].supportKind, 'REVIEWED_EDITORIAL_SUMMARY');
 assert.equal(presentation.workstreams[0].sources[0].validFrom, '2026-01-01');
 assert.ok(hasCurrentAuthorityEvidencePresentation(presentation, result.query));
+assert.equal(hasCompleteRequestRepresentation(presentation), false);
 assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, ` ${result.query} `), false,
   'diagnostic presentations are bound to the exact raw query');
 assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, 'A different follow-up'), false);
@@ -221,6 +224,37 @@ const completeButInsufficientPresentation = createAuthorityEvidencePresentation(
 assert.equal(completeButInsufficientPresentation.requestCompletenessContext.evaluation.status, 'COMPLETE');
 assert.equal(completeButInsufficientPresentation.status, 'INSUFFICIENT',
   'complete request representation never promotes insufficient evidence');
+const completeAndVerifiedResult = {
+  ...result,
+  query: completeCpfQuery,
+  requestCompletenessContext: completeCpfContext,
+  issuePlan: { ...result.issuePlan, issues: [cpfPlan] },
+  workstreams: [result.workstreams[1]]
+};
+const completeAndVerifiedPresentation = createAuthorityEvidencePresentation(completeAndVerifiedResult);
+assert.equal(completeAndVerifiedPresentation.status, 'VERIFIED',
+  'Only complete exact-query representation with verified evidence receives whole-question verified status.');
+assert.equal(hasCompleteRequestRepresentation(completeAndVerifiedPresentation), true);
+const missingCompletenessPresentation = createAuthorityEvidencePresentation({ ...result, requestCompletenessContext: undefined });
+assert.equal(missingCompletenessPresentation.status, 'CONDITIONAL',
+  'Missing request completeness evidence cannot yield whole-question VERIFIED status.');
+const incorrectCpfOperationObservation = structuredClone(completeCpfContext.observationSnapshot.normalizedInterpretation);
+incorrectCpfOperationObservation.requestedOperation = 'EXPLAIN_RULE';
+incorrectCpfOperationObservation.issues[0].operation = 'EXPLAIN_RULE';
+const incompleteCpfContext = ensureRequestCompletenessContext(completeCpfQuery, undefined, {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: incorrectCpfOperationObservation
+});
+assert.equal(incompleteCpfContext.evaluation.status, 'INCOMPLETE');
+const incompleteRepresentationPresentation = createAuthorityEvidencePresentation({
+  ...completeAndVerifiedResult, requestCompletenessContext: incompleteCpfContext
+});
+assert.equal(incompleteRepresentationPresentation.status, 'CONDITIONAL',
+  'An explicit operation mismatch leaves verified mapped evidence conditional.');
+const staleCompletenessPresentation = createAuthorityEvidencePresentation({
+  ...result, requestCompletenessContext: completeCpfContext
+});
+assert.equal(staleCompletenessPresentation.status, 'CONDITIONAL',
+  'A complete evaluation for another query cannot confirm this request.');
 const forgedAggregate = createAuthorityEvidencePresentation({
   ...result, requestCompletenessContext: { ...result.requestCompletenessContext, identity: 'forged' }
 });
@@ -235,6 +269,10 @@ assert.match(panel, /Employer CPF contribution/);
 assert.match(panel, /Reviewed local summary/);
 assert.match(panel, /01\/01\/2026/);
 assert.match(panel, /Supports: Company tax deduction/);
+assert.match(panel, /Evidence verified for mapped issues; full request coverage unconfirmed/,
+  'The compliance panel makes uncertain whole-request coverage explicit.');
+assert.match(renderAuthorityEvidenceResponseText(presentation, false), /full request coverage unconfirmed/,
+  'Text responses preserve the same distinction between evidence and request coverage.');
 
 // These fetched-like fixtures exercise the real projection and panel link gate.
 // They validate presentation behavior only; they are not production acceptance evidence.
@@ -277,7 +315,7 @@ for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
   }));
   assert.match(livePanel, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     `${authority} verified live URL is shown exactly`);
-  assert.match(livePanel, /All requested evidence verified/);
+  assert.match(livePanel, /Evidence verified for mapped issues; full request coverage unconfirmed/);
 
   const conditionalIssue = { ...liveIssue, applicationStatus: 'UNRESOLVED', applicationReason: 'The relevant application facts are unresolved.' };
   const conditionalPresentation = createAuthorityEvidencePresentation({
@@ -289,7 +327,7 @@ for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
     citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: conditionalPresentation
   }));
   assert.equal(conditionalPresentation.status, 'CONDITIONAL');
-  assert.match(conditionalPanel, /Evidence verified; application unresolved/);
+  assert.match(conditionalPanel, /full request coverage unconfirmed; application unresolved/);
 
   const unresolvedGap = plannedIssue({
     id: `${authority.toLowerCase()}-unresolved-residual`, authority: 'UNKNOWN', domain: 'UNKNOWN',
@@ -392,7 +430,7 @@ assert.equal(createChatPreview('Legacy answer body', { ...currentSingleIrasScena
   'single-IRAS preview remains on the legacy path');
 
 const freshScenario = { ...staleScenario, rawQuery: presentation.query, authorityEvidencePresentation: presentation };
-assert.match(createChatPreview('legacy unsupported statutory prose', freshScenario), /Verified evidence covers the resolved material workstreams/);
+assert.match(createChatPreview('legacy unsupported statutory prose', freshScenario), /Evidence verified for mapped issues; full request coverage unconfirmed/);
 const balancedScenario = {
   ...freshScenario, queryIntent: 'HYBRID', scenarioType: 'EXPENSE',
   directGroups: [{ title: 'Operating expense', totalDebit: 120, totalCredit: 120, isBalanced: true, lines: [{}] }]
@@ -1083,7 +1121,9 @@ assert.equal(b1PositiveIssue.evidenceStatus, 'VERIFIED', 'the B1 table passes re
 assert.equal(b1PositiveIssue.applicationStatus, 'NOT_REQUIRED', 'the general rule request remains source-only without a date calculation');
 assert.equal(b1PositiveIssue.applicationReason, undefined);
 const b1PositivePresentation = createAuthorityEvidencePresentation(b1Workstreams);
-assert.equal(b1PositivePresentation.status, 'VERIFIED');
+assert.equal(b1PositivePresentation.status, 'CONDITIONAL',
+  'verified ACRA source coverage remains conditional while whole-request representation is unconfirmed');
+assert.match(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /full request coverage unconfirmed/);
 assert.doesNotMatch(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /31\/07\/2026/,
   'B1 reports the rule without calculating a filing deadline date');
 const b2SemanticUnderstanding = annualReturnUnderstanding('EXPLAIN_RULE');
@@ -1127,9 +1167,9 @@ assert.ok(b2Issue.verifiedClaims.every(claim => !claim.quote.includes('31/07/202
   'derived date math remains separate from verbatim verified source claims');
 const b2Presentation = createAuthorityEvidencePresentation(b2Workstreams);
 const b2ResponseText = renderAuthorityEvidenceResponseText(b2Presentation, false);
-if (b2Presentation.status !== 'VERIFIED') {
-  acceptanceMatrixFailures.push('B2 evidence presentation is not whole-question VERIFIED');
-}
+assert.equal(b2Presentation.status, 'CONDITIONAL',
+  'verified evidence and date application stay conditional until request representation is complete');
+assert.match(b2ResponseText, /full request coverage unconfirmed/);
 assert.match(b2ResponseText, /\*\*Application:\*\* .*31\/07\/2026/,
   'the text renderer presents the deterministic date as an application result');
 assert.doesNotMatch(b2ResponseText, /Application unresolved/);
