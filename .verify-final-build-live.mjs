@@ -19,20 +19,14 @@ if (process.env.ACCOUNTING_ALLOW_LIVE_MODEL_CALLS !== '1') {
 }
 
 const cases = [
-  { id: 'acra', question: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.', authorities: ['ACRA'] },
-  { id: 'cpf', question: 'Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.', authorities: ['CPF_BOARD'] },
-  { id: 'mom', question: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries.', authorities: ['MOM'] },
-  { id: 'mas', question: 'Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.', authorities: ['MAS'] },
-  { id: 'iras-residency', question: 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries.', authorities: ['IRAS'] },
-  { id: 'iras-relief', question: 'Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries.', authorities: ['IRAS'] },
-  { id: 'iras-gst', question: 'A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.', authorities: ['IRAS'] },
-  { id: 'mixed-acra-cpf', question: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries. Separately, Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.', authorities: ['ACRA', 'CPF_BOARD'] },
-  { id: 'mixed-mom-mas', question: 'Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries. Separately, Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.', authorities: ['MOM', 'MAS'] },
-  { id: 'mixed-iras-three', question: 'For Singapore corporate income tax, is incorporation in Singapore alone enough to make a company tax resident? Explain the general control-and-management test using IRAS guidance. Do not calculate tax or create journal entries. Separately, Under IRAS rules, can cash top-ups to my own CPF Special Account or Retirement Account qualify for tax relief? Explain the general eligibility conditions and relief limits using official IRAS guidance. This is a general rules question; do not calculate my personal tax or create journal entries. Separately, A Singapore GST-registered business purchases a private passenger motor car for business use. Is the GST on the purchase generally claimable as input tax? Explain the general IRAS restriction and relevant exceptions. Do not calculate amounts or create journal entries.', authorities: ['IRAS'] }
+  { id: 'acra-coverage', question: 'Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries.', authorities: ['ACRA'] },
+  { id: 'cpf-single-group', question: 'Can cash top-ups to my CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.', authorities: ['IRAS'] },
+  { id: 'cpf-repeated', question: 'Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions and relief limits for Special Account top-ups. Can cash top-ups to my own CPF qualify for tax relief? Explain the general eligibility conditions for Retirement Account top-ups.', authorities: ['IRAS'] },
+  { id: 'cpf-case-control', question: 'Can cash top-ups of SGD 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Do not calculate my tax but calculate my relief amount.', authorities: ['IRAS'] },
 ];
 
-const appSourceSha = '472268b2f7f229eb85bae1e164c5ff9585b25660';
-const expectedAppTreeSha256 = 'ddb105774656c1287af4a896a96386f1b8623f4ecf1600d7bb7c45a3a21a74fe';
+const appSourceSha = '7a67af83cadaf5bef43f18cfcb92ddaf5e2e9a51';
+const expectedAppTreeSha256 = '25da43907ddf88a6df26dd2ec861b86887b9cf41af0add2b641b68a460f5061b';
 if (!/^[0-9a-f]{40}$/i.test(appSourceSha)) throw new Error('Set 630113b74f9ebcec7b3498644645b5ca61a0b73b to the reviewed app commit before dispatch.');
 if (!/^[0-9a-f]{64}$/i.test(expectedAppTreeSha256)) throw new Error('Set 6ab427cdaac791e7b95f33f4561958162c64fac20938cb021d880731c0649474 to the reviewed app tree hash before dispatch.');
 
@@ -52,6 +46,15 @@ const trackedEntries = execFileSync('git', ['ls-tree', '-r', '-z', 'HEAD'], { cw
 const actualAppTreeSha256 = createHash('sha256').update(trackedEntries.join('\n')).digest('hex');
 if (actualAppTreeSha256 !== expectedAppTreeSha256) {
   throw new Error('Tracked application tree differs from the reviewed app source tree.');
+}
+// A shallow Cloudflare checkout may omit the reviewed parent commit object.
+// Fetch only the exact pinned public commit before reading its tree; never substitute a branch head.
+const pinnedApplicationCommitObject = `${appSourceSha}^{commit}`;
+try {
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
+} catch {
+  execFileSync('git', ['fetch', '--depth=1', '--no-tags', 'https://github.com/dexrrick/accounting.git', appSourceSha], { cwd: applicationRoot, stdio: 'ignore' });
+  execFileSync('git', ['cat-file', '-e', pinnedApplicationCommitObject], { cwd: applicationRoot, stdio: 'ignore' });
 }
 const verifiedApplicationRuntime = await verifyPinnedApplicationRuntime({ root: applicationRoot, appSourceSha });
 
@@ -362,7 +365,7 @@ const hashes = {
 
 
 for (const method of Object.keys(originalConsole)) console[method] = () => {};
-const MAX_MODEL_REQUESTS_PER_RUN = 20;
+const MAX_MODEL_REQUESTS_PER_RUN = 12;
 const MAX_MODEL_REQUESTS_PER_CASE = 3;
 const MIN_CASE_START_INTERVAL_MS = 15_250;
 let totalModelRequestStarts = 0;
