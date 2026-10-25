@@ -36,6 +36,7 @@ import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targ
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { provesMomSalaryPaymentSource } from '../retrieval/momSalaryPaymentRule';
 import { completeIrasCpfCashTopUpEligibilityQuote, completeIrasCpfCashTopUpLimitQuotes } from '../verification/claimEvidenceVerifier';
 import {
   isBoundedStatutoryAdvisoryRequest,
@@ -809,8 +810,13 @@ const ACRA_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = 
   acra_record_retention: ['Company directors’ duties & key obligations']
 };
 
+const MOM_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
+  'mom-salary-payment': ['Paying salary']
+};
+
 function getTopicDiscoveryHints(topic: MappedCoverageTopic): string[] {
-  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || []), ...(ACRA_DISCOVERY_TITLE_HINTS[topic.id] || [])];
+  return [...(topic.aliases || []), ...topic.keywords, ...(CPF_DISCOVERY_TITLE_HINTS[topic.id] || []),
+    ...(ACRA_DISCOVERY_TITLE_HINTS[topic.id] || []), ...(MOM_DISCOVERY_TITLE_HINTS[topic.id] || [])];
 }
 
 function getTopicContentTerms(topic: MappedCoverageTopic): string[] {
@@ -1644,6 +1650,16 @@ export async function resolveMappedOfficialSourceFallback(
       attempt.titleMatched = false;
       attempt.contentMatched = false;
       attempt.error = contentValidation.reason || 'Fetched page lacks visible topic-specific body content.';
+      return undefined;
+    }
+
+    const momSalarySourceProof = topic.id === 'mom-salary-payment'
+      ? provesMomSalaryPaymentSource(query, contentValidation.substantiveText || '')
+      : undefined;
+    if (momSalarySourceProof === false) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched MOM salary guidance contains negated, contradictory, or incomplete evidence for the requested payment deadline.';
       return undefined;
     }
 

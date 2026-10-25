@@ -908,7 +908,7 @@ function normalizeIssueLocalCpfTaxOutcome(
         /\b(?:not|never|no)\b[^.!?]{0,50}\b(?:tax\s+relief|personal\s+(?:income\s+)?tax\s+relief|personal\s+relief)\b/i.test(issueQuery) ||
         explicitlyRequestsCpfPayrollOutcome(issues.length === 1 ? query : issueQuery) ||
         issue.population === 'UNKNOWN' && !/\b(?:personal|individual|my\s+own|own\s+(?:cpf|central provident fund)|employee['’]s\s+own)\b/i.test(issueQuery)) return issue;
-    const generalRuleFollowOn = isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery, query);
+    const generalRuleFollowOn = isBoundedCpfCashTopUpGeneralRuleQuery(issueQuery, query, issue, issues);
     if (['COMPANY', 'EMPLOYER'].includes(issue.population)) return issue;
     changed = true;
     const normalizedPopulation = issue.population === 'UNKNOWN' ? 'INDIVIDUAL' : issue.population;
@@ -939,7 +939,87 @@ function normalizeIssueLocalCpfTaxOutcome(
   }, query) || interpretation;
 }
 
-function isBoundedCpfCashTopUpGeneralRuleQuery(query: string, fullQuery = query): boolean {
+function cpfIssueOwnsExecutableCalculation(
+  fullQuery: string,
+  issue: SemanticQuestionIssue,
+  issues: readonly SemanticQuestionIssue[]
+): boolean {
+  const calculations = queryClauseSpans(fullQuery).flatMap(({ text }, index) =>
+    text.split(/(?<=\.)\s+(?=(?:calculate|compute|estimate|how\s+much)\b)/i)
+      .map(fragment => ({ text: removeNegatedOutputDirectives(fragment), index }))
+  ).filter(({ text }) => /\b(?:calculate|compute|estimate|how\s+much\s+(?:relief|tax\s+relief)|my\s+(?:personal\s+)?(?:relief|tax\s+relief)\s+amount)\b/i.test(text));
+  if (calculations.length === 0) return false;
+
+  const issueStarts = issues.map((candidate, index) => ({
+    issue: candidate,
+    index,
+    clauseIndex: queryClauseIndexForSemanticIssue(fullQuery, candidate.subject)
+  }));
+  const currentIssueIndex = issues.indexOf(issue);
+  // Ambiguous issue matches cannot safely isolate another issue's calculation.
+  if (currentIssueIndex < 0 || issueStarts.some(start => start.clauseIndex === undefined)) return true;
+
+  for (const calculation of calculations) {
+    const clauseAnchors = new Set(semanticConceptAnchors(calculation.text));
+    // Relief is intentionally generic in ordinary concept matching. Here it
+    // identifies a cash-top-up relief calculation only when an issue owns the
+    // same relief subject, allowing a later CPF calculation to remain bound to
+    // CPF even when a MOM issue appears between the questions.
+    if (/\b(?:relief|tax\s+relief)\b/i.test(calculation.text)) clauseAnchors.add('relief');
+    const eligibleIssues = issueStarts.filter(start => start.clauseIndex! <= calculation.index);
+    if (eligibleIssues.length === 0) return true;
+    const scoredOwners = eligibleIssues.map(candidate => {
+      const issueAnchors = new Set(semanticConceptAnchors(candidate.issue.subject));
+      if (/\bcash\s+top[ -]?ups?\b[\s\S]{0,45}\b(?:tax\s+)?relief\b/i.test(candidate.issue.subject)) issueAnchors.add('relief');
+      return { index: candidate.index, score: [...clauseAnchors].filter(anchor => issueAnchors.has(anchor)).length };
+    }).sort((left, right) => right.score - left.score || left.index - right.index);
+    if (scoredOwners[0].score === 0 || scoredOwners.length > 1 && scoredOwners[0].score === scoredOwners[1].score ||
+        scoredOwners[0].index === currentIssueIndex) return true;
+  }
+  return false;
+}
+
+function statesPersonalCpfTopUpAmount(query: string): boolean {
+  return queryClauseSpans(query).some(({ text }) => {
+    const topUp = /\b(?:cash\s+)?top[ -]?ups?\b/i.exec(text);
+    if (!topUp) return false;
+    const monetaryNumber = String.raw`(\d[\d,]*(?:\.\d{1,2})?)`;
+    const explicitCurrency = new RegExp(String.raw`(?:\b(?:SGD|S\$|Singapore dollars?|dollars?)\s*\$?\s*${monetaryNumber}|\$\s*${monetaryNumber}|${monetaryNumber}\s*(?:SGD|Singapore dollars?|dollars?))`, 'i');
+    const amountGrammar = new RegExp(String.raw`\b(?:cash\s+)?top[ -]?ups?\b[^.!?;]{0,50}?\b(?:of|amount(?:ing)?(?:\s+to)?|worth|valued\s+at|totaling|totalling)\s+(?:(?:SGD|S\$)\s*)?${monetaryNumber}\b`, 'i');
+    const directAmount = new RegExp(String.raw`\b(?:cash\s+)?top[ -]?ups?\s+(?:(?:SGD|S\$)\s*)?${monetaryNumber}\b`, 'i');
+    const amountBeforeTopUp = new RegExp(String.raw`\b${monetaryNumber}\s+(?:cash\s+)?top[ -]?ups?\b`, 'i');
+    const currencyMatch = explicitCurrency.exec(text);
+    if (currencyMatch) {
+      const number = currencyMatch.slice(1).find(Boolean);
+      if (number) {
+        const numberOffset = currencyMatch.index + currencyMatch[0].lastIndexOf(number);
+        if (Math.abs(numberOffset - topUp.index) <= 85) return true;
+      }
+    }
+    const amountMatches = [amountGrammar.exec(text), directAmount.exec(text), amountBeforeTopUp.exec(text)].filter(
+      (match): match is RegExpExecArray => match !== null
+    );
+    return amountMatches.some(match => {
+      const number = match[1];
+      if (!number) return false;
+      const numberOffset = match.index + match[0].lastIndexOf(number);
+      const contextBeforeNumber = text.slice(Math.max(0, numberOffset - 45), numberOffset);
+      const contextAfterNumber = text.slice(numberOffset + number.length, numberOffset + number.length + 36);
+      const yearOrDate = /\b(?:year\s+of\s+assessment|assessment\s+year|calendar\s+year|financial\s+year|YA|FY)\s*$/i.test(contextBeforeNumber) ||
+        /\b(?:effective(?:\s+from)?|with\s+effect\s+from)\b[^.!?;]{0,24}\b(?:\d{1,2}\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?\s*$/i.test(contextBeforeNumber);
+      const ageCondition = /\b(?:aged?|age|under|below|over|above|at\s+least|younger\s+than|older\s+than)\s*$/i.test(contextBeforeNumber) ||
+        /^\s*(?:years?\s+old|years?\s+of\s+age|and\s+older|or\s+older|and\s+younger|or\s+younger)\b/i.test(contextAfterNumber);
+      return !yearOrDate && !ageCondition;
+    });
+  });
+}
+
+function isBoundedCpfCashTopUpGeneralRuleQuery(
+  query: string,
+  fullQuery = query,
+  issue?: SemanticQuestionIssue,
+  siblingIssues: readonly SemanticQuestionIssue[] = issue ? [issue] : []
+): boolean {
   const statesGeneralEligibility = /\b(?:explain|describe|outline|summari[sz]e)\b[^.!?;]{0,100}\b(?:general\s+)?eligib\w*\s+conditions?\b/i.test(query);
   const statesReliefLimits = /\b(?:relief\s+limits?|limits?\s+(?:on\s+)?relief|maximum\s+relief|relief\s+caps?)\b/i.test(query);
   const ruleOnlyIntent = /\b(?:this\s+is|this\s+remains)\s+a\s+general\s+rules?\s+question\b/i.test(query) ||
@@ -948,9 +1028,9 @@ function isBoundedCpfCashTopUpGeneralRuleQuery(query: string, fullQuery = query)
     /\b(?:do\s+not|don['’]?t|never)\s+(?:calculate|compute|estimate)\b(?:(?!\b(?:but|and)\s+(?:please\s+)?(?:calculate|compute|estimate)\b)(?!\b(?:rather\s+(?:than\s+)?|instead(?:\s+of)?\s*)(?:please\s+)?(?:calculate|compute|estimate)\b)[^,;.!?])*/gi,
     ' '
   );
-  const requestsCaseAmount = /\b(?:calculate|compute|estimate|how\s+much\s+(?:relief|tax\s+relief)|my\s+(?:personal\s+)?(?:relief|tax\s+relief)\s+amount)\b/i.test(executableRequestText);
-  const statesPersonalTopUpAmount = queryClauseSpans(fullQuery).some(({ text }) =>
-    /\b(?:cash\s+)?top[ -]?ups?\b/i.test(text) && /\b\d[\d,]*(?:\.\d+)?\b/.test(text));
+  const requestsCaseAmount = /\b(?:calculate|compute|estimate|how\s+much\s+(?:relief|tax\s+relief)|my\s+(?:personal\s+)?(?:relief|tax\s+relief)\s+amount)\b/i.test(executableRequestText) &&
+    (!issue || cpfIssueOwnsExecutableCalculation(fullQuery, issue, siblingIssues));
+  const statesPersonalTopUpAmount = statesPersonalCpfTopUpAmount(query);
   const explicitCaseFacts = hasCaseLinkedCircumstances(fullQuery) ||
     statesPersonalTopUpAmount ||
     /\b(?:can|could|do|does|will|would|should)\s+i\b[^.!?;]{0,100}\b(?:qualif\w*|eligib\w*|claim\w*)\b|\b(?:am\s+i|are\s+we)\s+(?:eligible|qualif\w*|able\s+to\s+claim)\b/i.test(fullQuery);

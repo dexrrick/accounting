@@ -1,6 +1,7 @@
 import type { AuthorityEvidencePresentation, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
 import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { getMomSalaryPaymentRuleEvidence } from '../retrieval/momSalaryPaymentRule';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
   if (stream.evidenceStatus === 'INSUFFICIENT') return 'Evidence incomplete';
@@ -34,6 +35,12 @@ export function renderAuthorityEvidenceResponseText(
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
     for (const issue of stream.issues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
+      const momSalaryRule = getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue);
+      if (momSalaryRule?.kind === 'REGULAR_SALARY') {
+        lines.push(`- **MOM rule explanation:** For employees covered by the Employment Act, regular salary must be paid at least once a month and within 7 days after the salary period ends. [${momSalaryRule.title}](${momSalaryRule.officialUrl})`);
+      } else if (momSalaryRule?.kind === 'OVERTIME_SALARY') {
+        lines.push(`- **MOM rule explanation:** For employees covered by the Employment Act, overtime pay must be paid within 14 days after the salary period ends. This explains the payment deadline only; overtime eligibility depends on separate rules. [${momSalaryRule.title}](${momSalaryRule.officialUrl})`);
+      }
       if (issue.applicationReason) lines.push(`- **Application${issue.applicationStatus === 'VERIFIED' ? '' : ' unresolved'}:** ${issue.applicationReason}`);
       for (const gap of issue.gaps) lines.push(`- **Evidence gap:** ${gap}`);
     }

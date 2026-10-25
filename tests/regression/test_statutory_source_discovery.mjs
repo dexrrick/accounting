@@ -90,6 +90,44 @@ const cases = [
     sourcePublisher: 'Monetary Authority of Singapore (MAS)'
   }
 ];
+// These new questions use the same retrieval, admission, quote and rendering
+// helpers below, while the established four-authority fixture bank keeps its
+// original authority-keyed controls intact.
+const salaryPaymentHtml = `<html><head><title>Paying salary | Ministry of Manpower</title></head><body><main>
+  <h1>Paying salary</h1>
+  <p>In accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.</p>
+  <p>If you are covered by the Employment Act, your employer must pay your salary at least once a month.</p>
+  <p>Salary must be paid:</p>
+  <ul><li>Within 7 days after the end of the salary period.</li>
+  <li>For overtime work, within 14 days after the end of the salary period.</li></ul>
+  <p>Your final salary payment could vary depending on the reason employment ends. Commission payment depends on your employment contract. Tax clearance may require withholding money.</p>
+</main></body></html>`;
+const salaryPaymentSamples = [
+  {
+    key: 'regular-salary',
+    authority: 'MOM', topicId: 'mom-salary-payment',
+    query: 'How often must salary be paid and when is regular salary due after the salary period?',
+    runtimeQuery: 'Under MOM guidance, how often must salary be paid and when is regular salary due after the salary period?',
+    subject: 'salary payment period and regular salary deadline', domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
+    url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary',
+    title: 'Paying salary | Ministry of Manpower',
+    paragraph: 'If you are covered by the Employment Act, your employer must pay your salary at least once a month.',
+    pageHtml: salaryPaymentHtml, sourcePublisher: 'Ministry of Manpower (MOM)',
+    expectedExplanation: /regular salary must be paid at least once a month and within 7 days after the salary period ends/i
+  },
+  {
+    key: 'overtime-salary',
+    authority: 'MOM', topicId: 'mom-salary-payment',
+    query: 'When is overtime salary payment due after the salary period?',
+    runtimeQuery: 'Under MOM guidance, when is overtime salary payment due after the salary period?',
+    subject: 'overtime salary payment period deadline', domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
+    url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary',
+    title: 'Paying salary | Ministry of Manpower',
+    paragraph: 'For overtime work, within 14 days after the end of the salary period.',
+    pageHtml: salaryPaymentHtml, sourcePublisher: 'Ministry of Manpower (MOM)',
+    expectedExplanation: /for employees covered by the Employment Act, overtime pay must be paid within 14 days after the salary period ends/i
+  }
+];
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mas.gov.sg/regulation/guidelines', 'MAS').isValid, true);
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://www.mom.gov.sg/employment-practices', 'MAS').isValid, false);
 assert.equal(defaultExternalSourceValidator.validateCanonicalUrl('https://sso.agc.gov.sg/Act/SFA2001', 'MAS').isValid, true);
@@ -447,12 +485,19 @@ const runWorkstreams = async (samples, {
   providers
 } = {}) => {
   const calls = [];
+  const fetchedPages = new Map();
+  const allSamples = [...cases, ...salaryPaymentSamples];
   const customFetch = async url => {
     calls.push(url);
-    const sitemapOwner = cases.find(sample => OFFICIAL_SOURCE_DISCOVERY_PROVIDERS[sample.authority].sitemapUrls.includes(url));
-    if (sitemapOwner) return response(`<urlset><url><loc>${sitemapOwner.url}</loc></url></urlset>`);
-    const pageOwner = cases.find(sample => sample.url === url);
-    if (pageOwner) return response(pageOverrides[pageOwner.authority] || pageFor(pageOwner));
+    const sitemapOwner = allSamples.find(sample => OFFICIAL_SOURCE_DISCOVERY_PROVIDERS[sample.authority].sitemapUrls.includes(url));
+    if (sitemapOwner) return response(`<urlset>${allSamples.filter(sample => sample.authority === sitemapOwner.authority)
+      .map(sample => `<url><loc>${sample.url}</loc></url>`).join('')}</urlset>`);
+    const pageOwner = allSamples.find(sample => sample.url === url);
+    if (pageOwner) {
+      const page = pageOverrides[url] || pageOverrides[pageOwner.key] || pageOverrides[pageOwner.authority] || pageFor(pageOwner);
+      fetchedPages.set(url, page);
+      return response(page);
+    }
     if (url.endsWith('/robots.txt')) return new Response('not found', { status: 404 });
     if (url.startsWith('https://html.duckduckgo.com/html/') || url.startsWith('https://r.jina.ai/'))
       return new Response('not found', { status: 404 });
@@ -469,7 +514,7 @@ const runWorkstreams = async (samples, {
       fetchOptions: { customFetch, timeoutMs: 500, useCache: false }
     }
   });
-  return { ...result, calls };
+  return { ...result, calls, fetchedPages };
 };
 
 const successfulRuns = new Map();
@@ -543,6 +588,32 @@ for (const sample of cases) {
     assert.ok(renderedResponse.includes(claim.text));
   }
   assert.ok(renderedResponse.includes(sample.url), 'The shared response renders the verified official link.');
+  if (sample.expectedExplanation) {
+    assert.match(renderedResponse, sample.expectedExplanation,
+      'A claim-backed MOM salary answer explains the rule instead of showing a source excerpt alone.');
+    const suppressExplanation = (mutate, query = routeQuery) => {
+      const candidate = structuredClone(presentation);
+      candidate.query = query;
+      mutate(candidate.workstreams.find(item => item.authority === 'MOM'));
+      assert.doesNotMatch(renderAuthorityEvidenceResponseText(candidate, false), /MOM rule explanation:/,
+        'The MOM salary explanation is suppressed when scope or complete same-source evidence is missing.');
+    };
+    suppressExplanation(stream => { stream.authority = 'CPF'; });
+    suppressExplanation(stream => { stream.applicationStatus = 'UNRESOLVED'; });
+    suppressExplanation(stream => { stream.sources[0].officialUrl = 'https://www.cpf.gov.sg/member/'; });
+    suppressExplanation(stream => {
+      const claim = stream.sources.flatMap(source => source.claims).find(item => item.issueIds.includes(stream.issues[0].id));
+      claim.text = 'Salary must be paid within 7 days after the end of the salary period.';
+    });
+    suppressExplanation(stream => {
+      const claim = stream.sources.flatMap(source => source.claims).find(item => item.issueIds.includes(stream.issues[0].id));
+      claim.text = claim.text.replace('Within 7 days after the end of the salary period.', 'Not within 7 days after the end of the salary period.');
+      claim.text = claim.text.replace('For overtime work, within 14 days', 'For overtime work, within 7 days');
+    });
+    suppressExplanation(stream => { stream.issues[0].applicationStatus = 'UNRESOLVED'; });
+    suppressExplanation(() => {}, `${routeQuery} in 2023`);
+    suppressExplanation(() => {}, `${routeQuery} when is my final salary due?`);
+  }
   assert.match(renderedResponse, /Evidence verified/);
   assert.doesNotMatch(renderedResponse, /\bjournal\b/i,
     'A generic statutory response does not claim or create a journal.');
@@ -711,6 +782,131 @@ for (const sample of cases) {
     const rejectedIssue = rejected.workstreams.find(item => item.authority === sample.authority).issues[0];
     assert.notEqual(rejectedIssue.evidenceStatus, 'VERIFIED');
     assert.equal(rejectedIssue.sources.length, 0);
+  }
+}
+
+// New MOM salary explanations run through the same semantic reconciliation,
+// official discovery, page fetch, source admission, exact-quote verification,
+// and rendering path as the four established authority fixtures.
+for (const sample of salaryPaymentSamples) {
+  const routeQuery = sample.runtimeQuery;
+  const classification = classifyQuestion(routeQuery);
+  const oracle = oracleUnderstandingFor([sample]);
+  assert.ok(validateSemanticQuestionInterpretation(oracle.interpretation, routeQuery));
+  const reconciled = reconcileQuestionUnderstanding(routeQuery, classification, oracle);
+  const mappedIssue = reconciled.issuePlan.issues.find(issue => issue.governingAuthorities.includes('MOM'));
+  assert.ok(mappedIssue);
+  assert.equal(mappedIssue.status, 'MAPPED');
+  assert.ok(mappedIssue.mappedTopicIds.includes(sample.topicId));
+
+  const result = await runWorkstreams([sample], { query: routeQuery, issuePlan: reconciled.issuePlan });
+  assert.ok(result.calls.includes(sample.url), `The current MOM article is fetched after official sitemap discovery; calls=${JSON.stringify(result.calls)}, trace=${JSON.stringify(result.workstreams.find(stream => stream.authority === 'MOM')?.issues[0]?.retrievalTrace)}`);
+  assert.ok(result.workstreams.some(stream => stream.authority === 'MOM'));
+  const workstream = result.workstreams.find(stream => stream.authority === 'MOM');
+  const evidenceIssue = workstream.issues[0];
+  assert.equal(evidenceIssue.evidenceStatus, 'VERIFIED');
+  assert.ok(evidenceIssue.verifiedClaims.some(claim => {
+    const source = evidenceIssue.sources.find(record => record.id === claim.recordId);
+    return source?.officialSourceUrl === sample.url && source.sourcePublisher === sample.sourcePublisher &&
+      source.provenance === 'LIVE_EXTERNAL' && source.sourceText.includes(claim.quote);
+  }), 'Every rule explanation has an exact verified quote bound to the fetched current MOM source.');
+
+  const presentation = createAuthorityEvidencePresentation(result);
+  const rendered = renderAuthorityEvidenceResponseText(presentation, false);
+  assert.match(rendered, sample.expectedExplanation);
+  assert.match(rendered, /full request coverage unconfirmed|resolved material issues have verified evidence|Source coverage is verified|Evidence is incomplete for one or more material issues/i,
+    'The explanatory answer retains the existing qualified completeness status.');
+
+  const mustSuppress = (mutate, query = routeQuery) => {
+    const candidate = structuredClone(presentation);
+    candidate.query = query;
+    mutate(candidate.workstreams.find(stream => stream.authority === 'MOM'));
+    assert.doesNotMatch(renderAuthorityEvidenceResponseText(candidate, false), /MOM rule explanation:/,
+      'Rule explanations require complete, current, issue-bound MOM evidence.');
+  };
+  mustSuppress(stream => { stream.authority = 'CPF'; });
+  mustSuppress(stream => { stream.domain = 'CPF_PAYROLL'; });
+  mustSuppress(stream => { stream.applicationStatus = 'UNRESOLVED'; });
+  mustSuppress(stream => { stream.issues[0].applicationStatus = 'UNRESOLVED'; });
+  mustSuppress(stream => { stream.issues[0].operation = 'CALCULATE'; });
+  mustSuppress(stream => { stream.issues.push({ ...stream.issues[0], id: `${stream.issues[0].id}-other` }); });
+  const selectedSource = stream => stream.sources.find(source => source.officialUrl === sample.url);
+  mustSuppress(stream => { selectedSource(stream).officialUrl = 'https://www.cpf.gov.sg/member/'; });
+  mustSuppress(stream => { selectedSource(stream).validTo = '2024-12-31'; });
+  mustSuppress(stream => { selectedSource(stream).provenance = 'LOCAL_CURATED'; });
+  mustSuppress(stream => { selectedSource(stream).claims[0].provenance = 'LOCAL_CURATED'; });
+  mustSuppress(stream => { selectedSource(stream).claims[0].issueIds = ['another-issue']; });
+  mustSuppress(stream => {
+    selectedSource(stream).claims[0].text = 'Salary must be paid within 7 days after the salary period ends.';
+  });
+  mustSuppress(stream => {
+    const source = selectedSource(stream);
+    const monthlyClaim = source.claims.find(claim => /in accordance with the employment act/i.test(claim.text));
+    monthlyClaim.text = 'In accordance with the Employment Act, your employer must not pay your salary at least once a month.';
+  });
+  if (sample.key === 'overtime-salary') {
+    mustSuppress(stream => {
+      const source = selectedSource(stream);
+      const deadlineClaim = source.claims.find(claim => /for overtime work, within 14 days/i.test(claim.text));
+      deadlineClaim.text = deadlineClaim.text.replace('within 14 days', 'within 7 days');
+    });
+    mustSuppress(stream => {
+      const source = selectedSource(stream);
+      const deadlineClaim = source.claims.find(claim => /for overtime work, within 14 days/i.test(claim.text));
+      deadlineClaim.text += ' For overtime work, payment must not be made within 14 days after the end of the salary period.';
+    });
+    mustSuppress(stream => {
+      const source = selectedSource(stream);
+      const deadlineClaim = source.claims.find(claim => /for overtime work, within 14 days/i.test(claim.text));
+      deadlineClaim.text = `Salary must not be paid:\n${deadlineClaim.text}`;
+    });
+  } else {
+    mustSuppress(stream => {
+      const source = selectedSource(stream);
+      const deadlineClaim = source.claims.find(claim => /within 7 days after the end of the salary period/i.test(claim.text) &&
+        !/for overtime work/i.test(claim.text));
+      deadlineClaim.text = `Salary must not be paid:\n${deadlineClaim.text}`;
+    });
+  }
+  mustSuppress(stream => { stream.issues[0].subject = 'final salary payment deadline'; });
+  mustSuppress(stream => { stream.issues[0].subject = sample.key === 'regular-salary'
+    ? 'overtime salary payment deadline' : 'regular salary payment deadline'; });
+  mustSuppress(() => {}, `${routeQuery} in 2023`);
+  mustSuppress(() => {}, `${routeQuery} when is my final salary due?`);
+  mustSuppress(() => {}, sample.key === 'regular-salary'
+    ? `${routeQuery} and when is overtime pay due after the salary period?`
+    : `${routeQuery} and how often is regular salary paid and when is it due?`);
+
+  const sourceText = sample.pageHtml;
+  const mutatedPages = sample.key === 'regular-salary' ? [
+    { key: 'negated-monthly-duty', html: sourceText.replace('must pay your salary at least once a month', 'must not pay your salary at least once a month') },
+    { key: 'wrong-regular-deadline', html: sourceText.replaceAll('within 7 days after the end of the salary period', 'within 14 days after the end of the salary period') },
+    { key: 'overtime-owned-regular-deadline', html: sourceText.replaceAll('within 7 days after the end of the salary period.', 'within 14 days after the end of the salary period.')
+      .replace('<li>Within 7 days after the end of the salary period.</li>',
+        '<li>For overtime work, within 7 days after the end of the salary period.</li>') },
+    { key: 'contradictory-monthly-premise', html: sourceText.replace('</main>', '<p>In accordance with the Employment Act, your employer must not pay your salary at least once a month.</p></main>') },
+    { key: 'negated-regular-deadline', html: sourceText.replace('</main>', '<p>Regular salary must not be paid within 7 days after the end of the salary period.</p></main>') }
+  ] : [
+    { key: 'wrong-overtime-deadline', html: sourceText.replace('For overtime work, within 14 days', 'For overtime work, within 7 days') },
+    { key: 'contradictory-overtime-deadline', html: sourceText.replace('</main>', '<p>For overtime work, payment must not be made within 14 days after the end of the salary period.</p></main>') }
+  ];
+  for (const [mutationIndex, mutation] of mutatedPages.entries()) {
+    const invalid = await runWorkstreams([sample], {
+      query: routeQuery, issuePlan: reconciled.issuePlan, pageOverrides: { [sample.url]: mutation.html }
+    });
+    const fetchedBody = invalid.fetchedPages.get(sample.url);
+    assert.equal(fetchedBody, mutation.html, 'The invalid page body is the one returned to the controlled fetcher.');
+    const invalidPresentation = createAuthorityEvidencePresentation(invalid);
+    const invalidIssue = invalid.workstreams.find(stream => stream.authority === 'MOM')?.issues[0];
+    const diagnostic = {
+      mutationIndex,
+      mutationKey: mutation.key,
+      fetchedBodyLead: fetchedBody?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 480),
+      admittedSourceText: invalidIssue?.sources.find(source => source.officialSourceUrl === sample.url)?.sourceText,
+      verifiedQuoteText: invalidIssue?.verifiedClaims.map(claim => claim.quote)
+    };
+    assert.doesNotMatch(renderAuthorityEvidenceResponseText(invalidPresentation, false), /MOM rule explanation:/,
+      `MOM_RAW_PAGE_NEGATIVE_DIAGNOSTIC ${JSON.stringify(diagnostic)}`);
   }
 }
 

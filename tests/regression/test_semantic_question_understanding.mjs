@@ -887,6 +887,102 @@ assert.equal(normalizedMixedCpf.interpretation.issues[1].domain, 'CPF_PAYROLL');
 assert.equal(normalizedMixedCpf.interpretation.issues[1].operation, 'CALCULATE',
   'A distinct employer contribution outcome stays a CPF payroll issue.');
 
+const cpfWithMomCalculationQuery = 'Can cash top-ups to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits. Separately, calculate MOM overtime pay for an employee.';
+const cpfWithMomCalculationMeaning = interpretation({
+  authorityCandidates: ['CPF', 'MOM'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'CPF cash top-up relief and MOM overtime pay', requestedOperation: 'OTHER',
+  issues: [cpfCashTopUpIssue, {
+    subject: 'MOM employee overtime pay calculation', population: 'EMPLOYEE', domain: 'MOM_EMPLOYMENT',
+    governingAuthorities: ['MOM'], contextualAuthorities: [], operation: 'CALCULATE', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+  }]
+});
+const normalizedCpfWithMomCalculation = await interpretSemanticQuestion(cpfWithMomCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomCalculationMeaning));
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].domain, 'IRAS_INCOME_TAX',
+  'CPF cash top-up tax relief is governed by IRAS even beside a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+  'A separately owned MOM calculation cannot make the general IRAS relief issue case-specific.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[0].evidenceRequirement, 'AUTHORITATIVE_SOURCE',
+  'The general IRAS relief issue remains source-only.');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].domain, 'MOM_EMPLOYMENT');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].operation, 'CALCULATE');
+assert.equal(normalizedCpfWithMomCalculation.interpretation.issues[1].evidenceRequirement, 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+  'The independent MOM overtime calculation retains its own case-fact requirement.');
+
+const cpfWithMomThenReliefCalculationQuery = `${cpfWithMomCalculationQuery} Calculate my CPF relief amount.`;
+const cpfWithMomThenReliefCalculationMeaning = structuredClone(cpfWithMomCalculationMeaning);
+const normalizedCpfWithMomThenReliefCalculation = await interpretSemanticQuestion(cpfWithMomThenReliefCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomThenReliefCalculationMeaning));
+assert.equal(normalizedCpfWithMomThenReliefCalculation.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'A later affirmative CPF relief calculation remains owned by CPF even after a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomThenReliefCalculation.interpretation.issues[1].operation, 'CALCULATE');
+const cpfWithMomNegativeThenReliefCalculationQuery = `${cpfWithMomCalculationQuery} Do not calculate my tax, but calculate my CPF relief amount.`;
+const normalizedCpfWithMomNegativeThenReliefCalculation = await interpretSemanticQuestion(
+  cpfWithMomNegativeThenReliefCalculationQuery, provider,
+  async () => JSON.stringify(cpfWithMomCalculationMeaning));
+assert.equal(normalizedCpfWithMomNegativeThenReliefCalculation.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+  'An affirmative CPF relief calculation remains owned by the CPF issue after negative wording and a separate MOM calculation.');
+assert.equal(normalizedCpfWithMomNegativeThenReliefCalculation.interpretation.issues[1].operation, 'CALCULATE');
+
+for (const [numericCpfQuestion, description, retainedScope] of [
+  ['Can cash top-ups for Year of Assessment 2026 to my own CPF Special Account qualify for tax relief?', 'an assessment year', 'Year of Assessment 2026'],
+  ['Can cash top-ups for YA 2026 to my own CPF Special Account qualify for tax relief?', 'an abbreviated assessment year', 'YA 2026'],
+  ['Can cash top-ups in calendar year 2026 to my own CPF Special Account qualify for tax relief?', 'a calendar year', 'calendar year 2026'],
+  ['Can cash top-ups to my own CPF Special Account for members under 55 or aged 55 and older qualify for tax relief?', 'general age thresholds', 'members under 55 or aged 55 and older'],
+  ['Can cash top-ups effective from 1 January 2026 to my own CPF Special Account qualify for tax relief?', 'an effective date', 'effective from 1 January 2026']
+]) {
+  const numericContextQuery = `${numericCpfQuestion} Explain the general eligibility conditions and relief limits.`;
+  const scopedCpfMeaning = structuredClone(cpfCashTopUpMeaning);
+  scopedCpfMeaning.issues[0].subject = `CPF cash top-up tax relief eligibility ${retainedScope}`;
+  const normalizedNumericContext = await interpretSemanticQuestion(numericContextQuery, provider,
+    async () => JSON.stringify(scopedCpfMeaning));
+  assert.equal(normalizedNumericContext.interpretation.issues[0].operation, 'EXPLAIN_RULE',
+    `A number in ${description} is not a personal top-up amount.`);
+  assert.equal(normalizedNumericContext.interpretation.requiresUserSpecificFacts, false,
+    `A general ${description} keeps the CPF relief question source-only.`);
+  assert.equal(normalizedNumericContext.interpretation.issues[0].subject, scopedCpfMeaning.issues[0].subject,
+    `The issue retains ${description} scope through interpretation normalization.`);
+}
+const currencyTopUpAmountQuery = 'Can cash top-ups of SGD 2,026 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedCurrencyTopUpAmount = await interpretSemanticQuestion(currencyTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedCurrencyTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'A currency-qualified numeric top-up remains a personal case fact.');
+const datedCurrencyTopUpAmountQuery = 'Can cash top-ups for Year of Assessment 2026 amounting to SGD 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedDatedCurrencyTopUpAmount = await interpretSemanticQuestion(datedCurrencyTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedDatedCurrencyTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'An explicit monetary top-up amount remains case-specific when the same clause also names an assessment year.');
+for (const monetaryPhrase of ['$8,000', '8,000 dollars']) {
+  const currencyFormQuery = `Can cash top-ups for YA 2026 amounting to ${monetaryPhrase} to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.`;
+  const normalizedCurrencyForm = await interpretSemanticQuestion(currencyFormQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedCurrencyForm.interpretation.requiresUserSpecificFacts, true,
+    `Explicit currency ${monetaryPhrase} remains monetary beside an assessment year.`);
+}
+for (const assessmentPeriod of ['YA 2026', 'Year of Assessment 2026']) {
+  const datedBareTopUpAmountQuery = `Can cash top-ups for ${assessmentPeriod} amounting to 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.`;
+  const normalizedDatedBareTopUpAmount = await interpretSemanticQuestion(datedBareTopUpAmountQuery, provider,
+    async () => JSON.stringify(cpfCashTopUpMeaning));
+  assert.equal(normalizedDatedBareTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+    `A bare monetary amount remains case-specific beside ${assessmentPeriod}.`);
+  assert.equal(normalizedDatedBareTopUpAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY',
+    `The relief calculation safeguard remains active beside ${assessmentPeriod}.`);
+}
+const barePersonalTopUpAmountQuery = 'Can cash top-ups of 8,000 to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedBarePersonalTopUpAmount = await interpretSemanticQuestion(barePersonalTopUpAmountQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedBarePersonalTopUpAmount.interpretation.requiresUserSpecificFacts, true,
+  'A bare numeric amount explicitly attached to the user’s top-up remains case-specific.');
+assert.equal(normalizedBarePersonalTopUpAmount.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+const amountBeforeTopUpQuery = 'Can an 8,000 cash top-up to my own CPF Special Account qualify for tax relief? Explain the general eligibility conditions and relief limits.';
+const normalizedAmountBeforeTopUp = await interpretSemanticQuestion(amountBeforeTopUpQuery, provider,
+  async () => JSON.stringify(cpfCashTopUpMeaning));
+assert.equal(normalizedAmountBeforeTopUp.interpretation.requiresUserSpecificFacts, true,
+  'A bare monetary amount immediately before the user’s cash top-up remains case-specific.');
+assert.equal(normalizedAmountBeforeTopUp.interpretation.issues[0].operation, 'CHECK_ELIGIBILITY');
+
 const separateCpfEligibilityQuery = 'Explain CPF cash top-up tax relief eligibility and limits. Separately, explain CPF contribution eligibility.';
 const separateCpfEligibilityMeaning = interpretation({
   authorityCandidates: ['UNKNOWN'], contextualAuthorities: [], domain: 'UNKNOWN', population: 'UNKNOWN',
