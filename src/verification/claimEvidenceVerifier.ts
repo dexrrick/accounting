@@ -6,7 +6,12 @@ import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmiss
 import type { SharedDocumentAdmissionOptions } from '../standards/sharedDocumentAdmission';
 import type { VerifiedDocumentBinding } from '../standards/unifiedSourceModel';
 import type { QueryDomain, StatutoryAuthority } from '../types/accounting';
+import { getCoverageTopicById } from '../standards/coverageRegistry';
 import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
+import { selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
+import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
+import { selectIrasCpfExpansionQuotes, supportIrasCpfExpansionRule } from '../retrieval/irasCpfExpansionRules';
+import { selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
 import { normalizeEvidenceText, startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 export { startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 
@@ -41,6 +46,150 @@ export interface VerifyEvidenceClaimsOptions {
   expectedDomain?: QueryDomain;
   applicabilityTarget?: 'ACRA_FYE';
   versioningManager?: SourceVersioningManager;
+  boundedCoverageRequest?: BoundedCoverageRequest;
+}
+
+export interface BoundedCoverageRequest {
+  authority: StatutoryAuthority;
+  topicId: string;
+  query: string;
+  subject: string;
+}
+
+interface BoundedCoverageRuleProfile {
+  authority: StatutoryAuthority;
+  domain: string;
+  officialUrls: readonly string[];
+}
+
+const BOUNDED_COVERAGE_RULE_PROFILES: Readonly<Record<string, BoundedCoverageRuleProfile>> = {
+  'IRAS:iras-gst-input-tax': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax']
+  },
+  'IRAS:iras-cit-eci': {
+    authority: 'IRAS', domain: 'IRAS_TAX',
+    officialUrls: ['https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing']
+  },
+  'CPF:cpf-ordinary-wages': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions']
+  },
+  'CPF:cpf-additional-wages': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions']
+  },
+  'CPF:cpf-bonus-backpay': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions']
+  },
+  'ACRA:acra_company-secretary': {
+    authority: 'ACRA', domain: 'ACRA_CORP',
+    officialUrls: ['https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/']
+  },
+  'MAS:mas-regulatory-reporting': {
+    authority: 'MAS', domain: 'MAS_FUNDS',
+    officialUrls: ['https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf']
+  },
+  'IRAS:iras-gst-filing-deadlines': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension']
+  },
+  'CPF:cpf-contribution-due-dates': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: [
+      'https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions',
+      'https://www.cpf.gov.sg/employer/compliance-and-rectifications/enforcement-and-penalties-for-non-compliance'
+    ]
+  },
+  'CPF:cpf_contribution_rates': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay']
+  },
+  'CPF:cpf-pr-contribution-rates': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay']
+  },
+  'MOM:mom-salary-payment': {
+    authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    officialUrls: ['https://www.mom.gov.sg/employment-practices/salary/paying-salary',
+      'https://www.mom.gov.sg/employment-practices/salary/salary-deductions']
+  },
+  'ACRA:acra_small_company': {
+    authority: 'ACRA', domain: 'ACRA_CORP',
+    officialUrls: ['https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/']
+  },
+  'ACRA:acra_audit-requirements': {
+    authority: 'ACRA', domain: 'ACRA_CORP',
+    officialUrls: ['https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/']
+  },
+  'MAS:mas-vcfm': {
+    authority: 'MAS', domain: 'MAS_FUNDS',
+    officialUrls: ['https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing']
+  },
+  'MAS:mas-fund-management-exemptions': {
+    authority: 'MAS', domain: 'MAS_FUNDS',
+    officialUrls: ['https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing']
+  }
+};
+
+function sameExactOfficialCoverageUrl(actualValue: string, expectedValue: string): boolean {
+  try {
+    const actual = new URL(actualValue);
+    const expected = new URL(expectedValue);
+    return actual.protocol === 'https:' && !actual.username && !actual.password && !actual.port &&
+      !actual.search && !actual.hash && actual.origin === expected.origin && actual.pathname === expected.pathname;
+  } catch {
+    return false;
+  }
+}
+
+function recordBoundToCoverageTopic(record: AuthoritativeSourceRecord, topicId: string): boolean {
+  const topic = getCoverageTopicById(topicId);
+  return Boolean(topic && (topic.sourceRecordIds.includes(record.id) ||
+    [...(record.tags || []), ...(record.relatedTopicIds || []), ...(record.sourceMapTopicIds || []),
+      ...(record.retrievalHints || [])].includes(topicId)));
+}
+
+/** Narrow fallback for complete native list/section quotes. The normal generic span rules remain unchanged. */
+function isExactBoundedCoverageRuleSpan(
+  record: AuthoritativeSourceRecord,
+  quote: string,
+  request: BoundedCoverageRequest | undefined
+): boolean {
+  if (!request) return false;
+  const profile = BOUNDED_COVERAGE_RULE_PROFILES[`${request.authority}:${request.topicId}`];
+  if (!profile || profile.authority !== request.authority || record.authority !== profile.authority ||
+      record.sourceAuthority !== profile.authority || record.domain !== profile.domain ||
+      !recordBoundToCoverageTopic(record, request.topicId) ||
+      typeof record.officialSourceUrl !== 'string' || typeof record.canonicalSourceUrl !== 'string' ||
+      !profile.officialUrls.some(expectedUrl =>
+        sameExactOfficialCoverageUrl(record.officialSourceUrl!, expectedUrl) &&
+        sameExactOfficialCoverageUrl(record.canonicalSourceUrl!, expectedUrl))) return false;
+  const coverageRequest = {
+    authority: request.authority, topicId: request.topicId,
+    query: request.query, subject: request.subject, sourceText: record.sourceText,
+    officialUrl: record.officialSourceUrl
+  };
+  const fullRecordProof = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest) ??
+    supportIrasCpfCoverageRule(coverageRequest) ?? supportMomAcraMasCoverageRule(coverageRequest);
+  if (fullRecordProof !== true) return false;
+  const quoteProof = supportIrasCpfExpansionRule({ ...coverageRequest, sourceText: quote }) ??
+    supportMomAcraMasExpansionRule({ ...coverageRequest, sourceText: quote }) ??
+    supportIrasCpfCoverageRule({ ...coverageRequest, sourceText: quote }) ??
+    supportMomAcraMasCoverageRule({ ...coverageRequest, sourceText: quote });
+  const expansionProof = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest);
+  // An expansion component may establish one premise of the complete rule.
+  // Require the full document proof and exact selector membership here; the
+  // workstream requires every selected premise from this same record below.
+  if (quoteProof !== true && expansionProof !== true) return false;
+  const exactSelectedSpans = [
+    ...selectIrasCpfExpansionQuotes(coverageRequest),
+    ...selectMomAcraMasExpansionQuotes(coverageRequest),
+    ...selectIrasCpfCoverageQuotes(coverageRequest),
+    ...selectMomAcraMasCoverageQuotes(coverageRequest)
+  ];
+  return exactSelectedSpans.some(selected => normalizeEvidenceText(selected) === normalizeEvidenceText(quote));
 }
 
 const APPLICATION_SOURCE_TYPES = new Set(['APPLICATION_RULE']);
@@ -919,9 +1068,16 @@ export function verifyEvidenceClaims(
     }
 
     const sourceSpanResult = quoteIsWholeSourceSpan(record, quote);
-    const quoteResult = sourceSpanResult === 'NO_MATCH' && quoteIsCompleteBoundedAdvisorySpan(record, quote)
-      ? 'MATCH'
-      : sourceSpanResult;
+    const selectedExpansionComponent = sourceSpanResult === 'OMITS_ATTACHED_QUALIFICATION' &&
+      options?.boundedCoverageRequest &&
+      (supportIrasCpfExpansionRule({ ...options.boundedCoverageRequest, sourceText: record.sourceText,
+        officialUrl: record.officialSourceUrl }) ?? supportMomAcraMasExpansionRule({
+        ...options.boundedCoverageRequest, sourceText: record.sourceText, officialUrl: record.officialSourceUrl })) === true &&
+      isExactBoundedCoverageRuleSpan(record, quote, options.boundedCoverageRequest);
+    const quoteResult = selectedExpansionComponent || sourceSpanResult === 'NO_MATCH' && (
+      quoteIsCompleteBoundedAdvisorySpan(record, quote) ||
+      isExactBoundedCoverageRuleSpan(record, quote, options?.boundedCoverageRequest)
+    ) ? 'MATCH' : sourceSpanResult;
     if (quoteResult === 'OMITS_ATTACHED_QUALIFICATION') {
       rejected.push(reject(text, 'QUOTE_OMITS_ATTACHED_QUALIFICATION'));
       continue;

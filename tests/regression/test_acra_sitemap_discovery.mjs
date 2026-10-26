@@ -9,6 +9,7 @@ import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback, selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import { STATUTORY_VERIFIED_EXCERPTS } from '../fixtures/statutoryCoverageVerifiedExcerpts.mjs';
 import {
   getAcraAnnualReturnDeadlineTablePassage,
   supportsAcraAnnualReturnDeadlineEvidence,
@@ -149,6 +150,19 @@ const cases = [
   ['compliance', 'acra_directors', 'Explain company director duties and compliance obligations.'],
   ['filings', 'acra_share-allotments', 'How does a Singapore company file a return of allotment of shares?']
 ];
+const retainedAuditPage = pages.find(page => page.name === 'audit');
+assert.ok(retainedAuditPage, 'The immutable 10/10/2026 audit-exemption page capture remains present.');
+const retainedAuditTitle = /<title\b[^>]*>([\s\S]*?)<\/title\s*>/i.exec(retainedAuditPage.html)?.[1]
+  .replace(/&amp;/gi, '&').trim();
+assert.ok(retainedAuditTitle, 'The retained audit-exemption capture includes its official title.');
+const currentAuditExcerpt = STATUTORY_VERIFIED_EXCERPTS['acra-audit-exemption'];
+assert.equal(currentAuditExcerpt.kind, 'VERIFIED_OFFICIAL_VISIBLE_EXCERPT_LAYOUT_ADAPTED');
+assert.match(currentAuditExcerpt.note, /fetched on 25\/10\/2026/i);
+assert.match(currentAuditExcerpt.note, /not a complete page capture/i);
+// This page shell carries only the exact complete current visible excerpt. Its
+// wrapper metadata explicitly says the excerpt is layout-adapted, not a capture.
+// No rule wording is added to the old, immutable page capture.
+const currentAuditExcerptHtml = `<html><head><title>${retainedAuditTitle}</title></head><body><main>${currentAuditExcerpt.html}</main></body></html>`;
 const response = html => new Response(html, { status: 200, headers: { 'content-type': 'text/html' } });
 const xml = urls => `<urlset>${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`;
 const irrelevant = title => `<html><head><title>${title} | Accounting and Corporate Regulatory Authority</title></head><body><main><h1>${title}</h1><nav><a href="#">annual returns financial statements XBRL audit exemption company directors share allotment</a></nav><p>This page describes general information about business services and helps you find further resources for your organisation.</p></main></body></html>`;
@@ -390,7 +404,9 @@ assert.ok(orderedInstructions.records[0].sourceText.includes('must file an annua
 
 const positives = [];
 for (const [name, topic, query] of cases) {
-  const result = await run(name, topic, query);
+  const result = name === 'audit'
+    ? await run(name, topic, query, 'sitemap', { html: currentAuditExcerptHtml })
+    : await run(name, topic, query);
   positives.push(result);
   assert.equal(result.records.length, 1, `${name}: ${JSON.stringify(result.trace)}`);
   const record = result.records[0];
@@ -406,6 +422,13 @@ for (const [name, topic, query] of cases) {
   assert.ok(!record.sourceText.includes('SEARCH_METADATA_ONLY'));
   assert.ok(!record.sourceText.includes('Government agencies communicate'));
   assert.ok(!result.calls.some(url => url.includes('duckduckgo')), 'Adequate article stops before search.');
+  if (name === 'audit') {
+    const incompleteHistoricalCapture = await run(name, topic, query);
+    assert.equal(incompleteHistoricalCapture.records.length, 0,
+      'The immutable 10/10/2026 capture remains insufficient for the complete audit-exemption proof.');
+    assert.ok(incompleteHistoricalCapture.trace.attempts.some(attempt => attempt.fetchStatus === 'TOPIC_MISMATCH'),
+      'The incomplete audit capture is explicitly rejected by source proof.');
+  }
   const rejected = await run(name, topic, query, 'sitemap', { html: irrelevant(record.documentTitle) });
   assert.equal(rejected.records.length, 0, 'Relevant title/navigation labels cannot establish substantive rules.');
 }

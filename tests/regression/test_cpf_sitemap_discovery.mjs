@@ -15,10 +15,17 @@ const dueUrl = 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/en
 const memberUrl = 'https://www.cpf.gov.sg/member/growing-your-savings/saving-more-with-cpf/top-up-to-enjoy-higher-retirement-payouts';
 const response = html => new Response(html, { status: 200, headers: { 'content-type': 'text/html' } });
 const article = (title, body) => `<html><head><title>CPF Board | ${title}</title></head><body><main><h1>${title}</h1><p>${body}</p></main></body></html>`;
+const articleSections = (title, sections) => `<html><head><title>CPF Board | ${title}</title></head><body><main><h1>${title}</h1>${sections.map(section => `<p>${section}</p>`).join('')}</main></body></html>`;
 const wageArticle = article('What constitutes wages for CPF contributions', 'Ordinary wages are wages due or granted wholly and exclusively in respect of employment in that month. CPF contributions are payable on ordinary wages, subject to the applicable wage ceiling. The employer must determine the payment period and applicable contribution rates.');
 const memberArticle = article('Top up to enjoy higher retirement payouts', 'CPF members can make cash top-ups to grow their retirement savings. Top-ups (both cash top-ups and CPF transfers) are irreversible as they are a long-term commitment to boost your retirement savings for higher payouts. They cannot be withdrawn for any other purposes.');
+const dueEnforcementArticle = articleSections('Enforcement and penalties for non-compliance', [
+  'The CPF Board takes a serious view on employers who fail to pay CPF contributions correctly and promptly (the due date for CPF contributions is on the last day of the calendar month). Enforcement action will be taken against employers who fail to pay by the 14th of the following month (or the next working day if the 14th falls on a Saturday, Sunday or public holiday).',
+  'The CPF Board charges late payment interest at 1.5% per month, starting from the day after the due date, subject to a minimum amount of $5.'
+]);
+const incompleteDueEnforcementArticle = article('Enforcement and penalties for non-compliance',
+  'The CPF Board takes a serious view on employers who fail to pay CPF contributions correctly and promptly. The due date for CPF contributions is on the last day of the calendar month. The CPF Board charges late payment interest on contributions in arrears.');
 
-async function run(topic, query, mode = 'sitemap', body = wageArticle) {
+async function run(topic, query, mode = 'sitemap', body = wageArticle, dueBody = dueEnforcementArticle) {
   const calls = [];
   const fetch = async url => {
     calls.push(url);
@@ -42,7 +49,7 @@ async function run(topic, query, mode = 'sitemap', body = wageArticle) {
       return response(`<html><body><p>SEARCH_METADATA_ONLY</p><a href="${pageUrl}">Ordinary wages</a><a href="https://unapproved.example/ordinary-wages">Ordinary wages</a></body></html>`);
     }
     if (url === pageUrl) return response(body);
-    if (url === dueUrl) return response(article('Enforcement and penalties for non-compliance', 'The CPF Board takes a serious view on employers who fail to pay CPF contributions correctly and promptly. The due date for CPF contributions is on the last day of the calendar month. The CPF Board charges late payment interest on contributions in arrears.'));
+    if (url === dueUrl) return response(dueBody);
     if (url === memberUrl) return response(mode === 'member-unrelated' ? article('Top up to enjoy higher retirement payouts', 'CPF retirement savings help members plan for their future. This page describes general benefits and account options for retirement planning, with no details about the requested payment action.') : memberArticle);
     throw new Error(`Unexpected fetch: ${url}`);
   };
@@ -123,6 +130,13 @@ const dueDates = await run('cpf-contribution-due-dates', 'What is the CPF paymen
 assert.equal(dueDates.records.length, 1, JSON.stringify(dueDates.trace));
 assert.equal(dueDates.records[0].officialSourceUrl, dueUrl);
 assert.ok(dueDates.records[0].sourceText.includes('due date for CPF contributions'));
+assert.ok(dueDates.records[0].sourceText.includes('subject to a minimum amount of $5'),
+  'The complete enforcement excerpt keeps the interest minimum qualification on its own official page.');
+const incompleteDueDates = await run('cpf-contribution-due-dates', 'What is the CPF payment deadline?', 'sitemap', wageArticle, incompleteDueEnforcementArticle);
+assert.equal(incompleteDueDates.records.length, 0,
+  'An incomplete enforcement excerpt without the 14th-day and weekend conditions remains rejected.');
+assert.ok(incompleteDueDates.trace.attempts.some(attempt => attempt.candidateUrl === dueUrl && attempt.fetchStatus === 'TOPIC_MISMATCH'),
+  'The incomplete same-page excerpt is rejected by the rule proof rather than silently admitted.');
 
 const member = await run('cpf-cash-top-up-tax-relief', 'How can I make a CPF cash top-up?');
 assert.equal(member.records.length, 1, JSON.stringify(member.trace));

@@ -1,0 +1,188 @@
+{
+  "dateSingapore": "25/10/2026",
+  "status": "INCOMPLETE_USAGE_RESERVE_STOP_SMOKE_FAILURES_FULL_RUNNING",
+  "workspace": "D:/Accounting/.worktrees/review-corrections-20261025",
+  "branch": "codex/statutory-practical-coverage-20261025",
+  "baseApplicationCommit": "c3783109de0c7a8d1574a9a10cd1f338fee4ff26",
+  "headCommit": "051f503",
+  "uncommittedChanges": true,
+  "committed": false,
+  "pushed": false,
+  "merged": false,
+  "deployed": false,
+  "historicalAcraHolds": "UNCHANGED_SEPARATE",
+  "fiveHourUsedPercentAtLastCheck": 94,
+  "minimumRemainingReservePercent": 5,
+  "scope": [
+    "IRAS GST filing",
+    "CPF due dates",
+    "CPF qualitative rate factors",
+    "MOM final salary",
+    "ACRA audit exemption",
+    "MAS general VCFM route",
+    "MAS conditional class exemptions"
+  ],
+  "baselineCorrection": {
+    "completeRequiredTopicRouting": 57,
+    "primaryTopicOnlyRouting": 58,
+    "caseId": "cpf-additional-wages-definition-02",
+    "baselineTopics": [
+      "cpf-ordinary-wages"
+    ],
+    "missingRequiredTopic": "cpf-additional-wages",
+    "baselineCpfCompleteRouting": 8
+  },
+  "sourceManifest": "docs/evaluation/statutory-coverage-development-20261025/source-manifest.json",
+  "preliminaryReplay": "D:/Accounting/artifacts/coverage-development-20261025/preliminary-replay.json",
+  "pending": [
+    "DiagnoseCPFandACRAsitemapregressionfailures",
+    "Readfullregressionresultfromvalidation/results-from-full.json",
+    "Finalize10changedansweradjudications",
+    "ResolveGSTextensionquote-selectiongap andremainingcoveragegaps"
+  ],
+  "finalReplaySha256": "184c6374b9feadefc45506d4025ba75b5859ada5ba40a1c8d450260e23e6c3c5",
+  "snapshotMatches": true,
+  "routing": {
+    "IRAS": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 17
+    },
+    "CPF": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 8
+    },
+    "MOM": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 12
+    },
+    "ACRA": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 11
+    },
+    "MAS": {
+      "total": 20,
+      "routedOnOriginalQuestion": 20,
+      "baselineRoutedOnOriginalQuestion": 9
+    }
+  },
+  "verifiedEvidence": {
+    "IRAS": {
+      "INSUFFICIENT": 11,
+      "VERIFIED": 9
+    },
+    "CPF": {
+      "INSUFFICIENT": 7,
+      "VERIFIED": 13
+    },
+    "MOM": {
+      "INSUFFICIENT": 11,
+      "VERIFIED": 9
+    },
+    "ACRA": {
+      "INSUFFICIENT": 15,
+      "VERIFIED": 5
+    },
+    "MAS": {
+      "INSUFFICIENT": 11,
+      "VERIFIED": 9
+    }
+  },
+  "liveAcceptance": "NOT_RUN",
+  "independentlyReviewedCorrectness": "PENDING_FINAL_HASH_BOUND_REPORT_NOT_INFERRED_FROM_CHECKLIST",
+  "validationDirectory": "D:\\Accounting\\artifacts\\coverage-development-20261025\\validation",
+  "reviewPacket": "D:\\Accounting\\artifacts\\coverage-development-20261025\\final-answer-review-packet.json",
+  "independentReview": {
+    "reviewed": 90,
+    "correct": 33,
+    "partial": 13,
+    "unsupported": 44,
+    "unreviewed": 10
+  },
+  "independentReviewByAuthority": {
+    "IRAS": {
+      "reviewed": 15,
+      "correct": 3,
+      "partial": 9,
+      "unsupported": 3,
+      "unreviewed": 5
+    },
+    "CPF": {
+      "reviewed": 19,
+      "correct": 10,
+      "partial": 2,
+      "unsupported": 7,
+      "unreviewed": 1
+    },
+    "MOM": {
+      "reviewed": 20,
+      "correct": 9,
+      "partial": 0,
+      "unsupported": 11,
+      "unreviewed": 0
+    },
+    "ACRA": {
+      "reviewed": 20,
+      "correct": 5,
+      "partial": 0,
+      "unsupported": 15,
+      "unreviewed": 0
+    },
+    "MAS": {
+      "reviewed": 16,
+      "correct": 6,
+      "partial": 2,
+      "unsupported": 8,
+      "unreviewed": 4
+    }
+  },
+  "heuristicChecklistByAuthority": {
+    "IRAS": {
+      "PARTIAL": 11,
+      "FAIL": 4,
+      "PASS": 5
+    },
+    "CPF": {
+      "PASS": 5,
+      "PARTIAL": 13,
+      "FAIL": 2
+    },
+    "MOM": {
+      "FAIL": 6,
+      "PASS": 6,
+      "PARTIAL": 8
+    },
+    "ACRA": {
+      "FAIL": 5,
+      "PARTIAL": 10,
+      "PASS": 5
+    },
+    "MAS": {
+      "PARTIAL": 14,
+      "PASS": 5,
+      "FAIL": 1
+    }
+  },
+  "reviewReport": "D:\\Accounting\\artifacts\\coverage-development-20261025\\independent-review.json",
+  "heuristicReport": "D:\\Accounting\\artifacts\\coverage-development-20261025\\heuristic-checklists.json",
+  "validation": {
+    "preflight": "PASS",
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "viteBuild": "PASS",
+    "workerBuild": "PASS",
+    "focusedRegressions": "PASS_BUILDER_AND_SUPERVISOR_OUTPUTS",
+    "smoke": {
+      "status": "FAILED",
+      "failedSuites": [
+        "\u274c FAIL | coverage-governance    | Five-authority Statutory Coverage Fixture Replay |  1.31s",
+        "\u274c FAIL | retrieval-evidence     | CPF Sitemap Discovery                      |  0.45s",
+        "\u274c FAIL | retrieval-evidence     | ACRA Sitemap Discovery                     |  0.59s"
+      ]
+    },
+    "full": "RUNNING_SEPARATELY_RESULTS_FROM_FULL_JSON"
+  }
+}

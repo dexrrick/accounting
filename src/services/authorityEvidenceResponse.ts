@@ -4,6 +4,10 @@ import { formatSingaporeDate } from '../utils/dateUtils';
 import { getMomSalaryPaymentRuleEvidence } from '../retrieval/momSalaryPaymentRule';
 import { getIrasAcraPracticalRuleEvidence } from '../retrieval/irasAcraPracticalRules';
 import { getCpfMasPracticalRuleEvidence } from '../retrieval/cpfMasPracticalRules';
+import { getIrasCpfCoverageEvidence } from '../retrieval/irasCpfCoverageRules';
+import { getMomAcraMasCoverageEvidence } from '../retrieval/momAcraMasCoverageRules';
+import { getIrasCpfExpansionEvidence } from '../retrieval/irasCpfExpansionRules';
+import { getMomAcraMasExpansionEvidence } from '../retrieval/momAcraMasExpansionRules';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
   if (stream.evidenceStatus === 'INSUFFICIENT') return 'Evidence incomplete';
@@ -37,8 +41,12 @@ export function renderAuthorityEvidenceResponseText(
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
     for (const issue of stream.issues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
-      const practicalRule = getIrasAcraPracticalRuleEvidence(presentation.query, stream, issue) ||
-        getCpfMasPracticalRuleEvidence(presentation.query, stream, issue);
+      const practicalRule = getIrasCpfExpansionEvidence(presentation.query, stream, issue) ||
+        getMomAcraMasExpansionEvidence(presentation.query, stream, issue) ||
+        getIrasAcraPracticalRuleEvidence(presentation.query, stream, issue) ||
+        getCpfMasPracticalRuleEvidence(presentation.query, stream, issue) ||
+        getIrasCpfCoverageEvidence(presentation.query, stream, issue) ||
+        getMomAcraMasCoverageEvidence(presentation.query, stream, issue);
       if (practicalRule) {
         lines.push(`- **${practicalRule.authority} rule explanation:** ${practicalRule.text} [${practicalRule.title}](${practicalRule.officialUrl})`);
       }

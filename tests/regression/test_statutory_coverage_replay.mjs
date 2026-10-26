@@ -8,6 +8,8 @@ import {
 } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
 import { provesMomSalaryPaymentSource, supportMomSalaryPaymentIssue } from '../../src/retrieval/momSalaryPaymentRule.ts';
+import { supportMomAcraMasCoverageRule } from '../../src/retrieval/momAcraMasCoverageRules.ts';
+import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { replayStatutoryCoverageCase } from '../../scripts/replay_statutory_coverage.mjs';
 
@@ -23,9 +25,13 @@ const fixtureText = id => {
 };
 const fullNoticeSalaryQuestion = 'When is final salary due if an employee serves the full notice period?';
 const finalNoticeQuote = 'If an employee resigns after serving required notice, final salary is due on the last employment day.';
-assert.equal(provesMomSalaryPaymentSource(fullNoticeSalaryQuestion, fixtureText('mom-salary')), true,
+const nativeFinalSalaryRequest = {
+  authority: 'MOM', topicId: 'mom-salary-payment', query: fullNoticeSalaryQuestion,
+  subject: 'Final salary deadline when an employee resigns with required notice'
+};
+assert.equal(supportMomAcraMasCoverageRule({ ...nativeFinalSalaryRequest, sourceText: fixtureText('mom-salary') }), true,
   'The paying-salary page proves the exact full-notice final-salary question and retains its tax-clearance caveat.');
-assert.equal(provesMomSalaryPaymentSource(fullNoticeSalaryQuestion, fixtureText('mom-salary-deductions')), false,
+assert.equal(supportMomAcraMasCoverageRule({ ...nativeFinalSalaryRequest, sourceText: fixtureText('mom-salary-deductions') }), false,
   'The actual salary-deductions page cannot prove a final-salary payment deadline.');
 assert.equal(supportMomSalaryPaymentIssue(fullNoticeSalaryQuestion,
   'Final salary deadline when an employee resigns with required notice', finalNoticeQuote), true,
@@ -49,8 +55,9 @@ for (const fixture of STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES) {
   assert.ok(fixture.authorityPublisher);
   assert.ok(fixture.fixtureHtmlTitle.includes(fixture.authorityPublisher));
   assert.match(fixture.fixtureHtmlTitle, /\(offline fixture title\)$/);
-  assert.ok(wordCount(fixture.html) < 150, `${fixture.id} stays a short offline excerpt or paraphrase`);
-  assert.match(fixture.provenanceNote, /not a full captured page|not a downloaded or complete official page/i,
+  assert.ok(wordCount(fixture.html) < (fixture.fixtureKind.startsWith('VERIFIED_OFFICIAL_') ? 850 : 150),
+    `${fixture.id} stays a bounded qualified offline excerpt or paraphrase`);
+  assert.match(fixture.provenanceNote, /not a full captured page|not a downloaded or complete official page|not a complete (?:page|raw capture)/i,
     'Fixture provenance clearly says the text is a bounded synthetic body or selected excerpt.');
   assert.doesNotMatch(fixture.html, /validFrom|validTo|effectiveFrom|effectiveTo/i,
     'No unverified effective-date range is attached to a source fixture.');
@@ -116,13 +123,19 @@ for (const testCase of representatives) {
     assert.ok(result.fetches.includes(citation.url), `${testCase.id} cites a URL actually fetched by its fixture transport`);
     assert.ok(result.response.includes(citation.url), `${testCase.id} rendered response retains the cited URL`);
     const sourceFixture = STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.find(fixture => fixture.sourceUrl === citation.url);
-    const fixtureText = sourceFixture.html
-      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/&amp;/gi, '&').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'")
-      .replace(/\s+/g, ' ').trim();
+    // Mirror the production extraction profile for this source. In particular,
+    // IRAS retains headings and does not require a substantive-body slice;
+    // the latter intentionally omits some exact native IRAS filing headings.
+    // Browsers display named apostrophe entities as their visible character;
+    // the generic validator helper does not decode this named entity.
+    const fixtureHtml = sourceFixture.html.replace(/&rsquo;/gi, '’');
+    const fixtureText = (defaultExternalSourceValidator.validateTopicContent(fixtureHtml, {
+      standardIdentifiers: [], expectedTitles: [], topicTerms: [],
+      preferMainContent: sourceFixture.authority === 'ACRA',
+      requireSubstantiveBody: ['CPF', 'ACRA', 'MOM', 'MAS'].includes(sourceFixture.authority)
+    }).substantiveText || '').replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
     for (const claim of citation.claims.filter(item => item.supportKind === 'EXACT_SOURCE_QUOTE')) {
-      const exactQuote = (claim.quote || claim.text).replace(/\s+/g, ' ').trim();
+      const exactQuote = (claim.quote || claim.text).replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
       assert.ok(exactQuote && fixtureText.includes(exactQuote), `${testCase.id} exact quote comes from the fetched fixture body`);
       assert.ok(claim.sourceBinding || claim.fetchedSourceBinding, `${testCase.id} exact quote keeps a document binding`);
       if (claim.fetchedSourceBinding) assert.equal(claim.fetchedSourceBinding.canonicalUrl, citation.url);
@@ -145,6 +158,32 @@ for (const testCase of representatives) {
   const serialized = JSON.stringify(result);
   assert.doesNotMatch(serialized, /humanReview|independentReview|HUMAN_REVIEW_CORRECT/i,
     'No human adjudication is fabricated by a technical replay.');
+}
+
+for (const [id, expectedDeadline] of [
+  ['mom-final-salary-02', /within 7 days/i],
+  ['mom-final-salary-03', /within 3 working days/i]
+]) {
+  const testCase = corpus.cases.find(candidate => candidate.id === id);
+  assert.ok(testCase, `${id} is present in the statutory coverage corpus`);
+  const result = await replayStatutoryCoverageCase(testCase);
+  assert.equal(result.semanticOracle?.population, 'EMPLOYEE',
+    `${id} explicit resignation/dismissal scenario uses the employee population`);
+  assert.equal(result.pipelineStatus, 'VERIFIED', `${id} renders a source-backed final-salary answer`);
+  assert.match(result.response, expectedDeadline, `${id} rendered answer states the applicable deadline`);
+}
+
+for (const [id, expectedAnswer] of [
+  ['mas-class-exemptions-03', /does not become exempt merely because it manages assets for a related corporation/i],
+  ['mas-class-exemptions-04', /non-capital-markets-product pools/i]
+]) {
+  const testCase = corpus.cases.find(candidate => candidate.id === id);
+  assert.ok(testCase, `${id} is present in the statutory coverage corpus`);
+  const result = await replayStatutoryCoverageCase(testCase);
+  assert.equal(result.pipelineStatus, 'VERIFIED', `${id} renders a source-backed class-exemption answer`);
+  assert.ok(result.citations.some(citation => citation.url === 'https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing'),
+    `${id} cites the MAS fund-management licensing page`);
+  assert.match(result.response, expectedAnswer, `${id} rendered answer addresses the requested exemption question`);
 }
 
 console.log(`Statutory coverage replay regression passed: ${representatives.length} production-pipeline family cases across ${new Set(representatives.map(row => row.authority)).size} authorities.`);

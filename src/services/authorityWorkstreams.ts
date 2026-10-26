@@ -45,6 +45,10 @@ import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisoryS
 import { supportMasCmsDefinition, supportMasCmsRule } from '../retrieval/masCmsRuleSupport';
 import { isCpfMasPracticalRuleComponentQuote } from '../retrieval/cpfMasPracticalRules';
 import { supportIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
+import { isIrasCpfQualitativeRateFactorRequest, selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
+import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
+import { hasIrasCpfExpansionContradiction, selectIrasCpfExpansionQuotes, supportIrasCpfExpansionRule } from '../retrieval/irasCpfExpansionRules';
+import { hasMomAcraMasExpansionContradiction, selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
 import {
   supportMomSalaryPaymentConcept,
   supportMomSalaryPaymentIssue
@@ -65,7 +69,9 @@ import {
   completeIrasGstMotorCarConnectedPersonExceptionQuote,
   findRecordEligibilityRejection,
   verifyEvidenceClaims,
-  type VerifiedEvidenceClaim
+  type BoundedCoverageRequest,
+  type VerifiedEvidenceClaim,
+  type VerifyEvidenceClaimsOptions
 } from '../verification/claimEvidenceVerifier';
 import {
   buildGroundedReasoningContext,
@@ -1510,6 +1516,54 @@ function practicalRuleIssueTextSupport(
   topic: SingaporeCoverageTopic,
   concept?: RequestedQuestionConcept
 ): boolean | undefined {
+  const coverageRequest = {
+    authority: topic.authorities[0] || '', topicId: topic.id,
+    query, subject: issue.subject, sourceText: text
+  };
+  if (hasIrasCpfExpansionContradiction(coverageRequest) || hasMomAcraMasExpansionContradiction(coverageRequest)) return false;
+  const expansionSupport = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest);
+  // Incomplete evidence may still establish an older, narrower rule. Only a
+  // complete expansion proof supplements scope support; contradiction vetoes it.
+  const coverageSupport = (expansionSupport === true ? true : undefined) ?? supportIrasCpfCoverageRule(coverageRequest) ??
+    supportMomAcraMasCoverageRule(coverageRequest);
+  if (coverageSupport !== undefined) {
+    const topicAuthority = topic.authorities[0] as SemanticAuthority | undefined;
+    const expectedDomain: Readonly<Record<string, string>> = {
+      IRAS: topic.domainId === 'IRAS_CORPORATE_TAX' ? 'IRAS_INCOME_TAX' : 'IRAS_GST', CPF: 'CPF_PAYROLL', MOM: 'MOM_EMPLOYMENT',
+      ACRA: 'ACRA_CORPORATE', MAS: 'MAS_FUNDS'
+    };
+    const expectedPopulation = topicAuthority === 'CPF' ? 'EMPLOYER'
+      : topicAuthority === 'IRAS' || topicAuthority === 'ACRA' || topicAuthority === 'MAS' ? 'COMPANY'
+        : undefined;
+    const allowedOperations = topicAuthority === 'ACRA' || topicAuthority === 'MAS'
+      ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT']
+      : ['EXPLAIN_RULE', 'FILING_REQUIREMENT'];
+    const populationMatches = topicAuthority === 'MOM'
+      ? ['EMPLOYEE', 'EMPLOYER'].includes(issue.population)
+      : issue.population === expectedPopulation;
+    const scopeMatches = issue.status === 'MAPPED' && topicAuthority &&
+      issue.domain === expectedDomain[topicAuthority] && issue.governingAuthorities.length === 1 &&
+      issue.governingAuthorities[0] === topicAuthority && issue.mappedTopicIds.includes(topic.id) &&
+      allowedOperations.includes(issue.operation) &&
+      populationMatches;
+    if (!scopeMatches || coverageSupport !== true) return false;
+    // This receives only concepts already uniquely assigned to this issue by requestedConceptsForIssue.
+    if (concept && (concept.role === 'CONTEXT_ONLY' ||
+        !concept.topicIds.includes(topic.id) && concept.topicIds.length > 0 ||
+        concept.semanticDomain !== undefined && concept.semanticDomain !== issue.domain ||
+        concept.semanticPopulation !== undefined && concept.semanticPopulation !== issue.population ||
+        concept.semanticAuthorities !== undefined &&
+          (concept.semanticAuthorities.length !== 1 || concept.semanticAuthorities[0] !== topicAuthority))) return false;
+    if (concept) {
+      const conceptRequest = { ...coverageRequest, subject: [concept.label, ...concept.terms].join(' ') };
+      const conceptSupport = supportIrasCpfExpansionRule(conceptRequest) ??
+        supportMomAcraMasExpansionRule(conceptRequest) ?? supportIrasCpfCoverageRule(conceptRequest) ??
+        supportMomAcraMasCoverageRule(conceptRequest);
+      if (conceptSupport !== true) return false;
+    }
+    return true;
+  }
+
   const authority = practicalRuleAuthorityForTopic(topic);
   if (!authority) return undefined;
   const issueSubjectProof = supportIrasAcraPracticalRuleSource(query, authority, topic.id, issue.subject, text);
@@ -1626,9 +1680,12 @@ function requiresUnverifiedCpfRateSchedule(
   const subjectRequestsRates = /\brates?\b|\bpercentages?\b/i.test(issue.subject);
   const requestedByScopedText = subjectRequestsRates ||
     query.split(/[.!?;\n]+/).some(clause => hasTightlyBoundCpfRateAsk(clause));
+  const qualitativeRateFactorQuestion = issue.operation === 'EXPLAIN_RULE' &&
+    /\b(?:factor|depend|determin|vary|information|why)\b/i.test(query) &&
+    !/\b(?:what\s+(?:are|is)\s+(?:the\s+)?(?:current\s+)?rates?|what\s+(?:rate|percentage)|how much|calculate|compute|estimate|rate table|rate schedule)\b|\b\d+(?:\.\d+)?\s*%?|\$\s*\d/i.test(query);
   return authority === 'CPF' && issue.domain === 'CPF_PAYROLL' && issue.governingAuthorities.length === 1 &&
     issue.governingAuthorities[0] === 'CPF' && topics.some(topic => topic.id === 'cpf_contribution_rates') &&
-    requestedByScopedText;
+    requestedByScopedText && !qualitativeRateFactorQuestion;
 }
 
 function topicBoundToRecord(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic): boolean {
@@ -1905,8 +1962,23 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
       }
     }
     if (scope.issue && scope.topics && scope.concepts && scope.originalQuery) {
-      if (scope.issue.population === 'INDIVIDUAL' && scope.issue.domain === 'IRAS_INCOME_TAX' &&
-          scope.issue.governingAuthorities.includes('IRAS')) {
+      const issue = scope.issue;
+      for (const topic of scope.topics) {
+        const topicAuthority = issue.governingAuthorities.find(authority =>
+          topic.authorities.includes(authority as StatutoryAuthority)
+        );
+        if (!topicAuthority || !topicBoundToRecord(record, topic) ||
+            !recordMatchesGovernorAndDomain(record, topicAuthority, topic)) continue;
+        const request = {
+          authority: topicAuthority, topicId: topic.id,
+          query: scope.originalQuery, subject: issue.subject, sourceText: record.sourceText,
+          officialUrl: record.officialSourceUrl || record.canonicalSourceUrl
+        };
+        quoteCandidates.push(...selectIrasCpfCoverageQuotes(request));
+        quoteCandidates.push(...selectMomAcraMasCoverageQuotes(request));
+      }
+      if (issue.population === 'INDIVIDUAL' && issue.domain === 'IRAS_INCOME_TAX' &&
+          issue.governingAuthorities.includes('IRAS')) {
         const cpfTopic = scope.topics.find(topic => topic.id === INDIVIDUAL_CPF_CASH_TOP_UP_TOPIC_ID &&
           topic.domainId === 'IRAS_INDIVIDUAL_TAX');
         const requestedCpfConcepts = scope.concepts.some(concept =>
@@ -1921,8 +1993,8 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
       const requestedMotorCarException = scope.concepts.some(concept => concept.id === 'gst_motor_car_input_tax_exceptions');
       const motorCarTopic = scope.topics.find(topic =>
         ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topic.id) && topic.domainId === 'IRAS_GST');
-      if (scope.issue.governingAuthorities.includes('IRAS') && scope.issue.domain === 'IRAS_GST' &&
-          scope.issue.population === 'COMPANY' && requestedMotorCarException && motorCarTopic &&
+      if (issue.governingAuthorities.includes('IRAS') && issue.domain === 'IRAS_GST' &&
+          issue.population === 'COMPANY' && requestedMotorCarException && motorCarTopic &&
           record.authority === 'IRAS' && record.domain === 'IRAS_GST' && topicBoundToRecord(record, motorCarTopic)) {
         const connectedPersonQuote = completeIrasGstMotorCarConnectedPersonExceptionQuote(record.sourceText);
         const thirdPartyQuote = completeGstMotorCarThirdPartyQuote(record.sourceText);
@@ -1935,6 +2007,73 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
     });
   }
   return claims;
+}
+
+function practicalCoverageRuleClaimsForRecords(
+  records: AuthoritativeSourceRecord[],
+  scope: RuleClaimSelectionScope
+): Array<{
+  claim: { kind: 'RULE'; text: string; quote: string; recordId: string };
+  request: BoundedCoverageRequest;
+}> {
+  if (!scope.issue || !scope.topics || !scope.originalQuery) return [];
+  const claims: Array<{
+    claim: { kind: 'RULE'; text: string; quote: string; recordId: string };
+    request: BoundedCoverageRequest;
+  }> = [];
+  for (const record of records) {
+    for (const topic of scope.topics) {
+      if (!topicBoundToRecord(record, topic)) continue;
+      const topicAuthority = scope.issue.governingAuthorities.find(authority =>
+        topic.authorities.includes(authority as StatutoryAuthority)
+      );
+      const statutoryAuthority = topicAuthority ? retrievalAuthority(topicAuthority) : undefined;
+      if (!topicAuthority || !statutoryAuthority || !recordMatchesGovernorAndDomain(record, topicAuthority, topic)) continue;
+      const request = {
+        authority: statutoryAuthority, topicId: topic.id,
+        query: scope.originalQuery, subject: scope.issue.subject, sourceText: record.sourceText,
+        officialUrl: record.officialSourceUrl || record.canonicalSourceUrl
+      };
+      const quotes = [
+        ...selectIrasCpfExpansionQuotes(request),
+        ...selectMomAcraMasExpansionQuotes(request),
+        ...selectIrasCpfCoverageQuotes(request),
+        ...selectMomAcraMasCoverageQuotes(request)
+      ];
+      for (const quote of new Set(quotes)) claims.push({
+        claim: { kind: 'RULE', text: quote, quote, recordId: record.id },
+        request: { authority: statutoryAuthority, topicId: request.topicId,
+          query: request.query, subject: request.subject }
+      });
+    }
+  }
+  return claims;
+}
+
+/** Complete component evidence may only be assembled within one fetched record. */
+function completeExpansionClaimText(
+  claim: VerifiedEvidenceClaim,
+  claims: VerifiedEvidenceClaim[],
+  record: AuthoritativeSourceRecord,
+  topic: SingaporeCoverageTopic,
+  query: string,
+  subject: string
+): string | undefined {
+  if (!topicBoundToRecord(record, topic)) return undefined;
+  const request = { authority: topic.authorities[0] || '', topicId: topic.id,
+    query, subject, sourceText: record.sourceText,
+    officialUrl: record.officialSourceUrl || record.canonicalSourceUrl };
+  const proof = supportIrasCpfExpansionRule(request) ?? supportMomAcraMasExpansionRule(request);
+  if (proof !== true) return undefined;
+  const selected = [...selectIrasCpfExpansionQuotes(request), ...selectMomAcraMasExpansionQuotes(request)];
+  const normalizedQuote = (text: string): string => text.replace(/\s+/g, ' ').trim();
+  const sameRecordQuotes = new Set(claims.filter(item => item.recordId === record.id && item.supportKind === 'EXACT_SOURCE_QUOTE')
+    .map(item => normalizedQuote(item.quote)));
+  if (selected.length === 0 || !selected.some(text => normalizedQuote(text) === normalizedQuote(claim.quote)) ||
+      !selected.every(text => sameRecordQuotes.has(normalizedQuote(text)))) return undefined;
+  const joined = selected.join('\n\n');
+  return (supportIrasCpfExpansionRule({ ...request, sourceText: joined }) ??
+    supportMomAcraMasExpansionRule({ ...request, sourceText: joined })) === true ? joined : undefined;
 }
 
 function isCpfCashTopUpLimitComponentQuote(record: AuthoritativeSourceRecord, quote: string): boolean {
@@ -2026,6 +2165,8 @@ function issueClaimCoverage(
   for (const topic of topics) {
     const topicClaim = claims.some(claim => {
       const record = recordById.get(claim.recordId);
+      const expansionText = record && completeExpansionClaimText(claim, claims, record, topic, originalQuery, issue.subject);
+      if (expansionText) return practicalRuleIssueTextSupport(expansionText, originalQuery, issue, topic) === true;
       const tableOwnsDeadlineIssue = requireAcraDeadlineTable && topic.id === 'acra_annual-returns' &&
         supportsAcraAnnualReturnDeadlineTable(claim.quote);
       const momCanonicalAliasClaim = Boolean(record && supportsMomPartIvCanonicalAliasClaim(
@@ -2035,7 +2176,9 @@ function issueClaimCoverage(
       const practicalRuleSupport = record && topicBoundToRecord(record, topic)
         ? practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic)
         : undefined;
-      const supportsTopic = momSalarySupport !== undefined
+      const supportsTopic = practicalRuleSupport !== undefined
+        ? practicalRuleSupport
+        : momSalarySupport !== undefined
         ? momSalarySupport
         : acraAnnualReturnDutyScope
         ? isExactAcraAnnualReturnDutyParagraph(record?.sourceText || '', claim.quote)
@@ -2057,6 +2200,8 @@ function issueClaimCoverage(
       if (record) {
         for (const topic of topics) {
           if (!topicBoundToRecord(record, topic)) continue;
+          const expansionText = completeExpansionClaimText(claim, claims, record, topic, originalQuery, issue.subject);
+          if (expansionText) return practicalRuleIssueTextSupport(expansionText, originalQuery, issue, topic, concept) === true;
           const practicalRuleConceptSupport = practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic, concept);
           if (practicalRuleConceptSupport !== undefined) return practicalRuleConceptSupport;
         }
@@ -2384,17 +2529,32 @@ async function evaluateIssue(
   if (admitted.length === 0 && uniqueCandidates.length > 0) gaps.push(makeGap(issue, plan.authority, plan.domain, 'admitted', 'NO_ADMITTED_EVIDENCE',
     'No candidate passed the evidence admission checks for this issue.'));
 
-  const suggestedClaims = providerResult.claims?.map(claim => ({
+  const providerClaims = (providerResult.claims || []).map(claim => ({
     kind: 'RULE', text: claim.text, quote: claim.quote, recordId: claim.recordId,
     ...(claim.canonicalUrl ? { citationUrl: claim.canonicalUrl } : {})
-  })) || ruleClaimsForRecords(admitted, {
+  }));
+  const claimScope: RuleClaimSelectionScope = {
     includeAcraDutySentence: acraAnnualReturnDutyScope,
     issue,
     topics: evidenceTopics,
     concepts,
     originalQuery: query
-  });
-  const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
+  };
+  const sourceRuleClaims = providerResult.claims === undefined
+    ? ruleClaimsForRecords(admitted, claimScope) : [];
+  const selectedPracticalRuleClaims = practicalCoverageRuleClaimsForRecords(admitted, claimScope);
+  const qualitativeCpfRateFactorRequest = {
+    authority: 'CPF', topicId: evidenceTopics.find(topic =>
+      ['cpf_contribution_rates', 'cpf-pr-contribution-rates'].includes(topic.id))?.id || 'cpf_contribution_rates',
+    query, subject: issue.subject, sourceText: ''
+  };
+  const qualitativeCpfRateFactorScope = plan.authority === 'CPF' && issue.domain === 'CPF_PAYROLL' &&
+    issue.operation === 'EXPLAIN_RULE' && isIrasCpfQualitativeRateFactorRequest(qualitativeCpfRateFactorRequest);
+  const suggestedClaims = [...providerClaims, ...sourceRuleClaims, ...selectedPracticalRuleClaims.map(item => item.claim)]
+    .filter((claim, index, all) => all.findIndex(candidate =>
+      candidate.recordId === claim.recordId && candidate.quote === claim.quote
+    ) === index);
+  const verificationOptions: VerifyEvidenceClaimsOptions = {
     missingFacts: [], targetDate, referenceDate,
     expectedAuthority: plan.authority === 'MAS' ? 'MAS' :
       plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA' : undefined,
@@ -2402,13 +2562,32 @@ async function evaluateIssue(
       plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_CORP' : undefined,
     ...(plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {}),
     versioningManager: versioningManagerFor(retriever)
-  });
+  };
+  const verification = verifyEvidenceClaims(suggestedClaims, admitted, verificationOptions);
+  const boundedCoverageAccepted = selectedPracticalRuleClaims.flatMap(({ claim, request: boundedCoverageRequest }) =>
+    verifyEvidenceClaims([claim], admitted, { ...verificationOptions, boundedCoverageRequest }).accepted
+  );
+  // Keep selected rule components in source-rule order before incidental
+  // generic excerpts so complete list premises remain together in presentation.
+  const allAcceptedClaims = [...boundedCoverageAccepted, ...verification.accepted]
+    .filter((claim, index, all) => all.findIndex(candidate =>
+      candidate.recordId === claim.recordId && candidate.quote === claim.quote
+    ) === index);
   const acceptedClaims = plan.authority === 'IRAS'
-    ? bindAcceptedIrasQuotesToSiblingPageRecords(verification.accepted, admitted, targetDate)
-    : verification.accepted;
+    ? bindAcceptedIrasQuotesToSiblingPageRecords(allAcceptedClaims, admitted, targetDate)
+    : allAcceptedClaims;
   const verifiedClaims = cpfRateScheduleUnverified ? [] : acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
+    for (const topic of evidenceTopics) {
+      const expansionText = completeExpansionClaimText(claim, acceptedClaims, record, topic, query, issue.subject);
+      if (expansionText) return practicalRuleIssueTextSupport(expansionText, query, issue, topic) === true;
+    }
+    if (qualitativeCpfRateFactorScope) {
+      const request = { ...qualitativeCpfRateFactorRequest, sourceText: record.sourceText };
+      const completeNarrativeSpan = selectIrasCpfCoverageQuotes(request);
+      if (!completeNarrativeSpan.includes(claim.quote)) return false;
+    }
     if (plan.authority === 'MAS' && issue.domain === 'MAS_FUNDS' && issue.status === 'MAPPED' &&
         issue.operation === 'EXPLAIN_RULE' && issue.governingAuthorities.length === 1 &&
         issue.governingAuthorities[0] === 'MAS' && evidenceTopics.some(topic =>
@@ -2423,6 +2602,11 @@ async function evaluateIssue(
       supportsAcraAnnualReturnDeadlineTable(claim.quote) && evidenceTopics.some(topic =>
         topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic));
     if (tableOwnsDeadlineIssue) return true;
+    const practicalRuleSupport = evidenceTopics
+      .filter(topic => topicBoundToRecord(record, topic))
+      .map(topic => practicalRuleIssueTextSupport(claim.quote, query, issue, topic))
+      .find(support => support !== undefined);
+    if (practicalRuleSupport !== undefined) return practicalRuleSupport;
     const momSalarySupport = momSalaryPaymentIssueSupport(claim.quote, issue, plan.authority, query);
     if (momSalarySupport !== undefined) return momSalarySupport;
     const supportsTopic = evidenceTopics.some(topic => {

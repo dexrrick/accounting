@@ -1,0 +1,16 @@
+Source: Monetary Authority of Singapore, Compliance Toolkit for Venture Capital Fund Managers
+URL: https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf
+Retrieved: 26 October 2026 via official-PDF reading; toolkit last revised 29 May 2026
+Excerpt content SHA-256 (text after Use line): 2d5ab3af37e27eeed482330ba509980123e1ef996dcbffee5e4dea20ab8fa429
+Use: offline regression input only; not used as a live authority source
+
+To submit an annual declaration on changes to key appointments, Assets Under Management, investor types and numbers, fund types, and deals.
+Form 25A – Annual Declaration by a Venture Capital Fund Manager.
+Within 1 month after financial year end.
+Regulation 14(6) of the LCBR.
+
+To submit an annual declaration that there was no misconduct report for the preceding year.
+This applies to VCFMs that have not submitted any Misconduct Report in the preceding calendar year.
+Declaration of Nil Return of Misconduct of Representatives.
+Within 14 days after calendar year end.
+Paragraph 9 of the Notice on Reporting of Misconduct of Representatives by Holders of CMS Licence and Exempt Financial Institutions.

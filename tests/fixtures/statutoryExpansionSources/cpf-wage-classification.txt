@@ -1,0 +1,41 @@
+What are wages
+
+Under the CPF Act, wages are defined as remuneration in money, including any bonus that is due or granted to a person in respect of his employment.
+
+Only payments that are considered wages should be included when declaring wage information and computing CPF contributions.
+
+Payments to include as wages
+
+Basic wage: Salary payable to an employee for work done.
+Overtime pay: Payment to an employee for working beyond normal working hours.
+Bonus: Payment such as performance bonus.
+Allowance: For example, meal allowance and transport allowance.
+Commission: For example, sales commission.
+Cash incentive: For example, productivity incentive.
+
+Payments not to include as wages
+
+Termination benefit: Compensation that is not given for services or work done by the employee. For example, retrenchment benefit.
+Reimbursement: Reimbursement incurred on behalf of the employer for official purposes. The reimbursement amount must not exceed the expenditure incurred. For example, purchase of office stationery.
+Benefit in kind: Non-cash benefit or gift given to the employee. For example, a commemorative watch.
+
+Classifying wages as Ordinary Wages or Additional Wages
+
+After determining that a payment is wages, classify it correctly as Ordinary Wages or Additional Wages. The wage type affects how CPF contributions are computed and how the wage information should be declared.
+
+Total Wages is the sum of Ordinary Wages and Additional Wages. CPF contributions are computed on the Total Wages payable to an employee in a calendar month, subject to the applicable Ordinary and Additional Wage ceilings.
+
+For wages to be classified as Ordinary Wages for the month, they must meet both of the following conditions:
+
+* They are given to an employee for their employment in that month; and
+* They are payable by the 14th of the following month.
+
+For example, monthly salary.
+
+Wages which are not classified as Ordinary Wages will be Additional Wages for the month.
+
+For example, annual performance bonus.
+
+The Additional Wage ceiling sets the maximum amount of AW that attracts CPF contributions in a calendar year for all employees. It is applied on a per employee, per employer, per calendar year basis.
+
+Additional Wage ceiling calculator

@@ -1,0 +1,55 @@
+{
+  "snapshotDate": "2026-10-26",
+  "purpose": "Offline tests for source-backed statutory rule expansion. Local excerpts are not production authority inputs.",
+  "sources": [
+    {
+      "authority": "MOM",
+      "documentTitle": "Allowable salary deductions",
+      "officialUrl": "https://www.mom.gov.sg/employment-practices/salary/salary-deductions",
+      "retrievedBy": "Official page reading",
+      "retrievedDate": "2026-10-26",
+      "pageLastUpdated": "2024-12-16",
+      "fixture": "mom-salary-deductions.txt",
+      "fixtureContentSha256": "3d1fbe1cbdbd19ab9d6de1f82c640bbbf58053b797e26306bbec4f38a392d30b",
+      "nativeResponseFixture": "mom-salary-deductions-native.html",
+      "nativeResponseContentType": "text/html",
+      "nativeResponseByteLength": 62360,
+      "nativeResponseSha256": "9c70f7305f2d41440ea82f194d517f4ee5c235c117dab04fc3a09105355a9aac",
+      "productionUse": false,
+      "notes": "Retained native official HTML body and offline excerpt are regression inputs only. The live rule helper requires current, issue-bound source claims from this exact page."
+    },
+    {
+      "authority": "ACRA",
+      "documentTitle": "Step 4.3: Choosing company directors & other key officers",
+      "officialUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "retrievedBy": "Official page reading",
+      "retrievedDate": "2026-10-26",
+      "pageLastUpdated": "2026-10-23",
+      "fixture": "acra-company-secretary.txt",
+      "fixtureContentSha256": "83ae01bea9fa0d85928a9d80391e5d2e1c4211c73bfc7b3594a1c502ec29be78",
+      "nativeResponseFixture": "acra-company-secretary-native.html",
+      "nativeResponseContentType": "text/html",
+      "nativeResponseByteLength": 547099,
+      "nativeResponseSha256": "53db082b8686ee7cea205d7ce29c5fde6de51e16a7c389acb8241322d0560956",
+      "productionUse": false,
+      "notes": "Retained native official HTML body and offline excerpt are regression inputs only. The ACRA guide is not a full Companies Act eligibility determination."
+    },
+    {
+      "authority": "MAS",
+      "documentTitle": "Compliance Toolkit for Venture Capital Fund Managers",
+      "officialUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf",
+      "toolkitPageUrl": "https://www.mas.gov.sg/regulation/guidance/compliance-toolkits-for-fund-management-companies",
+      "retrievedBy": "Official PDF page reading and verified official PDF fetch with browser User-Agent",
+      "retrievedDate": "2026-10-26",
+      "documentLastRevised": "2026-05-29",
+      "fixture": "mas-vcfm-toolkit.pdf",
+      "contentType": "application/pdf",
+      "byteLength": 407690,
+      "documentSha256": "98e89fb58014311bd5840cd76110b82e4c268189fe0d6d53572100e6a425f440",
+      "excerptFixture": "mas-vcfm-annual-declarations.txt",
+      "excerptContentSha256": "2d5ab3af37e27eeed482330ba509980123e1ef996dcbffee5e4dea20ab8fa429",
+      "productionUse": false,
+      "notes": "Raw application/pdf fixture is the verified official source body. An earlier request without a browser User-Agent returned a maintenance HTML page and was replaced; runtime authority evidence must retain the extracted PDF hash and source locator."
+    }
+  ]
+}

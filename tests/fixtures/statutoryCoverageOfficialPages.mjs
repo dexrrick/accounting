@@ -1,3 +1,5 @@
+import { STATUTORY_VERIFIED_EXCERPTS } from './statutoryCoverageVerifiedExcerpts.mjs';
+
 const researched = '2026-10-25';
 const publishers = Object.freeze({
   IRAS: 'Inland Revenue Authority of Singapore (IRAS)',
@@ -10,11 +12,11 @@ const page = (id, authority, title, sourceUrl, topicIds, prose, fixtureKind = 'P
   id, authority, title, sourceUrl, topicIds: Object.freeze(topicIds), researched,
   authorityPublisher: publishers[authority],
   fixtureHtmlTitle: `${title} | ${publishers[authority]} (offline fixture title)`,
-  fixtureKind,
-  provenanceNote: fixtureKind.startsWith('RETAINED_REGRESSION_EXCERPT')
+  fixtureKind: STATUTORY_VERIFIED_EXCERPTS[id]?.kind || fixtureKind,
+  provenanceNote: STATUTORY_VERIFIED_EXCERPTS[id]?.note || (fixtureKind.startsWith('RETAINED_REGRESSION_EXCERPT')
     ? 'Selected official-source excerpts retained from existing offline regression fixtures, with clearly labelled paraphrased additions where stated; not a full captured page. The HTML title is fixture-generated and includes authority identity metadata.'
-    : 'Purpose-written offline paraphrase of selected official guidance; not a downloaded or complete official page. The HTML title is fixture-generated and includes authority identity metadata.',
-  html: '<!doctype html><html><head><title>' + title + ' | ' + publishers[authority] + ' (offline fixture title)</title></head><body><main><h1>' + title + '</h1><p>' + prose.replace(/\n/g, '<br>') + '</p></main></body></html>'
+    : 'Purpose-written offline paraphrase of selected official guidance; not a downloaded or complete official page. The HTML title is fixture-generated and includes authority identity metadata.'),
+  html: '<!doctype html><html><head><title>' + title + ' | ' + publishers[authority] + ' (offline fixture title)</title></head><body><main><h1>' + title + '</h1>' + (STATUTORY_VERIFIED_EXCERPTS[id]?.html || '<p>' + prose.replace(/\n/g, '<br>') + '</p>') + '</main></body></html>'
 });
 
 export const STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES = Object.freeze([

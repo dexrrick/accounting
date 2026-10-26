@@ -1,4 +1,5 @@
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
+import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
@@ -626,7 +627,10 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   switch (family) {
     case 'FOREIGN_DIVIDEND': return hasForeignDividendReceiptTaxRule(input.sourceText) ||
       hasDefinedForeignIncomeReceiptTaxRule(input.sourceText);
-    case 'GST_INPUT_TAX': return hasGstInputTaxClaimRule(input.sourceText);
+    case 'GST_INPUT_TAX': return hasGstInputTaxClaimRule(input.sourceText) ||
+      input.topicIds.includes('iras-gst-input-tax') && supportIrasCpfExpansionRule({
+        authority: 'IRAS', topicId: 'iras-gst-input-tax', query: input.subject,
+        subject: input.subject, sourceText: input.sourceText }) === true;
     case 'PRIVATE_EXPENSE_DEDUCTIBILITY': return hasPrivateExpenseDeductibilityRule(input.sourceText);
     case 'ROYALTY_WITHHOLDING_TAX': return hasRoyaltyWithholdingRule(input.sourceText, requiresNonResident);
   }

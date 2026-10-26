@@ -26,11 +26,20 @@ const baselineCommit = '9f5f8a3309cf28b5dcf56eb3a78da6c693801208';
 const integrityPaths = Object.freeze({
   corpus: 'tests/evaluation/statutory_coverage_wave_2026-10-25.json',
   fixtureCatalog: 'tests/fixtures/statutoryCoverageOfficialPages.mjs',
+  verifiedFixtureCatalog: 'tests/fixtures/statutoryCoverageVerifiedExcerpts.mjs',
+  irasGstFilingExcerpt: 'tests/fixtures/statutoryCoverageSources/iras-gst-filing.html',
+  cpfDueDateExcerpt: 'tests/fixtures/statutoryCoverageSources/cpf-due-date.txt',
+  cpfRateFactorsExcerpt: 'tests/fixtures/statutoryCoverageSources/cpf-rate-factors.txt',
+  momFinalSalaryExcerpt: 'tests/fixtures/statutoryCoverageSources/mom-final-salary.html',
+  acraAuditExemptionExcerpt: 'tests/fixtures/statutoryCoverageSources/acra-audit-exemption.txt',
+  masFundManagementExcerpt: 'tests/fixtures/statutoryCoverageSources/mas-fund-management.html',
   replayRunner: 'scripts/replay_statutory_coverage.mjs',
   coverageRegistry: 'src/standards/coverageRegistry.ts',
   queryTopicResolver: 'src/retrieval/queryTopicResolver.ts',
   semanticQuestionUnderstanding: 'src/services/semanticQuestionUnderstanding.ts',
   cpfMasPracticalRules: 'src/retrieval/cpfMasPracticalRules.ts',
+  irasCpfCoverageRules: 'src/retrieval/irasCpfCoverageRules.ts',
+  momAcraMasCoverageRules: 'src/retrieval/momAcraMasCoverageRules.ts',
   momSalaryPaymentRule: 'src/retrieval/momSalaryPaymentRule.ts'
 });
 const localOnlyRetriever = { retrieveSources: async () => [], getSourceById: () => undefined };
@@ -116,6 +125,7 @@ function populationFor(testCase, topic) {
   if (testCase.authority === 'MOM') {
     const question = testCase.question.toLowerCase();
     if (/\b(?:employer|our payroll|our employee|payroll|staff shortage|employer termination)\b/.test(question)) return 'EMPLOYER';
+    if (testCase.family === 'final-salary') return 'EMPLOYEE';
     if (/\b(?:employee|employees|worker|workers|managers|executives)\b/.test(question)) return 'EMPLOYEE';
     return 'UNKNOWN';
   }
@@ -545,9 +555,9 @@ export async function runStatutoryCoverageOfflineReplay(corpus) {
     routedByAuthority: Object.fromEntries(['IRAS', 'CPF', 'MOM', 'ACRA', 'MAS'].map(authority => [authority,
       { total: output.filter(row => row.authority === authority).length,
         routedOnOriginalQuestion: output.filter(row => row.authority === authority &&
-          row.resolverTopicIds.includes(row.expectedTopicId)).length,
+          caseById.get(row.id).requiredTopicIds.every(id => row.resolverTopicIds.includes(id))).length,
         baselineRoutedOnOriginalQuestion: baseline.filter(row => row.authority === authority &&
-          row.resolverTopicIds.includes(row.expectedTopicId)).length }])),
+          caseById.get(row.id).requiredTopicIds.every(id => row.resolverTopicIds.includes(id))).length }])),
     missingFixtureFamilies: [...new Set(output.filter(row => row.fixtureIds?.length === 0)
       .map(row => row.authority + '/' + row.family))].sort(),
     fixturePresentButNotVerifiedFamilies: [...new Set(output.filter(row => row.fixtureIds?.length && row.pipelineStatus !== 'VERIFIED')

@@ -252,6 +252,9 @@ const report = await runStatutoryCoverageBenchmark();
 assert.equal(QueryTopicResolver.CANONICAL_TOPICS, originalTopics, 'The baseline resolver catalog is restored after the benchmark.');
 assert.equal(report.liveAcceptance, 'NOT_RUN');
 assert.equal(report.routing.baseline.total, 100);
+assert.equal(report.routing.baseline.routed, 57,
+  'A compound OW/AW question requires both topics: the baseline routes 57 complete questions, not 58 primary topics.');
+assert.equal(report.routing.baseline.byAuthority.CPF.routed, 8);
 assert.equal(report.routing.current.total, 100);
 assert.equal(report.routing.current.byAuthority.MAS.total, 20);
 assert.equal(report.answerOutcomes.NOT_RUN, 100, 'Missing real answers remain NOT_RUN rather than inheriting routing success.');

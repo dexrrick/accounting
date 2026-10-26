@@ -1,0 +1,1575 @@
+{
+  "reviewer": {
+    "kind": "INDEPENDENT_AGENT",
+    "identity": "/root/coverage_reviewer"
+  },
+  "status": "COMPLETE",
+  "reviewedAtUTC": "2026-10-26T11:46:09.197Z",
+  "scope": "Read-only independent review of code, official sources and all100 actual rendered answers in an offline development replay. Supplied semantic interpretations are manual fixtures; no live model/browser/production acceptance.",
+  "workspace": "D:/Accounting/.worktrees/review-corrections-20261025",
+  "branch": "codex/statutory-practical-coverage-20261025",
+  "headCommit": "051f503f26b162038e19a5a0d2cd430e851f02cf",
+  "applicationBaseCommit": "c3783109de0c7a8d1574a9a10cd1f338fee4ff26",
+  "uncommitted": true,
+  "integrity": {
+    "replaySha256": "2cc8713050eb0d7c84d3b4541d94674ab587607f385afbfbb95a0e33220dae6f",
+    "expectedReplaySha256": "2cc8713050eb0d7c84d3b4541d94674ab587607f385afbfbb95a0e33220dae6f",
+    "snapshotFileCount": 35,
+    "snapshotFilesIndependentlyVerified": 35,
+    "snapshotMismatchFiles": [],
+    "allQuestionAndAnswerHashesMatch": true,
+    "all100FinalAnswersIdenticalToCompletedAdjudications": true,
+    "snapshotPath": "D:/Accounting/artifacts/coverage-development-20261026/review-snapshot.json",
+    "packetPath": "D:/Accounting/artifacts/coverage-development-20261026/final-answer-review-packet.json",
+    "snapshotSha256": "175c0869b5802a76a50018e4d2d8576d34317e1490945085d1c71accc4b2d28e",
+    "packetSha256": "504e05289b1d90e949380336c6ea9345fe70b242d18a626c8ffbf29a73a009bc"
+  },
+  "method": "All100 complete rendered responses were independently inspected. Repeated text was read losslessly through full unique lines plus ordered whole-response line composition;79 final question/answer pairs were reused only after exact SHA256 equality with previously adjudicated text.21 changed or previously unreviewed responses were fully read and newly adjudicated. Judgments assess the actual question and qualifications, independently of pipeline statuses/routing/checklists.",
+  "totals": {
+    "reviewed": 100,
+    "correct": 43,
+    "partial": 14,
+    "unsupported": 43
+  },
+  "perAuthority": {
+    "IRAS": {
+      "reviewed": 20,
+      "correct": 8,
+      "partial": 9,
+      "unsupported": 3
+    },
+    "CPF": {
+      "reviewed": 20,
+      "correct": 12,
+      "partial": 2,
+      "unsupported": 6
+    },
+    "MOM": {
+      "reviewed": 20,
+      "correct": 9,
+      "partial": 0,
+      "unsupported": 11
+    },
+    "ACRA": {
+      "reviewed": 20,
+      "correct": 5,
+      "partial": 0,
+      "unsupported": 15
+    },
+    "MAS": {
+      "reviewed": 20,
+      "correct": 9,
+      "partial": 3,
+      "unsupported": 8
+    }
+  },
+  "findings": [
+    {
+      "severity": "P2",
+      "status": "EXISTING_BASELINE_COVERAGE_GAP",
+      "file": "tests/fixtures/statutoryCoverageOfficialPages.mjs",
+      "symbol": "IRAS input-tax fixture and rendered answers",
+      "impact": "All five input-tax answers omit the official reasonable-steps condition relating to Missing Trader Fraud, so they remain partial.",
+      "fixDirection": "In a separate scoped follow-up, include the complete official conditions while preserving source proof.",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+    }
+  ],
+  "repairChecksObserved": [
+    "ACRA company-only and group-only revenue-threshold mutations with the other unchanged threshold now fail closed.",
+    "ACRA actual maintenance-section removal now fails closed.",
+    "Earlier MOM/MAS explicit false-framing controls were repaired.",
+    "The final CPF qualitative factor outputs contain no numeric contribution schedule.",
+    "GST compound extension answer now contains the complete native procedure and penalty/immediate-filing qualification.",
+    "Final exact-native IRAS nil-return and extension-request false-framing: proof=false, selectedQuotes=[]; original positive complete native quote remains accepted.",
+    "Final exact-native MOM tax-clearance not-required reversal and commission does-not-depend reversal: proof=false, selectedQuotes=[]; original positive native quote remains accepted.",
+    "Focused test_iras_cpf_coverage_rules.mjs passed on final freeze.",
+    "Focused test_mom_acra_mas_coverage_rules.mjs passed on final freeze.",
+    "Final ACRA company-only150/group-only150 and company/group negated50 controls independently rejected; original complete source remains accepted."
+  ],
+  "knownCoverageLimits": [
+    "Fourteen answers remain partial and43remain unsupported; safe abstentions, qualifications and overviews are not counted as complete answers.",
+    "Detailed VCFM comparison and Appendix4 admission facts remain partial.",
+    "The general MAS class-exemption when-question still lacks actual exemption conditions.",
+    "2018 leave and2024 CPF history and personal CPF calculation remain unsupported.",
+    "Existing AGM, annual returns, officer particulars, most secretary, overtime, QDC, notification and bonus families contain substantial unresolved coverage."
+  ],
+  "officialSourceVerification": {
+    "newReadOn26October2026": {
+      "url": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/enforcement-and-penalties-for-non-compliance",
+      "pageLastUpdated": "05/08/2026",
+      "independentlyRead": true,
+      "confirmed": "Monthly legal due date, enforcement cutoff and source-specific late-interest minimum of$5.",
+      "capturedExcerpt": "D:/Accounting/artifacts/coverage-development-20261026/cpf-enforcement-official-excerpt.txt"
+    },
+    "previousReads": "Six new source pages and eight adjacent cited source pages independently read during the25October review; source excerpts and applicability limits retained."
+  },
+  "validation": {
+    "performed": [
+      "Repository AGENTS.md read.",
+      "Scoped source/diff/test review.",
+      "All35 frozen hashes and all100 question/answer hashes checked at initial freeze.",
+      "Targeted read-only Node22 source mutation checks; elevated process used due sandbox os.userInfo failure.",
+      "Complete actual-answer adjudication for100cases.",
+      "Final repaired35filehash snapshot independently checked again before report completion; all100case hashes and existing answer adjudications unchanged.",
+      "Both focused source-proof regression suites independently rerun and passed after repair.",
+      "Original P1 exact-native reversals independently rerun and rejected; attached commission control rejected; genuine positive qualifications remain accepted.",
+      "Final post-headcount-repair35filehashes and all100question/answer hashes independently rechecked; no drift and all answers remain byte-identical.",
+      "Independent four-way company/group numeric-boundary and negated-headcount checks passed, followed by another passing focused MOM/ACRA/MAS regression suite."
+    ],
+    "notPerformed": [
+      "No full suite rerun by reviewer; supervisor owns final lint/type/build/smoke/full logs.",
+      "No live model/browser/R2/production verification.",
+      "No source activation, merge, deploy, commit or push."
+    ],
+    "supervisorChecks": {
+      "reported": "Parent reported final headcount-repaired lint/type/build passed; smoke/full reruns were running when reviewer finalized. Reviewer did not rerun the full suite.",
+      "independentlyRerunByReviewer": false
+    }
+  },
+  "heuristicChecklistAssessment": {
+    "separateFromIndependentVerdicts": true,
+    "note": "Neither pipeline VERIFIED, routing nor a heuristic checklist establishes complete answer correctness. The independent answer verdicts retain partial/unsupported cases despite correct routes or evidence labels."
+  },
+  "cases": [
+    {
+      "caseId": "iras-input-tax-01",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "questionSha256": "333890d967927d98b290f8c639e5a678ec6ab848277409d77f95bd667027d916",
+      "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives core GST-registration, business-use, taxable-supply, document and blocked-tax conditions, but omits IRAS's material reasonable-steps condition concerning Missing Trader Fraud; the general claim checklist is incomplete.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-input-tax-02",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "questionSha256": "5533c092b067d0126964fd42eb329d89768bc0e74bbe792821b458b804a03401",
+      "answerSha256": "b2445dfdb3a0c31897438a3b2486b0ee0df6fcecd3fc92ff047b031df719223b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives core GST-registration, business-use, taxable-supply, document and blocked-tax conditions, but omits IRAS's material reasonable-steps condition concerning Missing Trader Fraud; the general claim checklist is incomplete.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-input-tax-03",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "questionSha256": "28311ed64ad42b5287e3a6c2286f9b2c5008eee3f53f061fe07244e505a96a12",
+      "answerSha256": "1ccc2771aedf908d98a6cf17ae89c825f995e66af370d8cdc1a98211d6613f85",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives core GST-registration, business-use, taxable-supply, document and blocked-tax conditions, but omits IRAS's material reasonable-steps condition concerning Missing Trader Fraud; the general claim checklist is incomplete.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-input-tax-04",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "questionSha256": "14387cd6d59d321c874f1350a17e2c316a2a95148218d0f898577c82972a4507",
+      "answerSha256": "9883c8e7601be42faf2da57df4fcb540325a9e709b63985c49a790fbeff03d90",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives core GST-registration, business-use, taxable-supply, document and blocked-tax conditions, but omits IRAS's material reasonable-steps condition concerning Missing Trader Fraud; the general claim checklist is incomplete.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-input-tax-05",
+      "authority": "IRAS",
+      "family": "input-tax",
+      "questionSha256": "b9fb868ef3a9c8e7136f37859ce14c684ae61985a08f8085bcef9ba605562a0e",
+      "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives core GST-registration, business-use, taxable-supply, document and blocked-tax conditions, but omits IRAS's material reasonable-steps condition concerning Missing Trader Fraud; the general claim checklist is incomplete.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-gst-filing-01",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "questionSha256": "e08af5cc5eba0e9cff315a158efbab87461efe49116b139e92f93559ad18df30",
+      "answerSha256": "971fb64a94c1e9204aeac0973c1fa1ecfca8ddf1b04c470130a13b30a6991d0c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the one-month deadline after the quarterly accounting period, nil-return duty, and distinct GIRO collection timetable.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "iras-gst-filing-02",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "questionSha256": "ebefa6ec8af883b2a5432e208eb685c36ed890f5c4ee832b800ca708480fe0b6",
+      "answerSha256": "e3468d2900e725342367300506bf015a37e966f14f20cb8852f156a3bd8852e1",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the F5 return's one-month deadline after the accounting period and distinguishes GIRO deduction.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "iras-gst-filing-03",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "questionSha256": "60e539d64a4ce9fd486f89b135dda3344353e8679bd011885945e866e9bbc872",
+      "answerSha256": "4b83691b97ae9c8b13ae5521b3e9cd3aa8f1637d832f7fdcafbd94b9d608420b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explicitly requires a nil GST return when there was no activity.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "iras-gst-filing-04",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "questionSha256": "eb446d79dd6eefd73534dbabda935a449c52ac05f9184514b8bcf9fe1e136e53",
+      "answerSha256": "7a58f891f897b23f3a219c33d078b494d0fa89104ae6a63fd543ccf2dc770d72",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Answers both parts: normal one-month deadline and restricted extension grounds/procedure, at least five working days, supporting documents, nonautomatic approval, penalties and immediate outstanding F5 filing.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "iras-gst-filing-05",
+      "authority": "IRAS",
+      "family": "gst-filing",
+      "questionSha256": "5b3db6d6304c8be581522cc01fe9252b9fd2d219255b5c81820c20b9ad78796c",
+      "answerSha256": "971fb64a94c1e9204aeac0973c1fa1ecfca8ddf1b04c470130a13b30a6991d0c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the one-month accounting-period deadline and separate GIRO timetable.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "iras-eci-01",
+      "authority": "IRAS",
+      "family": "eci",
+      "questionSha256": "73c623895eb6472bc6a7d46cb0ca86a5f13128f18f1caf48fd3cf42bf835a9d1",
+      "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No three-month ECI filing rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-eci-02",
+      "authority": "IRAS",
+      "family": "eci",
+      "questionSha256": "a97c3d512097e00f2faf78d2c88f123e3dc20d77fc435482fd9a2a91e1da8f4f",
+      "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No deadline after FYE is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-eci-03",
+      "authority": "IRAS",
+      "family": "eci",
+      "questionSha256": "40ab9ad7fe0ebcc164690e13e562944cddb1d6c4fc597a7914932d5ad5880599",
+      "answerSha256": "f1d7ac7837e76f70afa4438e0015f6795aa4bfa27f9a2756a995aef4eb41d6ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Acknowledges an ECI filing waiver but omits its revenue and nil-ECI conditions.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-eci-04",
+      "authority": "IRAS",
+      "family": "eci",
+      "questionSha256": "ab702c7cf687e23c723bdd1bd983400aeb480bd4b2e6e2a0a9a19c534550f6ee",
+      "answerSha256": "af181039ba72e8828dbfc73adc58d3860bc42e5cf11327742dd448a3b6ad87ad",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Gives the filing duty and existence of waivers but does not explain why no accounting profit alone is insufficient or identify waiver facts.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-eci-05",
+      "authority": "IRAS",
+      "family": "eci",
+      "questionSha256": "730afd0cc59dc24ecb75beb9c372d9d810cfda948387bbd923bf3465975bad9a",
+      "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No ECI submission deadline is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-withholding-tax-01",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "questionSha256": "5019dfa4026f009c15f7bce8e29a2e882ca91a1bcc33b737149ee55afbff0571",
+      "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explains conditional liability by payment category, recipient residence, service location and treaty rather than equating overseas payment with WHT.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-withholding-tax-02",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "questionSha256": "0427a855ef3b89e5607e49602837cbd0e1485452478868404f18f100ef993835",
+      "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Provides general non-resident-company service factors but does not distinguish whether the foreign consultant is an individual or company.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-withholding-tax-03",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "questionSha256": "df85338098656ad3be3d1e615f6a1c3a7d39bd8c4680566898a11e7fe729c282",
+      "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Identifies payment type/date, tax residence, Singapore-attributable services and treaty as relevant facts.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-withholding-tax-04",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "questionSha256": "53f54e110cbd434a62c6b70193ed040a21d351dbb8378a09312091d3f21675c9",
+      "answerSha256": "158dc279e0bcbbb7799b816d3d3af04507d0975ccae86cc3677a63c6f678c692",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Says treaties affect analysis but does not explain possible reduced rates/exemptions and treaty entitlement.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "iras-withholding-tax-05",
+      "authority": "IRAS",
+      "family": "withholding-tax",
+      "questionSha256": "1d1ae4d2adede590105b6f697a7b008c02dd1853a07dcc264864ee47461d0dff",
+      "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives finance relevant non-resident-company payment/service-location/residence/treaty checks without inventing liability or rate.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-01",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "questionSha256": "88fcae4719213124d32da13d32def353429d41563b72ef7a17e9a1ec2ce39fd1",
+      "answerSha256": "0b42701f8e1b49f59de260c7020f025821d411ec17949f810c983527bac7a9da",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Defines AW as wages not classified as OW and supplies an annual-bonus example.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-02",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "questionSha256": "8d7471c09f30ee9cc02ccda6a216b893a27733fb77cea2377a2fa38a0d820b8e",
+      "answerSha256": "16312d07d34344a61483e77833bc5897171399fb114633cf8fb053d3b985c0a9",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Only defines AW residually; omits the affirmative OW classification conditions needed to distinguish AW from OW.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-03",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "questionSha256": "74300fdeff2728a6f8da97c38de5461244177ac776f7886d0ee4da7b6fbc17bf",
+      "answerSha256": "073ffada3861dfdce88fafbc40c1f56c56e5e10c5488b46143bf37e4194f39e8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives residual AW definition and an annual-performance-bonus example.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-additional-wages-definition-04",
+      "authority": "CPF",
+      "family": "additional-wages-definition",
+      "questionSha256": "4daf47ce10c3eb6053b0de09dd687780471da6eb197561cca771f1e9c668f478",
+      "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "The quoted annual-performance-bonus example answers AW versus OW.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-due-date-01",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "questionSha256": "acfb9dc27306b1b2d613de014148eab8ea3b477b36fda6e8bece5f0877a99397",
+      "answerSha256": "b56cde8c0b417ff24258556264585338a2cc82e55cbb6d61aa407d374d822922",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Distinguishes month-end legal due date from the following-month enforcement cutoff and next-working-day exception.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-due-date-02",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "questionSha256": "0ed2e5946cf1a6e66aeb8d8cd6669081c5686f23272b99d432f036ea12723e59",
+      "answerSha256": "b56cde8c0b417ff24258556264585338a2cc82e55cbb6d61aa407d374d822922",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the legal remittance date and separate enforcement cutoff with the working-day exception.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-due-date-03",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "questionSha256": "56807e8ab3482004f73a42b5f098596dfa3659e45448aa7b037e0eeb7c2413a5",
+      "answerSha256": "b56cde8c0b417ff24258556264585338a2cc82e55cbb6d61aa407d374d822922",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Provides the general monthly rule but does not identify the relevant wage/contribution month or give September-specific dates; salary payment month alone does not settle all payroll facts.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-due-date-04",
+      "authority": "CPF",
+      "family": "cpf-due-date",
+      "questionSha256": "168ea4d6c3f805dbffb389bacfe87ea0016124d5202034e17e45951b4f3301c7",
+      "answerSha256": "bd6acb6c4744281f5a1ff408746dec0e495cb18ded379b12a2f1a02d91d2d090",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives month-end legal payment timing and distinguishes enforcement timing.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-rate-factors-01",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "questionSha256": "5908bb102663db17b30b986993825ec61b9ac0b09ec50b38d9fb136c8a6cedf2",
+      "answerSha256": "159fdaf6b5b91cc802a422a20c554957bfc278a03711785070f78765ec3a518c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explains citizenship/PR year, age, wage band, applicable contribution period and joint higher-rate PR options without reproducing the numeric contribution schedule.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-rate-factors-02",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "questionSha256": "32db7cac830eeb1e6016a7ff0cc3f4cd4fa2c7833c48d62fc5e57b68d46541e1",
+      "answerSha256": "25267e3f82b0551b57b79c75d36295107e9ecb8e30649b5f68af03b362d35682",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "Safe historical abstention: no 2024-applicable factor/schedule explanation is provided.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-rate-factors-03",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "questionSha256": "a776a5a236592d319bd064b58fc0138dedf4888f430a06062ae2bbd8e87c980c",
+      "answerSha256": "159fdaf6b5b91cc802a422a20c554957bfc278a03711785070f78765ec3a518c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explains that age groups and citizenship/PR years use different contribution-rate categories and identifies wage/period and joint higher-rate PR options.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "cpf-cpf-rate-factors-04",
+      "authority": "CPF",
+      "family": "cpf-rate-factors",
+      "questionSha256": "fd93012a83a02c6d67b1735fbb3196567d4e101ae21889f70b3dcc299527d8ef",
+      "answerSha256": "c67c2d0ffc9224458cac20d05e8a522b4a8a74875c637f0d4f5c1eb1f6212f1e",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No calculation or concrete missing-payroll-facts list is provided; safe insufficiency does not answer the request.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-01",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "questionSha256": "8120ed0392ce6f582a761fd1bea32bf357c98bf74169f5b5ce2e340757d1cd24",
+      "answerSha256": "b5ca3f1635ff03fa8b43161531c347443daf906760f22ab4146542161f4bb4da",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives the annual per-employer/per-employee AW ceiling formula and relevant OW offset.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-02",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "questionSha256": "2ae934d1eebdd27ed15919548ec830e098d885bdc408ab1cedd10bbe3e34d887",
+      "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "States S$102,000 minus OW subject to CPF for the year.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-03",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "questionSha256": "3d6a1c482836afbb2bfbbaf7563a54f32cbe16c8950d8f72e871c1633d5606de",
+      "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explains the deduction of OW that attracted CPF from the annual AW ceiling.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-aw-ceiling-04",
+      "authority": "CPF",
+      "family": "cpf-aw-ceiling",
+      "questionSha256": "d9435c9e20e3dca26b221d30e1e820e527c88f95f28679a179b92e5f7ef3efe6",
+      "answerSha256": "39bb92611472173535368369a4e3d57422c06cccc64d1f52d2d9a1b4eb0476b9",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the general bonus AW ceiling formula without inventing a personal amount.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-bonus-classification-01",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "questionSha256": "6deb91272bfd86d1292b15a592d6c87b65e879654bba3b340ddf4b37cdf8d0fe",
+      "answerSha256": "f4ebc860465388b03c763c2c5d5ac19dbeafded33345172b16a04be9ae7130a3",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No substantive bonus CPF treatment is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-bonus-classification-02",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "questionSha256": "012ade6e6db99440edea1c94dc0af5992a9606727d7096eee9eba46ceba5f001",
+      "answerSha256": "a43bd6b6785bf5ad21eed3e42d95cc5dc2fb8f22275a0080c6bb427acf279c7b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No performance-bonus classification is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-bonus-classification-03",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "questionSha256": "abc3cdcc56aeb1e127b4b5e025c4a45770e15baf55da0a7cee99bef558bf0ce4",
+      "answerSha256": "2ea2cea856ac8703362cdc39fe283195eb284812e9e6d2c2809d5390af5f4b01",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No AWS classification is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "cpf-cpf-bonus-classification-04",
+      "authority": "CPF",
+      "family": "cpf-bonus-classification",
+      "questionSha256": "c667309e6436025a528bd0f8af6a00d3e52ba0bcc9f2003f066c327982b0d8f5",
+      "answerSha256": "d08858d3d8366061a287a7bee26e7049bfe3e7cd357b014c309bddd1d9173163",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No bonus/AW-ceiling relationship is answered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-timing-01",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "questionSha256": "0c538df1bbbc11c06dd051ddfa75f3007199bf39ccc887a3c3abbabc5c729935",
+      "answerSha256": "d7f4e6172a2c82358ba88cd7e705b1ab7398f00b82ec1d2ba55ec7f7a3eb6bc8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No statutory minimum payment frequency is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-timing-02",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "questionSha256": "c2c143b171010d03b7073d64ace14f2419602e444d0129374651514c126578e9",
+      "answerSha256": "360dfd8e4956c36124bb6b57ba5aad5f3045b3c8b1a3fa3889aa598fd6b639a8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No regular salary payment deadline is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-timing-03",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "questionSha256": "fc644e301ddc596c6d0d5a5720ee30a5a8589261748e683e0ea57e89f2cc2782",
+      "answerSha256": "376c341b112b6dcea4dc20bfc6eef582eb9fff21d02fef329f1e6a7e434e0f94",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "The official excerpt explicitly gives overtime payment within 14 days after the salary period.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-timing-04",
+      "authority": "MOM",
+      "family": "salary-timing",
+      "questionSha256": "2d9318588ad2921f7d599d5c87ddca172b6200be55ec805d78f8896e26bf7160",
+      "answerSha256": "02ff126ebfb2c4d185c738c45623739be03a99562d1632fa4fd9477608b0400b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No monthly payroll deadline is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-final-salary-01",
+      "authority": "MOM",
+      "family": "final-salary",
+      "questionSha256": "43ed93ca911f32ba59eddbddde3043998829317e2d19291021eeb9102d88a9c1",
+      "answerSha256": "c122bc1204541aa61dd0f939c1e7d971ae75559a5ca965afbe9afa117c41b1c8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives last-day payment when required notice is served and retains commission/tax-clearance qualifications.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-final-salary-02",
+      "authority": "MOM",
+      "family": "final-salary",
+      "questionSha256": "2a25272a550a8be8b909de6b8c9380b708b0774b0e4ea8e0384d481888517247",
+      "answerSha256": "7b7cd5530b7875a466969d05048474c71c46e90efcf63afbb20e27a3d67da153",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives seven days after the last employment day for resignation without notice, with Employment Act, commission and foreign-employee tax-clearance qualifications.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mom-final-salary-03",
+      "authority": "MOM",
+      "family": "final-salary",
+      "questionSha256": "37c8adbc942dbcc37a13083f052d8e6b3e798b3b07f8776fb05445782b3cebd6",
+      "answerSha256": "9d0da6c9444eca7379082ba7e126f89bfe73511523ba9c3c25976266983f9851",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives payment on the last employment day or, if impossible, within three working days after misconduct dismissal, with qualifications.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mom-final-salary-04",
+      "authority": "MOM",
+      "family": "final-salary",
+      "questionSha256": "cef65fb7cc696c81446b529ad88b33edc7f1c4ccb19bab363a0e7e58a5cd4c4c",
+      "answerSha256": "614b3cfeb7ef4fefe92247625164479486602861bc40cdaecd0533b7db5718ee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives employer-termination last-day payment or, if impossible, three working days, with qualifications.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-annual-leave-01",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "questionSha256": "9f66de4327ac62e396de0cf557252e1562f97c8a20c1fceb6fe7bf755f42b13e",
+      "answerSha256": "6ce04550008cf70acfb8064866f47b8130cb0f1989cd4d43f32a832695fb89f4",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "States Employment Act coverage and three months of service before paid annual leave entitlement.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-annual-leave-02",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "questionSha256": "489cd68246722c17fbe367d0dc3d135f633e5497e39469f6ca3cefcb647b4622",
+      "answerSha256": "5a37399458289a51e3af95d24920912cb65388f87b6e65f7e10a25051c3fcbd5",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives seven days initially, annual increments and fourteen days from eighth year.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-annual-leave-03",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "questionSha256": "8089dc4266cc77d8ed015b31150cf583d9c39bd49d0e0198dce49d35306b0bac",
+      "answerSha256": "f714402d85458f04f56a0e620048ce5a0b423e16ff4a752c31a33c45b89405ad",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explicitly supplies fourteen days from the eighth year for an eligible employee.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-annual-leave-04",
+      "authority": "MOM",
+      "family": "annual-leave",
+      "questionSha256": "47bc4a0983406b7ca6942ea1e11d03f8e22dfddfab2f7d8efb3340f157c7c5e5",
+      "answerSha256": "de38c41e07f06cf4e13cad3a5b5b52a5b38503f1a6d1473107cb3e5723bfdcae",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "A current general excerpt is presented for 2018 without a historical version/applicability basis.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-deductions-01",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "questionSha256": "102aff46cf0f88ae4ba8e3f50ce38ed28dbe4e21b97397fda5c982cbc69a36e0",
+      "answerSha256": "314e4e692076db6da39c0e96ad32103154213621b60b1856ec0ed4e65ad5c97a",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No rule or required factual conditions for staff-shortage deductions is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-deductions-02",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "questionSha256": "af8666c0d2145981c20021de3d9b04686c46675b137897ecfcc42bcf467d749f",
+      "answerSha256": "70c84784f3e4c4575bf145133e5813f2dd7bed9f613113472e0f1caf63d3a3bc",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No permitted deduction grounds are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-deductions-03",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "questionSha256": "d5218bac598d96edc713fc14760a06fc11d46ecf389fe4bb3d8891180fff36fe",
+      "answerSha256": "6e69efb5172c75398920cf404135337f69003190320eb25c591568640e10c634",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No damage deduction conditions/cap are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-salary-deductions-04",
+      "authority": "MOM",
+      "family": "salary-deductions",
+      "questionSha256": "8d6da24de9e9bedfdae011027a10ece5d74228713389d4c566a19c0a313b3957",
+      "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Identifies Employment Act coverage, specified grounds, fault/explanation, individual and total caps, and exceptions.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-overtime-eligibility-01",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "questionSha256": "5a6590db8eb6de8e9b51c53792b78b04cab28ee07d9fdd8638bc14428a1e4b3e",
+      "answerSha256": "912215da2d85a8d69e9c8efe06ab011fce4a90c1842e67d95b59638aa7c825d8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No Part IV population or salary thresholds are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-overtime-eligibility-02",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "questionSha256": "cdc9c6eaff27c02adafbfc81b7db910a135b24354a2b36532069bc8fcfe3c58b",
+      "answerSha256": "21a809d91ca46649a8e769af1b496a16b8aa0b376739516c9b022ab20697cc2f",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No substantive answer on non-universal statutory overtime coverage is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-overtime-eligibility-03",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "questionSha256": "f7bf35bd88582270b93037c06cfef9c8119af48a2d77e26e447125da7f916b15",
+      "answerSha256": "71e3ae440d9a7df6198040fea6be828a71f48b1d55c7612d8ba120290e2d6f3b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No coverage factors or thresholds are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mom-overtime-eligibility-04",
+      "authority": "MOM",
+      "family": "overtime-eligibility",
+      "questionSha256": "3079e8cc50ff90f402852927ebcf2dbadfd8b51a53bfbdda2de6025615850e87",
+      "answerSha256": "5700356b1ee2c1fc86797d6138b7d06d40980a1a0d88fb5b2b39f3d5fab74a8c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No managers/executives exclusion rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-agm-deadlines-01",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "questionSha256": "c5031686db81563b80fb9808e2f3bcded16cc6e9cabd843afdcb0f7d5e53744b",
+      "answerSha256": "0a1b7831151f36ae0eb205a0ca80befe51e703c0ff2816cda11a63e416259945",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No AGM timing rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-agm-deadlines-02",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "questionSha256": "15c1de51d6b393aadd3c471ef2106e92b63d14af9969f98f9344b7500fb2c6ba",
+      "answerSha256": "0a1b7831151f36ae0eb205a0ca80befe51e703c0ff2816cda11a63e416259945",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No listed/non-listed AGM deadlines are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-agm-deadlines-03",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "questionSha256": "78778d9559a402fc245aa1342ab606c27eb8ed98cd244ce40e834c76cd88a05c",
+      "answerSha256": "26faed43fc3adc1d802a229ae8bce45df1187495d3b236109731e1100fc87726",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No substantive AGM scheduling rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-agm-deadlines-04",
+      "authority": "ACRA",
+      "family": "agm-deadlines",
+      "questionSha256": "06f96bcc0da3ea21d2751be006e3e8123102505df376e71bfd7e34898d3c9ed0",
+      "answerSha256": "50d66b154964bdf78f379d471563cc82f58a4f60e1692f7237fe7a2baa1ceaee",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No concrete deadline-input list is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-returns-01",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "questionSha256": "2b4145ea21cdc8bfdd36b2bc9cabbcd5e50432d25919b4049ee16636fe00e1b8",
+      "answerSha256": "39b05316ae032fdc29334794bd39cedde15022c3982eac12af6bc88bb4b49048",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No annual-return filing procedure is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-returns-02",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "questionSha256": "603f9eb5c9c5b948440771265f1caf9b658f1a765a3ac3253805f6d85e1a18b3",
+      "answerSha256": "3fd630d62e2c55e7de59ce446482745672d32acdf57b439ee77a79007b309cf8",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No private-company annual-return deadline is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-returns-03",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "questionSha256": "ced62b28d2b49f8ffc8ed0179018f7d115bfe9abc02b64c45c047ad2d4071593",
+      "answerSha256": "acfea62e95d237893026b35e82643523486cf1eb740320ee4573a8621ca1a7c1",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No dormant-company filing duty is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-returns-04",
+      "authority": "ACRA",
+      "family": "annual-returns",
+      "questionSha256": "27c9fa6bec2ca7d884f43921204aec756b3c922c85d7ce6a08785ecd9e6feffe",
+      "answerSha256": "4b7d518450c546b2f454ef84fe89774f6a25e5b2accb3b5231ea549cf2d64a34",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No listed/non-listed annual-return deadlines are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-audit-exemption-01",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "questionSha256": "51e3f1a4acebff189fa1a0b1f11d4aea71f83f240f2a1b5bb8b304dd81ec88c5",
+      "answerSha256": "5cc3e163e885b8e9245b9447124954f1351383fe1b48f5bc2ac57845007e87d2",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives private status, two of three size criteria over two FYs, new/group rules, continuation and filing qualifications.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-audit-exemption-02",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "questionSha256": "b8bd2f496a5e439a5936751091f73b2150e1b8123ab205adc96fea2aa773a4c8",
+      "answerSha256": "b8e6346113ec2246d33eec95932ab26b2fbc979aadd883b02fc41d0ef2f513e7",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Correctly distinguishes private status and two of three quantitative criteria.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-audit-exemption-03",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "questionSha256": "5e241a9c1ba46175a7d3c48a298584c45b16ed66340a653f3ed4c75515bb24f8",
+      "answerSha256": "898cf99e30e8de71d61572e5955cda1bab8ecbb36f2c3c59868f039a08a1f1a7",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "States two immediate past consecutive FYs and newly-incorporated current-year route.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-audit-exemption-04",
+      "authority": "ACRA",
+      "family": "audit-exemption",
+      "questionSha256": "6ad174c1fcb05610510943d584a0edff196b759ee52d41a2538e2a944cd0dc0d",
+      "answerSha256": "6c070ecb10faa6dacd50a454302e7abddf21a8f0847602288917acfe5ceb9e2b",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives revenue, assets and year-end full-time-employee measures and thresholds.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-return-officer-particulars-01",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "questionSha256": "c1678685c053b2bd907909c47b3c23c3586d0f1f522e685b75b23625307044f7",
+      "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No October 2026 officer-particulars rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-return-officer-particulars-02",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "questionSha256": "c8cf75e0bfecf38d68c8067a256fdd796cd5f6a9af90819ec18624500b826702",
+      "answerSha256": "ca2a2f5468d9c8978f5bbf6755c6c35149c5704381403d5d51cfcb8e5b524760",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No substantive confirmation requirement is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-return-officer-particulars-03",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "questionSha256": "97e11374610ead454ea36e5e1400443791c9ed22cafa603af3496cecb989c2e3",
+      "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No list of covered officers is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-annual-return-officer-particulars-04",
+      "authority": "ACRA",
+      "family": "annual-return-officer-particulars",
+      "questionSha256": "c569c08a2221533a38b25dccaa70b19871393816850793b8438a15f708796efd",
+      "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No officer information checklist is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-secretary-appointment-01",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "questionSha256": "09dd79f56d785d43e07712d82fc84983971c27eea200e03156634ecb324a4d32",
+      "answerSha256": "bd92dc73c871c6c3cdccb8ea8ecc7f5afe2cb43a9bda4e3c6ba1f591f533fe29",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No six-month appointment rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-secretary-appointment-02",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "questionSha256": "463b63754e0cfa5efe1c708754ce5a305722bf798ba03a0406418abe0fa22df1",
+      "answerSha256": "e63582f03d6c02de0bcf5a3454c5ad1ba21a656216f699d8de0e2c55a381a005",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No basic secretary requirements are rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-secretary-appointment-03",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "questionSha256": "2aab937d325b0cac62c4049fe3df308c21af8feadbcc0d2ba54f9e4fc800fd3b",
+      "answerSha256": "ec8c0c32817ec8e8f0b369ad9330885022a124e29db0b4f1e71d1c2a9f413306",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Official excerpt expressly prohibits a sole director also acting as secretary.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "acra-secretary-appointment-04",
+      "authority": "ACRA",
+      "family": "secretary-appointment",
+      "questionSha256": "7801477ae4e17b5e5babf229fc220098bffd241f0b248c69c75a89cff35bcba7",
+      "answerSha256": "bdad90d8477a3b3bf4b5e22d3f05b93aa157e8aee803673944a5c371e40ead8a",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No residence requirement is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-fund-management-licence-01",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "questionSha256": "4a8e7de0bebba1a92dc7d611bb20fd9cb21bbaf2e63fd6771e7ea1f50a974dd6",
+      "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Official excerpt explicitly requires an LFMC conducting regulated fund management to hold a CMS licence.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-fund-management-licence-02",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "questionSha256": "8a108e71878feb28ce984cbcae5cddab4d02e2ee3eb385c672e5d9800519ea16",
+      "answerSha256": "5bc82909a4eb7d1b24f9be70928b15ec3d3e744302f2d795680c1f84277237e1",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives the general regulated-activity trigger and CMS/LFMC application rule without deciding the firm's particular status.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-fund-management-licence-03",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "questionSha256": "d0ebaf08c63d2ec7316314d956227996fbee2ced4c8ff501b1e33c0c5059554a",
+      "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "States the regulated fund-management LFMC/CMS rule.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-fund-management-licence-04",
+      "authority": "MAS",
+      "family": "fund-management-licence",
+      "questionSha256": "4013af1a3663af5eafc2cfe9e5bd4c95b18b4ce6d84e3b1af59ec5777243b422",
+      "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "States the general SFA-regulated fund-management licensing rule.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-vcfm-01",
+      "authority": "MAS",
+      "family": "vcfm",
+      "questionSha256": "02a1253d35e767869c8655631d19f99c34f76723736c113bd2494f70fe59ae63",
+      "answerSha256": "7e04837971fb6e6db8669f31d4930e7bf95cf027043e992a8ad3c35b8c17537d",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Provides the requested general regime overview: sole-VC managers may apply as LFMCs under the simplified VCFM regime; it explicitly reserves detailed Appendix 4 criteria.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-vcfm-02",
+      "authority": "MAS",
+      "family": "vcfm",
+      "questionSha256": "609e5b25b8817aae8783576c74708a838f11869549192bfde090f015a82d66f5",
+      "answerSha256": "ef5427d4b9bf11facde3bf920867e04b52c4820ec77995a253d529f2a9033e4c",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Explains that a manager solely managing VC funds may apply through the simplified route; it does not claim automatic eligibility.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-vcfm-03",
+      "authority": "MAS",
+      "family": "vcfm",
+      "questionSha256": "55a7f88a0269b442af18b41ebc8cb6213ecdc1f6db073872b6f6852876b4300c",
+      "answerSha256": "3a5d9137c1bd27ba615e1230a408b6a92593569165a91c56a04847aea66b0797",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Correctly identifies VCFM as a simplified LFMC route but expressly lacks a substantive side-by-side comparison and detailed Appendix 4 differences.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-vcfm-04",
+      "authority": "MAS",
+      "family": "vcfm",
+      "questionSha256": "f3430262438051db588dfa0991307a6a6d2007b3303aee59fab50f39d699c41d",
+      "answerSha256": "41cd0b0d59b9d04b5a1bfabf71294d8ab6f6733470b43c7bb66b94ee2b5f9134",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Provides general application factors and sole-VC scope but not the detailed fund/investment/admission facts in Appendix 4 needed for actual eligibility.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-class-exemptions-01",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "questionSha256": "b6d8724cd5977daaebd601f6540d03fec0af0d1dcbc498868a5e422330146d5f",
+      "answerSha256": "9e3dbf341c83fa81119ef29f5f56d0c2bed2b5ee1bc1e15731a577decdcbe0ed",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Confirms existing class exemptions and gives conditional examples without asserting automatic eligibility.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-class-exemptions-02",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "questionSha256": "a89f1cd9f094695ba04b571c24f0fe317bae18d804028173ac4f6d818f02f7b4",
+      "answerSha256": "9e3dbf341c83fa81119ef29f5f56d0c2bed2b5ee1bc1e15731a577decdcbe0ed",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "PARTIAL",
+      "reason": "Explains the class-exemption route and possible examples, but does not state the specific exemption conditions needed to determine when a manager may operate without a licence.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-class-exemptions-03",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "questionSha256": "1bd979ba1f8ec5c27d3a2e75af231fe49c24ce39bf60c6bfbe71b601f065b4aa",
+      "answerSha256": "9691c0b1d36813052d6a2b322276961f71920a1830589edaafcb6084a0f9ec01",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Directly rejects automatic exemption solely from related-corporation asset management and requires the actual statutory exemption conditions to be checked.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-class-exemptions-04",
+      "authority": "MAS",
+      "family": "class-exemptions",
+      "questionSha256": "3eeaef4050f72dadaf32fae0a6233e54f60d738c0ea9835d4aa3703630a90064",
+      "answerSha256": "9e3dbf341c83fa81119ef29f5f56d0c2bed2b5ee1bc1e15731a577decdcbe0ed",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "CORRECT",
+      "reason": "Gives the requested related-corporation/family, immovable-asset and non-capital-markets-product examples, qualified as potentially eligible.",
+      "adjudicationBasis": "FULL_FINAL_RENDERED_ANSWER_READ"
+    },
+    {
+      "caseId": "mas-qdc-reporting-01",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "questionSha256": "0f3d15bc410a7c1993544b44c49f7a5fc38e172b0c8fe5509132486fc333a8dc",
+      "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No QDC return or applicability is identified.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-qdc-reporting-02",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "questionSha256": "726be9ac8526e9ae69dff7f4f98acc63c05f186b6847362791fdb92b91dd3242",
+      "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No reporting due frequency/deadline is provided.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-qdc-reporting-03",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "questionSha256": "993b13c5710227c6f93cff9bec202dc621990c68e743a3cb40b047f737132e23",
+      "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No QDC reporting population is explained.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-qdc-reporting-04",
+      "authority": "MAS",
+      "family": "qdc-reporting",
+      "questionSha256": "f5c8d125df83681f0d8f860902fcd3d3d2fff68df3db936889f417093772afdb",
+      "answerSha256": "1daead0381ff80994222896bcdd86bf9f3cb1822760e817ad13ae5125f172086",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "A general VCFM licensing excerpt does not establish a QDC return requirement.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-regulatory-notifications-01",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "questionSha256": "7b72f97349e22bf5d93bdc5b2463ee12dd0e78fea744887308d35f2b8acc01f9",
+      "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No applicable regulatory return is identified.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-regulatory-notifications-02",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "questionSha256": "3b35dd28183bef6a26384e75a7e0b25927731817acb18df1545523d85e2b7f4a",
+      "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No notification event/deadline rule is rendered.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-regulatory-notifications-03",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "questionSha256": "dcbdea8b915cbafcf67ee03ca1f01f3e36f8561f6c2926e5c48ff64b24e28d7d",
+      "answerSha256": "11c8862aa9351edbd378cb6fe03f8d33704f92ea823f18da447a3329ad1b7379",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No annual LFMC filings are identified.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    },
+    {
+      "caseId": "mas-regulatory-notifications-04",
+      "authority": "MAS",
+      "family": "regulatory-notifications",
+      "questionSha256": "b4831f1ea65cf6b7d7910e5289b37feec0623a0988be24bf36e109734b2b9c55",
+      "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+      "reviewer": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "verdict": "UNSUPPORTED",
+      "reason": "No substantive licence/fund-type reporting-dependency explanation is provided.",
+      "adjudicationBasis": "PREVIOUSLY_READ_IDENTICAL_QUESTION_AND_ANSWER_HASHES"
+    }
+  ],
+  "assessment": {
+    "codeReview": "NO_OPEN_MATERIAL_INTRODUCED_IMPLEMENTATION_FINDINGS",
+    "answerCoverage": "43CORRECT /14PARTIAL /43UNSUPPORTED; complete review does not mean complete corpus answer coverage",
+    "sourceScope": "Offline development/source replay only; numeric calculations, historical applicability and detailed eligibility gaps remain explicit."
+  },
+  "resolvedFindings": [
+    {
+      "severity": "P1",
+      "status": "RESOLVED",
+      "file": "src/retrieval/irasCpfCoverageRules.ts",
+      "symbol": "provesGstFiling / relevantQuoteSpan",
+      "impact": "The source proof accepts explicitly negated nil-return or extension-request premises and can select a quotation which drops the negating prefix while rendering the positive summary.",
+      "reproduction": "On the exact final iras-gst-filing-04 citation quotation, replace Submit your extension request form with It is false that Submit your extension request form. Full proof remains true and selects3092characters. Prefixing You must file a with It is false that also remains true and selects3075characters.",
+      "fixDirection": "Fail closed on direct negation/conflict for every mandatory nil/extension premise, and require full fetched-source proof before quote selection. Add native-quote/source mutation controls.",
+      "resolution": "Final repaired source predicates reject the original exact-native reproduction. Focused regression suite passed, including direct qualification/conflict controls and positive official wording. No final rendered answer changed."
+    },
+    {
+      "severity": "P1",
+      "status": "RESOLVED",
+      "file": "src/retrieval/momAcraMasCoverageRules.ts",
+      "symbol": "momFinalSalaryFacts",
+      "impact": "A source saying the employer is not required to withhold monies for tax clearance still proves the positive summary that the employer must withhold.",
+      "reproduction": "On the exact final mom-final-salary-01 native quote, replace your employer is required to withhold with your employer is not required to withhold. The mutation applies and support=true, selectedQuotes=1.",
+      "fixDirection": "Check polarity and conflicts for commission/tax-clearance and other attached mandatory facts, not only scenario deadlines and explicit false-framing.",
+      "resolution": "Final repaired source predicates reject the original exact-native reproduction. Focused regression suite passed, including direct qualification/conflict controls and positive official wording. No final rendered answer changed."
+    },
+    {
+      "severity": "P1",
+      "status": "RESOLVED",
+      "foundBy": "SUPERVISOR",
+      "independentlyVerifiedBy": {
+        "kind": "INDEPENDENT_AGENT",
+        "identity": "/root/coverage_reviewer"
+      },
+      "file": "src/retrieval/momAcraMasCoverageRules.ts",
+      "symbol": "hasSingleFiftyEmployeeCriterion / acraSmallCompanyFacts",
+      "impact": "The previous unbounded50-employee substring also matched150 employees in company/group criteria.",
+      "resolution": "The final helper parses exactly one affirmative integer50 threshold independently in each bounded company/group section. Reviewer independently confirmed company-only150, group-only150, company negated50 and group negated50 all produce proof=false and no selected quote, while the original source passes. Focused MOM/ACRA/MAS suite passed again."
+    }
+  ]
+}

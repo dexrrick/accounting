@@ -455,6 +455,130 @@ function canonicalAcraAnnualReturnSubjectIfBounded(
   return 'annual return filing deadline';
 }
 
+const GST_FILING_SUBJECT_WORDS = new Set([
+  'gst', 'goods', 'services', 'tax', 'return', 'returns', 'filing', 'file', 'deadline', 'deadlines', 'due', 'date', 'dates',
+  'nil', 'duty', 'duties', 'extension', 'extensions', 'procedure', 'procedures', 'requirement', 'requirements',
+  'accounting', 'period', 'periods', 'when', 'has', 'no', 'activity',
+  'quarter', 'quarterly', 'payment', 'payments', 'company', 'companies', 'registered', 'rule', 'rules', 'and', 'or',
+  'a', 'an', 'the', 'for', 'from', 'on', 'in', 'of', 'to', 'under', 'after', 'each', 'within'
+]);
+
+const MAS_CLASS_EXEMPTION_SUBJECT_WORDS = new Set([
+  'conditional', 'class', 'classes', 'exemption', 'exemptions', 'exempt', 'from', 'fund', 'funds', 'management',
+  'licensing', 'licence', 'licences', 'license', 'licenses', 'manager', 'managers', 'requirement', 'requirements',
+  'rule', 'rules', 'and', 'or', 'a', 'an', 'the', 'for', 'of', 'to', 'under'
+]);
+
+const CPF_DUE_DATE_SUBJECT_WORDS = new Set([
+  'cpf', 'contribution', 'contributions', 'legal', 'due', 'date', 'dates', 'late', 'payment', 'payments', 'enforcement',
+  'cut', 'off', 'cutoff', 'deadline', 'deadlines', 'remit', 'remittance', 'employer', 'employers', 'last', 'day',
+  'calendar', 'month', 'and', 'or', 'a', 'an', 'the', 'for', 'of', 'to', 'by', 'after', 'following'
+]);
+
+function normalizedSubjectWords(subject: string): string[] {
+  return subject.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(/\s+/).filter(Boolean);
+}
+
+function hasOnlyBoundedSubjectWords(subject: string, allowedWords: ReadonlySet<string>): boolean {
+  const words = normalizedSubjectWords(subject);
+  return words.length > 0 && words.every(word => allowedWords.has(word));
+}
+
+function hasBoundedGstFilingSubject(subject: string): boolean {
+  const words = normalizedSubjectWords(subject);
+  return hasOnlyBoundedSubjectWords(subject, GST_FILING_SUBJECT_WORDS) && words.includes('gst') &&
+    words.some(word => word === 'return' || word === 'returns') &&
+    words.some(word => ['filing', 'file', 'deadline', 'deadlines', 'due'].includes(word));
+}
+
+function hasBoundedMasClassExemptionSubject(subject: string): boolean {
+  const words = normalizedSubjectWords(subject);
+  const classExemption = hasOnlyBoundedSubjectWords(subject, MAS_CLASS_EXEMPTION_SUBJECT_WORDS) && words.includes('class') &&
+    words.some(word => word === 'exemption' || word === 'exemptions') && words.includes('fund') &&
+    words.includes('management') && words.some(word => ['licensing', 'licence', 'license'].includes(word));
+  const relatedCorporationExemptionWords = new Set([
+    'whether', 'related', 'corporation', 'fund', 'management', 'is', 'automatically', 'exempt'
+  ]);
+  const relatedCorporationExemption = hasOnlyBoundedSubjectWords(subject, relatedCorporationExemptionWords) &&
+    words.includes('related') && words.includes('corporation') && words.includes('management') &&
+    words.includes('automatically') && words.includes('exempt');
+  return classExemption || relatedCorporationExemption;
+}
+
+function hasBoundedGstFilingTopicBinding(
+  query: string,
+  subject: string,
+  domain: SemanticQuestionDomain,
+  population: SemanticPopulation,
+  operation: SemanticQuestionOperation,
+  governingAuthorities: SemanticAuthority[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>
+): boolean {
+  return domain === 'IRAS_GST' && population === 'COMPANY' &&
+    ['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(operation) &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' &&
+    independentlyRecognizedTopicIds.has('iras-gst-filing-deadlines') &&
+    hasBoundedGstFilingSubject(subject) &&
+    /\b(?:gst|goods and services tax)\b/i.test(query) &&
+    /\b(?:returns?|filing|file)\b/i.test(query) && /\b(?:due|deadline|filing|file|nil|extension)\b/i.test(query);
+}
+
+function hasBoundedMasClassExemptionTopicBinding(
+  query: string,
+  subject: string,
+  domain: SemanticQuestionDomain,
+  population: SemanticPopulation,
+  operation: SemanticQuestionOperation,
+  governingAuthorities: SemanticAuthority[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>
+): boolean {
+  return domain === 'MAS_FUNDS' && population === 'COMPANY' &&
+    ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY'].includes(operation) &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'MAS' &&
+    independentlyRecognizedTopicIds.has('mas-fund-management-exemptions') &&
+    hasBoundedMasClassExemptionSubject(subject) &&
+    (/\bclass\s+exemptions?\b/i.test(query) && /\bfund\s+management\b/i.test(query) &&
+      /\blicen[cs](?:e|ing)\b/i.test(query) ||
+      /\bfund manager\b/i.test(query) && /\bwithout\s+(?:an?\s+)?(?:mas\s+)?licen[cs]e\b/i.test(query) ||
+      /\bclass exempt\b/i.test(query) && /\bfund management activities\b/i.test(query) ||
+      /\bmanag\w*\s+money\b[^.!?]{0,100}\brelated corporation\b[^.!?]{0,100}\bautomatically exempt\b/i.test(query));
+}
+
+function hasSeparateMasLfmcLicensingAsk(query: string): boolean {
+  const askBoundary = /\s+\b(?:and|or|but|also)\s+(?=(?:what|which|who|where|when|why|how|can|could|do|does|did|is|are|will|would|should|must|generally|separately|apply|explain|determine|check)\b)/i;
+  const clauses = query.split(/[.!?;\n]+/).flatMap(sentence => sentence.split(askBoundary)).map(clause => clause.trim());
+  return clauses.some(clause =>
+    /\b(?:lfmc|licensed fund management company|fund manager|fund management)\b/i.test(clause) &&
+    /\b(?:licen[cs](?:e|ing)|apply|requirement|regulated)\b/i.test(clause) &&
+    !/\b(?:exempt(?:ion|ions|ed)?|without\s+(?:an?\s+)?(?:mas\s+)?licen[cs]e|does not require\s+(?:an?\s+)?(?:mas\s+)?licen[cs]e)\b/i.test(clause)
+  );
+}
+
+function hasBoundedCpfDueDateIssue(
+  query: string,
+  subject: string,
+  domain: SemanticQuestionDomain,
+  population: SemanticPopulation,
+  operation: SemanticQuestionOperation,
+  governingAuthorities: SemanticAuthority[],
+  independentlyRecognizedTopicIds: ReadonlySet<string>
+): boolean {
+  const words = normalizedSubjectWords(subject);
+  return domain === 'CPF_PAYROLL' && population === 'EMPLOYER' && operation === 'FILING_REQUIREMENT' &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'CPF' &&
+    independentlyRecognizedTopicIds.has('cpf-contribution-due-dates') &&
+    hasOnlyBoundedSubjectWords(subject, CPF_DUE_DATE_SUBJECT_WORDS) &&
+    words.includes('cpf') && words.some(word => word === 'contribution' || word === 'contributions') &&
+    words.some(word => ['due', 'date', 'dates', 'deadline', 'deadlines', 'payment', 'payments', 'remit', 'remittance'].includes(word)) &&
+    /\b(?:cpf|central provident fund)\b/i.test(query) &&
+    /\b(?:due|deadline|date|payment|pay|remit|remittance)\b/i.test(query);
+}
+
+function hasCpfRateOrAmountOutcome(query: string, subject: string): boolean {
+  return /\b(?:rates?|percentages?|percent|amounts?|how\s+much|calculate|compute|estimate|work\s+out|factor\w*|depend\w*|var(?:y|ies)|age|wage\s+band|wage\s+ceiling|citizenship|residency|rate\s+table|rate\s+schedule)\b/i.test(query + ' ' + subject);
+}
+
 function resolveIssueTopicIds(
   query: string,
   subject: string,
@@ -464,7 +588,7 @@ function resolveIssueTopicIds(
   governingAuthorities: SemanticAuthority[],
   independentlyRecognizedTopicIds: ReadonlySet<string>,
   issueCount: number
-): { mappedTopicIds: string[]; routingChildTopicIds: string[] } {
+): { mappedTopicIds: string[]; routingChildTopicIds: string[]; contextualTopicIds: string[] } {
   const allowedDomains = topicDomainsForIssue(domain, population);
   const subjectForTopicResolution = canonicalAcraAnnualReturnSubjectIfBounded(
     query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds, issueCount
@@ -477,11 +601,38 @@ function resolveIssueTopicIds(
     .map(topic => topic.id)
     .filter(topicId => topicId !== 'acra_annual-returns' || boundedAcraAnnualReturnSubject);
   const subjectTopics = getCoverageTopicsByIds(subjectTopicIds);
+  const bindRecognizedGstFilingTopic = hasBoundedGstFilingTopicBinding(
+    query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds
+  );
+  const bindRecognizedMasClassExemptionTopic = hasBoundedMasClassExemptionTopicBinding(
+    query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds
+  );
+  const bindRecognizedCpfDueDateTopic = hasBoundedCpfDueDateIssue(
+    query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds
+  );
+  const contextualizeCpfRates = bindRecognizedCpfDueDateTopic && !hasCpfRateOrAmountOutcome(query, subject);
+  const contextualizeMasLfmc = bindRecognizedMasClassExemptionTopic && issueCount === 1 &&
+    independentlyRecognizedTopicIds.has('mas-lfmc') && !hasSeparateMasLfmcLicensingAsk(query);
+  const contextualizeMasVcfm = issueCount === 1 && domain === 'MAS_FUNDS' && population === 'COMPANY' &&
+    ['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(operation) &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'MAS' &&
+    independentlyRecognizedTopicIds.has('mas-regulatory-reporting') &&
+    independentlyRecognizedTopicIds.has('mas-vcfm') &&
+    /\b(?:vcfm|venture capital fund manager)\b/i.test(query) &&
+    /\b(?:annual declarations?|form 25a|nil misconduct|nil return)\b/i.test(query) &&
+    /\b(?:annual declarations?|form 25a|nil misconduct|nil return)\b/i.test(subject) &&
+    !/\b(?:licen[cs](?:e|ing)|admission|eligibility|qualif\w*|exemption)\b/i.test(query + ' ' + subject);
   const bindRecognizedGstTopic = domain === 'IRAS_GST' && population === 'COMPANY' && operation === 'EXPLAIN_RULE' &&
     governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' && issueCount === 1 &&
     independentlyRecognizedTopicIds.has('iras-gst-input-tax') && hasBoundedGstInputTaxRecoveryAnchors(query, subject);
-  const topicsForMapping = bindRecognizedGstTopic
-    ? [...new Map([...subjectTopics, ...getCoverageTopicsByIds(['iras-gst-input-tax'])].map(topic => [topic.id, topic])).values()]
+  const boundTopicIds = [
+    ...(bindRecognizedGstFilingTopic ? ['iras-gst-filing-deadlines'] : []),
+    ...(bindRecognizedMasClassExemptionTopic ? ['mas-fund-management-exemptions'] : []),
+    ...(bindRecognizedCpfDueDateTopic ? ['cpf-contribution-due-dates'] : []),
+    ...(bindRecognizedGstTopic ? ['iras-gst-input-tax'] : [])
+  ];
+  const topicsForMapping = boundTopicIds.length
+    ? [...new Map([...subjectTopics, ...getCoverageTopicsByIds(boundTopicIds)].map(topic => [topic.id, topic])).values()]
     : subjectTopics;
   const routingChildTopicIds = [...new Set([
     ...topicsForMapping.filter(topic => getRoutingParentIdsForChild(topic.id).length > 0).map(topic => topic.id),
@@ -489,13 +640,22 @@ function resolveIssueTopicIds(
   ])].sort();
   const eligibleTopics = topicsForMapping.filter(topic =>
     allowedDomains.includes(topic.domainId) &&
-    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain));
+    semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain) &&
+    !(topic.id === 'iras-gst-filing-deadlines' && hasBoundedGstFilingSubject(subject) && !bindRecognizedGstFilingTopic) &&
+    !(topic.id === 'mas-fund-management-exemptions' && hasBoundedMasClassExemptionSubject(subject) && !bindRecognizedMasClassExemptionTopic) &&
+    !(bindRecognizedCpfDueDateTopic && topic.id === 'cpf_contribution_rates') &&
+    !(contextualizeMasVcfm && topic.id === 'mas-vcfm'));
   const childParents = new Set(routingChildTopicIds.flatMap(getRoutingParentIdsForChild));
   return {
     mappedTopicIds: eligibleTopics
       .filter(topic => independentlyRecognizedTopicIds.has(topic.id) && !childParents.has(topic.id))
       .map(topic => topic.id).sort(),
-    routingChildTopicIds
+    routingChildTopicIds,
+    contextualTopicIds: [
+      ...(contextualizeCpfRates && independentlyRecognizedTopicIds.has('cpf_contribution_rates') ? ['cpf_contribution_rates'] : []),
+      ...(contextualizeMasLfmc ? ['mas-lfmc'] : []),
+      ...(contextualizeMasVcfm ? ['mas-vcfm'] : [])
+    ]
   };
 }
 
@@ -2676,11 +2836,13 @@ function reconcileSemanticIssuePlan(
       const unresolvedReason: ReconciledSemanticQuestionIssue['unresolvedReason'] = mappedTopicIds.length > 0
         ? undefined
         : routedIssue.domain === 'UNKNOWN' ? 'UNKNOWN_DOMAIN' : 'NO_COVERAGE_TOPIC';
-      const contextualTopicIds = !semanticHasCpfGoverningIssue && !separateCpfPayrollOutcomeRequested &&
-        inventoryIds.has('cpf_contribution_rates') &&
-        isMappedIndividualCpfReliefIssue(routedIssue, mappedTopicIds)
-        ? ['cpf_contribution_rates']
-        : [];
+      const contextualTopicIds = [...new Set([
+        ...mapping.contextualTopicIds,
+        ...(!semanticHasCpfGoverningIssue && !separateCpfPayrollOutcomeRequested &&
+          inventoryIds.has('cpf_contribution_rates') &&
+          isMappedIndividualCpfReliefIssue(routedIssue, mappedTopicIds)
+          ? ['cpf_contribution_rates'] : [])
+      ])];
       return {
         ...reconciledIssue,
         id: addId(reconciledIssue),
