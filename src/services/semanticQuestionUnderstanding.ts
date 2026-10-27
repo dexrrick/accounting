@@ -408,7 +408,8 @@ export function canonicalAccountingWorkstreamAuthority(
 
 const ACRA_ANNUAL_RETURN_SUBJECT_WORDS = new Set([
   'a', 'the', 'general', 'ordinary', 'annual', 'return', 'filing', 'deadline', 'due', 'date',
-  'company', 'companies', 'singapore', 'acra', 'rule', 'rules', 'and', 'requirement', 'requirements'
+  'company', 'companies', 'singapore', 'acra', 'rule', 'rules', 'and', 'requirement', 'requirements',
+  'financial', 'year', 'end', 'after', 'months', 'listed', 'non', 'unlisted', 'fye'
 ]);
 
 function isBoundedAcraAnnualReturnSubject(
@@ -593,7 +594,9 @@ function resolveIssueTopicIds(
   const subjectForTopicResolution = canonicalAcraAnnualReturnSubjectIfBounded(
     query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds, issueCount
   );
-  const constrainB3AnnualReturnSubject = isBoundedAcraAnnualReturnMissingFactsQuestion(query);
+  const newAnnualReturnFamily = /\b(?:dormant|inactive|tax waiver|waived.*tax|share capital|branch.register exception)\b/i.test(query + ' ' + subject);
+  const constrainB3AnnualReturnSubject = isBoundedAcraAnnualReturnMissingFactsQuestion(query) ||
+    isAcraAnnualReturnDeadlineQuestion(query) && issueCount === 1 && !newAnnualReturnFamily;
   const boundedAcraAnnualReturnSubject = !constrainB3AnnualReturnSubject ||
     isBoundedAcraAnnualReturnSubject(query, subject, domain, population, operation,
       governingAuthorities, independentlyRecognizedTopicIds, issueCount);
@@ -610,9 +613,21 @@ function resolveIssueTopicIds(
   const bindRecognizedCpfDueDateTopic = hasBoundedCpfDueDateIssue(
     query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds
   );
-  const contextualizeCpfRates = bindRecognizedCpfDueDateTopic && !hasCpfRateOrAmountOutcome(query, subject);
+  const generalCpfFamily = domain === 'CPF_PAYROLL' && population === 'EMPLOYER' && issueCount === 1 &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'CPF' &&
+    ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY'].includes(operation) &&
+    (independentlyRecognizedTopicIds.has('cpf-employee-coverage') || independentlyRecognizedTopicIds.has('cpf-contribution-computation')) &&
+    !/\b(?:what rate|which rate|percentage|rate table|rate schedule|calculate|compute|how much|amount payable)\b/i.test(query);
+  const contextualizeCpfRates = (bindRecognizedCpfDueDateTopic && !hasCpfRateOrAmountOutcome(query, subject)) || generalCpfFamily;
   const contextualizeMasLfmc = bindRecognizedMasClassExemptionTopic && issueCount === 1 &&
     independentlyRecognizedTopicIds.has('mas-lfmc') && !hasSeparateMasLfmcLicensingAsk(query);
+  const reportingRegimeContext = issueCount === 1 && domain === 'MAS_FUNDS' && population === 'COMPANY' &&
+    ['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(operation) &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'MAS' &&
+    independentlyRecognizedTopicIds.has('mas-regulatory-reporting') &&
+    /\b(?:financial returns?|audited filings?|reporting|notification|filing calendar)\b/i.test(subject) &&
+    !hasSeparateMasLfmcLicensingAsk(query) &&
+    !/\b(?:apply|application|obtain|licensing|admission|licence eligibility|license eligibility|exemptions?)\b/i.test(query);
   const contextualizeMasVcfm = issueCount === 1 && domain === 'MAS_FUNDS' && population === 'COMPANY' &&
     ['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(operation) &&
     governingAuthorities.length === 1 && governingAuthorities[0] === 'MAS' &&
@@ -625,11 +640,17 @@ function resolveIssueTopicIds(
   const bindRecognizedGstTopic = domain === 'IRAS_GST' && population === 'COMPANY' && operation === 'EXPLAIN_RULE' &&
     governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' && issueCount === 1 &&
     independentlyRecognizedTopicIds.has('iras-gst-input-tax') && hasBoundedGstInputTaxRecoveryAnchors(query, subject);
+  const bindGstCategoryComparison = domain === 'IRAS_GST' && population === 'COMPANY' && issueCount === 1 &&
+    ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY'].includes(operation) &&
+    governingAuthorities.length === 1 && governingAuthorities[0] === 'IRAS' &&
+    independentlyRecognizedTopicIds.has('iras-gst-zero-rating') && independentlyRecognizedTopicIds.has('iras-gst-exempt-supplies') &&
+    /\bexempt\b/i.test(subject) && /\bzero[- ]rat(?:e|ed|ing)\b/i.test(subject);
   const boundTopicIds = [
     ...(bindRecognizedGstFilingTopic ? ['iras-gst-filing-deadlines'] : []),
     ...(bindRecognizedMasClassExemptionTopic ? ['mas-fund-management-exemptions'] : []),
     ...(bindRecognizedCpfDueDateTopic ? ['cpf-contribution-due-dates'] : []),
-    ...(bindRecognizedGstTopic ? ['iras-gst-input-tax'] : [])
+    ...(bindRecognizedGstTopic ? ['iras-gst-input-tax'] : []),
+    ...(bindGstCategoryComparison ? ['iras-gst-zero-rating', 'iras-gst-exempt-supplies'] : [])
   ];
   const topicsForMapping = boundTopicIds.length
     ? [...new Map([...subjectTopics, ...getCoverageTopicsByIds(boundTopicIds)].map(topic => [topic.id, topic])).values()]
@@ -641,9 +662,11 @@ function resolveIssueTopicIds(
   const eligibleTopics = topicsForMapping.filter(topic =>
     allowedDomains.includes(topic.domainId) &&
     semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain) &&
+    !(topic.id === 'iras-gst-input-tax' && population !== 'COMPANY' && isGstInputTaxRecoverySubject(subject)) &&
     !(topic.id === 'iras-gst-filing-deadlines' && hasBoundedGstFilingSubject(subject) && !bindRecognizedGstFilingTopic) &&
     !(topic.id === 'mas-fund-management-exemptions' && hasBoundedMasClassExemptionSubject(subject) && !bindRecognizedMasClassExemptionTopic) &&
-    !(bindRecognizedCpfDueDateTopic && topic.id === 'cpf_contribution_rates') &&
+    !(contextualizeCpfRates && topic.id === 'cpf_contribution_rates') &&
+    !(reportingRegimeContext && ['mas-lfmc', 'mas-vcfm'].includes(topic.id)) &&
     !(contextualizeMasVcfm && topic.id === 'mas-vcfm'));
   const childParents = new Set(routingChildTopicIds.flatMap(getRoutingParentIdsForChild));
   return {
@@ -654,7 +677,8 @@ function resolveIssueTopicIds(
     contextualTopicIds: [
       ...(contextualizeCpfRates && independentlyRecognizedTopicIds.has('cpf_contribution_rates') ? ['cpf_contribution_rates'] : []),
       ...(contextualizeMasLfmc ? ['mas-lfmc'] : []),
-      ...(contextualizeMasVcfm ? ['mas-vcfm'] : [])
+      ...(contextualizeMasVcfm ? ['mas-vcfm'] : []),
+      ...(reportingRegimeContext ? ['mas-lfmc', 'mas-vcfm'].filter(id => independentlyRecognizedTopicIds.has(id)) : [])
     ]
   };
 }

@@ -47,11 +47,12 @@ import { isCpfMasPracticalRuleComponentQuote } from '../retrieval/cpfMasPractica
 import { supportIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
 import { isIrasCpfQualitativeRateFactorRequest, selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
-import { hasIrasCpfExpansionContradiction, selectIrasCpfExpansionQuotes, supportIrasCpfExpansionRule } from '../retrieval/irasCpfExpansionRules';
-import { hasMomAcraMasExpansionContradiction, selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
+import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '../retrieval/practicalStatutoryExpansion';
+
 import {
   supportMomSalaryPaymentConcept,
-  supportMomSalaryPaymentIssue
+  supportMomSalaryPaymentIssue,
+  selectMomSalaryPaymentRuleQuote
 } from '../retrieval/momSalaryPaymentRule';
 import {
   isAcraAnnualReturnDeadlineIssue,
@@ -1520,8 +1521,8 @@ function practicalRuleIssueTextSupport(
     authority: topic.authorities[0] || '', topicId: topic.id,
     query, subject: issue.subject, sourceText: text
   };
-  if (hasIrasCpfExpansionContradiction(coverageRequest) || hasMomAcraMasExpansionContradiction(coverageRequest)) return false;
-  const expansionSupport = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest);
+  if (hasPracticalExpansionContradiction(coverageRequest)) return false;
+  const expansionSupport = supportPracticalExpansionRule(coverageRequest);
   // Incomplete evidence may still establish an older, narrower rule. Only a
   // complete expansion proof supplements scope support; contradiction vetoes it.
   const coverageSupport = (expansionSupport === true ? true : undefined) ?? supportIrasCpfCoverageRule(coverageRequest) ??
@@ -1535,7 +1536,7 @@ function practicalRuleIssueTextSupport(
     const expectedPopulation = topicAuthority === 'CPF' ? 'EMPLOYER'
       : topicAuthority === 'IRAS' || topicAuthority === 'ACRA' || topicAuthority === 'MAS' ? 'COMPANY'
         : undefined;
-    const allowedOperations = topicAuthority === 'ACRA' || topicAuthority === 'MAS'
+    const allowedOperations = expansionSupport === true || topicAuthority === 'ACRA' || topicAuthority === 'MAS'
       ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT']
       : ['EXPLAIN_RULE', 'FILING_REQUIREMENT'];
     const populationMatches = topicAuthority === 'MOM'
@@ -1556,8 +1557,7 @@ function practicalRuleIssueTextSupport(
           (concept.semanticAuthorities.length !== 1 || concept.semanticAuthorities[0] !== topicAuthority))) return false;
     if (concept) {
       const conceptRequest = { ...coverageRequest, subject: [concept.label, ...concept.terms].join(' ') };
-      const conceptSupport = supportIrasCpfExpansionRule(conceptRequest) ??
-        supportMomAcraMasExpansionRule(conceptRequest) ?? supportIrasCpfCoverageRule(conceptRequest) ??
+      const conceptSupport = supportPracticalExpansionRule(conceptRequest) ?? supportIrasCpfCoverageRule(conceptRequest) ??
         supportMomAcraMasCoverageRule(conceptRequest);
       if (conceptSupport !== true) return false;
     }
@@ -1900,7 +1900,10 @@ function eligibleLocalRecords(
         const topicPredicates: AuthorityAdmissionPredicateResult[] = [
           { predicate: 'topicBoundToRecord', passed: topicBoundToRecord(record, topic) },
           { predicate: 'governorAndDomain', passed: recordMatchesGovernorAndDomain(record, authority, topic) },
-          { predicate: 'textSupportsTopic', passed: textSupportsTopic(record.sourceText, topic) },
+          { predicate: 'textSupportsTopic', passed: supportPracticalExpansionRule({
+            authority: authority, topicId: topic.id, query: originalQuery, subject: issue.subject,
+            sourceText: record.sourceText, officialUrl: record.officialSourceUrl
+          }) === true || textSupportsTopic(record.sourceText, topic) },
           { predicate: 'boundedSubstantiveSupport', passed: substantiveSupport },
           { predicate: 'issueSubjectSupport', passed: supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery) }
         ];
@@ -2009,6 +2012,27 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
   return claims;
 }
 
+const MOM_PAYING_SALARY_URL = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
+
+function normalizedExactMomPayingSalaryUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || url.hostname !== 'www.mom.gov.sg' || url.username || url.password || url.port ||
+        url.search || url.hash || url.pathname.replace(/\/$/, '') !== '/employment-practices/salary/paying-salary') return undefined;
+    return `${url.origin}/employment-practices/salary/paying-salary`;
+  } catch {
+    return undefined;
+  }
+}
+
+function isExactMomSalaryPaymentRecord(record: AuthoritativeSourceRecord): boolean {
+  return record.provenance === 'LIVE_EXTERNAL' && !record.validTo && record.authority === 'MOM' &&
+    record.sourceAuthority === 'MOM' && record.domain === 'MOM_EMPLOYMENT' &&
+    normalizedExactMomPayingSalaryUrl(record.officialSourceUrl) === MOM_PAYING_SALARY_URL &&
+    normalizedExactMomPayingSalaryUrl(record.canonicalSourceUrl) === MOM_PAYING_SALARY_URL;
+}
+
 function practicalCoverageRuleClaimsForRecords(
   records: AuthoritativeSourceRecord[],
   scope: RuleClaimSelectionScope
@@ -2034,11 +2058,20 @@ function practicalCoverageRuleClaimsForRecords(
         query: scope.originalQuery, subject: scope.issue.subject, sourceText: record.sourceText,
         officialUrl: record.officialSourceUrl || record.canonicalSourceUrl
       };
+      const regularSalaryIssueOwned = statutoryAuthority === 'MOM' && topic.id === 'mom-salary-payment' &&
+        scope.issue.domain === 'MOM_EMPLOYMENT' && scope.issue.operation === 'EXPLAIN_RULE' &&
+        ['EMPLOYEE', 'EMPLOYER'].includes(scope.issue.population) && scope.issue.status === 'MAPPED' &&
+        scope.issue.governingAuthorities.length === 1 && scope.issue.governingAuthorities[0] === 'MOM' &&
+        scope.issue.mappedTopicIds.includes(topic.id) && isExactMomSalaryPaymentRecord(record) &&
+        supportMomSalaryPaymentIssue(scope.originalQuery, scope.issue.subject, record.sourceText) === true;
+      const regularSalaryQuote = regularSalaryIssueOwned
+        ? selectMomSalaryPaymentRuleQuote(scope.originalQuery, record.sourceText)
+        : undefined;
       const quotes = [
-        ...selectIrasCpfExpansionQuotes(request),
-        ...selectMomAcraMasExpansionQuotes(request),
+        ...selectPracticalExpansionQuotes(request),
         ...selectIrasCpfCoverageQuotes(request),
-        ...selectMomAcraMasCoverageQuotes(request)
+        ...selectMomAcraMasCoverageQuotes(request),
+        ...(regularSalaryQuote ? [regularSalaryQuote] : [])
       ];
       for (const quote of new Set(quotes)) claims.push({
         claim: { kind: 'RULE', text: quote, quote, recordId: record.id },
@@ -2063,17 +2096,16 @@ function completeExpansionClaimText(
   const request = { authority: topic.authorities[0] || '', topicId: topic.id,
     query, subject, sourceText: record.sourceText,
     officialUrl: record.officialSourceUrl || record.canonicalSourceUrl };
-  const proof = supportIrasCpfExpansionRule(request) ?? supportMomAcraMasExpansionRule(request);
+  const proof = supportPracticalExpansionRule(request);
   if (proof !== true) return undefined;
-  const selected = [...selectIrasCpfExpansionQuotes(request), ...selectMomAcraMasExpansionQuotes(request)];
+  const selected = [...selectPracticalExpansionQuotes(request)];
   const normalizedQuote = (text: string): string => text.replace(/\s+/g, ' ').trim();
   const sameRecordQuotes = new Set(claims.filter(item => item.recordId === record.id && item.supportKind === 'EXACT_SOURCE_QUOTE')
     .map(item => normalizedQuote(item.quote)));
   if (selected.length === 0 || !selected.some(text => normalizedQuote(text) === normalizedQuote(claim.quote)) ||
       !selected.every(text => sameRecordQuotes.has(normalizedQuote(text)))) return undefined;
   const joined = selected.join('\n\n');
-  return (supportIrasCpfExpansionRule({ ...request, sourceText: joined }) ??
-    supportMomAcraMasExpansionRule({ ...request, sourceText: joined })) === true ? joined : undefined;
+  return (supportPracticalExpansionRule({ ...request, sourceText: joined })) === true ? joined : undefined;
 }
 
 function isCpfCashTopUpLimitComponentQuote(record: AuthoritativeSourceRecord, quote: string): boolean {

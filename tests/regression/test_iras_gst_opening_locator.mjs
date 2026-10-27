@@ -17,6 +17,7 @@ import {
   validateSemanticQuestionInterpretation
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { supportGeneralIrasRuleConcept } from '../../src/retrieval/irasRuleConceptSupport.ts';
+import { cleanHtmlText } from '../../src/retrieval/sourceAdapters.ts';
 import { irasResolverCases } from '../fixtures/irasResolverCases.mjs';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -47,6 +48,7 @@ assert.ok(previousInputTaxKeywords.every(keyword => topic.keywords.includes(keyw
 assert.ok(topic.keywords.includes('input tax recovery conditions'));
 assert.ok(topic.keywords.includes('recover gst on business purchases'));
 assert.deepEqual(topic.queryPatterns, [
+  String.raw`(?=[\s\S]*\b(?:gst|input tax)\b)(?=[\s\S]*\b(?:recover\w*|claim\w*)\b)(?=[\s\S]*\b(?:purchases?|eligibility|business)\b)`,
   String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?)\b`,
   String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`,
   String.raw`(?=[\s\S]*\b(?:gst|goods and services tax)\b)(?=[\s\S]*\binput[ -]?tax\b)(?=[\s\S]*\b(?:claim\w*|recover\w*|recovery)\b)(?=[\s\S]*\b(?:business|purchase|company)\b)`
@@ -166,11 +168,13 @@ async function runPipeline(testCase, ruleText, controlId = testCase.id) {
   controlTransportCounts.set(controlId, counts);
   activeControlCounts = counts;
   const { questionUnderstanding, reconciled, issue, topicIds, requestedConcepts } = understandingFor(testCase);
-  const selectedPageHtml = `<html><head><title>${escapeHtml(mapPointer.documentTitle)} | IRAS</title></head>` +
-    `<body><main><h1>${escapeHtml(mapPointer.documentTitle)} | IRAS</h1>` +
-    competition.map((text, index) => index === distractors.length + 1
-      ? `<p>${escapeHtml(ruleText)}</p>` : `<p>${escapeHtml(text)}</p>`).join('') +
-    `</main></body></html>`;
+  const selectedPageHtml = /^\s*<!doctype html/i.test(ruleText)
+    ? ruleText
+    : `<html><head><title>${escapeHtml(mapPointer.documentTitle)} | IRAS</title></head>` +
+      `<body><main><h1>${escapeHtml(mapPointer.documentTitle)} | IRAS</h1>` +
+      competition.map((text, index) => index === distractors.length + 1
+        ? `<p>${escapeHtml(ruleText)}</p>` : `<p>${escapeHtml(text)}</p>`).join('') +
+      `</main></body></html>`;
   const discoveryAdapter = {
     async discoverOfficialSourceCandidates() {
       counts.discovery += 1;
@@ -249,6 +253,42 @@ async function runPipeline(testCase, ruleText, controlId = testCase.id) {
 const generalCase = irasResolverCases.find(row => row.id === 'gst-input-tax-general-rule');
 assert.ok(generalCase);
 try {
+  const missingRegistrationGeneralCase = {
+    ...generalCase,
+    id: 'gst-input-tax-general-rule-registration-not-provided',
+    query: 'What are the general Singapore GST rules for claiming input tax on business purchases by a company?',
+    issues: [{ ...generalCase.issues[0], subject: 'general GST input tax claim conditions for business purchases' }]
+  };
+  const completeInputTaxHtml = await readFile(path.join(REPOSITORY_ROOT,
+    'tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-page.html'), 'utf8');
+  const completeInputTaxSource = cleanHtmlText(completeInputTaxHtml);
+  const missingRegistrationContext = understandingFor(missingRegistrationGeneralCase);
+  assert.equal(supportGeneralIrasRuleConcept({
+    sourceText: completeInputTaxSource,
+    domainId: mapDefinition.domainId,
+    topicIds: missingRegistrationContext.topicIds,
+    subject: missingRegistrationContext.issue.subject,
+    population: missingRegistrationContext.issue.population,
+    concepts: missingRegistrationContext.requestedConcepts
+  }), true, `The complete native IRAS source proves the general concepts: ${JSON.stringify(missingRegistrationContext.requestedConcepts)}`);
+  const missingRegistrationGeneral = await runPipeline(missingRegistrationGeneralCase, completeInputTaxHtml);
+  assert.ok(missingRegistrationGeneral.liveRecords.length > 0,
+    'A general question can retrieve the input-tax rule when registration status is not supplied.');
+  assert.equal(missingRegistrationGeneral.finalIssue.evidenceStatus, 'VERIFIED');
+  assert.notEqual(missingRegistrationGeneral.finalIssue.applicationStatus, 'VERIFIED',
+    'Source-backed general conditions do not verify the case-specific claim application.');
+  const fullRuleRecordIds = new Set(missingRegistrationGeneral.liveRecords
+    .filter(record => record.canonicalSourceUrl === mapDefinition.canonicalSourceUrl)
+    .map(record => record.recordId ?? record.id));
+  const fullRuleClaims = (missingRegistrationGeneral.finalIssue.verifiedClaims || [])
+    .filter(claim => fullRuleRecordIds.has(claim.recordId));
+  assert.equal(fullRuleClaims.length, 9,
+    'The verified general answer is bound to the complete current page: its conditions lead-in and all eight numbered criteria.');
+  for (let condition = 1; condition <= 8; condition += 1) {
+    assert.ok(fullRuleClaims.some(claim => new RegExp(`^${condition}\\.\\s`).test(claim.quote)),
+      `The general answer retains exact IRAS input-tax condition ${condition}.`);
+  }
+
   const complete = await runPipeline(generalCase, completeOpeningParagraph, 'complete-positive');
   assert.equal(complete.transportCounts.discovery, 0,
     'The complete positive is sufficient from the selected mapped source without discovery fallback.');

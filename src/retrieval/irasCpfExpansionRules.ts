@@ -4,6 +4,7 @@ import type {
   AuthorityPresentedWorkstream
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
 
 export interface IrasCpfExpansionRequest {
   authority: string;
@@ -56,27 +57,35 @@ function visibleText(value: string): string {
     .trim();
 }
 
-function isHistoricalOrCaseSpecific(query: string): boolean {
-  return /\b(?:19|20)\d{2}\b|\b(?:historical|historic|previous|prior|former|old|superseded)\b/i.test(query)
-    || /\b(?:my|our|this)\s+(?:company|business|employee|payroll|purchase|supplier|invoice|claim|revenue|eci)\b/i.test(query)
-    || /\b(?:calculate|compute|estimate the|how much|will (?:we|my company|the company) qualify|are we eligible|can we claim this|based on these figures)\b/i.test(query);
+function isOutOfCurrentDateScope(query: string): boolean {
+  if (/\b(?:historical|historic|previous|prior|former|old|superseded|future|upcoming|thereafter|hereafter)\b/i.test(query)) return true;
+  if (/\b(?:last|previous|prior|past|next|coming|following)\s+(?:\d+\s+)?(?:days?|weeks?|months?|quarters?|years?|financial years?|reporting periods?|tax years?)\b/i.test(query)) return true;
+
+  const currentDate = TargetDateResolver.CURRENT_SYSTEM_DATE;
+  const currentYear = currentDate.slice(0, 4);
+  if ([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].some(match => match[0] !== currentYear)) return true;
+  const dateComparison = /\b(?:before|prior to|after|following|until|through)\s+(?:the year\s+)?(?:(?:[0-3]?\d\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2})\b/gi;
+  if ([...query.matchAll(dateComparison)].some(match => match[1] === currentYear)) return true;
+
+  const resolvedDate = defaultTargetDateResolver.resolveTargetDate(query, currentDate);
+  return resolvedDate.source === 'EXPLICIT' && resolvedDate.targetDate !== currentDate;
 }
 
 function isStandaloneAdditionalWageDefinition(query: string): boolean {
   const asksForDefinition = /\b(?:define|definition|meaning|mean|means|explain|explains|describe|what is|what are|what does|what (?:kind|type) of|how does|how do)\b/i.test(query);
   return /\badditional wages?\b/i.test(query)
     && asksForDefinition
-    && !/\b(?:ordinary wages?|\bow\b|bonuses?|\baws\b|allowances?|reimbursements?|components?|classif\w*|ceilings?|rates?|contributions?|calculate|compute|eligib\w*|qualif\w*|threshold|due date|deadline|payment timing)\b/i.test(query);
+    && !/\b(?:ordinary wages?|\bow\b|bonus(?:es)?|\baws\b|allowances?|reimbursements?|components?|classif\w*|ceilings?|rates?|contributions?|calculate|compute|eligib\w*|qualif\w*|threshold|due date|deadline|payment timing)\b/i.test(query);
 }
 
 function recognizesRule(input: Pick<IrasCpfExpansionRequest, 'authority' | 'topicId' | 'query' | 'subject'>): ExpansionRule | undefined {
   const { authority, topicId, query, subject } = input;
-  if (isHistoricalOrCaseSpecific(query)) return undefined;
+  if (isOutOfCurrentDateScope(query)) return undefined;
   if (authority === 'CPF' && isStandaloneAdditionalWageDefinition(query)) return undefined;
 
   if (authority === 'IRAS' && topicId === 'iras-gst-input-tax'
     && /\b(?:gst|input tax|input gst)\b/i.test(query)
-    && /\b(?:conditions?|requirements?|criteria|claim(?:ing)? input tax|input tax claim rules?)\b/i.test(query)
+    && /\b(?:conditions?|requirements?|criteria|eligib\w*|qualif\w*|recover\w*|claim\w*|deductible|input tax claim rules?|who\s+can|when\s+can)\b/i.test(query)
     && !/\b(?:motor cars?|vehicle exceptions?|staff medical|medical insurance|input tax apportionment|particular goods|missing trader fraud (?:checks?|indicators?|due diligence)|how to (?:ascertain|identify|check)|what (?:reasonable )?steps)\b/i.test(query)
     && /\b(?:gst|input tax|claim)\b/i.test(subject)) {
     return 'IRAS_INPUT_TAX';
@@ -84,16 +93,15 @@ function recognizesRule(input: Pick<IrasCpfExpansionRequest, 'authority' | 'topi
 
   if (authority === 'IRAS' && topicId === 'iras-cit-eci'
     && /\b(?:eci|estimated chargeable income)\b/i.test(query)
-    && /\b(?:waiver|waive|exempt|nil|revenue|must|need|requirement|file|filing)\b/i.test(query)
+    && /\b(?:waiver|waive|exempt|nil|revenue|profit|must|need|requirement|file|filing|when|deadline|due|how long|submit by|skip)\b/i.test(query)
     && !/\b(?:penalt\w*|late filing|failure to file|notice of assessment|estimated assessment|objection|appeal|revise|payment deadline|late payment)\b/i.test(query)
-    && !(/\b(?:when|deadline|due date)\b/i.test(query) && !/\b(?:waiver|waive|nil|revenue|who must|who needs|need to file)\b/i.test(query))
     && /\b(?:eci|estimated chargeable income|corporate tax)\b/i.test(subject)) {
     return 'IRAS_ECI_FILING';
   }
 
   if (authority === 'CPF' && ['cpf-additional-wages', 'cpf-ordinary-wages', 'cpf-bonus-backpay'].includes(topicId)
     && /\b(?:cpf|central provident fund)\b/i.test(query)
-    && /\b(?:classif\w*|ordinary wages?|additional wages?|\bow\b|\baw\b|allowances?|reimbursements?|bonuses?|\baws\b|what constitutes wages|which payments?|payments? (?:that )?attract cpf)\b/i.test(query)
+    && /\b(?:classif\w*|ordinary wages?|additional wages?|\bow\b|\baw\b|allowances?|reimbursements?|bonus(?:es)?|\baws\b|what constitutes wages|which payments?|payments? (?:that )?attract cpf)\b/i.test(query)
     && !/\b(?:ceilings?|rates?|rate table|how much|calculate|compute|eligib\w*|qualif\w*|threshold)\b/i.test(query)
     && /\b(?:wages?|payroll|allowance|reimbursement|bonus|cpf)\b/i.test(subject)) {
     return 'CPF_WAGE_CLASSIFICATION';
@@ -299,7 +307,7 @@ function exactOfficialUrl(value: string | undefined, expected: string): boolean 
 /** Undefined means this module does not own the topic; false means required source facts fail closed. */
 export function supportIrasCpfExpansionRule(input: IrasCpfExpansionRequest): boolean | undefined {
   const rule = recognizesRule(input);
-  if (!rule || isHistoricalOrCaseSpecific(input.query)) return rule ? false : undefined;
+  if (!rule || isOutOfCurrentDateScope(input.query)) return rule ? false : undefined;
   if (input.officialUrl && !exactOfficialUrl(input.officialUrl, allowedUrl(rule))) return false;
   return prove(rule, input.sourceText);
 }
@@ -339,7 +347,7 @@ export function selectIrasCpfExpansionQuotes(input: IrasCpfExpansionRequest): st
 }
 
 function ruleForPresentedIssue(query: string, authority: string, subject: string): ExpansionRule | undefined {
-  if (authority === 'IRAS' && /\b(?:input tax|input gst)\b/i.test(query)
+  if (authority === 'IRAS' && /\b(?:input tax|input gst|gst)\b/i.test(query)
     && /\b(?:input tax|gst|claim)\b/i.test(subject)) {
     return recognizesRule({ authority, topicId: 'iras-gst-input-tax', query, subject });
   }
@@ -368,12 +376,12 @@ function expectedDomain(rule: ExpansionRule): string {
 
 function answerText(rule: ExpansionRule): string {
   if (rule === 'IRAS_INPUT_TAX') {
-    return 'IRAS allows an input tax claim only when all applicable conditions are met: the claimant is GST-registered; the goods or services are supplied to or imported by it and are used for its business; local purchases have valid tax invoices and imports have the required import permits and supporting documents; the input tax is attributable to qualifying taxable or specified out-of-scope supplies; the claim is not disallowed under Regulations 26 or 27; and the claimant has taken reasonable steps to conclude that the goods or services are not part of a Missing Trader Fraud arrangement, on a conclusion a reasonable person would make. This is a general rule; a specific claim also depends on its facts and any applicable exceptions.';
+    return 'IRAS allows an input tax claim only when all applicable conditions are met: the claimant is GST-registered; the goods or services are supplied to or imported by it and are used for its business; local purchases have valid tax invoices and imports have the required import permits and supporting documents; the input tax is attributable to qualifying taxable or specified out-of-scope supplies; the claim is not disallowed under Regulations 26 or 27; and the claimant has taken reasonable steps to conclude that the goods or services are not part of a Missing Trader Fraud arrangement, on a conclusion a reasonable person would make. This gives the general rule only. A conclusion about a particular purchase also requires the GST-registration status, what was acquired and its business use, the related supplies, supporting documents, any applicable blocked-input-tax exception, and the Missing Trader Fraud assessment.';
   }
   if (rule === 'IRAS_ECI_FILING') {
-    return 'A company generally files ECI within three months after its financial year end unless it is specifically not required to file or qualifies for the waiver. For each Year of Assessment, the waiver requires both annual revenue of S$5 million or less for the financial year and nil ECI before deducting the partial tax exemption or new start-up tax exemption. Revenue generally means income from the company’s main activity, with separate-source income excluded where it does not arise from that activity; an investment holding company’s revenue is its investment income. The company self-assesses whether it qualifies. IRAS also lists categories separately exempt from filing, so check the current official guidance before applying the rule to a particular entity.';
+    return 'A company generally files ECI within three months after its financial year end unless it is specifically not required to file or qualifies for the waiver. For each Year of Assessment, the waiver requires both annual revenue of S$5 million or less for the financial year and nil ECI before deducting the partial tax exemption or new start-up tax exemption. A company’s accounting profit or book loss alone does not establish nil ECI: ECI is an estimated chargeable-income amount, so the tax computation and relevant adjustments still matter. Revenue generally means income from the company’s main activity, with separate-source income excluded where it does not arise from that activity; an investment holding company’s revenue is its investment income. The company self-assesses whether it qualifies. IRAS also lists categories separately exempt from filing. To identify a particular due date, the company’s financial year end is needed; to assess a waiver, the applicable year of assessment, annual revenue and pre-exemption ECI must be known.';
   }
-  return 'CPF wage treatment has two steps. First decide whether a payment is wages: CPF Board lists salary, overtime pay, bonuses, meal and transport allowances, commissions and cash incentives as examples of wages; a qualifying reimbursement for official employer expenses is excluded when it does not exceed the expense, as are specified termination benefits and non-cash benefits. Then classify wages as Ordinary Wages (OW) only when they are for employment in that month and payable by the 14th of the following month. Wages that do not meet the OW definition are Additional Wages (AW); an annual performance bonus is an example. OW and AW are both part of total wages and are subject to their applicable ceilings. Specific contribution amounts depend on the employee’s facts and the relevant contribution period.';
+  return 'CPF wage treatment has two steps. First decide whether a payment is wages: CPF Board lists salary, overtime pay, bonuses, meal and transport allowances, commissions and cash incentives as examples of wages; a qualifying reimbursement for official employer expenses is excluded when it does not exceed the expense, as are specified termination benefits and non-cash benefits. Then classify wages as Ordinary Wages (OW) only when they are for employment in that month and payable by the 14th of the following month. Wages that do not meet the OW definition are Additional Wages (AW); an annual performance bonus is an example. OW and AW are both part of total wages and are subject to their applicable ceilings. Classifying a particular payment depends on what it was for, the employment month, payment timing, and, for a claimed reimbursement, the official expense and amount. A contribution calculation also requires the employee’s applicable status, age and wage facts for the relevant contribution period.';
 }
 
 /** Renders general rule explanations only from complete exact claims bound to this issue and page revision. */
@@ -388,7 +396,7 @@ export function getIrasCpfExpansionEvidence(
   const populationAllowed = rule === 'CPF_WAGE_CLASSIFICATION' ? ['Employer', 'Employee'] : ['Company'];
   if (stream.authority !== authority || stream.domain !== expectedDomain(rule)
     || !populationAllowed.includes(issue.population)
-    || !['EXPLAIN_RULE', 'FILING_REQUIREMENT'].includes(issue.operation)
+    || !['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT'].includes(issue.operation)
     || issue.evidenceStatus !== 'VERIFIED'
     || !['NOT_REQUIRED', 'UNRESOLVED'].includes(issue.applicationStatus)
     || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;

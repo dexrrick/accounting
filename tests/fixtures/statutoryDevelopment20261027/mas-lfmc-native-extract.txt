@@ -1,0 +1,510 @@
+Monetary Authority of Singapore
+COMPLIANCE TOOLKIT FOR
+LICENSED FUND MANAGEMENT COMPANIES
+- Approvals, Notifications and Regulatory Submissions
+to MAS under the Securities and Futures Act
+
+Key Legislative and | 1. Securities and Futures Act 2001 (SFA). Specifically, the following
+Regulatory | parts of the SFA:
+Requirements | • Part IV Holders of Capital Markets Services (CMS) Licence and
+Covered: | Representatives
+• Part V Books, Customer Assets and Audit
+2. Securities and Futures (Licensing and Conduct of Business)
+Regulations (LCBR) (Rg. 10)
+3. Securities and Futures (Financial and Margin Requirements for
+Holders of CMS Licenses) Regulations (FMR) (Rg. 13)
+4. Securities and Futures (Exemption for Cross-Border Arrangements)
+(Foreign Related Corporations) Regulations 2021 (SF(ECBA)(FRC)R)
+5. Securities and Futures (Exemption for Cross-Border Arrangements)
+(Foreign Offices) Regulations 2021 (SF(ECBA)(FO)R)
+6. Licence conditions imposed on Licensed Fund Management
+Companies (LFMCs)
+7. Guidelines on Licensing and Conduct of Business for Fund
+Management Companies
+8. Notice on Reporting of Misconduct of Representatives by Holders of
+CMS Licence and Exempt Financial Institutions
+9. Notice on Requirements in relation to Cross-Border Arrangements
+under the SF(ECBA)(FRC)R (SFA04-N17)
+10. Notice on Requirements in relation to Cross-Border Arrangements
+under the SF(ECBA)(FO)R (SFA04-N18)
+Description of | This Compliance Toolkit aims to provide guidance on:
+Document: | • Applications for approvals from MAS;
+• Notifications to be submitted to MAS; and
+• Regulatory submissions to MAS (e.g. financial returns), which
+are applicable to LFMCs
+This compliance toolkit aims to provide LFMCs with a simple reference
+on the common applications, forms and submissions pursuant to the SFA
+that are applicable to LFMCs. However, it is not exhaustive, and LFMCs
+are expected to be familiar with all legislations and requirements that
+are applicable to them. For the avoidance of doubt, this toolkit excludes
+reporting obligations that fall outside the SFA; as well as fund-level
+requirements (e.g. Code of Collective Investment Scheme). Where an
+LFMC intends to apply for or holds a CMS licence to carry on business in
+other SFA regulated activities such as dealing in Capital Markets
+Products, it should also refer to the compliance toolkit that is relevant
+to these other types of regulated activities.
+LF MCs are welcomed to provide suggestions on this toolkit using the
+Guided Form at Contact Us.
+Relevant to: | LFMCs
+2
+
+Method of | The login URLs for the different modes of submission are as follows:
+Submission:
+• eLicensing | https://elicensing.mas.gov.sg/
+• MAS-Tx | https://mastx.mas.gov.sg/login/
+For submissions via FormSG, MAS-Tx or eLicensing, LFMCs should not
+encrypt any uploaded attachments.
+LFMCs may login to MAS-Tx to see the due dates and obtain email
+reminders for regular returns as well as obtain copies of their
+submissions. LFMCs may also limit user access to a specific category of
+transactions only. Please refer to the column “MAS -Tx Category
+(Transaction Name) ” to determine which category each transaction
+belongs to and the corresponding transaction name. You may refer to
+the user guide on MAS-Tx for further details on assigning user access.
+Version: | Issued on 2 October 2020 (Last revised on 29 May 2026)
+3
+
+MAS-Tx Category
+Legislative | Mode of
+S/N | Requirement | Form to be Submitted | Regulatory Deadline | (Transaction Name)
+Reference | Submission
+[Updated in Nov 2024]
+Section A: Applications for approvals from MAS
+1 To seek MAS’ approval for a grant of CMS Form 1 – Application for Prior to carrying on Section 84 of the SFA eLicensing | NA
+licence to carry on business in fund a CMS Licence | business in fund and
+management as an LFMC | management as an
+LFMC
+[Updated in Aug 2024]
+2 To seek MAS’ approval to conduct Form 5 - Application for Prior to carrying on Section 90 of the SFA MAS-Tx | Entity Activities &
+additional type(s) of regulated activity Additional Regulated business in additional and Regulation 11A | Particulars
+1
+under the SFA | Activity under a CMS type(s) of regulated of the LCBR | (Add | CMS
+Licence | activity under the SFA | Activity/Product - Form
+5)
+3 To seek MAS’ approval for the Form 11 - Appointment Prior | to | the Section 96 of the SFA MAS-Tx | Shareholders | &
+appointment of a Chief Executive Officer of | CEO | or appointment of CEO or and Regulation 12 of | Management
+(CEO) or Director; or for the change in the Director/Change | of Director; or the change the LCBR | (Appointment | of
+nature of Director appointment from Non- Director's Nature of in the nature of | CEO/Director - Form 11)
+Executive to Executive | Appointment from Non- Director appointment
+Executive to Executive
+4 For an acquirer seeking MAS’ approval to Application for Approval Prior to obtaining Section 97A of the MAS-Tx | Shareholders | &
+obtain effective control of an LFMC | to obtain Effective effective control of an SFA | Management
+Control of the Holder of LFMC | (Change in Controller
+This applies to any person that intends to a CMS Licence under | 20% or more)
+obtain effective control of an LFMC (i.e the Section 97A(2) of the
+acquirer) | SFA
+1
+For more information, please refer to the FAQs on the Licensing of Fund Management Companies on the need to hold a CMS licence for dealing in capital markets products and the
+relevant exemptions.
+4
+
+5 For an LFMC/ acquiree seeking MAS’ No prescribed form | Prior to the change of Licence condition | MAS-Tx | Shareholders | &
+approval for any change of members or | members | or | Management
+shareholdings of members which will | shareholdings | of | (Change | in
+result in any person, alone or acting | members of an LFMC | Controller 20% or
+together with any connected person, being | more)
+in a position to control equal or more than
+20% of the voting power in or hold interest
+in equal or more than 20% of the issued
+shares of the LFMC
+This applies to a ny LFMC that is being
+acquired
+6 To seek MAS’ approval to acquire or hold, No prescribed form | Prior to the acquisition Licence condition | MAS-Tx | Entity Activities &
+whether directly or indirectly, an interest | or control of a | Particulars
+of 20% or more of the share capital of any | corporation, or the | (Establish/Acquire/
+corporation; or establish any branch | establishment of any | Hold Major Stake in
+(whether in Singapore or elsewhere). For | branch | a Corporation)
+this condition, "corporation" has the same
+meaning as in section 2 of the SFA, but
+excludes a corporation which is
+incorporated for the purpose of arranging
+a closed-end fund or a collective
+investment scheme
+7 To seek MAS' approval to comply with new No prescribed form | (a) | Prior | to Regulation 4 of the MAS-Tx | Entity Activities &
+base capital requirement when: | commencing | or FMR | Particulars
+ceasing business in any | (Adjust Base Capital
+(a) commencing or ceasing business in any | regulated activity; or | Requirements)
+regulated activity; or | (b) Prior to changing
+(b) changing the scope of business in a | the scope of the
+regulated activity | business in a regulated
+activity
+5
+
+8 To seek MAS’ approval to reduce paid -up No prescribed form | Prior to reduction of Regulation 20 of the MAS-Tx | Entity Activities &
+ordinary share capital or paid-up | paid-up ordinary share FMR | Particulars
+irredeemable and | non-cumulative | capital or paid-up | (Reduce Paid-up
+preference share capital | irredeemable and non- | Capital)
+cumulative preference
+share capital
+9 To seek MAS’ approval to disclose No prescribed form | Prior to disclosing the Sections 150A and MAS-Tx | Incident & Breach
+inspection reports issued by MAS or a | inspection report | 150C of the SFA | Reporting
+foreign regulatory authority, to a person | (Disclosure | of
+other than the auditor of the LFMC in | Inspection/Investiga
+connection with the performance of duties | tion Report)
+of the auditor for that LFMC
+This applies to any LFMC subject to
+inspection by MAS or a foreign regulatory
+authority
+10 To seek MAS’ approval to disclose No prescribed form | Prior to disclosing the Section 152A of the MAS-Tx | Incident & Breach
+investigation reports issued by MAS to a | investigation report | SFA | Reporting
+person other than the auditor of the LFMC | (Disclosure | of
+in connection with the performance of | Inspection/Investiga
+duties of the auditor for that LFMC | tion Report)
+This applies to any LFMC subject to MAS’
+investigation
+11 To seek MAS’ approval to remove the Application to review Prior to increasing any Licence condition | MAS-Tx | Entity Activities &
+restriction of S$250 million on assets under the restriction on assets positions, that would | Particulars
+management | under management. | result in the total value | (Application | to
+of the managed assets | Review | the
+exceeding | S$250 | Restriction on AUM)
+million
+[Updated in Aug 2024]
+6
+
+Section B: Notifications to be submitted to MAS
+Section B1: Notifications in relation to the LFMC
+12 To notify MAS where an LFMC: | Form 7 - Notice of For cessation of Section 93 of the SFA MAS-Tx | Entity Activities &
+Cessation of Business | business, within 14 and Regulation 11 of | Particulars
+(a) ceases to carry on business in any or all | days | after | the the LCBR | (Cessation (Form
+regulated activities; or | (Accompanied by an cessation of any or all | 7)/Non-
+(b) has not commenced business in any or audit certification (no regulated activities | Commencement of
+all regulated activities by the end of prescribed format) that | CMS Activity)
+the period of 6 months from the date the LFMC has fully For | non-
+of the grant of the licence | discharged all customer commencement of
+obligations) | regulated | activity,
+immediately after the
+end of 6 months from
+the date of the grant of
+the CMS licence
+13 To notify MAS of a change of name or a Notice for Change in Within 14 days from Section 93 of the SFA MAS-Tx | Entity Activities &
+change of principal place of business | Particulars | the date of change | Particulars
+(Notice of Change in
+[Updated in Aug 2024] | Particulars)
+14 To notify MAS of any matter which may No prescribed form | Immediate | Licence condition | MAS-Tx | Incident & Breach
+adversely affect an LFMC’s financial | Reporting
+position to a material extent, including | Section 97C of the SFA | (Material Adverse
+where the LFMC: | Change to Financial
+Position)
+(a) is or is likely to become insolvent;
+(b) is or is likely to become unable to meet
+its obligations; or
+(c) has suspended or is about to suspend
+payments
+7
+
+15 To notify MAS of any changes of members No prescribed form | Immediate | Licence condition | MAS-Tx | Shareholders | &
+or shareholdings of members which will | Management
+result in any person, alone or acting | (Change | in
+together with any connected person, being | Controller <20%)
+in a position to control less than 20% of the
+voting power in or hold interest in less than
+20% of the issued shares of the LFMC
+16 To notify MAS of the execution of an No prescribed form | 7 days prior to the Licence condition | MAS-Tx | Entity Activities &
+agreement or transaction for the purchase, | execution of the | Particulars
+sale, merger or any other business | agreement | or | (Purchase/Sale/Mer
+combination of all or any part of the | transaction | ger of Business)
+business in the regulated activity under the
+SFA for which its CMS licence is granted
+17 To notify MAS of (i) the resignation of CEO Notice of Change in As soon as practicable, Licence condition | MAS-Tx | Entity Activities &
+or any Director; (ii) any change in the Particulars | or for (i), no later than | Particulars
+nature of the appointment of a Director | 14 days from the date of | (Notice of Change in
+from one that is Executive to one that is | the resignation | Particulars)
+Non-Executive; (iii) any change in
+particulars (including address and
+identification number) of CEO or any
+Director provided in Form 11; and (iv) any
+change in the business interests or
+shareholdings of CEO or any Director
+provided in Form 11
+[Updated in Aug 2024]
+18 To notify MAS when an LFMC becomes No prescribed form | Immediate | Licence condition | MAS-Tx | Incident & Breach
+aware that it or any of its officers or | Reporting
+representatives has committed any | (Fitness & Propriety
+offence, is subject to any disciplinary | Concerns)
+action, investigation, civil or criminal
+proceedings, any breach of laws or
+regulations, business rules or codes of
+conduct, or is involved in any matter that
+8
+
+would affect the ability to meet the fit and
+proper criteria
+19 To notify MAS when an LFMC has fewer No prescribed form | As soon as practicable Licence condition | MAS-Tx | Incident & Breach
+than 2 full-time appointed representatives | Reporting
+in respect of each relevant regulated | (< 2 Representatives
+activity under the SFA | per | Regulated
+Activity)
+20 To notify MAS on: | (a) | Significant (a)(i) | Guidelines | on MAS-Tx | Incident & Breach
+Redemption Report | within 1 business day Liquidity | Risk | Reporting
+(a) significant redemptions and the | (T+1): | Management | (Sig
+activation of liquidity management tools in (b) Fund Gating and - for daily dealing CIS, Practices for Fund | Redemption/Activat
+2 | 3
+authorised, restricted, or exempt CIS Suspension Report | where single-day net Management | ion of Liq Mgmt
+managed by the FMC | redemptions > 5% AUM Companies (SFA04- | Tools)
+(i.e. day T) | G08) and MAS
+(b) suspension of fund dealings or | Circular
+activation of gating measures for all CIS | (a)(ii) within 3 business CMI 13/2021 dated
+that the FMC manages, advises, acts as a | days (T+3): - for daily 31 May 2021
+representative of, and/or offers | dealing CIS, where
+weekly aggregate net
+redemptions > 10%
+AUM
+- for weekly dealing CIS,
+where weekly aggregate
+net redemptions > 5%
+AUM
+- for other dealing
+frequency CIS, where
+aggregate | net
+redemptions over the
+CIS’ dealing period >
+10% AUM
+(b) within 3 business
+days
+2
+CIS authorised pursuant to section 286 of the SFA.
+3
+CIS registered pursuant to section 305 of the SFA (i.e. “Restricted CIS”), and CIS that fall within the specified exemptions under sections 302B, 302C, and 304 of the SFA (i.e. “Exempt CIS”).
+9
+
+21 To notify MAS of cross-border Form FN – Notification Within 14 days of Regulations 4(2) and MAS-Tx | Entity Activities &
+arrangements with Foreign Related for Arrangements with commencement | of 5(1) | of | the | Particulars
+Corporations or Foreign Offices under the Foreign | Related qualifying | business SF(ECBA)(FRC)R and | (Commencement of
+following Exemption Regulations: | Corporations and/or under the Exemption Regulations 7(2) and | Cross | Border
+- SF(ECBA)(FRC)R | Foreign Offices under Regulations | 8(2) | of | the | Arrangements | -
+- SF(ECBA)(FO)R | the | Exemption | SF(ECBA)(FO)R | Form FN)
+Regulations
+22 To notify MAS of changes in particulars Form FC – Notification Within 14 days from Paragraphs 5.3.1 (a) MAS-Tx | Entity Activities &
+to/cessation of cross-border arrangements for Change in Particulars date | of and (b) of SFA04-N17 | Particulars
+notified under the following Exemption to Arrangements with change/cessation | and Paragraphs 5.3.1 | (Updates to Cross-
+Regulations: | Foreign | Related | (a) and (b) of SFA04- | Border
+- SF(ECBA)(FRC)R | Corporations and/or | N18 | Arrangements | -
+- SF(ECBA)(FO)R | Foreign Offices notified | Form FC)
+under the Exemption
+Regulations
+23 To notify MAS upon the discovery of a Please refer to Circular As soon as possible, but Section 29(1) of the Call/Email | NA
+system malfunction or IT security incident, on Financial Institution not later than 1 hour, FSM Act (Notice FSM-
+which has a severe and widespread impact Incident Reporting | upon the discovery of a N21)
+on the LFMC ’s operations or materially for further information relevant incident.
+impacts the LFMC ’s service to its
+customers, through the respective MAS
+Review Officer (RO) during the MAS office
+hours or a phone call to MAS Duty Officer
+(DO) via the 24-hour MAS BCM incident
+reporting line (Tel: 6229 9526 / 6229 9527)
+outside office hours or if the MAS RO is not
+contactable
+[Updated in Feb 2026]
+10
+
+B2: Notifications in relation to financial and margin requirements
+24 To notify MAS of the inclusion of the No prescribed form | Immediate | Regulation 2A of the MAS-Tx | Incident & Breach
+following items in the financial resources | FMR | Reporting
+of an LFMC: | (Temp Inclusions in
+Financial Resources
+(a) the excess of allowable preference | Computation)
+share capital over base capital; and
+4
+(b) qualifying subordinated loans
+An LFMC is prohibited from including items
+(a) and/or (b) in its financial resources for
+a period exceeding 90 days in each
+calendar year
+25 To notify MAS when the base capital or net No prescribed form | Immediate | Regulation 4 of the MAS-Tx | Incident & Breach
+5
+head office funds fall or will fall below the | FMR | Reporting
+prescribed amount | (Breach of Base
+Capital
+Requirement)
+26 To notify MAS when the financial No prescribed form | Immediate | Regulation 6 of the MAS-Tx | Incident & Breach
+resources or adjusted net head office funds | FMR | Reporting
+fall or will fall below the total risk | (Breach of Total Risk
+requirement | Requirement)
+27 To notify MAS when the financial No prescribed form | Immediate | Regulation 7 of the MAS-Tx | Incident & Breach
+resources or adjusted net head office funds | FMR | Reporting
+fall below 120% of its total risk | (Breach of Total Risk
+requirement | Requirement)
+28 In matters relating to preference shares, to No prescribed form | For issuance, prior to Regulation 21 of the MAS-Tx | Entity Activities &
+notify MAS prior to: | the issuance of the FMR | Particulars
+preference share | (Preference Shares
+(a) issuing any preference share; and | Issuance | &
+(b) repaying the principal of any | For repayment, 3 | Repayment)
+preference share (other than any | months before the
+4
+The terms “base capital”, “qualifying subordinated loan” and “financial resources” are defined in Regulation 2 of FMR.
+5
+As defined in Regulation 2 of FMR.
+11
+
+paid-up irredeemable and non- | proposed date of
+cumulative preference share capital) | repurchase | or
+that is included as part of LFMC’s | redemption
+financial | resources | through
+repurchase or redemption
+29 In matters relating to qualifying No prescribed form | For drawing down a Regulation 22 of the MAS-Tx | Entity Activities &
+subordinated loan, to notify MAS prior to: | qualifying | FMR | Particulars
+subordinated loan, | (Qualifying
+(a) the drawdown of a qualifying | prior | to | the | Subordinated Loans
+subordinated loan; and | drawdown; | Drawdown | &
+(b) the repayment, whether in part or in | Repayment)
+full, of any subordinated loan | For early repayment,
+principal before the maturity date set | prior | to | the
+out in the subordination loan | repayment;
+agreement
+For repayment of
+matured qualifying
+subordinated loan, at
+least one business day
+before the repayment
+Section B3: Notifications in relation to the representatives of LFMCs
+30 To notify MAS of the appointment of a Form 3A - Notification Prior | to | the Sections 99D and 99H MAS-Tx | Staff & Reps
+representative | for Appointment of an appointment of the of the SFA and | (Appointment of
+Appointed | appointed | Regulation 3A of the | Rep - Form 3A)
+Representative | representative | LCBR
+31 To notify MAS of the appointment of a Form 3B - Notification Prior | to | the Sections 99E and 99H MAS-Tx | Staff & Reps
+provisional representative | for Appointment of a appointment of the of the SFA and | (Appointment of
+Provisional | provisional | Regulation 3B of the | Provisional Rep -
+Representative | representative | LCBR | Form 3B)
+32 To notify MAS of the appointment of a Form 3C - Notification Prior | to | the Sections 99F and 99H MAS-Tx | Staff & Reps
+temporary representative | for Appointment of a appointment of the of the SFA and | (Appointment of
+Temporary | temporary | Regulation 3C of the | Temporary
+Representative | representative | LCBR
+12
+
+Representative -
+Form 3C)
+33 To notify MAS of the completion of Form 3D - Notification of Prior to the expiry of Section 99E of the SFA MAS-Tx | Staff & Reps
+examination requirements by a provisional the Completion of the period specified and Regulation 3B of | (Provisional
+representative | Examination | against the provisional the LCBR | Representative
+Requirements by a representative’s name | Exam Completion -
+Provisional | in the public register of | Form 3D)
+Representative | representatives
+34 To notify MAS of the intention for an Form 6 - Notification to Prior to carrying out Section 99L of the SFA MAS-Tx | Staff & Reps
+appointed representative to carry out Add Activity of a the | additional and Regulation 5 of the | (Add Representative
+additional regulated activity, in addition to Representative | regulated activity | LCBR | Activity/Product -
+that indicated against the representative’s | Form 6/7)
+name in the public register of
+representatives
+35 To notify MAS: | Form 8 - Notification for (a) No later than the Sections 99D, 99E and MAS-Tx | Staff & Reps
+the Cessation of a | next business day 99F of the SFA and | (Cessation/Non-
+(a) where a representative has ceased to Representative in any or | after the cessation Regulation 11B of the | Commencement of
+be a representative in any or all all of the Regulated | of | regulated LCBR | Rep - Form 8/10)
+regulated activities; or | Activities | activity
+(b) where an appointed representative
+has not commenced to act as a | (b) Immediate
+representative in at least one of the
+regulated activities by the end of the
+period of 6 months from the date that
+the representative’s name was
+entered in the public register of
+representatives
+36 To notify MAS of any change to a Form 16 - Notification to Within 14 days of the Section 99H of the SFA MAS-Tx | Staff & Reps
+representative’s particulars | Change Particulars for a date of change | and Regulation 5 of the | (Change | of
+Representative | LCBR | Representative
+Particulars - Form
+16/18)
+13
+
+Section C: Regulatory submissions to MAS
+37 To submit quarterly financial returns | Form 1 - Statement of Within 14 days from Regulation 27 of the MAS-Tx | Regular | Data
+Assets and Liabilities | the end of each FMR | Returns
+quarter | (SFA | Quarterly
+Form 2 - Statement of | Return - Forms 1&2)
+Financial | Resources,
+Total Risk Requirement
+and | Aggregate
+Indebtedness
+38 To submit audited annual financial returns Form 1 - Statement of Within 5 months from Section 107 of the SFA Forms 1 to 4: Regular | Data
+and auditor’s report | Assets and Liabilities | the end of the financial and Regulation 27 of MAS-Tx | Returns
+year | the FMR | (SFA Annual Returns
+Form 2 - Statement of | Forms 5 and 6, - Forms 1-4)
+Financial | Resources, | and auditor’s
+Total Risk Requirement | report: MAS-Tx (Auditor's
+and | Aggregate | Report/Audited FS -
+Indebtedness | Forms 5&6)
+Form 3 - Statement
+related to the Accounts
+of a Holder of a CMS
+Licence
+Form 4 - Statement
+relating to the Accounts
+of a Holder of a CMS
+Licence | –
+Supplementary
+Information
+Form 5 - Auditor’s
+Report - For a Holder of
+a CMS Licence
+14
+
+Form 6 - Auditor’s
+Certification - For a
+Holder of a CMS Licence
+Audited Profit and Loss
+Account and Balance
+Sheet made up to the
+last day of the financial
+year, together with an
+Auditor’s | report,
+including Management
+Letter (if any)
+39 To report to MAS the following types of (a) | Report | on (a) Upon discovery of Paragraphs 4 to 8 of MAS-Tx | Incident & Breach
+misconduct committed by the LFMC’s misconduct | of the misconduct | the | Notice | on | Reporting
+representatives: | representative | Reporting | of | ( Representative/Bro
+(b) When there is any Misconduct | of | king | Staff
+(a) Acts Involving Fraud, Dishonesty or (b) Update report (for significant | Representatives by | Misconduct
+Other Offences of a Similar Nature; | cases | where development in the Holders of CMS | Reporting)
+(b) Acts Relating to Market Conduct investigations and/or case | Licence and Exempt
+Provisions under Part XII of the SFA; | disciplinary actions are | Financial Institutions
+(c) Failure to Satisfy the Guidelines on Fit pending)
+and Proper Criteria;
+(d) Non-compliance with any regulatory
+requirement relating to the provision
+of any regulated activity under the
+SFA;
+(e) A serious breach of the LFMC’s internal
+policy or code of conduct
+40 To submit an annual declaration that there Declaration of Nil Return Within 14 days after Paragraph 9 of the MAS-Tx | Incident & Breach
+was no misconduct report for the of Misconduct of calendar year end | Notice on Reporting of | Reporting
+preceding year | Representatives | Misconduct | of | ( Declaration of No
+Representatives by | Misconduct)
+This applies to LFMCs that have not | Holders of CMS
+submitted any Misconduct Report in the | Licence and Exempt
+preceding calendar year | Financial Institutions
+15
+
+41 To submit certification by independent Form FR – Annual Within 5 months from Paragraph 5.3.1 (c) of MAS-Tx | Regular | Data
+assurance function and information on Declaration | for the end of the financial SFA04-N17 | and | Returns
+cross-border arrangements notified under Arrangements | with year | Paragraph 5.3.1 (c) of | ( Cross-Border
+the following Exemption Regulations: | Foreign | Related | SFA04-N18 | Arrangements
+- SF(ECBA)(FRC)R | Corporations and/or | Annual Declaration -
+- SF(ECBA)(FO)R | Foreign Offices notified | Form FR)
+under the Exemption
+Regulations
+42 To submit to MAS a root cause and impact Incident | Reporting (a) Submit | initial Section 29(1) of the MAS-Tx | Incident & Breach
+analysis report of a system malfunction or Template | incident report as FSM Act (Notice FSM- | Reporting | (FI
+IT security incident, which has a severe and | soon as possible, N21) | Incident Reporting)
+widespread impact on the LFMC ’s Please refer to Circular | but not later than
+operations or materially impacts the on Financial Institution | 24 hours from the
+LFMC ’s service to its customers | Incident Reporting for | discovery of the
+further information. | relevant incident.
+The report shall contain —
+(b) Submit | final
+(a) an executive summary of the relevant | incident report
+incident; | within 14 days
+(b) an analysis of the root cause which | from the discovery
+triggered the relevant incident; | of the relevant
+(c) a description of the impact of the | incident.
+relevant incident on the LFMC ’s—
+(i) | compliance with laws and
+regulations applicable to the
+LFMC;
+(ii) | operations; and
+(iii) service to its customers; and
+16
+
+(d) a description of the remedial measures
+taken to address the root cause and
+consequences of the relevant incident
+[Updated in Jan 2026]
+17

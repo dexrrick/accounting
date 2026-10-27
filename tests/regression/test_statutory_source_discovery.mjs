@@ -22,6 +22,7 @@ import {
 } from '../../src/utils/authorityEvidencePresentation.ts';
 import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import {
   getMomSalaryPaymentRuleEvidence,
   supportMomSalaryPaymentConcept,
@@ -1009,15 +1010,26 @@ for (const sample of salaryPaymentSamples) {
   mustSuppress(stream => { selectedSource(stream).officialUrl = 'https://www.cpf.gov.sg/member/'; });
   mustSuppress(stream => { selectedSource(stream).validTo = '2024-12-31'; });
   mustSuppress(stream => { selectedSource(stream).provenance = 'LOCAL_CURATED'; });
-  mustSuppress(stream => { selectedSource(stream).claims[0].provenance = 'LOCAL_CURATED'; });
-  mustSuppress(stream => { selectedSource(stream).claims[0].issueIds = ['another-issue']; });
+  const mutateIssueClaims = (stream, mutate) => {
+    const source = selectedSource(stream);
+    const issueId = stream.issues[0].id;
+    const claims = source.claims.filter(claim => claim.issueIds.includes(issueId));
+    assert.ok(claims.length > 0, 'The source retains exact claims bound to the current salary issue.');
+    for (const claim of claims) mutate(claim);
+  };
+  mustSuppress(stream => mutateIssueClaims(stream, claim => { claim.provenance = 'LOCAL_CURATED'; }));
+  mustSuppress(stream => mutateIssueClaims(stream, claim => { claim.issueIds = ['another-issue']; }));
   mustSuppress(stream => {
-    selectedSource(stream).claims[0].text = 'Salary must be paid within 7 days after the salary period ends.';
+    mutateIssueClaims(stream, claim => { claim.text = 'Salary must be paid within 7 days after the salary period ends.'; });
   });
   mustSuppress(stream => {
     const source = selectedSource(stream);
-    const monthlyClaim = source.claims.find(claim => /in accordance with the employment act/i.test(claim.text));
-    monthlyClaim.text = 'In accordance with the Employment Act, your employer must not pay your salary at least once a month.';
+    const monthlyClaims = source.claims.filter(claim => claim.issueIds.includes(stream.issues[0].id) &&
+      /(?:if you are covered by|in accordance with) the employment act/i.test(claim.text));
+    assert.ok(monthlyClaims.length > 0);
+    for (const monthlyClaim of monthlyClaims) {
+      monthlyClaim.text = monthlyClaim.text.replace(/employer must pay/i, 'employer must not pay');
+    }
   });
   if (sample.key === 'overtime-salary') {
     mustSuppress(stream => {
@@ -1038,9 +1050,10 @@ for (const sample of salaryPaymentSamples) {
   } else {
     mustSuppress(stream => {
       const source = selectedSource(stream);
-      const deadlineClaim = source.claims.find(claim => /within 7 days after the end of the salary period/i.test(claim.text) &&
-        !/for overtime work/i.test(claim.text));
-      deadlineClaim.text = `Salary must not be paid:\n${deadlineClaim.text}`;
+      const deadlineClaims = source.claims.filter(claim => claim.issueIds.includes(stream.issues[0].id) &&
+        /within 7 days after the end of the salary period/i.test(claim.text) && !/for overtime work/i.test(claim.text));
+      assert.ok(deadlineClaims.length > 0);
+      for (const deadlineClaim of deadlineClaims) deadlineClaim.text = `Salary must not be paid:\n${deadlineClaim.text}`;
     });
   }
   mustSuppress(stream => { stream.issues[0].subject = 'final salary payment deadline'; });
@@ -1092,6 +1105,44 @@ for (const sample of salaryPaymentSamples) {
       `MOM_RAW_PAGE_NEGATIVE_DIAGNOSTIC ${JSON.stringify(diagnostic)}`);
   }
 }
+
+const naturalWagesDeadlineQuery = 'For someone covered by the Employment Act, can the company pay normal monthly wages two weeks after the pay period closes?';
+const naturalWagesDeadlineSubject = 'Employment Act regular salary frequency and payment deadline';
+const retainedPayingSalaryPage = STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.find(page => page.id === 'mom-salary');
+assert.ok(retainedPayingSalaryPage, 'The retained native MOM Paying Salary page is available for the full retrieval-path regression.');
+const naturalWagesSample = {
+  ...salaryPaymentSamples[0], subject: naturalWagesDeadlineSubject, population: 'EMPLOYEE'
+};
+const naturalWagesIssue = { ...makeIssue(naturalWagesSample), id: 'natural-wages-deadline-issue' };
+const longSalaryPageHtml = retainedPayingSalaryPage.html.replace('</main>',
+  `<p>${Array.from({ length: 260 }, (_, index) => `Supplementary employment information item ${index + 1}.`).join(' ')}</p></main>`);
+assert.ok(longSalaryPageHtml.length > 5_000, 'The source excerpt regression exercises the bounded long-page selection path.');
+const naturalWagesResult = await runWorkstreams([naturalWagesSample], {
+  query: naturalWagesDeadlineQuery,
+  issuePlan: makeIssuePlan([naturalWagesIssue]),
+  pageOverrides: { [salaryPageUrl]: longSalaryPageHtml }
+});
+const naturalWagesStream = naturalWagesResult.workstreams.find(stream => stream.authority === 'MOM');
+const naturalWagesIssueEvidence = naturalWagesStream?.issues[0];
+assert.equal(naturalWagesIssueEvidence?.evidenceStatus, 'VERIFIED', JSON.stringify({
+  issue: naturalWagesIssueEvidence,
+  trace: naturalWagesIssueEvidence?.retrievalTrace
+}));
+const naturalWagesSource = naturalWagesIssueEvidence.sources.find(source => source.officialSourceUrl === salaryPageUrl);
+assert.ok(naturalWagesSource, 'The natural wages answer remains bound to the fetched MOM Paying Salary page.');
+const naturalWagesClaim = naturalWagesIssueEvidence.verifiedClaims.find(claim =>
+  /If you are covered by the Employment Act[\s\S]*?at least once a month/i.test(claim.quote) &&
+  /Salary must be paid:[\s\S]*?Within 7 days after the end of the salary period/i.test(claim.quote));
+assert.ok(naturalWagesClaim, 'The same verified quote contains the Employment Act monthly rule and ordinary seven-day deadline.');
+assert.ok(naturalWagesSource.sourceText.includes(naturalWagesClaim.quote),
+  'The combined salary-timing quote remains a literal substring of its fetched source record.');
+const naturalWagesPresentation = createAuthorityEvidencePresentation(naturalWagesResult);
+const naturalWagesAnswer = renderAuthorityEvidenceResponseText(naturalWagesPresentation, false);
+assert.match(naturalWagesAnswer,
+  /regular salary must be paid at least once a month and within 7 days after the salary period ends/i,
+'The natural wages paraphrase receives the verified general rule through the production workstream path.');
+assert.doesNotMatch(naturalWagesAnswer, /two weeks is (?:allowed|permitted|acceptable)/i,
+  'The proposed two-week interval is not rendered as an accepted statutory deadline.');
 
 // Mixed non-IRAS questions retain separate source ownership. A gap in one
 // authority keeps the whole question insufficient without borrowing the other source.

@@ -1,5 +1,6 @@
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
+import { supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
@@ -46,6 +47,33 @@ const GST_INPUT_TAX_SUBJECT_WORDS = new Set([
   'input-tax'
 ]);
 
+const IRAS_GENERAL_QUESTION_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'of', 'for', 'from', 'in', 'on', 'to', 'by', 'with', 'as', 'is', 'are', 'be',
+  'can', 'could', 'does', 'do', 'how', 'what', 'when', 'where', 'which', 'who', 'why', 'whether', 'may', 'must',
+  'will', 'would', 'should', 'not', 'only', 'all', 'any', 'general', 'generally', 'rule', 'rules', 'guidance',
+  'overview', 'explain', 'explanation', 'condition', 'conditions', 'eligibility', 'eligible', 'requirement',
+  'requirements', 'criteria', 'supporting', 'document', 'documents', 'documentation', 'claim', 'claiming', 'recover',
+  'recovery', 'recoverable', 'company', 'business', 'businesses', 'singapore'
+]);
+const IRAS_GST_OUTPUT_CATEGORY_TOPIC_IDS = new Set([
+  'iras-gst-standard-rated-supplies', 'iras-gst-zero-rating', 'iras-gst-exempt-supplies', 'iras-gst-out-of-scope-supplies'
+]);
+const IRAS_GST_OUTPUT_CATEGORY_WORDS = new Set([
+  ...IRAS_GENERAL_QUESTION_WORDS,
+  'gst', 'goods', 'good', 'service', 'services', 'supply', 'supplies', 'sale', 'sales', 'taxable', 'standard',
+  'rated', 'rating', 'rate', 'zero', 'exempt', 'exemption', 'scope', 'outside', 'out', 'charge', 'chargeable',
+  'customer', 'customers', 'overseas', 'international', 'export', 'exported', 'compare', 'comparison', 'different',
+  'difference', 'distinction', 'between', 'category', 'categories'
+]);
+const IRAS_ECI_GENERAL_TOPIC_IDS = new Set(['iras-cit-eci']);
+const IRAS_ECI_GENERAL_WORDS = new Set([
+  ...IRAS_GENERAL_QUESTION_WORDS,
+  'eci', 'estimated', 'chargeable', 'income', 'tax', 'filing', 'file', 'submit', 'submission', 'deadline', 'due',
+  'fye', 'financial', 'year', 'end', 'waiver', 'nil', 'revenue', 'annual', 'million', 'exemption', 'partial',
+  'start-up', 'startup', 'profit', 'accounting', 'book', 'loss', 'skip', 'no', 'mean', 'means', 'establish', 'establishes',
+  'established', 'qualify', 'qualification', 'assessment', 'ya'
+]);
+
 const PRIVATE_EXPENSE_SUBJECT_WORDS = new Set([
   'a', 'an', 'the', 'our', 'its', 's', 'company', 'corporate', 'business', 'singapore', 'income', 'tax', 'treatment',
   'rule', 'general', 'guidance', 'overview', 'private', 'personal', 'domestic', 'expense', 'director', 'holiday', 'travel',
@@ -73,6 +101,7 @@ function canonicalWord(value: string): string {
   if (value === 'overseas') return value;
   if (value === 'pays') return 'pay';
   if (value === 'paid') return 'pay';
+  if (value === 'establishes') return 'establish';
   if (value === 'claiming' || value === 'claimed' || value === 'claims') return 'claim';
   if (value === 'recovering' || value === 'recovered' || value === 'recovers') return 'recover';
   if (value === 'recovery' || value === 'recoveries') return 'recovery';
@@ -112,6 +141,11 @@ function hasPhrase(words: readonly string[], phrase: readonly string[]): boolean
 
 function includesAny(words: readonly string[], allowed: ReadonlySet<string>): boolean {
   return words.some(word => allowed.has(word));
+}
+
+function usesOnlyAllowedWords(phrases: readonly string[], allowed: ReadonlySet<string>): boolean {
+  const words = phrases.flatMap(tokenize).map(canonicalWord);
+  return words.length > 0 && words.every(word => allowed.has(word));
 }
 
 type RuleSourceUnit =
@@ -568,6 +602,33 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
  */
 export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput): GeneralIrasRuleSupport {
   const concepts = input.concepts || [];
+  // Full-family proof is limited to general concepts. A checklist cannot prove
+  // a specific blocked-input exception, supply classification, or entity case.
+  if (input.population === undefined || input.population === 'COMPANY') {
+    const requestedPhrases = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])];
+    const topics = new Set(input.topicIds);
+    let adapterTopicIds: string[] = [];
+    if (input.domainId === 'IRAS_GST' && topics.size === 1 && topics.has('iras-gst-input-tax') &&
+        usesOnlyAllowedWords(requestedPhrases, new Set([...GST_INPUT_TAX_SUBJECT_WORDS, ...IRAS_GENERAL_QUESTION_WORDS]))) {
+      adapterTopicIds = ['iras-gst-input-tax'];
+    } else if (input.domainId === 'IRAS_GST' && topics.size > 0 &&
+        [...topics].every(topicId => IRAS_GST_OUTPUT_CATEGORY_TOPIC_IDS.has(topicId)) &&
+        usesOnlyAllowedWords(requestedPhrases, IRAS_GST_OUTPUT_CATEGORY_WORDS)) {
+      adapterTopicIds = [...topics];
+    } else if (input.domainId === 'IRAS_CORPORATE_TAX' && topics.size === 1 &&
+        [...topics].every(topicId => IRAS_ECI_GENERAL_TOPIC_IDS.has(topicId)) &&
+        usesOnlyAllowedWords(requestedPhrases, IRAS_ECI_GENERAL_WORDS)) {
+      adapterTopicIds = [...topics];
+    }
+    for (const topicId of adapterTopicIds) {
+      const support = (subject: string): boolean | undefined => {
+        const request = { authority: 'IRAS', topicId, query: subject, subject, sourceText: input.sourceText };
+        return supportIrasCpfExpansionRule(request) ?? supportIrasCpfMasPracticalRule(request);
+      };
+      if (support(input.subject) === true && concepts.every(concept =>
+        support([concept.label, ...concept.terms].join(' ')) === true)) return true;
+    }
+  }
   const subjectWords = tokenize(input.subject);
   const conceptWords = concepts.flatMap(concept => [concept.label, ...concept.terms].flatMap(tokenize));
   const words = [...subjectWords, ...conceptWords].map(canonicalWord);

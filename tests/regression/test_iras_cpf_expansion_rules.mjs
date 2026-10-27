@@ -7,6 +7,7 @@ import {
   selectIrasCpfExpansionQuotes,
   supportIrasCpfExpansionRule
 } from '../../src/retrieval/irasCpfExpansionRules.ts';
+import { TargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
 import { cleanHtmlText } from '../../src/retrieval/sourceAdapters.ts';
 
 const fixtureRoot = new URL('../fixtures/statutoryExpansionSources/', import.meta.url);
@@ -139,8 +140,8 @@ assert.equal(supportIrasCpfExpansionRule({ ...inputTaxRequest, officialUrl: unde
   'Text-only semantic support checks can prove complete rule content when the source URL is supplied by an outer source gate.');
 assert.deepEqual(selectIrasCpfExpansionQuotes({ ...inputTaxRequest, officialUrl: undefined }), [],
   'Quote selection requires the source URL so its quote can enter the governed verifier path.');
-assert.equal(supportIrasCpfExpansionRule(inputTax('Can we claim input tax on this purchase?')), undefined,
-  'Specific claim decisions remain outside the general rule handler.');
+assert.equal(supportIrasCpfExpansionRule(inputTax('Can we claim input tax on this purchase?')), true,
+  'A specific claim question can receive the general conditions, with its application kept unresolved by the evidence renderer.');
 assert.equal(supportIrasCpfExpansionRule(inputTax('What are the input tax conditions for motor car expenses?')), undefined,
   'The general checklist does not stand in for the detailed motor-car exception rules.');
 assert.equal(supportIrasCpfExpansionRule(inputTax('What reasonable steps should a business take for Missing Trader Fraud checks?')), undefined,
@@ -161,6 +162,8 @@ const eciFixture = renderFixture(eciRequest);
 const eciEvidence = getIrasCpfExpansionEvidence(eciQuery, eciFixture.stream, eciFixture.issue);
 assert.match(eciEvidence?.text || '', /within three months/i);
 assert.match(eciEvidence?.text || '', /both annual revenue.*S\$5 million or less.*nil ECI/i);
+assert.match(eciEvidence?.text || '', /accounting profit or book loss alone does not establish nil ECI/i,
+  'A book result alone is not equated with tax-computed nil ECI.');
 assert.match(eciEvidence?.text || '', /self-assesses/i);
 assert.equal(supportIrasCpfExpansionRule(eci(eciQuery, eciHtml)), true,
   'Current official native HTML with ordered-list markup and a revenue footnote proves the ECI waiver.');
@@ -198,17 +201,41 @@ assert.equal(getIrasCpfExpansionEvidence(eciQuery, deniedEciRendered.stream, den
   'A denied ECI threshold cannot render from its earlier positive wording.');
 assert.equal(supportIrasCpfExpansionRule(eci('What were the 2025 ECI filing and waiver rules?')), undefined,
   'Historical rule applicability is left unsupported.');
-assert.equal(supportIrasCpfExpansionRule(eci('Does my company qualify for the ECI waiver?')), undefined,
-  'Company-specific eligibility remains outside general rule rendering.');
-assert.equal(supportIrasCpfExpansionRule(eci('When is ECI due?')), undefined,
-  'The existing deadline rule keeps ownership of a deadline-only question.');
+assert.equal(supportIrasCpfExpansionRule(eci('Does my company qualify for the ECI waiver?')), true,
+  'A company-specific waiver question can receive the verified general tests without establishing eligibility.');
+assert.equal(supportIrasCpfExpansionRule(eci('When is ECI due?')), true,
+  'A general ECI deadline question receives the verified three-month deadline.');
+assert.equal(supportIrasCpfExpansionRule(eci('Is ECI due three months after year end?')), true,
+  'A paraphrase phrased as a confirmation of the ordinary deadline is answerable.');
+assert.equal(supportIrasCpfExpansionRule(eci('Does no accounting profit mean we can skip ECI?')), true,
+  'A no-profit assumption receives the verified general filing and waiver rules without deciding the company case.');
 assert.equal(supportIrasCpfExpansionRule(eci('What penalties apply for late ECI filing?')), undefined,
   'An ECI waiver explanation does not support penalty or late-filing consequences.');
+const currentDate = TargetDateResolver.CURRENT_SYSTEM_DATE;
+const currentYear = Number(currentDate.slice(0, 4));
+assert.equal(supportIrasCpfExpansionRule(eci(`As of ${currentDate.slice(0, 4)}, when is ECI due?`)), true,
+  'A reference to the current applicability year remains answerable.');
+assert.equal(supportIrasCpfExpansionRule(eci(`As of ${currentYear + 1}, when is ECI due?`)), undefined,
+  'Future applicability is not established using today’s guidance.');
+assert.equal(supportIrasCpfExpansionRule(eci('When was ECI due last year?')), undefined,
+  'Relative historical years are outside the current source period.');
+assert.equal(supportIrasCpfExpansionRule(eci('When will ECI be due next year?')), undefined,
+  'Relative future years are outside the current source period.');
+assert.equal(supportIrasCpfExpansionRule(eci(`What is the ECI due date before ${currentYear}?`)), undefined,
+  'A cutoff comparison using the current year does not establish the earlier period.');
+assert.equal(supportIrasCpfExpansionRule(eci(`What will the ECI due date be after ${currentYear}?`)), undefined,
+  'A cutoff comparison using the current year does not establish later periods.');
+const previousDate = new Date(`${currentDate}T00:00:00Z`);
+previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+assert.equal(supportIrasCpfExpansionRule(eci(`When is ECI due for an FYE on ${previousDate.toISOString().slice(0, 10)}?`)), undefined,
+  'A current general rule cannot determine a different specific deadline date.');
 
 const cpfQuery = 'How are CPF wage components, allowances, reimbursements and annual bonuses classified as OW or AW?';
 const cpfRequest = cpf(cpfQuery);
 assert.equal(supportIrasCpfExpansionRule(cpfRequest), true,
   'Compound OW/AW, allowance, reimbursement and annual-bonus classification stays with the expansion handler.');
+assert.equal(supportIrasCpfExpansionRule(cpf('Is a bonus wages for CPF?')), true,
+  'The singular natural form for a bonus is recognized.');
 const cpfQuotes = selectIrasCpfExpansionQuotes(cpfRequest);
 assert.equal(cpfQuotes.length, 1);
 assert.ok(cpfQuotes[0].includes('payable by the 14th of the following month'));

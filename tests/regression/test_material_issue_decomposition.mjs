@@ -171,7 +171,7 @@ const fixtures = {
 
 const expectedTopicIds = {
   A: [['cpf_contribution_rates'], ['cpf_contribution_rates'], ['iras-individual-cpf-relief']],
-  B: [[], ['mom-work-passes-general'], ['cpf_contribution_rates'], []],
+  B: [[], ['mom-work-passes-general'], ['cpf-employee-coverage', 'cpf_contribution_rates'], []],
   C: [[], []],
   D: [[], ['iras-cit-deductibility']]
 };

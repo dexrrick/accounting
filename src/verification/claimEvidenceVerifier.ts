@@ -10,8 +10,9 @@ import { getCoverageTopicById } from '../standards/coverageRegistry';
 import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
 import { selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
-import { selectIrasCpfExpansionQuotes, supportIrasCpfExpansionRule } from '../retrieval/irasCpfExpansionRules';
-import { selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
+import { selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '../retrieval/practicalStatutoryExpansion';
+import { selectMomSalaryPaymentRuleQuote, supportMomSalaryPaymentIssue } from '../retrieval/momSalaryPaymentRule';
+
 import { normalizeEvidenceText, startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 export { startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 
@@ -63,6 +64,38 @@ interface BoundedCoverageRuleProfile {
 }
 
 const BOUNDED_COVERAGE_RULE_PROFILES: Readonly<Record<string, BoundedCoverageRuleProfile>> = {
+  'IRAS:iras-gst-standard-rated-supplies': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)']
+  },
+  'IRAS:iras-gst-zero-rating': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/goods-and-services-tax-(gst)-what-it-is-and-how-it-works', 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/completing-gst-returns']
+  },
+  'IRAS:iras-gst-exempt-supplies': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/goods-and-services-tax-(gst)-what-it-is-and-how-it-works']
+  },
+  'IRAS:iras-gst-out-of-scope-supplies': {
+    authority: 'IRAS', domain: 'IRAS_GST',
+    officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies']
+  },
+  'ACRA:acra_agm': {
+    authority: 'ACRA', domain: 'ACRA_CORP',
+    officialUrls: ['https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/']
+  },
+  'ACRA:acra_annual-returns': {
+    authority: 'ACRA', domain: 'ACRA_CORP',
+    officialUrls: ['https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/']
+  },
+  'MOM:mom-part-iv-overtime': {
+    authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    officialUrls: ['https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days']
+  },
+  'MOM:mom_overtime': {
+    authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    officialUrls: ['https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days']
+  },
   'IRAS:iras-gst-input-tax': {
     authority: 'IRAS', domain: 'IRAS_GST',
     officialUrls: ['https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax']
@@ -89,7 +122,8 @@ const BOUNDED_COVERAGE_RULE_PROFILES: Readonly<Record<string, BoundedCoverageRul
   },
   'MAS:mas-regulatory-reporting': {
     authority: 'MAS', domain: 'MAS_FUNDS',
-    officialUrls: ['https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf']
+    officialUrls: ['https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf',
+      'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf']
   },
   'IRAS:iras-gst-filing-deadlines': {
     authority: 'IRAS', domain: 'IRAS_GST',
@@ -103,6 +137,14 @@ const BOUNDED_COVERAGE_RULE_PROFILES: Readonly<Record<string, BoundedCoverageRul
     ]
   },
   'CPF:cpf_contribution_rates': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay']
+  },
+  'CPF:cpf-employee-coverage': {
+    authority: 'CPF', domain: 'CPF_BOARD',
+    officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions']
+  },
+  'CPF:cpf-contribution-computation': {
     authority: 'CPF', domain: 'CPF_BOARD',
     officialUrls: ['https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay']
   },
@@ -158,6 +200,25 @@ function isExactBoundedCoverageRuleSpan(
   request: BoundedCoverageRequest | undefined
 ): boolean {
   if (!request) return false;
+  const momSalaryRuleQuote = request.authority === 'MOM' && request.topicId === 'mom-salary-payment'
+    ? selectMomSalaryPaymentRuleQuote(request.query, record.sourceText)
+    : undefined;
+  // The exact contiguous-span profile is exclusively for the new ordinary
+  // salary-period rule. Leave final-salary and salary-deduction evidence to
+  // their established full-source rule profiles.
+  if (request.authority === 'MOM' && request.topicId === 'mom-salary-payment' &&
+      momSalaryRuleQuote !== undefined &&
+      supportMomSalaryPaymentIssue(request.query, request.subject, record.sourceText) === true) {
+    const officialUrl = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
+    return record.provenance === 'LIVE_EXTERNAL' && record.lifecycleState === 'CANDIDATE' &&
+      record.sourceStatus === 'NEEDS_REVIEW' && !record.validTo && record.authority === 'MOM' &&
+      record.sourceAuthority === 'MOM' && record.domain === 'MOM_EMPLOYMENT' &&
+      recordBoundToCoverageTopic(record, 'mom-salary-payment') &&
+      typeof record.officialSourceUrl === 'string' && typeof record.canonicalSourceUrl === 'string' &&
+      sameExactOfficialCoverageUrl(record.officialSourceUrl, officialUrl) &&
+      sameExactOfficialCoverageUrl(record.canonicalSourceUrl, officialUrl) &&
+      momSalaryRuleQuote === quote;
+  }
   const profile = BOUNDED_COVERAGE_RULE_PROFILES[`${request.authority}:${request.topicId}`];
   if (!profile || profile.authority !== request.authority || record.authority !== profile.authority ||
       record.sourceAuthority !== profile.authority || record.domain !== profile.domain ||
@@ -171,21 +232,19 @@ function isExactBoundedCoverageRuleSpan(
     query: request.query, subject: request.subject, sourceText: record.sourceText,
     officialUrl: record.officialSourceUrl
   };
-  const fullRecordProof = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest) ??
+  const fullRecordProof = supportPracticalExpansionRule(coverageRequest) ??
     supportIrasCpfCoverageRule(coverageRequest) ?? supportMomAcraMasCoverageRule(coverageRequest);
   if (fullRecordProof !== true) return false;
-  const quoteProof = supportIrasCpfExpansionRule({ ...coverageRequest, sourceText: quote }) ??
-    supportMomAcraMasExpansionRule({ ...coverageRequest, sourceText: quote }) ??
+  const quoteProof = supportPracticalExpansionRule({ ...coverageRequest, sourceText: quote }) ??
     supportIrasCpfCoverageRule({ ...coverageRequest, sourceText: quote }) ??
     supportMomAcraMasCoverageRule({ ...coverageRequest, sourceText: quote });
-  const expansionProof = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest);
+  const expansionProof = supportPracticalExpansionRule(coverageRequest);
   // An expansion component may establish one premise of the complete rule.
   // Require the full document proof and exact selector membership here; the
   // workstream requires every selected premise from this same record below.
   if (quoteProof !== true && expansionProof !== true) return false;
   const exactSelectedSpans = [
-    ...selectIrasCpfExpansionQuotes(coverageRequest),
-    ...selectMomAcraMasExpansionQuotes(coverageRequest),
+    ...selectPracticalExpansionQuotes(coverageRequest),
     ...selectIrasCpfCoverageQuotes(coverageRequest),
     ...selectMomAcraMasCoverageQuotes(coverageRequest)
   ];
@@ -1070,11 +1129,18 @@ export function verifyEvidenceClaims(
     const sourceSpanResult = quoteIsWholeSourceSpan(record, quote);
     const selectedExpansionComponent = sourceSpanResult === 'OMITS_ATTACHED_QUALIFICATION' &&
       options?.boundedCoverageRequest &&
-      (supportIrasCpfExpansionRule({ ...options.boundedCoverageRequest, sourceText: record.sourceText,
-        officialUrl: record.officialSourceUrl }) ?? supportMomAcraMasExpansionRule({
-        ...options.boundedCoverageRequest, sourceText: record.sourceText, officialUrl: record.officialSourceUrl })) === true &&
+      supportPracticalExpansionRule({ ...options.boundedCoverageRequest, sourceText: record.sourceText,
+        officialUrl: record.officialSourceUrl }) === true &&
       isExactBoundedCoverageRuleSpan(record, quote, options.boundedCoverageRequest);
-    const quoteResult = selectedExpansionComponent || sourceSpanResult === 'NO_MATCH' && (
+    // The ordinary salary deadline is one item under a source heading and
+    // may be marked as omitting the following overtime list item. Admit only
+    // the exact, query-bound MOM selector span; do not relax the generic span
+    // rules for other evidence.
+    const selectedMomSalaryRuleSpan = sourceSpanResult === 'OMITS_ATTACHED_QUALIFICATION' &&
+      options?.boundedCoverageRequest?.authority === 'MOM' &&
+      options.boundedCoverageRequest.topicId === 'mom-salary-payment' &&
+      isExactBoundedCoverageRuleSpan(record, quote, options.boundedCoverageRequest);
+    const quoteResult = selectedExpansionComponent || selectedMomSalaryRuleSpan || sourceSpanResult === 'NO_MATCH' && (
       quoteIsCompleteBoundedAdvisorySpan(record, quote) ||
       isExactBoundedCoverageRuleSpan(record, quote, options?.boundedCoverageRequest)
     ) ? 'MATCH' : sourceSpanResult;

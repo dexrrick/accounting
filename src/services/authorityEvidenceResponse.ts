@@ -8,6 +8,9 @@ import { getIrasCpfCoverageEvidence } from '../retrieval/irasCpfCoverageRules';
 import { getMomAcraMasCoverageEvidence } from '../retrieval/momAcraMasCoverageRules';
 import { getIrasCpfExpansionEvidence } from '../retrieval/irasCpfExpansionRules';
 import { getMomAcraMasExpansionEvidence } from '../retrieval/momAcraMasExpansionRules';
+import { getAcraMomPracticalEvidence } from '../retrieval/acraMomPracticalRules20261027';
+import { getIrasCpfMasPracticalEvidence } from '../retrieval/irasCpfMasPracticalRules20261027';
+import { TargetDateResolver } from '../retrieval/targetDateResolver';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
   if (stream.evidenceStatus === 'INSUFFICIENT') return 'Evidence incomplete';
@@ -37,11 +40,25 @@ export function renderAuthorityEvidenceResponseText(
     ...(hasBalancedJournal ? ['', 'The deterministic journal remains available in the Double Entry Journal tab.'] : [])
   ];
 
+  const requestedYears = [...new Set([...presentation.query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))]
+    .filter(year => year !== TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
+  if (requestedYears.length > 0 && presentation.workstreams.length > 0 &&
+      presentation.workstreams.every(stream => stream.evidenceStatus === 'INSUFFICIENT')) {
+    lines.push('', `**Applicability limitation:** The available evidence does not establish the requested rule for ${requestedYears.join(', ')}. An official source whose legal applicability covers that period is needed. A current page, its retrieval date, or a document's original issue date alone cannot establish the requirements for an earlier or later period.`);
+    if (presentation.workstreams.some(stream => stream.authority === 'CPF')) {
+      lines.push('A CPF amount would also require the contribution table applicable to that payroll period, citizenship or PR status and year, age, and relevant wages.');
+    }
+    if (presentation.workstreams.some(stream => stream.authority === 'ACRA')) {
+      lines.push('An ACRA filing deadline would also require the applicable financial year end, company and listing status, AGM facts and any relevant statutory exception.');
+    }
+  }
   for (const stream of presentation.workstreams) {
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
     for (const issue of stream.issues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
-      const practicalRule = getIrasCpfExpansionEvidence(presentation.query, stream, issue) ||
+      const practicalRule = getAcraMomPracticalEvidence(presentation.query, stream, issue) ||
+        getIrasCpfMasPracticalEvidence(presentation.query, stream, issue) ||
+        getIrasCpfExpansionEvidence(presentation.query, stream, issue) ||
         getMomAcraMasExpansionEvidence(presentation.query, stream, issue) ||
         getIrasAcraPracticalRuleEvidence(presentation.query, stream, issue) ||
         getCpfMasPracticalRuleEvidence(presentation.query, stream, issue) ||

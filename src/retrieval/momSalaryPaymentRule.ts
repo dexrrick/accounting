@@ -15,11 +15,11 @@ export interface MomSalaryPaymentRuleEvidence {
 
 function requestedRule(query: string): MomSalaryPaymentRuleKind | undefined {
   if (/\b(?:19|20)\d{2}\b|\b(?:historical|previous|former|old|superseded|before\s+\d{4})\b/i.test(query) ||
-      /\b(?:calculate|compute|estimate|how much|my salary|our salary|commission|tax clearance)\b/i.test(query)) {
+      /\b(?:calculate|compute|estimate|how much|my salary|our salary|commission|tax clearance|deduct(?:ion|ions|ed|ing)?)\b/i.test(query)) {
     return undefined;
   }
   const hasPaymentTimingIntent = /\b(?:when|how soon|due|deadline|timing|what date|by what date)\b/i.test(query);
-  const mentionsSalary = /\b(?:salary|salaries|pay)\b/i.test(query);
+  const mentionsSalary = /\b(?:salary|salaries|pay|wage|wages)\b/i.test(query);
   const asksFinalSalaryTiming = hasPaymentTimingIntent && mentionsSalary &&
     (/\b(?:final|last)\s+(?:salary|pay(?:ment)?)\b/i.test(query) ||
       /\b(?:resign\w*|dismiss\w*|terminat\w*)\b/i.test(query));
@@ -28,13 +28,15 @@ function requestedRule(query: string): MomSalaryPaymentRuleKind | undefined {
   const asksOvertimeDeadline = /\b(?:when|what(?:\s+is)?\s+the\s+deadline|how\s+soon)\b/i.test(query) &&
     /\bovertime\s+(?:salary|pay)\b/i.test(query) && /\bsalary\s+period\b/i.test(query);
   const hasOvertimeContext = /\bovertime\b/i.test(query);
-  const explicitlyRegularSalary = /\bregular\s+salary\b/i.test(query);
+  const explicitlyRegularSalary = /\b(?:regular|normal|monthly)\s+(?:salary|salaries|pay|wages?)\b/i.test(query);
+  const asksBareSalaryPeriodDeadline = /\b(?:when|due|deadline|how soon|what date|by what date)\b/i.test(query) &&
+    /\bsalary\b/i.test(query) && /\b(?:salary|pay)\s+period\b/i.test(query);
   const asksRegularFrequency = /\b(?:how\s+often|frequency(?:\s+of)?)\b/i.test(query) &&
-    /\b(?:regular\s+)?salary\b/i.test(query) && /\b(?:pay|paid|payment|paying)\b/i.test(query) &&
+    /\b(?:(?:regular\s+)?salar(?:y|ies)|wages?)\b/i.test(query) && /\b(?:pay|paid|payment|paying)\b/i.test(query) &&
     (!hasOvertimeContext || explicitlyRegularSalary);
-  const asksRegularDate = /\b(?:when|due|deadline|how\s+soon|what date|by what date)\b/i.test(query) &&
-    /\b(?:regular\s+)?salary\b/i.test(query) &&
-    /\b(?:pay|paid|payment|payable|salary\s+period)\b/i.test(query) &&
+  const asksRegularDate = /\b(?:when|due|deadline|how\s+soon|what date|by what date|can|may|is it permissible|is it okay)\b/i.test(query) &&
+    (/\b(?:(?:regular|normal|monthly)\s+(?:salar(?:y|ies)|pay|wages?)|regular\s+pay)\b/i.test(query) || asksBareSalaryPeriodDeadline) &&
+    /\b(?:pay|paid|payment|payable|salary\s+period|pay\s+period|wage\s+period)\b/i.test(query) &&
     (!hasOvertimeContext || explicitlyRegularSalary);
   const asksRegularDeadline = asksRegularFrequency || asksRegularDate;
   if (asksOvertimeDeadline && asksRegularDeadline) return undefined;
@@ -134,8 +136,8 @@ function isCompleteSalaryPaymentEvidence(
       monthlyPremiseMentions.some(statement => !isPositive(statement))) return false;
   if (kind === 'REGULAR_SALARY') {
     const regularDeadline = /\bwithin\s+7\s+days\s+after\s+the\s+end\s+of\s+the\s+salary\s+period\b/i;
-    const hasCompleteRegularRule = statements.some(statement => isPositiveEmploymentActMonthlySalaryRule(statement) &&
-      regularDeadline.test(statement) && isPositive(statement));
+    const hasCompleteRegularRule = statements.some(statement => isPositiveEmploymentActMonthlySalaryRule(statement)) &&
+      statements.some(statement => regularDeadline.test(statement) && isPositive(statement));
     const hasNegatedGeneralDeadline = statements.some(statement =>
       /\bwithin\s+\d+\s+days\s+after\s+the\s+end\s+of\s+the\s+salary\s+period\b/i.test(statement) &&
       !/\bovertime\b/i.test(statement) && !isPositive(statement));
@@ -158,6 +160,28 @@ function isCompleteSalaryPaymentEvidence(
 export function provesMomSalaryPaymentSource(query: string, sourceText: string): boolean | undefined {
   const kind = requestedRule(query);
   return kind ? isCompleteSalaryPaymentEvidence([sourceText], kind, query, kind === 'FINAL_SALARY') : undefined;
+}
+
+/**
+ * Selects one exact contiguous source span for ordinary salary timing when
+ * the monthly-payment premise and the ordinary seven-day deadline are in
+ * separate paragraphs or list items. Intervening source wording is retained
+ * so the quote stays a literal source span, not a stitched summary.
+ */
+export function selectMomSalaryPaymentRuleQuote(query: string, sourceText: string): string | undefined {
+  if (requestedRule(query) !== 'REGULAR_SALARY' ||
+      !isCompleteSalaryPaymentEvidence([sourceText], 'REGULAR_SALARY', query)) return undefined;
+
+  const monthlyRule = /\b(?:if\s+you\s+are\s+covered\s+by|in\s+accordance\s+with)\s+the\s+employment\s+act\b[^.!?]{0,180}\b(?:your\s+)?employer\s+must\s+pay\s+(?:your\s+)?salary\b[^.!?]{0,100}\bat\s+least\s+once\s+a\s+month\b[.!?]/i;
+  const regularDeadline = /\bsalary\s+must\s+be\s+paid\s*:\s*(?:[-•◦▪*]\s*)?within\s+7\s+days\s+after\s+the\s+end\s+of\s+the\s+salary\s+period\.?/i;
+  const monthlyMatch = monthlyRule.exec(sourceText);
+  const deadlineMatch = regularDeadline.exec(sourceText);
+  if (!monthlyMatch || monthlyMatch.index === undefined || !deadlineMatch || deadlineMatch.index === undefined) return undefined;
+
+  const start = Math.min(monthlyMatch.index, deadlineMatch.index);
+  const end = Math.max(monthlyMatch.index + monthlyMatch[0].length, deadlineMatch.index + deadlineMatch[0].length);
+  const quote = sourceText.slice(start, end).trim();
+  return quote.length > 0 && quote.length <= 4_000 ? quote : undefined;
 }
 
 function normalizedSalaryConcept(value: string): string {

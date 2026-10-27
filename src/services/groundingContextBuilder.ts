@@ -34,15 +34,17 @@ import {
 } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
+import { cleanHtmlText } from '../retrieval/sourceAdapters';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
-import { provesMomSalaryPaymentSource } from '../retrieval/momSalaryPaymentRule';
+import { provesMomSalaryPaymentSource, selectMomSalaryPaymentRuleQuote } from '../retrieval/momSalaryPaymentRule';
 import { provesIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
 import { provesCpfMasPracticalRuleSource } from '../retrieval/cpfMasPracticalRules';
 import { supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
-import { hasIrasCpfExpansionContradiction, selectIrasCpfExpansionQuotes, supportIrasCpfExpansionRule } from '../retrieval/irasCpfExpansionRules';
-import { MAS_VCFM_TOOLKIT_URL, hasMomAcraMasExpansionContradiction, selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
+import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule, practicalExpansionPointers } from '../retrieval/practicalStatutoryExpansion';
+import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPracticalRules20261027';
+import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
 import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
 import {
   completeIrasCpfCashTopUpEligibilityQuote,
@@ -83,11 +85,15 @@ import {
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
+const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
 const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
   'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
   'CPF:cpf-bonus-backpay': ['wages are defined as remuneration in money'],
   'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money'],
   'CPF:cpf-additional-wages': ['wages are defined as remuneration in money'],
+  'CPF:cpf-employee-coverage': ['person who is employed in Singapore', 'Singapore Permanent Residents earning total wages'],
+  'CPF:cpf-contribution-computation': ['CPF contribution rates vary based on', 'pay the employer', 'round off the Total CPF contributions'],
+  'MAS:mas-regulatory-reporting': ['To submit quarterly financial returns', 'To submit audited annual financial returns', 'To notify MAS of a change of name'],
   'MAS:mas-fund-management-exemptions': ['existing class exemption']
 };
 
@@ -1265,6 +1271,17 @@ function discoveryHostsForTopic(topic: MappedCoverageTopic): string[] {
   return approvedHostsForTopic(topic);
 }
 
+function isExactMomPayingSalaryUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'www.mom.gov.sg' && !url.username && !url.password && !url.port &&
+      !url.search && !url.hash && url.pathname.replace(/\/$/, '') === '/employment-practices/salary/paying-salary';
+  } catch {
+    return false;
+  }
+}
+
 function isApprovedDiscoveryCandidateUrl(candidateUrl: string, approvedHosts: readonly string[]): boolean {
   try {
     const parsed = new URL(candidateUrl);
@@ -1630,8 +1647,7 @@ export async function resolveMappedOfficialSourceFallback(
       semanticIrasContext?.primarySubject || topic.title;
     const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id,
       query, subject: scopedCoverageSubject, sourceText: '', officialUrl: candidateUrl };
-    const expansionOwned = (supportIrasCpfExpansionRule(expansionRequest) ??
-      supportMomAcraMasExpansionRule(expansionRequest)) !== undefined;
+    const expansionOwned = (supportPracticalExpansionRule(expansionRequest)) !== undefined;
     const coverageContentAnchors = (expansionOwned || currentOwnedPracticalCoverageRequest(
       topic.authorities[0] || '', topic.id, query, scopedCoverageSubject
     )) ? PRACTICAL_COVERAGE_CONTENT_ANCHORS[`${topic.authorities[0]}:${topic.id}`] || [] : [];
@@ -1655,16 +1671,19 @@ export async function resolveMappedOfficialSourceFallback(
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
-      if (topic.id === 'mas-regulatory-reporting' && candidateUrl === MAS_VCFM_TOOLKIT_URL) {
+      const lfmcToolkitUrl = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
+      if (topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) {
+        const isLfmc = candidateUrl === lfmcToolkitUrl;
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
         if (document.status === 'SUCCESS') {
           const extraction = await extractOfficialDocumentFromRetrieved({
             url: candidateUrl, authority: 'MAS', domain: 'MAS_FUNDS', documentKind: 'PDF',
-            standardOrActCode: 'MAS', legalOrStandardInstrument: 'VCFM Compliance Toolkit',
+            standardOrActCode: 'MAS', legalOrStandardInstrument: isLfmc ? 'LFMC Compliance Toolkit' : 'VCFM Compliance Toolkit',
             expectedTopic: {
               standardIdentifiers: ['MAS'],
-              expectedTitles: ['Compliance Toolkit for Venture Capital Fund Managers', 'Venture Capital Fund Managers'],
-              topicTerms: ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
+              expectedTitles: isLfmc ? ['Compliance Toolkit for Licensed Fund Management Companies', 'Licensed Fund Management Companies']
+                : ['Compliance Toolkit for Venture Capital Fund Managers', 'Venture Capital Fund Managers'],
+              topicTerms: isLfmc ? ['quarterly financial returns', 'principal place of business'] : ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
             }
           }, document);
           if (extraction.status === 'SUCCESS') {
@@ -1682,6 +1701,74 @@ export async function resolveMappedOfficialSourceFallback(
             result = { ...document, status: 'INVALID_CONTENT', error: extraction.reason };
           }
         } else result = document;
+      } else if (expansionOwned && IRAS_GST_BASICS_EXEMPT_RULE &&
+          IRAS_GST_BASICS_EXEMPT_RULE.topicIds.includes(topic.id) &&
+          topic.authorities.includes('IRAS') && candidateUrl === IRAS_GST_BASICS_EXEMPT_RULE.officialUrl) {
+        // The native GST overview places the exempt-category examples in
+        // link-only cells inside its substantive comparison table. The
+        // generic visible-text extractor correctly removes link-only chrome,
+        // but that also drops these four rule-bearing cells. Fetch and verify
+        // the exact page, require the complete eight-part native proof, then
+        // pass only its exact selected visible passages through the ordinary
+        // topic validator. The raw response hash, final URL, and retrieval
+        // metadata remain attached to the fetched document.
+        const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        const rawTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
+        const nativeTitle = rawTitle ? cleanHtmlText(rawTitle).replace(/\s+/g, ' ').trim() : '';
+        const nativeTitleIdentityMatches = normalizeEvidenceText(nativeTitle) ===
+          normalizeEvidenceText(IRAS_GST_BASICS_EXEMPT_RULE.title);
+        const nativeMain = document.content?.match(/<main\b[^>]*>([\s\S]*?)<\/main\s*>/i)?.[1] || '';
+        const sourceIdentityQuote = [...nativeMain.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p\s*>/gi)]
+          .map(match => cleanHtmlText(match[1]).replace(/\s+/g, ' ').trim())
+          .find(text => /\bGST-registered businesses\b/i.test(text) && /\bIRAS\b/i.test(text));
+        const exactNativeIdentity = document.status === 'SUCCESS' && document.content &&
+          document.finalUrl === IRAS_GST_BASICS_EXEMPT_RULE.officialUrl &&
+          nativeTitleIdentityMatches && Boolean(sourceIdentityQuote);
+        const nativeRequest = { ...expansionRequest,
+          sourceText: exactNativeIdentity ? document.content! : '',
+          officialUrl: IRAS_GST_BASICS_EXEMPT_RULE.officialUrl };
+        const nativeProof = exactNativeIdentity ? supportPracticalExpansionRule(nativeRequest) : undefined;
+        const quotes = nativeProof === true ? selectPracticalExpansionQuotes(nativeRequest) : [];
+        if (nativeProof === true && quotes.length === 8) {
+          expectation.expectedTitles.push(IRAS_GST_BASICS_EXEMPT_RULE.title);
+          const escape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const content = `<html><head><title>${escape(nativeTitle)}</title></head><body><main><h1>${escape(nativeTitle)}</h1><p>${escape(sourceIdentityQuote!)}</p>${quotes
+            .map(quote => `<p>${escape(quote).replace(/\n/g, '<br>')}</p>`).join('')}</main></body></html>`;
+          const checked = defaultExternalSourceValidator.validateTopicContent(content, expectation);
+          result = { ...document, content, pageTitle: checked.pageTitle,
+            status: checked.isValid ? 'SUCCESS' : 'TOPIC_MISMATCH',
+            topicMatched: checked.isValid, titleMatched: checked.isValid, contentMatched: checked.isValid,
+            error: checked.isValid ? undefined : checked.reason };
+        } else {
+          result = { ...document, status: 'TOPIC_MISMATCH',
+            error: !exactNativeIdentity
+              ? 'The IRAS GST basics source did not match its exact native URL and title identity.'
+              : nativeProof !== true
+                ? 'The IRAS GST basics source does not establish every required exempt and zero-rated category premise.'
+                : `The IRAS GST basics source yielded ${quotes.length} of 8 required category passages.` };
+        }
+      } else if (expansionOwned && ((topic.id === 'cpf-employee-coverage' &&
+          candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions') ||
+          (topic.id === 'cpf-contribution-computation' && candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay'))) {
+        // CPF's employee definitions/exemptions are native action cards. The
+        // generic paragraph extractor excludes their containers. Select only
+        // a complete, contradiction-checked rule from visible native markup;
+        // then run the usual identity/body validation on those exact passages.
+        const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        const quotes = document.status === 'SUCCESS' && document.content
+          ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
+        const nativeTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
+        if (quotes.length > 0 && nativeTitle && (topic.id === 'cpf-employee-coverage'
+          ? /who should receive cpf contributions/i.test(nativeTitle) : /how much cpf contributions to pay/i.test(nativeTitle))) {
+          const escape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          const content = `<html><head><title>${escape(nativeTitle)}</title></head><body><main>${quotes
+            .map(quote => `<p>${escape(quote).replace(/\n/g, '<br>')}</p>`).join('')}</main></body></html>`;
+          const checked = defaultExternalSourceValidator.validateTopicContent(content, expectation);
+          result = { ...document, content, pageTitle: checked.pageTitle,
+            status: checked.isValid ? 'SUCCESS' : 'TOPIC_MISMATCH',
+            topicMatched: checked.isValid, titleMatched: checked.isValid, contentMatched: checked.isValid,
+            error: checked.isValid ? undefined : checked.reason };
+        } else result = { ...document, status: 'TOPIC_MISMATCH', error: 'Native CPF cards do not establish the complete employee coverage rule and publisher identity.' };
       } else {
         result = await webRetriever.fetchOfficialSource(candidateUrl, {
           ...options.fetchOptions,
@@ -1762,6 +1849,11 @@ export async function resolveMappedOfficialSourceFallback(
       attempt.error = 'Fetched MOM salary guidance contains negated, contradictory, or incomplete evidence for the requested payment deadline.';
       return undefined;
     }
+    const momSalaryPaymentRuleQuote = topic.id === 'mom-salary-payment' && topic.domainId === 'MOM_EMPLOYMENT' &&
+      topic.authorities.includes('MOM') && momSalarySourceProof === true &&
+      isExactMomPayingSalaryUrl(candidateUrl) && isExactMomPayingSalaryUrl(result.finalUrl)
+      ? selectMomSalaryPaymentRuleQuote(query, contentValidation.substantiveText || '')
+      : undefined;
 
     const coverageRequest = {
       authority: topic.authorities[0], topicId: topic.id, subject: scopedCoverageSubject,
@@ -1769,16 +1861,16 @@ export async function resolveMappedOfficialSourceFallback(
     };
     const irasCpfCoverageProof = supportIrasCpfCoverageRule(coverageRequest);
     const momAcraMasCoverageProof = supportMomAcraMasCoverageRule(coverageRequest);
-    const expansionCoverageProof = supportIrasCpfExpansionRule(coverageRequest) ?? supportMomAcraMasExpansionRule(coverageRequest);
+    const expansionCoverageProof = supportPracticalExpansionRule(coverageRequest);
     const completeCoverageProof = expansionCoverageProof ?? irasCpfCoverageProof ?? momAcraMasCoverageProof;
     const practicalSourceProofs = [
       completeCoverageProof === true ? undefined :
         provesIrasAcraPracticalRuleSource(query, topic.authorities[0], topic.id, contentValidation.substantiveText || ''),
       completeCoverageProof === true ? undefined : provesCpfMasPracticalRuleSource(coverageRequest),
-      hasIrasCpfExpansionContradiction(coverageRequest) || hasMomAcraMasExpansionContradiction(coverageRequest)
+      hasPracticalExpansionContradiction(coverageRequest)
         ? false : undefined,
-      irasCpfCoverageProof,
-      momAcraMasCoverageProof
+      completeCoverageProof === true ? undefined : irasCpfCoverageProof,
+      completeCoverageProof === true ? undefined : momAcraMasCoverageProof
     ];
     if (practicalSourceProofs.includes(false)) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
@@ -1844,13 +1936,12 @@ export async function resolveMappedOfficialSourceFallback(
       ? [acraDeadlineDutyPassage ? `${acraDeadlineDutyPassage}\n\n${acraDeadlineTablePassage}` : '', acraDeadlineTablePassage]
       : [];
     const expansionQuotes = [
-      ...selectIrasCpfExpansionQuotes(coverageRequest),
-      ...selectMomAcraMasExpansionQuotes(coverageRequest)
+      ...selectPracticalExpansionQuotes(coverageRequest)
     ];
     const legacyExcerpt = preferredStatutoryAdvisoryPassage || preferredIrasConceptPassage ||
       selectRelevantFetchedText(contentValidation.substantiveText || '',
       [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
-      [...preferredAcraDeadlinePassages,
+      [...(momSalaryPaymentRuleQuote ? [momSalaryPaymentRuleQuote] : []), ...preferredAcraDeadlinePassages,
         ...(preferredRulePassage ? [preferredRulePassage] : [])]);
     const completeExpansionPassage = expansionQuotes.length > 0
       ? [...new Set([expansionQuotes.join('\n\n'),
@@ -2063,6 +2154,14 @@ export async function resolveMappedOfficialSourceFallback(
       sourceMapIds.add('MAS_VCFM_COMPLIANCE_TOOLKIT_CURRENT');
       await tryFetch(topic, MAS_VCFM_TOOLKIT_URL, undefined, 'MAPPED_SOURCE',
         'Compliance Toolkit for Venture Capital Fund Managers');
+    }
+    if (!historicalStatutoryQuery) {
+      const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id, query,
+        subject: options.evidenceScope?.context.primarySubject || topic.title, sourceText: '' };
+      for (const pointer of practicalExpansionPointers(expansionRequest)) {
+        mappedStageAttempted = true;
+        await tryFetch(topic, pointer.url, undefined, 'MAPPED_SOURCE', pointer.title);
+      }
     }
   }
   const mappedCoverageAdequate = topicsRequiringFallback.length > 0 && registeredCoverageAdequate();
