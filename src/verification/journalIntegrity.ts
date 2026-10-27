@@ -44,9 +44,30 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   if (n === 'discount allowed' || n === 'expected credit loss' || n === 'expected credit losses' || n.startsWith('impairment loss')) {
     return 'EXPENSE';
   }
+  if ((n.includes('amortisation') || n.includes('amortization')) && !n.includes('accumulated') && !n.startsWith('unamorti')) {
+    return 'EXPENSE';
+  }
+  if (n.startsWith('employer cpf') && !n.includes('payable')) {
+    return 'EXPENSE';
+  }
+  if (n.startsWith('income tax expense')) {
+    return 'EXPENSE';
+  }
+  if (n === 'salaries and wages' || (n.startsWith('staff costs') && !n.includes('accrued') && !n.includes('payable'))) {
+    return 'EXPENSE';
+  }
 
   // ASSET
   if (n.startsWith('prepaid ') || n === 'prepayments' || n === 'prepayment') {
+    return 'ASSET';
+  }
+  if (
+    n.startsWith('accumulated depreciation') ||
+    n.startsWith('accumulated amortisation') ||
+    n.startsWith('accumulated amortization') ||
+    n === 'deferred tax asset' ||
+    n === 'deferred tax assets'
+  ) {
     return 'ASSET';
   }
   const assetNames = [
@@ -79,7 +100,17 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n === 'contract liability' ||
     n === 'provisions' ||
     n === 'warranty provision' ||
-    (n.startsWith('provision for ') && !n.includes('doubtful') && !n.includes('bad debt'))
+    (n.startsWith('provision for ') && !n.includes('doubtful') && !n.includes('bad debt')) ||
+    n.startsWith('cpf payable') ||
+    n.includes('salaries payable') ||
+    n.includes('wages payable') ||
+    n === 'sdl payable' ||
+    n === 'skills development levy payable' ||
+    n === 'current tax payable' ||
+    n === 'income tax payable' ||
+    n === 'corporate tax payable' ||
+    n === 'deferred tax liability' ||
+    n === 'deferred tax liabilities'
   ) {
     return 'LIABILITY';
   }
