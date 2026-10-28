@@ -1,0 +1,84 @@
+{
+  "reviewer": "/root/finish_enrichment_review",
+  "verdict": "NO_UNRESOLVED_MATERIAL_FINDINGS_IN_SCOPED_DELTA",
+  "corpusSha256": "7b18b7edff6be8389815c791bc91781366bd53aa6bce74c02e66862d4c10abff",
+  "initialFour": {
+    "CORRECT": 1,
+    "PARTIAL": 1,
+    "UNSUPPORTED": 2
+  },
+  "finalFour": {
+    "CORRECT": 2,
+    "PARTIAL": 0,
+    "UNSUPPORTED": 2
+  },
+  "rows": [
+    {
+      "id": "PRESERVE-MOM-01",
+      "questionSha256": "b4708a55b23a4d186409e378f0d5622eaa646ee902dc30280e67b2af9d66fef6",
+      "finalAnswerSha256": "c37aeb9e89622beee85094bb45d18c1916e0de8b12472f624ca92117083bdecc",
+      "baseSameSourceGrade": "CORRECT",
+      "initialGrade": "CORRECT",
+      "finalGrade": "CORRECT",
+      "reason": "General eligibility,7-to14-day service scale and service-year start explained conditionally.",
+      "issueEvidence": "VERIFIED",
+      "caseApplication": "UNRESOLVED",
+      "wholeQuestion": "INSUFFICIENT",
+      "caseFactsNeededForRequestedGeneralRule": false
+    },
+    {
+      "id": "PRESERVE-MOM-02",
+      "questionSha256": "dc60995f6533a345d62f825ca0feeb0b2fcc1025a24a8250aea4a194c77043e0",
+      "finalAnswerSha256": "96a6f23b25a9fece1fc093a4f3f7faab01fb1c1c7b98d3cc75a9ff0d9c9674b5",
+      "baseSameSourceGrade": "CORRECT",
+      "initialGrade": "PARTIAL",
+      "finalGrade": "CORRECT",
+      "reason": "Explicit probation qualification and completed-month basis restored with exact bound source quote; initial content loss versus same-source base resolved.",
+      "issueEvidence": "VERIFIED",
+      "caseApplication": "UNRESOLVED",
+      "wholeQuestion": "INSUFFICIENT",
+      "caseFactsNeededForRequestedGeneralRule": false
+    },
+    {
+      "id": "PRESERVE-CPF-01",
+      "questionSha256": "0b6ed51a0c1e8bfb1469877d38ca1583ff80849dcf5eed3e0ead1839e287c98a",
+      "finalAnswerSha256": "227a840498185398ced8474f12c5eb8221aa5d1f305cab5df67a247267e6c8f0",
+      "baseSameSourceGrade": "UNSUPPORTED",
+      "initialGrade": "UNSUPPORTED",
+      "finalGrade": "UNSUPPORTED",
+      "reason": "NO_COVERAGE_TOPIC and UNASSIGNED_QUERY_TOPIC block answer before source proof; byte-identical same-source base output, so not a regression.",
+      "failureLayer": "ISSUE_TOPIC_RECONCILIATION",
+      "issueEvidence": "INSUFFICIENT",
+      "caseApplication": "NOT_REQUIRED",
+      "wholeQuestion": "INSUFFICIENT",
+      "caseFactsNeededForRequestedGeneralRule": false
+    },
+    {
+      "id": "PRESERVE-CPF-02",
+      "questionSha256": "0cb1774fe18673df5345329875a54f5bcff8f09fcde31c13e01df2a013a93a64",
+      "finalAnswerSha256": "b60fa1d22b4e82250d691daaeaf462e96ef273d99dd1975ed98d3385c4449366",
+      "baseSameSourceGrade": "UNSUPPORTED",
+      "initialGrade": "UNSUPPORTED",
+      "finalGrade": "UNSUPPORTED",
+      "reason": "Requested issue never receives reviewed CPF computation topic; byte-identical same-source base output, so not a regression.",
+      "failureLayer": "ISSUE_TOPIC_RECONCILIATION",
+      "issueEvidence": "INSUFFICIENT",
+      "caseApplication": "NOT_REQUIRED",
+      "wholeQuestion": "INSUFFICIENT",
+      "caseFactsNeededForRequestedGeneralRule": false
+    }
+  ],
+  "prior30HashComparison": {
+    "checked": 30,
+    "changed": [
+      "fresh-mom-01"
+    ],
+    "unchanged": 29,
+    "finalGrades": {
+      "CORRECT": 17,
+      "PARTIAL": 2,
+      "UNSUPPORTED": 11
+    }
+  },
+  "limitation": "Four additional questions were frozen before inspection. Their probation finding prompted a source-backed correction, so final results are post-review preservation results, not pristine holdout accuracy or additional primary30 gains."
+}

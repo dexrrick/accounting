@@ -8,6 +8,7 @@ import { findRecordEligibilityRejection } from '../verification/claimEvidenceVer
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
+import { supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 
 export interface EvidenceQualityTraceAttempt {
@@ -654,6 +655,8 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       const live = !local && !eligibilityRejection &&
         isVerifiedLiveCandidate(record, topic, targetDate, input.sourceMapFallbackTrace);
       const topicTextMatches = distinctiveTextMatches(record, topic, input.query) || explicitlyBoundLocal || transitionContext ||
+        supportIrasMasKnowledgeRule({ authority: 'IRAS', topicId: topic.id, query: input.query,
+          subject: input.scopedSubject || topic.title, sourceText: record.sourceText, officialUrl: record.officialSourceUrl }) === true ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
         rejectedCode = eligibilityRejection || transitionEligibilityRejection ||

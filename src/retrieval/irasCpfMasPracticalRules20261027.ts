@@ -310,7 +310,7 @@ function requiredPatterns(rule: IrasCpfMasPracticalRuleMetadata): readonly RegEx
       /employees of the united nations \(un\)\s+employees of the un organisation, or any agency, institution or related organisation of the un organisation that is located in singapore/i
     ];
     case 'CPF_CONTRIBUTION_COMPUTATION': return [
-      /cpf contribution rates vary based on your employee's citizenship status, age group, and total wages/i,
+      /cpf contribution rates vary based on your employee['\u2019]s citizenship status, age group, and total wages/i,
       /singapore citizens or singapore permanent residents and who are earning total wages of more than \$50 per month/i,
       /table 1: singapore citizen or singapore permanent resident \(spr\) from the third year of spr status/i,
       /table 2: spr in the first year of spr status/i,
@@ -319,8 +319,8 @@ function requiredPatterns(rule: IrasCpfMasPracticalRuleMetadata): readonly RegEx
       /new contribution rates apply from the first day of the month after the employee['\u2019]s 55\s*th, 60\s*th, 65\s*th or 70\s*th birthday/i,
       /different rates apply for different wage bands/i,
       /total wages are made up of an employee['\u2019]s ordinary wages and additional wages\. different ceilings apply to ordinary wages and additional wages/i,
-      /the total cpf contributions comprise both your share as the employer and your employee's share/i,
-      /if your employee earns above \$50 but not more than \$500 per month, there is no employee's share of cpf contributions\. you will still need to pay the employer's share/i,
+      /the total cpf contributions comprise both your share as the employer and your employee['\u2019]s share/i,
+      /if your employee earns above \$50 but not more than \$500 per month, there is no employee['\u2019]s share of cpf contributions\. you will still need to pay the employer['\u2019]s share/i,
       /please round off the total cpf contributions to the nearest dollar\. cents should be dropped for amounts less than 50 cents, and amounts of 50 cents and above should be treated as an additional dollar\. the cents should always be dropped for the employee['\u2019]s share of cpf contributions/i
     ];
     case 'MAS_LFMC_FINANCIAL_RETURNS':
@@ -420,8 +420,8 @@ function hasContradiction(rule: IrasCpfMasPracticalRuleMetadata, sourceText: str
     case 'CPF_EMPLOYEE_COVERAGE': return /part-time employees?[^.!?]{0,100}\b(?:are excluded|do not receive cpf|are not eligible)/i.test(text)
       || /foreigners?[^.!?]{0,100}\b(?:must receive|are entitled to) cpf contributions/i.test(text)
       || /employees earning (?:exactly )?\$50 or less[^.!?]{0,100}\b(?:must|have to) receive cpf contributions/i.test(text);
-    case 'CPF_CONTRIBUTION_COMPUTATION': return /(?:employee|employee's) share[^.!?]{0,140}\b(?:payable|contributed)\b[^.!?]{0,60}\b(?:above )?\$50[^.!?]{0,40}\b(?:not more than|up to) \$500/i.test(text)
-      || /employee's share[^.!?]{0,120}\b(?:round|keep|retain) cents/i.test(text)
+    case 'CPF_CONTRIBUTION_COMPUTATION': return /(?:employee|employee['\u2019]s) share[^.!?]{0,140}\b(?:payable|contributed)\b[^.!?]{0,60}\b(?:above )?\$50[^.!?]{0,40}\b(?:not more than|up to) \$500/i.test(text)
+      || /employee['\u2019]s share[^.!?]{0,120}\b(?:round|keep|retain) cents/i.test(text)
       || /total cpf contributions[^.!?]{0,120}\bround(?:ed)? down to the nearest dollar/i.test(text);
     case 'MAS_LFMC_FINANCIAL_RETURNS': return /quarterly financial returns[^.!?]{0,100}\bwithin (?:five|5) months/i.test(text)
       || /annual financial returns[^.!?]{0,100}\bwithin (?:14|fourteen) days/i.test(text)

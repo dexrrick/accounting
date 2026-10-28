@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import ts from 'typescript';
+import { loadStatutoryKnowledgeSources } from './load_statutory_knowledge_sources.mjs';
 import { getCoverageTopicById } from '../src/standards/coverageRegistry.ts';
 import { defaultQueryTopicResolver, QueryTopicResolver } from '../src/retrieval/queryTopicResolver.ts';
 import { ControlledWebRetriever } from '../src/retrieval/controlledWebRetriever.ts';
@@ -43,8 +44,12 @@ const integrityPaths = Object.freeze({
   momSalaryPaymentRule: 'src/retrieval/momSalaryPaymentRule.ts'
 });
 const localOnlyRetriever = { retrieveSources: async () => [], getSourceById: () => undefined };
+const extraSourceFlag = process.argv.find(value => value.startsWith('--source-manifests='));
+const addedSources = await loadStatutoryKnowledgeSources(extraSourceFlag?.slice('--source-manifests='.length));
+const replayPages = [...STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.filter(page =>
+  !addedSources.some(added => added.sourceUrl === page.sourceUrl)), ...addedSources];
 const pagesByAuthority = new Map();
-for (const page of STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES) {
+for (const page of replayPages) {
   const pages = pagesByAuthority.get(page.authority) || [];
   pages.push(page);
   pagesByAuthority.set(page.authority, pages);
@@ -290,8 +295,9 @@ async function replayCase(testCase) {
     if (provider?.sitemapUrls?.includes(url)) {
       return new Response(sitemap, { status: 200, headers: { 'content-type': 'application/xml' } });
     }
-    const fixture = STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.find(page => page.sourceUrl === url);
-    if (fixture) return new Response(fixture.html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+    const fixture = replayPages.find(page => page.sourceUrl === url);
+    if (fixture) return new Response(fixture.body || fixture.html, { status: 200,
+      headers: { 'content-type': fixture.contentType || 'text/html; charset=utf-8' } });
     if (url.endsWith('/robots.txt')) return new Response('not found', { status: 404 });
     if (url.startsWith('https://html.duckduckgo.com/') || url.startsWith('https://r.jina.ai/')) {
       return new Response('not found', { status: 404 });
@@ -531,6 +537,7 @@ export async function runStatutoryCoverageOfflineReplay(corpus) {
     offlineEvidenceGainCaveat: 'Fixture-pipeline status and exact synthetic-page quotes measure evidence-path behaviour only. They are not live source acceptance, complete-question coverage or independently adjudicated statutory-answer correctness.',
     corpusSize: corpus.cases.length,
     semanticInterpretation: 'A hand-authored narrow offline fixture supplies domain, population, operation, authority and a question-scoped subject for each row. It supplies no mapped topic IDs; the production resolver and reconciliation pipeline run on the original question. Model interpretation and independent answer review are not exercised.',
+    addedSourceFixtures: addedSources.map(({ body: _body, html: _html, ...page }) => page),
     fixturePages: STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.map(page => ({
       id: page.id,
       authority: page.authority,

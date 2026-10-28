@@ -604,6 +604,11 @@ function resolveIssueTopicIds(
     .map(topic => topic.id)
     .filter(topicId => topicId !== 'acra_annual-returns' || boundedAcraAnnualReturnSubject);
   const subjectTopics = getCoverageTopicsByIds(subjectTopicIds);
+  const officerConfirmationOnly = issueCount === 1 && domain === 'ACRA_CORPORATE' && population === 'COMPANY'
+    && governingAuthorities.length === 1 && governingAuthorities[0] === 'ACRA'
+    && independentlyRecognizedTopicIds.has('acra-annual-return-officer-particulars')
+    && subjectTopicIds.includes('acra-annual-return-officer-particulars')
+    && !/\b(?:deadline|due date|extension|penalt\w*|how to file|filing process|filing procedure)\b/i.test(query + ' ' + subject);
   const bindRecognizedGstFilingTopic = hasBoundedGstFilingTopicBinding(
     query, subject, domain, population, operation, governingAuthorities, independentlyRecognizedTopicIds
   );
@@ -663,6 +668,7 @@ function resolveIssueTopicIds(
     allowedDomains.includes(topic.domainId) &&
     semanticAuthorityCoversTopic(governingAuthorities, topic.authorities, domain) &&
     !(topic.id === 'iras-gst-input-tax' && population !== 'COMPANY' && isGstInputTaxRecoverySubject(subject)) &&
+    !(officerConfirmationOnly && topic.id === 'acra_annual-returns') &&
     !(topic.id === 'iras-gst-filing-deadlines' && hasBoundedGstFilingSubject(subject) && !bindRecognizedGstFilingTopic) &&
     !(topic.id === 'mas-fund-management-exemptions' && hasBoundedMasClassExemptionSubject(subject) && !bindRecognizedMasClassExemptionTopic) &&
     !(contextualizeCpfRates && topic.id === 'cpf_contribution_rates') &&
@@ -675,6 +681,7 @@ function resolveIssueTopicIds(
       .map(topic => topic.id).sort(),
     routingChildTopicIds,
     contextualTopicIds: [
+      ...(officerConfirmationOnly && independentlyRecognizedTopicIds.has('acra_annual-returns') ? ['acra_annual-returns'] : []),
       ...(contextualizeCpfRates && independentlyRecognizedTopicIds.has('cpf_contribution_rates') ? ['cpf_contribution_rates'] : []),
       ...(contextualizeMasLfmc ? ['mas-lfmc'] : []),
       ...(contextualizeMasVcfm ? ['mas-vcfm'] : []),

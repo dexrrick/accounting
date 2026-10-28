@@ -1,6 +1,7 @@
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
 import { supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
+import { hasIrasMasKnowledgeContradiction, supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
@@ -602,6 +603,19 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
  */
 export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput): GeneralIrasRuleSupport {
   const concepts = input.concepts || [];
+  if ((input.population === undefined || input.population === 'COMPANY') &&
+      ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(input.domainId)) {
+    for (const topicId of input.topicIds) {
+      const request = { authority: 'IRAS', topicId, query: input.subject, subject: input.subject,
+        sourceText: input.sourceText };
+      const support = supportIrasMasKnowledgeRule(request);
+      if (support === true && concepts.every(concept => supportIrasMasKnowledgeRule({ ...request,
+        subject: [concept.label, ...concept.terms].join(' ') }) === true)) return true;
+      // Incomplete new-family proof may use the bounded legacy semantic proof;
+      // only an explicit new-family contradiction/scope veto blocks fallback.
+      if (support === false && hasIrasMasKnowledgeContradiction(request)) return false;
+    }
+  }
   // Full-family proof is limited to general concepts. A checklist cannot prove
   // a specific blocked-input exception, supply classification, or entity case.
   if (input.population === undefined || input.population === 'COMPANY') {

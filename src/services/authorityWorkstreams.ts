@@ -48,6 +48,7 @@ import { supportIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPractic
 import { isIrasCpfQualitativeRateFactorRequest, selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
 import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '../retrieval/practicalStatutoryExpansion';
+import { STATUTORY_KNOWLEDGE_RULES_20261027B, sourceProvesKnowledgeDate, supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
 
 import {
   supportMomSalaryPaymentConcept,
@@ -1537,10 +1538,16 @@ function practicalRuleIssueTextSupport(
       : topicAuthority === 'IRAS' || topicAuthority === 'ACRA' || topicAuthority === 'MAS' ? 'COMPANY'
         : undefined;
     const allowedOperations = expansionSupport === true || topicAuthority === 'ACRA' || topicAuthority === 'MAS'
-      ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT']
+      ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT',
+          ...(topicAuthority === 'CPF' && supportStatutoryKnowledgeRule(coverageRequest) === true ? ['CALCULATE'] : [])]
       : ['EXPLAIN_RULE', 'FILING_REQUIREMENT'];
+    const hasSpecificMOMPopulationRequest = /\b(?:my|our|this|that|a specific|named)\s+(?:employee|worker|person|annual leave|leave entitlement|leave balance)\b/i
+      .test(`${query}\n${issue.subject}`);
+    const unknownMOMGeneralRule = topicAuthority === 'MOM' && issue.population === 'UNKNOWN' &&
+      expansionSupport === true && ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY'].includes(issue.operation) &&
+      !hasSpecificMOMPopulationRequest;
     const populationMatches = topicAuthority === 'MOM'
-      ? ['EMPLOYEE', 'EMPLOYER'].includes(issue.population)
+      ? ['EMPLOYEE', 'EMPLOYER'].includes(issue.population) || unknownMOMGeneralRule
       : issue.population === expectedPopulation;
     const scopeMatches = issue.status === 'MAPPED' && topicAuthority &&
       issue.domain === expectedDomain[topicAuthority] && issue.governingAuthorities.length === 1 &&
@@ -1887,7 +1894,10 @@ function eligibleLocalRecords(
       eligibilityRejection = findRecordEligibilityRejection(record, targetDate, referenceDate,
         versioningManager, exactManagedTopic ? (authority === 'MAS' ? 'MAS' : 'ACRA') : undefined,
         exactManagedTopic?.legacyDomains[0],
-        authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined);
+        authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined,
+        topics.map(topic => ({ authority: topic.authorities[0], topicId: topic.id,
+          query: originalQuery, subject: issue.subject })).find(request => sourceProvesKnowledgeDate({ ...request,
+            sourceText: record.sourceText, officialUrl: record.officialSourceUrl }, targetDate)));
       predicates.push({ predicate: 'recordEligibility', passed: !eligibilityRejection,
         ...(eligibilityRejection ? { result: eligibilityRejection } : { result: 'ELIGIBLE' }) });
     }
@@ -2419,7 +2429,7 @@ async function evaluateIssue(
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
   const application = applicationForIssue(query, issue, plan.authority, acraCandidateIssues);
-  const cpfRateScheduleUnverified = requiresUnverifiedCpfRateSchedule(query, issue, plan.authority, evidenceTopics);
+  let cpfRateScheduleUnverified = requiresUnverifiedCpfRateSchedule(query, issue, plan.authority, evidenceTopics);
   const base: Omit<AuthorityIssueEvidence, 'evidenceStatus' | 'verifiedClaims' | 'sources' | 'gaps'> = {
     issueId: issue.id,
     subject: issue.subject,
@@ -2434,10 +2444,6 @@ async function evaluateIssue(
     ...(application.reason ? { applicationReason: application.reason } : {})
   };
   const gaps: AuthorityEvidenceGap[] = [];
-  if (cpfRateScheduleUnverified) {
-    gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'CPF_RATE_SCHEDULE_UNVERIFIED',
-      'This runtime has no independently validated CPF rate-schedule parser; numeric contribution rates remain insufficient.'));
-  }
   if (issue.status !== 'MAPPED' || !mapped) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'mapped', issue.unresolvedReason || (plan.domain === 'UNKNOWN' ? 'CANONICAL_AREA_UNRESOLVED' : 'ISSUE_UNMAPPED'),
       'The issue has no resolved authority and topic mapping for this workstream.'));
@@ -2555,6 +2561,18 @@ async function evaluateIssue(
     candidateDiagnostics = result.diagnostics;
   }
   const admissionDiagnostics: AuthorityIssueAdmissionDiagnostics = { ...admissionTrace, candidates: candidateDiagnostics };
+  if (cpfRateScheduleUnverified) {
+    const table = STATUTORY_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_CONTRIBUTION_TABLES');
+    const completeTableAdmitted = table && admitted.some(record => record.authority === 'CPF'
+      && record.sourceAuthority === 'CPF' && record.domain === 'CPF_BOARD'
+      && record.officialSourceUrl === table.officialUrl && record.canonicalSourceUrl === table.officialUrl
+      && evidenceTopics.some(topic => topicBoundToRecord(record, topic)
+        && supportStatutoryKnowledgeRule({ authority: 'CPF', topicId: topic.id, query,
+          subject: issue.subject, sourceText: record.sourceText, officialUrl: record.officialSourceUrl }) === true));
+    cpfRateScheduleUnverified = !completeTableAdmitted;
+    if (cpfRateScheduleUnverified) gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'CPF_RATE_SCHEDULE_UNVERIFIED',
+      'No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.'));
+  }
   lifecycle.admitted = admitted.length > 0;
   if (localRejectedCount > 0 && admitted.length === 0) gaps.push(makeGap(issue, plan.authority, plan.domain, 'admitted', 'CANDIDATE_REJECTED',
     'Candidates failed authority, domain, provenance, date, topic, or source-text checks.'));

@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { loadStatutoryKnowledgeSources } from './load_statutory_knowledge_sources.mjs';
 
 // An independently frozen question set is evaluated without supplying mapped
 // topic IDs. The semantic fixture supplies only the independently stated issue.
@@ -20,7 +21,7 @@ const { SourceCache } = await load('src/retrieval/sourceCache.ts');
 const { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } = await load('src/retrieval/officialSitemapDiscovery.ts');
 const { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } = await import('../tests/fixtures/statutoryCoverageOfficialPages.mjs');
 
-const corpusBytes = await readFile(path.join(runnerRoot, 'tests/evaluation/statutory_natural_questions_20261027.json'));
+const corpusBytes = await readFile(flag('corpus') || path.join(runnerRoot, 'tests/evaluation/statutory_natural_questions_20261027.json'));
 const corpus = JSON.parse(corpusBytes);
 const sourcePages = new Map(STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.map(page => [page.sourceUrl,
   { authority: page.authority, title: page.title, body: Buffer.from(page.html), type: 'text/html', kind: page.fixtureKind }]));
@@ -58,18 +59,22 @@ for (const manifestName of (await readdir(developmentDir)).filter(name => name.e
 }
 
 const localOnly = { retrieveSources: async () => [], getSourceById: () => undefined };
+const addedSources = await loadStatutoryKnowledgeSources(flag('source-manifests'));
+for (const page of addedSources) sourcePages.set(page.sourceUrl, {
+  authority: page.authority, title: page.title, body: page.body, type: page.contentType, kind: page.fixtureKind
+});
 const outcomes = [];
 for (const testCase of corpus.cases) {
   const authority = testCase.authority;
   const domain = testCase.domain || ({ CPF: 'CPF_PAYROLL', MOM: 'MOM_EMPLOYMENT', ACRA: 'ACRA_CORPORATE', MAS: 'MAS_FUNDS' })[authority];
-  const population = authority === 'CPF' ? 'EMPLOYER' : authority === 'MOM' ? 'EMPLOYEE' : 'COMPANY';
+  const population = testCase.population || (authority === 'CPF' ? 'EMPLOYER' : authority === 'MOM' ? 'EMPLOYEE' : 'COMPANY');
   const interpretation = validateSemanticQuestionInterpretation({
     jurisdiction: ['Singapore'], authorityCandidates: [authority], contextualAuthorities: [], domain, population,
     primarySubject: testCase.subject, concepts: [{ concept: testCase.subject, role: 'PRIMARY' }],
-    requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: testCase.expectedScope === 'GENERAL_WITH_MISSING_FACTS',
-    calculationRequested: false, factsExplicitlyProvided: [], confidence: 0.98,
+    requestedOperation: testCase.operation || 'EXPLAIN_RULE', requiresUserSpecificFacts: testCase.expectedScope === 'GENERAL_WITH_MISSING_FACTS' || testCase.operation === 'CALCULATE',
+    calculationRequested: testCase.operation === 'CALCULATE', factsExplicitlyProvided: testCase.facts || [], confidence: 0.98,
     issues: [{ subject: testCase.subject, population, domain, governingAuthorities: [authority], contextualAuthorities: [],
-      operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      operation: testCase.operation || 'EXPLAIN_RULE', mappedTopicIds: [],
       evidenceRequirement: testCase.expectedScope === 'GENERAL_WITH_MISSING_FACTS'
         ? 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' : 'AUTHORITATIVE_SOURCE', confidence: 0.98 }]
   }, testCase.question);
@@ -101,6 +106,7 @@ for (const testCase of corpus.cases) {
 }
 const report = { scope: 'INDEPENDENT_NATURAL_QUESTIONS_OFFLINE_EXPLICIT_SEMANTIC_FIXTURES', appRoot,
   corpusSha256: createHash('sha256').update(corpusBytes).digest('hex'), networkRequests: 0, modelRequests: 0,
+  addedSourceFixtures: addedSources.map(({ body: _body, html: _html, ...page }) => page),
   limitation: 'Semantic issue fixtures are supplied; source response envelopes are layout-adapted where stated. Answer correctness requires independent adjudication.',
   sources: [...sourcePages].map(([url, page]) => ({ url, title: page.title, authority: page.authority, kind: page.kind,
     sha256: createHash('sha256').update(page.body).digest('hex') })), outcomes };

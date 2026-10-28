@@ -44,6 +44,7 @@ import { supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
 import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule, practicalExpansionPointers } from '../retrieval/practicalStatutoryExpansion';
 import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPracticalRules20261027';
+import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate } from '../retrieval/statutoryKnowledge20261027b';
 import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
 import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
 import {
@@ -88,12 +89,18 @@ const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.ag
 const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
 const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
   'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
+  'ACRA:acra-annual-return-officer-particulars': ['Companies filing annual returns will need to confirm'],
+  'IRAS:iras-wht-filing-payment-due-date': ['file and pay WHT', '15th of the second month'],
+  'IRAS:iras-wht-deemed-payment-date': ['The date of payment is defined as the earliest'],
+  'IRAS:iras-gst-motor-vehicles': ['Regulation 27', 'purchase and running expenses of motor cars'],
   'CPF:cpf-bonus-backpay': ['wages are defined as remuneration in money'],
-  'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money'],
   'CPF:cpf-additional-wages': ['wages are defined as remuneration in money'],
   'CPF:cpf-employee-coverage': ['person who is employed in Singapore', 'Singapore Permanent Residents earning total wages'],
   'CPF:cpf-contribution-computation': ['CPF contribution rates vary based on', 'pay the employer', 'round off the Total CPF contributions'],
-  'MAS:mas-regulatory-reporting': ['To submit quarterly financial returns', 'To submit audited annual financial returns', 'To notify MAS of a change of name'],
+  'CPF:cpf-pr-contribution-rates': ['Your CPF contribution rates as an SPR depend', 'Second-year rate: Applies from the month following'],
+  'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money', 'maximum amount of OW that attracts CPF contributions'],
+  'CPF:cpf_wage_ceiling': ['maximum amount of OW that attracts CPF contributions'],
+  'MAS:mas-regulatory-reporting': ['To submit quarterly financial returns', 'To submit audited annual financial returns', 'To notify MAS of a change of name', 'CMS licence', 'misconduct', 'representatives'],
   'MAS:mas-fund-management-exemptions': ['existing class exemption']
 };
 
@@ -1672,18 +1679,20 @@ export async function resolveMappedOfficialSourceFallback(
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
       const lfmcToolkitUrl = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
-      if (topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) {
+      const knowledgePdf = STATUTORY_KNOWLEDGE_POINTERS_20261027B.find(item => item.authority === topic.authorities[0]
+        && item.topicIds.includes(topic.id) && item.url === candidateUrl && item.documentKind === 'PDF');
+      if ((topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) || knowledgePdf) {
         const isLfmc = candidateUrl === lfmcToolkitUrl;
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
         if (document.status === 'SUCCESS') {
           const extraction = await extractOfficialDocumentFromRetrieved({
-            url: candidateUrl, authority: 'MAS', domain: 'MAS_FUNDS', documentKind: 'PDF',
-            standardOrActCode: 'MAS', legalOrStandardInstrument: isLfmc ? 'LFMC Compliance Toolkit' : 'VCFM Compliance Toolkit',
+            url: candidateUrl, authority: knowledgePdf?.authority || 'MAS', domain: topic.legacyDomains[0] || 'MAS_FUNDS', documentKind: 'PDF',
+            standardOrActCode: knowledgePdf?.authority || 'MAS', legalOrStandardInstrument: knowledgePdf?.title || (isLfmc ? 'LFMC Compliance Toolkit' : 'VCFM Compliance Toolkit'),
             expectedTopic: {
-              standardIdentifiers: ['MAS'],
-              expectedTitles: isLfmc ? ['Compliance Toolkit for Licensed Fund Management Companies', 'Licensed Fund Management Companies']
+              standardIdentifiers: knowledgePdf?.standardIdentifiers || ['MAS'],
+              expectedTitles: knowledgePdf ? knowledgePdf.expectedTitles : isLfmc ? ['Compliance Toolkit for Licensed Fund Management Companies', 'Licensed Fund Management Companies']
                 : ['Compliance Toolkit for Venture Capital Fund Managers', 'Venture Capital Fund Managers'],
-              topicTerms: isLfmc ? ['quarterly financial returns', 'principal place of business'] : ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
+              topicTerms: knowledgePdf ? knowledgePdf.contentTerms || getTopicContentTerms(topic) : isLfmc ? ['quarterly financial returns', 'principal place of business'] : ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
             }
           }, document);
           if (extraction.status === 'SUCCESS') {
@@ -1800,7 +1809,12 @@ export async function resolveMappedOfficialSourceFallback(
     if (result.status !== 'SUCCESS' || !result.content || !result.finalUrl || !result.topicMatched ||
         !isApprovedSingaporeSourceUrl(result.finalUrl) || !approvedHostsForTopic(topic).includes(finalHost)) return undefined;
 
-    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl)) {
+    const exactCompanyCommencementNotice = topic.id === 'acra-annual-return-officer-particulars'
+      && STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(item => item.authority === 'ACRA'
+        && item.topicIds.includes(topic.id) && item.url === result.finalUrl)
+      && supportPracticalExpansionRule({ ...expansionRequest, officialUrl: result.finalUrl,
+        sourceText: result.content }) === true;
+    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl) && !exactCompanyCommencementNotice) {
       attempt.fetchStatus = 'DOMAIN_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = 'Fetched ACRA page addresses a different entity type or accounting-standard authority scope.';
@@ -1956,7 +1970,8 @@ export async function resolveMappedOfficialSourceFallback(
       term,
       expectation.allowIrasTopicTokenEquivalence === true
     )).length;
-    if (!excerpt || excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1) || !requiredContentPresent) {
+    const completeKnowledgeExcerpt = supportPracticalExpansionRule({ ...coverageRequest, sourceText: excerpt }) === true;
+    if (!excerpt || (!completeKnowledgeExcerpt && excerptTopicMatches < (expectation.minimumTopicTermMatches ?? 1)) || !requiredContentPresent) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = requiredContentPresent
@@ -1972,7 +1987,8 @@ export async function resolveMappedOfficialSourceFallback(
       return undefined;
     }
     if (topic.id === 'acra_annual-returns' && !isAcraAnnualReturnDeadlineQuestion(query) &&
-        !supportsAcraAnnualReturnFilingRule(excerpt)) {
+        !supportsAcraAnnualReturnFilingRule(excerpt) &&
+        supportPracticalExpansionRule({ ...coverageRequest, sourceText: excerpt }) !== true) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = 'Fetched ACRA annual-return page lacks an operative company filing rule.';
@@ -2134,6 +2150,15 @@ export async function resolveMappedOfficialSourceFallback(
     if (historicalStatutoryQuery && applicablePointers.length === 0) {
       attempts.push({ topicId: topic.id, fetchStatus: 'HISTORICAL_SCOPE_UNVERIFIED', titleMatched: false, contentMatched: false,
         error: 'No reviewed source-map pointer validity window covers the requested historical statutory period.' });
+      // Try only a known, explicitly dated rule pointer. Its actual body must
+      // separately prove the date and every rule premise before admission.
+      const request = { authority: topic.authorities[0] || '', topicId: topic.id, query,
+        subject: options.evidenceScope?.context.primarySubject || topic.title, sourceText: '' };
+      for (const pointer of practicalExpansionPointers(request)) {
+        if (knowledgePointerCoversDate({ ...request, officialUrl: pointer.url }, targetDate)) {
+          await tryFetch(topic, pointer.url, undefined, 'MAPPED_SOURCE', pointer.title);
+        }
+      }
       continue;
     }
     for (const pointer of applicablePointers) {
@@ -2158,7 +2183,12 @@ export async function resolveMappedOfficialSourceFallback(
     if (!historicalStatutoryQuery) {
       const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id, query,
         subject: options.evidenceScope?.context.primarySubject || topic.title, sourceText: '' };
+      const mappedUrls = new Set(applicablePointers.map(pointer => pointer.officialSourceUrl));
       for (const pointer of practicalExpansionPointers(expansionRequest)) {
+        // A current rule pointer may repeat a URL already represented by a
+        // reviewed source-map pointer. Keep that page on the mapped path so a
+        // duplicate fetch cannot relabel mapped evidence as discovered.
+        if (mappedUrls.has(pointer.url)) continue;
         mappedStageAttempted = true;
         await tryFetch(topic, pointer.url, undefined, 'MAPPED_SOURCE', pointer.title);
       }

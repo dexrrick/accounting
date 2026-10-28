@@ -1,0 +1,51 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: How much CPF contributions to pay
+Canonical official URL: https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay
+Capture date (Singapore): 2026-10-27
+Capture method: verbatim visible text returned by a read-only browser extraction of the official HTML page. This is not a raw HTML response; exact excerpt text is retained below.
+
+Updates on 21 May 2026
+To further strengthen the retirement adequacy of senior employees, there will be an increase to the CPF contribution rates from 1 Jan 2027. Find out more about these changes and how it affects you and your employees.
+Current rates
+What are the CPF contribution rates?
+The following table summarises the current contribution rates for Singaporeans and SPRs (from third year and onwards) with monthly wages above $750, across the different age groups.
+Employee’s age (years) | Contribution rates from 1 January 2026 (monthly wages > $750)
+By employer (% of wage) | By employee (% of wage) | Total (% of wage)
+55 and below | 17 | 20 | 37
+Above 55 to 60 | 16 | 18 | 34
+Above 60 to 65 | 12.5 | 12.5 | 25
+Above 65 to 70 | 9 | 7.5 | 16.5
+Above 70 | 7.5 | 5 | 12.5
+View all tables (PDF, 0.2MB) for the full set of contribution rate tables covering all citizenship statuses and SPR years.
+Computation
+Determine your employees’ CPF contributions
+CPF contribution rates vary based on your employee’s citizenship status, age group, and total wages. As an employer, you are required to pay CPF contributions for your employees who are Singapore Citizens or Singapore Permanent Residents and who are earning total wages of more than $50 per month.
+Step 1: Select the contribution rate table based on citizenship status
+Select the contribution rate table that applies to your employee.
+Table 1: Singapore Citizen or Singapore Permanent Resident (SPR) from the third year of SPR status
+Table 2: SPR in the first year of SPR status
+Table 3: SPR in the second year of SPR status
+Please ensure that your employees inform you the date when they became Singapore Citizens or SPRs, as different CPF contribution rates are applicable.
+Determine the year of SPR status
+The first year begins on the day of SPR conversion
+The second year begins on the first day of the month after the first anniversary of SPR conversion
+The third year begins on the first day of the month after the second anniversary of SPR conversion
+Contribute more for first and second year SPRs
+You and your employee who is in the first two years of SPR status can jointly apply to contribute CPF at a higher rate. The options are:
+You and your employee both contribute at full rates (Table 1)
+You contribute at full rates while your employee continues to contribute at graduated rates (Tables 4 and 5)
+Step 2: Determine the rates based on age group and wage band
+Different rates apply to different age groups.
+New contribution rates apply from the first day of the month after the employee’s 55th, 60th, 65th or 70th birthday.
+Different rates apply for different wage bands.
+Step 3: Determine the Total Wages subject to CPF contributions
+Apply the wage ceilings to determine Total Wages subject to CPF contributions
+An employee’s CPF contributions are computed based on the Total Wages payable in a calendar month.
+Total Wages are made up of an employee’s Ordinary Wages and Additional Wages. Different ceilings apply to Ordinary Wages and Additional Wages.
+Step 4: Compute the CPF contributions on Total Wages
+Compute Total CPF contributions
+You can compute the total CPF contributions by applying the contribution rate to your employee’s total wages subject to CPF. The total CPF contributions comprise both your share as the employer and your employee’s share, which you are required to pay to the CPF Board. You are entitled to recover the employee’s share when paying your employee’s wages for the month.
+Note that if your employee earns above $50 but not more than $500 per month, there is no employee’s share of CPF contributions. You will still need to pay the employer’s share.
+Round off your Total CPF contributions
+Please round off the Total CPF contributions to the nearest dollar. Cents should be dropped for amounts less than 50 cents, and amounts of 50 cents and above should be treated as an additional dollar. The cents should always be dropped for the employee’s share of CPF contributions.

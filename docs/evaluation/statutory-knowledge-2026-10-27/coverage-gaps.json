@@ -1,0 +1,140 @@
+{
+  "scope": "Known limitations from independent question review and implementation boundaries; not an exhaustive legal-domain audit",
+  "categories": {
+    "MISSING_KNOWLEDGE": "No implemented substantive rule for the requested obligation or period",
+    "INSUFFICIENT_SOURCE_EVIDENCE": "Available admitted passages do not establish all required premises",
+    "INCORRECT_SEMANTIC_MAPPING": "The requested issue is not mapped to the relevant supported rule or fact role",
+    "MISSING_CASE_FACTS": "A correct general rule exists, but individual application or arithmetic needs additional facts"
+  },
+  "byAuthority": {
+    "ACRA": [
+      {
+        "topic": "Annual-return CEO question using month/year wording",
+        "category": "INCORRECT_SEMANTIC_MAPPING",
+        "cases": [
+          "hold-acra-02"
+        ],
+        "detail": "Date-scope handling blocks the supported commencement explanation."
+      },
+      {
+        "topic": "Pre-commencement annual return",
+        "category": "INSUFFICIENT_SOURCE_EVIDENCE",
+        "cases": [
+          "hold-acra-03"
+        ],
+        "detail": "New commencement rule is not retrospectively applied; complete earlier requirements are not established."
+      },
+      {
+        "topic": "Further AGM and company-secretary exceptions",
+        "category": "MISSING_KNOWLEDGE",
+        "detail": "Existing bounded rules remain; the secretary capture does not itself implement all appointment, qualification, vacancy and AGM exceptions."
+      }
+    ],
+    "IRAS": [
+      {
+        "topic": "Medical examination for work-permit renewal",
+        "category": "MISSING_KNOWLEDGE",
+        "cases": [
+          "hold-iras-01"
+        ],
+        "detail": "General medical restrictions are explained; the specific blocked example is omitted from the rendered explanation."
+      },
+      {
+        "topic": "Other specific GST treatments and blocked-claim exceptions",
+        "category": "MISSING_KNOWLEDGE",
+        "detail": "Medical and motor-car rules do not establish every supply treatment or input-tax exception."
+      },
+      {
+        "topic": "Treaty-specific WHT and individual-company ECI outcome",
+        "category": "MISSING_CASE_FACTS",
+        "detail": "Payment classification, work location, treaty eligibility and payment dates or revenue and tax-adjusted ECI still need facts; general guidance must remain available."
+      }
+    ],
+    "CPF": [
+      {
+        "topic": "Age/percentage and birthday phrasing; PR conversion-date fact role; wage-band boundary phrasing",
+        "category": "INCORRECT_SEMANTIC_MAPPING",
+        "cases": [
+          "hold-cpf-01",
+          "hold-cpf-02",
+          "hold-cpf-03",
+          "PRESERVE-CPF-01",
+          "PRESERVE-CPF-02"
+        ],
+        "detail": "PR conversion facts may be treated as a historical-law request; supported 2026 tables do not cure interpretation errors. Independently frozen $50/$500 boundary questions fail topic/issue reconciliation identically in base and final; this is not a missing payroll-facts failure."
+      },
+      {
+        "topic": "AW year-end recalculation in natural-language answer",
+        "category": "INSUFFICIENT_SOURCE_EVIDENCE",
+        "cases": [
+          "fresh-cpf-02"
+        ],
+        "detail": "The selected quotations contain isolated examples instead of the complete recalculation rule, despite richer retained source and metadata."
+      },
+      {
+        "topic": "Payroll case application",
+        "category": "MISSING_CASE_FACTS",
+        "detail": "The typed calculator requires explicit population, status/birth dates, classified OW/AW, prior amounts and an annual OW estimate or final-settlement facts. It is not connected to natural-language extraction."
+      },
+      {
+        "topic": "Other payroll years and special populations",
+        "category": "MISSING_KNOWLEDGE",
+        "detail": "The calculator is limited to retained 2026 private-sector/non-pensionable schedules; it excludes platform workers and other unsupported populations."
+      }
+    ],
+    "MOM": [
+      {
+        "topic": "Employer-termination, holiday absence and weekend-holiday wording",
+        "category": "INCORRECT_SEMANTIC_MAPPING",
+        "cases": [
+          "hold-mom-03",
+          "hold-mom-04",
+          "fresh-mom-02"
+        ],
+        "detail": "The substantive rule is present but these question forms do not reach the correct supported issue."
+      },
+      {
+        "topic": "Actual salary, overtime, leave balance and holiday pay",
+        "category": "MISSING_CASE_FACTS",
+        "detail": "Employment Act/Part IV scope, wage basis, hours, service length, schedule, prior leave and absence facts remain necessary."
+      },
+      {
+        "topic": "Further leave, termination disputes and special employee categories",
+        "category": "MISSING_KNOWLEDGE",
+        "detail": "This batch does not implement every parental-leave or termination obligation; existing regular-salary and overtime rules are preserved, not claimed as new."
+      }
+    ],
+    "MAS": [
+      {
+        "topic": "QDC",
+        "category": "INSUFFICIENT_SOURCE_EVIDENCE",
+        "cases": [
+          "hold-mas-04"
+        ],
+        "detail": "No complete QDC-specific admitted official proof; exact return obligations remain unsupported."
+      },
+      {
+        "topic": "Current/pre-2027 misconduct obligations",
+        "category": "MISSING_KNOWLEDGE",
+        "cases": [
+          "hold-mas-03"
+        ],
+        "detail": "SFA 04-N24 explicitly starts on 01/01/2027 and cannot establish the earlier regime. Safe temporal abstention is not a knowledge gain."
+      },
+      {
+        "topic": "Manager toolkit versus fund obligations under fresh wording",
+        "category": "INCORRECT_SEMANTIC_MAPPING",
+        "cases": [
+          "fresh-mas-01"
+        ],
+        "detail": "The selected answer contains general licensing quotes; another manager-versus-fund question is correct, so support is wording-sensitive."
+      },
+      {
+        "topic": "Fund-level returns and complete regulatory notifications",
+        "category": "MISSING_KNOWLEDGE",
+        "detail": "Manager-level LFMC/VCFM guidance and the future misconduct notice do not exhaust fund-level or non-SFA duties."
+      }
+    ]
+  },
+  "releaseBoundary": "Coverage development is separate from historical ACRA release acceptance; no merge or deployment."
+}

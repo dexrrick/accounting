@@ -11,6 +11,7 @@ import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisoryS
 import { selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
 import { selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '../retrieval/practicalStatutoryExpansion';
+import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, sourceProvesKnowledgeDate } from '../retrieval/statutoryKnowledge20261027b';
 import { selectMomSalaryPaymentRuleQuote, supportMomSalaryPaymentIssue } from '../retrieval/momSalaryPaymentRule';
 
 import { normalizeEvidenceText, startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
@@ -219,12 +220,19 @@ function isExactBoundedCoverageRuleSpan(
       sameExactOfficialCoverageUrl(record.canonicalSourceUrl, officialUrl) &&
       momSalaryRuleQuote === quote;
   }
-  const profile = BOUNDED_COVERAGE_RULE_PROFILES[`${request.authority}:${request.topicId}`];
+  const legacyProfile = BOUNDED_COVERAGE_RULE_PROFILES[`${request.authority}:${request.topicId}`];
+  const knowledgeUrls = STATUTORY_KNOWLEDGE_POINTERS_20261027B.filter(pointer =>
+    pointer.authority === request.authority && pointer.topicIds.includes(request.topicId)).map(pointer => pointer.url);
+  const knowledgeDomains: Readonly<Record<string, string>> = { IRAS: request.topicId.includes('gst') ? 'IRAS_GST' : 'IRAS_TAX',
+    CPF: 'CPF_BOARD', ACRA: 'ACRA_CORP', MOM: 'MOM_EMPLOYMENT', MAS: 'MAS_FUNDS' };
+  const knowledgeDomain = knowledgeDomains[request.authority];
+  const profile = legacyProfile || (knowledgeUrls.length && knowledgeDomain
+    ? { authority: request.authority, domain: knowledgeDomain, officialUrls: knowledgeUrls } : undefined);
   if (!profile || profile.authority !== request.authority || record.authority !== profile.authority ||
       record.sourceAuthority !== profile.authority || record.domain !== profile.domain ||
       !recordBoundToCoverageTopic(record, request.topicId) ||
       typeof record.officialSourceUrl !== 'string' || typeof record.canonicalSourceUrl !== 'string' ||
-      !profile.officialUrls.some(expectedUrl =>
+      ![...profile.officialUrls, ...knowledgeUrls].some(expectedUrl =>
         sameExactOfficialCoverageUrl(record.officialSourceUrl!, expectedUrl) &&
         sameExactOfficialCoverageUrl(record.canonicalSourceUrl!, expectedUrl))) return false;
   const coverageRequest = {
@@ -719,7 +727,8 @@ export function findRecordEligibilityRejection(
   versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
   expectedAuthority?: StatutoryAuthority,
   expectedDomain?: QueryDomain,
-  applicabilityTarget?: VerifyEvidenceClaimsOptions['applicabilityTarget']
+  applicabilityTarget?: VerifyEvidenceClaimsOptions['applicabilityTarget'],
+  boundedCoverageRequest?: BoundedCoverageRequest
 ): string | undefined {
   if (APPLICATION_SOURCE_TYPES.has(record.sourceType) || record.evidenceTier === 'APPLICATION_RULE') {
     return 'APPLICATION_SOURCE_NOT_ALLOWED';
@@ -759,7 +768,11 @@ export function findRecordEligibilityRejection(
     }
     // A source-map validity window is routing metadata. A freshly fetched page
     // cannot establish an older rule merely by inheriting that pointer's dates.
-    if (targetDate && targetDate < record.retrievedAt.slice(0, 10)) {
+    if (targetDate && targetDate < record.retrievedAt.slice(0, 10) &&
+        !sourceProvesKnowledgeDate({
+          authority: boundedCoverageRequest?.authority || '', topicId: boundedCoverageRequest?.topicId || '',
+          query: boundedCoverageRequest?.query || '', subject: boundedCoverageRequest?.subject || '',
+          sourceText: record.sourceText, officialUrl: record.officialSourceUrl }, targetDate)) {
       return 'LIVE_HISTORICAL_PAGE_SCOPE_UNVERIFIED';
     }
   } else {
@@ -772,6 +785,13 @@ export function findRecordEligibilityRejection(
   const canonicalUrl = normalizeApprovedHttpsUrl(record.canonicalSourceUrl);
   if (!officialUrl || !canonicalUrl || officialUrl !== canonicalUrl) return 'SOURCE_URL_NOT_APPROVED_OR_CANONICAL';
 
+  // A complete issue-bound commencement quotation supplies its own date. It
+  // does not confer historical approval on a page or inherit pointer dates.
+  if (boundedCoverageRequest && record.authority === boundedCoverageRequest.authority
+      && record.sourceAuthority === boundedCoverageRequest.authority && !record.validTo
+      && !record.validFrom && !record.effectiveDate
+      && sourceProvesKnowledgeDate({ ...boundedCoverageRequest,
+        sourceText: record.sourceText, officialUrl: record.officialSourceUrl }, targetDate)) return undefined;
   return findDateRejection(record, targetDate);
 }
 
@@ -1101,7 +1121,8 @@ export function verifyEvidenceClaims(
       versioningManager,
       options?.expectedAuthority,
       options?.expectedDomain,
-      options?.applicabilityTarget
+      options?.applicabilityTarget,
+      options?.boundedCoverageRequest
     );
     if (eligibilityRejection) {
       rejected.push(reject(text, eligibilityRejection));

@@ -12,6 +12,7 @@ import { supportMomAcraMasCoverageRule } from '../../src/retrieval/momAcraMasCov
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { replayStatutoryCoverageCase } from '../../scripts/replay_statutory_coverage.mjs';
+import { STATUTORY_KNOWLEDGE_POINTERS_20261027B } from '../../src/retrieval/statutoryKnowledge20261027b.ts';
 
 const corpus = JSON.parse(await readFile(new URL('../evaluation/statutory_coverage_wave_2026-10-25.json', import.meta.url), 'utf8'));
 assert.equal(corpus.cases.length, 100);
@@ -135,7 +136,8 @@ for (const testCase of representatives) {
       requireSubstantiveBody: ['CPF', 'ACRA', 'MOM', 'MAS'].includes(sourceFixture.authority)
     }).substantiveText || '').replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
     for (const claim of citation.claims.filter(item => item.supportKind === 'EXACT_SOURCE_QUOTE')) {
-      const exactQuote = (claim.quote || claim.text).replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
+      const exactQuote = (claim.quote || claim.text).replace(/&rsquo;/gi, '’')
+        .replace(/\s+([,.;:!?])/g, '$1').replace(/\s+/g, ' ').trim();
       assert.ok(exactQuote && fixtureText.includes(exactQuote), `${testCase.id} exact quote comes from the fetched fixture body`);
       assert.ok(claim.sourceBinding || claim.fetchedSourceBinding, `${testCase.id} exact quote keeps a document binding`);
       if (claim.fetchedSourceBinding) assert.equal(claim.fetchedSourceBinding.canonicalUrl, citation.url);
@@ -151,6 +153,9 @@ for (const testCase of representatives) {
   assert.deepEqual(result.citationScopeAudit.citedSourceUrls, result.citations.map(source => source.url));
   for (const url of result.fetches) {
     assert.ok(STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.some(fixture => fixture.sourceUrl === url) ||
+      // New retrieval pointers remain unavailable in this unchanged old source
+      // set. customFetch blocks them; they supply no positive fixture evidence.
+      STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(pointer => pointer.url === url) ||
       /\/sitemap(?:\.xml)?$/.test(url) || url.endsWith('/robots.txt') ||
       url.startsWith('https://html.duckduckgo.com/') || url.startsWith('https://r.jina.ai/'),
     `${testCase.id} fetch was intercepted by an offline fixture/negative lookup: ${url}`);
