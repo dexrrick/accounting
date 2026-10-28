@@ -1388,4 +1388,365 @@ assert.equal(g20_post4.totalDebit, 5000);
 assert.equal(g20_post4.totalCredit, 5000);
 assert.equal(g20_post4.isBalanced, true);
 
+// 21. PR #26 Hold-Merge Review Findings (Issues 1–3):
+// Issue 1: Prepaid expense overstatement when total coverage period is missing
+// 1a) Prepaid insurance with elapsed period but unstated total coverage period must fail closed
+const q21_1a = "Prepaid insurance of S$12,000; 3 months have elapsed. Record insurance expense.";
+const p21_1a = await parseAccountingQuery(q21_1a, null);
+assert.equal(p21_1a.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_1a.isComplete, false, 'Prepaid balance with elapsed duration but missing coverage must fail closed');
+assert.equal(p21_1a.directGroups?.length ?? 0, 0);
+assert.ok(p21_1a.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// Follow-up A: User provides coverage period ("12 months")
+const p21_1a_folA = await parseAccountingQuery("12 months", p21_1a);
+assert.equal(p21_1a_folA.isComplete, true, 'Coverage follow-up must complete scenario');
+assert.equal(p21_1a_folA.directGroups?.length, 1);
+const g21_1a_folA = p21_1a_folA.directGroups[0];
+assert.equal(g21_1a_folA.lines[0].accountName, 'Insurance Expense');
+assert.equal(g21_1a_folA.lines[0].category, 'EXPENSE');
+assert.equal(g21_1a_folA.lines[0].debit, 3000);
+assert.equal(g21_1a_folA.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g21_1a_folA.lines[1].category, 'ASSET');
+assert.equal(g21_1a_folA.lines[1].credit, 3000);
+assert.equal(g21_1a_folA.totalDebit, 3000);
+assert.equal(g21_1a_folA.totalCredit, 3000);
+assert.equal(g21_1a_folA.isBalanced, true);
+const v21_1a_folA = validateJournalGroups([g21_1a_folA], { rawQuery: p21_1a_folA.rawQuery });
+assert.equal(v21_1a_folA.isValid, true);
+
+// Follow-up B: User provides exact expired amount ("S$3,000")
+const p21_1a_folB = await parseAccountingQuery("S$3,000", p21_1a);
+assert.equal(p21_1a_folB.isComplete, true, 'Explicit SGD period charge follow-up must complete scenario');
+assert.equal(p21_1a_folB.directGroups?.length, 1);
+const g21_1a_folB = p21_1a_folB.directGroups[0];
+assert.equal(g21_1a_folB.lines[0].accountName, 'Insurance Expense');
+assert.equal(g21_1a_folB.lines[0].category, 'EXPENSE');
+assert.equal(g21_1a_folB.lines[0].debit, 3000);
+assert.equal(g21_1a_folB.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g21_1a_folB.lines[1].category, 'ASSET');
+assert.equal(g21_1a_folB.lines[1].credit, 3000);
+assert.equal(g21_1a_folB.totalDebit, 3000);
+assert.equal(g21_1a_folB.totalCredit, 3000);
+assert.equal(g21_1a_folB.isBalanced, true);
+const v21_1a_folB = validateJournalGroups([g21_1a_folB], { rawQuery: p21_1a_folB.rawQuery });
+assert.equal(v21_1a_folB.isValid, true);
+
+// Follow-up C: User provides coverage period ("annual")
+const p21_1a_folC = await parseAccountingQuery("annual", p21_1a);
+assert.equal(p21_1a_folC.isComplete, true, '"annual" coverage follow-up must complete scenario');
+assert.equal(p21_1a_folC.directGroups?.length, 1);
+const g21_1a_folC = p21_1a_folC.directGroups[0];
+assert.equal(g21_1a_folC.lines[0].accountName, 'Insurance Expense');
+assert.equal(g21_1a_folC.lines[0].debit, 3000);
+assert.equal(g21_1a_folC.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g21_1a_folC.lines[1].credit, 3000);
+assert.equal(g21_1a_folC.isBalanced, true);
+const v21_1a_folC = validateJournalGroups([g21_1a_folC], { rawQuery: p21_1a_folC.rawQuery });
+assert.equal(v21_1a_folC.isValid, true);
+
+// Follow-up D: User provides coverage period ("1 year")
+const p21_1a_folD = await parseAccountingQuery("1 year", p21_1a);
+assert.equal(p21_1a_folD.isComplete, true, '"1 year" coverage follow-up must complete scenario');
+assert.equal(p21_1a_folD.directGroups?.length, 1);
+const g21_1a_folD = p21_1a_folD.directGroups[0];
+assert.equal(g21_1a_folD.lines[0].accountName, 'Insurance Expense');
+assert.equal(g21_1a_folD.lines[0].debit, 3000);
+assert.equal(g21_1a_folD.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g21_1a_folD.lines[1].credit, 3000);
+assert.equal(g21_1a_folD.isBalanced, true);
+const v21_1a_folD = validateJournalGroups([g21_1a_folD], { rawQuery: p21_1a_folD.rawQuery });
+assert.equal(v21_1a_folD.isValid, true);
+
+// 1b) Unqualified prepaid balance without coverage or elapsed fails closed
+const q21_1b = "Prepaid insurance of S$12,000. Recognise expired insurance.";
+const p21_1b = await parseAccountingQuery(q21_1b, null);
+assert.equal(p21_1b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_1b.isComplete, false, 'Unqualified prepaid balance without durations must fail closed');
+assert.equal(p21_1b.directGroups?.length ?? 0, 0);
+assert.ok(p21_1b.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// 1c) Explicit expired amount completes directly
+const q21_1c = "SGD 2,500 of prepaid insurance has expired. Record insurance expense.";
+const p21_1c = await parseAccountingQuery(q21_1c, null);
+assert.equal(p21_1c.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_1c.isComplete, true);
+assert.equal(p21_1c.directGroups?.length, 1);
+const g21_1c = p21_1c.directGroups[0];
+assert.equal(g21_1c.lines[0].accountName, 'Insurance Expense');
+assert.equal(g21_1c.lines[0].category, 'EXPENSE');
+assert.equal(g21_1c.lines[0].debit, 2500);
+assert.equal(g21_1c.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g21_1c.lines[1].category, 'ASSET');
+assert.equal(g21_1c.lines[1].credit, 2500);
+assert.equal(g21_1c.totalDebit, 2500);
+assert.equal(g21_1c.totalCredit, 2500);
+assert.equal(g21_1c.isBalanced, true);
+const v21_1c = validateJournalGroups([g21_1c], { rawQuery: q21_1c });
+assert.equal(v21_1c.isValid, true);
+
+// Issue 2: Separate Salary Settlement and CPF Settlement Status Tracking
+// 2a) Example A: Salaries paid by bank, CPF remains unpaid
+const q21_2a = "Paid monthly salaries by bank: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; CPF remains unpaid.";
+const p21_2a = await parseAccountingQuery(q21_2a, null);
+assert.equal(p21_2a.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2a.isComplete, true);
+assert.equal(p21_2a.directGroups?.length, 1);
+const g21_2a = p21_2a.directGroups[0];
+assert.equal(g21_2a.lines.length, 4);
+assert.equal(g21_2a.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2a.lines[0].category, 'EXPENSE');
+assert.equal(g21_2a.lines[0].debit, 5000);
+assert.equal(g21_2a.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2a.lines[1].category, 'EXPENSE');
+assert.equal(g21_2a.lines[1].debit, 850);
+assert.equal(g21_2a.lines[2].accountName, 'Cash at Bank');
+assert.equal(g21_2a.lines[2].category, 'ASSET');
+assert.equal(g21_2a.lines[2].credit, 4000);
+assert.equal(g21_2a.lines[3].accountName, 'CPF Payable');
+assert.equal(g21_2a.lines[3].category, 'LIABILITY');
+assert.equal(g21_2a.lines[3].credit, 1850);
+assert.equal(g21_2a.totalDebit, 5850);
+assert.equal(g21_2a.totalCredit, 5850);
+assert.equal(g21_2a.isBalanced, true);
+const v21_2a = validateJournalGroups([g21_2a], { rawQuery: q21_2a });
+assert.equal(v21_2a.isValid, true);
+
+// 2b) Example B: CPF paid by bank, net salaries still outstanding
+const q21_2b = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; CPF paid by bank, net salaries still outstanding.";
+const p21_2b = await parseAccountingQuery(q21_2b, null);
+assert.equal(p21_2b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2b.isComplete, true);
+assert.equal(p21_2b.directGroups?.length, 1);
+const g21_2b = p21_2b.directGroups[0];
+assert.equal(g21_2b.lines.length, 4);
+assert.equal(g21_2b.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2b.lines[0].category, 'EXPENSE');
+assert.equal(g21_2b.lines[0].debit, 5000);
+assert.equal(g21_2b.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2b.lines[1].category, 'EXPENSE');
+assert.equal(g21_2b.lines[1].debit, 850);
+assert.equal(g21_2b.lines[2].accountName, 'Salaries Payable');
+assert.equal(g21_2b.lines[2].category, 'LIABILITY');
+assert.equal(g21_2b.lines[2].credit, 4000);
+assert.equal(g21_2b.lines[3].accountName, 'Cash at Bank');
+assert.equal(g21_2b.lines[3].category, 'ASSET');
+assert.equal(g21_2b.lines[3].credit, 1850);
+assert.equal(g21_2b.totalDebit, 5850);
+assert.equal(g21_2b.totalCredit, 5850);
+assert.equal(g21_2b.isBalanced, true);
+const v21_2b = validateJournalGroups([g21_2b], { rawQuery: q21_2b });
+assert.equal(v21_2b.isValid, true);
+
+// 2c) Both paid by bank
+const q21_2c = "Paid both salaries and CPF by bank: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850.";
+const p21_2c = await parseAccountingQuery(q21_2c, null);
+assert.equal(p21_2c.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2c.isComplete, true);
+assert.equal(p21_2c.directGroups?.length, 1);
+const g21_2c = p21_2c.directGroups[0];
+assert.equal(g21_2c.lines.length, 3);
+assert.equal(g21_2c.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2c.lines[0].category, 'EXPENSE');
+assert.equal(g21_2c.lines[0].debit, 5000);
+assert.equal(g21_2c.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2c.lines[1].category, 'EXPENSE');
+assert.equal(g21_2c.lines[1].debit, 850);
+assert.equal(g21_2c.lines[2].accountName, 'Cash at Bank');
+assert.equal(g21_2c.lines[2].category, 'ASSET');
+assert.equal(g21_2c.lines[2].credit, 5850);
+assert.equal(g21_2c.totalDebit, 5850);
+assert.equal(g21_2c.totalCredit, 5850);
+assert.equal(g21_2c.isBalanced, true);
+const v21_2c = validateJournalGroups([g21_2c], { rawQuery: q21_2c });
+assert.equal(v21_2c.isValid, true);
+
+// 2d) Mixed payment methods: cash salaries, bank CPF
+const q21_2d = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; salaries paid in cash, CPF paid by bank.";
+const p21_2d = await parseAccountingQuery(q21_2d, null);
+assert.equal(p21_2d.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2d.isComplete, true);
+assert.equal(p21_2d.directGroups?.length, 1);
+const g21_2d = p21_2d.directGroups[0];
+assert.equal(g21_2d.lines.length, 4);
+assert.equal(g21_2d.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2d.lines[0].category, 'EXPENSE');
+assert.equal(g21_2d.lines[0].debit, 5000);
+assert.equal(g21_2d.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2d.lines[1].category, 'EXPENSE');
+assert.equal(g21_2d.lines[1].debit, 850);
+assert.equal(g21_2d.lines[2].accountName, 'Cash');
+assert.equal(g21_2d.lines[2].category, 'ASSET');
+assert.equal(g21_2d.lines[2].credit, 4000);
+assert.equal(g21_2d.lines[3].accountName, 'Cash at Bank');
+assert.equal(g21_2d.lines[3].category, 'ASSET');
+assert.equal(g21_2d.lines[3].credit, 1850);
+assert.equal(g21_2d.totalDebit, 5850);
+assert.equal(g21_2d.totalCredit, 5850);
+assert.equal(g21_2d.isBalanced, true);
+const v21_2d = validateJournalGroups([g21_2d], { rawQuery: q21_2d });
+assert.equal(v21_2d.isValid, true);
+
+// 2e) 4-amount payroll with total CPF
+const q21_2e = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; CPF of S$1,850 paid by bank, net salaries still outstanding.";
+const p21_2e = await parseAccountingQuery(q21_2e, null);
+assert.equal(p21_2e.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2e.isComplete, true);
+assert.equal(p21_2e.directGroups?.length, 1);
+const g21_2e = p21_2e.directGroups[0];
+assert.equal(g21_2e.lines.length, 4);
+assert.equal(g21_2e.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2e.lines[0].category, 'EXPENSE');
+assert.equal(g21_2e.lines[0].debit, 5000);
+assert.equal(g21_2e.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2e.lines[1].category, 'EXPENSE');
+assert.equal(g21_2e.lines[1].debit, 850);
+assert.equal(g21_2e.lines[2].accountName, 'Salaries Payable');
+assert.equal(g21_2e.lines[2].category, 'LIABILITY');
+assert.equal(g21_2e.lines[2].credit, 4000);
+assert.equal(g21_2e.lines[3].accountName, 'Cash at Bank');
+assert.equal(g21_2e.lines[3].category, 'ASSET');
+assert.equal(g21_2e.lines[3].credit, 1850);
+assert.equal(g21_2e.totalDebit, 5850);
+assert.equal(g21_2e.totalCredit, 5850);
+assert.equal(g21_2e.isBalanced, true);
+const v21_2e = validateJournalGroups([g21_2e], { rawQuery: q21_2e });
+assert.equal(v21_2e.isValid, true);
+
+// 2f) 5-amount payroll (gross, ee CPF, er CPF, total CPF, net salaries)
+const q21_2f = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; CPF of S$1,850 paid by bank, net salaries of S$4,000 still outstanding.";
+const p21_2f = await parseAccountingQuery(q21_2f, null);
+assert.equal(p21_2f.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2f.isComplete, true);
+assert.equal(p21_2f.directGroups?.length, 1);
+const g21_2f = p21_2f.directGroups[0];
+assert.equal(g21_2f.lines.length, 4);
+assert.equal(g21_2f.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2f.lines[0].category, 'EXPENSE');
+assert.equal(g21_2f.lines[0].debit, 5000);
+assert.equal(g21_2f.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2f.lines[1].category, 'EXPENSE');
+assert.equal(g21_2f.lines[1].debit, 850);
+assert.equal(g21_2f.lines[2].accountName, 'Salaries Payable');
+assert.equal(g21_2f.lines[2].category, 'LIABILITY');
+assert.equal(g21_2f.lines[2].credit, 4000);
+assert.equal(g21_2f.lines[3].accountName, 'Cash at Bank');
+assert.equal(g21_2f.lines[3].category, 'ASSET');
+assert.equal(g21_2f.lines[3].credit, 1850);
+assert.equal(g21_2f.totalDebit, 5850);
+assert.equal(g21_2f.totalCredit, 5850);
+assert.equal(g21_2f.isBalanced, true);
+const v21_2f = validateJournalGroups([g21_2f], { rawQuery: q21_2f });
+assert.equal(v21_2f.isValid, true);
+
+// 2g) Formatted amounts and 'and' clause splitting with mixed payment
+const q21_2g = "Paid gross salaries of S$5,000 in cash and CPF by bank: employee CPF S$1,000, employer CPF S$850.";
+const p21_2g = await parseAccountingQuery(q21_2g, null);
+assert.equal(p21_2g.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_2g.isComplete, true);
+assert.equal(p21_2g.directGroups?.length, 1);
+const g21_2g = p21_2g.directGroups[0];
+assert.equal(g21_2g.lines.length, 4);
+assert.equal(g21_2g.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g21_2g.lines[0].category, 'EXPENSE');
+assert.equal(g21_2g.lines[0].debit, 5000);
+assert.equal(g21_2g.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g21_2g.lines[1].category, 'EXPENSE');
+assert.equal(g21_2g.lines[1].debit, 850);
+assert.equal(g21_2g.lines[2].accountName, 'Cash');
+assert.equal(g21_2g.lines[2].category, 'ASSET');
+assert.equal(g21_2g.lines[2].credit, 4000);
+assert.equal(g21_2g.lines[3].accountName, 'Cash at Bank');
+assert.equal(g21_2g.lines[3].category, 'ASSET');
+assert.equal(g21_2g.lines[3].credit, 1850);
+assert.equal(g21_2g.totalDebit, 5850);
+assert.equal(g21_2g.totalCredit, 5850);
+assert.equal(g21_2g.isBalanced, true);
+const v21_2g = validateJournalGroups([g21_2g], { rawQuery: q21_2g });
+assert.equal(v21_2g.isValid, true);
+
+// Issue 3: Initial prepaid insurance purchase misrouting & Prepaid Insurance account
+// 3a) Record prepaid insurance by bank for 12 months (ASSET Prepaid Insurance, not expense)
+const q21_3a = "Record prepaid insurance of S$12,000 by bank for 12 months.";
+const p21_3a = await parseAccountingQuery(q21_3a, null);
+assert.equal(p21_3a.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_3a.isComplete, true);
+assert.equal(p21_3a.directGroups?.length, 1);
+const g21_3a = p21_3a.directGroups[0];
+assert.equal(g21_3a.lines[0].accountName, 'Prepaid Insurance');
+assert.equal(g21_3a.lines[0].category, 'ASSET');
+assert.equal(g21_3a.lines[0].debit, 12000);
+assert.equal(g21_3a.lines[1].accountName, 'Cash at Bank');
+assert.equal(g21_3a.lines[1].category, 'ASSET');
+assert.equal(g21_3a.lines[1].credit, 12000);
+assert.equal(g21_3a.totalDebit, 12000);
+assert.equal(g21_3a.totalCredit, 12000);
+assert.equal(g21_3a.isBalanced, true);
+const v21_3a = validateJournalGroups([g21_3a], { rawQuery: q21_3a });
+assert.equal(v21_3a.isValid, true);
+
+// 3b) Paid prepaid insurance without payment method fails closed with paymentMethod (NOT periodCharge)
+const q21_3b = "Paid prepaid insurance of S$12,000 for 12 months.";
+const p21_3b = await parseAccountingQuery(q21_3b, null);
+assert.equal(p21_3b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_3b.isComplete, false);
+assert.equal(p21_3b.directGroups?.length ?? 0, 0);
+assert.ok(p21_3b.missingFields.some(f => f.fieldKey === 'paymentMethod'), 'Must request paymentMethod');
+assert.ok(!p21_3b.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must NOT request periodCharge');
+const p21_3b_resolved = await parseAccountingQuery("by bank transfer", p21_3b);
+assert.equal(p21_3b_resolved.isComplete, true);
+assert.equal(p21_3b_resolved.directGroups?.length, 1);
+const g21_3b_res = p21_3b_resolved.directGroups[0];
+assert.equal(g21_3b_res.lines[0].accountName, 'Prepaid Insurance');
+assert.equal(g21_3b_res.lines[0].category, 'ASSET');
+assert.equal(g21_3b_res.lines[0].debit, 12000);
+assert.equal(g21_3b_res.lines[1].accountName, 'Cash at Bank');
+assert.equal(g21_3b_res.lines[1].category, 'ASSET');
+assert.equal(g21_3b_res.lines[1].credit, 12000);
+assert.equal(g21_3b_res.totalDebit, 12000);
+assert.equal(g21_3b_res.totalCredit, 12000);
+assert.equal(g21_3b_res.isBalanced, true);
+const v21_3b_res = validateJournalGroups([g21_3b_res], { rawQuery: p21_3b_resolved.rawQuery });
+assert.equal(v21_3b_res.isValid, true);
+
+// 3c) Recognise prepaid insurance of S$12,000 paid by bank for 12 months
+const q21_3c = "Recognise prepaid insurance of S$12,000 paid by bank for 12 months.";
+const p21_3c = await parseAccountingQuery(q21_3c, null);
+assert.equal(p21_3c.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_3c.isComplete, true);
+assert.equal(p21_3c.directGroups?.length, 1);
+const g21_3c = p21_3c.directGroups[0];
+assert.equal(g21_3c.lines.length, 2);
+assert.equal(g21_3c.lines[0].accountName, 'Prepaid Insurance');
+assert.equal(g21_3c.lines[0].category, 'ASSET');
+assert.equal(g21_3c.lines[0].debit, 12000);
+assert.equal(g21_3c.lines[1].accountName, 'Cash at Bank');
+assert.equal(g21_3c.lines[1].category, 'ASSET');
+assert.equal(g21_3c.lines[1].credit, 12000);
+assert.equal(g21_3c.totalDebit, 12000);
+assert.equal(g21_3c.totalCredit, 12000);
+assert.equal(g21_3c.isBalanced, true);
+const v21_3c = validateJournalGroups([g21_3c], { rawQuery: q21_3c });
+assert.equal(v21_3c.isValid, true);
+
+// 3d) Paid insurance in advance of S$12,000 by bank
+const q21_3d = "Paid insurance in advance of S$12,000 by bank.";
+const p21_3d = await parseAccountingQuery(q21_3d, null);
+assert.equal(p21_3d.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p21_3d.isComplete, true);
+assert.equal(p21_3d.directGroups?.length, 1);
+const g21_3d = p21_3d.directGroups[0];
+assert.equal(g21_3d.lines.length, 2);
+assert.equal(g21_3d.lines[0].accountName, 'Prepaid Insurance');
+assert.equal(g21_3d.lines[0].category, 'ASSET');
+assert.equal(g21_3d.lines[0].debit, 12000);
+assert.equal(g21_3d.lines[1].accountName, 'Cash at Bank');
+assert.equal(g21_3d.lines[1].category, 'ASSET');
+assert.equal(g21_3d.lines[1].credit, 12000);
+assert.equal(g21_3d.totalDebit, 12000);
+assert.equal(g21_3d.totalCredit, 12000);
+assert.equal(g21_3d.isBalanced, true);
+const v21_3d = validateJournalGroups([g21_3d], { rawQuery: q21_3d });
+assert.equal(v21_3d.isValid, true);
+
 console.log('PASS | Double-entry reliability, deterministic integrity, and guardrail validation');
