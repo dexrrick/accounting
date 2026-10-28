@@ -984,4 +984,408 @@ assert.equal(p19g.isComplete, false, 'Deferred tax on revaluation surplus must f
 assert.equal(p19g.directGroups?.length ?? 0, 0);
 assert.ok(p19g.missingFields.some(f => f.fieldKey === 'deferredTaxRecognitionLocation'));
 
+// 20. Phase 3 Review Corrections (Findings 1–7):
+
+// Finding 1: Prepaid unit variations and elapsed vs coverage isolation
+// 1a) Annual prepaid insurance with 3 months elapsed (must NOT treat "for 3 months" as total coverage)
+const q20_1a = "Annual prepaid insurance of SGD 12,000; record the insurance expense for 3 months.";
+const p20_1a = await parseAccountingQuery(q20_1a, null);
+assert.equal(p20_1a.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_1a.isComplete, true);
+assert.equal(p20_1a.directGroups?.length, 1);
+const g20_1a = p20_1a.directGroups[0];
+assert.equal(g20_1a.lines[0].accountName, 'Insurance Expense');
+assert.equal(g20_1a.lines[0].category, 'EXPENSE');
+assert.equal(g20_1a.lines[0].debit, 3000);
+assert.equal(g20_1a.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g20_1a.lines[1].category, 'ASSET');
+assert.equal(g20_1a.lines[1].credit, 3000);
+assert.equal(g20_1a.totalDebit, 3000);
+assert.equal(g20_1a.totalCredit, 3000);
+assert.equal(g20_1a.isBalanced, true);
+const v20_1a = validateJournalGroups([g20_1a], { rawQuery: q20_1a });
+assert.equal(v20_1a.isValid, true);
+
+// 1b) Prepaid rent of SGD 24,000 for 1 year with 1 quarter elapsed
+const q20_1b = "Prepaid rent of SGD 24,000 paid for 1 year; 1 quarter has elapsed. Record rent expense.";
+const p20_1b = await parseAccountingQuery(q20_1b, null);
+assert.equal(p20_1b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_1b.isComplete, true);
+assert.equal(p20_1b.directGroups?.length, 1);
+const g20_1b = p20_1b.directGroups[0];
+assert.equal(g20_1b.lines[0].accountName, 'Rent Expense');
+assert.equal(g20_1b.lines[0].category, 'EXPENSE');
+assert.equal(g20_1b.lines[0].debit, 6000);
+assert.equal(g20_1b.lines[1].accountName, 'Prepaid Rent');
+assert.equal(g20_1b.lines[1].category, 'ASSET');
+assert.equal(g20_1b.lines[1].credit, 6000);
+assert.equal(g20_1b.totalDebit, 6000);
+assert.equal(g20_1b.totalCredit, 6000);
+assert.equal(g20_1b.isBalanced, true);
+const v20_1b = validateJournalGroups([g20_1b], { rawQuery: q20_1b });
+assert.equal(v20_1b.isValid, true);
+
+// 1c) Semi-annual prepaid insurance of SGD 3,600 with 1 month expired
+const q20_1c = "Semi-annual prepaid insurance of SGD 3,600; 1 month has expired. Recognise insurance expense.";
+const p20_1c = await parseAccountingQuery(q20_1c, null);
+assert.equal(p20_1c.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_1c.isComplete, true);
+assert.equal(p20_1c.directGroups?.length, 1);
+const g20_1c = p20_1c.directGroups[0];
+assert.equal(g20_1c.lines[0].accountName, 'Insurance Expense');
+assert.equal(g20_1c.lines[0].category, 'EXPENSE');
+assert.equal(g20_1c.lines[0].debit, 600);
+assert.equal(g20_1c.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g20_1c.lines[1].category, 'ASSET');
+assert.equal(g20_1c.lines[1].credit, 600);
+assert.equal(g20_1c.totalDebit, 600);
+assert.equal(g20_1c.totalCredit, 600);
+assert.equal(g20_1c.isBalanced, true);
+const v20_1c = validateJournalGroups([g20_1c], { rawQuery: q20_1c });
+assert.equal(v20_1c.isValid, true);
+
+// 1d) Incompatible units: 12 months coverage vs 20 days elapsed fails closed
+const q20_1d = "Prepaid insurance of SGD 12,000 for 12 months; 20 days have elapsed. Record insurance expense.";
+const p20_1d = await parseAccountingQuery(q20_1d, null);
+assert.equal(p20_1d.isComplete, false, 'Incompatible units must fail closed');
+assert.equal(p20_1d.directGroups?.length ?? 0, 0);
+assert.ok(p20_1d.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge on unit mismatch');
+
+// 1e) Coverage without elapsed period fails closed
+const q20_1e = "Annual prepaid insurance of SGD 12,000. Recognise expired prepaid insurance.";
+const p20_1e = await parseAccountingQuery(q20_1e, null);
+assert.equal(p20_1e.isComplete, false, 'Coverage without elapsed period must fail closed');
+assert.equal(p20_1e.directGroups?.length ?? 0, 0);
+assert.ok(p20_1e.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// Finding 2: Payroll accrual vs salary already paid
+// 2a) Paid monthly salaries by bank transfer (Cash at Bank asset, not Salaries Payable liability)
+const q20_2a = "Paid monthly salaries by bank transfer: gross salaries SGD 5,000, employee CPF SGD 1,000, employer CPF SGD 850.";
+const p20_2a = await parseAccountingQuery(q20_2a, null);
+assert.equal(p20_2a.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_2a.isComplete, true);
+assert.equal(p20_2a.directGroups?.length, 1);
+const g20_2a = p20_2a.directGroups[0];
+assert.equal(g20_2a.lines.length, 4);
+assert.equal(g20_2a.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g20_2a.lines[0].category, 'EXPENSE');
+assert.equal(g20_2a.lines[0].debit, 5000);
+assert.equal(g20_2a.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g20_2a.lines[1].category, 'EXPENSE');
+assert.equal(g20_2a.lines[1].debit, 850);
+assert.equal(g20_2a.lines[2].accountName, 'Cash at Bank');
+assert.equal(g20_2a.lines[2].category, 'ASSET');
+assert.equal(g20_2a.lines[2].credit, 4000);
+assert.equal(g20_2a.lines[3].accountName, 'CPF Payable');
+assert.equal(g20_2a.lines[3].category, 'LIABILITY');
+assert.equal(g20_2a.lines[3].credit, 1850);
+assert.equal(g20_2a.totalDebit, 5850);
+assert.equal(g20_2a.totalCredit, 5850);
+assert.equal(g20_2a.isBalanced, true);
+const v20_2a = validateJournalGroups([g20_2a], { rawQuery: q20_2a });
+assert.equal(v20_2a.isValid, true);
+
+// 2b) Paid monthly salaries in cash
+const q20_2b = "Paid monthly salaries in cash: gross salary SGD 3,000, employee CPF SGD 600, employer CPF SGD 510.";
+const p20_2b = await parseAccountingQuery(q20_2b, null);
+assert.equal(p20_2b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_2b.isComplete, true);
+assert.equal(p20_2b.directGroups?.length, 1);
+const g20_2b = p20_2b.directGroups[0];
+assert.equal(g20_2b.lines[2].accountName, 'Cash');
+assert.equal(g20_2b.lines[2].category, 'ASSET');
+assert.equal(g20_2b.lines[2].credit, 2400);
+assert.equal(g20_2b.lines[3].accountName, 'CPF Payable');
+assert.equal(g20_2b.lines[3].credit, 1110);
+assert.equal(g20_2b.totalDebit, 3510);
+assert.equal(g20_2b.totalCredit, 3510);
+assert.equal(g20_2b.isBalanced, true);
+const v20_2b = validateJournalGroups([g20_2b], { rawQuery: q20_2b });
+assert.equal(v20_2b.isValid, true);
+
+// 2c) Paid monthly salaries without payment method fails closed and follow-up resolves
+const q20_2c = "Paid monthly salaries: gross salaries SGD 5,000, employee CPF SGD 1,000, employer CPF SGD 850.";
+const p20_2c = await parseAccountingQuery(q20_2c, null);
+assert.equal(p20_2c.isComplete, false, 'Paid salaries without payment method must fail closed');
+assert.equal(p20_2c.directGroups?.length ?? 0, 0);
+assert.ok(p20_2c.missingFields.some(f => f.fieldKey === 'paymentMethod'), 'Must request paymentMethod');
+const p20_2c_resolved = await parseAccountingQuery("by bank transfer", p20_2c);
+assert.equal(p20_2c_resolved.isComplete, true);
+assert.equal(p20_2c_resolved.directGroups?.length, 1);
+const g20_2c_res = p20_2c_resolved.directGroups[0];
+assert.equal(g20_2c_res.lines[2].accountName, 'Cash at Bank');
+assert.equal(g20_2c_res.lines[2].credit, 4000);
+assert.equal(g20_2c_res.lines[3].accountName, 'CPF Payable');
+assert.equal(g20_2c_res.lines[3].credit, 1850);
+assert.equal(g20_2c_res.totalDebit, 5850);
+assert.equal(g20_2c_res.totalCredit, 5850);
+assert.equal(g20_2c_res.isBalanced, true);
+
+// 2d) Non-CPF direct salary accrual vs payment
+const q20_2d_accrual = "Accrued monthly salaries of SGD 4,000 at month-end.";
+const p20_2d_accrual = await parseAccountingQuery(q20_2d_accrual, null);
+assert.equal(p20_2d_accrual.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_2d_accrual.isComplete, true);
+const g20_2d_acc = p20_2d_accrual.directGroups[0];
+assert.equal(g20_2d_acc.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g20_2d_acc.lines[0].category, 'EXPENSE');
+assert.equal(g20_2d_acc.lines[0].debit, 4000);
+assert.equal(g20_2d_acc.lines[1].accountName, 'Salaries Payable');
+assert.equal(g20_2d_acc.lines[1].category, 'LIABILITY');
+assert.equal(g20_2d_acc.lines[1].credit, 4000);
+assert.equal(g20_2d_acc.isBalanced, true);
+
+const q20_2d_paid = "Paid casual wages of SGD 1,200 in cash.";
+const p20_2d_paid = await parseAccountingQuery(q20_2d_paid, null);
+assert.equal(p20_2d_paid.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_2d_paid.isComplete, true);
+const g20_2d_paid = p20_2d_paid.directGroups[0];
+assert.equal(g20_2d_paid.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g20_2d_paid.lines[0].debit, 1200);
+assert.equal(g20_2d_paid.lines[1].accountName, 'Cash');
+assert.equal(g20_2d_paid.lines[1].category, 'ASSET');
+assert.equal(g20_2d_paid.lines[1].credit, 1200);
+assert.equal(g20_2d_paid.isBalanced, true);
+
+// Finding 3: Asset cost / carrying amount not mistaken for depreciation or amortisation charge
+const q20_3a = "Record annual depreciation on machinery costing SGD 50,000.";
+const p20_3a = await parseAccountingQuery(q20_3a, null);
+assert.equal(p20_3a.isComplete, false, 'Machinery cost must not be posted as depreciation charge');
+assert.equal(p20_3a.directGroups?.length ?? 0, 0);
+assert.ok(p20_3a.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+const q20_3b = "Record annual depreciation on office equipment with carrying amount of SGD 40,000.";
+const p20_3b = await parseAccountingQuery(q20_3b, null);
+assert.equal(p20_3b.isComplete, false, 'Carrying amount must not be posted as depreciation charge');
+assert.equal(p20_3b.directGroups?.length ?? 0, 0);
+assert.ok(p20_3b.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+const q20_3c = "Record depreciation on machinery (cost: SGD 50,000).";
+const p20_3c = await parseAccountingQuery(q20_3c, null);
+assert.equal(p20_3c.isComplete, false, 'Cost in parens must not be posted as depreciation charge');
+assert.equal(p20_3c.directGroups?.length ?? 0, 0);
+assert.ok(p20_3c.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+const q20_3d = "Record depreciation on machinery of SGD 50,000.";
+const p20_3d = await parseAccountingQuery(q20_3d, null);
+assert.equal(p20_3d.isComplete, false, 'Machinery of SGD 50,000 must not be posted as depreciation charge');
+assert.equal(p20_3d.directGroups?.length ?? 0, 0);
+assert.ok(p20_3d.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+const q20_3e = "Record amortisation on software licence valued at SGD 24,000.";
+const p20_3e = await parseAccountingQuery(q20_3e, null);
+assert.equal(p20_3e.isComplete, false, 'Valuation of software licence must not be posted as amortisation charge');
+assert.equal(p20_3e.directGroups?.length ?? 0, 0);
+assert.ok(p20_3e.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+// Finding 4: Ambiguous deferred tax movement direction
+const q20_4a = "Record deferred tax liability movement of SGD 5,000.";
+const p20_4a = await parseAccountingQuery(q20_4a, null);
+assert.equal(p20_4a.isComplete, false, 'Ambiguous DTL movement direction must fail closed');
+assert.equal(p20_4a.directGroups?.length ?? 0, 0);
+assert.ok(p20_4a.missingFields.some(f => f.fieldKey === 'deferredTaxDirection'));
+const p20_4a_resolved = await parseAccountingQuery("decrease", p20_4a);
+assert.equal(p20_4a_resolved.isComplete, true);
+assert.equal(p20_4a_resolved.directGroups?.length, 1);
+const g20_4a_res = p20_4a_resolved.directGroups[0];
+assert.equal(g20_4a_res.lines[0].accountName, 'Deferred Tax Liability');
+assert.equal(g20_4a_res.lines[0].category, 'LIABILITY');
+assert.equal(g20_4a_res.lines[0].debit, 5000);
+assert.equal(g20_4a_res.lines[1].accountName, 'Income Tax Expense');
+assert.equal(g20_4a_res.lines[1].category, 'EXPENSE');
+assert.equal(g20_4a_res.lines[1].credit, 5000);
+assert.equal(g20_4a_res.isBalanced, true);
+
+const q20_4b = "Post year-end deferred tax asset adjustment of SGD 3,000.";
+const p20_4b = await parseAccountingQuery(q20_4b, null);
+assert.equal(p20_4b.isComplete, false, 'Ambiguous DTA adjustment direction must fail closed');
+assert.equal(p20_4b.directGroups?.length ?? 0, 0);
+assert.ok(p20_4b.missingFields.some(f => f.fieldKey === 'deferredTaxDirection'));
+
+const q20_4c = "Record a reversal of deferred tax liability of SGD 2,000.";
+const p20_4c = await parseAccountingQuery(q20_4c, null);
+assert.equal(p20_4c.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_4c.isComplete, true);
+assert.equal(p20_4c.directGroups?.length, 1);
+const g20_4c = p20_4c.directGroups[0];
+assert.equal(g20_4c.lines[0].accountName, 'Deferred Tax Liability');
+assert.equal(g20_4c.lines[0].debit, 2000);
+assert.equal(g20_4c.lines[1].accountName, 'Income Tax Expense');
+assert.equal(g20_4c.lines[1].credit, 2000);
+assert.equal(g20_4c.isBalanced, true);
+
+// Finding 5: Unspecified IRAS payment
+const q20_5a = "Paid SGD 10,000 to IRAS by bank transfer.";
+const p20_5a = await parseAccountingQuery(q20_5a, null);
+assert.equal(p20_5a.isComplete, false, 'Unspecified tax payment to IRAS must fail closed on taxType');
+assert.equal(p20_5a.directGroups?.length ?? 0, 0);
+assert.ok(p20_5a.missingFields.some(f => f.fieldKey === 'taxType'), 'Must request taxType');
+const p20_5a_resolved = await parseAccountingQuery("corporate income tax", p20_5a);
+assert.equal(p20_5a_resolved.isComplete, true);
+assert.equal(p20_5a_resolved.directGroups?.length, 1);
+const g20_5a_res = p20_5a_resolved.directGroups[0];
+assert.equal(g20_5a_res.lines[0].accountName, 'Current Tax Payable');
+assert.equal(g20_5a_res.lines[0].category, 'LIABILITY');
+assert.equal(g20_5a_res.lines[0].debit, 10000);
+assert.equal(g20_5a_res.lines[1].accountName, 'Cash at Bank');
+assert.equal(g20_5a_res.lines[1].category, 'ASSET');
+assert.equal(g20_5a_res.lines[1].credit, 10000);
+assert.equal(g20_5a_res.isBalanced, true);
+
+const q20_5b = "Settled tax payable of SGD 8,500 to IRAS by bank transfer.";
+const p20_5b = await parseAccountingQuery(q20_5b, null);
+assert.equal(p20_5b.isComplete, false, 'Generic tax payable settlement to IRAS must fail closed on taxType');
+assert.equal(p20_5b.directGroups?.length ?? 0, 0);
+assert.ok(p20_5b.missingFields.some(f => f.fieldKey === 'taxType'));
+
+// Finding 6: Deterministic follow-up resolution for periodCharge and taxAmount
+// 6a) Follow-up on p17c (non-exact prepaid division) with stated charge
+const p20_6a_resolved = await parseAccountingQuery("SGD 3,333.33", p17c);
+assert.equal(p20_6a_resolved.isComplete, true);
+assert.equal(p20_6a_resolved.directGroups?.length, 1);
+const g20_6a_res = p20_6a_resolved.directGroups[0];
+assert.equal(g20_6a_res.lines[0].accountName, 'Insurance Expense');
+assert.equal(g20_6a_res.lines[0].debit, 3333.33);
+assert.equal(g20_6a_res.lines[1].accountName, 'Prepaid Insurance');
+assert.equal(g20_6a_res.lines[1].credit, 3333.33);
+assert.equal(g20_6a_res.totalDebit, 3333.33);
+assert.equal(g20_6a_res.totalCredit, 3333.33);
+assert.equal(g20_6a_res.isBalanced, true);
+const v20_6a = validateJournalGroups([g20_6a_res], { rawQuery: p20_6a_resolved.rawQuery });
+assert.equal(v20_6a.isValid, true);
+
+// 6b) Follow-up on p18c (reducing-balance carrying amount) with stated charge
+const p20_6b_resolved = await parseAccountingQuery("SGD 8,000", p18c);
+assert.equal(p20_6b_resolved.isComplete, true);
+assert.equal(p20_6b_resolved.directGroups?.length, 1);
+const g20_6b_res = p20_6b_resolved.directGroups[0];
+assert.equal(g20_6b_res.lines[0].accountName, 'Depreciation Expense');
+assert.equal(g20_6b_res.lines[0].debit, 8000);
+assert.equal(g20_6b_res.lines[1].accountName, 'Accumulated Depreciation — Office Equipment');
+assert.equal(g20_6b_res.lines[1].credit, 8000);
+assert.equal(g20_6b_res.totalDebit, 8000);
+assert.equal(g20_6b_res.totalCredit, 8000);
+assert.equal(g20_6b_res.isBalanced, true);
+
+// 6c) Follow-up on p19c (profit without tax amount) with stated current tax amount
+const p20_6c_resolved = await parseAccountingQuery("SGD 34,000", p19c);
+assert.equal(p20_6c_resolved.isComplete, true);
+assert.equal(p20_6c_resolved.directGroups?.length, 1);
+const g20_6c_res = p20_6c_resolved.directGroups[0];
+assert.equal(g20_6c_res.lines[0].accountName, 'Income Tax Expense');
+assert.equal(g20_6c_res.lines[0].debit, 34000);
+assert.equal(g20_6c_res.lines[1].accountName, 'Current Tax Payable');
+assert.equal(g20_6c_res.lines[1].credit, 34000);
+assert.equal(g20_6c_res.totalDebit, 34000);
+assert.equal(g20_6c_res.totalCredit, 34000);
+assert.equal(g20_6c_res.isBalanced, true);
+
+// 6d) Follow-up on deferred tax with percentage rate but without stated tax amount
+const q20_6d = "Recognise an increase in deferred tax liability at 17% on SGD 100,000.";
+const p20_6d = await parseAccountingQuery(q20_6d, null);
+assert.equal(p20_6d.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_6d.isComplete, false, 'Percentage rate without stated tax amount must fail closed');
+assert.equal(p20_6d.directGroups?.length ?? 0, 0);
+assert.ok(p20_6d.missingFields.some(f => f.fieldKey === 'taxAmount'), 'Must request taxAmount');
+const p20_6d_resolved = await parseAccountingQuery("SGD 17,000", p20_6d);
+assert.equal(p20_6d_resolved.isComplete, true);
+assert.equal(p20_6d_resolved.directGroups?.length, 1);
+const g20_6d_res = p20_6d_resolved.directGroups[0];
+assert.equal(g20_6d_res.lines[0].accountName, 'Income Tax Expense');
+assert.equal(g20_6d_res.lines[0].debit, 17000);
+assert.equal(g20_6d_res.lines[1].accountName, 'Deferred Tax Liability');
+assert.equal(g20_6d_res.lines[1].credit, 17000);
+assert.equal(g20_6d_res.totalDebit, 17000);
+assert.equal(g20_6d_res.totalCredit, 17000);
+assert.equal(g20_6d_res.isBalanced, true);
+
+// Finding 7: Accrued expense settlement payment methods & reducing-balance with stated charge
+// 7a) Accrued expense settlement without payment method fails closed, resolves with cash or cheque
+const q20_7a = "Settled previously accrued audit fee of SGD 3,000.";
+const p20_7a = await parseAccountingQuery(q20_7a, null);
+assert.equal(p20_7a.isComplete, false, 'Accrued expense settlement without cash vs bank must fail closed');
+assert.equal(p20_7a.directGroups?.length ?? 0, 0);
+assert.ok(p20_7a.missingFields.some(f => f.fieldKey === 'paymentMethod'), 'Must request paymentMethod');
+const p20_7a_cash = await parseAccountingQuery("in cash", p20_7a);
+assert.equal(p20_7a_cash.isComplete, true);
+const g20_7a_cash = p20_7a_cash.directGroups[0];
+assert.equal(g20_7a_cash.lines[0].accountName, 'Accrued Expenses');
+assert.equal(g20_7a_cash.lines[0].debit, 3000);
+assert.equal(g20_7a_cash.lines[1].accountName, 'Cash');
+assert.equal(g20_7a_cash.lines[1].category, 'ASSET');
+assert.equal(g20_7a_cash.lines[1].credit, 3000);
+assert.equal(g20_7a_cash.isBalanced, true);
+
+const q20_7a_cheque = "Settled previously accrued audit fee of SGD 3,000 by cheque.";
+const p20_7a_cheque = await parseAccountingQuery(q20_7a_cheque, null);
+assert.equal(p20_7a_cheque.isComplete, true);
+const g20_7a_cheque = p20_7a_cheque.directGroups[0];
+assert.equal(g20_7a_cheque.lines[0].accountName, 'Accrued Expenses');
+assert.equal(g20_7a_cheque.lines[0].debit, 3000);
+assert.equal(g20_7a_cheque.lines[1].accountName, 'Cash at Bank');
+assert.equal(g20_7a_cheque.lines[1].category, 'ASSET');
+assert.equal(g20_7a_cheque.lines[1].credit, 3000);
+assert.equal(g20_7a_cheque.isBalanced, true);
+
+// 7b) Reducing-balance depreciation with explicit stated periodic charge
+const q20_7b = "Record reducing-balance depreciation charge of SGD 6,000 on motor vehicles for the year.";
+const p20_7b = await parseAccountingQuery(q20_7b, null);
+assert.equal(p20_7b.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_7b.isComplete, true);
+assert.equal(p20_7b.directGroups?.length, 1);
+const g20_7b = p20_7b.directGroups[0];
+assert.equal(g20_7b.lines[0].accountName, 'Depreciation Expense');
+assert.equal(g20_7b.lines[0].category, 'EXPENSE');
+assert.equal(g20_7b.lines[0].debit, 6000);
+assert.equal(g20_7b.lines[1].accountName, 'Accumulated Depreciation — Motor Vehicles');
+assert.equal(g20_7b.lines[1].category, 'ASSET');
+assert.equal(g20_7b.lines[1].credit, 6000);
+assert.equal(g20_7b.totalDebit, 6000);
+assert.equal(g20_7b.totalCredit, 6000);
+assert.equal(g20_7b.isBalanced, true);
+const v20_7b = validateJournalGroups([g20_7b], { rawQuery: q20_7b });
+assert.equal(v20_7b.isValid, true);
+
+// Post-review defect regression checks:
+// 1) Depreciation on acquired asset must not route to equipment acquisition
+const q20_post1 = "Record depreciation on machinery acquired for SGD 50,000.";
+const p20_post1 = await parseAccountingQuery(q20_post1, null);
+assert.equal(p20_post1.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_post1.isComplete, false, 'Acquisition cost must not be posted as depreciation charge');
+assert.equal(p20_post1.directGroups?.length ?? 0, 0);
+assert.ok(p20_post1.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// 2) Elapsed time "2 years ago" must not be treated as a 2-year useful life
+const q20_post2 = "Record annual depreciation on equipment purchased 2 years ago for SGD 40,000.";
+const p20_post2 = await parseAccountingQuery(q20_post2, null);
+assert.equal(p20_post2.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_post2.isComplete, false, 'Elapsed acquisition time must not be treated as useful life');
+assert.equal(p20_post2.directGroups?.length ?? 0, 0);
+assert.ok(p20_post2.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// 3) Amortisation on acquired software asset
+const q20_post3 = "Record amortisation on software acquired for SGD 20,000.";
+const p20_post3 = await parseAccountingQuery(q20_post3, null);
+assert.equal(p20_post3.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_post3.isComplete, false, 'Acquisition cost of software must not be posted as amortisation charge');
+assert.equal(p20_post3.directGroups?.length ?? 0, 0);
+assert.ok(p20_post3.missingFields.some(f => f.fieldKey === 'periodCharge'), 'Must request periodCharge');
+
+// 4) Recognise a decrease in DTL
+const q20_post4 = "Recognise a decrease in deferred tax liability of SGD 5,000.";
+const p20_post4 = await parseAccountingQuery(q20_post4, null);
+assert.equal(p20_post4.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(p20_post4.isComplete, true);
+assert.equal(p20_post4.directGroups?.length, 1);
+const g20_post4 = p20_post4.directGroups[0];
+assert.equal(g20_post4.lines[0].accountName, 'Deferred Tax Liability');
+assert.equal(g20_post4.lines[0].category, 'LIABILITY');
+assert.equal(g20_post4.lines[0].debit, 5000);
+assert.equal(g20_post4.lines[1].accountName, 'Income Tax Expense');
+assert.equal(g20_post4.lines[1].category, 'EXPENSE');
+assert.equal(g20_post4.lines[1].credit, 5000);
+assert.equal(g20_post4.totalDebit, 5000);
+assert.equal(g20_post4.totalCredit, 5000);
+assert.equal(g20_post4.isBalanced, true);
+
 console.log('PASS | Double-entry reliability, deterministic integrity, and guardrail validation');
