@@ -2673,4 +2673,229 @@ assert.equal(g22_B9_ctrl.lines[3].accountName, 'CPF Payable');
 assert.equal(g22_B9_ctrl.lines[3].credit, 1850);
 assert.equal(g22_B9_ctrl.isBalanced, true);
 
+// 22_B10) PR #26 Reviewer Finding: Distinguish completed payroll settlement from future, conditional, scheduled, and pending settlement
+
+// 1. Exact reviewer prompt 1: "has yet to be made"
+const q22_B10a = "Salaries payable of S$4,000 and CPF payable of S$1,850; settlement has yet to be made by bank.";
+const p22_B10a = await parseAccountingQuery(q22_B10a, null);
+assert.equal(p22_B10a.isComplete, false, 'Pending/unexecuted settlement must fail closed');
+assert.equal(p22_B10a.directGroups?.length ?? 0, 0, 'Must produce 0 groups');
+assert.ok(p22_B10a.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'), 'Must request payrollSettlementTarget');
+
+// 2. Exact reviewer prompt 2: "will be made"
+const q22_B10b = "Salaries payable of S$4,000 and CPF payable of S$1,850; settlement will be made by bank next week.";
+const p22_B10b = await parseAccountingQuery(q22_B10b, null);
+assert.equal(p22_B10b.isComplete, false, 'Future settlement must fail closed');
+assert.equal(p22_B10b.directGroups?.length ?? 0, 0, 'Must produce 0 groups');
+assert.ok(p22_B10b.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'), 'Must request payrollSettlementTarget');
+
+// 3. Required negative 3: "scheduled for payment"
+const q22_B10c1 = "Salaries payable of S$4,000 and CPF payable of S$1,850; scheduled for payment by bank.";
+const p22_B10c1 = await parseAccountingQuery(q22_B10c1, null);
+assert.equal(p22_B10c1.isComplete, false);
+assert.equal(p22_B10c1.directGroups?.length ?? 0, 0);
+assert.ok(p22_B10c1.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+const q22_B10c2 = "Salaries payable of S$4,000 and CPF payable of S$1,850 are scheduled for payment by bank transfer.";
+const p22_B10c2 = await parseAccountingQuery(q22_B10c2, null);
+assert.equal(p22_B10c2.isComplete, false);
+assert.equal(p22_B10c2.directGroups?.length ?? 0, 0);
+assert.ok(p22_B10c2.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+// 4. Required negative 4: "should be paid"
+const q22_B10d1 = "Salaries payable of S$4,000 and CPF payable of S$1,850; should be paid by bank.";
+const p22_B10d1 = await parseAccountingQuery(q22_B10d1, null);
+assert.equal(p22_B10d1.isComplete, false);
+assert.equal(p22_B10d1.directGroups?.length ?? 0, 0);
+assert.ok(p22_B10d1.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+const q22_B10d2 = "Salaries payable of S$4,000 and CPF payable of S$1,850 should be paid by bank transfer.";
+const p22_B10d2 = await parseAccountingQuery(q22_B10d2, null);
+assert.equal(p22_B10d2.isComplete, false);
+assert.equal(p22_B10d2.directGroups?.length ?? 0, 0);
+assert.ok(p22_B10d2.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+// 5. Prior-accrual breakdown negative variants
+const priorNegativeVariants = [
+  "Previously accrued payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; settlement will be made by bank next week.",
+  "Previously accrued payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; scheduled for payment by bank.",
+  "Previously accrued payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; should be paid by bank.",
+  "Previously accrued payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; settlement has yet to be made."
+];
+for (const q of priorNegativeVariants) {
+  const p = await parseAccountingQuery(q, null);
+  assert.equal(p.isComplete, false, `Prior accrual negative variant must fail closed: "${q}"`);
+  assert.equal(p.directGroups?.length ?? 0, 0, `Must have 0 groups: "${q}"`);
+}
+
+// 5b. Nominal conditional/pending bypass variants
+const nominalPendingOrConditionalVariants = [
+  "Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank subject to approval.",
+  "Settlement of salaries payable of S$4,000 and CPF payable of S$1,850 if paid by bank.",
+  "Settlement of salaries payable S$4,000 and CPF payable S$1,850 awaiting bank transfer.",
+  "Settlement of salaries payable S$4,000 and CPF payable S$1,850 pending payment by bank."
+];
+for (const q of nominalPendingOrConditionalVariants) {
+  const p = await parseAccountingQuery(q, null);
+  assert.equal(p.isComplete, false, `Nominal pending/conditional query must fail closed: "${q}"`);
+  assert.equal(p.directGroups?.length ?? 0, 0, `Must have 0 groups: "${q}"`);
+}
+
+// 6. Single-leg negative variants across future/pending/scheduled/conditional predicates
+const singleLegNegatives = [
+  "Salaries payable of S$4,000; settlement has yet to be made by bank.",
+  "Salaries payable of S$4,000; settlement will be made by bank next week.",
+  "Salaries payable of S$4,000; scheduled for payment by bank.",
+  "Salaries payable of S$4,000; should be paid by bank.",
+  "CPF payable of S$1,850; settlement has yet to be made by bank.",
+  "CPF payable of S$1,850; settlement will be made by bank next week.",
+  "CPF payable of S$1,850; scheduled for payment by bank.",
+  "CPF payable of S$1,850; should be paid by bank."
+];
+for (const q of singleLegNegatives) {
+  const p = await parseAccountingQuery(q, null);
+  assert.equal(p.isComplete, false, `Single-leg negative variant must fail closed: "${q}"`);
+  assert.equal(p.directGroups?.length ?? 0, 0, `Must have 0 groups: "${q}"`);
+}
+
+// 6b. Post-verbal conditional test
+const q22_B10_postVerbalCond = "Salaries payable of S$4,000 and CPF payable of S$1,850; pay by bank if approved.";
+const p22_B10_postVerbalCond = await parseAccountingQuery(q22_B10_postVerbalCond, null);
+assert.equal(p22_B10_postVerbalCond.isComplete, false);
+assert.equal(p22_B10_postVerbalCond.directGroups?.length ?? 0, 0);
+
+// 7. Mixed-leg partial settlement: Salaries paid, CPF future
+const q22_B10_mixed = "Salaries payable of S$4,000 paid by bank; CPF payable of S$1,850 will be paid by bank next week.";
+const p22_B10_mixed = await parseAccountingQuery(q22_B10_mixed, null);
+assert.equal(p22_B10_mixed.isComplete, true, 'Partially settled prior liabilities must complete settled leg');
+assert.equal(p22_B10_mixed.directGroups?.length, 1);
+const g22_B10_mixed = p22_B10_mixed.directGroups[0];
+assert.equal(g22_B10_mixed.lines.length, 2);
+assert.ok(g22_B10_mixed.lines.every(l => l.category !== 'EXPENSE'), 'Must have zero EXPENSE lines');
+assert.ok(g22_B10_mixed.lines.every(l => !/cpf/i.test(l.accountName)), 'Must have zero CPF lines');
+assert.equal(g22_B10_mixed.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10_mixed.lines[0].debit, 4000);
+assert.equal(g22_B10_mixed.lines[1].accountName, 'Cash at Bank');
+assert.equal(g22_B10_mixed.lines[1].credit, 4000);
+assert.equal(g22_B10_mixed.isBalanced, true);
+const v22_B10_mixed = validateJournalGroups([g22_B10_mixed], { rawQuery: q22_B10_mixed });
+assert.equal(v22_B10_mixed.isValid, true);
+
+// 7b. Multi-clause passive paid + second-clause conditional test
+const q22_B10_splitCond = "Salaries payable of S$4,000 were paid by bank; CPF payable of S$1,850 will be paid if approved.";
+const p22_B10_splitCond = await parseAccountingQuery(q22_B10_splitCond, null);
+assert.equal(p22_B10_splitCond.isComplete, true);
+assert.equal(p22_B10_splitCond.directGroups?.length, 1);
+const g22_B10_splitCond = p22_B10_splitCond.directGroups[0];
+assert.equal(g22_B10_splitCond.lines.length, 2);
+assert.ok(g22_B10_splitCond.lines.every(l => l.category !== 'EXPENSE'));
+assert.ok(g22_B10_splitCond.lines.every(l => !/cpf/i.test(l.accountName)));
+assert.equal(g22_B10_splitCond.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10_splitCond.lines[0].debit, 4000);
+assert.equal(g22_B10_splitCond.lines[1].accountName, 'Cash at Bank');
+assert.equal(g22_B10_splitCond.lines[1].credit, 4000);
+assert.equal(g22_B10_splitCond.isBalanced, true);
+
+// 8. Follow-up checks on p22_B10a / p22_B10b
+// 8a) Follow-up "will be paid next week" on p22_B10a remains incomplete
+const p22_B10a_f1 = await parseAccountingQuery("will be paid next week", p22_B10a);
+assert.equal(p22_B10a_f1.isComplete, false);
+assert.equal(p22_B10a_f1.directGroups?.length ?? 0, 0);
+
+// 8a2) Conditional follow-up "if approved by bank" on p22_B10a remains incomplete with 0 groups
+const p22_B10a_f_cond = await parseAccountingQuery("if approved by bank", p22_B10a);
+assert.equal(p22_B10a_f_cond.isComplete, false);
+assert.equal(p22_B10a_f_cond.directGroups?.length ?? 0, 0);
+
+// 8b) Follow-up "salaries in cash" on p22_B10a completes Dr Salaries Payable 4,000 / Cr Cash 4,000 (no leakage of "by bank")
+const p22_B10a_f2 = await parseAccountingQuery("salaries in cash", p22_B10a);
+assert.equal(p22_B10a_f2.isComplete, true);
+assert.equal(p22_B10a_f2.directGroups?.length, 1);
+const g22_B10a_f2 = p22_B10a_f2.directGroups[0];
+assert.equal(g22_B10a_f2.lines.length, 2);
+assert.equal(g22_B10a_f2.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10a_f2.lines[0].debit, 4000);
+assert.equal(g22_B10a_f2.lines[1].accountName, 'Cash');
+assert.equal(g22_B10a_f2.lines[1].credit, 4000);
+assert.equal(g22_B10a_f2.isBalanced, true);
+
+// 8c) Follow-up "both by bank" on p22_B10b completes settlement of both liabilities
+const p22_B10b_f = await parseAccountingQuery("both by bank", p22_B10b);
+assert.equal(p22_B10b_f.isComplete, true);
+assert.equal(p22_B10b_f.directGroups?.length, 1);
+const g22_B10b_f = p22_B10b_f.directGroups[0];
+assert.equal(g22_B10b_f.lines.length, 3);
+assert.equal(g22_B10b_f.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10b_f.lines[0].debit, 4000);
+assert.equal(g22_B10b_f.lines[1].accountName, 'CPF Payable');
+assert.equal(g22_B10b_f.lines[1].debit, 1850);
+assert.equal(g22_B10b_f.lines[2].accountName, 'Cash at Bank');
+assert.equal(g22_B10b_f.lines[2].credit, 5850);
+assert.equal(g22_B10b_f.isBalanced, true);
+
+// 8d) Single-clause method leakage follow-up test
+const q22_B10_sc = "Settlement of salaries payable of S$4,000 and CPF payable of S$1,850 has yet to be made by bank.";
+const p22_B10_sc = await parseAccountingQuery(q22_B10_sc, null);
+assert.equal(p22_B10_sc.isComplete, false);
+assert.equal(p22_B10_sc.directGroups?.length ?? 0, 0);
+const p22_B10_sc_f = await parseAccountingQuery("salaries in cash", p22_B10_sc);
+assert.equal(p22_B10_sc_f.isComplete, true);
+assert.equal(p22_B10_sc_f.directGroups?.length, 1);
+const g22_B10_sc_f = p22_B10_sc_f.directGroups[0];
+assert.equal(g22_B10_sc_f.lines.length, 2);
+assert.equal(g22_B10_sc_f.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10_sc_f.lines[0].debit, 4000);
+assert.equal(g22_B10_sc_f.lines[1].accountName, 'Cash');
+assert.equal(g22_B10_sc_f.lines[1].credit, 4000);
+assert.equal(g22_B10_sc_f.isBalanced, true);
+
+// 9. Current-period accrual control with future settlement: recognizes current expenses and liabilities (NOT bank outflow)
+const q22_B10_cur = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; settlement will be made by bank next week.";
+const p22_B10_cur = await parseAccountingQuery(q22_B10_cur, null);
+assert.equal(p22_B10_cur.isComplete, true, 'Current period payroll with future settlement recognizes expenses and payables');
+assert.equal(p22_B10_cur.directGroups?.length, 1);
+const g22_B10_cur = p22_B10_cur.directGroups[0];
+assert.equal(g22_B10_cur.lines.length, 4);
+assert.equal(g22_B10_cur.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g22_B10_cur.lines[0].debit, 5000);
+assert.equal(g22_B10_cur.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g22_B10_cur.lines[1].debit, 850);
+assert.equal(g22_B10_cur.lines[2].accountName, 'Salaries Payable');
+assert.equal(g22_B10_cur.lines[2].credit, 4000);
+assert.equal(g22_B10_cur.lines[3].accountName, 'CPF Payable');
+assert.equal(g22_B10_cur.lines[3].credit, 1850);
+assert.ok(g22_B10_cur.lines.every(l => l.accountName !== 'Cash at Bank' && l.accountName !== 'Cash'), 'Must NOT credit cash or bank');
+assert.equal(g22_B10_cur.isBalanced, true);
+
+// 10. Valid completed-payment controls retained
+// 10a) Explicit nominal passive completion: "settlement was made by bank"
+const q22_B10_comp1 = "Salaries payable of S$4,000 and CPF payable of S$1,850; settlement was made by bank.";
+const p22_B10_comp1 = await parseAccountingQuery(q22_B10_comp1, null);
+assert.equal(p22_B10_comp1.isComplete, true);
+assert.equal(p22_B10_comp1.directGroups?.length, 1);
+const g22_B10_comp1 = p22_B10_comp1.directGroups[0];
+assert.equal(g22_B10_comp1.lines.length, 3);
+assert.equal(g22_B10_comp1.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10_comp1.lines[0].debit, 4000);
+assert.equal(g22_B10_comp1.lines[1].accountName, 'CPF Payable');
+assert.equal(g22_B10_comp1.lines[1].debit, 1850);
+assert.equal(g22_B10_comp1.lines[2].accountName, 'Cash at Bank');
+assert.equal(g22_B10_comp1.lines[2].credit, 5850);
+assert.equal(g22_B10_comp1.isBalanced, true);
+
+// 10b) Passive verbal completion: "were settled by bank transfer"
+const q22_B10_comp2 = "Salaries payable of S$4,000 and CPF payable of S$1,850 were settled by bank transfer.";
+const p22_B10_comp2 = await parseAccountingQuery(q22_B10_comp2, null);
+assert.equal(p22_B10_comp2.isComplete, true);
+assert.equal(p22_B10_comp2.directGroups?.length, 1);
+const g22_B10_comp2 = p22_B10_comp2.directGroups[0];
+assert.equal(g22_B10_comp2.lines.length, 3);
+assert.equal(g22_B10_comp2.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B10_comp2.lines[0].debit, 4000);
+assert.equal(g22_B10_comp2.lines[1].accountName, 'CPF Payable');
+assert.equal(g22_B10_comp2.lines[1].debit, 1850);
+assert.equal(g22_B10_comp2.lines[2].accountName, 'Cash at Bank');
+assert.equal(g22_B10_comp2.lines[2].credit, 5850);
+assert.equal(g22_B10_comp2.isBalanced, true);
+
 console.log('PASS | Double-entry reliability, deterministic integrity, and guardrail validation');
