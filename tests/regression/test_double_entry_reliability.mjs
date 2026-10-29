@@ -2565,4 +2565,112 @@ const p22_E4 = await parseAccountingQuery(q22_E4, null);
 assert.equal(p22_E4.isComplete, false, 'Expired amount exceeding prepaid balance in single turn must fail closed');
 assert.ok(p22_E4.missingFields.some(f => f.fieldKey === 'periodCharge'));
 
+// 22_E5a) Finding 1 High: Exceeding balance ceiling in base query even with explicit expired phrase
+const q22_E5a = "Prepaid insurance balance is S$12,000; S$3,000 of prepaid insurance has expired; stated periodic charge is SGD 15,000. Record insurance expense.";
+const p22_E5a = await parseAccountingQuery(q22_E5a, null);
+assert.equal(p22_E5a.isComplete, false, 'Expired amount exceeding balance must fail closed even when base had explicit expired phrase');
+assert.equal(p22_E5a.directGroups?.length ?? 0, 0);
+assert.ok(p22_E5a.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+// 22_E5b) Finding 1 High: Conflicting stated charge within balance ceiling check + valid follow-up
+const q22_E5b = "Prepaid insurance balance is S$12,000; S$3,000 of prepaid insurance has expired; stated periodic charge is SGD 5,000. Record insurance expense.";
+const p22_E5b = await parseAccountingQuery(q22_E5b, null);
+assert.equal(p22_E5b.isComplete, false, 'Conflicting stated charge within balance ceiling must fail closed');
+assert.equal(p22_E5b.directGroups?.length ?? 0, 0);
+assert.ok(p22_E5b.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+// Follow-up S$20,000 still fails closed (exceeds balance ceiling)
+const p22_E5b_fail = await parseAccountingQuery("S$20,000", p22_E5b);
+assert.equal(p22_E5b_fail.isComplete, false);
+
+// Follow-up S$3,000 completes Dr Insurance Expense 3,000 / Cr Prepaid Insurance 3,000
+const p22_E5b_valid = await parseAccountingQuery("S$3,000", p22_E5b);
+assert.equal(p22_E5b_valid.isComplete, true);
+assert.equal(p22_E5b_valid.directGroups?.length, 1);
+assert.equal(p22_E5b_valid.directGroups[0].lines[0].accountName, 'Insurance Expense');
+assert.equal(p22_E5b_valid.directGroups[0].lines[0].debit, 3000);
+assert.equal(p22_E5b_valid.directGroups[0].lines[1].accountName, 'Prepaid Insurance');
+assert.equal(p22_E5b_valid.directGroups[0].lines[1].credit, 3000);
+assert.equal(p22_E5b_valid.directGroups[0].isBalanced, true);
+
+// 22_E6) Conflicting expired amounts in single turn fails closed, valid follow-up completes
+const q22_E6 = "Prepaid insurance balance is S$12,000; S$3,000 has expired and S$5,000 has expired. Record insurance expense.";
+const p22_E6 = await parseAccountingQuery(q22_E6, null);
+assert.equal(p22_E6.isComplete, false, 'Multiple conflicting expired amounts in single query must fail closed');
+assert.ok(p22_E6.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+const p22_E6_res = await parseAccountingQuery("S$4,000", p22_E6);
+assert.equal(p22_E6_res.isComplete, true);
+assert.equal(p22_E6_res.directGroups?.length, 1);
+assert.equal(p22_E6_res.directGroups[0].lines[0].debit, 4000);
+assert.equal(p22_E6_res.directGroups[0].lines[1].credit, 4000);
+assert.equal(p22_E6_res.directGroups[0].isBalanced, true);
+
+// 22_E7) Formula calculation vs stated explicit expired amount conflict fails closed
+const q22_E7 = "Prepaid insurance balance is S$12,000 covering 12 months with 3 months elapsed; S$5,000 has expired. Record insurance expense.";
+const p22_E7 = await parseAccountingQuery(q22_E7, null);
+assert.equal(p22_E7.isComplete, false, 'Stated expired amount conflicting with elapsed pro-rata calculation must fail closed');
+assert.ok(p22_E7.missingFields.some(f => f.fieldKey === 'periodCharge'));
+
+// 22_B8) Finding 2 Medium: Prior payroll accrual with negated settlement must NOT create expense lines or groups
+const q22_B8 = "Previously accrued payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; no settlement was made.";
+const p22_B8 = await parseAccountingQuery(q22_B8, null);
+assert.equal(p22_B8.isComplete, false, 'Prior accrual with negated settlement must fail closed');
+assert.equal(p22_B8.directGroups?.length ?? 0, 0, 'Must produce 0 groups');
+assert.ok(p22_B8.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+const p22_B8_sal = await parseAccountingQuery("salaries by bank", p22_B8);
+assert.equal(p22_B8_sal.isComplete, true);
+assert.equal(p22_B8_sal.directGroups?.length, 1);
+const g22_B8_sal = p22_B8_sal.directGroups[0];
+assert.ok(g22_B8_sal.lines.every(l => l.category !== 'EXPENSE'), 'Must have ZERO EXPENSE lines upon liability settlement');
+assert.equal(g22_B8_sal.lines[0].accountName, 'Salaries Payable');
+assert.equal(g22_B8_sal.lines[0].debit, 4000);
+assert.equal(g22_B8_sal.lines[1].accountName, 'Cash at Bank');
+assert.equal(g22_B8_sal.lines[1].credit, 4000);
+assert.equal(g22_B8_sal.isBalanced, true);
+
+// 22_B9) Additional negated variants + single-leg negated settlement + current-period control check
+// Variant A: Prior payroll accrual text
+const q22_B9a = "Last month we accrued payroll of S$5,000 gross, S$1,000 employee CPF and S$850 employer CPF. No settlement was made.";
+const p22_B9a = await parseAccountingQuery(q22_B9a, null);
+assert.equal(p22_B9a.isComplete, false);
+assert.equal(p22_B9a.directGroups?.length ?? 0, 0);
+
+// Variant B: Both liabilities explicit with negated settlement
+const q22_B9b = "Salaries payable of S$4,000 and CPF payable of S$1,850; settlement was not made.";
+const p22_B9b = await parseAccountingQuery(q22_B9b, null);
+assert.equal(p22_B9b.isComplete, false);
+assert.equal(p22_B9b.directGroups?.length ?? 0, 0);
+assert.ok(p22_B9b.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+// Variant C: Single-leg salaries payable with negated settlement
+const q22_B9c = "Salaries payable of S$4,000; no settlement was made.";
+const p22_B9c = await parseAccountingQuery(q22_B9c, null);
+assert.equal(p22_B9c.isComplete, false);
+assert.equal(p22_B9c.directGroups?.length ?? 0, 0);
+
+// Variant D: Single-leg CPF payable with negated settlement
+const q22_B9d = "CPF payable of S$1,850; no settlement was made.";
+const p22_B9d = await parseAccountingQuery(q22_B9d, null);
+assert.equal(p22_B9d.isComplete, false);
+assert.equal(p22_B9d.directGroups?.length ?? 0, 0);
+
+// Control: Current period accrual without prior context is unaffected
+const q22_B9_ctrl = "Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850; no settlement was made.";
+const p22_B9_ctrl = await parseAccountingQuery(q22_B9_ctrl, null);
+assert.equal(p22_B9_ctrl.isComplete, true, 'Current period payroll with no settlement recognises current expense and liabilities');
+assert.equal(p22_B9_ctrl.directGroups?.length, 1);
+const g22_B9_ctrl = p22_B9_ctrl.directGroups[0];
+assert.equal(g22_B9_ctrl.lines.length, 4);
+assert.equal(g22_B9_ctrl.lines[0].accountName, 'Salaries and Wages Expense');
+assert.equal(g22_B9_ctrl.lines[0].debit, 5000);
+assert.equal(g22_B9_ctrl.lines[1].accountName, 'Employer CPF Contribution Expense');
+assert.equal(g22_B9_ctrl.lines[1].debit, 850);
+assert.equal(g22_B9_ctrl.lines[2].accountName, 'Salaries Payable');
+assert.equal(g22_B9_ctrl.lines[2].credit, 4000);
+assert.equal(g22_B9_ctrl.lines[3].accountName, 'CPF Payable');
+assert.equal(g22_B9_ctrl.lines[3].credit, 1850);
+assert.equal(g22_B9_ctrl.isBalanced, true);
+
 console.log('PASS | Double-entry reliability, deterministic integrity, and guardrail validation');
