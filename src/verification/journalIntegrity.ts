@@ -79,7 +79,8 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     'cheque account', 'operating account', 'business account', 'inventory',
     'merchandise inventory', 'right-of-use asset', 'right-of-use assets',
     'allowance for doubtful debts', 'allowance for doubtful accounts',
-    'loss allowance — trade receivables', 'loss allowance - trade receivables'
+    'loss allowance — trade receivables', 'loss allowance - trade receivables',
+    'current tax asset', 'current tax assets', 'income tax recoverable', 'tax recoverable'
   ];
   if (assetNames.includes(n)) {
     return 'ASSET';
@@ -119,7 +120,7 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   if (!n.includes('unpaid') && !n.includes('receivable') && !n.includes('due from')) {
     const equityNames = [
       'share capital', 'ordinary share capital', "owner's capital", "owner's drawings",
-      'drawings', 'retained earnings'
+      'drawings', 'retained earnings', 'capital reserve', 'convertible debt equity reserve'
     ];
     if (equityNames.includes(n)) {
       return 'EQUITY';
@@ -141,6 +142,11 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n === 'discount received'
   ) {
     return 'REVENUE';
+  }
+
+  // OTHER COMPREHENSIVE INCOME
+  if (n.startsWith('oci —') || n.startsWith('oci -') || n.startsWith('oci ') || n.endsWith('(oci)')) {
+    return 'OTHER_COMPREHENSIVE_INCOME';
   }
 
   return undefined;

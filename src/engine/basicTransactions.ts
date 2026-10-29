@@ -283,8 +283,8 @@ function extractPayrollAmounts(query: string): { grossCents: bigint; employeeCpf
   const eeB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s*(?:of|for)?\s*employee(?:'s|s')?\s+cpf(?:\s+(?:contribution|deduction|portion|share))?\b/gi;
   const employeeCpfCents = extractLabelledAmount(query, eeA, eeB);
 
-  const gA = /\b(?:gross\s+(?:salar(?:y|ies)|wages?|pay|payroll)|(?<!\bnet\s+)(?:salar(?:y|ies)|wages?))\s*(?:of|is|was|:|-)?\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)(?!\s+payable\b)/gi;
-  const gB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s*(?:of|for)?\s*(?:gross\s+(?:salar(?:y|ies)|wages?|pay|payroll)|(?<!\bnet\s+)(?:salar(?:y|ies)|wages?))\b(?!\s+payable\b)/gi;
+  const gA = /\b(?:gross\s+(?:salar(?:y|ies)|wages?|pay|payroll)|gross\b|payroll\s+of|(?<!\bnet\s+)(?:salar(?:y|ies)|wages?))\s*(?:of|is|was|:|-)?\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)(?:\s+gross\b)?(?!\s+payable\b)/gi;
+  const gB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s*(?:of\s+|for\s+)?(?:gross(?:\s+(?:salar(?:y|ies)|wages?|pay|payroll))?|(?<!\bnet\s+)(?:salar(?:y|ies)|wages?))\b(?!\s+payable\b)/gi;
   const grossCents = extractLabelledAmount(query, gA, gB);
 
   if (!employerCpfCents || !employeeCpfCents || !grossCents) return undefined;
@@ -311,6 +311,45 @@ function extractPayrollAmounts(query: string): { grossCents: bigint; employeeCpf
   return { grossCents, employeeCpfCents, employerCpfCents };
 }
 
+function extractPayrollLiabilitySettlementAmounts(query: string): { salPayableCents: bigint; cpfPayableCents: bigint } | undefined {
+  const allAmounts = getAllAmounts(query);
+  if (allAmounts.length !== 2 && allAmounts.length !== 3) return undefined;
+
+  const salA = /\b(?:salar(?:y|ies)\s+payable|wages?\s+payable|(?:accrued|previously\s+accrued)\s+(?:net\s+)?(?:salar(?:y|ies)|wages?|pay))\s*(?:of|is|was|:|-)?\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi;
+  const salB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s*(?:of\s+|for\s+)?(?:salar(?:y|ies)\s+payable|wages?\s+payable|(?:accrued|previously\s+accrued)\s+(?:net\s+)?(?:salar(?:y|ies)|wages?|pay))\b/gi;
+  const salPayableCents = extractLabelledAmount(query, salA, salB);
+
+  const cpfA = /\b(?:cpf\s+payable|(?:accrued|previously\s+accrued)\s+cpf(?:\s+contributions?)?)\s*(?:of|is|was|:|-)?\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi;
+  const cpfB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s*(?:of\s+|for\s+)?(?:cpf\s+payable|(?:accrued|previously\s+accrued)\s+cpf(?:\s+contributions?)?)\b/gi;
+  const cpfPayableCents = extractLabelledAmount(query, cpfA, cpfB);
+
+  if (!salPayableCents || !cpfPayableCents) return undefined;
+  if (salPayableCents <= 0n || cpfPayableCents <= 0n) return undefined;
+
+  if (allAmounts.length === 3) {
+    const totalExpected = salPayableCents + cpfPayableCents;
+    const hasTotal = allAmounts.some(a => a.cents === totalExpected);
+    if (!hasTotal) return undefined;
+  }
+
+  return { salPayableCents, cpfPayableCents };
+}
+
+function isPriorPayrollAccrualSettlement(query: string): boolean {
+  const hasPayVerb = /(?<!\b(?:not|never|not\s+yet|yet\s+to\s+be|to\s+be|will|shall)\s+)\b(?:paid|pay(?:ing)?|settle[ds]?|settling|settlement|remit(?:ted|ting)?|disburse[ds]?|clear(?:ed|ing)?|transfer(?:red)?)\b/i.test(query);
+  if (!hasPayVerb) return false;
+
+  const priorTemporalCue = /\b(?:last\s+(?:month|period|quarter|week|year)|prior\s+(?:month|period|quarter|week|year)|previous\s+(?:month|period|quarter|week|year)|previously|already|earlier)\b[^.;]*?\b(?:accrue[ds]?|accrual|recogni[sz]ed|recorded|booked)\b/i.test(query)
+    || /\b(?:accrue[ds]?|accrual)\b[^.;]*?\b(?:last\s+(?:month|period|quarter|week|year)|in\s+the\s+(?:prior|previous)\s+(?:month|period|quarter|week|year)|previously|earlier)\b/i.test(query);
+
+  const directSettlementCue = /\b(?:paid|pay(?:ing)?|settle[ds]?|settling|settlement\s+of|remit(?:ted|ting)?|disburse[ds]?|clear(?:ed|ing)?)\s+(?:the\s+|our\s+|both\s+)?(?:previously\s+|prior[- ]month(?:'s)?\s+|last\s+month(?:'s)?\s+)?(?:accrued|payable)\s+(?:monthly\s+|staff\s+)?(?:payroll|salar(?:y|ies)|wages?|cpf)\b/i.test(query)
+    || /\b(?:previously\s+|already\s+)?accrued\s+(?:monthly\s+|staff\s+)?(?:payroll|salar(?:y|ies)|wages?)\b[^.;]*?\b(?:was|were|has\s+been|have\s+been)\s+(?:paid|settled|disbursed|cleared)\b/i.test(query);
+
+  const liabilityAmountsCue = Boolean(extractPayrollLiabilitySettlementAmounts(query));
+
+  return priorTemporalCue || directSettlementCue || liabilityAmountsCue;
+}
+
 function parseNumberWordOrDigits(val: string): number | undefined {
   if (!val) return undefined;
   const cleaned = val.trim().toLowerCase().replace(/-/g, ' ');
@@ -318,12 +357,15 @@ function parseNumberWordOrDigits(val: string): number | undefined {
   const words: Record<string, number> = {
     a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5,
     six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11,
-    twelve: 12, eighteen: 18, 'twenty four': 24
+    twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+    seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20,
+    'twenty four': 24, thirty: 30, 'thirty six': 36,
+    'forty eight': 48, sixty: 60
   };
   return words[cleaned];
 }
 
-const NUM_WORD_OR_DIGIT = '(?:\\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|eighteen|twenty[- ]four)';
+const NUM_WORD_OR_DIGIT = '(?:\\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|twenty[- ]four|thirty|thirty[- ]six|forty[- ]eight|sixty)';
 
 function parseDurationUnit(countStr: string | undefined, unitStr: string): { family: 'MONTH' | 'DAY'; units: number } | undefined {
   const count = countStr ? parseNumberWordOrDigits(countStr) : 1;
@@ -341,8 +383,18 @@ function parseDurationUnit(countStr: string | undefined, unitStr: string): { fam
 interface PayrollSettlementStatus {
   salaryPaid: boolean;
   cpfPaid: boolean;
-  salaryPayMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE';
-  cpfPayMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE';
+  salaryPaymentMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE';
+  cpfPaymentMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE';
+  isPriorAccrualSettlement: boolean;
+}
+
+function mergePayMethod(
+  cur: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE',
+  next: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE'
+): 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' {
+  if (cur === 'NONE') return next;
+  if (next === 'NONE' || cur === next) return cur;
+  return 'AMBIGUOUS';
 }
 
 function detectPayMethodInText(text: string): 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' {
@@ -355,34 +407,62 @@ function detectPayMethodInText(text: string): 'CASH' | 'BANK' | 'AMBIGUOUS' | 'N
 }
 
 function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus {
-  // 1. Joint phrases
-  const jointPaid = /(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?|transfer(?:red)?)\s+(?:both\s+)?(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay|payroll)(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?(?:\s+(?:in|by|via|with|through)\s+\w+)?\s+and\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total)\s+)*cpf(?:\s+contributions?)?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?(?:\s+(?:in|by|via|with|through)\s+\w+)?\b/i.test(query)
-    || /\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\s+and\s+cpf\s+(?:were\s+|was\s+|have\s+been\s+|has\s+been\s+|are\s+)?(?!not\b)(?:paid|disbursed|remitted|settled|transferred)\b/i.test(query);
+  const isPriorAccrualSettlement = isPriorPayrollAccrualSettlement(query);
 
-  const jointUnpaid = /(?:(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\s+and\s+cpf|cpf\s+and\s+(?:salar(?:y|ies)|wages?|net\s+pay|payroll))\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|settled|remitted)|yet\s+to\s+be\s+(?:paid|settled|remitted))\b/i.test(query)
-    || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:both\s+)?(?:salar(?:y|ies)|wages?|payroll)\s+and\s+cpf\b/i.test(query);
+  let activeText = query;
+  if (isPriorAccrualSettlement) {
+    const sentences = query.split(/(?<=[.;])\s+/).map(s => s.trim()).filter(Boolean);
+    const nonHistoricalSentences = sentences.filter(s => {
+      const hasPriorTemporal = /\b(?:last\s+(?:month|period|quarter|week|year)|prior\s+(?:month|period|quarter|week|year)|previous\s+(?:month|period|quarter|week|year)|previously|already|earlier)\b/i.test(s);
+      const hasAccrual = /\b(?:accrue[ds]?|accrual|recogni[sz]ed|recorded|booked)\b/i.test(s);
+      const hasPayVerb = /\b(?:paid|pay(?:ing)?|settle[ds]?|settling|settlement|remit(?:ted|ting)?|disburse[ds]?|clear(?:ed|ing)?|transfer(?:red)?)\b/i.test(s);
+      if (hasAccrual && hasPriorTemporal && !hasPayVerb) return false;
+      if (hasAccrual && !hasPayVerb) return false;
+      return true;
+    });
+    if (nonHistoricalSentences.length > 0 && nonHistoricalSentences.length < sentences.length) {
+      activeText = nonHistoricalSentences.join('; ');
+    } else {
+      activeText = query.replace(/(?<!\b(?:remains?|still|is|are|was|were)\s+)\b(?:previously\s+|already\s+)?accrued\b/gi, 'existing');
+    }
+  }
+
+  // 1. Joint phrases
+  const jointPaid = /(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?|transfer(?:red)?)\s+(?:both\s+)?(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay|payroll)(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?(?:\s+(?:payable))?(?:\s+(?:in|by|via|with|through)\s+\w+)?\s+and\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total)\s+)*cpf(?:\s+(?:contributions?|payable))?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?(?:\s+(?:in|by|via|with|through)\s+\w+)?\b/i.test(activeText)
+    || /\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll)(?:\s+payable)?\s+and\s+cpf(?:\s+payable)?\s+(?:were\s+|was\s+|have\s+been\s+|has\s+been\s+|are\s+)?(?!not\b)(?:paid|disbursed|remitted|settled|transferred)\b/i.test(activeText);
+
+  const jointUnpaid = isPriorAccrualSettlement
+    ? /(?:(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\s+and\s+cpf|cpf\s+and\s+(?:salar(?:y|ies)|wages?|net\s+pay|payroll))\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:still\s+)?(?:unpaid|not\s+(?:yet\s+)?(?:paid|settled|remitted)|yet\s+to\s+be\s+(?:paid|settled|remitted))\b/i.test(activeText)
+    : (/(?:(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\s+and\s+cpf|cpf\s+and\s+(?:salar(?:y|ies)|wages?|net\s+pay|payroll))\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|settled|remitted)|yet\s+to\s+be\s+(?:paid|settled|remitted))\b/i.test(activeText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:both\s+)?(?:salar(?:y|ies)|wages?|payroll)\s+and\s+cpf\b/i.test(activeText));
 
   // 2. Salary-specific status
-  const salaryExplicitUnpaid = /\b(?:(?:monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|disbursed|settled|transferred)|yet\s+to\s+be\s+(?:paid|disbursed|settled|transferred))\b/i.test(query)
-    || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(query);
+  const salaryExplicitUnpaid = isPriorAccrualSettlement
+    ? /\b(?:(?:monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b[^.;]*?\b(?:remains?\s+(?:still\s+)?(?:unpaid|payable|outstanding|accrued)|still\s+(?:unpaid|payable|outstanding|accrued)|not\s+(?:yet\s+)?(?:paid|disbursed|settled|transferred)|yet\s+to\s+be\s+(?:paid|disbursed|settled|transferred))\b/i.test(activeText)
+    : (/\b(?:(?:monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|disbursed|settled|transferred)|yet\s+to\s+be\s+(?:paid|disbursed|settled|transferred))\b/i.test(activeText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(activeText));
 
-  const salaryExplicitPaid = (/(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?|transfer(?:red)?)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(query)
-    || /(?<!\b(?:not|never|unpaid|outstanding)\s+)\b(?:(?:monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|have\s+been|has\s+been|already|also)\s+)*(?!not\b)(?:paid|disbursed|settled|transferred)\b/i.test(query))
+  const salaryExplicitPaid = (/(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?|transfer(?:red)?)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)(?:\s+payable)?\b/i.test(activeText)
+    || /(?<!\b(?:not|never|unpaid|outstanding)\s+)\b(?:(?:monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)(?:\s+payable)?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|have\s+been|has\s+been|already|also)\s+)*(?!not\b)(?:paid|disbursed|settled|transferred)\b/i.test(activeText))
     && !salaryExplicitUnpaid;
 
   // 3. CPF-specific status
-  const cpfExplicitUnpaid = /\bcpf(?:\s+contributions?)?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|remitted|settled|transferred)|yet\s+to\s+be\s+(?:paid|remitted|settled|transferred)|to\s+be\s+(?:paid|remitted|settled)(?:\s+later|\s+next\s+\w+)?)\b/i.test(query)
-    || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total)\s+)*cpf(?:\s+contributions?)?\b/i.test(query);
+  const cpfExplicitUnpaid = isPriorAccrualSettlement
+    ? /\bcpf\b[^.;]*?\b(?:remains?\s+(?:still\s+)?(?:unpaid|payable|outstanding|accrued)|still\s+(?:unpaid|payable|outstanding|accrued)|not\s+(?:yet\s+)?(?:paid|remitted|settled|transferred)|yet\s+to\s+be\s+(?:paid|remitted|settled|transferred)|to\s+be\s+(?:paid|remitted|settled)(?:\s+later|\s+next\s+\w+)?)\b/i.test(activeText)
+    : (/\bcpf(?:\s+(?:contributions?|payable))?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|remains?|still|have\s+been|has\s+been)\s+)*(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due|not\s+(?:yet\s+)?(?:paid|remitted|settled|transferred)|yet\s+to\s+be\s+(?:paid|remitted|settled|transferred)|to\s+be\s+(?:paid|remitted|settled)(?:\s+later|\s+next\s+\w+)?)\b/i.test(activeText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total)\s+)*cpf(?:\s+contributions?)?\b/i.test(activeText));
 
-  const cpfExplicitPaid = (/(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|remit(?:ted|ting)?|settle[ds]?|transfer(?:red)?)\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total|both)\s+)*cpf(?:\s+contributions?)?\b/i.test(query)
-    || /(?<!\b(?:employee|employer)(?:'s|s')?\s+)\bcpf(?:\s+contributions?)?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|have\s+been|has\s+been|already|also)\s+)*(?!not\b)(?:paid|remitted|settled|transferred)\b/i.test(query))
+  const cpfExplicitPaid = (/(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|remit(?:ted|ting)?|settle[ds]?|transfer(?:red)?)\s+(?:(?:the|our|monthly|employee\s+and\s+employer|combined|total|both)\s+)*cpf(?:\s+(?:contributions?|payable))?\b/i.test(activeText)
+    || /(?<!\b(?:employee|employer)(?:'s|s')?\s+)\bcpf(?:\s+(?:contributions?|payable))?(?:\s+(?:of\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+)?\s+(?:(?:is|are|was|were|have\s+been|has\s+been|already|also)\s+)*(?!not\b)(?:paid|remitted|settled|transferred)\b/i.test(activeText))
     && !cpfExplicitUnpaid;
 
   // 4. General payroll status
-  const generalPayrollPaid = /(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|disburse[ds]?|settle[ds]?)\s+(?:the\s+|our\s+)?(?:monthly\s+)?payroll\b/i.test(query)
-    || /\bpayroll\s+(?:was\s+|were\s+|has\s+been\s+)?(?:paid|disbursed|settled)\b/i.test(query);
-  const generalPayrollUnpaid = /\b(?:accrue[ds]?|accrual|unpaid|outstanding)\s+(?:the\s+|our\s+)?(?:monthly\s+)?payroll\b/i.test(query)
-    || /\bpayroll\s+(?:is\s+|was\s+|remains?\s+)?(?:unpaid|outstanding|accrued)\b/i.test(query);
+  const generalPayrollPaid = /(?<!\b(?:not|never|to|will|shall|must|should|can)\s+)\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?)\s+(?:the\s+|our\s+)?(?:previously\s+|prior[- ]month(?:'s)?\s+|last\s+month(?:'s)?\s+)?(?:monthly\s+|accrued\s+|existing\s+)?payroll\b/i.test(activeText)
+    || /\bpayroll\s+(?:was\s+|were\s+|has\s+been\s+)?(?:paid|disbursed|settled)\b/i.test(activeText);
+  const generalPayrollUnpaid = /\b(?:accrue[ds]?|accrual|unpaid|outstanding)\s+(?:the\s+|our\s+)?(?:monthly\s+)?payroll\b/i.test(activeText)
+    || /\bpayroll\s+(?:is\s+|was\s+|remains?\s+)?(?:unpaid|outstanding|accrued)\b/i.test(activeText);
+
+  const hasLiabilitySettlementAmounts = Boolean(extractPayrollLiabilitySettlementAmounts(query));
 
   const salaryPaid = salaryExplicitUnpaid
     ? false
@@ -392,11 +472,13 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
         ? true
         : jointPaid
           ? true
-          : generalPayrollUnpaid
-            ? false
-            : generalPayrollPaid
-              ? true
-              : false;
+          : (isPriorAccrualSettlement && (hasLiabilitySettlementAmounts || generalPayrollPaid))
+            ? true
+            : generalPayrollUnpaid
+              ? false
+              : generalPayrollPaid
+                ? true
+                : false;
 
   const cpfPaid = cpfExplicitUnpaid
     ? false
@@ -406,58 +488,101 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
         ? true
         : jointPaid
           ? true
-          : false;
+          : (isPriorAccrualSettlement && (hasLiabilitySettlementAmounts || generalPayrollPaid))
+            ? true
+            : false;
 
   // 5. Clause-aware payment method
-  const wholeQueryMethod = detectPayMethodInText(query);
-  const rawClauses = query.split(/;|\b(?:while|whereas|but)\b|:(?!\d)|,(?!\d)|\.(?!\d)/i).map(c => c.trim()).filter(Boolean);
+  const rawClauses = activeText.split(/;|\b(?:while|whereas|but)\b|:(?!\d)|\.(?!\d)/i).map(c => c.trim()).filter(Boolean);
   const clauses: string[] = [];
+  const statusVerbRegex = /\b(?:paid|pay(?:ing)?|disburse[ds]?|remit(?:ted|ting)?|settle[ds]?|settling|transfer(?:red)?|clear(?:ed|ing)?|(?:is|are|was|were|remains?|still)\s+(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)|not\s+(?:yet\s+)?(?:paid|settled|remitted))\b/i;
+
+  const intermediateClauses: string[] = [];
   for (const c of rawClauses) {
-    if (detectPayMethodInText(c) === 'AMBIGUOUS' && /\band\b/i.test(c)) {
-      const sub = c.split(/\band\b/i).map(s => s.trim()).filter(Boolean);
-      clauses.push(...sub);
+    if (/,(?!\d)/.test(c)) {
+      const commaParts = c.split(/,(?!\d)/).map(s => s.trim()).filter(Boolean);
+      const isAmbiguousMethod = detectPayMethodInText(c) === 'AMBIGUOUS';
+      const hasMultipleSideVerbs = commaParts.filter(p => statusVerbRegex.test(p)).length >= 2;
+      const hasTrailingLegSpecificMethod = commaParts.slice(1).some(p => {
+        if (detectPayMethodInText(p) === 'NONE') return false;
+        const hasStandaloneCpf = /(?<!\b(?:employee|employer)(?:'s|s')?\s+)\bcpf\b/i.test(p);
+        const hasStandaloneSalary = /(?<!\bgross\s+)\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(p);
+        return hasStandaloneCpf !== hasStandaloneSalary;
+      });
+      if (isAmbiguousMethod || hasMultipleSideVerbs || hasTrailingLegSpecificMethod) {
+        intermediateClauses.push(...commaParts);
+      } else {
+        intermediateClauses.push(c);
+      }
+    } else {
+      intermediateClauses.push(c);
+    }
+  }
+
+  for (const c of intermediateClauses) {
+    if (/\band\b/i.test(c)) {
+      const parts = c.split(/\band\b/i).map(s => s.trim()).filter(Boolean);
+      const isAmbiguousMethod = detectPayMethodInText(c) === 'AMBIGUOUS';
+      const hasMultipleSideVerbs = parts.filter(p => statusVerbRegex.test(p)).length >= 2;
+      if (isAmbiguousMethod || hasMultipleSideVerbs) {
+        clauses.push(...parts);
+      } else {
+        clauses.push(c);
+      }
     } else {
       clauses.push(c);
     }
   }
 
-  let salaryPayMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' = 'NONE';
-  let cpfPayMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' = 'NONE';
+  let salaryPaymentMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' = 'NONE';
+  let cpfPaymentMethod: 'CASH' | 'BANK' | 'AMBIGUOUS' | 'NONE' = 'NONE';
 
-  if (salaryPaid) {
-    for (const c of clauses) {
-      if (/\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\b/i.test(c)) {
-        const m = detectPayMethodInText(c);
-        if (m !== 'NONE') {
-          salaryPayMethod = m;
-          break;
-        }
+  for (const c of clauses) {
+    const m = detectPayMethodInText(c);
+    if (m === 'NONE') continue;
+
+    const mentionsSalary = /\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(c);
+    const mentionsCpf = /\bcpf\b/i.test(c);
+    const mentionsPayroll = /\bpayroll\b/i.test(c);
+    const mentionsBoth = /\b(?:both|all)\b/i.test(c);
+
+    if ((mentionsSalary || mentionsPayroll) && mentionsCpf) {
+      if (salaryPaid) salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+      if (cpfPaid) cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+    } else if (mentionsSalary && !mentionsCpf) {
+      if (salaryPaid) salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+    } else if (mentionsCpf && !mentionsSalary) {
+      if (cpfPaid) cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+    } else if (mentionsBoth) {
+      if (salaryPaid) salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+      if (cpfPaid) cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+    } else if (mentionsPayroll) {
+      if (salaryPaid && cpfPaid && (jointPaid || generalPayrollPaid || hasLiabilitySettlementAmounts)) {
+        salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+        cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+      } else if (salaryPaid && !cpfPaid) {
+        salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+      } else if (cpfPaid && !salaryPaid) {
+        cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
       }
-    }
-    if (salaryPayMethod === 'NONE') {
-      salaryPayMethod = wholeQueryMethod;
+    } else {
+      // Unattached method clause (e.g. trailing ", by bank transfer")
+      if (salaryPaid && !cpfPaid && salaryPaymentMethod === 'NONE') {
+        salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+      } else if (cpfPaid && !salaryPaid && cpfPaymentMethod === 'NONE') {
+        cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+      } else if (salaryPaid && cpfPaid && (jointPaid || generalPayrollPaid || hasLiabilitySettlementAmounts) && salaryPaymentMethod === 'NONE' && cpfPaymentMethod === 'NONE') {
+        salaryPaymentMethod = mergePayMethod(salaryPaymentMethod, m);
+        cpfPaymentMethod = mergePayMethod(cpfPaymentMethod, m);
+      }
     }
   }
 
-  if (cpfPaid) {
-    for (const c of clauses) {
-      if (/\bcpf\b/i.test(c)) {
-        const m = detectPayMethodInText(c);
-        if (m !== 'NONE') {
-          cpfPayMethod = m;
-          break;
-        }
-      }
-    }
-    if (cpfPayMethod === 'NONE') {
-      cpfPayMethod = wholeQueryMethod;
-    }
-    if (cpfPayMethod === 'NONE' && !salaryPaid && /\bcpf\s+board\b/i.test(query)) {
-      cpfPayMethod = 'BANK';
-    }
+  if (cpfPaid && cpfPaymentMethod === 'NONE' && !salaryPaid && /\bcpf\s+board\b/i.test(activeText)) {
+    cpfPaymentMethod = 'BANK';
   }
 
-  return { salaryPaid, cpfPaid, salaryPayMethod, cpfPayMethod };
+  return { salaryPaid, cpfPaid, salaryPaymentMethod, cpfPaymentMethod, isPriorAccrualSettlement };
 }
 
 function hasStatutoryPayrollCalcCues(query: string): boolean {
@@ -496,7 +621,7 @@ function isAssetValueAmount(query: string): boolean {
 }
 
 function hasExplicitIncomeTaxTarget(query: string): boolean {
-  return /\b(?:(?:current|corporate|company)\s+(?:income\s+)?tax(?:\s+payable|\s+liability|\s+assessment|\s+bill|\s+instalment)?|income\s+tax(?:\s+payable|\s+liability|\s+assessment|\s+bill|\s+instalment)?|iras\s+(?:corporate\s+|income\s+|current\s+)tax(?:\s+bill|\s+assessment|\s+payable)?|estimated\s+chargeable\s+income|\beci\b\s+(?:tax|instalment|assessment))\b/i.test(query);
+  return /\b(?:(?:current|corporate|company)\s+(?:income\s+)?tax(?:\s+payable|\s+liability|\s+assessment|\s+bill|\s+instalment)?|income\s+tax(?:\s+payable|\s+liability|\s+assessment|\s+bill|\s+instalment)?|prepaid\s+(?:corporate\s+|current\s+|company\s+)?(?:income\s+)?tax|advance\s+(?:corporate\s+|current\s+|company\s+)?(?:income\s+)?tax|iras\s+(?:corporate\s+|income\s+|current\s+)tax(?:\s+bill|\s+assessment|\s+payable)?|estimated\s+chargeable\s+income|\beci\b(?:\s+(?:tax|instalment|payment|assessment))?)\b/i.test(query);
 }
 
 function hasUnspecifiedIrasOrTaxPaymentTarget(query: string): boolean {
@@ -507,7 +632,7 @@ function isPayrollAccrual(query: string): boolean {
   if (/\b(?:calculat\w*|comput\w*|how\s+much|what\s+is\s+(?:his|her|the)\s+(?:cpf|salary|prorat\w*)|years?\s+old|\baged?\s+\d+|singaporean|citizen|permanent\s+resident|\bpr\b|foreigner|work\s+permit|employment\s+pass|\bs\s+pass\b|last\s+day|prorat\w*|resign\w*|incomplete\s+month|ordinary\s+wage|aw\s+ceiling|cpf\s+ceiling|cpf\s+rate|skills\s+development\s+levy|\bsdl\b)\b/i.test(query)) {
     return false;
   }
-  return Boolean(extractPayrollAmounts(query));
+  return Boolean(extractPayrollAmounts(query)) || (isPriorPayrollAccrualSettlement(query) && Boolean(extractPayrollLiabilitySettlementAmounts(query)));
 }
 
 function isPayrollNetPaySettlement(query: string): boolean {
@@ -519,7 +644,7 @@ function isPayrollNetPaySettlement(query: string): boolean {
 
 function isCpfRemittance(query: string): boolean {
   const paymentVerb = /\b(?:pay|paid|paying|remit(?:ted|ting|tance)?|settle[ds]?|settling|settlement|transfer(?:red)?)\b/i.test(query);
-  const target = /\b(?:cpf\s+payable|cpf\s+contributions?|cpf\s+to\s+(?:the\s+)?cpf\s+board|(?:the\s+)?cpf\s+board)\b/i.test(query);
+  const target = /\b(?:cpf\s+(?:payable|liability)|(?:accrued\s+)?cpf\s+(?:liability|contributions?|payable)|cpf\s+to\s+(?:the\s+)?cpf\s+board|(?:the\s+)?cpf\s+board)\b/i.test(query);
   const notAccrualOrCalc = !/\b(?:gross\s+(?:salar(?:y|ies)|wages?)|earning|earns|years?\s+old|singaporean|\bpr\b|last\s+day|prorat\w*|resign\w*|calculat\w*|comput\w*|how\s+much|cpf\s+ceiling|ordinary\s+wage|aw\s+ceiling|cpf\s+rate|senior\s+worker|deadline|late\s+payment)\b/i.test(query);
   return paymentVerb && target && notAccrualOrCalc;
 }
@@ -547,7 +672,7 @@ function isDepOrAmortOnPreviouslyAcquiredAsset(query: string): boolean {
 
 function isDepreciationCharge(query: string): boolean {
   if (!/\bdepreciat(?:e|ed|ing|ion)\b/i.test(query)) return false;
-  const hasBookingCue = /\b(?:record|recogni[sz](?:e|ed|ing)|book|post|charge[ds]?|expense|journal|double\s+entry|debit|credit|for\s+the\s+(?:year|month|quarter|period)|annual|monthly)\b/i.test(query);
+  const hasBookingCue = /\b(?:record|recogni[sz](?:e|ed|ing)|book|post|charge[ds]?|expense|journal|double\s+entry|debit|credit|for\s+the\s+(?:year|month|quarter|period)|annual|monthly|quarterly|half[- ]yearly|semi[- ]annual(?:ly)?|for\s+(?:the\s+)?(?:\d+|a|an|one|two|three|four|six|twelve)\s*[- ]?(?:years?|quarters?|half[- ]years?|months?))\b/i.test(query);
   if (!hasBookingCue) return false;
   const hasAcquisitionVerb = /\b(?:purchas\w*|bought|acquir\w*|acquisition)\b/i.test(query) && !isDepOrAmortOnPreviouslyAcquiredAsset(query);
   const isPpeOtherExclusions = /\b(?:trade[- ]?in|dispos\w*|derecogni\w*|sold|sale\s+of|scrapp\w*|rou\b|right[- ]of[- ]use|lease\w*|revalu\w*|impair\w*|capital\s+allowances?|section\s+19\w*|s[\s-]?plate|passenger\s+car|tax\s+depreciation|deferred\s+tax|add[- ]?back|tax\s+deduct\w*|deductible)\b/i.test(query);
@@ -572,7 +697,7 @@ function isCurrentTaxProvision(query: string): boolean {
 }
 
 function isCurrentTaxPayment(query: string): boolean {
-  const hasPaymentVerb = /\b(?:pay|paid|paying|settle[ds]?|settling|settlement|remit(?:ted|ting)?|transferred)\b/i.test(query);
+  const hasPaymentVerb = /\b(?:pay|paid|paying|prepaid|prepay(?:ing|ment)?|settle[ds]?|settling|settlement|remit(?:ted|ting)?|transferred)\b/i.test(query);
   if (!hasPaymentVerb) return false;
   if (!hasExplicitIncomeTaxTarget(query) && !hasUnspecifiedIrasOrTaxPaymentTarget(query)) return false;
   const isExcluded = /\b(?:gst|withholding|wht|property\s+tax|stamp\s+duty|deferred\s+tax|penalt\w*|fine|deadline|due\s+date|when\s+(?:must|is|should)|how\s+(?:do|to|is)|what\s+is|can\s+(?:i|we)|deduct\w*|section\s+\d+|form\s+c|provision\s+for)\b/i.test(query);
@@ -617,6 +742,56 @@ function resolveCurrentTaxAmount(query: string): { cents?: bigint; missing?: Mis
   };
 }
 
+function resolveCurrentTaxPaymentDetails(query: string): {
+  isSplit?: boolean;
+  paidCents?: bigint;
+  liabilityCents?: bigint;
+  prepaidAssetCents?: bigint;
+  noExistingLiability?: boolean;
+  advanceOrInstalmentCue?: boolean;
+  existingLiabilityConfirmed?: boolean;
+  cents?: bigint;
+  missing?: MissingFieldInfo;
+} {
+  const noExistingLiability = /\b(?:no\s+(?:(?:existing|prior|current|recorded|recogni[sz]ed|accrued)\s+)?(?:(?:corporate|income|current|company)\s+)?tax\s+(?:liability|payable|provision|obligation)|without\s+(?:an?\s+)?(?:existing|prior)\s+(?:(?:corporate|income|current|company)\s+)?tax\s+(?:liability|payable|provision)|before\s+(?:any\s+)?(?:(?:corporate|income|current|company)\s+)?tax\s+(?:liability|provision)\s+(?:is\s+|has\s+been\s+)?(?:recogni[sz]ed|recorded|accrued)|(?:current\s+|existing\s+)?tax\s+(?:liability|payable)\s+is\s+(?:nil|zero|0))\b/i.test(query);
+
+  const existingLiabilityConfirmed = /\b(?:settl(?:e[ds]?|ing)\s+(?:the\s+|an?\s+|our\s+)?(?:existing|accrued|recogni[sz]ed|recorded|assessed)\s+(?:(?:current|income|corporate|company)\s+)?tax(?:\s+(?:payable|liability|provision|assessment|bill))?|against\s+(?:an?\s+|the\s+)?(?:existing|accrued|recorded)\s+(?:(?:current|income|corporate|company)\s+)?tax\s+(?:payable|liability|provision))\b/i.test(query);
+
+  const advanceOrInstalmentCue = /\b(?:advance\s+(?:payment|tax|(?:(?:corporate|income|current|company)\s+)+tax|instalment)|paid?\s+(?:[\w\s]{0,30}?\s+)?in\s+advance|prepaid\s+(?:(?:corporate|current|company)\s+)?(?:income\s+)?tax|prepay(?:ing|ment)?\s+(?:of\s+)?(?:(?:corporate|current|company)\s+)?(?:income\s+)?tax|estimated\s+chargeable\s+income|\beci\b(?:\s+(?:tax|instalment|payment|assessment))?|provisional\s+(?:tax|instalment))\b/i.test(query);
+
+  const paidMatch = query.match(/\b(?:pay|paid|paying|remit(?:ted|ting)?|transferred|settle[ds]?)\s+(?:corporate\s+|income\s+|current\s+|company\s+)?(?:income\s+)?tax(?:\s+of)?\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/i);
+  const liabMatch = query.match(/\b(?:against\s+(?:an?\s+|the\s+)?(?:existing\s+)?(?:current\s+tax\s+payable|tax\s+payable|tax\s+liability)(?:\s+balance)?(?:\s+of)?|existing\s+(?:current\s+tax\s+payable|tax\s+payable|tax\s+liability)(?:\s+balance)?\s*(?:of|is|was|:|-)?)\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?/i);
+
+  if (paidMatch && liabMatch) {
+    const paidCents = BigInt(paidMatch[1].replace(/,/g, '')) * 100n + BigInt((paidMatch[2] || '').padEnd(2, '0'));
+    const liabilityCents = BigInt(liabMatch[1].replace(/,/g, '')) * 100n + BigInt((liabMatch[2] || '').padEnd(2, '0'));
+
+    if (paidCents > liabilityCents && liabilityCents > 0n) {
+      return {
+        isSplit: true,
+        paidCents,
+        liabilityCents,
+        prepaidAssetCents: paidCents - liabilityCents
+      };
+    }
+    if (paidCents <= liabilityCents && paidCents > 0n) {
+      return { cents: paidCents };
+    }
+  }
+
+  const resAmt = resolveCurrentTaxAmount(query);
+  if (resAmt.missing) {
+    return { missing: resAmt.missing };
+  }
+
+  return {
+    cents: resAmt.cents,
+    noExistingLiability,
+    advanceOrInstalmentCue,
+    existingLiabilityConfirmed
+  };
+}
+
 function resolveDeferredTaxAmount(query: string): { cents?: bigint; missing?: MissingFieldInfo } {
   const dtOverride = query.match(/\bstated\s+deferred\s+tax\s+amount\s+is\s+(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
   if (dtOverride) {
@@ -627,20 +802,90 @@ function resolveDeferredTaxAmount(query: string): { cents?: bigint; missing?: Mi
   }
 
   const allAmounts = getAllAmounts(query);
-  const taxMatchA = /(?:deferred\s+tax(?:\s+(?:liabilit(?:y|ies)|assets?|movement|adjustment))?|\bdtl\b|\bdta\b)\s+(?:in\s+profit\s+or\s+loss\s+)?(?:of\s+|is\s+|was\s+|by\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi;
+  const taxMatchA = /(?:deferred\s+tax(?:\s+(?:liabilit(?:y|ies)|assets?|movement|adjustment))?|\bdtl\b|\bdta\b)\s+(?:in\s+(?:profit\s+or\s+loss|equity|oci|other\s+comprehensive\s+income)\s+)?(?:of\s+|is\s+|was\s+|by\s+)?(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi;
   const taxMatchB = /(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:of\s+|for\s+|in\s+)?(?:deferred\s+tax(?:\s+(?:liabilit(?:y|ies)|assets?))?|\bdtl\b|\bdta\b)\b/gi;
   const labelledDtCents = extractLabelledAmount(query, taxMatchA, taxMatchB);
   if (labelledDtCents) {
     return { cents: labelledDtCents };
   }
 
-  if (allAmounts.length === 1 && !/\btemporary\s+differences?\b/i.test(query) && !/\b\d+(?:\.\d+)?\s*%/.test(query)) {
+  if (
+    allAmounts.length === 1 &&
+    !/\btemporary\s+differences?\b/i.test(query) &&
+    !/\b\d+(?:\.\d+)?\s*%/.test(query) &&
+    !/(?:\b(?:revaluation(?:\s+surplus|\s+gain|\s+reserve)?|share\s+issu(?:e|ance)\s+costs?|equity\s+transaction\s+costs?|fair\s+value\s+(?:gain|loss|reserve)|convertible\s+(?:bond|debt|note)|opening\s+retained\s+earnings)\s+(?:of|is|was)\s+(?:\bSGD|S\$|\$))/i.test(query)
+  ) {
     return { cents: allAmounts[0].cents };
   }
 
   return {
     missing: need('taxAmount', 'Deferred tax movement amount', 'What is the SGD deferred tax movement amount to recognise?')
   };
+}
+
+function extractDepAmortUsefulLifeAndPeriod(query: string): { usefulLifeMonths?: bigint; periodMonths?: bigint } {
+  let usefulLifeMonths: bigint | undefined;
+  let periodMonths: bigint | undefined;
+  let maskedQuery = query;
+
+  const ulPat1 = new RegExp('\\b(?:useful|economic|service|expected|estimated|licen[cs]e|patent|contract)\\s+(?:life|term|period)\\s+(?:of\\s+|is\\s+|was\\s+)?(' + NUM_WORD_OR_DIGIT + ')\\s*[- ]?\\s*(years?|quarters?|half[- ]years?|months?)(?!\\s+ago\\b)', 'i');
+  const ulPat2 = new RegExp('(?<![\\w-])(' + NUM_WORD_OR_DIGIT + ')[- ](year|quarter|half[- ]year|month)s?\\s+(?:useful\\s+life|economic\\s+life|service\\s+life|life|term|software(?:\\s+licen[cs]e)?|licen[cs]e|patent|trademark|copyright|franchise|intangible(?:\\s+asset)?)(?!\\s+ago\\b)', 'i');
+  const ulPat3 = new RegExp('\\b(?:depreciat\\w*|amorti[sz]\\w*)(?:\\s+straight[- ]line)?\\s+over\\s+(?:a\\s+|an\\s+|its\\s+)?(' + NUM_WORD_OR_DIGIT + ')\\s*[- ]?\\s*(years?|quarters?|half[- ]years?|months?)(?!\\s+ago\\b)', 'i');
+  const ulPat4 = new RegExp('\\bover\\s+(?:a\\s+period\\s+of\\s+|an?\\s+)?(' + NUM_WORD_OR_DIGIT + ')\\s*[- ]?\\s*(years?|quarters?|half[- ]years?|months?)(?!\\s+ago\\b)', 'i');
+
+  const m1 = query.match(ulPat1);
+  const m2 = !m1 ? query.match(ulPat2) : null;
+  const m3 = !m1 && !m2 ? query.match(ulPat3) : null;
+  const m4 = !m1 && !m2 && !m3 ? query.match(ulPat4) : null;
+  const ulMatch = m1 || m2 || m3 || m4;
+
+  if (ulMatch) {
+    const countStr = ulMatch[1];
+    const unitStr = ulMatch[2];
+    const parsed = parseDurationUnit(countStr, unitStr);
+    if (parsed && parsed.family === 'MONTH') {
+      usefulLifeMonths = BigInt(parsed.units);
+      maskedQuery = query.replace(ulMatch[0], ' '.repeat(ulMatch[0].length));
+    }
+  } else {
+    const fb = query.match(new RegExp('\\b(?:with|has|having)\\s+(?:a\\s+|an\\s+)?(' + NUM_WORD_OR_DIGIT + ')\\s*[- ]?\\s*(years?|quarters?|half[- ]years?|months?)\\s+(?:useful\\s+)?life\\b', 'i'));
+    if (fb) {
+      const parsed = parseDurationUnit(fb[1], fb[2]);
+      if (parsed && parsed.family === 'MONTH') {
+        usefulLifeMonths = BigInt(parsed.units);
+        maskedQuery = query.replace(fb[0], ' '.repeat(fb[0].length));
+      }
+    }
+  }
+
+  // Step 2: period from maskedQuery
+  const perPat1 = new RegExp('\\b(?:for|covering)\\s+(?:the\\s+(?:first|past|last|current|next)\\s+)?(' + NUM_WORD_OR_DIGIT + ')\\s*[- ]?\\s*(years?|quarters?|half[- ]years?|months?)(?!\\s+ago\\b)', 'i');
+  const perPat2 = new RegExp('(?<![\\w-])(' + NUM_WORD_OR_DIGIT + ')[- ](year|quarter|half[- ]year|month)s?(?:\'s|s\')?(?:\\s+of)?\\s+(?:straight[- ]line\\s+)?(?:depreciation|amorti[sz]ation|charge|expense)\\b', 'i');
+
+  const pm1 = maskedQuery.match(perPat1);
+  const pm2 = !pm1 ? maskedQuery.match(perPat2) : null;
+  const pMatch = pm1 || pm2;
+
+  if (pMatch) {
+    const parsed = parseDurationUnit(pMatch[1], pMatch[2]);
+    if (parsed && parsed.family === 'MONTH') {
+      periodMonths = BigInt(parsed.units);
+    }
+  }
+
+  if (periodMonths === undefined) {
+    if (/\b(?:half[- ]yearly|semi[- ]annual(?:ly)?|for\s+(?:a|an|one|1|the)\s+half[- ]year|six[- ]month|6[- ]month)\b/i.test(maskedQuery)) {
+      periodMonths = 6n;
+    } else if (/\b(?:annual(?:ly)?|(?<!half[- ])yearly|full[- ]year|per\s+(?:annum|year)|for\s+(?:a|an|one|1|the)\s+year|one[- ]year|1[- ]year)\b/i.test(maskedQuery)) {
+      periodMonths = 12n;
+    } else if (/\b(?:quarterly|per\s+quarter|for\s+(?:a|an|one|1|the)\s+quarter|one[- ]quarter|1[- ]quarter|(?:first|second|third|fourth|q[1-4])[- ]quarter)\b/i.test(maskedQuery)) {
+      periodMonths = 3n;
+    } else if (/\b(?:monthly|per\s+month|for\s+(?:a|an|one|1|the)\s+month|one[- ]month|1[- ]month)\b/i.test(maskedQuery)) {
+      periodMonths = 1n;
+    }
+  }
+
+  return { usefulLifeMonths, periodMonths };
 }
 
 function extractPrepaidElapsedAndCoverage(query: string): {
@@ -778,12 +1023,44 @@ function resolvePeriodAdjustmentCharge(
 ): { cents?: bigint; note?: string; missing?: MissingFieldInfo } {
   // Canonical follow-up override FIRST
   const periodicOverride = query.match(/\bstated\s+periodic\s+charge\s+is\s+(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+  const baseWithoutOverride = query.replace(/;\s*stated\s+periodic\s+charge\s+is\s+(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/gi, '').trim();
+
   if (periodicOverride) {
     const w = periodicOverride[1].replace(/,/g, '');
     const f = (periodicOverride[2] || '').padEnd(2, '0');
-    const cents = BigInt(w) * 100n + BigInt(f || '0');
-    if (cents > 0n) {
-      return { cents };
+    const overrideCents = BigInt(w) * 100n + BigInt(f || '0');
+    if (overrideCents > 0n) {
+      if (templateId === 'PREPAID_EXPENSE_RECOGNITION') {
+        const baseAmounts = getAllAmounts(baseWithoutOverride);
+        if (baseAmounts.length >= 1 && !isExplicitPrepaidPeriodCharge(baseWithoutOverride)) {
+          const availablePrepaidCents = baseAmounts[0].cents;
+          if (overrideCents > availablePrepaidCents) {
+            return {
+              missing: need(
+                'periodCharge',
+                'Valid expired prepaid expense amount',
+                'The stated expired amount (SGD ' + (Number(overrideCents) / 100).toFixed(2) + ') exceeds the stated prepaid balance of SGD ' + (Number(availablePrepaidCents) / 100).toFixed(2) + '. Please explain any additional prepaid balance or state a valid expired amount not exceeding SGD ' + (Number(availablePrepaidCents) / 100).toFixed(2) + '.'
+              )
+            };
+          }
+        }
+      }
+      if (templateId === 'DEPRECIATION_CHARGE' || templateId === 'AMORTISATION_CHARGE') {
+        const baseAmounts = getAllAmounts(baseWithoutOverride);
+        if (baseAmounts.length >= 1 && isAssetValueAmount(baseWithoutOverride)) {
+          const maxAssetCents = baseAmounts.reduce((max, a) => (a.cents > max ? a.cents : max), 0n);
+          if (overrideCents > maxAssetCents) {
+            return {
+              missing: need(
+                'periodCharge',
+                'Valid period charge amount',
+                'The stated charge exceeds the stated asset cost or carrying amount. Please state a valid periodic charge in SGD.'
+              )
+            };
+          }
+        }
+      }
+      return { cents: overrideCents };
     }
   }
 
@@ -792,6 +1069,29 @@ function resolvePeriodAdjustmentCharge(
   if (templateId === 'PREPAID_EXPENSE_RECOGNITION') {
     if (allAmounts.length === 0) {
       return { missing: need('amount', 'Prepaid amount', 'What is the prepaid amount in SGD?') };
+    }
+    if (allAmounts.length === 2 && !periodicOverride) {
+      const balMatch = query.match(/(?<!\b(?:expired|used|consumed|elapsed|amorti[sz]ed|released|of)\s+)\bprepaid\s+(?:rent|rental|insurance|expenses?|subscriptions?|maintenance|advertising|fees?)(?:\s+balance)?\s*(?:of|is|was|:|=|-)\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+      const expMatch = query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:has\s+|have\s+|was\s+)?(?:expired|elapsed|been\s+used|used(?:\s+up)?|consumed)\b/i)
+        || query.match(/\b(?:expired|used|consumed|amorti[sz]ed|released|charge|(?<!\bprepaid\s)expense)\s+(?:(?:prepaid\s+)?(?:rent|rental|insurance|expenses?|subscriptions?|maintenance|advertising|fees?)\s+)?(?:amount\s+|portion\s+)?(?:of|is|was|:)\s*(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)/i);
+
+      if (balMatch && expMatch && balMatch.index !== expMatch.index) {
+        const balCents = BigInt(balMatch[1].replace(/,/g, '')) * 100n + BigInt((balMatch[2] || '').padEnd(2, '0'));
+        const expCents = BigInt(expMatch[1].replace(/,/g, '')) * 100n + BigInt((expMatch[2] || '').padEnd(2, '0'));
+
+        if (expCents > balCents) {
+          return {
+            missing: need(
+              'periodCharge',
+              'Valid expired prepaid expense amount',
+              'The stated expired amount (SGD ' + (Number(expCents) / 100).toFixed(2) + ') exceeds the stated prepaid balance of SGD ' + (Number(balCents) / 100).toFixed(2) + '. Please explain any additional prepaid balance or state a valid expired amount not exceeding SGD ' + (Number(balCents) / 100).toFixed(2) + '.'
+            )
+          };
+        }
+        if (expCents > 0n) {
+          return { cents: expCents };
+        }
+      }
     }
     if (allAmounts.length > 1) {
       return { missing: need('periodCharge', 'Prepaid expense amount', 'Multiple SGD amounts were stated; please provide the exact SGD prepaid expense amount to recognise for the period.') };
@@ -863,7 +1163,8 @@ function resolvePeriodAdjustmentCharge(
   const resMatchB = query.match(/(?:\bSGD\s*|S\$\s*|\$\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?![\d]|,\d|\.\d)\s+(?:residual|salvage|scrap)(?:\s+value)?\b/i);
   const isZeroRes = /\b(?:no\s+residual(?:\s+value)?|zero\s+residual(?:\s+value)?|nil\s+residual(?:\s+value)?|residual(?:\s+value)?\s+(?:is\s+|of\s+)?(?:nil|zero|0|sgd\s*0|\$0))\b/i.test(query);
 
-  const hasFormulaCues = (Boolean(costM) || Boolean(resMatchA || resMatchB || isZeroRes)) && /\b\d+\s*(?:years?|months?)(?!\s+ago\b)/i.test(query);
+  const { usefulLifeMonths, periodMonths } = extractDepAmortUsefulLifeAndPeriod(query);
+  const hasFormulaCues = (Boolean(costM) || Boolean(resMatchA || resMatchB || isZeroRes)) && Boolean(usefulLifeMonths);
 
   if (hasFormulaCues) {
     let costCents: bigint | undefined;
@@ -889,39 +1190,34 @@ function resolvePeriodAdjustmentCharge(
       };
     }
 
-    const yMatch = query.match(/\b(\d+)\s*years?(?!\s+ago\b)/i);
-    const mMatch = query.match(/\b(\d+)\s*months?(?!\s+ago\b)/i);
-    if (!yMatch && !mMatch) {
-      return { missing: need('periodCharge', 'Useful life or period charge', 'Please state the useful life in years/months or provide the periodic charge in SGD.') };
-    }
-
-    let divisor: bigint;
-    if (yMatch) {
-      const y = BigInt(yMatch[1]);
-      if (/\b(?:monthly|for\s+the\s+month|1\s+month|per\s+month)\b/i.test(query)) {
-        divisor = y * 12n;
-      } else {
-        divisor = y;
-      }
-    } else {
-      divisor = BigInt(mMatch![1]);
-    }
-
-    if (costCents <= residualCents || divisor <= 0n) {
+    if (costCents <= residualCents || usefulLifeMonths! <= 0n) {
       return { missing: need('periodCharge', 'Valid cost and useful life', 'Asset cost must exceed residual value and useful life must be positive.') };
     }
 
+    if (!periodMonths) {
+      return {
+        missing: need('periodCharge', 'Accounting period for charge', 'Which reporting period is being recorded (monthly, quarterly, half-yearly, or annual), or what is the exact SGD charge for the period?')
+      };
+    }
+
+    if (periodMonths <= 0n || periodMonths > usefulLifeMonths!) {
+      return {
+        missing: need('periodCharge', 'Valid accounting period', 'The requested period cannot exceed the asset useful life. Please state a valid period or exact SGD charge.')
+      };
+    }
+
     const depreciableCents = costCents - residualCents;
-    if (depreciableCents % divisor !== 0n) {
+    const numerator = depreciableCents * periodMonths;
+    if (numerator % usefulLifeMonths! !== 0n) {
       return {
         missing: need('periodCharge', 'Exact period charge', 'The straight-line calculation does not divide into exact integer cents; please state the exact SGD charge to post.')
       };
     }
 
-    const chargeCents = depreciableCents / divisor;
+    const chargeCents = numerator / usefulLifeMonths!;
     return {
       cents: chargeCents,
-      note: ' Straight-line calculation: (SGD ' + (Number(costCents) / 100).toFixed(2) + ' − SGD ' + (Number(residualCents) / 100).toFixed(2) + ') ÷ ' + divisor.toString() + ' = SGD ' + (Number(chargeCents) / 100).toFixed(2) + '.'
+      note: ' Straight-line calculation: ((SGD ' + (Number(costCents) / 100).toFixed(2) + ' − SGD ' + (Number(residualCents) / 100).toFixed(2) + ') × ' + periodMonths.toString() + ' months) ÷ ' + usefulLifeMonths!.toString() + ' months = SGD ' + (Number(chargeCents) / 100).toFixed(2) + '.'
     };
   }
 
@@ -1231,20 +1527,37 @@ const templates: Template[] = [
     patterns: [/\b(?:payroll|salar(?:y|ies)|wages?)\b/i, /\bcpf\b/i],
     accounts: q => {
       const settlement = resolvePayrollSettlementStatus(q);
-      const { salaryPaid, cpfPaid, salaryPayMethod, cpfPayMethod } = settlement;
+      const { salaryPaid, cpfPaid, salaryPaymentMethod, cpfPaymentMethod, isPriorAccrualSettlement } = settlement;
       const missing: MissingFieldInfo[] = [];
 
-      if (salaryPaid && (salaryPayMethod === 'NONE' || salaryPayMethod === 'AMBIGUOUS')) {
-        missing.push(need('paymentMethod', 'Salary payment method', 'Were the salaries paid in cash or from a bank account?'));
-      }
-      if (cpfPaid && (cpfPayMethod === 'NONE' || cpfPayMethod === 'AMBIGUOUS')) {
-        missing.push(need('paymentMethod', 'CPF payment method', 'Was the CPF payment made from a bank account or in cash?'));
+      if (isPriorAccrualSettlement && !salaryPaid && !cpfPaid) {
+        missing.push(need('payrollSettlementTarget', 'Accrued payroll liability settled', 'Which previously accrued liability was paid (salaries payable, CPF payable, or both)?'));
       }
 
-      const debit = expense('Salaries and Wages Expense', '5100');
-      const credit = salaryPaid
-        ? (salaryPayMethod === 'CASH' ? cash() : bank())
-        : liability('Salaries Payable', '2110');
+      if (salaryPaid && (salaryPaymentMethod === 'NONE' || salaryPaymentMethod === 'AMBIGUOUS')) {
+        missing.push(need('salaryPaymentMethod', 'Salary payment method', 'Were the salaries paid in cash or from a bank account?'));
+      }
+      if (cpfPaid && (cpfPaymentMethod === 'NONE' || cpfPaymentMethod === 'AMBIGUOUS')) {
+        missing.push(need('cpfPaymentMethod', 'CPF payment method', 'Was the CPF payment made from a bank account or in cash?'));
+      }
+
+      let debit: Account;
+      let credit: Account;
+
+      if (isPriorAccrualSettlement) {
+        if (!salaryPaid && cpfPaid) {
+          debit = liability('CPF Payable', '2120');
+          credit = cpfPaymentMethod === 'CASH' ? cash() : bank();
+        } else {
+          debit = liability('Salaries Payable', '2110');
+          credit = salaryPaymentMethod === 'CASH' ? cash() : bank();
+        }
+      } else {
+        debit = expense('Salaries and Wages Expense', '5100');
+        credit = salaryPaid
+          ? (salaryPaymentMethod === 'CASH' ? cash() : bank())
+          : liability('Salaries Payable', '2110');
+      }
 
       if (missing.length > 0) {
         return { debit, credit, missing };
@@ -1317,9 +1630,12 @@ const templates: Template[] = [
     title: 'Remittance of CPF contributions to CPF Board',
     patterns: [
       /\b(?:pay|paid|paying|remit(?:ted|ting|tance)?|settle[ds]?|settling|settlement|transfer(?:red)?)\b/i,
-      /\b(?:cpf\s+payable|cpf\s+contributions?|cpf\s+to\s+(?:the\s+)?cpf\s+board|(?:the\s+)?cpf\s+board)\b/i
+      /\b(?:cpf\s+(?:payable|liability)|(?:accrued\s+)?cpf\s+(?:liability|contributions?|payable)|cpf\s+to\s+(?:the\s+)?cpf\s+board|(?:the\s+)?cpf\s+board)\b/i
     ],
-    accounts: () => ({ debit: liability('CPF Payable', '2120'), credit: bank() }),
+    accounts: q => ({
+      debit: liability('CPF Payable', '2120'),
+      credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash)\b/i.test(q) ? cash() : bank()
+    }),
     rationale: 'Remittance of accrued CPF contributions to CPF Board extinguishes the CPF Payable liability.'
   },
   {
@@ -1347,7 +1663,7 @@ const templates: Template[] = [
     title: 'Depreciation charge on property, plant and equipment',
     patterns: [
       /\bdepreciat(?:e|ed|ing|ion)\b/i,
-      /\b(?:record|recogni[sz](?:e|ed|ing)|book|post|charge[ds]?|expense|journal|double\s+entry|debit|credit|for\s+the\s+(?:year|month|quarter|period)|annual|monthly)\b/i
+      /\b(?:record|recogni[sz](?:e|ed|ing)|book|post|charge[ds]?|expense|journal|double\s+entry|debit|credit|for\s+the\s+(?:year|month|quarter|period)|annual|monthly|quarterly|half[- ]yearly|semi[- ]annual(?:ly)?|for\s+(?:the\s+)?(?:\d+|a|an|one|two|three|four|six|twelve)\s*[- ]?(?:years?|quarters?|half[- ]years?|months?))\b/i
     ],
     accounts: q => {
       let assetClass = 'Property, Plant and Equipment';
@@ -1399,7 +1715,7 @@ const templates: Template[] = [
     id: 'CURRENT_TAX_PAYMENT',
     title: 'Settlement of current income tax payable',
     patterns: [
-      /\b(?:pay|paid|paying|settle[ds]?|settling|settlement|remit(?:ted|ting)?|transferred)\b/i,
+      /\b(?:pay|paid|paying|prepaid|prepay(?:ing|ment)?|settle[ds]?|settling|settlement|remit(?:ted|ting)?|transferred)\b/i,
       /\b(?:(?:current|corporate|company)\s+(?:income\s+)?tax|income\s+tax|iras|\btax\s+(?:payable|bill|assessment))\b/i
     ],
     accounts: q => {
@@ -1410,6 +1726,31 @@ const templates: Template[] = [
           missing: [need('taxType', 'Type of IRAS tax obligation', 'Which tax obligation is being paid to IRAS (for example, corporate income tax, GST, withholding tax, property tax, or stamp duty)?')]
         };
       }
+
+      const details = resolveCurrentTaxPaymentDetails(q);
+      if (details.missing) {
+        return {
+          debit: liability('Current Tax Payable', '2400'),
+          credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash)\b/i.test(q) ? cash() : bank(),
+          missing: [details.missing]
+        };
+      }
+
+      if (details.noExistingLiability) {
+        return {
+          debit: asset('Prepaid Income Tax', '1400'),
+          credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash)\b/i.test(q) ? cash() : bank()
+        };
+      }
+
+      if (details.advanceOrInstalmentCue && !details.existingLiabilityConfirmed) {
+        return {
+          debit: liability('Current Tax Payable', '2400'),
+          credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash)\b/i.test(q) ? cash() : bank(),
+          missing: [need('taxLiabilityStatus', 'Existing current tax liability status', 'Does this advance or ECI tax payment settle an existing Current Tax Payable liability already recognised, or is there no existing tax liability (so it should be recognised as a Prepaid Income Tax asset under SFRS(I) 1-12 §12)?')]
+        };
+      }
+
       return {
         debit: liability('Current Tax Payable', '2400'),
         credit: /\b(?:in\s+cash|with\s+cash|by\s+cash|physical\s+cash)\b/i.test(q) ? cash() : bank()
@@ -1425,18 +1766,30 @@ const templates: Template[] = [
       /\bdeferred\s+tax(?:\s+(?:liabilit(?:y|ies)|assets?))?\b/i
     ],
     accounts: q => {
-      if (/\b(?:revaluation(?:\s+surplus|\s+reserve|\s+gain)?|fvoci|fair\s+value\s+through\s+other\s+comprehensive\s+income|other\s+comprehensive\s+income|\boci\b|cash\s+flow\s+hedge)\b/i.test(q)) {
-        return {
-          missing: [need('deferredTaxRecognitionLocation', 'Deferred tax recognition outside profit or loss (SFRS(I) 1-12)', 'Deferred tax relating to items recognised in other comprehensive income (such as revaluation surplus or FVOCI investments) is recognised in OCI rather than profit or loss under SFRS(I) 1-12. Please clarify the OCI reserve account and whether a deferred tax liability or asset applies.')]
-        };
+      const isEquityLocation = /\b(?:direct(?:ly)?\s+(?:in|to|through)\s+equity|(?:recogni[sz]ed|charged|credited|recorded|adjusted|accounted\s+for)\s+(?:direct(?:ly)?\s+)?(?:in|to)\s+(?:equity|share\s+capital|ordinary\s+share\s+capital|retained\s+earnings|opening\s+retained\s+earnings|capital\s+reserve)|share\s+issu(?:e|ance)\s+(?:transaction\s+)?costs?|equity\s+(?:transaction|issuance)\s+costs?|equity\s+component\s+of\s+(?:a\s+)?(?:convertible|compound)|compound\s+(?:financial\s+)?instrument|opening\s+retained\s+earnings|(?:retrospective\s+(?:adjustment|application|restatement)|change\s+in\s+accounting\s+policy|prior[- ]period\s+error)\b[\s\S]*?\b(?:equity|retained\s+earnings))\b/i.test(q);
+
+      const isOciLocation = /\b(?:revaluation(?:\s+surplus|\s+reserve|\s+gain)?|fvoci|fair\s+value\s+through\s+other\s+comprehensive\s+income|other\s+comprehensive\s+income|\boci\b|cash\s+flow\s+hedge)\b/i.test(q);
+
+      let specificEquityAccount: Account | undefined;
+      if (/\b(?:share\s+capital|ordinary\s+share\s+capital|share\s+issu(?:e|ance)\s+(?:transaction\s+)?costs?|equity\s+(?:transaction|issuance)\s+costs?)\b/i.test(q)) {
+        specificEquityAccount = equity('Share Capital', '3100');
+      } else if (/\b(?:retained\s+earnings|opening\s+retained\s+earnings|change\s+in\s+accounting\s+policy|prior[- ]period\s+error|retrospective\s+(?:adjustment|application|restatement))\b/i.test(q)) {
+        specificEquityAccount = equity('Retained Earnings', '3200');
+      } else if (/\b(?:capital\s+reserve|convertible\s+(?:bond|debt|note|instrument)|compound\s+(?:financial\s+)?instrument)\b/i.test(q)) {
+        specificEquityAccount = equity('Capital Reserve', '3300');
       }
+
+      let specificOciAccount: Account | undefined;
+      if (/\brevaluation(?:\s+surplus|\s+reserve|\s+gain)?\b/i.test(q)) {
+        specificOciAccount = { name: 'OCI — Revaluation Surplus', code: '3400', category: 'OTHER_COMPREHENSIVE_INCOME' as AccountCategory };
+      } else if (/\b(?:fvoci|fair\s+value\s+through\s+other\s+comprehensive\s+income|fair\s+value\s+reserve)\b/i.test(q)) {
+        specificOciAccount = { name: 'OCI — Fair Value Reserve (FVOCI)', code: '3410', category: 'OTHER_COMPREHENSIVE_INCOME' as AccountCategory };
+      } else if (/\bcash\s+flow\s+hedge\b/i.test(q)) {
+        specificOciAccount = { name: 'OCI — Cash Flow Hedge Reserve', code: '3420', category: 'OTHER_COMPREHENSIVE_INCOME' as AccountCategory };
+      }
+
       const isDtl = /\bdeferred\s+tax\s+liabilit(?:y|ies)|\bdtl\b/i.test(q);
       const isDta = /\bdeferred\s+tax\s+assets?|\bdta\b/i.test(q);
-      if ((!isDtl && !isDta) || (isDtl && isDta)) {
-        return {
-          missing: [need('deferredTaxType', 'Deferred tax asset or liability', 'Is this movement in a Deferred Tax Liability or a Deferred Tax Asset?')]
-        };
-      }
 
       const dirOverride = q.match(/\bdirection\s+is\s+an?\s+(increase|decrease)\b/i)?.[1]?.toLowerCase();
       let isIncrease = false;
@@ -1450,6 +1803,66 @@ const templates: Template[] = [
         isDecrease = /\b(?:decreas(?:e|ed|es|ing)|revers(?:e|ed|es|ing|al)|reduc(?:e|ed|es|ing|tion)|write[- ]?down|derecogni[sz](?:e|ed|ing)|utili[sz](?:e|ed|ing|ation)|downward)\b/i.test(q);
         isIncrease = /\b(?:increas(?:e|ed|es|ing)|additional|raise[ds]?|upward)\b/i.test(q)
           || (!isDecrease && !hasAmbiguousMovementNoun && /\b(?:recogni[sz](?:e|ed|ing)|initial\s+recognition|creat(?:e|ed|ing)|establish(?:ed|ing)?|arising)\b/i.test(q));
+      }
+
+      // OCI recognition
+      if (isOciLocation && !isEquityLocation) {
+        if (!specificOciAccount || (isDtl === isDta)) {
+          return {
+            missing: [need('deferredTaxRecognitionLocation', 'Deferred tax recognition outside profit or loss (SFRS(I) 1-12)', 'Deferred tax relating to items recognised in other comprehensive income (such as revaluation surplus or FVOCI investments) is recognised in OCI rather than profit or loss under SFRS(I) 1-12 §61A(a). Please clarify the OCI reserve account, whether a deferred tax liability or asset applies, and the deferred tax movement amount.')]
+          };
+        }
+        if (isIncrease === isDecrease) {
+          return {
+            missing: [need('deferredTaxDirection', 'Direction of deferred tax movement', 'Is the deferred tax balance increasing (initial/additional recognition) or decreasing (reversal/reduction)?')]
+          };
+        }
+        const targetCounterparty = specificOciAccount;
+        if (isDtl) {
+          return isDecrease
+            ? { debit: liability('Deferred Tax Liability', '2410'), credit: targetCounterparty }
+            : { debit: targetCounterparty, credit: liability('Deferred Tax Liability', '2410') };
+        } else {
+          return isDecrease
+            ? { debit: targetCounterparty, credit: asset('Deferred Tax Asset', '1410') }
+            : { debit: asset('Deferred Tax Asset', '1410'), credit: targetCounterparty };
+        }
+      }
+
+      // Equity recognition
+      if (isEquityLocation) {
+        if (!specificEquityAccount) {
+          return {
+            missing: [need('deferredTaxRecognitionLocation', 'Equity account for deferred tax recognition (SFRS(I) 1-12)', 'Under SFRS(I) 1-12 §61A(b), deferred tax relating to items recognised directly in equity must be recognised directly in equity rather than profit or loss. Which equity account applies (Share Capital, Retained Earnings, or Capital Reserve)?')]
+          };
+        }
+        if ((!isDtl && !isDta) || (isDtl && isDta)) {
+          return {
+            missing: [need('deferredTaxType', 'Deferred tax asset or liability', 'Is this movement in a Deferred Tax Liability or a Deferred Tax Asset?')]
+          };
+        }
+        if (isIncrease === isDecrease) {
+          return {
+            missing: [need('deferredTaxDirection', 'Direction of deferred tax movement', 'Is the deferred tax balance increasing (initial/additional recognition) or decreasing (reversal/reduction)?')]
+          };
+        }
+        const targetCounterparty = specificEquityAccount;
+        if (isDtl) {
+          return isDecrease
+            ? { debit: liability('Deferred Tax Liability', '2410'), credit: targetCounterparty }
+            : { debit: targetCounterparty, credit: liability('Deferred Tax Liability', '2410') };
+        } else {
+          return isDecrease
+            ? { debit: targetCounterparty, credit: asset('Deferred Tax Asset', '1410') }
+            : { debit: asset('Deferred Tax Asset', '1410'), credit: targetCounterparty };
+        }
+      }
+
+      // Profit or loss recognition
+      if ((!isDtl && !isDta) || (isDtl && isDta)) {
+        return {
+          missing: [need('deferredTaxType', 'Deferred tax asset or liability', 'Is this movement in a Deferred Tax Liability or a Deferred Tax Asset?')]
+        };
       }
 
       if (isIncrease === isDecrease) {
@@ -1558,12 +1971,13 @@ const templates: Template[] = [
  */
 export function matchBasicTransaction(query: string): AccountingScenarioState | undefined {
   // Never override the specialized GST, salary, lease, investment or FX routes.
-  if (/\b(?:GST|share(?:s|holder)?|FVTPL|forex|foreign exchange|FX|lease|tenancy)\b/i.test(query) ||
+  if (/\b(?:GST|FVTPL|forex|foreign exchange|FX|lease|tenancy)\b/i.test(query) ||
+      (/\bshare(?:s|holder)?\b/i.test(query) && !/\bdeferred\s+tax\b/i.test(query)) ||
       (/\bFVOCI\b/i.test(query) && !/\bdeferred\s+tax\b/i.test(query)) ||
       /\brental agreement\b/i.test(query) ||
       /\b(?:USD|EUR|GBP|AUD|MYR|JPY|CNY)\b/i.test(query) ||
       /\btransaction\s*[12]\b/i.test(query) ||
-      /\b(?:bond|non[- ]?poci|poci|significant\s+increase\s+in\s+credit\s+risk|sppi|12-month\s+or\s+lifetime)\b/i.test(query)) return undefined;
+      ((!/\bdeferred\s+tax\b/i.test(query) && /\bbond\b/i.test(query)) || /\b(?:non[- ]?poci|poci|significant\s+increase\s+in\s+credit\s+risk|sppi|12-month\s+or\s+lifetime)\b/i.test(query))) return undefined;
 
   const hasPayrollOrCpfTerms = /\b(?:CPF|payroll|salar(?:y|ies)|wages?)\b/i.test(query);
   const PAYROLL_TEMPLATE_IDS = new Set(['PAYROLL_ACCRUAL', 'PAYROLL_NET_PAY_SETTLEMENT', 'CPF_REMITTANCE', 'SALARY_ACCRUAL', 'SALARY_PAYMENT']);
@@ -1624,6 +2038,7 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   // 6. Monthly payroll and CPF accrual
   const isPayroll = template.id === 'PAYROLL_ACCRUAL';
   const payrollSplit = isPayroll ? extractPayrollAmounts(query) : undefined;
+  const payrollLiabilitySplit = isPayroll && isPriorPayrollAccrualSettlement(query) ? extractPayrollLiabilitySettlementAmounts(query) : undefined;
 
   // 7. Period adjustments (prepaid expense recognition, depreciation, amortisation)
   const isPeriodAdjustment =
@@ -1632,9 +2047,11 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     template.id === 'AMORTISATION_CHARGE';
   const periodAdjustment = isPeriodAdjustment ? resolvePeriodAdjustmentCharge(template.id, query) : undefined;
 
-  // 8. Current tax provision
-  const isCurrentTax = template.id === 'CURRENT_TAX_PROVISION';
-  const currentTaxRes = isCurrentTax ? resolveCurrentTaxAmount(query) : undefined;
+  // 8. Current tax
+  const isCurrentTaxProv = template.id === 'CURRENT_TAX_PROVISION';
+  const isCurrentTaxPay = template.id === 'CURRENT_TAX_PAYMENT';
+  const currentTaxDetails = isCurrentTaxPay ? resolveCurrentTaxPaymentDetails(query) : undefined;
+  const currentTaxRes = isCurrentTaxProv ? resolveCurrentTaxAmount(query) : currentTaxDetails;
 
   // 9. Deferred tax movement
   const isDeferredTax = template.id === 'DEFERRED_TAX_MOVEMENT';
@@ -1660,6 +2077,8 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     !supplierDiscountSplit &&
     !isSupplierDiscount &&
     !payrollSplit &&
+    !payrollLiabilitySplit &&
+    !currentTaxDetails?.isSplit &&
     !periodAdjustment?.cents &&
     !currentTaxRes?.cents &&
     !deferredTaxRes?.cents
@@ -1677,7 +2096,8 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     Boolean(discountSplit && pair.debit && pair.credit) ||
     Boolean(salesReturnAndCost && pair.debit && pair.credit) ||
     Boolean(supplierDiscountSplit && pair.debit && pair.credit) ||
-    Boolean(payrollSplit) ||
+    Boolean(payrollSplit || payrollLiabilitySplit) ||
+    Boolean(currentTaxDetails?.isSplit) ||
     Boolean(periodAdjustment?.cents && pair.debit && pair.credit) ||
     Boolean(currentTaxRes?.cents && pair.debit && pair.credit) ||
     Boolean(deferredTaxRes?.cents && pair.debit && pair.credit) ||
@@ -2065,46 +2485,249 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     };
   }
 
-  // Branch: Monthly payroll and CPF accrual
-  if (payrollSplit) {
-    const grossAmount = Number(payrollSplit.grossCents) / 100;
-    const employerCpfAmount = Number(payrollSplit.employerCpfCents) / 100;
-    const netPayCents = payrollSplit.grossCents - payrollSplit.employeeCpfCents;
-    const netPayAmount = Number(netPayCents) / 100;
-    const totalCpfCents = payrollSplit.employeeCpfCents + payrollSplit.employerCpfCents;
-    const totalCpfAmount = Number(totalCpfCents) / 100;
-    const totalCents = payrollSplit.grossCents + payrollSplit.employerCpfCents;
-    const totalAmount = Number(totalCents) / 100;
+  // Branch: Current tax payment with excess advance / prepaid tax asset
+  if (currentTaxDetails?.isSplit && template.id === 'CURRENT_TAX_PAYMENT') {
+    const paidAmount = Number(currentTaxDetails.paidCents!) / 100;
+    const liabAmount = Number(currentTaxDetails.liabilityCents!) / 100;
+    const prepAmount = Number(currentTaxDetails.prepaidAssetCents!) / 100;
+    const title = 'Current tax payment with prepaid tax asset';
+    const rationale = 'Settlement of existing current tax payable with excess payment recognized as a prepaid income tax asset under SFRS(I) 1-12 §12.';
+    const creditAcct = pair.credit ?? bank();
 
+    const lines: JournalLine[] = isComplete ? [
+      {
+        id: 'basic-tax-current-payable',
+        accountCode: '2400',
+        accountName: 'Current Tax Payable',
+        category: 'LIABILITY',
+        debit: liabAmount,
+        credit: 0,
+        lineExplanation: 'Settlement of existing current tax payable to IRAS under SFRS(I) 1-12.'
+      },
+      {
+        id: 'basic-tax-prepaid-asset',
+        accountCode: '1400',
+        accountName: 'Prepaid Income Tax',
+        category: 'ASSET',
+        debit: prepAmount,
+        credit: 0,
+        lineExplanation: 'Recognition of excess tax paid as prepaid current tax asset under SFRS(I) 1-12 §12.'
+      },
+      {
+        id: 'basic-tax-payment',
+        accountCode: creditAcct.code,
+        accountName: creditAcct.name,
+        category: 'ASSET',
+        debit: 0,
+        credit: paidAmount,
+        lineExplanation: 'Disbursement of tax payment to IRAS from bank/cash account.'
+      }
+    ] : [];
+
+    return {
+      scenarioType: 'BASIC_BOOKKEEPING',
+      authorityStatus: isComplete ? 'DETERMINISTIC' : 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: title,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      amount: paidAmount,
+      accountingTreatmentSummary: rationale,
+      directGroups: isComplete ? [{
+        id: 'basic-current_tax_split',
+        eventDate,
+        title,
+        summary: title + ' — SGD ' + paidAmount.toFixed(2),
+        lines,
+        totalDebit: paidAmount,
+        totalCredit: paidAmount,
+        isBalanced: true,
+        citations: [],
+        rationalePoints: [rationale],
+        authorityStatus: 'DETERMINISTIC'
+      }] : [],
+      isComplete,
+      missingFields
+    };
+  }
+
+  // Branch: Monthly payroll and CPF accrual or prior accrual settlement
+  if (payrollSplit || payrollLiabilitySplit) {
     const settlement = resolvePayrollSettlementStatus(query);
-    const { salaryPaid, cpfPaid, salaryPayMethod, cpfPayMethod } = settlement;
-    const salaryPayAcct = salaryPayMethod === 'CASH' ? cash() : bank();
-    const cpfPayAcct = cpfPayMethod === 'CASH' ? cash() : bank();
+    const { salaryPaid, cpfPaid, salaryPaymentMethod, cpfPaymentMethod, isPriorAccrualSettlement } = settlement;
+    const salaryPayAcct = salaryPaymentMethod === 'CASH' ? cash() : bank();
+    const cpfPayAcct = cpfPaymentMethod === 'CASH' ? cash() : bank();
 
     let title: string;
     let rationale: string;
     let groupId: string;
-
-    if (salaryPaid && cpfPaid) {
-      title = 'Monthly payroll and CPF payment';
-      groupId = 'basic-payroll_payment';
-      rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with net salaries and CPF contributions paid from cash or bank.';
-    } else if (salaryPaid && !cpfPaid) {
-      title = 'Monthly payroll payment and CPF accrual';
-      groupId = 'basic-payroll_payment_accrual';
-      rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with net salaries paid from cash or bank and combined employee and employer CPF payable to CPF Board.';
-    } else if (!salaryPaid && cpfPaid) {
-      title = 'Monthly payroll accrual and CPF payment';
-      groupId = 'basic-payroll_accrual_cpf_payment';
-      rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with combined employee and employer CPF contributions paid from cash or bank and net salaries payable to employees.';
-    } else {
-      title = template.title;
-      groupId = 'basic-payroll_accrual';
-      rationale = template.rationale;
-    }
-
+    let totalAmount: number;
     let lines: JournalLine[] = [];
-    if (isComplete) {
+
+    if (isPriorAccrualSettlement) {
+      const salPayableCents = payrollSplit
+        ? (payrollSplit.grossCents - payrollSplit.employeeCpfCents)
+        : payrollLiabilitySplit!.salPayableCents;
+      const cpfPayableCents = payrollSplit
+        ? (payrollSplit.employeeCpfCents + payrollSplit.employerCpfCents)
+        : payrollLiabilitySplit!.cpfPayableCents;
+
+      const salPayableAmount = Number(salPayableCents) / 100;
+      const cpfPayableAmount = Number(cpfPayableCents) / 100;
+      const totalSettlementCents = (salaryPaid ? salPayableCents : 0n) + (cpfPaid ? cpfPayableCents : 0n);
+      totalAmount = Number(totalSettlementCents) / 100;
+
+      title = 'Settlement of accrued payroll and CPF liabilities';
+      groupId = 'basic-payroll_accrual_settlement';
+      rationale = 'Settlement of previously accrued salaries and CPF liabilities extinguishes the respective liabilities without recognizing duplicate expense in the settlement period under SFRS(I) 1-19.';
+
+      if (isComplete) {
+        if (salaryPaid && cpfPaid) {
+          if (salaryPayAcct.code === cpfPayAcct.code) {
+            lines = [
+              {
+                id: 'basic-payroll-settle-salaries',
+                accountCode: '2110',
+                accountName: 'Salaries Payable',
+                category: 'LIABILITY',
+                debit: salPayableAmount,
+                credit: 0,
+                lineExplanation: 'Settlement of previously accrued salaries payable to employees.'
+              },
+              {
+                id: 'basic-payroll-settle-cpf',
+                accountCode: '2120',
+                accountName: 'CPF Payable',
+                category: 'LIABILITY',
+                debit: cpfPayableAmount,
+                credit: 0,
+                lineExplanation: 'Settlement of previously accrued CPF contributions to CPF Board.'
+              },
+              {
+                id: 'basic-payroll-settle-payment',
+                accountCode: salaryPayAcct.code,
+                accountName: salaryPayAcct.name,
+                category: 'ASSET',
+                debit: 0,
+                credit: totalAmount,
+                lineExplanation: 'Disbursement of accrued salaries and remittance of accrued CPF from bank/cash account.'
+              }
+            ];
+          } else {
+            lines = [
+              {
+                id: 'basic-payroll-settle-salaries',
+                accountCode: '2110',
+                accountName: 'Salaries Payable',
+                category: 'LIABILITY',
+                debit: salPayableAmount,
+                credit: 0,
+                lineExplanation: 'Settlement of previously accrued salaries payable to employees.'
+              },
+              {
+                id: 'basic-payroll-settle-cpf',
+                accountCode: '2120',
+                accountName: 'CPF Payable',
+                category: 'LIABILITY',
+                debit: cpfPayableAmount,
+                credit: 0,
+                lineExplanation: 'Settlement of previously accrued CPF contributions to CPF Board.'
+              },
+              {
+                id: 'basic-payroll-settle-sal-pay',
+                accountCode: salaryPayAcct.code,
+                accountName: salaryPayAcct.name,
+                category: 'ASSET',
+                debit: 0,
+                credit: salPayableAmount,
+                lineExplanation: 'Disbursement of accrued salaries from bank/cash account.'
+              },
+              {
+                id: 'basic-payroll-settle-cpf-pay',
+                accountCode: cpfPayAcct.code,
+                accountName: cpfPayAcct.name,
+                category: 'ASSET',
+                debit: 0,
+                credit: cpfPayableAmount,
+                lineExplanation: 'Remittance of accrued CPF from bank/cash account.'
+              }
+            ];
+          }
+        } else if (salaryPaid && !cpfPaid) {
+          lines = [
+            {
+              id: 'basic-payroll-settle-salaries',
+              accountCode: '2110',
+              accountName: 'Salaries Payable',
+              category: 'LIABILITY',
+              debit: salPayableAmount,
+              credit: 0,
+              lineExplanation: 'Settlement of previously accrued salaries payable to employees.'
+            },
+            {
+              id: 'basic-payroll-settle-sal-pay',
+              accountCode: salaryPayAcct.code,
+              accountName: salaryPayAcct.name,
+              category: 'ASSET',
+              debit: 0,
+              credit: salPayableAmount,
+              lineExplanation: 'Disbursement of accrued salaries from bank/cash account.'
+            }
+          ];
+        } else if (!salaryPaid && cpfPaid) {
+          lines = [
+            {
+              id: 'basic-payroll-settle-cpf',
+              accountCode: '2120',
+              accountName: 'CPF Payable',
+              category: 'LIABILITY',
+              debit: cpfPayableAmount,
+              credit: 0,
+              lineExplanation: 'Settlement of previously accrued CPF contributions to CPF Board.'
+            },
+            {
+              id: 'basic-payroll-settle-cpf-pay',
+              accountCode: cpfPayAcct.code,
+              accountName: cpfPayAcct.name,
+              category: 'ASSET',
+              debit: 0,
+              credit: cpfPayableAmount,
+              lineExplanation: 'Remittance of accrued CPF from bank/cash account.'
+            }
+          ];
+        }
+      }
+    } else {
+      const grossAmount = Number(payrollSplit!.grossCents) / 100;
+      const employerCpfAmount = Number(payrollSplit!.employerCpfCents) / 100;
+      const netPayCents = payrollSplit!.grossCents - payrollSplit!.employeeCpfCents;
+      const netPayAmount = Number(netPayCents) / 100;
+      const totalCpfCents = payrollSplit!.employeeCpfCents + payrollSplit!.employerCpfCents;
+      const totalCpfAmount = Number(totalCpfCents) / 100;
+      const totalCents = payrollSplit!.grossCents + payrollSplit!.employerCpfCents;
+      totalAmount = Number(totalCents) / 100;
+
+      if (salaryPaid && cpfPaid) {
+        title = 'Monthly payroll and CPF payment';
+        groupId = 'basic-payroll_payment';
+        rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with net salaries and CPF contributions paid from cash or bank.';
+      } else if (salaryPaid && !cpfPaid) {
+        title = 'Monthly payroll payment and CPF accrual';
+        groupId = 'basic-payroll_payment_accrual';
+        rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with net salaries paid from cash or bank and combined employee and employer CPF payable to CPF Board.';
+      } else if (!salaryPaid && cpfPaid) {
+        title = 'Monthly payroll accrual and CPF payment';
+        groupId = 'basic-payroll_accrual_cpf_payment';
+        rationale = 'Under SFRS(I) 1-19, short-term employee benefits (gross salaries and employer CPF contributions) are recognised as expenses when employees render service, with combined employee and employer CPF contributions paid from cash or bank and net salaries payable to employees.';
+      } else {
+        title = template.title;
+        groupId = 'basic-payroll_accrual';
+        rationale = template.rationale;
+      }
+
+      if (isComplete) {
       if (salaryPaid && cpfPaid) {
         if (salaryPayAcct.code === cpfPayAcct.code) {
           lines = [
@@ -2295,6 +2918,7 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
         ];
       }
     }
+  }
 
     return {
       scenarioType: 'BASIC_BOOKKEEPING',
@@ -2329,7 +2953,26 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   const cents = periodAdjustment?.cents ?? currentTaxRes?.cents ?? deferredTaxRes?.cents ?? amountCents(query);
   const amount = cents ? Number(cents) / 100 : undefined;
   const skipGstSuffix = /(?:WITHDRAWAL|TRANSFER|PAYROLL|CPF|TAX|DEPRECIATION|AMORTISATION|PREPAID_EXPENSE_RECOGNITION)/.test(template.id);
-  const rationale = template.rationale + (periodAdjustment?.note ? periodAdjustment.note : '') + (skipGstSuffix
+
+  let dynamicTitle = template.title;
+  let dynamicRationale = template.rationale;
+
+  if (template.id === 'DEFERRED_TAX_MOVEMENT') {
+    if (pair.debit?.category === 'OTHER_COMPREHENSIVE_INCOME' || pair.credit?.category === 'OTHER_COMPREHENSIVE_INCOME') {
+      dynamicTitle = 'Deferred tax recognised in other comprehensive income';
+      dynamicRationale = 'Under SFRS(I) 1-12 §61A(a), current and deferred tax relating to items recognised in other comprehensive income is recognised in other comprehensive income rather than profit or loss.';
+    } else if (pair.debit?.category === 'EQUITY' || pair.credit?.category === 'EQUITY') {
+      dynamicTitle = 'Deferred tax recognised directly in equity';
+      dynamicRationale = 'Under SFRS(I) 1-12 §61A(b), current and deferred tax relating to items recognised directly in equity is recognised directly in equity rather than profit or loss.';
+    }
+  } else if (template.id === 'CURRENT_TAX_PAYMENT') {
+    if (pair.debit?.name === 'Prepaid Income Tax') {
+      dynamicTitle = 'Prepayment of current corporate income tax';
+      dynamicRationale = 'Under SFRS(I) 1-12 §12, income tax paid in advance or where no current tax liability exists is recognized as a current tax asset (Prepaid Income Tax) until the tax liability is assessed.';
+    }
+  }
+
+  const rationale = dynamicRationale + (periodAdjustment?.note ? periodAdjustment.note : '') + (skipGstSuffix
     ? '' : ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.');
 
   const lines: JournalLine[] = !isComplete || amount === undefined ? [] : [
@@ -2359,7 +3002,7 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     queryIntent: 'TRANSACTION',
     primaryDomain: 'ACCOUNTING_SFRS',
     rawQuery: query,
-    transactionTitle: template.title,
+    transactionTitle: dynamicTitle,
     functionalCurrency: 'SGD',
     transactionCurrency: 'SGD',
     amount,
@@ -2367,8 +3010,8 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     directGroups: isComplete && amount !== undefined ? [{
       id: 'basic-' + template.id.toLowerCase(),
       eventDate,
-      title: template.title,
-      summary: template.title + ' — SGD ' + amount.toFixed(2),
+      title: dynamicTitle,
+      summary: dynamicTitle + ' — SGD ' + amount.toFixed(2),
       lines,
       totalDebit: amount,
       totalCredit: amount,
@@ -2441,7 +3084,7 @@ export function resolveBasicOwnerDrawingsFollowUp(
   // paymentMethod follow-up
   if (missingKeys.has('paymentMethod')) {
     const isCash = /^(?:(?:paid\s+)?in\s+cash|(?:with|by)\s+cash|cash|from\s+petty\s+cash|physical\s+cash)$/i.test(answer);
-    const isBank = /^(?:(?:paid\s+)?(?:by|via|through)\s+(?:a\s+)?bank\s+transfer|bank\s+transfer|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|bank\s+account|from\s+bank|(?:by|via)\s+cheque|(?:by|via)\s+check|(?:via|by)\s+giro|(?:via|by)\s+paynow|by\s+wire|wire\s+transfer)$/i.test(answer);
+    const isBank = /^(?:(?:paid\s+)?(?:by|via|through)\s+(?:a\s+)?bank(?:\s+transfer)?|bank\s+transfer|bank|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|(?:the\s+|our\s+)?bank(?:\s+account)?|from\s+bank|(?:by|via)\s+cheque|(?:by|via)\s+check|(?:via|by)\s+giro|(?:via|by)\s+paynow|by\s+wire|wire\s+transfer)$/i.test(answer);
     const isCredit = /^(?:on\s+credit|on\s+account|credit)$/i.test(answer);
 
     const hasPayrollOrCpfTerms = /\b(?:CPF|payroll|salar(?:y|ies)|wages?)\b/i.test(original);
@@ -2459,8 +3102,88 @@ export function resolveBasicOwnerDrawingsFollowUp(
     }
   }
 
+  // salaryPaymentMethod / cpfPaymentMethod follow-up
+  if (missingKeys.has('salaryPaymentMethod') || missingKeys.has('cpfPaymentMethod')) {
+    if (/^(?:on\s+credit|on\s+account|credit)$/i.test(answer)) {
+      return { ...currentScenario, directGroups: [], isComplete: false };
+    }
+
+    const isSnippetCash = (text: string) => /\b(?:in\s+cash|with\s+cash|by\s+cash|petty\s+cash|physical\s+cash|^cash$)\b/i.test(text.trim());
+    const isSnippetBank = (text: string) => /\b(?:by\s+bank|via\s+bank|through\s+bank|bank\s+transfer|^bank$|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|(?:the\s+|our\s+)?bank(?:\s+account)?|from\s+bank|(?:by|via)\s+cheque|(?:by|via)\s+check|(?:via|by)\s+giro|(?:via|by)\s+paynow|by\s+wire|wire\s+transfer)\b/i.test(text.trim());
+
+    // 2. Support compound two-leg answers (e.g., "salaries in cash, CPF by bank", "salaries paid in cash and CPF paid by bank transfer")
+    const compoundParts = answer.split(/;|,|\band\b/i).map(s => s.trim()).filter(Boolean);
+    let compoundSalaryMethod: 'cash' | 'bank' | null = null;
+    let compoundCpfMethod: 'cash' | 'bank' | null = null;
+
+    for (const p of compoundParts) {
+      const mentionsSalary = /\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(p);
+      const mentionsCpf = /\bcpf\b/i.test(p);
+      if (mentionsSalary && !mentionsCpf) {
+        if (isSnippetCash(p)) compoundSalaryMethod = 'cash';
+        else if (isSnippetBank(p)) compoundSalaryMethod = 'bank';
+      } else if (mentionsCpf && !mentionsSalary) {
+        if (isSnippetCash(p)) compoundCpfMethod = 'cash';
+        else if (isSnippetBank(p)) compoundCpfMethod = 'bank';
+      }
+    }
+
+    if (compoundSalaryMethod || compoundCpfMethod) {
+      let suffixes = '';
+      if (compoundSalaryMethod && missingKeys.has('salaryPaymentMethod')) {
+        suffixes += compoundSalaryMethod === 'cash' ? '; salaries paid in cash' : '; salaries paid by bank transfer';
+      }
+      if (compoundCpfMethod && missingKeys.has('cpfPaymentMethod')) {
+        suffixes += compoundCpfMethod === 'cash' ? '; cpf paid in cash' : '; cpf paid by bank transfer';
+      }
+      if (suffixes) {
+        return matchBasicTransaction(`${baseQuery}${suffixes}`);
+      }
+    }
+
+    // 3. Single-method answers
+    const restrictsToSalary = /\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(answer) && !/\bcpf\b/i.test(answer);
+    const restrictsToCpf = /\bcpf\b/i.test(answer) && !/\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(answer);
+
+    const isCash = isSnippetCash(answer) || /^(?:(?:both\s+|salaries\s+|cpf\s+)?(?:paid\s+)?in\s+cash|(?:with|by)\s+cash|cash|from\s+petty\s+cash|physical\s+cash)$/i.test(answer);
+    const isBank = isSnippetBank(answer) || /^(?:(?:both\s+|salaries\s+|cpf\s+)?(?:paid\s+)?(?:by|via|through)\s+(?:a\s+)?bank(?:\s+transfer)?|bank\s+transfer|bank|from\s+(?:the\s+|our\s+)?bank(?:\s+account)?|(?:the\s+|our\s+)?bank(?:\s+account)?|from\s+bank|(?:by|via)\s+cheque|(?:by|via)\s+check|(?:via|by)\s+giro|(?:via|by)\s+paynow|by\s+wire|wire\s+transfer)$/i.test(answer);
+
+    if (isCash || isBank) {
+      const chosen = isCash ? 'cash' : 'bank';
+      if (restrictsToSalary && missingKeys.has('salaryPaymentMethod')) {
+        return matchBasicTransaction(`${baseQuery}; salaries paid ${chosen === 'cash' ? 'in cash' : 'by bank transfer'}`);
+      } else if (restrictsToCpf && missingKeys.has('cpfPaymentMethod')) {
+        return matchBasicTransaction(`${baseQuery}; cpf paid ${chosen === 'cash' ? 'in cash' : 'by bank transfer'}`);
+      } else if (missingKeys.has('salaryPaymentMethod') && missingKeys.has('cpfPaymentMethod')) {
+        return matchBasicTransaction(`${baseQuery}; both salaries and CPF paid ${chosen === 'cash' ? 'in cash' : 'by bank transfer'}`);
+      } else if (missingKeys.has('salaryPaymentMethod')) {
+        return matchBasicTransaction(`${baseQuery}; salaries paid ${chosen === 'cash' ? 'in cash' : 'by bank transfer'}`);
+      } else if (missingKeys.has('cpfPaymentMethod')) {
+        return matchBasicTransaction(`${baseQuery}; cpf paid ${chosen === 'cash' ? 'in cash' : 'by bank transfer'}`);
+      }
+    }
+  }
+
   // periodCharge follow-up
   if (missingKeys.has('periodCharge')) {
+    const cleanBaseQuery = baseQuery.replace(/;\s*stated\s+periodic\s+charge\s+is\s+(?:\bSGD\s*|S\$\s*|\$\s*)[\d,.]+/gi, '').trim();
+
+    // Check nil residual or period follow-ups for dep/amort BEFORE chargeAmtMatch
+    if (/^(?:nil|zero|no)\s+(?:residual(?:\s+value)?|salvage(?:\s+value)?)$/i.test(answer)) {
+      return matchBasicTransaction(`${cleanBaseQuery}; with nil residual value`);
+    }
+    if (!isPrepaidExpenseRecognition(original) && /^(?:(?:over|for)\s+)?(?:a\s+useful\s+life\s+of\s+)?(\d+|a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve)\s+years?$/i.test(answer)) {
+      return matchBasicTransaction(`${cleanBaseQuery}; useful life of ${answer.trim()}`);
+    }
+    if (!isPrepaidExpenseRecognition(original) && /^(?:annual(?:ly)?|yearly|monthly|quarterly|half[- ]year(?:ly)?|semi[- ]?annual(?:ly)?)$/i.test(answer)) {
+      const normPeriod = /^(?:half[- ]year(?:ly)?|semi[- ]?annual(?:ly)?)$/i.test(answer)
+        ? 'half-yearly'
+        : /^annual(?:ly)?|yearly$/i.test(answer)
+          ? 'annual'
+          : answer.trim().toLowerCase();
+      return matchBasicTransaction(`${cleanBaseQuery}; ${normPeriod} charge`);
+    }
+
     const chargeAmtMatch = !/%/.test(answer)
       ? answer.match(/^(?:(?:it\s+is|the\s+(?:periodic\s+)?(?:depreciation\s+|amortisation\s+|amortization\s+|prepaid\s+)?(?:charge|expense|amount)\s+(?:is\s+)?|(?:periodic\s+)?(?:charge|expense)\s+(?:of\s+|is\s+)?))?(?:SGD\s*|S\$\s*|\$\s*)?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d{1,2}))?(?:\s*SGD)?$/i)
       : null;
@@ -2472,7 +3195,7 @@ export function resolveBasicOwnerDrawingsFollowUp(
         return { ...currentScenario, directGroups: [], isComplete: false };
       }
       const digits = chargeAmtMatch[1].replace(/,/g, '') + (chargeAmtMatch[2] ? '.' + chargeAmtMatch[2] : '');
-      return matchBasicTransaction(`${baseQuery}; stated periodic charge is SGD ${digits}`);
+      return matchBasicTransaction(`${cleanBaseQuery}; stated periodic charge is SGD ${digits}`);
     }
 
     if (isPrepaidExpenseRecognition(original)) {
@@ -2496,7 +3219,7 @@ export function resolveBasicOwnerDrawingsFollowUp(
           } else if (/^(?:quarterly|one[- ]quarter|1[- ]quarter)$/i.test(cleanDur)) {
             cleanDur = '3 months';
           }
-          return matchBasicTransaction(`${baseQuery}; covering ${cleanDur}`);
+          return matchBasicTransaction(`${cleanBaseQuery}; covering ${cleanDur}`);
         }
 
         if ((origCoverage && !origElapsed) || isExplicitElapsed) {
@@ -2509,7 +3232,7 @@ export function resolveBasicOwnerDrawingsFollowUp(
           } else if (/^(?:quarterly|one[- ]quarter|1[- ]quarter)$/i.test(elapsedStr)) {
             elapsedStr = '1 quarter';
           }
-          return matchBasicTransaction(`${baseQuery}; ${elapsedStr} have elapsed`);
+          return matchBasicTransaction(`${cleanBaseQuery}; ${elapsedStr} have elapsed`);
         }
       }
     }
@@ -2549,6 +3272,42 @@ export function resolveBasicOwnerDrawingsFollowUp(
   if (missingKeys.has('taxType')) {
     if (/^(?:(?:it\s+is|for)\s+)?(?:corporate\s+(?:income\s+)?tax|current\s+(?:income\s+)?tax|income\s+tax|company\s+tax)$/i.test(answer)) {
       return matchBasicTransaction(`${baseQuery} for corporate income tax`);
+    }
+  }
+
+  // taxLiabilityStatus follow-up
+  if (missingKeys.has('taxLiabilityStatus')) {
+    if (/^(?:no\s+(?:existing|prior)\s+(?:tax\s+)?liability|prepaid(?:\s+income)?\s+tax|advance(?:\s+tax)?|no\s+prior\s+liability|no\s+liability)$/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; with no existing tax liability`);
+    }
+    if (/^(?:settl(?:es?|ing)\s+(?:an?\s+|the\s+)?existing\s+(?:current\s+tax\s+payable|tax\s+payable|tax\s+liability)|existing\s+(?:current\s+tax\s+payable|tax\s+payable|tax\s+liability)|settl(?:es?|ing)\s+(?:an?\s+|the\s+)?existing\s+liability)$/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; settling existing current tax payable`);
+    }
+  }
+
+  // deferredTaxRecognitionLocation follow-up
+  if (missingKeys.has('deferredTaxRecognitionLocation')) {
+    if (/\b(?:share\s+capital|ordinary\s+share\s+capital|share\s+issue\s+costs?)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; recognised directly in Share Capital`);
+    }
+    if (/\b(?:retained\s+earnings|opening\s+retained\s+earnings)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; recognised directly in Retained Earnings`);
+    }
+    if (/\b(?:capital\s+reserve|convertible\s+bond)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; recognised directly in Capital Reserve`);
+    }
+    if (/\b(?:revaluation\s+surplus|oci|other\s+comprehensive\s+income)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery}; recognised in other comprehensive income on revaluation surplus`);
+    }
+  }
+
+  // deferredTaxType follow-up
+  if (missingKeys.has('deferredTaxType')) {
+    if (/\b(?:deferred\s+tax\s+liability|\bdtl\b|liability)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery} for Deferred Tax Liability`);
+    }
+    if (/\b(?:deferred\s+tax\s+asset|\bdta\b|asset)\b/i.test(answer)) {
+      return matchBasicTransaction(`${baseQuery} for Deferred Tax Asset`);
     }
   }
 
