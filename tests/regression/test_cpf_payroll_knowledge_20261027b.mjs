@@ -18,7 +18,7 @@ import {
 
 const fixtureDir = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const readText = name => readFileSync(new URL(name, fixtureDir), 'utf8').replace(/^\uFEFF/, '').trim();
-const sourceBody = text => text.replace(/^SOURCE CAPTURE METADATA[\s\S]*?\n\n/, '').trim();
+const sourceBody = text => text.replace(/^SOURCE CAPTURE METADATA[\s\S]*?(?:\r?\n){2}/, '').trim();
 const rateFixture = readText('cpf-rate-tables-2026-extract.txt');
 const computationFixture = readText('cpf-computation-guidance-extract.txt');
 const owFixture = readText('cpf-ow-ceiling-extract.txt');
@@ -90,8 +90,42 @@ const requests = [
 
 for (const request of requests) {
   assert.equal(supportCpfPayrollKnowledgeRule(request), true, request.subject);
-  assert.equal(selectCpfPayrollKnowledgeQuotes(request).length, 1, request.subject);
+  const quotes = selectCpfPayrollKnowledgeQuotes(request);
+  assert.ok(quotes.length > 0, request.subject);
+  if (request !== requests[3]) assert.equal(quotes.length, 1, request.subject);
 }
+const decemberAwQuestion = {
+  ...requests[3],
+  subject: 'CPF payroll contribution review',
+  query: 'For CPF Additional Wages, can we keep our estimated annual ceiling unchanged in December if the employee actual Ordinary Wages turn out higher?'
+};
+assert.equal(supportCpfPayrollKnowledgeRule(decemberAwQuestion), true,
+  'The complete CPF source supports the actual-OW December recalculation question.');
+const decemberAwQuotes = selectCpfPayrollKnowledgeQuotes(decemberAwQuestion);
+const decemberAwQuote = decemberAwQuotes.join('\n\n');
+assert.ok(decemberAwQuote.length < 4_000, 'The AW explanation uses bounded first-page source paragraphs rather than the full example document.');
+assert.ok(decemberAwQuotes.every(quote => awText.includes(quote)),
+  'Every AW explanation passage is an unchanged excerpt from the retained official text.');
+assert.equal(supportCpfPayrollKnowledgeRule({ ...decemberAwQuestion, sourceText: decemberAwQuote }), true,
+  'The bounded, exact-source AW passage independently retains every required fact.');
+assert.match(decemberAwQuote,
+  /last month of employment or end of the year in December[\s\S]{0,500}actual OW subject to CPF paid up till[\s\S]{0,500}pay any shortfall in CPF contributions[\s\S]{0,500}refund application online/i,
+  'The verified passage retains the full actual-OW, shortfall and refund premise.');
+assert.match(decemberAwQuote, /AW ceiling is computed on a\s+per employer, per year basis[\s\S]*\$102,000 - Total Ordinary Wages[\s\S]*due and payable date of the AW/i,
+  'The passage keeps the formula and due-and-payable year qualification with the year-end instruction.');
+assert.equal(supportCpfPayrollKnowledgeRule({
+  ...decemberAwQuestion,
+  sourceText: decemberAwQuotes.filter(quote => !/Step 2:/i.test(quote)).join('\n\n')
+}), false, 'The source proof fails if the full-source Step 2 recalculation instruction is missing.');
+const reversedAwInstruction = awText.replace(/pay any shortfall in CPF contributions/i,
+  'do not pay any shortfall in CPF contributions');
+assert.notEqual(reversedAwInstruction, awText, 'The reversed-instruction mutation changes the source text.');
+assert.equal(supportCpfPayrollKnowledgeRule({
+  ...decemberAwQuestion,
+  sourceText: reversedAwInstruction
+}), false, 'A source that reverses the shortfall instruction cannot support the AW rule.');
+assert.equal(hasCpfPayrollKnowledgeContradiction({ ...decemberAwQuestion, sourceText: reversedAwInstruction }), true,
+  'A reversed shortfall instruction vetoes fallback to a weaker CPF claim.');
 const ratePdfBytes = readFileSync(new URL('cpf-rates-native-2026.pdf', fixtureDir));
 const rateUrl = requests[0].officialUrl;
 const repositoryPdfResult = await extractOfficialDocumentFromRetrieved({
@@ -138,6 +172,43 @@ if (repositoryPdfResult.status === 'SUCCESS') {
   assert.notEqual(swappedNativeRates, extractedRequest.sourceText, 'The native PDF rate-column mutation changes the extracted text.');
   assert.equal(supportCpfPayrollKnowledgeRule({ ...extractedRequest, sourceText: swappedNativeRates }), false,
     'The repository PDF extractor path rejects swapped employer/employee rates.');
+}
+
+const awPdfBytes = readFileSync(new URL('cpf-aw-ceiling-native-2026.pdf', fixtureDir));
+const awPdfUrl = requests[3].officialUrl;
+const repositoryAwPdfResult = await extractOfficialDocumentFromRetrieved({
+  url: awPdfUrl,
+  authority: 'CPF',
+  domain: 'CPF_BOARD',
+  standardOrActCode: 'CPF_2026_ADDITIONAL_WAGE_CEILING',
+  legalOrStandardInstrument: 'Examples for computation of Additional Wage (AW) Ceiling',
+  documentKind: 'PDF',
+  expectedTopic: {
+    standardIdentifiers: ['Examples for computation of Additional Wage (AW) Ceiling'],
+    expectedTitles: ['Examples for computation of Additional Wage (AW) Ceiling'],
+    topicTerms: ['additional wage', 'ordinary wages']
+  }
+}, {
+  status: 'SUCCESS',
+  httpStatus: 200,
+  sourceUrl: awPdfUrl,
+  finalUrl: awPdfUrl,
+  contentType: 'application/pdf',
+  contentBytes: new Uint8Array(awPdfBytes),
+  retrievedAt: '2026-10-27T00:00:00.000Z'
+});
+assert.equal(repositoryAwPdfResult.status, 'SUCCESS', 'the native CPF AW ceiling PDF extracts through the application document path');
+if (repositoryAwPdfResult.status === 'SUCCESS') {
+  const extractedAwRequest = { ...requests[3], sourceText: repositoryAwPdfResult.record.sourceText };
+  const extractedAwQuote = selectCpfPayrollKnowledgeQuotes(extractedAwRequest)[0];
+  assert.ok(extractedAwQuote?.length < 4_000,
+    'the native PDF path selects a bounded AW rule passage from its full extracted source.');
+  assert.equal(supportCpfPayrollKnowledgeRule({ ...extractedAwRequest, sourceText: extractedAwQuote }), true,
+    'the bounded native PDF passage retains the complete strict AW source facts.');
+  assert.ok(extractedAwQuote.length < 3_200,
+    'the native-PDF source block remains within the bounded exact-quote length.');
+  assert.ok(repositoryAwPdfResult.record.sourceText.includes(extractedAwQuote),
+    'the selected native-PDF source block is unchanged official text.');
 }
 const scTableQuote = selectCpfPayrollKnowledgeQuotes(requests[0])[0];
 assert.ok(scTableQuote.length < 12_000, 'The current table quote stays within the evidence excerpt budget.');
@@ -218,6 +289,8 @@ const annualCeiling = calculateCpfPayroll2026({ ...basePayroll, ordinaryWageCent
 assert.equal(annualCeiling.status, 'CALCULATED');
 assert.equal(annualCeiling.ordinaryWageSubjectCents, 800_000, 'The OW contribution base is capped at S$8,000.');
 assert.equal(annualCeiling.additionalWageSubjectCents, 600_000, 'Projected 2026 full-year OW of S$96,000 leaves S$6,000 AW ceiling.');
+assert.equal(annualCeiling.availableAwCeilingBeforePaymentCents, 600_000);
+assert.equal(annualCeiling.remainingAwCeilingCents, 0, 'The returned remaining ceiling is after the current AW payment.');
 assert.equal(annualCeiling.totalContributionCents, 518_000);
 assert.equal(annualCeiling.employeeContributionCents, 280_000);
 assert.equal(annualCeiling.employerContributionCents, 238_000);
@@ -335,6 +408,42 @@ const finalDecember = calculateCpfPayroll2026({
 assert.equal(finalDecember.status, 'CALCULATED');
 assert.equal(finalDecember.projectedAnnualOwSubjectCents, 9_600_000, 'December uses actual OW paid to date and current month.');
 assert.equal(finalDecember.additionalWageSubjectCents, 600_000);
+assert.equal(finalDecember.availableAwCeilingBeforePaymentCents, 600_000);
+assert.equal(finalDecember.remainingAwCeilingCents, 0);
+const firstBonus = calculateCpfPayroll2026({ ...basePayroll, additionalWageCents: 200_000 });
+assert.equal(firstBonus.status, 'CALCULATED');
+assert.equal(firstBonus.availableAwCeilingBeforePaymentCents, 600_000);
+assert.equal(firstBonus.remainingAwCeilingCents, 400_000);
+const secondBonus = calculateCpfPayroll2026({
+  ...basePayroll, contributionMonth: '2026-02', priorYearToDateAdditionalWageSubjectCents: firstBonus.additionalWageSubjectCents,
+  additionalWageCents: 200_000
+});
+assert.equal(secondBonus.status, 'CALCULATED');
+assert.equal(secondBonus.availableAwCeilingBeforePaymentCents, 400_000);
+assert.equal(secondBonus.remainingAwCeilingCents, 200_000);
+const ceilingExhaustion = calculateCpfPayroll2026({
+  ...basePayroll, contributionMonth: '2026-03', priorYearToDateAdditionalWageSubjectCents: 400_000,
+  additionalWageCents: 500_000
+});
+assert.equal(ceilingExhaustion.status, 'CALCULATED');
+assert.equal(ceilingExhaustion.additionalWageSubjectCents, 200_000);
+assert.equal(ceilingExhaustion.remainingAwCeilingCents, 0);
+const afterExhaustion = calculateCpfPayroll2026({
+  ...basePayroll, contributionMonth: '2026-04', priorYearToDateAdditionalWageSubjectCents: 600_000,
+  additionalWageCents: 50_000
+});
+assert.equal(afterExhaustion.status, 'CALCULATED');
+assert.equal(afterExhaustion.availableAwCeilingBeforePaymentCents, 0);
+assert.equal(afterExhaustion.additionalWageSubjectCents, 0);
+assert.equal(afterExhaustion.remainingAwCeilingCents, 0);
+const yearEndActualOwIncrease = calculateCpfPayroll2026({
+  ...basePayroll, contributionMonth: '2026-12', priorYearToDateOrdinaryWageSubjectCents: 8_800_000,
+  priorYearToDateAdditionalWageSubjectCents: 650_000, ordinaryWageCents: 800_000,
+  additionalWageCents: 0, estimatedFullYearOrdinaryWageSubjectCents: 8_800_000
+});
+assert.equal(yearEndActualOwIncrease.status, 'REVIEW_REQUIRED',
+  'December recalculates from actual OW and flags prior AW above the reduced ceiling for review.');
+assert.match(yearEndActualOwIncrease.reason, /exceeds the recalculated ceiling/i);
 const awCeilingDecrease = calculateCpfPayroll2026({
   ...basePayroll, contributionMonth: '2026-08', ordinaryWageCents: 500_000, priorYearToDateOrdinaryWageSubjectCents: 5_000_000,
   priorYearToDateAdditionalWageSubjectCents: 5_000_000, estimatedFullYearOrdinaryWageSubjectCents: 9_600_000,
@@ -376,10 +485,79 @@ const renderedPr1FullFull = getCpfPayrollKnowledgeEvidence(fullFullSprQuery, str
 assert.match(renderedPr1FullFull?.text || '', /only after it approves/);
 assert.doesNotMatch(renderedPr1FullFull?.text || '', /17%\/20%/,
   'A Table 1 SPR full/full answer states its approval condition instead of presenting SC/third-year rates as unconditional.');
+const birthdayRateQuery = 'How do CPF contribution percentages change when an employee reaches age 55 on their birthday?';
+const renderedBirthdayRates = getCpfPayrollKnowledgeEvidence(birthdayRateQuery, stream, issue);
+assert.equal(renderedBirthdayRates?.ruleId, 'CPF_2026_CONTRIBUTION_TABLES',
+  'Percentage and birthday phrasing reaches the guarded 2026 rate-table explanation.');
+assert.match(renderedBirthdayRates?.text || '', /first day of the month after the 55th, 60th, 65th or 70th birthday/i,
+  'The existing source-backed age transition explanation is rendered without adding rate facts.');
+assert.equal(getCpfPayrollKnowledgeEvidence('What CPF contribution rates applied in 2025?', stream, issue), undefined,
+  'Birthday and percentage recognition does not weaken the historical-rate guard.');
 assert.equal(getCpfPayrollKnowledgeEvidence(
   'For staff earning S$400 in total wages for a month, is there always an employee CPF deduction as well as an employer contribution?',
   stream, { ...issue, subject: 'CPF low-wage employer and employee contribution shares' }
 ), undefined, 'The new 2026 rate renderer does not displace the existing low-wage explanation with unrelated full-rate percentages.');
+
+const prHash = createHash('sha256').update(prText).digest('hex');
+const prSource = {
+  key: 'cpf-pr-year-source', title: 'CPF Permanent Resident contribution years', publisher: 'CPF Board',
+  documentTitle: requests[4].subject, officialUrl: requests[4].officialUrl, provenance: 'LIVE_EXTERNAL', claims: [{
+    text: prText, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: ['cpf-pr-year-issue'], provenance: 'LIVE_EXTERNAL',
+    fetchedSourceBinding: {
+      recordId: 'cpf-pr-year-official-extract', documentHash: prHash,
+      canonicalUrl: requests[4].officialUrl, retrievedAt: '2026-10-27T00:00:00Z'
+    }
+  }]
+};
+const prIssue = {
+  id: 'cpf-pr-year-issue', subject: 'CPF SPR year of status timing', population: 'Employer',
+  operation: 'EXPLAIN_RULE', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: []
+};
+const prStream = { ...stream, issues: [prIssue], sources: [prSource] };
+const prDateQuestion = 'An employee became a PR on 18 May 2025. When does the second year of CPF contributions start?';
+const renderedPrDates = getCpfPayrollKnowledgeEvidence(prDateQuestion, prStream, prIssue);
+assert.equal(renderedPrDates?.ruleId, 'CPF_PERMANENT_RESIDENT_YEAR');
+assert.match(renderedPrDates?.text || '', /18\/05\/2025[\s\S]*31\/05\/2026[\s\S]*01\/06\/2026[\s\S]*31\/05\/2027[\s\S]*01\/06\/2027/,
+  'The role-bound PR date determines the first, second and third year boundaries in Singapore date format.');
+assert.doesNotMatch(renderedPrDates?.text || '', /\d+%|S\$\s?\d/,
+  'PR-year date calculation does not infer historical payroll rates or amounts.');
+const missingPrDate = getCpfPayrollKnowledgeEvidence(
+  'When does an SPR move into the second year of CPF contributions?', prStream, prIssue
+);
+assert.match(missingPrDate?.text || '', /exact PR status date is needed/i,
+  'A missing conversion date returns the general sourced rule without inventing an example date.');
+const invalidPrDate = getCpfPayrollKnowledgeEvidence(
+  'An employee became a PR on 31 February 2025. When does the second year of CPF contributions start?', prStream, prIssue
+);
+assert.match(invalidPrDate?.text || '', /exact PR status date is needed/i,
+  'An impossible conversion date is not normalized into a computed date.');
+assert.doesNotMatch(invalidPrDate?.text || '', /01\/03\/2026|28\/02\/2026/);
+for (const disputedQuery of [
+  'An employee was not granted PR status on 18 May 2025. When does the second year of CPF contributions start?',
+  'An employee did not become a PR on 18 May 2025. When does the second year of CPF contributions start?',
+  'Was the employee granted PR status on 18 May 2025? When does the second year of CPF contributions start?',
+  'An employee may have been granted PR status on 18 May 2025. When does the second year of CPF contributions start?',
+  'If an employee became a PR on 18 May 2025, when would the second year of CPF contributions start?',
+  'An employee was NOT granted PR status on 18 May 2025, but the actual conversion date is unconfirmed. When does the second year of CPF contributions start?',
+  'The employee was NOT granted PR status on 18 May 2025 but says the actual date was 20 May 2025. When does the second year of CPF contributions start?',
+  'An employee was granted PR status on 18 May 2025, but that date was retracted. When does the second year of CPF contributions start?',
+  'An employee was granted PR status on 18 May 2025. That date was retracted. When does the second year of CPF contributions start?',
+  'An employee was granted PR status on 18 May 2025. Correction: that was the application date, not the conversion date. When does the second year of CPF contributions start?'
+]) {
+  const disputedPrDate = getCpfPayrollKnowledgeEvidence(disputedQuery, prStream, prIssue);
+  assert.match(disputedPrDate?.text || '', /exact PR status date is needed/i,
+    `A negated, conditional, uncertain or retracted PR premise requests clarification: ${disputedQuery}`);
+  assert.doesNotMatch(disputedPrDate?.text || '', /18\/05\/2025|01\/06\/2026/,
+    'A disputed PR premise does not produce calculated year boundaries.');
+}
+const ambiguousPrDates = getCpfPayrollKnowledgeEvidence(
+  'An employee became a PR on 18 May 2025, then converted to PR on 10 June 2025. When does the second CPF year start?',
+  prStream, prIssue
+);
+assert.match(ambiguousPrDates?.text || '', /exact PR status date is needed/i,
+  'Multiple conflicting conversion dates fall back to the general rule instead of selecting one.');
+assert.doesNotMatch(ambiguousPrDates?.text || '', /18\/05\/2025|10\/06\/2025|01\/06\/2026/);
+
 const lowWageQuery = 'For staff earning S$400 in total wages for a month, is there always an employee CPF deduction as well as an employer contribution?';
 const lowWageRequest = {
   authority: 'CPF', topicId: 'cpf-contribution-computation', query: lowWageQuery,

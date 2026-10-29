@@ -204,6 +204,13 @@ function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
     : rule.id === 'ACRA_XBRL_FINANCIAL_STATEMENT_TEMPLATES' ? '19 october 2026' : undefined;
   const transitionQuestion = Boolean(allowedBoundary && explicitDates.length === 1 && explicitDates[0] === allowedBoundary
     && /\b(?:from|on|effective|commenc\w*)\s+\d{1,2}\s+october\s+2026\b/i.test(query));
+  const currentOfficerChangeExplanation = rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020' &&
+    years.length > 0 && years.every(year => year === '2026') && /\boctober\s+2026\b/i.test(query) &&
+    /\bannual[- ]return\b/i.test(query) && /\b(?:change|commenc\w*)\b/i.test(query) &&
+    /\b(?:ceo|chief executive|officer particulars?)\b/i.test(query) &&
+    /\b(?:does|what|which|ask|require)\b/i.test(query) &&
+    !/\b(?:filed|submitted|lodged|filing date|our company|my company|historical|prior|previous|past)\b/i.test(query);
+  if (currentOfficerChangeExplanation) return false;
   if (years.length > 0 && (!transitionQuestion || years.some(year => year !== '2026'))) return true;
   if (explicitDates.length > 0 && !transitionQuestion) return true;
   if (transitionQuestion && /\b(?:was|were|has|have|had|my|our|this company's|a specific|the return filed)\b[\s\S]{0,90}\b(?:filed|submitted|lodged|applicable|applied)\b/i.test(query)) return true;

@@ -2,6 +2,7 @@ import type { RequestedQuestionConcept } from '../services/semanticQuestionUnder
 import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
 import { supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
 import { hasIrasMasKnowledgeContradiction, supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
+import { supportStatutoryWorkflowRule } from './statutoryWorkflows20261029';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
@@ -608,9 +609,10 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
     for (const topicId of input.topicIds) {
       const request = { authority: 'IRAS', topicId, query: input.subject, subject: input.subject,
         sourceText: input.sourceText };
-      const support = supportIrasMasKnowledgeRule(request);
-      if (support === true && concepts.every(concept => supportIrasMasKnowledgeRule({ ...request,
-        subject: [concept.label, ...concept.terms].join(' ') }) === true)) return true;
+      const support = supportIrasMasKnowledgeRule(request) ?? supportStatutoryWorkflowRule(request);
+      if (support === true && concepts.every(concept => (supportIrasMasKnowledgeRule({ ...request,
+        subject: [concept.label, ...concept.terms].join(' ') }) ?? supportStatutoryWorkflowRule({ ...request,
+        subject: [concept.label, ...concept.terms].join(' ') })) === true)) return true;
       // Incomplete new-family proof may use the bounded legacy semantic proof;
       // only an explicit new-family contradiction/scope veto blocks fallback.
       if (support === false && hasIrasMasKnowledgeContradiction(request)) return false;

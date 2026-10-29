@@ -275,10 +275,50 @@ assert.equal(supportIrasMasKnowledgeRule(extractedTreatyZeroWht), true,
   'the complete WHT filing family survives visible HTML extraction with bullet markers');
 assert.equal(selectIrasMasKnowledgeQuotes(extractedTreatyZeroWht).length, 6,
   'all six filing, timing, deemed-payment, director-fee, GIRO and consolidation passages remain required');
+for (const query of [
+  'We paid a non-resident on 1 October 2026. When is WHT filing due?',
+  'If we pay a non-resident on 12 November 2026, when is WHT filing due?'
+]) {
+  const datedPayment = { ...extractedTreatyZeroWht, topicId: 'iras-wht-deemed-payment-date', query };
+  assert.equal(supportIrasMasKnowledgeRule(datedPayment), true,
+    `An ordinary 2026 transaction date does not imply a historical or future rule request: ${query}`);
+  assert.equal(selectIrasMasKnowledgeQuotes(datedPayment).length, 6,
+    'Dated payment scenarios still require all WHT deadline and deemed-payment premises.');
+}
+assert.equal(supportIrasMasKnowledgeRule({ ...extractedTreatyZeroWht,
+  topicId: 'iras-wht-deemed-payment-date',
+  query: 'We paid a non-resident on 1 October 2025. What was the WHT filing due date?'
+}), false, 'Current source guidance does not establish the historical 2025 rule.');
+assert.equal(supportIrasMasKnowledgeRule({ ...extractedTreatyZeroWht,
+  topicId: 'iras-wht-deemed-payment-date',
+  query: 'We paid a non-resident on 1 October 2026, but the contractual payment was due on 1 December 2025. When is WHT filing due?'
+}), false, 'A current-year remittance date cannot bypass an earlier historical contractual/deemed-payment date.');
+assert.equal(supportIrasMasKnowledgeRule({ ...extractedTreatyZeroWht,
+  topicId: 'iras-wht-deemed-payment-date',
+  query: 'We paid a non-resident on 1 October 2026. What legal WHT rule was in force on that date?'
+}), false, 'A dated request for the rule version in force remains subject to historical/effective-date evidence.');
+assert.equal(supportIrasMasKnowledgeRule({ ...extractedTreatyZeroWht,
+  topicId: 'iras-wht-deemed-payment-date',
+  query: 'If we pay a non-resident on 12 November 2027, when is WHT filing due?'
+}), false, 'A future dated payment outside the evidenced period remains unsupported.');
 assert.equal(supportIrasMasKnowledgeRule({ ...extractedTreatyZeroWht,
   query: 'A non-resident consultancy performs work in Singapore and overseas. Which service fees attract WHT?',
   subject: 'Withholding tax on non-resident consultancy service fees'
 }), false, 'a service-fee question cannot be proved by the WHT filing-date page');
+const permitMedicalQuery = 'Can I claim the GST charged on medical examinations incurred for the purpose of renewing my employees’ work permits?';
+const permitMedicalRequest = {
+  authority: 'IRAS', topicId: 'iras-gst-input-tax', query: permitMedicalQuery,
+  subject: 'GST input tax on employee medical examination for work permit renewal',
+  officialUrl: inputTax[0].officialUrl, sourceText: textFor(inputTax[0].fixture)
+};
+assert.equal(supportIrasMasKnowledgeRule(permitMedicalRequest), true,
+  'The retained native IRAS page directly supports the work-permit renewal example.');
+assert.match(selectIrasMasKnowledgeQuotes(permitMedicalRequest).join('\n'),
+  /renewing my employees[’'] work permits[\s\S]*blocked as medical expenses under Regulation 26/i);
+assert.equal(supportIrasMasKnowledgeRule({
+  ...permitMedicalRequest,
+  sourceText: permitMedicalRequest.sourceText.replace(/Can I claim the GST charged on medical examinations incurred for the purpose of renewing my employees[’'] work permits\?/i, '')
+}), false, 'The work-permit conclusion is not admitted if its direct example premise is absent.');
 assert.equal(supportIrasMasKnowledgeRule({ authority: 'MAS', topicId: 'mas-quarterly-fund-data-collection',
   query: 'What QDC return must a fund manager submit?', subject: 'QDC reporting', sourceText: '' }), undefined,
   'QDC remains unowned without primary-source proof');

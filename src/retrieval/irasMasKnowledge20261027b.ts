@@ -87,7 +87,7 @@ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMe
     limitations: ['The retained fixture is the complete native IRAS page response captured on 26 October 2026; the capture date does not establish legal applicability.', 'Does not classify a particular vehicle against the statutory definition or establish the complete rules for every motor-vehicle arrangement.', 'Do not infer transaction-period treatment from the page retrieval date.']
   },
   {
-    id: 'IRAS_ECI_PRACTICAL_WAIVER', authority: 'IRAS', topicIds: ['iras-cit-eci'],
+    id: 'IRAS_ECI_PRACTICAL_WAIVER', authority: 'IRAS', topicIds: ['iras-cit-eci', 'iras-investment-holding-company'],
     officialUrl: IRAS_ECI_URL, title: 'Estimated Chargeable Income (ECI) Filing',
     fixture: 'iras-mas-eci-native.html', fixtureKind: 'IRAS_NATIVE_HTML_PAGE',
     authorityAndProvisions: ['IRAS ECI filing guidance; the displayed excerpt identifies Income Tax Act 1947 section 43(2) for one named REIT category and sections 35(14), 35(12), and 35(12A) for the stated unit-trust note'],
@@ -166,6 +166,17 @@ function queryText(input: Pick<IrasMasKnowledgeRequest, 'query' | 'subject'>): s
   return `${input.query}\n${input.subject}`.slice(0, MAX_QUERY_LENGTH * 2);
 }
 
+function isCompleteIhcEciWaiverQuestion(query: string): boolean {
+  const text = query.toLowerCase();
+  return /\binvestment holding company\b/i.test(text) &&
+    /\b(?:eci|estimated chargeable income)\b/i.test(text) &&
+    /\bwaiv\w*\b/i.test(text) &&
+    /\bdividends?\b/i.test(text) && /\binterest\b/i.test(text) &&
+    /\brevenue\b/i.test(text) &&
+    /\b(?:accounting|book) loss\b/i.test(text) && /\bnil eci\b/i.test(text) &&
+    !/[?;]\s*\S/.test(query) && !/\b(?:separately|another question|separate issue)\b/i.test(text);
+}
+
 function isMedicalInsurancePremiumPremise(input: Pick<IrasMasKnowledgeRequest, 'query' | 'subject'>): boolean {
   return /\binsurance\s+premiums?\b|\b(?:medical|health|accident)\s+insurance\b|\binsurance\s+(?:policy|policies)\s+for\s+(?:medical|health|accident)\b/i.test(queryText(input));
 }
@@ -208,9 +219,11 @@ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' 
     if (queryFamily === 'motor') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[1];
     if (queryFamily === 'compound') return undefined;
   }
-  if (input.authority === 'IRAS' && input.topicId === 'iras-cit-eci'
-      && /\b(?:eci|estimated chargeable income)\b/i.test(text)
-      && /\b(?:waiv\w*|nil|revenue|profit|loss|must file|need to file|filing|deadline|revenue threshold)\b/i.test(text)) {
+  if (input.authority === 'IRAS' &&
+      (input.topicId === 'iras-cit-eci' ||
+        input.topicId === 'iras-investment-holding-company' && isCompleteIhcEciWaiverQuestion(input.query)) &&
+      /\b(?:eci|estimated chargeable income)\b/i.test(text) &&
+      /\b(?:waiv\w*|nil|revenue|profit|loss|threshold|eligib\w*|qualif\w*|condition\w*|exempt\w*)\b/i.test(text)) {
     return IRAS_MAS_KNOWLEDGE_RULES_20261027B[2];
   }
   const isWhtQuestion = /\b(?:wht|withholding tax)\b/i.test(text);
@@ -235,6 +248,10 @@ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' 
 
 function hasNonCurrentScope(query: string, rule: Rule): boolean {
   if (query.length > MAX_QUERY_LENGTH || /\b(?:historical|historic|last year|previous|prior period|past period|former rule|superseded rule)\b/i.test(query)) return true;
+  const asksLegalVersion = /\b(?:effective(?: date)?|in force|came into force|took effect|commenced on|which law applied|governed by|legal|statutory)\b/i.test(query);
+  const hasDatedWhtPayment = rule.id === 'IRAS_WHT_FILING_DATE' && !asksLegalVersion &&
+    /\b(?:paid|pay|payment|date of payment)\b/i.test(query) &&
+    /\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+2026\b|\b2026[-/]\d{1,2}[-/]\d{1,2}\b|\b\d{1,2}[-/]\d{1,2}[-/]2026\b/i.test(query);
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => Number(match[0]));
   const currentYear = Number(TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
   if (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027') {
@@ -255,7 +272,8 @@ function hasNonCurrentScope(query: string, rule: Rule): boolean {
   const resolved = defaultTargetDateResolver.resolveTargetDate(query, TargetDateResolver.CURRENT_SYSTEM_DATE);
   return resolved.source === 'EXPLICIT' && resolved.targetDate !== TargetDateResolver.CURRENT_SYSTEM_DATE
     && !((rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && resolved.targetDate === '2021-10-01')
-      || (rule.id === 'IRAS_GST_MOTOR_CAR_INPUT_TAX' && ['2022-04-01', '2023-01-01'].includes(resolved.targetDate ?? '')));
+      || (rule.id === 'IRAS_GST_MOTOR_CAR_INPUT_TAX' && ['2022-04-01', '2023-01-01'].includes(resolved.targetDate ?? ''))
+      || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`)));
 }
 
 function passagePatterns(rule: Rule): RegExp[] {
@@ -264,7 +282,8 @@ function passagePatterns(rule: Rule): RegExp[] {
       /Input tax claims are disallowed under Regulation 26 of the GST \(General\) Regulations\./i,
       /However, subject to the conditions for input tax claim, these claims are allowed if:[\s\S]{0,650}?mandated by written law or advisory\s*\./i,
       /the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement arising on account of the nature of the work required of your staff or his work environment; and[\s\S]{0,900}?Government or a public authority of Singapore\./i,
-      /No, GST incurred on PCP will not be claimable\.[\s\S]{0,650}?will not be claimable\./i
+      /No, GST incurred on PCP will not be claimable\.[\s\S]{0,650}?will not be claimable\./i,
+      /Can I claim the GST charged on medical examinations incurred for the purpose of renewing my employees[’'] work permits\?\s*No, the input tax on such examinations is blocked as medical expenses under Regulation 26 of the GST \(General\) Regulations\./i
     ];
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return [
       /Input tax claims on purchase and running expenses of motor cars are disallowed under Regulation 27[\s\S]{0,700}?conditions for input tax claim\./i,

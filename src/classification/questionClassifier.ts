@@ -157,6 +157,12 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     ].includes(topic.id))
   );
   const topicIds = topicMetadata.map(topic => topic.id);
+  // ACRA XBRL filing questions refer to financial statements but do not ask
+  // for accounting analysis. Keep that filing language from setting the
+  // generic financial-statement accounting signal unless the query also asks
+  // about accounting work or describes an actual transaction.
+  const isAcraXbrlFilingAdvisory = topicIds.includes('acra_xbrl') &&
+    !/\b(?:journal|bookkeeping|debit|credit|how to record|how do i record|accounting treatment|recognition|measurement|depreciat\w*|amorti\w*|capitalis\w*|capitaliz\w*|sfrs|ifrs|ias\s*\d*|intangible assets?|financial assets?|trade discount|accruals?|leases?|rou asset|fvtpl|fvtoci|balance sheet|p&l|statement of profit|statement of comprehensive income|restatement|restate|reclassif\w*|presentation of income|revenue presentation|bought|sold|purchased|acquired|invested|disposed of|issued|allotted)\b/i.test(entryIntentQuery);
 
   // 1. Domain Indicator Detection
   const hasAccounting =
@@ -182,8 +188,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('trade discount') ||
     q.includes('balance sheet') ||
     q.includes('p&l') ||
-    q.includes('financial statement') ||
-    q.includes('financial statements') ||
+    (!isAcraXbrlFilingAdvisory && (q.includes('financial statement') || q.includes('financial statements'))) ||
     q.includes('statement of profit') ||
     q.includes('statement of comprehensive income') ||
     q.includes('restatement') ||
@@ -328,10 +333,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     q.includes('13o') || q.includes('13u') || q.includes('cms licence') ||
     topicMetadata.some(topic => topic.domainId.startsWith('MAS_'));
 
+  // Age bands, contribution years and wage thresholds carry digits without asking for a payroll result.
+  const asksCpfContributionRates =
+    /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+    /\b(?:rates?|percentages?|contribution table|rate table)\b/.test(entryIntentQuery);
+  const explicitlyCalculatesCpfContribution =
+    /\b(?:calculat\w*|comput\w*|work out|estimate\b|estimating\b|how much)\b/.test(entryIntentQuery) ||
+    /\b(?:cpf|contribution) amount\b/.test(entryIntentQuery);
   const hasPayrollCalculation =
     (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
     (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
-    (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') || /\d+/.test(entryIntentQuery));
+    (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') ||
+      explicitlyCalculatesCpfContribution || (/\d+/.test(entryIntentQuery) && !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution)));
 
   // 2. Map Authorities
   const authorities: string[] = [];

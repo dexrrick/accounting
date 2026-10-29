@@ -209,6 +209,25 @@ assert.equal(supportIrasCpfMasPracticalRule(requestFor(irasStandard, { query: 'W
 const masFinancial = cases.find(sample => sample.id === 'MAS_LFMC_FINANCIAL_RETURNS');
 assert.equal(supportIrasCpfMasPracticalRule(requestFor(masFinancial, { query: 'When are these returns due?' })), true,
   'The mapped LFMC financial-return subject can anchor a concise deadline question.');
+const masFundScope = {
+  ...masFinancial,
+  query: 'Does MAS’s LFMC compliance toolkit cover every return owed by investment funds a licensed manager manages?',
+  subject: 'LFMC reporting and fund-level returns'
+};
+assert.equal(supportIrasCpfMasPracticalRule(requestFor(masFundScope)), true,
+  'A toolkit coverage question about all returns of managed investment funds selects the source-backed financial-return family.');
+const masFundScopePresentation = presentedEvidence(masFundScope);
+const masFundScopeEvidence = getIrasCpfMasPracticalEvidence(
+  masFundScope.query, masFundScopePresentation.stream, masFundScopePresentation.issue
+);
+assert.match(masFundScopeEvidence?.text || '', /excludes obligations outside the SFA and fund-level requirements/i,
+  'The routed explanation preserves the toolkit’s explicit fund-level scope limitation.');
+assert.equal(supportIrasCpfMasPracticalRule(requestFor(masFinancial, {
+  query: 'What licensing requirements apply to a new LFMC?', subject: 'LFMC licensing requirements'
+})), undefined, 'A general LFMC licensing question does not select the financial-return family.');
+assert.equal(supportIrasCpfMasPracticalRule(requestFor(masFinancial, {
+  query: 'Does the LFMC compliance toolkit cover QDC reporting?'
+})), undefined, 'A QDC-specific reporting question does not select the financial-return family.');
 const naturalZeroRating = {
   ...cases.find(sample => sample.id === 'IRAS_GST_ZERO_RATED'),
   query: 'A customer has an overseas billing address. Is our sale automatically zero-rated for GST?',

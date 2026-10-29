@@ -8,7 +8,8 @@ import { findRecordEligibilityRejection } from '../verification/claimEvidenceVer
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
-import { supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
+import { hasStatutoryKnowledgeContradiction, STATUTORY_KNOWLEDGE_POINTERS_20261027B,
+  supportStatutoryKnowledgeRule } from './statutoryKnowledge20261027b';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 
 export interface EvidenceQualityTraceAttempt {
@@ -66,6 +67,38 @@ export interface EvidenceQualityAssessment {
   missingFacts: string[];
   targetDate?: string;
   targetDateConfidence: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+type IrasKnowledgePointer = typeof STATUTORY_KNOWLEDGE_POINTERS_20261027B[number];
+
+function requestedIrasKnowledgePointers(
+  input: EvidenceQualityInput,
+  topics: SingaporeCoverageTopic[]
+): Array<{ topic: SingaporeCoverageTopic; pointer: IrasKnowledgePointer; subject: string }> {
+  if (!input.scopedSubject?.trim() || input.scopedPopulation !== 'COMPANY') return [];
+  return topics.flatMap(topic => {
+    if (!topic.domainId.startsWith('IRAS_')) return [];
+    const subject = input.scopedSubject?.trim() || topic.title;
+    return STATUTORY_KNOWLEDGE_POINTERS_20261027B
+      .filter(pointer => pointer.authority === 'IRAS' && pointer.topicIds.includes(topic.id))
+      .filter(pointer => supportStatutoryKnowledgeRule({
+        authority: 'IRAS', topicId: topic.id, query: input.query, subject, sourceText: '', officialUrl: pointer.url
+      }) !== undefined)
+      .map(pointer => ({ topic, pointer, subject }));
+  });
+}
+
+function provesExactIrasKnowledgePointer(
+  record: AuthoritativeSourceRecord,
+  requested: { topic: SingaporeCoverageTopic; pointer: IrasKnowledgePointer; subject: string },
+  query: string
+): boolean {
+  return record.authority === 'IRAS' && record.sourceAuthority === 'IRAS' &&
+    record.officialSourceUrl === requested.pointer.url && record.canonicalSourceUrl === requested.pointer.url &&
+    supportStatutoryKnowledgeRule({
+      authority: 'IRAS', topicId: requested.topic.id, query, subject: requested.subject,
+      sourceText: record.sourceText || '', officialUrl: requested.pointer.url
+    }) === true;
 }
 
 const GENERIC_TOPIC_WORDS = new Set([
@@ -539,7 +572,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const referenceDate = input.referenceDate || SourceFreshnessManager.DEFAULT_REFERENCE_DATE;
   const resolvedTarget = input.targetDate
     ? { targetDate: input.targetDate, confidence: 'HIGH' as const }
-    : defaultTargetDateResolver.resolveTargetDate(input.query, referenceDate);
+    : defaultTargetDateResolver.resolveAuthorityEvidenceDate(input.query, referenceDate);
   const targetDate = resolvedTarget.targetDate;
   const relevanceDate = targetDate || referenceDate;
   const targetTopics = [...new Map([
@@ -556,6 +589,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
   const scopedRequest = Boolean(input.scopedSubject?.trim());
   const irasRequest = hasIrasAssessmentScope(input);
   const requestedConcepts = input.requestedConcepts || targetTopics.flatMap(scopedConcepts);
+  const requestedIrasKnowledge = requestedIrasKnowledgePointers(input, targetTopics);
   const reject = (recordId: string, code: string, reason: string) => rejectedRecords.push({ recordId, code, reason });
 
   if (!irasRequest) {
@@ -618,6 +652,15 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       reject(record.id, 'SOURCE_TEXT_MISSING', 'Record has no substantive evidence text.');
       continue;
     }
+    const contradictsRecognizedRule = requestedIrasKnowledge.some(requested =>
+      hasStatutoryKnowledgeContradiction({ authority: 'IRAS', topicId: requested.topic.id,
+        query: input.query, subject: requested.subject, sourceText: record.sourceText || '',
+        officialUrl: record.officialSourceUrl }));
+    if (contradictsRecognizedRule) {
+      reject(record.id, 'KNOWN_IRAS_RULE_CONTRADICTION',
+        'Source text contradicts a recognized complete IRAS rule family.');
+      continue;
+    }
 
     let accepted = false;
     let rejectedCode = 'TOPIC_ASSOCIATION_NOT_FOUND';
@@ -655,7 +698,7 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
       const live = !local && !eligibilityRejection &&
         isVerifiedLiveCandidate(record, topic, targetDate, input.sourceMapFallbackTrace);
       const topicTextMatches = distinctiveTextMatches(record, topic, input.query) || explicitlyBoundLocal || transitionContext ||
-        supportIrasMasKnowledgeRule({ authority: 'IRAS', topicId: topic.id, query: input.query,
+        supportStatutoryKnowledgeRule({ authority: 'IRAS', topicId: topic.id, query: input.query,
           subject: input.scopedSubject || topic.title, sourceText: record.sourceText, officialUrl: record.officialSourceUrl }) === true ||
         (topic.domainId === 'IRAS_GST' && isStandardGstRateContext(record, topic, rateYears));
       if (!local && !live) {
@@ -787,7 +830,14 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     );
     const supportsUncoveredConcept = derivedConcepts.some(concept => !locallyCoveredConceptIds.has(concept.id) &&
       requestedConceptSupportForRecord(record, concept) === true);
-    return relatedTopics.length > 0 || supportsUncoveredConcept;
+    const suppliesMissingFullRule = requestedIrasKnowledge.some(requested => {
+      if (!(acceptedTopicIdsByRecord.get(record.id) || new Set<string>()).has(requested.topic.id) ||
+          !provesExactIrasKnowledgePointer(record, requested, input.query)) return false;
+      return ![...eligibleById.values()].some(localRecord => localRecord.provenance === 'LOCAL_STATIC' &&
+        (acceptedTopicIdsByRecord.get(localRecord.id) || new Set<string>()).has(requested.topic.id) &&
+        provesExactIrasKnowledgePointer(localRecord, requested, input.query));
+    });
+    return relatedTopics.length > 0 || supportsUncoveredConcept || suppliesMissingFullRule;
   });
   const eligibleRecords = [
     ...relevantLiveOnlyForGap.filter(record => record.provenance !== 'LIVE_EXTERNAL'),
@@ -871,12 +921,21 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     else liveByTopic.add(topic.id);
   }
 
-  const uncoveredTopicIds = targetTopics.map(topic => topic.id).filter(id => !covered.has(id));
+
   for (const concept of derivedConcepts) {
     if (eligibleRecords.some(record => requestedConceptSupportForRecord(record, concept) === true)) {
       coveredConceptIds.add(concept.id);
     }
   }
+  const fullRuleTopics = new Set(requestedIrasKnowledge
+    .filter(requested => eligibleRecords.some(record =>
+      (acceptedTopicIdsByRecord.get(record.id) || new Set<string>()).has(requested.topic.id) &&
+      provesExactIrasKnowledgePointer(record, requested, input.query)))
+    .map(requested => requested.topic.id));
+  for (const requested of requestedIrasKnowledge) {
+    if (!fullRuleTopics.has(requested.topic.id)) covered.delete(requested.topic.id);
+  }
+  const uncoveredTopicIds = targetTopics.map(topic => topic.id).filter(id => !covered.has(id));
   const coveredConcepts = derivedConcepts.filter(concept => coveredConceptIds.has(concept.id)).map(concept => concept.label);
   const uncoveredConcepts = derivedConcepts.filter(concept => !coveredConceptIds.has(concept.id)).map(concept => concept.label);
   const everyConceptCoveredLocally = derivedConcepts.every(concept => locallyCoveredConceptIds.has(concept.id));

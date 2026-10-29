@@ -4,19 +4,24 @@ import { IRAS_MAS_KNOWLEDGE_RULES_20261027B, getIrasMasKnowledgeEvidence,
   hasIrasMasKnowledgeContradiction, selectIrasMasKnowledgeQuotes, supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
 import { CPF_PAYROLL_KNOWLEDGE_RULES_20261027B, getCpfPayrollKnowledgeEvidence,
   hasCpfPayrollKnowledgeContradiction, selectCpfPayrollKnowledgeQuotes, supportCpfPayrollKnowledgeRule } from './cpfPayrollKnowledge20261027b';
+import { STATUTORY_WORKFLOW_RULES_20261029, getStatutoryWorkflowEvidence,
+  hasStatutoryWorkflowContradiction, selectStatutoryWorkflowQuotes,
+  supportStatutoryWorkflowRule } from './statutoryWorkflows20261029';
 import type { PracticalExpansionRequest } from './practicalStatutoryExpansion';
 import { TargetDateResolver } from './targetDateResolver';
 
 export { getAcraMomKnowledgeEvidence, getIrasMasKnowledgeEvidence, getCpfPayrollKnowledgeEvidence };
+export { getStatutoryWorkflowEvidence };
 
 export const STATUTORY_KNOWLEDGE_RULES_20261027B = [
   ...ACRA_MOM_KNOWLEDGE_RULES_20261027B, ...IRAS_MAS_KNOWLEDGE_RULES_20261027B,
-  ...CPF_PAYROLL_KNOWLEDGE_RULES_20261027B
+  ...CPF_PAYROLL_KNOWLEDGE_RULES_20261027B, ...STATUTORY_WORKFLOW_RULES_20261029
 ] as const;
 
 export const STATUTORY_KNOWLEDGE_POINTERS_20261027B = STATUTORY_KNOWLEDGE_RULES_20261027B.map(rule => ({
   authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title,
-  expectedTitles: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['NOTICE ON REPORTING'] : [rule.title],
+  expectedTitles: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['NOTICE ON REPORTING']
+    : rule.id === 'MAS_LFMC_KEY_APPOINTMENTS' ? [rule.title, 'Licensed Fund Management Companies'] : [rule.title],
   standardIdentifiers: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['SFA 04-N24'] : [rule.authority],
   contentTerms: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['CMS licence', 'representatives', 'misconduct'] : undefined,
   documentKind: /\.pdf$/i.test(new URL(rule.officialUrl).pathname) || rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING'
@@ -24,17 +29,18 @@ export const STATUTORY_KNOWLEDGE_POINTERS_20261027B = STATUTORY_KNOWLEDGE_RULES_
 }));
 
 export function supportStatutoryKnowledgeRule(request: PracticalExpansionRequest): boolean | undefined {
-  return supportAcraMomKnowledgeRule(request) ?? supportIrasMasKnowledgeRule(request) ?? supportCpfPayrollKnowledgeRule(request);
+  return supportAcraMomKnowledgeRule(request) ?? supportIrasMasKnowledgeRule(request) ?? supportCpfPayrollKnowledgeRule(request)
+    ?? supportStatutoryWorkflowRule(request);
 }
 
 export function selectStatutoryKnowledgeQuotes(request: PracticalExpansionRequest): string[] {
   return [...new Set([...selectAcraMomKnowledgeQuotes(request), ...selectIrasMasKnowledgeQuotes(request),
-    ...selectCpfPayrollKnowledgeQuotes(request)])];
+    ...selectCpfPayrollKnowledgeQuotes(request), ...selectStatutoryWorkflowQuotes(request)])];
 }
 
 export function hasStatutoryKnowledgeContradiction(request: PracticalExpansionRequest): boolean {
   return hasAcraMomKnowledgeContradiction(request) || hasIrasMasKnowledgeContradiction(request)
-    || hasCpfPayrollKnowledgeContradiction(request);
+    || hasCpfPayrollKnowledgeContradiction(request) || hasStatutoryWorkflowContradiction(request);
 }
 
 /** Explicit commencement prose, never a source-map or retrieval-date inference. */

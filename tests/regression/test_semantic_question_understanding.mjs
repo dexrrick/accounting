@@ -38,6 +38,114 @@ const interpretation = (overrides = {}) => ({
 
 const semantic = (overrides = {}) => ({ mode: 'SEMANTIC_INTERPRETATION', interpretation: interpretation(overrides) });
 const reconcile = (query, meaning) => reconcileQuestionUnderstanding(query, classifyQuestion(query), semantic(meaning));
+const taxonomyPlan = query => reconcileQuestionUnderstanding(query, classifyQuestion(query), {
+  mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER'
+}).issuePlan;
+
+const cpfRoundedTotalQuery = 'Can payroll deduct the rounded total CPF contribution from the employee and then add an employer share on top?';
+const cpfRoundedTotalPlan = taxonomyPlan(cpfRoundedTotalQuery);
+assert.equal(cpfRoundedTotalPlan.issues.length, 1);
+assert.equal(cpfRoundedTotalPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(cpfRoundedTotalPlan.issues[0].mappedTopicIds, ['cpf-contribution-computation']);
+assert.ok(cpfRoundedTotalPlan.issues[0].contextualTopicIds.includes('cpf-contribution-rounding'));
+assert.equal(cpfRoundedTotalPlan.coverageEstablished, false,
+  'Source-backed CPF rounding interpretation does not claim whole-question completeness.');
+assert.equal(cpfRoundedTotalPlan.hasUnmappedResidual, true);
+const cpfRoundedTotalSeparateQuery = `${cpfRoundedTotalQuery} Also, what contribution rates apply by age?`;
+const cpfRoundedTotalSeparatePlan = taxonomyPlan(cpfRoundedTotalSeparateQuery);
+assert.ok(cpfRoundedTotalSeparatePlan.issues.some(item => item.mappedTopicIds.includes('cpf-contribution-computation')));
+assert.ok(cpfRoundedTotalSeparatePlan.issues.some(item => item.mappedTopicIds.includes('cpf_contribution_rates')),
+  'An independent age-rate question remains mapped beside CPF rounding.');
+
+const momSickLeaveMonthQuery = 'After four completed months with the employer, is statutory paid sick leave already the full 14 outpatient and 60 hospitalisation days?';
+const momSickLeavePlan = taxonomyPlan(momSickLeaveMonthQuery);
+assert.equal(momSickLeavePlan.issues.length, 1);
+assert.equal(momSickLeavePlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.ok(momSickLeavePlan.issues[0].mappedTopicIds.includes('mom_sick_leave'));
+const momSickLeaveOverlapQuery = 'Is the 60-day hospitalisation leave entitlement in addition to the 14 days of outpatient sick leave?';
+const momSickLeaveOverlapPlan = taxonomyPlan(momSickLeaveOverlapQuery);
+assert.equal(momSickLeaveOverlapPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.ok(momSickLeaveOverlapPlan.issues[0].mappedTopicIds.includes('mom_sick_leave'));
+const momSickLeaveSeparatePlan = taxonomyPlan(`${momSickLeaveOverlapQuery} Also, when is final salary due?`);
+assert.ok(momSickLeaveSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mom_sick_leave')));
+assert.ok(momSickLeaveSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mom-salary-payment')),
+  'A separate final-salary question remains independent of the sick-leave answer.');
+
+const acraAgmProcessQuery = 'When filing an annual return in Bizfile, do we still need to declare AGM details if our company was exempt from holding the meeting?';
+const acraAgmProcessPlan = taxonomyPlan(acraAgmProcessQuery);
+assert.equal(acraAgmProcessPlan.issues.length, 1);
+assert.equal(acraAgmProcessPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(acraAgmProcessPlan.issues[0].mappedTopicIds, ['acra_annual-returns']);
+assert.ok(acraAgmProcessPlan.issues[0].contextualTopicIds.includes('acra_agm'));
+assert.equal(acraAgmProcessPlan.coverageEstablished, false,
+  'The ACRA process rule does not claim completeness for the full user request.');
+assert.equal(acraAgmProcessPlan.hasUnmappedResidual, true);
+const acraAgmWithSeparateDeadlinePlan = taxonomyPlan(`${acraAgmProcessQuery} Also, when are annual returns due?`);
+assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_agm')),
+  'A separate AGM request is not demoted to context.');
+
+const masToolkitQuery = 'Does MAS\'s LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?';
+const masToolkitPlan = taxonomyPlan(masToolkitQuery);
+assert.equal(masToolkitPlan.issues.length, 1);
+assert.equal(masToolkitPlan.issues[0].operation, 'EXPLAIN_RULE');
+assert.deepEqual(masToolkitPlan.issues[0].mappedTopicIds, ['mas-regulatory-reporting']);
+assert.equal(masToolkitPlan.coverageEstablished, false,
+  'The toolkit disclaimer does not establish complete coverage of fund-level duties.');
+assert.equal(masToolkitPlan.hasUnmappedResidual, true);
+const masToolkitWithSeparateLicencePlan = taxonomyPlan(`${masToolkitQuery} Also, does the manager need a CMS licence?`);
+assert.ok(masToolkitWithSeparateLicencePlan.issues.some(item => item.mappedTopicIds.includes('mas-regulatory-reporting')));
+assert.ok(masToolkitWithSeparateLicencePlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc')),
+  'A separate manager licensing question remains mapped independently.');
+
+const acraEntityChangeQuery = 'Our Singapore company\'s registered office address and entity email changed on 12 October. When must we notify ACRA, and can we wait until the annual return?';
+const acraEntityChangePlan = taxonomyPlan(acraEntityChangeQuery);
+assert.ok(acraEntityChangePlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+assert.equal(acraEntityChangePlan.issues.find(item => item.mappedTopicIds.includes('acra-entity-information-changes'))?.operation, 'EXPLAIN_RULE');
+assert.equal(acraEntityChangePlan.coverageEstablished, false);
+assert.equal(acraEntityChangePlan.hasUnmappedResidual, true);
+const acraEntityAndOfficeRequirementsPlan = taxonomyPlan(`${acraEntityChangeQuery} Also, what must the registered office address be?`);
+assert.ok(acraEntityAndOfficeRequirementsPlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+assert.ok(acraEntityAndOfficeRequirementsPlan.issues.some(item => item.mappedTopicIds.includes('acra_registered-office')),
+  'A separate registered-office requirement remains mapped beside the entity-update rule.');
+
+const irasRecordRetentionQuery = 'For YA 2023, how long must a company keep its source documents, accounting records and bank statements, and what changes after dissolution?';
+const irasRecordRetentionPlan = taxonomyPlan(irasRecordRetentionQuery);
+assert.ok(irasRecordRetentionPlan.issues.some(item => item.mappedTopicIds.includes('iras-company-record-retention')));
+assert.equal(irasRecordRetentionPlan.issues.find(item => item.mappedTopicIds.includes('iras-company-record-retention'))?.operation, 'EXPLAIN_RULE');
+assert.equal(irasRecordRetentionPlan.issues.find(item => item.mappedTopicIds.includes('iras-company-record-retention'))?.population, 'COMPANY');
+assert.equal(taxonomyPlan('How long must a GST-registered company keep GST records?').issues
+  .some(item => item.mappedTopicIds.includes('iras-company-record-retention')), false,
+  'Corporate income-tax retention mapping does not absorb GST record retention.');
+
+const cpfRefundQuery = 'When should an employer request a refund of wrongly paid CPF contributions, including for conditional wages, and should the employee share be returned first?';
+const cpfRefundPlan = taxonomyPlan(cpfRefundQuery);
+assert.ok(cpfRefundPlan.issues.some(item => item.mappedTopicIds.includes('cpf-adjustments-refunds')));
+assert.equal(cpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.operation, 'EXPLAIN_RULE');
+assert.equal(cpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.population, 'EMPLOYER');
+const personalCpfRefundPlan = taxonomyPlan('Can I request a refund of my personal CPF contributions?');
+assert.notEqual(personalCpfRefundPlan.issues.find(item => item.mappedTopicIds.includes('cpf-adjustments-refunds'))?.population, 'EMPLOYER',
+  'The employer refund rule does not reclassify a personal CPF question as employer guidance.');
+
+const momPayslipQuery = 'Must an employer give an itemised payslip with payment or within three working days if unable, and with outstanding salary on dismissal? Is soft copy allowed?';
+const momPayslipPlan = taxonomyPlan(momPayslipQuery);
+assert.ok(momPayslipPlan.issues.some(item => item.mappedTopicIds.includes('mom-itemised-payslips')));
+assert.equal(momPayslipPlan.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.operation, 'EXPLAIN_RULE');
+assert.equal(momPayslipPlan.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.population, 'EMPLOYER');
+const momPayslipEmployeePerspective = taxonomyPlan('Must my employer give me an itemised payslip together with payment?');
+assert.equal(momPayslipEmployeePerspective.issues.find(item => item.mappedTopicIds.includes('mom-itemised-payslips'))?.population, 'EMPLOYEE');
+
+const masAppointmentQuery = 'For an LFMC, must the company get prior MAS approval on Form 11 before appointing a CEO or director?';
+const masAppointmentPlan = taxonomyPlan(masAppointmentQuery);
+assert.ok(masAppointmentPlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')));
+assert.equal(masAppointmentPlan.issues.find(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments'))?.operation, 'EXPLAIN_RULE');
+assert.equal(masAppointmentPlan.issues.find(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments'))?.population, 'COMPANY');
+const masRow17Plan = taxonomyPlan('For an LFMC, does row 17 require notification when director particulars change?');
+assert.equal(masRow17Plan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')), false,
+  'Row 17 change notifications do not select the prior-appointment approval rule.');
+const masAppointmentSeparatePlan = taxonomyPlan(`${masAppointmentQuery} Also, what reporting returns does an LFMC file each quarter?`);
+assert.ok(masAppointmentSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mas-lfmc-key-appointments')));
+assert.ok(masAppointmentSeparatePlan.issues.some(item => item.mappedTopicIds.includes('mas-regulatory-reporting')),
+  'A separate LFMC reporting question remains mapped beside the appointment rule.');
 
 assert.ok(validateSemanticQuestionInterpretation(interpretation()), 'Accept the complete semantic contract.');
 for (const invalid of [

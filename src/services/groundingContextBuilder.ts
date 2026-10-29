@@ -44,7 +44,8 @@ import { supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
 import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule, practicalExpansionPointers } from '../retrieval/practicalStatutoryExpansion';
 import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPracticalRules20261027';
-import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate } from '../retrieval/statutoryKnowledge20261027b';
+import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate,
+  supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
 import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
 import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
 import {
@@ -1534,7 +1535,7 @@ export async function resolveMappedOfficialSourceFallback(
   }
 
   const referenceDate = options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE;
-  const targetDateResolution = defaultTargetDateResolver.resolveTargetDate(query, referenceDate);
+  const targetDateResolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, referenceDate);
   const targetDate = targetDateResolution.targetDate;
   const currentSingaporeYear = referenceDate.slice(0, 4);
   const currentYearYaProxy = targetDateResolution.source === 'INFERRED' &&
@@ -1758,7 +1759,8 @@ export async function resolveMappedOfficialSourceFallback(
         }
       } else if (expansionOwned && ((topic.id === 'cpf-employee-coverage' &&
           candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions') ||
-          (topic.id === 'cpf-contribution-computation' && candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay'))) {
+          (topic.id === 'cpf-contribution-computation' && candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay') ||
+          (topic.id === 'cpf-adjustments-refunds' && candidateUrl === 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions'))) {
         // CPF's employee definitions/exemptions are native action cards. The
         // generic paragraph extractor excludes their containers. Select only
         // a complete, contradiction-checked rule from visible native markup;
@@ -1767,8 +1769,10 @@ export async function resolveMappedOfficialSourceFallback(
         const quotes = document.status === 'SUCCESS' && document.content
           ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
         const nativeTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
-        if (quotes.length > 0 && nativeTitle && (topic.id === 'cpf-employee-coverage'
-          ? /who should receive cpf contributions/i.test(nativeTitle) : /how much cpf contributions to pay/i.test(nativeTitle))) {
+        if (quotes.length > 0 && nativeTitle && document.finalUrl === candidateUrl && (topic.id === 'cpf-employee-coverage'
+          ? /who should receive cpf contributions/i.test(nativeTitle)
+          : topic.id === 'cpf-adjustments-refunds' ? /applying for refund of cpf contributions/i.test(nativeTitle)
+            : /how much cpf contributions to pay/i.test(nativeTitle))) {
           const escape = (value: string): string => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           const content = `<html><head><title>${escape(nativeTitle)}</title></head><body><main>${quotes
             .map(quote => `<p>${escape(quote).replace(/\n/g, '<br>')}</p>`).join('')}</main></body></html>`;
@@ -1814,7 +1818,13 @@ export async function resolveMappedOfficialSourceFallback(
         && item.topicIds.includes(topic.id) && item.url === result.finalUrl)
       && supportPracticalExpansionRule({ ...expansionRequest, officialUrl: result.finalUrl,
         sourceText: result.content }) === true;
-    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl) && !exactCompanyCommencementNotice) {
+    const exactCompanyEntityInformationRule = topic.id === 'acra-entity-information-changes'
+      && STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(item => item.authority === 'ACRA'
+        && item.topicIds.includes(topic.id) && item.url === result.finalUrl)
+      && supportStatutoryKnowledgeRule({ authority: 'ACRA', topicId: topic.id,
+        query, subject: scopedCoverageSubject, sourceText: result.content, officialUrl: result.finalUrl }) === true;
+    if (!isAcraCompanySourceUrlCompatible(topic.domainId, result.finalUrl) &&
+        !exactCompanyCommencementNotice && !exactCompanyEntityInformationRule) {
       attempt.fetchStatus = 'DOMAIN_MISMATCH';
       attempt.contentMatched = false;
       attempt.error = 'Fetched ACRA page addresses a different entity type or accounting-standard authority scope.';

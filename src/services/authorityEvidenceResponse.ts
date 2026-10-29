@@ -11,13 +11,33 @@ import { getMomAcraMasExpansionEvidence } from '../retrieval/momAcraMasExpansion
 import { getAcraMomPracticalEvidence } from '../retrieval/acraMomPracticalRules20261027';
 import { getIrasCpfMasPracticalEvidence } from '../retrieval/irasCpfMasPracticalRules20261027';
 import { TargetDateResolver } from '../retrieval/targetDateResolver';
-import { getAcraMomKnowledgeEvidence, getIrasMasKnowledgeEvidence, getCpfPayrollKnowledgeEvidence } from '../retrieval/statutoryKnowledge20261027b';
+import { getAcraMomKnowledgeEvidence, getIrasMasKnowledgeEvidence, getCpfPayrollKnowledgeEvidence,
+  getStatutoryWorkflowEvidence } from '../retrieval/statutoryKnowledge20261027b';
 
 function statusText(stream: AuthorityPresentedWorkstream): string {
   if (stream.evidenceStatus === 'INSUFFICIENT') return 'Evidence incomplete';
   return stream.applicationStatus === 'UNRESOLVED'
     ? 'Verified evidence; case application unresolved'
     : 'Evidence verified';
+}
+
+function practicalRuleForIssue(
+  query: string,
+  stream: AuthorityPresentedWorkstream,
+  issue: AuthorityEvidencePresentation['workstreams'][number]['issues'][number]
+) {
+  return getAcraMomKnowledgeEvidence(query, stream, issue) ||
+    getIrasMasKnowledgeEvidence(query, stream, issue) ||
+    getCpfPayrollKnowledgeEvidence(query, stream, issue) ||
+    getStatutoryWorkflowEvidence(query, stream, issue) ||
+    getAcraMomPracticalEvidence(query, stream, issue) ||
+    getIrasCpfMasPracticalEvidence(query, stream, issue) ||
+    getIrasCpfExpansionEvidence(query, stream, issue) ||
+    getMomAcraMasExpansionEvidence(query, stream, issue) ||
+    getIrasAcraPracticalRuleEvidence(query, stream, issue) ||
+    getCpfMasPracticalRuleEvidence(query, stream, issue) ||
+    getIrasCpfCoverageEvidence(query, stream, issue) ||
+    getMomAcraMasCoverageEvidence(query, stream, issue);
 }
 
 /** Renders only verified source excerpts, reviewed summaries, and explicit gaps. */
@@ -27,12 +47,24 @@ export function renderAuthorityEvidenceResponseText(
 ): string {
   const requestComplete = hasCompleteRequestRepresentation(presentation);
   const evidenceVerified = presentation.evidenceStatus === 'VERIFIED';
+  const issueExplanations = presentation.workstreams.map(stream => ({
+    stream,
+    issues: stream.issues.map(issue => ({
+      issue,
+      practicalRule: practicalRuleForIssue(presentation.query, stream, issue),
+      momSalaryRule: getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue)
+    }))
+  }));
+  const hasVerifiedGeneralGuidance = issueExplanations.some(({ issues }) =>
+    issues.some(({ practicalRule, momSalaryRule }) => Boolean(practicalRule || momSalaryRule)));
+  const generalGuidancePrefix = hasVerifiedGeneralGuidance && presentation.status !== 'VERIFIED'
+    ? 'Verified general guidance is available. ' : '';
   const overall = presentation.status === 'INSUFFICIENT'
-    ? 'Evidence is incomplete for one or more material issues.'
+    ? `${generalGuidancePrefix}Evidence is incomplete for one or more material issues.`
     : !requestComplete && evidenceVerified
-      ? `Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved' : '.'}`
+      ? `${generalGuidancePrefix}Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved' : '.'}`
       : presentation.status === 'CONDITIONAL'
-      ? 'Source coverage is verified, but application to the case remains unresolved.'
+      ? `${generalGuidancePrefix}Source coverage is verified, but application to the case remains unresolved.`
       : 'The resolved material issues have verified evidence.';
   const lines = [
     '### Statutory Compliance & Legal Authority',
@@ -53,25 +85,13 @@ export function renderAuthorityEvidenceResponseText(
       lines.push('An ACRA filing deadline would also require the applicable financial year end, company and listing status, AGM facts and any relevant statutory exception.');
     }
   }
-  for (const stream of presentation.workstreams) {
+  for (const { stream, issues: explainedIssues } of issueExplanations) {
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
-    for (const issue of stream.issues) {
+    for (const { issue, practicalRule, momSalaryRule } of explainedIssues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
-      const practicalRule = getAcraMomKnowledgeEvidence(presentation.query, stream, issue) ||
-        getIrasMasKnowledgeEvidence(presentation.query, stream, issue) ||
-        getCpfPayrollKnowledgeEvidence(presentation.query, stream, issue) ||
-        getAcraMomPracticalEvidence(presentation.query, stream, issue) ||
-        getIrasCpfMasPracticalEvidence(presentation.query, stream, issue) ||
-        getIrasCpfExpansionEvidence(presentation.query, stream, issue) ||
-        getMomAcraMasExpansionEvidence(presentation.query, stream, issue) ||
-        getIrasAcraPracticalRuleEvidence(presentation.query, stream, issue) ||
-        getCpfMasPracticalRuleEvidence(presentation.query, stream, issue) ||
-        getIrasCpfCoverageEvidence(presentation.query, stream, issue) ||
-        getMomAcraMasCoverageEvidence(presentation.query, stream, issue);
       if (practicalRule) {
         lines.push(`- **${practicalRule.authority} rule explanation:** ${practicalRule.text} [${practicalRule.title}](${practicalRule.officialUrl})`);
       }
-      const momSalaryRule = getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue);
       if (momSalaryRule?.kind === 'REGULAR_SALARY') {
         lines.push(`- **MOM rule explanation:** For employees covered by the Employment Act, regular salary must be paid at least once a month and within 7 days after the salary period ends. [${momSalaryRule.title}](${momSalaryRule.officialUrl})`);
       } else if (momSalaryRule?.kind === 'OVERTIME_SALARY') {

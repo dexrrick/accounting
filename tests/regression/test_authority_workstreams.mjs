@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { buildAuthorityWorkstreams, planAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { CPF_PAYROLL_KNOWLEDGE_RULES_20261027B } from '../../src/retrieval/cpfPayrollKnowledge20261027b.ts';
 import { getRequestedQuestionConcepts, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { matchesRequestedQuestionConcept } from '../../src/retrieval/evidenceQualityGate.ts';
 import {
@@ -35,6 +37,13 @@ assert.equal(isAcraAnnualReturnDeadlineQuestion('Do non-listed companies have to
   'Listing status alone does not turn a general filing-duty question into a deadline query.');
 assert.equal(isAcraAnnualReturnDeadlineQuestion('When must annual returns be filed?'), true,
   'An annual-return timing question is recognized even when authority and company words are implicit.');
+const agmDeclarationDuringFiling = 'When filing an annual return in Bizfile, do we still need to declare AGM details if our company was exempt from holding the meeting?';
+assert.equal(isAcraAnnualReturnDeadlineQuestion(agmDeclarationDuringFiling), false,
+  'When filing introduces an AGM declaration process question, not a filing deadline request.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion(`${agmDeclarationDuringFiling} Also, when are annual returns due?`), true,
+  'A separate annual-return due-date request still requires deadline evidence beside the AGM process question.');
+assert.equal(isAcraAnnualReturnDeadlineQuestion('When filing an annual return in Bizfile, do we need to declare AGM details if exempt, and when must the annual return be filed?'), true,
+  'An explicit deadline request in the same question still requires deadline evidence.');
 assert.equal(isAcraAnnualReturnDeadlineQuestion('What date are annual returns due?'), true);
 assert.equal(isAcraAnnualReturnDeadlineQuestion('How long after FYE are annual returns due?'), true);
 assert.equal(isAcraAnnualReturnDeadlineQuestion(
@@ -416,6 +425,73 @@ assert.equal(cpfResult.workstreams[0].verifiedClaims[0].supportKind, 'EXACT_SOUR
 assert.equal(cpfResult.evidenceStatus, 'VERIFIED');
 assert.notEqual(cpfResult.requestCompletenessContext.evaluation.status, 'COMPLETE');
 assert.equal(cpfResult.status, 'CONDITIONAL');
+
+const cpfRateRule = CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_CONTRIBUTION_TABLES');
+assert.ok(cpfRateRule);
+const cpfRateText = readFileSync(new URL('../fixtures/statutoryKnowledge20261027b/cpf-rate-tables-2026-extract.txt', import.meta.url), 'utf8')
+  .replace(/^SOURCE CAPTURE METADATA[\s\S]*?\n\n/, '').trim();
+const cpfEmployeeRateQuery = 'What CPF contribution percentages apply based on employee age in 2026?';
+const cpfEmployeeRateIssue = issue('cpf-employee-rate-table', {
+  subject: 'CPF contribution percentages by employee age', population: 'EMPLOYEE',
+  mappedTopicIds: ['cpf_contribution_rates']
+});
+const cpfRateCandidate = {
+  ...cpfCeiling, id: 'CPF_RATES_BY_AGE_2026', sourceText: cpfRateText,
+  authority: 'CPF', sourceAuthority: 'CPF', domain: 'CPF_BOARD',
+  officialSourceUrl: cpfRateRule.officialUrl, canonicalSourceUrl: cpfRateRule.officialUrl,
+  documentTitle: cpfRateRule.title, sourcePublisher: 'CPF Board',
+  provenance: 'LIVE_EXTERNAL', sourceStatus: 'NEEDS_REVIEW', lifecycleState: 'CANDIDATE',
+  extractionStatus: 'PARTIAL', verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
+  urlVerificationStatus: 'VERIFIED', documentHash: 'a'.repeat(64),
+  relatedTopicIds: ['cpf_contribution_rates'], retrievedAt: '2026-10-27T00:00:00Z'
+};
+const cpfRateTrace = {
+  selectedRecordIds: [cpfRateCandidate.id], finalVerifiedUrls: [cpfRateRule.officialUrl],
+  attempts: [{ topicId: 'cpf_contribution_rates', fetchStatus: 'SUCCESS', titleMatched: true,
+    contentMatched: true, finalUrl: cpfRateRule.officialUrl }]
+};
+const cpfEmployeeRateResult = await buildAuthorityWorkstreams(
+  cpfEmployeeRateQuery, issuePlan([cpfEmployeeRateIssue]),
+  { providers: { CPF: provider('CPF', async () => ({ candidates: [cpfRateCandidate],
+    claims: [exactClaim(cpfRateCandidate)], evidenceQualityTrace: cpfRateTrace })) }, referenceDate }
+);
+assert.equal(cpfEmployeeRateResult.workstreams[0].issues[0].evidenceStatus, 'VERIFIED',
+  `The single-authority employee-side CPF rate issue admits source-proven CPF statutory knowledge: ${JSON.stringify(cpfEmployeeRateResult.workstreams[0].issues[0])}`);
+assert.equal(cpfEmployeeRateResult.workstreams[0].issues[0].population, 'EMPLOYEE',
+  'The issue retains its employee population through evidence admission.');
+const cpfIndividualRateResult = await buildAuthorityWorkstreams(
+  cpfEmployeeRateQuery, issuePlan([issue('cpf-individual-rate-table', {
+    subject: cpfEmployeeRateIssue.subject, population: 'INDIVIDUAL', mappedTopicIds: ['cpf_contribution_rates']
+  })]),
+  { providers: { CPF: provider('CPF', async () => ({ candidates: [cpfRateCandidate],
+    claims: [exactClaim(cpfRateCandidate)], evidenceQualityTrace: cpfRateTrace })) }, referenceDate }
+);
+assert.equal(cpfIndividualRateResult.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'The narrow employee allowance does not extend to an individual-population issue.');
+const cpfForeignRateCandidate = { ...cpfRateCandidate, officialSourceUrl: 'https://example.org/cpf-rates',
+  canonicalSourceUrl: 'https://example.org/cpf-rates' };
+const cpfForeignRateResult = await buildAuthorityWorkstreams(
+  cpfEmployeeRateQuery, issuePlan([cpfEmployeeRateIssue]),
+  { providers: { CPF: provider('CPF', async () => ({ candidates: [cpfForeignRateCandidate],
+    claims: [exactClaim(cpfForeignRateCandidate)], evidenceQualityTrace: {
+      ...cpfRateTrace, finalVerifiedUrls: [cpfForeignRateCandidate.officialSourceUrl],
+      attempts: [{ ...cpfRateTrace.attempts[0], finalUrl: cpfForeignRateCandidate.officialSourceUrl }]
+    } })) }, referenceDate }
+);
+assert.equal(cpfForeignRateResult.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'The population allowance does not admit a non-official CPF source URL.');
+const irasCpfReliefIssue = issue('iras-individual-cpf-relief', {
+  subject: 'Individual CPF contribution tax relief', population: 'INDIVIDUAL',
+  domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'],
+  mappedTopicIds: ['iras-individual-cpf-relief']
+});
+const irasCpfReliefResult = await buildAuthorityWorkstreams(
+  'Can an individual claim tax relief for CPF contributions?', issuePlan([irasCpfReliefIssue]),
+  { providers: { IRAS: provider('IRAS', async () => ({ candidates: [cpfRateCandidate],
+    claims: [exactClaim(cpfRateCandidate)] })) }, referenceDate }
+);
+assert.equal(irasCpfReliefResult.workstreams[0].issues[0].evidenceStatus, 'INSUFFICIENT',
+  'CPF payroll source proof does not authorize evidence for the separate IRAS individual-relief issue.');
 const conditionalCase = await buildAuthorityWorkstreams(
   'Check whether the CPF ordinary wage monthly ceiling applies in 2026.',
   issuePlan([issue('cpf-case-facts', {

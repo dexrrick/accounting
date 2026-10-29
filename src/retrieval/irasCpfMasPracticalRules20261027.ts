@@ -236,9 +236,11 @@ function recognizesRule(input: Pick<IrasCpfMasPracticalRuleRequest, 'authority' 
     const coverageRule = topicRules.find(rule => rule.id === 'CPF_EMPLOYEE_COVERAGE');
     if (coverageRule) return coverageRule;
   }
-  if (authority === 'MAS'
+  if (authority === 'MAS' && !/\b(?:qdc|qualifying debt securities)\b/i.test(text)
       && /\b(?:lfmc|licensed fund manager|filing calendar|regulatory reporting)\b/i.test(text)
-      && /\b(?:quarterly|annual|yearly|financial|forms?\s*[1-6]|regulatory returns?|filings?|reporting|calendar)\b/i.test(text)
+      && ( /\b(?:quarterly|annual|yearly|financial|forms?\s*[1-6]|regulatory returns?|filings?|reporting|calendar)\b/i.test(text)
+        || /\b(?:compliance )?toolkit\b[\s\S]{0,120}\b(?:cover|covers|include|includes|address|addresses)\b[\s\S]{0,80}\b(?:every|all)\b[\s\S]{0,80}\b(?:returns?|reporting requirements?)\b/i.test(text)
+          && /\b(?:investment funds?|fund[- ]level|funds? (?:that|which|a|an)\b)[\s\S]{0,100}\b(?:manager|lfmc)\b/i.test(text))
       && /\b(?:mas|lfmc|fund manager)\b/i.test(text)) {
     const financialRule = topicRules.find(rule => rule.id === 'MAS_LFMC_FINANCIAL_RETURNS');
     if (financialRule) return financialRule;

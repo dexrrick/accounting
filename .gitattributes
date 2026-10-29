@@ -9,6 +9,7 @@ tests/fixtures/irasResolverCases.mjs -text whitespace=cr-at-eol
 tests/fixtures/legacy_verification_harness_23637b.txt -text whitespace=cr-at-eol
 tests/fixtures/statutoryDevelopment20261027/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryKnowledge20261027b/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
+tests/fixtures/statutoryWorkflows20261029/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/regression/test_iras_multi_authority_evidence_v4.mjs -text whitespace=cr-at-eol
 tests/regression/test_iras_mapped_evidence_diagnostic_v[4-9].mjs -text whitespace=cr-at-eol
 tests/regression/test_iras_public_gst_selection_v[3-4].mjs -text whitespace=cr-at-eol

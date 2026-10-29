@@ -1,0 +1,378 @@
+import type {
+  AuthorityPresentedIssue,
+  AuthorityPresentedSource,
+  AuthorityPresentedWorkstream
+} from '../utils/authorityEvidencePresentation';
+import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+
+export interface StatutoryWorkflowRequest {
+  authority: string;
+  topicId: string;
+  query: string;
+  subject: string;
+  sourceText: string;
+  officialUrl?: string;
+}
+
+export type StatutoryWorkflowRuleId =
+  | 'ACRA_ENTITY_INFORMATION_UPDATE_DEADLINES'
+  | 'IRAS_COMPANY_TAX_RECORD_RETENTION'
+  | 'CPF_CONTRIBUTION_REFUND_DEADLINES'
+  | 'MOM_ITEMISED_PAYSLIP_REQUIREMENTS'
+  | 'MAS_LFMC_KEY_APPOINTMENTS';
+
+export interface StatutoryWorkflowRule {
+  id: StatutoryWorkflowRuleId;
+  authority: 'ACRA' | 'IRAS' | 'CPF' | 'MOM' | 'MAS';
+  topicIds: readonly string[];
+  officialUrl: string;
+  title: string;
+  fixtureFile: string;
+  fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML' | 'RETAINED_NATIVE_OFFICIAL_PDF';
+  population: string;
+  provisions: readonly string[];
+  rule: string;
+  conditions: readonly string[];
+  exceptions: readonly string[];
+  requiredFacts: readonly string[];
+  effectiveDateEvidence: string;
+  limitations: readonly string[];
+}
+
+type Rule = StatutoryWorkflowRule & {
+  requiredSourceTerms: readonly string[];
+  quoteMatchers: readonly RegExp[];
+  contradictionPatterns: readonly RegExp[];
+  queryPattern: RegExp;
+  subjectPattern: RegExp;
+};
+
+const ACRA_ENTITY_URL = 'https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/';
+const IRAS_RECORDS_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements';
+const CPF_REFUNDS_URL = 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions';
+const MOM_PAYSLIPS_URL = 'https://www.mom.gov.sg/employment-practices/salary/itemised-payslips';
+const MAS_LFMC_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
+
+/**
+ * Source-backed workflow guidance for five current administrative procedures.
+ * These records are retrieval pointers and proof contracts; their metadata does
+ * not admit or activate a source. Every displayed explanation still requires
+ * exact-URL, issue-bound quotes from one verified source revision.
+ */
+export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze([
+  {
+    id: 'ACRA_ENTITY_INFORMATION_UPDATE_DEADLINES', authority: 'ACRA', topicIds: ['acra-entity-information-changes'],
+    officialUrl: ACRA_ENTITY_URL, title: 'Updating an entity’s information', fixtureFile: 'acra-entity-updates.html',
+    fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Entities registered with ACRA; a separate 30-day deadline applies to foreign companies',
+    provisions: ['ACRA entity-information update guidance; the cited page does not identify a statutory section number.'],
+    rule: 'ACRA says registered entities must notify it of changes within 14 days from the date of change; foreign companies have 30 days. The listed details include the entity email address and registered office address. The time limit runs from the change, so the annual return is not a substitute for making a required update within that period.',
+    conditions: ['The 14-day period applies to registered entities except foreign companies, for which the page gives 30 days.', 'The source lists entity name, email address, business activities, registered office and other entity information; the steps vary by information category.'],
+    exceptions: ['The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods.'],
+    requiredFacts: ['Entity type and the category of information changed.', 'The date of the change and any category-specific filing facts.'],
+    effectiveDateEvidence: 'The captured page does not state a legal commencement date. Its retrieval date is not treated as an effective date.',
+    limitations: ['General current page guidance only; no deadline date is calculated here.', 'For an entity-specific answer, confirm the entity category and the actual change date.'],
+    requiredSourceTerms: [
+      'All registered entities must notify ACRA of any changes within 14 days from the date of change, except foreign companies which have 30 days.',
+      'Within 14 days from the date of the change', 'Within 30 days from the date of the change',
+      'Entity email address', 'Registered office address'
+    ],
+    quoteMatchers: [
+      /All registered entities must notify ACRA of any changes within 14 days from the date of change, except foreign companies which have 30 days\./i,
+      /Filing deadlines[\s\S]{0,120}All registered entities\s*(?:\|\s*)?Within 14 days from the date of the change[\s\S]{0,120}Foreign companies\s*(?:\|\s*)?Within 30 days from the date of the change/i,
+      /Entity email address[\s\S]{0,220}Registered office address/i
+    ],
+    contradictionPatterns: [
+      /(?:all registered entities|registered entities)[^.!?\n]{0,100}\b(?:15|10) days\b/i,
+      /foreign companies[^.!?\n]{0,100}\b(?:14|15|60) days\b/i,
+      /foreign companies[^.!?\n]{0,100}\b(?:30|thirty) days\b[^.!?\n]{0,100}\b(?:14|fourteen) days\b/i
+    ],
+    queryPattern: /\b(?:entity information|registered entities?|registered office|entity email|business email|company email|email address|business activities|update\w*|changes? to (?:our|the|an) entity)\b/i,
+    subjectPattern: /\b(?:entity information|registered entity|registered office|entity email|email address|business activities|entity update|change of entity information|notification deadline)\b/i
+  },
+  {
+    id: 'IRAS_COMPANY_TAX_RECORD_RETENTION', authority: 'IRAS', topicIds: ['iras-company-record-retention'],
+    officialUrl: IRAS_RECORDS_URL, title: 'Record Keeping Requirements', fixtureFile: 'iras-company-records.html',
+    fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Companies keeping records and supporting documents connected with their business and corporate income tax',
+    provisions: ['IRAS corporate income tax record-keeping guidance; no Act section number is added from the cited page.'],
+    rule: 'A company must retain source documents, accounting records and schedules, bank statements and other transaction-connected business records for at least five years from the relevant Year of Assessment (YA). IRAS gives examples: records for YA 2019 are retained to 31 December 2023, while records for YA 2023 are retained to 31 December 2027. For a company struck off and dissolved, the officer immediately before dissolution keeps the books and papers for at least five years after dissolution; for a wound-up company, the liquidator does so for at least five years from dissolution.',
+    conditions: ['Use the relevant YA for ordinary company tax records; the page’s examples distinguish December and non-December financial-year ends.', 'After dissolution, the source identifies a different responsible person and starts the five-year period from dissolution.'],
+    exceptions: ['This is corporate income tax record guidance, not the separate GST record-retention rule.', 'The ordinary YA period does not replace the separate dissolution-date duties for struck-off or wound-up companies.'],
+    requiredFacts: ['The relevant YA and financial-year period.', 'Whether the company was struck off and dissolved or wound up, and its dissolution date.'],
+    effectiveDateEvidence: 'The captured current page gives duration examples but no separate legal commencement date. Capture/update dates do not establish historic legal-version applicability.',
+    limitations: ['The source examples explain ordinary YA retention; they do not determine every record-specific retention requirement.', 'A company-specific last-retention date requires the correct YA or dissolution date.'],
+    requiredSourceTerms: [
+      'source documents, accounting records and schedules, bank statements',
+      'Your company must retain its records for at least 5 years from the relevant YA.',
+      '2019 1 Jan 2018 to 31 Dec 2018 31 Dec 2023', '2023 1 Jan 2022 to 31 Dec 2022 31 Dec 2027',
+      '2019 1 Oct 2017 to 30 Sep 2018 31 Dec 2023', '2023 1 Oct 2021 to 30 Sep 2022 31 Dec 2027',
+      'Struck Off Companies', 'officer of the company immediately before its dissolution',
+      'at least 5 years after the date on which the company was dissolved', 'Wound Up Companies',
+      'liquidator of the company', 'at least 5 years from the date of dissolution of the company'
+    ],
+    quoteMatchers: [
+      /Your company must maintain proper records of its financial transactions and retain the source documents, accounting records and schedules, bank statements[^.]{0,260}Year of Assessment \(YA\)\./i,
+      /Your company must retain its records for at least 5 years from the relevant YA\./i,
+      /Example 1:[\s\S]{0,600}2019[\s\S]{0,180}31 Dec 2023[\s\S]{0,300}2023[\s\S]{0,180}31 Dec 2027/i,
+      /Example 2:[\s\S]{0,600}2019[\s\S]{0,180}31 Dec 2023[\s\S]{0,300}2023[\s\S]{0,180}31 Dec 2027/i,
+      /Struck Off Companies[\s\S]{0,500}officer of the company immediately before its dissolution[\s\S]{0,250}at least 5 years after the date on which the company was dissolved/i,
+      /Wound Up Companies[\s\S]{0,400}liquidator of the company[\s\S]{0,250}at least 5 years from the date of dissolution of the company/i
+    ],
+    contradictionPatterns: [
+      /records?[^.!?\n]{0,100}\bat least (?:6|3) years from the relevant YA\b/i,
+      /struck off[^.!?\n]{0,220}\bat least (?:6|3) years after[^.!?\n]{0,70}dissolv/i,
+      /wound up[^.!?\n]{0,220}\bat least (?:6|3) years from[^.!?\n]{0,70}dissolv/i
+    ],
+    queryPattern: /\b(?:corporate tax|company tax|income tax|business records?|accounting records?|source documents?|invoices?|books and papers|record[- ]keeping|records? retention|record custod(?:y|ian)|dissolv\w*|struck off|wound up|keep (?:our|the|company) records?)\b/i,
+    subjectPattern: /\b(?:company (?:tax )?record|corporate (?:tax )?record|business record|books and papers|record retention|record[- ]keeping|record custod|dissolv\w*|wound up|struck off)\b/i
+  },
+  {
+    id: 'CPF_CONTRIBUTION_REFUND_DEADLINES', authority: 'CPF', topicIds: ['cpf-adjustments-refunds'],
+    officialUrl: CPF_REFUNDS_URL, title: 'Applying for refund of CPF contributions', fixtureFile: 'cpf-refunds.html',
+    fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Employers applying to refund wrongly paid CPF contributions for employees',
+    provisions: ['CPF Board employer refund application guidance; the page describes submission process and does not independently interpret CPF Act provisions.'],
+    rule: 'Refund requests for CPF contributions generally must be made immediately and no later than one year from payment; the “PAYMENTS RECEIVED ON” field identifies the payment date. For conditional wages, the one-year period instead runs from when the wages are due to be repaid to the employer, as stated in employment terms or a mutual agreement, and that date must be entered in the application. Before applying, the employer must return the employee share directly to the employee. CPF Board effects refunds only to the extent of funds available in the employee’s CPF account. Excess Additional Wage ceiling contributions should be claimed promptly; excess CPF Annual Limit contributions paid from 2023 are automatically refunded to the employer’s Direct Debit Account from February 2024.',
+    conditions: ['The general and entire-submission application deadline is one year from contribution payment, using the “PAYMENTS RECEIVED ON” record field.', 'Conditional-wage refunds use the repayment due date, not the contribution payment date.', 'The employer must first return the employee share where applicable; refunds depend on funds available in employee CPF accounts.'],
+    exceptions: ['Excess Additional Wage ceiling contributions are a prompt-application category.', 'CPF Annual Limit excess contributions paid from 2023 are refunded automatically to the employer from February 2024; this is distinct from an application for an AW-ceiling refund.'],
+    requiredFacts: ['Refund category and CPF payment date.', 'For conditional wages, the contractual or mutually agreed repayment due date.', 'Whether the employee share was returned and funds remain available in CPF account(s).', 'For AW or annual-limit excess, the relevant year and excess category.'],
+    effectiveDateEvidence: 'The page’s annual-limit statement explicitly starts in February 2024 and applies to excess paid from 2023. Other page-update dates are not treated as effective dates.',
+    limitations: ['No refund due date is computed, including for leap-year anniversaries.', 'The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund.'],
+    requiredSourceTerms: [
+      'Any request for refund of CPF contributions paid must be made immediately and no later than one year from the date of payment of the CPF contributions.',
+      'PAYMENTS RECEIVED ON', 'field in your record of payment to determine the date of payment',
+      'conditional wages must be made immediately and no later than one year from the date wages are supposed to be repaid to the employer',
+      'date stated in the terms of employment or based on mutual agreement', 'refund the employee’s share of CPF contributions',
+      'before submitting the application', 'Refund is subject to availability of funds', 'available funds in the employee’s CPF account',
+      'apply for a refund of the CPF contributions made promptly', 'From February 2024',
+      "refunded automatically to the employer's Direct Debit Account", 'excess contributions paid from year 2023'
+    ],
+    quoteMatchers: [
+      /Any request for refund of CPF contributions paid must be made immediately and no later than one year from the date of payment of the CPF contributions\.[\s\S]{0,220}PAYMENTS RECEIVED ON[\s\S]{0,120}field in your record of payment to determine the date of payment\./i,
+      /Any request for refund of CPF contributions paid on conditional wages must be made immediately and no later than one year from the date wages are supposed to be repaid to the employer[\s\S]{0,330}terms of employment or based on mutual agreement/i,
+      /You’re responsible to refund the employee’s share of CPF contributions[^.]*before submitting the application\./i,
+      /Refund is subject to availability of funds[\s\S]{0,200}available funds in the employee’s CPF account/i,
+      /Refund of payments made in excess of Additional Wage ceiling[\s\S]{0,320}apply for a refund[^.]*promptly\./i,
+      /Refund of contributions paid in excess of CPF Annual Limit[\s\S]{0,300}From February 2024[^.]*refunded automatically[^.]*Direct Debit Account[\s\S]{0,140}excess contributions paid from year 2023/i
+    ],
+    contradictionPatterns: [
+      /refund of CPF contributions paid[^.!?\n]{0,160}\bno later than (?:two|2|six|6) years\b/i,
+      /conditional wages[^.!?\n]{0,160}\bfrom the date of payment\b/i,
+      /annual limit[^.!?\n]{0,220}\b(?:must apply|application required|not refunded automatically)\b/i,
+      /AW ceiling[^.!?\n]{0,220}\brefunded automatically\b/i
+    ],
+    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund|overpaid|excess contribution|wrongly paid|repayment)\b|\b(?:refund|overpaid|excess contribution)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
+    subjectPattern: /\b(?:cpf|contribution|refund|repayment)\b/i
+  },
+  {
+    id: 'MOM_ITEMISED_PAYSLIP_REQUIREMENTS', authority: 'MOM', topicIds: ['mom-itemised-payslips'],
+    officialUrl: MOM_PAYSLIPS_URL, title: 'Itemised pay slips', fixtureFile: 'mom-payslips.html',
+    fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Employees covered by the Employment Act and their employers',
+    provisions: ['Employment Act coverage as stated by MOM. No section number is added from the captured page.'],
+    rule: 'Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically.',
+    conditions: ['The requirement applies to employees covered by the Employment Act.', 'MOM permits soft or hard copy, including handwritten.', 'The fallback is three working days after payment only when the employer cannot give it with payment.'],
+    exceptions: ['Items that do not apply need not be shown; MOM’s page gives overtime items as an example.', 'This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker.'],
+    requiredFacts: ['Employment Act coverage.', 'Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary.'],
+    effectiveDateEvidence: 'The page states that the itemised-payslip duty begins on 1 April 2016. This does not establish that every detailed condition in the current page applied unchanged from that date.',
+    limitations: ['Three working days are not converted into calendar days.', 'The captured page does not establish current coverage of a particular worker.'],
+    requiredSourceTerms: [
+      'From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.',
+      'Employers must issue itemised pay slips to all employees covered by the Employment Act.',
+      'Pay slips must include the items below, unless an item is not applicable.',
+      'if overtime pay does not apply to you, your pay slip need not include items 9 to 11',
+      'Give together with payment to employee.',
+      'If unable to give together, to be given within three working days of payment.',
+      'In the case of termination or dismissal, must give pay slip together with outstanding salary.',
+      'Format | Soft or hard copy (including handwritten)'
+    ],
+    quoteMatchers: [
+      /From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act\./i,
+      /Employers must issue itemised pay slips to all employees covered by the Employment Act\./i,
+      /Pay slips must include the items below, unless an item is not applicable\.[\s\S]{0,200}if overtime pay does not apply to you, your pay slip need not include items 9 to 11\./i,
+      /Give together with payment to employee\.[\s\S]{0,200}If unable to give together, to be given within three working days of payment\./i,
+      /In the case of termination or dismissal, must give pay slip together with outstanding salary\./i,
+      /Format\s*\|\s*Soft or hard copy \(including handwritten\)/i
+    ],
+    contradictionPatterns: [
+      /within (?:five|5|three) calendar days of payment/i,
+      /within (?:five|5) working days of payment/i,
+      /termination or dismissal[^.!?\n]{0,180}\b(?:within 3 days|after the final pay date)\b/i,
+      /itemised pay slips? (?:are|is) optional/i
+    ],
+    queryPattern: /\b(?:itemi[sz]ed (?:pay ?slips?|statements?)|pay ?slips?|payslips?)\b/i,
+    subjectPattern: /\b(?:itemi[sz]ed pay ?slip|pay ?slip|payslip)\b/i
+  },
+  {
+    id: 'MAS_LFMC_KEY_APPOINTMENTS', authority: 'MAS', topicIds: ['mas-lfmc-key-appointments'],
+    officialUrl: MAS_LFMC_TOOLKIT_URL, title: 'Compliance Toolkit for Licensed Fund Management Companies',
+    fixtureFile: 'mas-lfmc-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
+    population: 'Licensed Fund Management Companies (LFMCs)',
+    provisions: ['MAS LFMC Compliance Toolkit requirement 3, which cites section 96 of the Securities and Futures Act and regulation 12 of the Securities and Futures (Licensing and Conduct of Business) Regulations.'],
+    rule: 'The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11.',
+    conditions: ['The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope.', 'Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3.'],
+    exceptions: ['This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements.', 'The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements.'],
+    requiredFacts: ['Whether the firm is an LFMC.', 'Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change.'],
+    effectiveDateEvidence: 'The retained PDF identifies its issue/revision dates only; neither those dates nor row 17’s update note establishes legal commencement for row 3.',
+    limitations: ['General current toolkit guidance only; verify the applicable SFA provisions, licence conditions and current MAS requirements for a specific LFMC.', 'Do not apply this row to VCFMs or other CMS licence holders without a source covering that regime.'],
+    requiredSourceTerms: [
+      'Compliance Toolkit aims to provide guidance', 'Relevant to: | LFMCs',
+      '3 To seek MAS’ approval', 'Form 11 - Appointment', 'Prior | to | the', 'appointment of a Chief Executive Officer',
+      'Section 96 of the SFA', 'Regulation 12 of',
+      '(CEO) or Director;', 'nature of Director appointment from Non-',
+      '17 To notify MAS of', 'resignation of CEO', 'Executive', 'Non-Executive',
+      'change in particulars', 'provided in Form 11'
+    ],
+    quoteMatchers: [
+      /3 To seek MAS’ approval[\s\S]{0,1000}Form 11[\s\S]{0,240}Prior\s*\|\s*to\s*\|\s*the[\s\S]{0,500}Section 96 of the SFA[\s\S]{0,500}Regulation 12 of[\s\S]{0,300}\(CEO\) or Director;[\s\S]{0,300}nature of Director appointment from Non-[\s\S]{0,200}Executive to Executive[\s\S]{0,200}Executive to Executive/i,
+      /17 To notify MAS of[\s\S]{0,2200}resignation of CEO[\s\S]{0,1800}Non-Executive[\s\S]{0,1800}provided in Form 11/i,
+      /Relevant to:\s*\|\s*LFMCs/i
+    ],
+    contradictionPatterns: [
+      /3 To seek MAS’ approval[\s\S]{0,900}\b(?:after|following)\s*\|?\s*(?:the\s*\|?\s*)?appointment\b/i,
+      /3 To seek MAS’ approval[\s\S]{0,1000}Form 11[\s\S]{0,250}\b(?:after|following)\s*\|\s*the\b/i,
+      /row 3[^.!?\n]{0,220}\bnotification\b/i,
+      /17 To notify MAS[^\n]{0,900}\bprior approval\b/i
+    ],
+    queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,180}\b(?:appoint\w*|appointment|CEO|director|Form 11)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11)\b[\s\S]{0,180}\b(?:LFMC|licensed fund management company)\b/i,
+    subjectPattern: /\b(?:LFMC|fund management|CEO|director|Form 11|key appointment)\b/i
+  }
+]);
+
+export const STATUTORY_WORKFLOW_RULES_METADATA_20261029: readonly StatutoryWorkflowRule[] = STATUTORY_WORKFLOW_RULES_20261029;
+
+function recognizeRule(input: Pick<StatutoryWorkflowRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
+  return STATUTORY_WORKFLOW_RULES_20261029.find(rule => rule.authority === input.authority
+    && rule.topicIds.includes(input.topicId) && rule.queryPattern.test(input.query) && rule.subjectPattern.test(input.subject));
+}
+
+function cleanedSource(sourceText: string): string {
+  if (!/<(?:!doctype|html|head|body|main|article|section|div|p|table|tr|td|li|h[1-6])\b/i.test(sourceText)) {
+    return sourceText.replace(/\r/g, '').replace(/[\t ]+\n/g, '\n').trim();
+  }
+  return (/<table\b/i.test(sourceText) ? cleanHtmlTextPreservingTableCells(sourceText) : cleanHtmlText(sourceText))
+    .replace(/\r/g, '').replace(/\n{2,}/g, '\n').trim();
+}
+
+function sourceStatements(sourceText: string): string[] {
+  const clean = cleanedSource(sourceText);
+  return [...new Set(clean.split(/\n+/).flatMap(line => line.split(/(?<=[.!?])\s+/))
+    .map(value => value.trim()).filter(Boolean))];
+}
+
+function normalizedSourceTerms(value: string): string {
+  return value.replace(/\s*\|\s*/g, ' ').replace(/\s+/g, ' ').toLowerCase();
+}
+
+function sourceContradicts(rule: Rule, sourceText: string): boolean {
+  const clean = cleanedSource(sourceText);
+  return rule.contradictionPatterns.some(pattern => pattern.test(clean));
+}
+
+function sourceProves(rule: Rule, sourceText: string): boolean {
+  return !sourceContradicts(rule, sourceText) && hasAllRequiredTerms(rule, sourceText)
+    && hasAllRequiredQuotes(rule, sourceText);
+}
+
+function hasAllRequiredTerms(rule: Rule, sourceText: string): boolean {
+  const clean = normalizedSourceTerms(cleanedSource(sourceText));
+  return rule.requiredSourceTerms.every(term => clean.includes(normalizedSourceTerms(term)));
+}
+
+function hasAllRequiredQuotes(rule: Rule, sourceText: string): boolean {
+  const clean = cleanedSource(sourceText);
+  return rule.quoteMatchers.every(pattern => pattern.test(clean));
+}
+
+function historicalVersionRequest(query: string): boolean {
+  return /\b(?:historical|historic|back then|at that time|at that date|used to|what was|what were|previous law|prior law|former rule|superseded|in force|what (?:law|rules?|requirements?) applied|which (?:law|rules?) applied|law applicable in|rules? applicable in|effective as of)\b/i.test(query);
+}
+
+function scopeAllowsCurrentRule(query: string): boolean {
+  if (historicalVersionRequest(query)) return false;
+  const resolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query);
+  const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
+  const hasNonCurrentYear = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].some(match => match[0] !== currentYear);
+  if (hasNonCurrentYear && resolution.dateRole !== 'CURRENT_WORKFLOW_FACT') return false;
+  return resolution.source === 'NONE' || !resolution.targetDate;
+}
+
+/** Returns undefined for an unowned issue and false for a known rule without complete exact-source proof. */
+export function supportStatutoryWorkflowRule(request: StatutoryWorkflowRequest): boolean | undefined {
+  const rule = recognizeRule(request);
+  if (!rule) return undefined;
+  if (!scopeAllowsCurrentRule(request.query)
+      || (request.officialUrl !== undefined && request.officialUrl !== rule.officialUrl)
+      || sourceContradicts(rule, request.sourceText)) return false;
+  return sourceProves(rule, request.sourceText);
+}
+
+/** Returns all bounded, directly matched premises only when they jointly prove the owned family. */
+export function selectStatutoryWorkflowQuotes(request: StatutoryWorkflowRequest): string[] {
+  const rule = recognizeRule(request);
+  if (!rule || request.officialUrl !== rule.officialUrl || supportStatutoryWorkflowRule(request) !== true) return [];
+  const clean = cleanedSource(request.sourceText);
+  const statements = sourceStatements(request.sourceText);
+  const quotes = rule.quoteMatchers.map(pattern => pattern.exec(clean)?.[0]).filter((value): value is string => Boolean(value));
+  const selected = [...quotes];
+  for (const term of rule.requiredSourceTerms) {
+    if (normalizedSourceTerms(selected.join(' ')).includes(normalizedSourceTerms(term))) continue;
+    const statement = statements.find(value => normalizedSourceTerms(value).includes(normalizedSourceTerms(term)));
+    if (!statement) return [];
+    selected.push(statement);
+  }
+  const unique = [...new Set(selected)];
+  return unique.every(quote => quote.length <= 5_000)
+    && rule.requiredSourceTerms.every(term => normalizedSourceTerms(unique.join('\n')).includes(normalizedSourceTerms(term)))
+    && !sourceContradicts(rule, unique.join('\n')) ? unique : [];
+}
+
+/** Explicit contradictory text can veto broader statutory fallbacks for a recognized family. */
+export function hasStatutoryWorkflowContradiction(request: StatutoryWorkflowRequest): boolean {
+  const rule = recognizeRule(request);
+  return Boolean(rule && sourceContradicts(rule, request.sourceText));
+}
+
+export function statutoryWorkflowPointers(input: Pick<StatutoryWorkflowRequest, 'authority' | 'topicId' | 'query' | 'subject'>): string[] {
+  const rule = recognizeRule(input);
+  return rule ? [rule.officialUrl] : [];
+}
+
+function sourceFor(rule: Rule, source: AuthorityPresentedSource, issueId: string): boolean {
+  return source.provenance === 'LIVE_EXTERNAL' && !source.validTo && source.officialUrl === rule.officialUrl
+    && groupExactIssueClaimsByDocument(source, issueId)
+      .some(group => sourceProves(rule, group.map(claim => claim.text).join('\n')));
+}
+
+function answerText(rule: Rule): string {
+  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} For case-specific application, consider: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}`;
+}
+
+/** Renders a general explanation only from exact-URL, issue-bound quotes in one verified document revision. */
+export function getStatutoryWorkflowEvidence(
+  query: string,
+  stream: AuthorityPresentedWorkstream,
+  issue: AuthorityPresentedIssue
+): { authority: Rule['authority']; title: string; officialUrl: string; text: string } | undefined {
+  const rule = STATUTORY_WORKFLOW_RULES_20261029.find(candidate => candidate.authority === stream.authority
+    && candidate.queryPattern.test(query) && candidate.subjectPattern.test(issue.subject));
+  if (!rule || !scopeAllowsCurrentRule(query)) return undefined;
+  const domainsByAuthority: Record<Rule['authority'], readonly string[]> = {
+    ACRA: ['ACRA_CORPORATE'], IRAS: ['IRAS_CORPORATE_TAX'], CPF: ['CPF_PAYROLL', 'CPF_CONTRIBUTIONS'],
+    MOM: ['MOM_EMPLOYMENT'], MAS: ['MAS_FUNDS']
+  };
+  const populationsByAuthority: Record<Rule['authority'], readonly string[]> = {
+    ACRA: ['Company', 'COMPANY'], IRAS: ['Company', 'COMPANY'], CPF: ['Employer', 'EMPLOYER'],
+    MOM: ['Employer', 'EMPLOYER', 'Employee', 'EMPLOYEE'], MAS: ['Company', 'COMPANY']
+  };
+  if (!domainsByAuthority[rule.authority].includes(stream.domain) || !populationsByAuthority[rule.authority].includes(issue.population)
+      || !['NOT_REQUIRED', 'UNRESOLVED'].includes(issue.applicationStatus) || issue.evidenceStatus !== 'VERIFIED'
+      || !['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT'].includes(issue.operation)
+      || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
+  const source = stream.sources.find(candidate => sourceFor(rule, candidate, issue.id));
+  if (!source) return undefined;
+  return { authority: rule.authority, title: source.title || rule.title, officialUrl: rule.officialUrl, text: answerText(rule) };
+}

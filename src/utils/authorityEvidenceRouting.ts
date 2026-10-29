@@ -77,6 +77,27 @@ function hasFocusedMasDocumentIssue(issuePlan: SemanticIssueReconciliation): boo
     issue.mappedTopicIds.some(topicId => FOCUSED_MAS_DOCUMENT_TOPICS.has(topicId)));
 }
 
+function hasMappedGeneralIrasRuleIssue(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  const irasIssues = issuePlan.issues.filter(issue => issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS');
+  if (irasIssues.length !== 1) return false;
+  const onlyIrasIssue = irasIssues[0];
+  const classifiedDomains = new Set<string>(classification.domains);
+  const hasOtherRequestedIssue = issuePlan.issues.some(issue => !issue.governingAuthorities.includes('IRAS') &&
+    !(issue.operation === 'OTHER' && issue.mappedTopicIds.length === 0 && (issue.contextualTopicIds?.length || 0) > 0));
+  if (hasOtherRequestedIssue || onlyIrasIssue.operation !== 'EXPLAIN_RULE' ||
+      onlyIrasIssue.population !== 'COMPANY' ||
+      onlyIrasIssue.domain !== 'IRAS_GST' && onlyIrasIssue.domain !== 'IRAS_INCOME_TAX' ||
+      !onlyIrasIssue.mappedTopicIds.length) return false;
+  return getCoverageTopicsByIds(onlyIrasIssue.mappedTopicIds).some(topic =>
+      topic.authorities.includes('IRAS') && ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(topic.domainId) &&
+      [topic.domainId, onlyIrasIssue.domain, ...topic.legacyDomains].some(domain => classifiedDomains.has(domain))
+    ) && classification.authorities.includes('IRAS');
+}
+
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
 export function shouldUseAuthorityEvidenceRuntime(input: {
   issuePlan: SemanticIssueReconciliation;
@@ -86,6 +107,14 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  if (input.explicitIrasEvidenceRequest &&
+      classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&
+      classification.authorities.includes('IRAS') && !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired && !classification.calculationRequired &&
+      hasMappedGeneralIrasRuleIssue(issuePlan, classification)) {
+    return true;
+  }
 
   // Standalone non-IRAS statutory questions can use the same evidence-backed
   // response path when both classification and a governed mapped topic agree.

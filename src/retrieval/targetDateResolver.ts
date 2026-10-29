@@ -4,6 +4,8 @@ export interface TargetDateResolution {
   source: 'EXPLICIT' | 'INFERRED' | 'NONE';
   rawMatchedText?: string;
   isHistorical?: boolean;
+  /** A recognised input fact, rather than a request for the law in that period. */
+  dateRole?: 'CURRENT_WORKFLOW_FACT';
 }
 
 import { getSingaporeDateString } from '../utils/dateUtils';
@@ -69,6 +71,97 @@ function section13wDisposalYear(query: string): string | undefined {
 
 export class TargetDateResolver {
   public static readonly CURRENT_SYSTEM_DATE = getSingaporeDateString();
+
+  private static hasSingleExplicitDate(query: string): boolean {
+    return [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))].length === 1;
+  }
+
+  private static dateHasNearbyRole(query: string, role: RegExp): boolean {
+    const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+    if (dates.length !== 1) return false;
+    const date = dates[0];
+    const start = Math.max(0, date.index! - 90);
+    const end = Math.min(query.length, date.index! + date[0].length + 70);
+    return role.test(query.slice(start, end));
+  }
+
+  /** Recognises fact dates only within one current compliance workflow. */
+  private static isCurrentWorkflowFactDate(query: string, currentDate: string): boolean {
+    if (/\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective|as of|as at|which law|what law|rules? applied|requirements? applied|used to)\b/i.test(query)) return false;
+    // These distinct requests must retain their date scope even without an authority acronym.
+    if (/\b(?:gst|goods and services tax|withholding tax|wht|public holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
+    const years = [...new Set([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))];
+    const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+    if (years.length !== 1) return false;
+    if (dates.length === 0) {
+      return Number(years[0]) <= Number(currentDate.slice(0, 4)) &&
+        /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(query) &&
+        /\b(?:company|corporate|business)\b/i.test(query) &&
+        /\b(?:records?|documents?|books|record[- ]keeping)\b/i.test(query) &&
+        /\b(?:retain|retention|keep|keeping|discard)\b/i.test(query) &&
+        !/\b(?:acra|cpf|mom|mas|were|was|did)\b/i.test(query);
+    }
+    if (dates.length !== 1 || years[0] !== currentDate.slice(0, 4) ||
+        (query.match(/\?/g) || []).length > 1) return false;
+    const date = EXPLICIT_DATE_PATTERN;
+    const nearDate = (role: string): boolean => new RegExp(`${role}[^.!?;\\n]{0,75}${date}`, 'i').test(query);
+    const entityChange = /\b(?:acra|registered office|entity email|entity information|entity details)\b/i.test(query) &&
+      nearDate(String.raw`\b(?:changed|updated|change occurred|date of (?:the )?change)\b`) &&
+      !/\b(?:cpf|mom|mas|income tax|employment act|fund management)\b/i.test(query);
+    const cpfRefund = /\b(?:cpf|central provident fund)\b/i.test(query) && /\brefund\w*\b/i.test(query) &&
+      nearDate(String.raw`\b(?:paid|payment|payments received on|repayment|wages? repayable)\b`) &&
+      !/\b(?:acra|mom|mas|income tax|employment act|fund management)\b/i.test(query);
+    const payslip = /\b(?:itemi[sz]ed pay ?slips?|pay ?slips?)\b/i.test(query) &&
+      nearDate(String.raw`\b(?:payment|paid|termination|dismissal|salary payment)\b`) &&
+      !/\b(?:acra|cpf|mas|income tax|fund management)\b/i.test(query);
+    const appointment = /\b(?:lfmc|licensed fund management company)\b/i.test(query) &&
+      nearDate(String.raw`\b(?:appoint\w*|ceo|chief executive|director)\b`) &&
+      !/\b(?:acra|cpf|mom|income tax|employment act)\b/i.test(query);
+    return entityChange || cpfRefund || payslip || appointment;
+  }
+
+  /** Resolves dates for statutory evidence separately from accounting transaction dates. */
+  public resolveAuthorityEvidenceDate(
+    query: string,
+    currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
+  ): TargetDateResolution {
+    const currentYear = currentDate.slice(0, 4);
+    const years = [...new Set([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))];
+    const versionContext = /\b(?:historical|historic|previous|prior|past|former|superseded|effective date|effective during|which law|which rules?|applicable law|year of assessment|\bya\s*20\d{2}|basis period|payroll year|rate table|legal|statutory|in force|governed|law|rules? applied|rate)\b/i.test(query);
+    const otherAuthorityOrDomain = /\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|acra|mas|monetary authority|income tax|corporate tax|tax relief|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?)\b/i.test(query);
+    const unresolved = (): TargetDateResolution => ({ confidence: 'LOW', source: 'NONE', isHistorical: false });
+    if (TargetDateResolver.isCurrentWorkflowFactDate(query, currentDate)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
+
+    const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&
+      /\b(?:filing|due date|deadline|when\b[^.!?;\n]{0,65}\b(?:file|filed|paid))\b/i.test(query) &&
+      /\b(?:paid|pay|paying|payment)\b/i.test(query) &&
+      TargetDateResolver.dateHasNearbyRole(query, /\b(?:paid|pay|paying|payment)\b/i) &&
+      !/\b(?:rates?|tax rates?|percent(?:age)?s?|back then|at that time|at that date|used to)\b/i.test(query);
+    if (asksWhtDeadline && years.length === 1 && years[0] === currentYear &&
+        TargetDateResolver.hasSingleExplicitDate(query) && !versionContext && !otherAuthorityOrDomain) {
+      return unresolved();
+    }
+
+    const asksPrContributionYearStart = /\b(?:permanent resident|spr|pr)\b/i.test(query) &&
+      /\b(?:became|obtained|conversion|converted|granted)\b/i.test(query) &&
+      TargetDateResolver.dateHasNearbyRole(query, /\b(?:became|obtained|conversion|converted|granted)\b/i) &&
+      /\b(?:when|what date)\b[\s\S]{0,80}\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?contribution year\s+(?:begin|start)/i.test(query);
+    if (asksPrContributionYearStart && years.length === 1 && TargetDateResolver.hasSingleExplicitDate(query) &&
+        !versionContext && !otherAuthorityOrDomain &&
+        !/\b(?:rates?|contributions? on wages|applicable to payroll|which table)\b/i.test(query)) {
+      return unresolved();
+    }
+
+    const asksCurrentAcraOfficerChange = /\bannual[- ]return\b/i.test(query) &&
+      new RegExp(`\\boctober\\s+${currentYear}\\b`, 'i').test(query) &&
+      /\b(?:change|commenc\w*)\b/i.test(query) &&
+      /\b(?:ceo|chief executive|officer particulars?)\b/i.test(query) &&
+      years.length === 1 && years[0] === currentYear && !otherAuthorityOrDomain &&
+      !/\b(?:file|filed|filing|submitted|lodged|our company|my company)\b/i.test(query) && !versionContext;
+    if (asksCurrentAcraOfficerChange) return unresolved();
+
+    return this.resolveTargetDate(query, currentDate);
+  }
 
   /**
    * Resolves target transaction, reporting, or statutory dates from user input text.

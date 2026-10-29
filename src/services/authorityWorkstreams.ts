@@ -1026,7 +1026,7 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
       if (!authority || !retrieverAuthority || topics.length === 0 || !domain) return { candidates: [], trace: getDefaultTrace(false) };
       const acraFacts = authority === 'ACRA' ? identifyAcraAnnualReturnCompanyFacts(request.originalQuery) : undefined;
       const resolvedTarget = authority === 'ACRA'
-        ? defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate)
+        ? defaultTargetDateResolver.resolveAuthorityEvidenceDate(request.originalQuery, referenceDate)
         : undefined;
       const applicabilityTarget = authority === 'ACRA' &&
         requiresAcraAnnualReturnDeadlineEvidence(request.originalQuery, authority, request.issue) &&
@@ -1079,7 +1079,7 @@ function defaultOfficialStatutoryProvider(
       const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(
         request.originalQuery, authority, request.issue
       );
-      const targetDate = defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate).targetDate;
+      const targetDate = defaultTargetDateResolver.resolveAuthorityEvidenceDate(request.originalQuery, referenceDate).targetDate;
       const versioningManager = versioningManagerFor(retriever);
       const localAdmission = eligibleLocalRecords(
         local.candidates, request.issue, authority, topics,
@@ -1537,6 +1537,8 @@ function practicalRuleIssueTextSupport(
     const expectedPopulation = topicAuthority === 'CPF' ? 'EMPLOYER'
       : topicAuthority === 'IRAS' || topicAuthority === 'ACRA' || topicAuthority === 'MAS' ? 'COMPANY'
         : undefined;
+    const cpfEmployeeRuleProof = topicAuthority === 'CPF' && topic.domainId === 'CPF_CONTRIBUTIONS' &&
+      supportStatutoryKnowledgeRule(coverageRequest) === true;
     const allowedOperations = expansionSupport === true || topicAuthority === 'ACRA' || topicAuthority === 'MAS'
       ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT',
           ...(topicAuthority === 'CPF' && supportStatutoryKnowledgeRule(coverageRequest) === true ? ['CALCULATE'] : [])]
@@ -1548,7 +1550,10 @@ function practicalRuleIssueTextSupport(
       !hasSpecificMOMPopulationRequest;
     const populationMatches = topicAuthority === 'MOM'
       ? ['EMPLOYEE', 'EMPLOYER'].includes(issue.population) || unknownMOMGeneralRule
-      : issue.population === expectedPopulation;
+      : topicAuthority === 'CPF'
+        ? issue.population === 'EMPLOYER' || issue.population === 'EMPLOYEE' && cpfEmployeeRuleProof &&
+          ['EXPLAIN_RULE', 'CALCULATE'].includes(issue.operation)
+        : issue.population === expectedPopulation;
     const scopeMatches = issue.status === 'MAPPED' && topicAuthority &&
       issue.domain === expectedDomain[topicAuthority] && issue.governingAuthorities.length === 1 &&
       issue.governingAuthorities[0] === topicAuthority && issue.mappedTopicIds.includes(topic.id) &&
@@ -1701,6 +1706,30 @@ function topicBoundToRecord(record: AuthoritativeSourceRecord, topic: SingaporeC
     (record.relatedTopicIds || []).includes(topic.id) ||
     (record.sourceMapTopicIds || []).includes(topic.id) ||
     (record.retrievalHints || []).includes(topic.id);
+}
+
+function provesExactIrasKnowledgeTopic(
+  record: AuthoritativeSourceRecord,
+  topic: SingaporeCoverageTopic,
+  query: string,
+  subject: string
+): boolean {
+  if (record.authority !== 'IRAS' || record.sourceAuthority !== 'IRAS' ||
+      !topic.authorities.includes('IRAS') || !record.officialSourceUrl ||
+      record.canonicalSourceUrl !== record.officialSourceUrl ||
+      !STATUTORY_KNOWLEDGE_RULES_20261027B.some(rule => rule.authority === 'IRAS' &&
+        rule.topicIds.includes(topic.id) && rule.officialUrl === record.officialSourceUrl)) return false;
+  return supportStatutoryKnowledgeRule({ authority: 'IRAS', topicId: topic.id, query, subject,
+    sourceText: record.sourceText || '', officialUrl: record.officialSourceUrl }) === true;
+}
+
+function issueTopicBoundToRecord(
+  record: AuthoritativeSourceRecord,
+  topic: SingaporeCoverageTopic,
+  query: string,
+  subject: string
+): boolean {
+  return topicBoundToRecord(record, topic) || provesExactIrasKnowledgeTopic(record, topic, query, subject);
 }
 
 function recordMatchesGovernorAndDomain(record: AuthoritativeSourceRecord, authority: SemanticAuthority, topic: SingaporeCoverageTopic): boolean {
@@ -2102,7 +2131,7 @@ function completeExpansionClaimText(
   query: string,
   subject: string
 ): string | undefined {
-  if (!topicBoundToRecord(record, topic)) return undefined;
+  if (!issueTopicBoundToRecord(record, topic, query, subject)) return undefined;
   const request = { authority: topic.authorities[0] || '', topicId: topic.id,
     query, subject, sourceText: record.sourceText,
     officialUrl: record.officialSourceUrl || record.canonicalSourceUrl };
@@ -2207,6 +2236,7 @@ function issueClaimCoverage(
   for (const topic of topics) {
     const topicClaim = claims.some(claim => {
       const record = recordById.get(claim.recordId);
+      const issueTopicBound = Boolean(record && issueTopicBoundToRecord(record, topic, originalQuery, issue.subject));
       const expansionText = record && completeExpansionClaimText(claim, claims, record, topic, originalQuery, issue.subject);
       if (expansionText) return practicalRuleIssueTextSupport(expansionText, originalQuery, issue, topic) === true;
       const tableOwnsDeadlineIssue = requireAcraDeadlineTable && topic.id === 'acra_annual-returns' &&
@@ -2215,7 +2245,7 @@ function issueClaimCoverage(
         record, topic, claim.quote, authority, issue, originalQuery
       ));
       const momSalarySupport = momSalaryPaymentIssueSupport(claim.quote, issue, authority, originalQuery);
-      const practicalRuleSupport = record && topicBoundToRecord(record, topic)
+      const practicalRuleSupport = record && issueTopicBound
         ? practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic)
         : undefined;
       const supportsTopic = practicalRuleSupport !== undefined
@@ -2231,7 +2261,7 @@ function issueClaimCoverage(
             authority === 'IRAS' && concepts.some(concept => concept.topicIds.includes(topic.id) &&
               generalIrasRuleConceptSupport(claim.quote, issue, [topic], [concept]) === true);
       return Boolean(record && passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery) &&
-        (topicBoundToRecord(record, topic) && (tableOwnsDeadlineIssue || supportsTopic) || momCanonicalAliasClaim));
+        (issueTopicBound && (tableOwnsDeadlineIssue || supportsTopic) || momCanonicalAliasClaim));
     });
     if (!topicClaim) missing.push(`topic:${topic.id}`);
   }
@@ -2241,7 +2271,7 @@ function issueClaimCoverage(
       const record = recordById.get(claim.recordId);
       if (record) {
         for (const topic of topics) {
-          if (!topicBoundToRecord(record, topic)) continue;
+          if (!issueTopicBoundToRecord(record, topic, originalQuery, issue.subject)) continue;
           const expansionText = completeExpansionClaimText(claim, claims, record, topic, originalQuery, issue.subject);
           if (expansionText) return practicalRuleIssueTextSupport(expansionText, originalQuery, issue, topic, concept) === true;
           const practicalRuleConceptSupport = practicalRuleIssueTextSupport(claim.quote, originalQuery, issue, topic, concept);
@@ -2515,7 +2545,7 @@ async function evaluateIssue(
   let localRejectedCount = 0;
   let candidateDiagnostics: AuthorityCandidateAdmissionDiagnostic[] = [];
   let irasQuality = undefined as ReturnType<typeof evaluateEvidenceQuality> | undefined;
-  const targetDate = defaultTargetDateResolver.resolveTargetDate(query, referenceDate).targetDate;
+  const targetDate = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, referenceDate).targetDate;
   if (plan.authority === 'IRAS') {
     irasQuality = evaluateEvidenceQuality({
       query,
