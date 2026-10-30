@@ -10,6 +10,8 @@ tests/fixtures/legacy_verification_harness_23637b.txt -text whitespace=cr-at-eol
 tests/fixtures/statutoryDevelopment20261027/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryKnowledge20261027b/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryWorkflows20261029/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
+
+tests/fixtures/statutoryKnowledge20261030/** -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol
 tests/fixtures/statutoryExpansionSources/iras-eci-filing-native.html -text whitespace=-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol

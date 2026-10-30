@@ -1,5 +1,13 @@
 # AGENTS.md
 
+## Codex usage reserve
+
+- For substantial work in this project, automatically read the available Codex usage-limit tool at the start or resumption, before delegating substantial work, before broad validation or publication, and at least every 15 minutes during sustained work. The user should not need to request these checks.
+- Track the five-hour window's remaining percentage (100 minus usedPercent), its reset time, and any more restrictive available allowance. Usage is shared across the account, including subagents and other chats; do not treat a prior reading as a guaranteed remaining budget.
+- Preserve more than 5% of the five-hour allowance. At 15% remaining, stop optional expansion and prioritize a tested, reviewable checkpoint. At 10% remaining, do not start substantial implementation, delegation, or broad validation; save current state, actual checks, unresolved failures, and exact next steps, then report the checkpoint before the reserve is consumed.
+- Recheck after a substantial agent run or an unexpected usage/credit error. If the usage tool is unavailable, say that the allowance cannot be verified and avoid starting another large batch on an assumed budget. Never automatically consume a reset credit, purchase credits, or change account limits.
+- A checkpoint is not completion: identify uncommitted/unpushed work and pending review/validation, and do not weaken accounting, evidence, or test safeguards to fit the reserve. Resume after the allowance replenishes or the user supplies a new instruction.
+
 ## Project purpose
 
 This repository is an IFRS and Singapore SFRS(I) accounting assistant.

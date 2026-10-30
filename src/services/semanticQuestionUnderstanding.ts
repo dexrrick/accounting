@@ -2859,6 +2859,43 @@ function refineTaxonomyRuleIntent(
     } : issue;
   };
 
+  if (issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+      topicIds.has('iras-cit-donations') && /\b(?:donat\w*|approved institution|ipc|institutions? of a public character)\b/i.test(text) &&
+      /\b(?:corporate|company|income) tax\b/i.test(text)) {
+    return makeRuleIssue('Corporate income tax treatment of approved donations', 'COMPANY');
+  }
+
+  if (issue.domain === 'ACRA_CORPORATE' && topicIds.has('acra_registered-office') &&
+      /\bregistered office\b/i.test(text) &&
+      /\b(?:location|address|access|accessible|hours|records?|notices?|mail|business day)\b/i.test(text) &&
+      !/\b(?:change|changed|updat\w*|notify|notification|filing deadline)\b/i.test(text)) {
+    return makeRuleIssue('ACRA local-company registered office location, access, records and notices', 'COMPANY');
+  }
+
+  if (issue.domain === 'MOM_EMPLOYMENT' && topicIds.has('mom-itemised-payslips') &&
+      /\b(?:itemi[sz]ed pay ?slips?|pay ?slips?|payslips?)\b/i.test(text) &&
+      /\b(?:content|particulars|format|soft copy|hard copy|electronic|retain\w*|retention|keep copies|records?)\b/i.test(text)) {
+    return makeRuleIssue('MOM itemised payslip content, delivery format and retention requirements', 'EMPLOYER');
+  }
+
+  if (issue.domain === 'CPF_PAYROLL' && topicIds.has('cpf-record-rectifications') &&
+      /\b(?:wrong|incorrect|amend|rectif|actual|change)\w*\b/i.test(text) &&
+      /\b(?:wage record|contribution month|contributions? record|cpf submission number|recipient)\b/i.test(text)) {
+    return makeRuleIssue('CPF contribution wage-record rectifications and refund or adjustment options', 'EMPLOYER');
+  }
+
+  if (issue.domain === 'MAS_FUNDS' && topicIds.has('mas-vcfm-change-notifications') &&
+      /\b(?:vcfm|venture capital fund manager)\b/i.test(text) &&
+      /\b(?:form 23a|particulars|appoint\w*|resign\w*|director|ceo|shareholder|contact|principal place|organisational chart)\b/i.test(text)) {
+    return makeRuleIssue('VCFM Form 23A change-in-particulars notification', 'COMPANY');
+  }
+
+  if (issue.domain === 'MAS_FUNDS' && topicIds.has('mas-vcfm-business-cessation') &&
+      /\b(?:vcfm|venture capital fund manager)\b/i.test(text) &&
+      /\b(?:form 7|ceas\w*|cessation|stopp\w*|not commenc\w*|non.commenc\w*|regulated activit\w*)\b/i.test(text)) {
+    return makeRuleIssue('VCFM Form 7 cessation and noncommencement notification', 'COMPANY');
+  }
+
   if (issue.domain === 'CPF_PAYROLL') {
     const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') && isCpfEmployerRefundContext(text);
     if (asksEmployerCpfRefund) {
@@ -2948,11 +2985,32 @@ function refineTaxonomyRuleIntent(
     if (asksAwCeiling && /\b(?:employer|payroll|our|we|employee['’]?s wages)\b/i.test(text)) {
       const separateOwCeiling = /\b(?:what|which|how much|is|does|apply to)\b[^.!?;]{0,55}\b(?:ordinary wages?|\bow\b)[^.!?;]{0,30}\bceiling\b/i.test(text);
       const contextualOw = separateOwCeiling ? [] : ['cpf-ordinary-wages', 'cpf_wage_ceiling'];
-      return makeRuleIssue('CPF additional wage ceiling and year-end recalculation', 'EMPLOYER', contextualOw);
+      const asksSeparateRecordRectification = /\b(?:wage record|contribution month|contributions? record|cpf submission number|recipient)\b/i.test(text) &&
+        /\b(?:wrong|incorrect|amend|rectif|correct|change)\w*\b/i.test(text);
+      const awIssue = makeRuleIssue('CPF additional wage ceiling and year-end recalculation', 'EMPLOYER', contextualOw);
+      return asksSeparateRecordRectification ? awIssue : {
+        ...awIssue,
+        mappedTopicIds: awIssue.mappedTopicIds.filter(topicId => topicId !== 'cpf-record-rectifications')
+      };
     }
   }
 
   if (issue.domain === 'MOM_EMPLOYMENT') {
+    const asksEmployerSalaryDeductionRule = topicIds.has('mom-salary-payment') &&
+      /\b(?:salary|wages?)\b/i.test(text) &&
+      /\b(?:deduct\w*|deduction\w*)\b/i.test(text) &&
+      /\b(?:can|may|lawful|allowed|permitted|authori[sz]ed|should|must)\b/i.test(text);
+    if (asksEmployerSalaryDeductionRule) {
+      return makeRuleIssue('MOM employer salary deduction authorization, purpose and limits', 'EMPLOYER');
+    }
+    const asksGeneralSalaryPaymentFrequency = topicIds.has('mom-salary-payment') &&
+      /\b(?:salary|wages?)\b/i.test(text) &&
+      (/\b(?:every|once|twice)\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+months?\b/i.test(text) ||
+        /\b(?:how often|frequency|payment interval|pay period)\b/i.test(text) &&
+          /\b(?:employer|company|business|payroll|paid|pay|payment)\b/i.test(text));
+    if (asksGeneralSalaryPaymentFrequency) {
+      return makeRuleIssue('MOM salary payment frequency and statutory deadline', 'EMPLOYER');
+    }
     const employeeScope = /\b(?:employee|worker|staff member|employment act)\b/i.test(text);
     const employerScope = /\b(?:employer|company|business)\b/i.test(text);
     const population: SemanticPopulation = employeeScope ? 'EMPLOYEE'
@@ -3055,7 +3113,7 @@ function refineTaxonomyRuleIntent(
       /\b(?:change\w*|updat\w*|notif\w*|inform\w*|report\w*)\b/i.test(text) &&
       !/\b(?:vcc|variable capital compan(?:y|ies))\b/i.test(text);
     if (asksCompanyEntityUpdateRule) {
-      const asksSeparateRegisteredOfficeRule = /\b(?:where is|what (?:is|are) (?:the )?registered office|what must\b[^.!?;]{0,60}\bregistered office|which address|registered office location|registered office address requirements?|what address must|registered office (?:must|should|needs to|has to) be)\b/i.test(text);
+      const asksSeparateRegisteredOfficeRule = asksPhysicalRegisteredOfficeRequirements(query);
       const proposedAnnualReturnDeferral = /\bwait\b[^.!?;]{0,65}\bannual return\b/i.test(text) &&
         !/\b(?:annual return[^.!?;]{0,30}(?:deadline|due)|(?:when|what date)[^.!?;]{0,40}(?:file|submit|lodge)[^.!?;]{0,25}annual return)\b/i.test(text);
       const updateIssue = makeRuleIssue('ACRA company entity information update requirements', 'COMPANY',
@@ -3277,12 +3335,24 @@ function refineTaxonomyRuleIntent(
 }
 
 function isCpfEmployerRefundContext(query: string): boolean {
-  const employerApplicantContext = /\b(?:we (?:paid|found|discover\w*|submitted|contributed|overpaid|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query);
+  const employerApplicantContext = /\b(?:we (?:paid|found|discover\w*|submitted|contributed|overpaid|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query)
+    || /\b(?:employer|company|our payroll|our company)\b[\s\S]{0,180}\bwe\s+(?:should|can|must|need to)?\s*(?:request|apply for)\s+(?:a\s+)?(?:cpf\s+)?refund\b/i.test(query);
+  const employeeWageContext = /\b(?:employee|staff|payroll|bonus|wages?|salary|contributions?)\b/i.test(query);
+  const paidCpfRecordContext = employeeWageContext &&
+    (/\b(?:PAYMENTS RECEIVED ON|CPF payment record)\b/i.test(query) ||
+      /\b(?:cpf|central provident fund)\b[^.!?;\n]{0,100}\b(?:was|were|is|are)\s+paid\b/i.test(query));
   const individualEmployeeVoice = /\b(?:my employer|to my employer|my (?:own |joining )?(?:bonus|wages?|cpf)|i (?:have|had|need|must|want|would) to repay)\b/i.test(query);
   return /\b(?:cpf|central provident fund)\b/i.test(query) &&
     /\b(?:refund\w*|overpaid|overpayment|excess (?:cpf )?contributions?|wrongly paid|mistaken (?:cpf )?contributions?|paid in error|recover\w*|money back)\b/i.test(query) &&
-    employerApplicantContext && !individualEmployeeVoice &&
+    (employerApplicantContext || paidCpfRecordContext) && !individualEmployeeVoice &&
     !/\b(?:individual|member|my own|my personal)\b/i.test(query);
+}
+
+function asksPhysicalRegisteredOfficeRequirements(query: string): boolean {
+  return /\bwhere\b[^.!?;]{0,120}\b(?:registered office|office)\b/i.test(query)
+    || /\b(?:registered office|office)\b[^.!?;]{0,120}\b(?:accessible|access hours|opening hours|business hours|open to|records?|notices?|mail|kept at)\b/i.test(query)
+    || /\bwhat must\b[^.!?;]{0,60}\bregistered office(?: address)?\s+(?:be|have|maintain)\b/i.test(query)
+    || /\b(?:what|which)\b[^.!?;]{0,100}\b(?:address|location)\b[^.!?;]{0,80}\bregistered office\b/i.test(query);
 }
 
 function explicitlyAsksCpfWageClassification(query: string): boolean {
@@ -3293,6 +3363,9 @@ function independentlyRecognizedTopics(query: string, classification: QuestionCl
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const candidateIds = [...new Set([...decomposition.topics.map(topic => topic.id), ...classification.topicIds])];
   const cpfRefundContext = isCpfEmployerRefundContext(query);
+  const registeredOfficeRecordContext = /\bregistered office\b/i.test(query)
+    && /\b(?:records?|notices?|mail)\b/i.test(query)
+    && !/\b(?:income tax|corporate tax|company tax|tax return|year of assessment|bank statements?|accounting records?|source documents?)\b/i.test(query);
   const incidentalCpfRefundTopics = cpfRefundContext
     ? new Set([
       ...(!explicitlyAsksCpfWageClassification(query)
@@ -3303,6 +3376,7 @@ function independentlyRecognizedTopics(query: string, classification: QuestionCl
     : new Set<string>();
   const topics = defaultQueryTopicResolver.resolveTopicIds(candidateIds).filter(topic =>
     !incidentalCpfRefundTopics.has(topic.id) &&
+    !(registeredOfficeRecordContext && topic.id === 'iras-company-record-retention') &&
     (topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
       topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
       topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_')));
@@ -3430,7 +3504,7 @@ function reconcileSemanticIssuePlan(
       else routingOwnershipFailure = ownership.failure;
     }
 
-    const issues: ReconciledSemanticQuestionIssue[] = issueMappings.map((issue, index) => {
+  const issues: ReconciledSemanticQuestionIssue[] = issueMappings.map((issue, index) => {
       const routingTopicIds = routingTopicIdsByIssue.get(index) || [];
       const { subjectRoutingChildTopicIds: _subjectRoutingChildTopicIds, ...publicIssue } = issue;
       return { ...publicIssue, ...(routingTopicIds.length ? { routingTopicIds: [...routingTopicIds] } : {}) };
@@ -3447,12 +3521,13 @@ function reconcileSemanticIssuePlan(
         unresolvedReason: 'UNASSIGNED_QUERY_TOPIC'
       });
     }
+    const issuesWithRequestedStatutoryParts = appendRequestedStatutoryIssues(query, issues, addId);
     const hasUnmappedResidual = Boolean(routingOwnershipFailure) ||
       inventory.hasUnparsedText && !canBindAcraApplicationInputResiduals(query, issues, inventory) || inventory.topics.length === 0 ||
       issues.some(issue => issue.status === 'UNRESOLVED');
     return {
       source: 'SEMANTIC_ISSUES',
-      issues,
+      issues: issuesWithRequestedStatutoryParts,
       coverageEstablished: inventory.topics.length > 0 && !hasUnmappedResidual,
       hasUnmappedResidual,
       ...(routingOwnershipFailure ? { routingOwnershipFailure } : {})
@@ -3521,13 +3596,268 @@ function reconcileSemanticIssuePlan(
       status: 'MAPPED' as const
     };
   });
-  const boundedAcraMissingFactsQuestion = isBoundedAcraAnnualReturnMissingFactsQuestion(query) && issues.length === 1 &&
-    issues[0].status === 'MAPPED' && issues[0].domain === 'ACRA_CORPORATE' && issues[0].population === 'COMPANY' &&
-    issues[0].governingAuthorities.length === 1 && issues[0].governingAuthorities[0] === 'ACRA' &&
-    issues[0].mappedTopicIds.length === 1 && issues[0].mappedTopicIds[0] === 'acra_annual-returns';
-  return { source: 'TAXONOMY_FALLBACK', issues,
+  const issuesWithRequestedStatutoryParts = appendRequestedStatutoryIssues(query, issues, addId);
+  const boundedAcraMissingFactsQuestion = isBoundedAcraAnnualReturnMissingFactsQuestion(query) && issuesWithRequestedStatutoryParts.length === 1 &&
+    issuesWithRequestedStatutoryParts[0].status === 'MAPPED' && issuesWithRequestedStatutoryParts[0].domain === 'ACRA_CORPORATE' && issuesWithRequestedStatutoryParts[0].population === 'COMPANY' &&
+    issuesWithRequestedStatutoryParts[0].governingAuthorities.length === 1 && issuesWithRequestedStatutoryParts[0].governingAuthorities[0] === 'ACRA' &&
+    issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === 1 && issuesWithRequestedStatutoryParts[0].mappedTopicIds[0] === 'acra_annual-returns';
+  return { source: 'TAXONOMY_FALLBACK', issues: issuesWithRequestedStatutoryParts,
     coverageEstablished: boundedAcraMissingFactsQuestion,
     hasUnmappedResidual: !boundedAcraMissingFactsQuestion };
+}
+
+function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
+  id: string;
+  status: 'MAPPED' | 'UNRESOLVED';
+  unresolvedReason?: ReconciledSemanticQuestionIssue['unresolvedReason'];
+  contextualTopicIds?: string[];
+}>(
+  query: string,
+  originalIssues: TIssue[],
+  addId: (issue: SemanticQuestionIssue) => string
+): TIssue[] {
+  const issues = [...originalIssues];
+  const cloneAsRequestedIssue = (
+    template: TIssue,
+    subject: string,
+    topicIds = template.mappedTopicIds,
+    population: SemanticPopulation = 'COMPANY',
+    operation: SemanticQuestionIssue['operation'] = 'EXPLAIN_RULE'
+  ): TIssue => {
+    const { id: _id, status: _status, unresolvedReason: _unresolvedReason, contextualTopicIds: _contextualTopicIds, ...base } = template;
+    const issue: SemanticQuestionIssue = {
+      ...base,
+      subject,
+      population,
+      operation,
+      mappedTopicIds: topicIds,
+      evidenceRequirement: deriveEvidenceRequirement(template.domain, operation),
+      confidence: 1
+    };
+    return { ...issue, id: addId(issue), status: 'MAPPED' } as TIssue;
+  };
+  const alreadyHasSubject = (pattern: RegExp) => issues.some(issue => pattern.test(issue.subject));
+
+  const irasInputTax = issues.find(issue => issue.domain === 'IRAS_GST' &&
+    issue.mappedTopicIds.some(topicId => ['iras-gst-input-tax', 'iras-gst-blocked-input-tax'].includes(topicId)));
+  const normalizedGstQuery = query.toLowerCase().replace(/[-_]/g, ' ');
+  const asksMedicalInputTax = /\b(?:staff|employee)\s+(?:medical\s+)?(?:expenses?|check[- ]?ups?|screening)\b/i.test(normalizedGstQuery) &&
+    /\b(?:input tax|input gst|gst)\b/i.test(normalizedGstQuery) &&
+    /\b(?:claim|recover|allowed|allowable|eligible|deductible)\w*\b/i.test(normalizedGstQuery);
+  const asksCommercialVanInputTax = /\b(?:delivery|commercial|goods)\s+van\b/i.test(normalizedGstQuery) &&
+    /\b(?:input tax|input gst|gst)\b/i.test(normalizedGstQuery) &&
+    /\b(?:claim|recover|allowed|allowable|eligible|deductible)\w*\b/i.test(normalizedGstQuery);
+  if (irasInputTax && asksMedicalInputTax && asksCommercialVanInputTax) {
+    const medicalSubject = /GST input tax on staff medical expenses/i;
+    const vanSubject = /GST input tax on (?:a )?(?:delivery|commercial|goods) van/i;
+    if (!alreadyHasSubject(medicalSubject)) {
+      issues.push(cloneAsRequestedIssue(irasInputTax, 'GST input tax on staff medical expenses'));
+    }
+    if (!alreadyHasSubject(vanSubject)) {
+      issues.push(cloneAsRequestedIssue(irasInputTax, 'GST input tax on a delivery van used for business deliveries'));
+    }
+    const originalIndex = issues.indexOf(irasInputTax);
+    const residualTopics = irasInputTax.mappedTopicIds.filter(topicId =>
+      !['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId));
+    if (originalIndex >= 0) {
+      const originalAlreadySpecific = /staff medical expenses|delivery van/i.test(irasInputTax.subject);
+      if (residualTopics.length === 0 && !originalAlreadySpecific) {
+        issues.splice(originalIndex, 1);
+      } else if (residualTopics.length > 0) {
+        issues[originalIndex] = cloneAsRequestedIssue(irasInputTax, irasInputTax.subject,
+          residualTopics, irasInputTax.population, irasInputTax.operation);
+      }
+    }
+  }
+
+  const momSalaryIssueIndex = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+    issue.mappedTopicIds.includes('mom-salary-payment'));
+  const asksSalaryDeduction = /\b(?:salary|wages?)\b/i.test(query) &&
+    /\b(?:deduct\w*|deduction\w*)\b/i.test(query) &&
+    /\b(?:can|may|lawful|allowed|permitted|authori[sz]ed|should|must)\b/i.test(query);
+  const asksSalaryPaymentFrequency = /\b(?:salary|wages?)\b/i.test(query) &&
+    (/\b(?:every|once|twice)\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+months?\b/i.test(query) ||
+      /\b(?:how often|frequency|payment interval|pay period)\b/i.test(query) &&
+        /\b(?:employer|company|business|payroll|paid|pay|payment)\b/i.test(query));
+  if (momSalaryIssueIndex >= 0 && asksSalaryDeduction && asksSalaryPaymentFrequency &&
+      hasIndependentSemanticClause(query)) {
+    const template = issues[momSalaryIssueIndex];
+    const residualTopics = template.mappedTopicIds.filter(topicId => topicId !== 'mom-salary-payment');
+    if (residualTopics.length === 0) {
+      issues[momSalaryIssueIndex] = cloneAsRequestedIssue(template,
+        'MOM employer salary deduction authorization, purpose and limits', ['mom-salary-payment'], 'EMPLOYER');
+    }
+    if (!alreadyHasSubject(/MOM employer salary deduction authorization, purpose and limits/i)) {
+      issues.push(cloneAsRequestedIssue(template,
+        'MOM employer salary deduction authorization, purpose and limits', ['mom-salary-payment'], 'EMPLOYER'));
+    }
+    if (!alreadyHasSubject(/MOM salary payment frequency and statutory deadline/i)) {
+      issues.push(cloneAsRequestedIssue(template,
+        'MOM salary payment frequency and statutory deadline', ['mom-salary-payment'], 'EMPLOYER'));
+    }
+  }
+
+  const acraOfficeIssueIndex = issues.findIndex(issue => issue.domain === 'ACRA_CORPORATE' &&
+    (issue.mappedTopicIds.includes('acra_registered-office') ||
+      issue.contextualTopicIds?.includes('acra_registered-office')));
+  const acraOfficeUpdateIntent = /\bregistered office\b/i.test(query) &&
+    /\b(?:change|changed|update|updated|notify|notification|inform|report)\w*\b/i.test(query);
+  const acraOfficePhysicalIntent = /\bregistered office\b/i.test(query) &&
+    asksPhysicalRegisteredOfficeRequirements(query);
+  if (acraOfficeIssueIndex >= 0 && acraOfficeUpdateIntent && acraOfficePhysicalIntent) {
+    const template = issues[acraOfficeIssueIndex];
+    const updateTopics = template.mappedTopicIds.filter(topicId => topicId !== 'acra_registered-office');
+    const unrelatedTopics = updateTopics.filter(topicId => topicId !== 'acra-entity-information-changes');
+    if (updateTopics.length && unrelatedTopics.length === 0) {
+      issues[acraOfficeIssueIndex] = cloneAsRequestedIssue(template,
+        'ACRA company entity information update requirements', updateTopics, 'COMPANY');
+    }
+    if (!alreadyHasSubject(/ACRA local-company registered office location, access, records and notices/i)) {
+      issues.push(cloneAsRequestedIssue(template,
+        'ACRA local-company registered office location, access, records and notices',
+        ['acra_registered-office'], 'COMPANY'));
+    }
+  }
+
+  const cpfRefundTemplate = issues.find(issue => issue.domain === 'CPF_PAYROLL' && issue.mappedTopicIds.includes('cpf-adjustments-refunds'));
+  const cpfContributionCalculationIntent = /\b(?:what|calculate|compute|estimate|how much)\b[^?!;]{0,100}\b(?:employer\s+)?(?:cpf\s+)?contribution\b[^?!;]{0,100}\b(?:payable|due|owe|salary|wages?)\b/i.test(query)
+    && /\b(?:cpf|central provident fund)\b/i.test(query)
+    && /\b(?:salary|wages?)\b/i.test(query);
+  const cpfRefundIntent = /\b(?:cpf|central provident fund)\b/i.test(query)
+    && /\b(?:refund\w*|overpaid|overpayment|excess contributions?|paid in error|repay\w*|repayment due date)\b/i.test(query)
+    && !/\b(?:my employer|my cpf account|i am (?:an? )?employee|as an? employee)\b/i.test(query);
+  const cpfContributionTemplate = issues.find(issue => issue.domain === 'CPF_PAYROLL' &&
+    [...issue.mappedTopicIds, ...(issue.contextualTopicIds || [])]
+      .some(topicId => ['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId)));
+  const cpfRefundTemplateIndex = cpfRefundTemplate ? issues.indexOf(cpfRefundTemplate) : -1;
+  if (cpfRefundTemplate && cpfRefundIntent && cpfRefundTemplateIndex >= 0) {
+    const calculationTopics = [...new Set([
+      ...cpfRefundTemplate.mappedTopicIds,
+      ...(cpfRefundTemplate.contextualTopicIds || [])
+    ])].filter(topicId => ['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId));
+    const rateAsk = /\b(?:contribution rates?|percentages?|rate table|rate band|age band)\b/i.test(query);
+    const refundPopulation: SemanticPopulation = isCpfEmployerRefundContext(query)
+      ? 'EMPLOYER' : /\b(?:i |my |employee|worker|staff member)\b/i.test(query) ? 'EMPLOYEE' : 'UNKNOWN';
+    const refundSubject = refundPopulation === 'EMPLOYER'
+      ? 'CPF employer refund timing and application requirements'
+      : 'CPF contribution refund timing and application requirements';
+    const refundIssue = cloneAsRequestedIssue(cpfRefundTemplate, refundSubject,
+      ['cpf-adjustments-refunds'], refundPopulation, 'EXPLAIN_RULE');
+    const residualTopics = cpfRefundTemplate.mappedTopicIds.filter(topicId =>
+      topicId !== 'cpf-adjustments-refunds' &&
+      !['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId));
+    if (residualTopics.length === 0) {
+      issues[cpfRefundTemplateIndex] = refundIssue;
+    } else {
+      issues[cpfRefundTemplateIndex] = cloneAsRequestedIssue(cpfRefundTemplate,
+        cpfRefundTemplate.subject, residualTopics, cpfRefundTemplate.population, cpfRefundTemplate.operation);
+      issues.push(refundIssue);
+    }
+    if (cpfContributionCalculationIntent && calculationTopics.length > 0 &&
+        !alreadyHasSubject(/CPF employer contribution calculation/i)) {
+      issues.push(cloneAsRequestedIssue(cpfContributionTemplate || cpfRefundTemplate,
+        'CPF employer contribution calculation', calculationTopics,
+        /\bemployer\b/i.test(query) ? 'EMPLOYER' : 'UNKNOWN', 'CALCULATE'));
+    } else if (rateAsk && calculationTopics.length > 0 &&
+        !alreadyHasSubject(/CPF contribution rates/i)) {
+      issues.push(cloneAsRequestedIssue(cpfContributionTemplate || cpfRefundTemplate,
+        'CPF contribution rates and applicable wage classification', calculationTopics,
+        /\bemployer\b/i.test(query) ? 'EMPLOYER' : 'UNKNOWN', 'EXPLAIN_RULE'));
+    }
+  }
+
+  const masReporting = issues.find(issue => issue.domain === 'MAS_FUNDS' &&
+    issue.mappedTopicIds.some(topicId => ['mas-regulatory-reporting', 'mas-vcfm'].includes(topicId)));
+  const asksForm25A = /\b(?:form\s*25a|form\s*25\s*a)\b/i.test(query);
+  const asksNilMisconduct = /\b(?:nil[- ]misconduct|nil return|no misconduct report|misconduct return)\b/i.test(query);
+  const asksManagedFundScope = /\b(?:fund[- ]level|all fund returns?|funds? (?:we|it|the manager) manage|every reporting obligation of the funds?|all (?:reporting|regulatory) obligations? of the funds?)\b/i.test(query) &&
+    /\b(?:complete|completes|all|every|assume|covers?)\b/i.test(query);
+  if (masReporting && asksForm25A && asksNilMisconduct) {
+    const form25aSubject = /MAS VCFM annual declaration and Form 25A reporting requirements/i;
+    const nilSubject = /MAS VCFM nil misconduct return requirements/i;
+    if (!alreadyHasSubject(form25aSubject)) {
+      issues.push(cloneAsRequestedIssue(masReporting, 'MAS VCFM annual declaration and Form 25A reporting requirements', ['mas-regulatory-reporting']));
+    }
+    if (!alreadyHasSubject(nilSubject)) {
+      issues.push(cloneAsRequestedIssue(masReporting, 'MAS VCFM nil misconduct return requirements', ['mas-regulatory-reporting']));
+    }
+  }
+  if (masReporting && asksForm25A && asksManagedFundScope &&
+      !alreadyHasSubject(/MAS VCFM toolkit scope and fund-level requirements/i)) {
+    issues.push(cloneAsRequestedIssue(masReporting, 'MAS VCFM toolkit scope and fund-level requirements', ['mas-regulatory-reporting']));
+  }
+
+  const masChangeAndCessationIssueIndex = issues.findIndex(issue => issue.domain === 'MAS_FUNDS' &&
+    issue.mappedTopicIds.includes('mas-vcfm-change-notifications') &&
+    issue.mappedTopicIds.includes('mas-vcfm-business-cessation'));
+  const asksForm23AChange = /\b(?:form\s*23a|change[- ]in[- ]particulars|particulars)\b/i.test(query) &&
+    /\b(?:vcfm|venture capital fund manager)\b/i.test(query);
+  const asksForm7Cessation = /\b(?:form\s*7|ceas\w*|cessation|stopp\w*|not commenc\w*|non.commenc\w*)\b/i.test(query) &&
+    /\b(?:vcfm|venture capital fund manager)\b/i.test(query);
+  if (masChangeAndCessationIssueIndex >= 0 && asksForm23AChange && asksForm7Cessation &&
+      hasIndependentSemanticClause(query)) {
+    const template = issues[masChangeAndCessationIssueIndex];
+    const residualTopics = template.mappedTopicIds.filter(topicId =>
+      !['mas-vcfm', 'mas-vcfm-change-notifications', 'mas-vcfm-business-cessation', 'mas-regulatory-reporting'].includes(topicId));
+    if (residualTopics.length === 0) {
+      issues[masChangeAndCessationIssueIndex] = cloneAsRequestedIssue(template,
+        'VCFM Form 23A change-in-particulars notification', ['mas-vcfm-change-notifications'], 'COMPANY');
+    } else {
+      const residualSubject = residualTopics.includes('mas-quarterly-fund-data-collection')
+        ? 'MAS quarterly fund data collection (QDC) form, scope and deadline requirements'
+        : template.subject;
+      issues[masChangeAndCessationIssueIndex] = cloneAsRequestedIssue(template,
+        residualSubject, residualTopics, template.population, template.operation);
+    }
+    if (!alreadyHasSubject(/VCFM Form 23A change-in-particulars notification/i)) {
+      issues.push(cloneAsRequestedIssue(template,
+        'VCFM Form 23A change-in-particulars notification', ['mas-vcfm-change-notifications'], 'COMPANY'));
+    }
+    if (!alreadyHasSubject(/VCFM Form 7 cessation and noncommencement notification/i)) {
+      issues.push(cloneAsRequestedIssue(template,
+        'VCFM Form 7 cessation and noncommencement notification', ['mas-vcfm-business-cessation'], 'COMPANY'));
+    }
+  }
+  const changeTemplateIndex = issues.findIndex(issue => issue.domain === 'MAS_FUNDS' &&
+    issue.mappedTopicIds.includes('mas-vcfm-change-notifications') &&
+    issue.mappedTopicIds.includes('mas-regulatory-reporting'));
+  if (changeTemplateIndex >= 0) {
+    const template = issues[changeTemplateIndex];
+    const asksIndependentReporting = /\b(?:form\s*25a|form\s*25\s*a|nil[- ]misconduct|nil return|misconduct return)\b/i.test(query);
+    const residualTopics = template.mappedTopicIds.filter(topicId =>
+      topicId !== 'mas-vcfm-change-notifications' && topicId !== 'mas-vcfm' &&
+      (topicId !== 'mas-regulatory-reporting' || asksIndependentReporting));
+    if (residualTopics.length === 0) {
+      issues[changeTemplateIndex] = cloneAsRequestedIssue(template,
+        'VCFM Form 23A change-in-particulars notification',
+        ['mas-vcfm-change-notifications'], 'COMPANY');
+    } else {
+      const residualSubject = residualTopics.includes('mas-quarterly-fund-data-collection')
+        ? 'MAS quarterly fund data collection (QDC) form, scope and deadline requirements'
+        : getCoverageTopicsByIds(residualTopics).map(topic => topic.title).join('; ');
+      issues[changeTemplateIndex] = cloneAsRequestedIssue(template,
+        residualSubject, residualTopics, template.population, template.operation);
+      if (!alreadyHasSubject(/VCFM Form 23A change-in-particulars notification/i)) {
+        issues.push(cloneAsRequestedIssue(template, 'VCFM Form 23A change-in-particulars notification',
+          ['mas-vcfm-change-notifications'], 'COMPANY'));
+      }
+    }
+  }
+  const hasNamedVcfmNotificationIssue = issues.some(issue =>
+    issue.mappedTopicIds.includes('mas-vcfm-change-notifications') ||
+    issue.mappedTopicIds.includes('mas-vcfm-business-cessation'));
+  const explicitlyAsksOtherVcfmRequirements = /\b(?:other|additional|all|every|complete|full|general|overall)\b[^.!?;]{0,90}\b(?:obligations?|requirements?|rules?|filings?)\b/i.test(query);
+  if (hasNamedVcfmNotificationIssue && !explicitlyAsksOtherVcfmRequirements) {
+    for (let index = issues.length - 1; index >= 0; index--) {
+      const issue = issues[index];
+      if (issue.domain === 'MAS_FUNDS' && issue.operation === 'OTHER' && issue.population === 'UNKNOWN' &&
+          issue.subject === 'Venture Capital Fund Manager' &&
+          issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'mas-vcfm') {
+        issues.splice(index, 1);
+      }
+    }
+  }
+  return issues;
 }
 
 /** Keeps issue reconciliation separate from the legacy flat classification projection. */

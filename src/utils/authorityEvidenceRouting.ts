@@ -83,19 +83,41 @@ function hasMappedGeneralIrasRuleIssue(
 ): boolean {
   const irasIssues = issuePlan.issues.filter(issue => issue.status === 'MAPPED' &&
     issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS');
-  if (irasIssues.length !== 1) return false;
-  const onlyIrasIssue = irasIssues[0];
+  if (irasIssues.length < 1) return false;
   const classifiedDomains = new Set<string>(classification.domains);
   const hasOtherRequestedIssue = issuePlan.issues.some(issue => !issue.governingAuthorities.includes('IRAS') &&
     !(issue.operation === 'OTHER' && issue.mappedTopicIds.length === 0 && (issue.contextualTopicIds?.length || 0) > 0));
-  if (hasOtherRequestedIssue || onlyIrasIssue.operation !== 'EXPLAIN_RULE' ||
-      onlyIrasIssue.population !== 'COMPANY' ||
-      onlyIrasIssue.domain !== 'IRAS_GST' && onlyIrasIssue.domain !== 'IRAS_INCOME_TAX' ||
-      !onlyIrasIssue.mappedTopicIds.length) return false;
-  return getCoverageTopicsByIds(onlyIrasIssue.mappedTopicIds).some(topic =>
+  if (hasOtherRequestedIssue || !classification.authorities.includes('IRAS')) return false;
+  return irasIssues.every(issue => {
+    if (issue.operation !== 'EXPLAIN_RULE' || issue.population !== 'COMPANY' ||
+        issue.domain !== 'IRAS_GST' && issue.domain !== 'IRAS_INCOME_TAX' ||
+        !issue.mappedTopicIds.length) return false;
+    const topics = getCoverageTopicsByIds(issue.mappedTopicIds);
+    return topics.length === issue.mappedTopicIds.length && topics.every(topic =>
       topic.authorities.includes('IRAS') && ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(topic.domainId) &&
-      [topic.domainId, onlyIrasIssue.domain, ...topic.legacyDomains].some(domain => classifiedDomains.has(domain))
-    ) && classification.authorities.includes('IRAS');
+      [topic.domainId, issue.domain, ...topic.legacyDomains].some(domain => classifiedDomains.has(domain))
+    );
+  });
+}
+
+function hasBoundedCpfCalculationAndRefundIssues(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (!classification.calculationRequired || classification.journalEntryRequired ||
+      classification.accountingAnalysisRequired || classification.missingFacts.length === 0 ||
+      !classification.authorities.includes('CPF')) return false;
+  const calculation = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'CPF_PAYROLL' && issue.operation === 'CALCULATE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' &&
+    issue.mappedTopicIds.some(topicId => ['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId)));
+  const refund = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'CPF_PAYROLL' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' &&
+    issue.mappedTopicIds.includes('cpf-adjustments-refunds'));
+  return Boolean(calculation && refund && calculation.id !== refund.id);
 }
 
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
@@ -107,6 +129,12 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
+
+  // The narrowly bounded payroll calculation path presents its unresolved
+  // inputs beside an independently requested, mapped employer refund rule.
+  // Missing calculation facts are mandatory, and ordinary journal/accounting
+  // requests remain on their established transaction path.
+  if (hasBoundedCpfCalculationAndRefundIssues(issuePlan, classification)) return true;
 
   if (input.explicitIrasEvidenceRequest &&
       classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&

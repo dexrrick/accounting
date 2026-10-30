@@ -1,0 +1,541 @@
+{
+  "scope": "APPLICATION_ENTRY_NATURAL_QUESTIONS_OFFLINE_NO_PROVIDER",
+  "appRoot": "D:\\Accounting",
+  "corpusSha256": "a3886cae6b1639f1c9933fcb27721aea190d605c4029c846e5061ffd0460f9d6",
+  "networkRequests": 0,
+  "modelRequests": 0,
+  "blockedModelEndpoints": [],
+  "addedSourceFixtures": [
+    {
+      "id": "acra-officer-particulars.txt",
+      "sourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+      "title": "Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "eab7036a1ddecf2be02d17f4e59757cf452d2d6dc7d2208e7f437b24111ba49e",
+      "responseSha256": "3d2dee94823ba4ccc63f654936b91c9d2da9db827ed9e2321e2732e4a666201f",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-officer-particulars.txt"
+    },
+    {
+      "id": "acra-annual-return-steps.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+      "title": "Steps to file an annual return",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "ceab11e8fa7f262a6b8ba57a4009c629a20eb3e80d2c34b7414342c577a387a0",
+      "responseSha256": "e5043d7da3a5eeeab53daa7ff5b6485a25b8f5982e68db18f9e4d73cf2f3c129",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-annual-return-steps.txt"
+    },
+    {
+      "id": "acra-xbrl-requirements.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "title": "Financial statements: Filing requirements and exemptions",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "adffff20762e5cddafc22fd0696185f13560ae23cd6a0ea81f83862e145e11c4",
+      "responseSha256": "b9599f1d17b99d0f2d973858787c97df0245b49e7276fb103cb688ae2621b490",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-xbrl-requirements.txt"
+    },
+    {
+      "id": "mom-annual-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+      "title": "Annual leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "3860c323d002a58d0a1eded019ea05be74e3e066635c2768fc483e19be0887dd",
+      "responseSha256": "8fabe393a7727f99ee6320f4b9fc756b4ec42aa3ead3db19e821200fcc6e83f4",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-annual-leave.txt"
+    },
+    {
+      "id": "mom-sick-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+      "title": "Sick leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "acc7a34bd7e233b0fc2055f53b9c1e0225c9c9f4f45399b19c250f37dd3cfefc",
+      "responseSha256": "d4cea1d2d22c25298a8ae9819ab60c43962681a02b521e0857d2c04cc6c5d741",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-sick-leave.txt"
+    },
+    {
+      "id": "mom-public-holidays.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+      "title": "Public holidays: entitlement and pay",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e39d68945cef9536932f8bc76e6defeae59c2aeb15f791e4461a5c9ed6d7961e",
+      "responseSha256": "b6dcef40d4ecdd66d048e29ea59faf93c758d2b742acc2a7a76af6dea12a463c",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-public-holidays.txt"
+    },
+    {
+      "id": "mom-final-salary.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "title": "Paying salary",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "f9f276912ea150290ebdb692a5878492994e42b14b071d24a6ca6412511fe8f2",
+      "responseSha256": "aec006363c1d90c724458b463bdd02f5d31dbb004da4fc018c22f7f8c30ad121",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-final-salary.txt"
+    },
+    {
+      "id": "acra-company-secretary.txt",
+      "sourceUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "title": "Step 4.3: Choosing company directors & other key officers",
+      "authority": "ACRA",
+      "topicIds": [
+        "acra_company-secretary"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "706caa3d601fbea5d4659f987fb719396445c9b55695319c51a18ab644c361aa",
+      "responseSha256": "e0881d7c2ca13329e4d2e16191c6d247a0a278e02612387f019df46eaea7ab5b",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-company-secretary.txt"
+    },
+    {
+      "id": "cpf-rates-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "title": "CPF Contribution Rate Table from 1 January 2026",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-pr-contribution-rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "responseSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-rates-native-2026.pdf"
+    },
+    {
+      "id": "cpf-computation-guidance-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "title": "How much CPF contributions to pay",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5",
+      "responseSha256": "c2a9aac0472a7093a040a1848fb2564ad5563e044c396f89779b1fc5d5364d5a",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-computation-guidance-extract.txt"
+    },
+    {
+      "id": "cpf-ow-ceiling-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "title": "What is the Ordinary Wage (OW) ceiling?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-ordinary-wages",
+        "cpf-ordinary-wage-ceiling"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611",
+      "responseSha256": "03614f7a519978c17bb745b06d69d0366988426bd96f09cb688a5b331b593b44",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-ow-ceiling-extract.txt"
+    },
+    {
+      "id": "cpf-aw-ceiling-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "title": "Examples for computation of Additional Wage (AW) Ceiling",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-additional-wages",
+        "cpf-additional-wage-ceiling"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "responseSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-aw-ceiling-native-2026.pdf"
+    },
+    {
+      "id": "cpf-pr-year-status-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "title": "I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-pr-contribution-rates",
+        "cpf_contribution_rates"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359",
+      "responseSha256": "623310671948909cd7bb25f446b35c8e551858b6fa5b96de9b3126205d7bdff5",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-pr-year-status-extract.txt"
+    },
+    {
+      "id": "iras-mas-input-tax-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "title": "Conditions for Claiming Input Tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "responseSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-input-tax-native.html"
+    },
+    {
+      "id": "iras-mas-eci-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "title": "Estimated Chargeable Income (ECI) Filing",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-eci"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "responseSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-eci-native.html"
+    },
+    {
+      "id": "iras-mas-wht-services-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "title": "Payments that are subject to withholding tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-management-fees"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "responseSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-services-native.html"
+    },
+    {
+      "id": "iras-mas-wht-deadline-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+      "title": "Withholding Tax (WHT) filing and payment due date",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-wht-filing-payment-due-date",
+        "iras-wht-deemed-payment-date"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "responseSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-deadline-native.html"
+    },
+    {
+      "id": "iras-mas-misconduct-native.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en",
+      "title": "Notice SFA 04-N24 — Reporting of Misconduct of Representatives",
+      "authority": "MAS",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "responseSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-misconduct-native.pdf"
+    },
+    {
+      "id": "iras-donations-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f)",
+      "title": "Tax Treatment of Business Expenses (A-F)",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "responseSha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "iras-donations-native.html"
+    },
+    {
+      "id": "iras-donations-conditions-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/other-taxes/charities/donations-tax-deductions",
+      "title": "Donations and Tax Deductions",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "responseSha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "iras-donations-conditions-native.html"
+    },
+    {
+      "id": "cpf-rectifications-native.html",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications",
+      "title": "Compliance and rectifications",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-adjustments-refunds"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "responseSha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "cpf-rectifications-native.html"
+    },
+    {
+      "id": "acra-registered-office-native.html",
+      "sourceUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/",
+      "title": "Registering a local company via Bizfile",
+      "authority": "ACRA",
+      "topicIds": [
+        "acra_registered-office"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "responseSha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "acra-registered-office-native.html"
+    },
+    {
+      "id": "mas-misconduct-faq-native.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf",
+      "title": "FAQs on the Misconduct Reporting Requirements under the FAA, IA and SFA (Effective 1 January 2027)",
+      "authority": "MAS",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "responseSha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "mas-misconduct-faq-native.pdf"
+    },
+    {
+      "id": "mom-payslips.html",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "title": "Itemised pay slips",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6",
+      "responseSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "mom-payslips.html"
+    },
+    {
+      "id": "iras-company-records.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements",
+      "title": "Record Keeping Requirements",
+      "authority": "IRAS",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f",
+      "responseSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "iras-company-records.html"
+    },
+    {
+      "id": "acra-entity-updates.html",
+      "sourceUrl": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+      "title": "Updating entity information",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32",
+      "responseSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "acra-entity-updates.html"
+    },
+    {
+      "id": "cpf-refunds.html",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+      "title": "Applying for refund of CPF contributions",
+      "authority": "CPF",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8",
+      "responseSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "cpf-refunds.html"
+    },
+    {
+      "id": "mas-lfmc-toolkit.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "title": "Compliance Toolkit for Licensed Fund Management Companies",
+      "authority": "MAS",
+      "topicIds": [],
+      "contentType": "application/pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "responseSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "mas-lfmc-toolkit.pdf"
+    }
+  ],
+  "limitation": "The normal processAccountingQuery entry point receives only each question with a null current scenario, IFRS, and no provider. Its default classification, deterministic fallback, retrieval and returned answer are measured. Frozen official source fixtures are served through a strict fetch override; every other URL, including any model endpoint, is blocked with HTTP 404. This is offline application-path evidence, not live semantic-model or browser acceptance. An absent authority evidence presentation and its empty status list remain as returned.",
+  "outcomes": [
+    {
+      "id": "accept-iras",
+      "question": "For corporate income tax, how does our company adjust donations to approved IPCs and other charities in its tax computation? Explain the enhanced deduction period and what the company must give the IPC.",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence verified\n\n**Corporate income tax treatment of approved donations** (party in scope: Company)\n- **IRAS rule explanation:** Donations are non-deductible expenses in arriving at adjusted profit. For donations made from 1 January 2016 through 31 December 2029, a company may claim a deduction of 2.5 times the amount donated to an approved Institution of a Public Character (IPC) or the Singapore Government to benefit the local community. The company must provide its UEN to the approved IPC. IRAS says approved donation amounts are pre-filled in Form C-S, Form C-S (Lite) or Form C based on information obtained from IPCs. In the tax computation, add back all donations, then deduct 2.5 times approved donations; the deduction is on a preceding-financial-year basis. The 2.5-times deduction applies to donations made from 1 January 2016 through 31 December 2029 under the captured current guidance. The donee must be an approved IPC or the Singapore Government, and a Government donation must benefit the local community. For an IPC donation, the company must provide its UEN to the IPC to receive the deduction. Approved donations are considered on a preceding-financial-year basis. Donations outside the approved-donation category remain non-deductible business expenses under this cited rule. This record does not cover individual income-tax donations, other incentive schemes, tax-exemption computation, or whether a named donee is currently approved. For case-specific application, consider: Donation date and financial year. Donee identity and current approved-IPC status, or whether a Singapore Government donation benefits the local community. Donation amount and the amount recorded by IRAS; whether the company provided its UEN to the IPC. This guidance does not calculate the company’s adjusted profit, chargeable income or tax deduction amount. Confirm that the donee and donation are eligible and reconcile the amount with the applicable YA before filing. [IRAS | Tax Treatment of Business Expenses (A-F)](https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f))\n\n**Source:** IRAS | Tax Treatment of Business Expenses (A-F) (live external)\n- **Verified official source excerpt** (supports Corporate income tax treatment of approved donations): Donations\nDonations are non-deductible expenses as they are not incurred in the production of income.\nHowever, for donations made from 1 Jan 2016 to 31 Dec 2029*, you can claim a tax deduction of 2.5 times the amount donated to an approved Institution of a Public Character (IPC) or the Singapore Government to benefit the local community\n- **Verified official source excerpt** (supports Corporate income tax treatment of approved donations): Your company is required to provide its Unique Entity Number (UEN) to the approved IPC in order to be given a tax deduction on the approved donations.\nTo enhance your filing experience, the approved donation amounts will be pre-filled in the Form C-S/ Form C-S (Lite)/ Form C\n- **Verified official source excerpt** (supports Corporate income tax treatment of approved donations): Step 1: Add back all donations made (approved donations or otherwise) to arrive at the adjusted profit as donations are non-deductible expenses.\nStep 2: Claim a tax deduction of 2.5 times the amount of approved donations. You can check the amount of approved donations made by the company via the View Donations digital service at mytax.iras.gov.sg. Tax deduction on approved donations is allowable on a preceding financial year basis\n- **Verified official source excerpt** (supports Corporate income tax treatment of approved donations): Tax deduction on approved donations is allowable on a preceding financial year basis.\n- Official source: [IRAS | Tax Treatment of Business Expenses (A-F)](https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f))\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "IRAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "Corporate income tax treatment of approved donations",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accept-cpf",
+      "question": "We declared the wrong CPF wage amount and used an incorrect contribution month. Does changing the record mean we receive a refund? What should payroll do about underpaid contributions?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence is incomplete for one or more material issues.\n\n**General statutory guidance:** Verified for the issues identified below; other issues remain incomplete.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** See the evidence gaps and coverage limitations below.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**CPF contribution wage-record rectifications and refund or adjustment options** (party in scope: Employer)\n- **CPF rule explanation:** Rectification depends on the error. Employers must rectify omitted or underpaid CPF contributions immediately, using the usual monthly contribution submission for arrears; delay can increase late-payment interest. If wages were declared incorrectly, inform CPF Board and ensure future submissions are accurate. For overpaid contributions, apply for a refund or adjustment. A refund returns excess money, while an adjustment changes the contribution record; CPF Board lists changing the contribution month or year, CPF Submission Number, or payment recipient as adjustment examples. Underpayment or omitted contributions are rectified immediately through the normal monthly submission process. Incorrect declared wages should be reported to CPF Board; future submissions must be accurate. For overpayment, choose refund when seeking excess money back or adjustment when correcting the contribution record. This procedure guide does not determine the correct wage classification, contribution rate, or amount owed in a particular payroll case. Overpaid contribution refunds remain subject to the separate refund process and its conditions. For case-specific application, consider: What was wrong: contribution amount, wages declared, contribution month/year, CSN or recipient. The affected employee, correct wage and contribution period, payment details, and whether money should be returned or only the record changed. No contribution amount, refund deadline, or case acceptance is calculated by this general rectification rule. Use the current application route for the employer type and error category. [CPFB | Compliance and rectifications](https://www.cpf.gov.sg/employer/compliance-and-rectifications)\n\n**CPF contribution refund timing and application requirements** (party in scope: Not established)\n- **Evidence gap:** Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf-adjustments-refunds.\n- **Evidence gap:** CPF contribution refund timing and application requirements: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** CPF contribution refund timing and application requirements: No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** CPF contribution refund timing and application requirements: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** CPF contribution refund timing and application requirements: Verified quotations do not support the requested topic cpf-adjustments-refunds.\n\n**Source:** CPFB | Compliance and rectifications (live external)\n- **Verified official source excerpt** (supports CPF contribution wage-record rectifications and refund or adjustment options): You will need to rectify any omission or underpayment of CPF contributions immediately. You can submit these CPF contribution arrears in the same way that you submit your monthly CPF contribution submissions for your employees.\nIf you do not rectify errors as soon as possible, you will incur higher late payment interest on the outstanding CPF contributions.\n- **Verified official source excerpt** (supports CPF contribution wage-record rectifications and refund or adjustment options): If you have overpaid CPF contributions for your employee(s), you can apply for a refund/an adjustment.\n- **Verified official source excerpt** (supports CPF contribution wage-record rectifications and refund or adjustment options): If you have declared wages incorrectly, you should inform the CPF Board and ensure that wages are accurately declared in future CPF submissions.\n- **Verified official source excerpt** (supports CPF contribution wage-record rectifications and refund or adjustment options): You can apply for a refund if you are seeking a return of the monies paid in excess or in error to your employees.\nRefunds can be for specific employee(s) or the entire submission.\nRefund of contributions\nAdjustment of contributions paid\nYou can apply for an adjustment if you want to change the contributions record.\nExamples of adjustment are changing of contributions month and year, CPF Submission Number (CSN) or payment recipient\n- Official source: [CPFB | Compliance and rectifications](https://www.cpf.gov.sg/employer/compliance-and-rectifications)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- CPF contribution refund timing and application requirements: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- CPF contribution refund timing and application requirements: No candidate passed the evidence admission checks for this issue.\n- CPF contribution refund timing and application requirements: No complete source quotation passed claim verification for this issue.\n- CPF contribution refund timing and application requirements: Verified quotations do not support the requested topic cpf-adjustments-refunds.",
+      "evidenceStatuses": [
+        {
+          "authority": "CPF",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "CPF contribution wage-record rectifications and refund or adjustment options",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "CPF contribution refund timing and application requirements",
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accept-mom",
+      "question": "For our Employment Act-covered staff, how long must we keep itemised payslips for current employees and employees who have left, and are electronic records allowed?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### Ministry of Manpower — Employment requirements\n\n**Status:** Evidence verified\n\n**MOM itemised payslip content, delivery format and retention requirements** (party in scope: Employer)\n- **MOM rule explanation:** Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the pay slip must be given within three working days of payment. For termination or dismissal, it must be given together with outstanding salary. MOM allows a soft or hard copy, including handwritten. The pay slip must include the employer and employee names, payment date, basic salary, salary period, applicable allowances, other payments, deductions and total net salary; overtime hours, pay and period are included where applicable. If payments are made more than once a month, pay slips may be consolidated, but the consolidated slip must show all payments since the last slip. Employers must retain issued pay slips: the latest two years for current employees, and the last two years for ex-employees for one year after they leave. The requirements apply to employees covered by the Employment Act. Only applicable pay slip items need to be shown; overtime items 9 to 11 need not be included when overtime pay does not apply. The fallback is three working days after payment only when the employer cannot give the pay slip with payment. Consolidation is permitted for multiple monthly payments, but must include every payment since the previous slip. Items that do not apply need not be shown; MOM’s page gives overtime items as an example. This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker. For case-specific application, consider: Employment Act coverage. Salary period, payment date and pay components applicable to the employee. Whether pay slips are consolidated, whether overtime applies, current or former employee status, and the employee’s departure date if applicable. Three working days are not converted into calendar days. The captured page does not establish current coverage of a particular worker or calculate a case-specific final salary. [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)\n\n**Source:** Itemised pay slips (live external)\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): Employers must issue itemised pay slips to all employees covered by the Employment Act.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): Pay slips must include the items below, unless an item is not applicable. For example, if overtime pay does not apply to you, your pay slip need not include items 9 to 11.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): Give together with payment to employee.\n\n• If unable to give together, to be given within three working days of payment.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): In the case of termination or dismissal, must give pay slip together with outstanding salary.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): Format | Soft or hard copy (including handwritten)\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): If payments are made more than once a month, employers can consolidate pay slips. The consolidated pay slip must contain details of all payments made since the last pay slip.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): items to include, when and how to give them.\n\nEmployers must issue itemised pay slips to all employees covered by the Employment Act.\n\nWhen\n\n• Give together with payment to employee.\n\n• If unable to give together, to be given within three working days of payment.\n\n• In the case of termination or dismissal, must give pay slip together with outstanding salary.\n\nFormat | Soft or hard copy (including handwritten).\n\nPay slips must include the items below, unless an item is not applicable. For example, if overtime pay does not apply to you, your pay slip need not include items 9 to 11. If payments are made more than once a month, employers can consolidate pay slips. The consolidated pay slip must contain details of all payments made since the last pay slip.\n\nNumber | Item description\n\n1 | Full name of employer.\n\n2 | Full name of employee.\n\n3 | Date of payment (or dates, if the pay slips consolidates multiple payments).\n\n4\n\nBasic salary\n\nFor hourly, daily or piece-rated workers, indicate all of the following:\n\n• Basic rate of pay, e.g. $X per hour.\n\n• Total number of hours or days worked or pieces produced.\n\n5 | Start and end date of salary period.\n\n6\n\nAllowances paid for salary period, such as:\n\n• All fixed allowances, e.g. transport.\n\n• All ad-hoc allowances, e.g. one-off uniform allowance.\n\n7\n\nAny other additional payment for each salary period, such as:\n\n• Bonuses\n\n• Rest day pay\n\n• Public holiday pay\n\n8\n\nDeductions made for each salary period, such as:\n\n• All fixed deductions (e.g. employee&rsquo;s CPF contribution).\n\n• All ad-hoc deductions (e.g. deductions for no-pay leave, absence from work).\n\n9 | Overtime hours worked.\n\n10 | Overtime pay.\n\n11 | Start and end date of overtime payment period (if different from item 5 start and end date of salary period).\n\n12 | Net salary paid in total.\n- **Verified official source excerpt** (supports MOM itemised payslip content, delivery format and retention requirements): Employers must keep a record of all pay slips issued.\n\nFormat | Soft or hard copy, including handwritten.\n\nFor how long?\n\n• For current employees: Latest two years.\n\n• For ex-employees: Last two years, to be kept for one year after the employee leaves employment.\n- Official source: [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "MOM",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "MOM itemised payslip content, delivery format and retention requirements",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accept-acra",
+      "question": "Our local Singapore company operates its factory in Tuas. May its registered office be in Raffles Place instead, and what public access, business-day opening hours, records and notices requirements apply?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### ACRA — Corporate filing and governance\n\n**Status:** Evidence verified\n\n**ACRA local-company registered office location, access, records and notices** (party in scope: Company)\n- **ACRA rule explanation:** For a local company, the registered office is the official Singapore address where ACRA and others can send communications and notices and where company records and registers are kept. It must be open to the public for at least three hours on each business day and open and accessible during normal business hours on each business day. It need not be the place where the company carries on its business activities. The page is guidance for local-company registration via Bizfile. The source states both a minimum of three public-access hours each business day and public access during normal business hours. The registered office may differ from the place where business is carried on. This source does not establish registered-office requirements for foreign companies, LLPs, VCCs or other entity types. For case-specific application, consider: Entity type and whether it is a local company. The proposed Singapore address, public-access hours on business days, and where company records and registers will be kept. This is ACRA guidance for local-company registration; it does not establish every ongoing filing duty or requirements for other entity classes. A specific address conclusion requires the entity type, address and access arrangements. [Step 4.6: Registering a local company via Bizfile | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/)\n\n**Source:** Step 4.6: Registering a local company via Bizfile | Accounting and Corporate Regulatory Authority (live external)\n- **Verified official source excerpt** (supports ACRA local-company registered office location, access, records and notices): Office hours Must be open to the public for at least three hours on each business day. This allows for public access and delivery of legal papers.\n- **Verified official source excerpt** (supports ACRA local-company registered office location, access, records and notices): Registered office address | The official address where: ACRA and others can send communications and notices to your company. You must keep your company records and registers. Requirements: Must be a Singapore address. Must be open and accessible to the public during normal business hours on each business day. Does not have to be the same place where you run your business activities.\n- Official source: [Step 4.6: Registering a local company via Bizfile | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "ACRA",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "ACRA local-company registered office location, access, records and notices",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accept-mas-change",
+      "question": "Our VCFM is appointing a director and changing its principal place of business. What Form23A change notification does the current MAS toolkit require, and what is the time limit?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### Monetary Authority of Singapore — Financial regulation\n\n**Status:** Evidence verified\n\n**VCFM Form 23A change-in-particulars notification** (party in scope: Company)\n- **MAS rule explanation:** A VCFM must notify MAS using Form 23A within 14 days from the date of a change to particulars of the VCFM, including its name, principal place of business, contact details, shareholdings or organisational chart, or particulars of its CEO, directors or shareholders, including resignations and appointments. This notification is for VCFMs and covers the particulars listed in row 11. The toolkit states a 14-day period from the change; it does not say that the period is 14 working days. Form 23A is a notification; this row does not state that it replaces any separate prior-approval requirement. This row is not the LFMC Form 11 appointment rule and does not establish a duty for other CMS licence categories. The toolkit revision/update date does not establish the historical legal commencement of this licence condition. For case-specific application, consider: Confirm that the manager is a VCFM. What particular changed, the person or entity affected, and the date of change. The toolkit gives a bounded row 11 summary, not every VCFM reporting duty or a historical legal-version determination. No date arithmetic is applied without an unambiguous change date. [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Source:** VENTURE CAPITAL FUND MANAGERS (live external)\n- **Verified official source excerpt** (supports VCFM Form 23A change-in-particulars notification): 11 To notify MAS of any change in: | Form 23A - Change Within 14 days from the date Licence condition | MAS-Tx | Entity Activities &\nin Particulars for of change | Particulars\n(a) particulars of a VCFM, including but not Venture Capital | (Change | in\nlimited to change in name, principal Fund Managers | Particulars | for\nplace | of | business, | contact | VCFMs – Form\ndetails,shareholdings and organisational | 23A)\nchart of a VCFM;\n(b) particulars of its CEO, Directors, and\nshareholders, including resignation and\nappointments\n[Updated in Dec 2024]\n- Official source: [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "MAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "VCFM Form 23A change-in-particulars notification",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "accept-mas-cessation",
+      "question": "Under the current MAS VCFM toolkit, how do the Form7 deadlines differ between ceasing a regulated activity and failing to commence an activity within six months of licence grant? What customer-obligation certification accompanies cessation?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### Monetary Authority of Singapore — Financial regulation\n\n**Status:** Evidence verified\n\n**VCFM Form 7 cessation and noncommencement notification** (party in scope: Company)\n- **MAS rule explanation:** A VCFM must submit Form 7, Notice of Cessation of Business, if it ceases to carry on any or all regulated activities. For cessation, the toolkit says to notify MAS within 14 days after the cessation and accompany Form 7 with an audit certification, in no prescribed format, that the VCFM has fully discharged all customer obligations. A VCFM that has not commenced any or all regulated activities by the end of six months from the CMS licence grant must submit Form 7 immediately after that six-month period ends. The cessation deadline applies to cessation of any or all regulated activities. The non-commencement rule applies when any or all regulated activities have not commenced by the end of six months from the licence grant. Form 7 cessation filing includes the stated audit certification of discharged customer obligations. This is a VCFM notification in the toolkit; it does not say that Form 7 is a prior-approval application. The toolkit does not establish the same process for an LFMC or another CMS licence category. For case-specific application, consider: Confirm the licence holder is a VCFM. Whether the event is cessation or non-commencement, the regulated activity affected, and the cessation date or CMS licence grant date. For cessation, whether the required customer-obligations audit certification is available. Do not calculate the non-commencement date without the CMS licence grant date or convert “immediately” into an invented day count. This bounded rule does not cover other VCFM notifications, winding-up duties or client-specific cessation consequences. [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Source:** VENTURE CAPITAL FUND MANAGERS (live external)\n- **Verified official source excerpt** (supports VCFM Form 7 cessation and noncommencement notification): 6 | To notify MAS where a VCFM: | Form 7 - Notice of For cessation of business, Section 93 of the SFA MAS-Tx | Entity Activities &\nCessation | of within 14 days after the and Regulation 11 of | Particulars\n(a) ceases to carry on business in any or all Business | cessation of any or all the LCBR | ( Cessation (Form\nregulated activities; or | regulated activities | 7)/Non-\n(b) has not commenced business in any or (Accompanied by | Commencement of\nall regulated activities by the end of the an | audit For non-commencement of | CMS Activity)\nperiod of 6 months from the date of the certification (no regulated | activity,\ngrant of the licence | prescribed format) immediately after the end of\nthat the VCFM has 6 months from the date of\nfully discharged all the grant of the CMS licence\ncustomer\nobligations)\n5\n- Official source: [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "MAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "VCFM Form 7 cessation and noncommencement notification",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

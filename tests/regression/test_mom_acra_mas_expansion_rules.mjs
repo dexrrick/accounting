@@ -30,6 +30,18 @@ const masPdf = readFileSync(fileURLToPath(new URL('../fixtures/statutoryExpansio
 const masPdfTextExtraction = await extractPdfDocumentText(masPdf);
 const masPdfText = masPdfTextExtraction.text;
 const masPdfTitle = 'Compliance Toolkit for Venture Capital Fund Managers';
+const misconductFaqPdf = readFileSync(fileURLToPath(new URL('../fixtures/statutoryKnowledge20261030/mas-misconduct-faq-native.pdf', import.meta.url)));
+const misconductFaqTextExtraction = await extractPdfDocumentText(misconductFaqPdf);
+const misconductFaqText = misconductFaqTextExtraction.text;
+const misconductFaqManifest = JSON.parse(readFileSync(fileURLToPath(new URL('../fixtures/statutoryKnowledge20261030/expansion-source-manifest.json', import.meta.url)), 'utf8'));
+const misconductFaqCapture = misconductFaqManifest.sources.find(source => source.fixture === 'mas-misconduct-faq-native.pdf');
+assert.ok(misconductFaqCapture, 'the current MAS nil-return FAQ has a retained native source manifest entry');
+assert.equal(createHash('sha256').update(misconductFaqPdf).digest('hex'), misconductFaqCapture.sha256,
+  'the current MAS nil-return PDF bytes match their retained source manifest digest');
+assert.equal(misconductFaqPdf.subarray(0, 5).toString('ascii'), '%PDF-', 'the FAQ fixture retains native PDF bytes');
+assert.equal(misconductFaqTextExtraction.pageCount, 12, 'the native FAQ PDF extracts all twelve pages');
+const misconductFaqUrl = misconductFaqCapture.url;
+const misconductFaqTitle = misconductFaqCapture.title;
 assert.match(masPdfTextExtraction.pageTexts[0], /COMPLIANCE TOOLKIT FOR\s+VENTURE CAPITAL FUND MANAGERS/i,
   'The validator title comes from the retained PDF first page.');
 const escapeHtml = value => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -77,8 +89,8 @@ const cases = [
   {
     authority: 'MAS', topicId: 'mas-regulatory-reporting', domain: 'MAS_FUNDS', population: 'Company',
     subject: 'VCFM nil misconduct return filing requirement',
-    query: 'What nil misconduct declaration must a VCFM submit and when is it due?', sourceText: masPdfText,
-    url: MAS_VCFM_TOOLKIT_URL, title: masPdfTitle, expected: 'within 14 days after calendar year end'
+    query: 'For calendar year 2026, does a VCFM need to submit a nil misconduct return, and what does the change from 1 January 2027 mean?', sourceText: misconductFaqText,
+    url: misconductFaqUrl, title: misconductFaqTitle, expected: 'calendar year ending 31 December 2026', sourceBytes: misconductFaqPdf
   }
 ];
 
@@ -86,7 +98,7 @@ function evidenceFor(sample, overrides = {}) {
   const issueId = overrides.issueId || 'expansion-issue';
   const sourceUrl = overrides.sourceUrl || sample.url;
   const documentHash = overrides.documentHash || (sample.authority === 'MAS'
-    ? createHash('sha256').update(masPdf).digest('hex') : 'a'.repeat(64));
+    ? createHash('sha256').update(sample.sourceBytes || masPdf).digest('hex') : 'a'.repeat(64));
   const retrievedAt = '2026-10-26T02:00:00Z';
   const makeClaim = (text, hash = documentHash) => ({
     text,
@@ -138,11 +150,22 @@ for (const sample of cases) {
   } else if (sample.authority === 'ACRA') {
     assert.equal(supportMomAcraMasExpansionRule({ ...request, sourceText: acraHtml }), true,
       'The source proof also accepts native ACRA HTML directly.');
-  } else if (sample.authority === 'MAS') {
+  } else if (sample.authority === 'MAS' && sample.url === MAS_VCFM_TOOLKIT_URL) {
     assert.equal(supportMomAcraMasExpansionRule({ ...request, sourceText: masPdfValidatorText }), true,
       'The source proof accepts the default validator output produced from the extracted official PDF.');
     assert.ok(selectMomAcraMasExpansionQuotes({ ...request, sourceText: masPdfValidatorText }).length > 0,
       'The same validator output supplies a bounded PDF-table-row quotation.');
+  } else if (sample.authority === 'MAS') {
+    assert.equal(supportMomAcraMasExpansionRule({ ...request, sourceText: masPdfText, officialUrl: MAS_VCFM_TOOLKIT_URL }), false,
+      'The older toolkit 14-day row cannot support the current nil-return answer.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...request,
+      sourceText: misconductFaqText.replace('No. MAS does not require', 'Yes. MAS requires'),
+    }), false, 'A reversed FAQ answer cannot prove the nil-return transition.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...request, officialUrl: `${misconductFaqUrl}?revision=other` }), false,
+      'A noncanonical FAQ URL cannot prove the current nil-return transition.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...request,
+      query: 'For calendar year 2025, what nil misconduct return due date applied to our VCFM?',
+    }), false, 'The 2026 FAQ does not claim a deadline for a different reporting year.');
   }
   assert.ok(selectMomAcraMasExpansionQuotes(request).some(quote => quote.length > 100),
     `${sample.authority} proof selects a substantial bounded source passage.`);
@@ -240,14 +263,13 @@ assert.equal(supportMomAcraMasExpansionRule({ ...masAnnual, sourceText: masPdfTe
 
 const masNil = cases[3];
 assert.equal(hasMomAcraMasExpansionContradiction({ ...masNil,
-  sourceText: masPdfText.replace('that have not', 'that have') }), true,
-  'An explicit reversal of the VCFM nil-return population is a source contradiction.');
+  sourceText: misconductFaqText.replace('No. MAS does not require', 'Yes. MAS requires') }), true,
+  'An explicit reversal of the current VCFM nil-return FAQ answer is a source contradiction.');
 assert.equal(supportMomAcraMasExpansionRule({ ...masNil, query: 'What nil misconduct declaration must a VCFM submit for the preceding calendar year and when is it due?' }), true,
   'A current nil-return rule may describe the preceding calendar year without becoming a historical query.');
-assert.equal(supportMomAcraMasExpansionRule({ ...masNil, sourceText: masPdfText.replace('Within 14 days after calendar', 'Within 30 days after calendar') }), false,
-  'A wrong nil-return deadline fails closed.');
-assert.equal(supportMomAcraMasExpansionRule({ ...masNil, sourceText: masPdfText.replace('that have not', 'that have') }), false,
-  'A nil return with the wrong population/condition fails closed.');
+assert.equal(supportMomAcraMasExpansionRule({ ...masNil,
+  sourceText: misconductFaqText.replace('No. MAS does not require', 'Yes. MAS requires') }), false,
+  'The current FAQ cannot prove a nil-return obligation when its answer is reversed.');
 
 for (const [label, overrides] of [
   ['wrong URL', { sourceUrl: 'https://example.com/mas.pdf' }],

@@ -1,0 +1,36 @@
+{
+  "scope": "P1 CPF conditional-wage refund date and mixed calculation reproduction",
+  "comparisonBase": "47353b991de6a232229c4c4d8418470d3bc361ba",
+  "officialEvidence": {
+    "refundProcedureUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+    "conditionalDateFaqUrl": "https://www.cpf.gov.sg/service/article/how-do-we-determine-the-date-of-conditional-wages-repayable",
+    "facts": "CPF Board states that a conditional-wage refund request is due immediately and no later than one year from when the wages are supposed to be repaid to the employer under employment terms or mutual agreement; the date must be entered in the refund application. Ordinary refunds use the contribution payment date shown in PAYMENTS RECEIVED ON. The FAQ says a sign-on/retention bonus tied to a minimum service period uses the last date of service as a guideline for the repayable date. This implementation does not infer that FAQ date from a resignation date."
+  },
+  "before": {
+    "mixedPrompt": "What employer CPF contribution is payable on an employee salary of S$5,000, and when should we request a refund of last month's overpayment?",
+    "classification": {
+      "calculationRequired": false,
+      "intent": "STATUTORY_ADVISORY",
+      "authorities": ["CPF"]
+    },
+    "conditionalWageWording": "The exact conditional bonus / resignation / repayment-due-date wording did not produce a case-specific one-year limit; the conventional 'under the employment terms, had to repay' phrase did.",
+    "ordinaryDuplicateControl": "A true ordinary payroll duplication continued to use the PAYMENTS RECEIVED ON date (01/10/2026 outer limit from 01/10/2025 payment)."
+  },
+  "afterLocalUnitChecks": {
+    "mixedPrompt": {
+      "calculationRequired": true,
+      "intent": "TRANSACTION",
+      "authorities": ["IRAS", "CPF", "MOM"]
+    },
+    "conditionalWageWording": "The verified fixture path derives a 15/09/2027 outer limit from an explicit 15 September 2026 repayment due date and does not use the unrelated 01/10/2025 payment date.",
+    "ordinaryDuplicateControl": "The duplicate-payment control still uses the PAYMENTS RECEIVED ON date."
+  },
+  "fullApplication": {
+    "status": "PASS_FOCUSED_INTEGRATION",
+    "detail": "The exact mixed payable-plus-refund request reaches the authority-workstream path with separate CALCULATE and CPF refund issues, exact refund-source claims, incomplete coverage, no direct journal, no fabricated CPF amount, and a source-backed employer refund explanation. CPF classification asks for age band, citizenship/PR year, OW/AW type and contribution period. Natural conditional-wage and cross-sentence repayment dates use the repayment due date; a training-expense repayment date does not bind to the bonus; competing due dates produce general refund guidance without a case-specific deadline. Ordinary duplicate controls use PAYMENTS RECEIVED ON. CPF share applicability, wage-classification, salary-deduction, and dated CPF-01/08 controls do not create journals or unrequested unqualified rates."
+  },
+  "validation": {
+    "targetedSuite": "test_statutory_workflows_20261029.mjs",
+    "currentResult": "Focused offline test_statutory_workflows_20261029.mjs passes after the P1 population and repayment-date fixes, including an assertion that the exact mixed prompt renders refund timing guidance; last output: Five-family statutory workflow source, quote, contradiction, date-role and source-bound rendering regressions passed."
+  }
+}

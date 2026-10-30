@@ -1,0 +1,275 @@
+{
+  "scope": "OFFLINE_RULES_ONLY_APPLICATION_AND_RETAINED_NATIVE_OFFICIAL_SOURCES",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "comparisonBase": "47353b991de6a232229c4c4d8418470d3bc361ba",
+  "completedAtUTC": "2026-10-30T10:10:56.544Z",
+  "changes": [
+    "Conditional-wage CPF refund deadline uses only an unambiguous owned repayment date; ordinary payment-date rule remains separate",
+    "Mixed CPF calculation/refund request preserves both asks and requests missing payroll facts without fabricated amount or journal",
+    "Independent medical/van GST issues and Form25A/nil-misconduct/fund-scope issues retain their own exact-source proof",
+    "Bounded new donations, CPF record rectifications, payslip records, registered-office and VCFM Form23A/Form7 guidance",
+    "Project usage policy checks shared limits automatically and checkpoints before the greater-than-5-percent reserve"
+  ],
+  "independent75": {
+    "baseline": {
+      "CORRECT": 13,
+      "PARTIAL": 8,
+      "INCORRECT": 9,
+      "UNSUPPORTED": 45
+    },
+    "final": {
+      "CORRECT": 20,
+      "PARTIAL": 7,
+      "INCORRECT": 1,
+      "UNSUPPORTED": 47
+    },
+    "perAuthority": {
+      "IRAS": {
+        "CORRECT": 4,
+        "PARTIAL": 4,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 7
+      },
+      "CPF": {
+        "CORRECT": 6,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 9
+      },
+      "MOM": {
+        "CORRECT": 4,
+        "PARTIAL": 2,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 9
+      },
+      "ACRA": {
+        "CORRECT": 1,
+        "PARTIAL": 1,
+        "INCORRECT": 1,
+        "UNSUPPORTED": 12
+      },
+      "MAS": {
+        "CORRECT": 5,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 10
+      }
+    },
+    "newlyCorrect": [
+      "iras-04",
+      "iras-05",
+      "cpf-11",
+      "mom-13",
+      "mas-07",
+      "mas-08",
+      "mas-03"
+    ],
+    "previouslyCorrectPreserved": {
+      "baselineCount": 13,
+      "preservedCount": 13,
+      "regressions": []
+    }
+  },
+  "targetedAcceptance": "6/6 independently correct; P2 reproductions 2 correct and QDC unsupported",
+  "previous60": "Nine changed answers independently correct, including two newly correct; 51 byte-identical answers inherit prior grades and were not re-adjudicated",
+  "validation": [
+    {
+      "completedUTC": "2026-10-30T10:03:00.7297894Z",
+      "check": "preflight",
+      "startedUTC": "2026-10-30T10:03:00.6771524Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:03:01.2099842Z",
+      "check": "lint",
+      "startedUTC": "2026-10-30T10:03:00.7411199Z",
+      "exitCode": 1
+    },
+    {
+      "completedUTC": "2026-10-30T10:03:01.3264668Z",
+      "check": "maintained-code-lint",
+      "startedUTC": "2026-10-30T10:03:01.2124898Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:03:05.3670145Z",
+      "check": "typecheck",
+      "startedUTC": "2026-10-30T10:03:01.3280101Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:03:07.5092673Z",
+      "check": "vite-build",
+      "startedUTC": "2026-10-30T10:03:05.3696125Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:03:08.1837741Z",
+      "check": "worker-build",
+      "startedUTC": "2026-10-30T10:03:07.5105412Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:06:32.6567749Z",
+      "check": "smoke",
+      "startedUTC": "2026-10-30T10:03:08.1850329Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:10:09.8696305Z",
+      "check": "full",
+      "startedUTC": "2026-10-30T10:06:32.6576708Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:10:13.2562124Z",
+      "check": "fixed100-original",
+      "startedUTC": "2026-10-30T10:10:09.8707374Z",
+      "exitCode": 0
+    },
+    {
+      "completedUTC": "2026-10-30T10:10:22.8069680Z",
+      "check": "fixed100-enriched",
+      "startedUTC": "2026-10-30T10:10:13.2573308Z",
+      "exitCode": 0
+    }
+  ],
+  "suites": {
+    "smoke": {
+      "passed": 159,
+      "failed": 0,
+      "exitCode": 0
+    },
+    "full": {
+      "passed": 182,
+      "failed": 0,
+      "exitCode": 0
+    }
+  },
+  "lintQualification": "Root oxlint exits 1: diagnostic JSON identifies 34 parse errors in archived artifacts/fresh-acceptance-2026-10-24/prepare.mjs. Maintained src/scripts/tests lint passes. No lint gate or archived file changed.",
+  "runtime": "Canonical Node 22.23.3; direct package-script equivalents because npm is unavailable; external network blocked during offline captures and replay",
+  "sourceIntegrity": {
+    "newNativeSources": [
+      {
+        "fixture": "iras-donations-native.html",
+        "sha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+        "byteLength": 278562,
+        "passed": true
+      },
+      {
+        "fixture": "iras-donations-conditions-native.html",
+        "sha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+        "byteLength": 279805,
+        "passed": true
+      },
+      {
+        "fixture": "cpf-rectifications-native.html",
+        "sha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+        "byteLength": 216786,
+        "passed": true
+      },
+      {
+        "fixture": "acra-registered-office-native.html",
+        "sha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+        "byteLength": 822134,
+        "passed": true
+      },
+      {
+        "fixture": "mas-misconduct-faq-native.pdf",
+        "sha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+        "byteLength": 412879,
+        "passed": true
+      }
+    ],
+    "existingNativeFixtureFilesByteIdentical": 43,
+    "exception": "Existing MAS manifest scope metadata only; retained native bytes unchanged",
+    "independent75CorpusSha256": "ce9dd34a89519f60502aaccc8aa56891f22369befcc1222f2134a51426566d23",
+    "passed": true
+  },
+  "preservation": {
+    "fixed100-original": {
+      "corpusSize": 100,
+      "corpusUnchanged": true,
+      "stableDuringReplay": true,
+      "countsBefore": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "countsAfter": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "losses": []
+    },
+    "fixed100-enriched": {
+      "corpusSize": 100,
+      "corpusUnchanged": true,
+      "stableDuringReplay": true,
+      "countsBefore": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/INSUFFICIENT": 10,
+        "ACRA/VERIFIED": 10,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "countsAfter": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/INSUFFICIENT": 10,
+        "ACRA/VERIFIED": 10,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "losses": []
+    }
+  },
+  "gaps": [
+    "Unchanged acra-13 incorrect VCC assumption",
+    "47 unsupported and 7 partial frozen questions remain; see per-question independent grades",
+    "Precise VCFM QDC form, applicability and deadline unverified",
+    "Historical ACRA applicability and uncovered MAS transition variants remain bounded",
+    "No live model, browser, CI or production acceptance; no PR, merge, deployment or source activation"
+  ],
+  "evidence": [
+    "independent-final-review.json",
+    "baseline75.json",
+    "final75.json",
+    "acceptance.json",
+    "p2-after.json",
+    "previous60-changed-review.json",
+    "preservation-report.json",
+    "source-integrity-report.json",
+    "validation-results.json",
+    "qdc-investigation.json"
+  ]
+}

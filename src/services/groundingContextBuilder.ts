@@ -47,6 +47,7 @@ import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPr
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate,
   supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
 import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
+import { STATUTORY_WORKFLOW_RULES_20261029 } from '../retrieval/statutoryWorkflows20261029';
 import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
 import {
   completeIrasCpfCashTopUpEligibilityQuote,
@@ -1680,6 +1681,13 @@ export async function resolveMappedOfficialSourceFallback(
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
+      // These native pages place required premises in table/card labels that
+      // generic paragraph extraction omits. The existing complete-rule proof
+      // selects exact visible passages before ordinary identity validation.
+      const nativeWorkflow = STATUTORY_WORKFLOW_RULES_20261029.find(rule =>
+        ['IRAS_COMPANY_APPROVED_DONATIONS', 'CPF_CONTRIBUTION_RECORD_RECTIFICATIONS', 'ACRA_REGISTERED_OFFICE_REQUIREMENTS'].includes(rule.id)
+        && rule.officialUrl === candidateUrl && rule.topicIds.includes(topic.id)
+        && rule.queryPattern.test(query) && rule.subjectPattern.test(scopedCoverageSubject));
       const lfmcToolkitUrl = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
       const knowledgePdf = STATUTORY_KNOWLEDGE_POINTERS_20261027B.find(item => item.authority === topic.authorities[0]
         && item.topicIds.includes(topic.id) && item.url === candidateUrl && item.documentKind === 'PDF');
@@ -1758,7 +1766,7 @@ export async function resolveMappedOfficialSourceFallback(
                 ? 'The IRAS GST basics source does not establish every required exempt and zero-rated category premise.'
                 : `The IRAS GST basics source yielded ${quotes.length} of 8 required category passages.` };
         }
-      } else if (expansionOwned && ((topic.id === 'cpf-employee-coverage' &&
+      } else if (expansionOwned && (nativeWorkflow || (topic.id === 'cpf-employee-coverage' &&
           candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions') ||
           (topic.id === 'cpf-contribution-computation' && candidateUrl === 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay') ||
           (topic.id === 'cpf-adjustments-refunds' && candidateUrl === 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions'))) {
@@ -1770,7 +1778,9 @@ export async function resolveMappedOfficialSourceFallback(
         const quotes = document.status === 'SUCCESS' && document.content
           ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
         const nativeTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
-        if (quotes.length > 0 && nativeTitle && document.finalUrl === candidateUrl && (topic.id === 'cpf-employee-coverage'
+        if (quotes.length > 0 && nativeTitle && document.finalUrl === candidateUrl && (nativeWorkflow
+          ? normalizeEvidenceText(cleanHtmlText(nativeTitle)).includes(normalizeEvidenceText(nativeWorkflow.title))
+          : topic.id === 'cpf-employee-coverage'
           ? /who should receive cpf contributions/i.test(nativeTitle)
           : topic.id === 'cpf-adjustments-refunds' ? /applying for refund of cpf contributions/i.test(nativeTitle)
             : /how much cpf contributions to pay/i.test(nativeTitle))) {
@@ -1782,7 +1792,7 @@ export async function resolveMappedOfficialSourceFallback(
             status: checked.isValid ? 'SUCCESS' : 'TOPIC_MISMATCH',
             topicMatched: checked.isValid, titleMatched: checked.isValid, contentMatched: checked.isValid,
             error: checked.isValid ? undefined : checked.reason };
-        } else result = { ...document, status: 'TOPIC_MISMATCH', error: 'Native CPF cards do not establish the complete employee coverage rule and publisher identity.' };
+        } else result = { ...document, status: 'TOPIC_MISMATCH', error: 'Native source cards do not establish the complete requested rule and publisher identity.' };
       } else {
         result = await webRetriever.fetchOfficialSource(candidateUrl, {
           ...options.fetchOptions,

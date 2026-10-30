@@ -48,6 +48,7 @@ import { supportIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPractic
 import { isIrasCpfQualitativeRateFactorRequest, selectIrasCpfCoverageQuotes, supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { selectMomAcraMasCoverageQuotes, supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
 import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '../retrieval/practicalStatutoryExpansion';
+import { expectedMasVcfmExpansionSource } from '../retrieval/momAcraMasExpansionRules';
 import { STATUTORY_KNOWLEDGE_RULES_20261027B, sourceProvesKnowledgeDate, supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
 
 import {
@@ -1936,9 +1937,14 @@ function eligibleLocalRecords(
     if (!firstSharedFailure) {
       const substantiveSupport = passesBoundedStatutoryAdvisorySupport(record.sourceText, authority, issue, topics, originalQuery);
       for (const topic of topics) {
+        const ownedMasSource = authority === 'MAS' ? expectedMasVcfmExpansionSource({
+          authority, topicId: topic.id, query: originalQuery, subject: issue.subject, sourceText: record.sourceText
+        }) : undefined;
         const topicPredicates: AuthorityAdmissionPredicateResult[] = [
           { predicate: 'topicBoundToRecord', passed: topicBoundToRecord(record, topic) },
           { predicate: 'governorAndDomain', passed: recordMatchesGovernorAndDomain(record, authority, topic) },
+          { predicate: 'ownedMasRuleSource', passed: !ownedMasSource ||
+            record.officialSourceUrl === ownedMasSource && record.canonicalSourceUrl === ownedMasSource },
           { predicate: 'textSupportsTopic', passed: supportPracticalExpansionRule({
             authority: authority, topicId: topic.id, query: originalQuery, subject: issue.subject,
             sourceText: record.sourceText, officialUrl: record.officialSourceUrl

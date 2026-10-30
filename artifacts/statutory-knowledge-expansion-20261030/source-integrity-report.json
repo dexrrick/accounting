@@ -1,0 +1,38 @@
+{
+  "newNativeSources": [
+    {
+      "fixture": "iras-donations-native.html",
+      "sha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "byteLength": 278562,
+      "passed": true
+    },
+    {
+      "fixture": "iras-donations-conditions-native.html",
+      "sha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "byteLength": 279805,
+      "passed": true
+    },
+    {
+      "fixture": "cpf-rectifications-native.html",
+      "sha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "byteLength": 216786,
+      "passed": true
+    },
+    {
+      "fixture": "acra-registered-office-native.html",
+      "sha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "byteLength": 822134,
+      "passed": true
+    },
+    {
+      "fixture": "mas-misconduct-faq-native.pdf",
+      "sha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "byteLength": 412879,
+      "passed": true
+    }
+  ],
+  "existingNativeFixtureFilesByteIdentical": 43,
+  "exception": "Existing MAS manifest scope metadata only; retained native bytes unchanged",
+  "independent75CorpusSha256": "ce9dd34a89519f60502aaccc8aa56891f22369befcc1222f2134a51426566d23",
+  "passed": true
+}

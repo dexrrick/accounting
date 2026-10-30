@@ -37,6 +37,42 @@ assert.equal(explicitPayrollCalculationClassification.journalEntryRequired, true
 const cpfAmountAndRefundClassification = classifyQuestion('How many dollars of CPF do we owe on the employee salary of S$5,000, and when should we request a refund of last month’s overpayment?');
 assert.equal(cpfAmountAndRefundClassification.calculationRequired, true,
   'A separate CPF dollar amount request remains a calculation when it shares a question with refund timing.');
+assert.equal(cpfAmountAndRefundClassification.journalEntryRequired, false,
+  'An amount-only CPF question does not request a journal entry.');
+const employerCpfPayableAndRefundClassification = classifyQuestion('What employer CPF contribution is payable on an employee salary of S$5,000, and when should we request a refund of last month’s overpayment?');
+assert.equal(employerCpfPayableAndRefundClassification.calculationRequired, true,
+  'An employer CPF contribution phrased as payable remains a calculation beside a separate refund request.');
+assert.equal(employerCpfPayableAndRefundClassification.intent, 'TRANSACTION');
+assert.equal(employerCpfPayableAndRefundClassification.journalEntryRequired, false,
+  'A payable CPF amount request remains distinct from an unrequested journal entry.');
+for (const fact of [/age/i, /citizenship|permanent.resident|PR contribution year/i, /Ordinary Wages or Additional Wages/i, /contribution period|wage month/i]) {
+  assert.ok(employerCpfPayableAndRefundClassification.missingFacts.some(value => fact.test(value)),
+    `The mixed CPF calculation asks for missing material facts: ${fact}`);
+}
+for (const query of [
+  'Our employee earns S$400 in the month. Is there an employee CPF share?',
+  'An employee received basic pay, overtime, a performance bonus and a reimbursed S$60 stationery purchase supported by a receipt. Which items are generally wages for CPF?',
+  "Can we deduct an employee's salary for a S$400 uniform, recruitment costs and a foreign worker levy?",
+  'A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?',
+  'Our payroll vendor says CPF contributions for June are due on 14 July. What is the contribution due date and what is the 14th?'
+]) {
+  const classification = classifyQuestion(query);
+  assert.equal(classification.calculationRequired, false,
+    `Amounts in a statutory eligibility, wage classification or salary deduction question do not trigger payroll calculation fallback: ${query}`);
+  assert.equal(classification.journalEntryRequired, false,
+    'A statutory or wage classification question does not request journal entries.');
+}
+const employerCpfPayableAndRefundPlan = reconcileQuestionUnderstanding(
+  'What employer CPF contribution is payable on an employee salary of S$5,000, and when should we request a refund of last month’s overpayment?',
+  employerCpfPayableAndRefundClassification,
+  { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }
+).issuePlan;
+assert.ok(employerCpfPayableAndRefundPlan.issues.some(issue => issue.operation === 'CALCULATE'),
+  'The CPF amount request remains a calculation issue beside refund timing.');
+assert.ok(employerCpfPayableAndRefundPlan.issues.some(issue => issue.mappedTopicIds.includes('cpf-adjustments-refunds') &&
+  issue.operation !== 'CALCULATE'), 'The separate CPF refund request remains present.');
+assert.equal(employerCpfPayableAndRefundPlan.coverageEstablished, false,
+  'A salary alone does not establish all facts needed to calculate an employer CPF contribution.');
 const variedCpfAmountAndRefundClassification = classifyQuestion('What CPF contribution amount is due on an employee salary of S$5,000, and when should we request a refund for last month’s overpayment?');
 assert.equal(variedCpfAmountAndRefundClassification.calculationRequired, true,
   'A differently worded contribution-amount question also remains calculable beside refund timing.');
@@ -68,7 +104,7 @@ for (const question of [
     'Historical wording or a separate unnamed employment request must retain its date scope.');
 }
 
-assert.equal(STATUTORY_WORKFLOW_RULES_20261029.length, 5, 'Exactly the five approved new workflow families are registered.');
+assert.equal(STATUTORY_WORKFLOW_RULES_20261029.length, 10, 'The five existing workflows and five approved expansions are registered.');
 
 const cases = [
   {
@@ -210,6 +246,21 @@ for (const sample of cases) {
   if (sample.id === 'cpf-refund') {
     const dateApplications = [
       ['CPF refund deadline: CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
+      ['CPF refund deadline: The joining bonus is conditional on completing twelve months of service. The employee must repay it on 15 September 2026 after leaving early.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: The joining bonus must be returned if the employee leaves early. Repayment due date is 15 September 2026 under the employment agreement.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: The joining bonus must be returned if the employee leaves early. The repayment due date is 15 September 2026 under the employment agreement.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: The joining bonus becomes repayable upon resignation. The employee resigned early, and the bonus repayment is due under the employment agreement on 15 September 2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: We paid a joining bonus. It has to be returned if the employee leaves early. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
+      ['CPF refund deadline: The joining bonus must be returned if the employee leaves early. Expense reimbursement repayment due date is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be returned if the employee leaves early. Training expenses repayment due date is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The bonus repayment due date was 15 September 2026, or 20 September 2026; the agreement is unclear. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|20\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: We paid a joining bonus. It may have to be returned if the employee leaves early, but the repayment terms are unclear. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The joining bonus is repayable if the employee resigns early, and the retention bonus is repayable if the employee leaves before two years. The employee must repay the bonus on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The joining bonus must be returned if the employee leaves early. A loan is also mentioned, but it is unclear which repayment date belongs to the bonus. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The joining bonus becomes repayable upon resignation on 15 September 2026 after a minimum service period. The contract does not state a separate repayment due date.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The conditional joining bonus must be repaid if the employee leaves early. A separate staff-loan repayment is due on 15 September 2026.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: The joining bonus is conditional on completing twelve months of service. The employee must repay it on 15 September 2026, but the bonus repayment due date is 20 September 2026.', 'NO_MATCH', /one-year outer limit is/i],
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 31/02/2026.', 'NO_MATCH', /one-year outer limit is/i],
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 29/02/2024.', 'NO_MATCH', /one-year outer limit is/i],
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 15/09/2026; a mutual agreement set the repayment due date as 20/09/2026.', 'NO_MATCH', /one-year outer limit is/i],
@@ -223,7 +274,7 @@ for (const sample of cases) {
       const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
       assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
       if (outcome === 'MATCH') {
-        assert.match(dateExplanation.text, pattern);
+        assert.match(dateExplanation.text, pattern, query);
         if (forbidden) assert.doesNotMatch(dateExplanation.text, forbidden,
           'Explicit payroll-duplication facts use the ordinary payment date rather than a bonus repayment date.');
       }
@@ -413,6 +464,24 @@ const appCases = [
   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
     query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
     expected: /^(?=[\s\S]*15\/09\/2027)(?=[\s\S]*before applying, the employer must return the employee share directly to the employee)[\s\S]*$/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025. What is our CPF refund deadline?',
+    expected: /one-year outer limit is 15\/09\/2027/i, forbidden: /one-year outer limit 01\/10\/2026/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF was paid on a joining bonus. It has to be returned if the employee leaves early. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the refund deadline?',
+    expected: /one-year outer limit is 15\/09\/2027/i, forbidden: /one-year outer limit 01\/10\/2026/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF refund deadline: The joining bonus must be returned if the employee leaves early. The repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?',
+    expected: /one-year outer limit is 15\/09\/2027/i, forbidden: /one-year outer limit 01\/10\/2026/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF refund deadline: The joining bonus must be returned if the employee leaves early. Expense reimbursement repayment due date is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i, forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'The joining bonus must be returned if the employee leaves early. Training expenses repayment due date is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i, forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'The bonus repayment due date was 15 September 2026, or 20 September 2026; the agreement is unclear. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i, forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|20\/09\/2027|01\/10\/2026)/i },
   { authority: 'MAS', topic: 'mas-lfmc-key-appointments', url: manifest.sources.find(item => item.fixture === 'mas-lfmc-toolkit.pdf').url,
     query: 'At our LFMC, an existing non-executive director will take an executive role. Since he is already on the board, can we simply notify MAS afterwards? Would moving an executive director into a non-executive role follow the same process?',
     expected: /prior MAS approval using Form 11.*Non-Executive to Executive.*already being on the board does not remove approval.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*specifically attached to the resignation/i },
@@ -485,6 +554,41 @@ const previousFetch = globalThis.fetch;
 const appResults = [];
 try {
   globalThis.fetch = strictOfflineFetch;
+  const mixedCpfQuery = 'What employer CPF contribution is payable on an employee salary of S$5,000, and when should we request a refund of last month’s overpayment?';
+  let mixedCpfWorkstreams;
+  const mixedCpfResponse = await processAccountingQuery(mixedCpfQuery, null, 'SFRS_I', undefined, undefined, [], undefined,
+    { onAuthorityWorkstreams: result => { mixedCpfWorkstreams = result; } });
+  assert.deepEqual(mixedCpfResponse.scenarioState.directGroups || [], [],
+    `An amount-only CPF question does not generate an unrequested salary journal: ${JSON.stringify(mixedCpfResponse.scenarioState.directGroups || [])}`);
+  assert.doesNotMatch(mixedCpfResponse.messageText,
+    /(?:employer|employee)(?:'s)? CPF (?:contribution|share)\s*(?:is|of|:)?\s*(?:S\$|SGD\s*\$?|\$)\s*\d/i,
+    'The normal application path does not invent a CPF amount from salary alone.');
+  assert.ok(mixedCpfWorkstreams, 'The exact mixed CPF request reaches the normal authority-workstream path.');
+  const mixedCpfPlanIssues = mixedCpfWorkstreams.issuePlan.issues;
+  assert.ok(mixedCpfPlanIssues.some(issue => issue.operation === 'CALCULATE'),
+    'The normal application plan retains the CPF contribution amount request as a calculation issue.');
+  assert.ok(mixedCpfPlanIssues.some(issue => issue.mappedTopicIds.includes('cpf-adjustments-refunds') &&
+    issue.operation !== 'CALCULATE'),
+  'The normal application plan keeps the independent CPF refund advice issue.');
+  assert.equal(mixedCpfWorkstreams.issuePlan.coverageEstablished, false,
+    'The salary alone does not establish enough facts to complete the mixed question.');
+  const mixedCpfPresentation = createAuthorityEvidencePresentation(mixedCpfWorkstreams);
+  const mixedCpfStream = mixedCpfPresentation.workstreams.find(item => item.authority === 'CPF');
+  const mixedRefundIssue = mixedCpfStream?.issues.find(issue => /CPF employer refund timing/i.test(issue.subject) &&
+    issue.operation === 'EXPLAIN_RULE' && issue.evidenceStatus === 'VERIFIED');
+  assert.ok(mixedRefundIssue,
+  'The presented CPF refund issue has verified source-backed rule evidence.');
+  assert.ok(getStatutoryWorkflowEvidence(mixedCpfQuery, mixedCpfStream, mixedRefundIssue),
+    'The exact mixed request can render the employer refund process beside the unresolved amount calculation.');
+  assert.match(mixedCpfResponse.messageText,
+    /CPF rule explanation:[\s\S]{0,700}Refund requests for CPF contributions generally must be made immediately and no later than one year from payment/i,
+    'The normal application response renders refund timing guidance while leaving the salary-based CPF amount unresolved.');
+  assert.ok(mixedCpfStream?.sources.some(source => source.officialUrl === manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url &&
+    source.claims.some(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE' &&
+      claim.fetchedSourceBinding?.canonicalUrl === source.officialUrl &&
+      claim.issueIds.some(id => mixedCpfStream.issues.some(issue => issue.id === id)))),
+  'The exact CPF refund procedure source is bound to the rendered mixed-query issue.');
+
   for (const sample of appCases) {
     let workstreams;
     let stream;
@@ -529,9 +633,28 @@ try {
         })) });
     }
   }
+  for (const query of [
+    'Our employee earns S$400 in the month. Is there an employee CPF share?',
+    'An employee received basic pay, overtime, a performance bonus and a reimbursed S$60 stationery purchase supported by a receipt. Which items are generally wages for CPF?',
+    "Can we deduct an employee's salary for a S$400 uniform, recruitment costs and a foreign worker levy?",
+    'A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?',
+    'Our payroll vendor says CPF contributions for June are due on 14 July. What is the contribution due date and what is the 14th?'
+  ]) {
+    const response = await processAccountingQuery(query, null, 'SFRS_I', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(response.messageText, /\b(?:journal entry|debit|credit)\b|\b(?:Dr|Cr)\s+/i,
+      'A CPF share or wage-classification question does not produce an unrequested journal entry.');
+    assert.doesNotMatch(response.messageText,
+      /(?:employee|employer)(?:'s)? CPF (?:contribution|share)\s*(?:is|of|:)?\s*(?:S\$|SGD\s*\$?|\$)\s*\d/i,
+      'A general CPF question does not invent a contribution amount from incidental monetary facts.');
+    if (/Ordinary Wages under CPF|what is the contribution due date/i.test(query)) {
+      assert.doesNotMatch(response.messageText, /\b(?:17|20)\s*%\b/i,
+        'A wage-date or contribution-deadline question does not introduce an unrequested unqualified rate summary.');
+    }
+  }
   const employeeVoicedCpfQueries = [
     'I have to repay my joining bonus to my employer. Can I request a CPF refund?',
-    'My employer made mistaken CPF contributions on my joining bonus; can I request money back?'
+    'My employer made mistaken CPF contributions on my joining bonus; can I request money back?',
+    'My employer paid CPF on my joining bonus. The payment record says PAYMENTS RECEIVED ON 1 October 2025. Can I request a CPF refund?'
   ];
   for (const query of employeeVoicedCpfQueries) {
     const { issuePlan } = reconcileQuestionUnderstanding(query, classifyQuestion(query),

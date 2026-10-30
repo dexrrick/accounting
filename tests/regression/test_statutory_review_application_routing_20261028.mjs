@@ -54,6 +54,13 @@ for (const question of [
   assert.equal(classification.calculationRequired, true, 'an actual amount request remains a calculation');
 }
 
+const proratedPayrollFollowup = classifyQuestion(
+  'what if the employee resigned on 15/10/2026 what will be his pro-rated payroll and CPF'
+);
+assert.equal(proratedPayrollFollowup.intent, 'TRANSACTION', 'a prorated payroll follow-up remains transactional');
+assert.equal(proratedPayrollFollowup.calculationRequired, true, 'a prorated payroll outcome remains a calculation');
+assert.equal(proratedPayrollFollowup.journalEntryRequired, true, 'the established prorated payroll follow-up retains its journal path');
+
 const question = rateQuestions[0];
 const acraGuidancePages = JSON.parse(readFileSync(new URL('../fixtures/acra-company-guidance-2026-10-10.json', import.meta.url), 'utf8'));
 const acraXbrlPage = acraGuidancePages.find(page => page.name === 'xbrl');

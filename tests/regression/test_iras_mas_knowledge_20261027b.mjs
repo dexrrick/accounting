@@ -206,9 +206,15 @@ assert.equal(getIrasMasKnowledgeEvidence(insurancePremiums.query, insuranceStrea
   'general medical-treatment evidence cannot answer a medical-insurance-premium question');
 const motor = cases[1];
 const compoundMedicalAndMotorQuery = 'Explain GST input tax recovery for staff medical expenses and company car expenses.';
+for (const family of [med, motor]) {
+  const completeSource = { ...family, query: compoundMedicalAndMotorQuery, sourceText: textFor(family.file) };
+  assert.equal(supportIrasMasKnowledgeRule(completeSource), true,
+    'the complete native page independently supports each specifically named compound issue');
+  assert.equal(hasIrasMasKnowledgeContradiction(completeSource), false);
+}
 const medicalOnlyEvidenceForMotorIssue = {
   ...motor, query: compoundMedicalAndMotorQuery, subject: 'GST input tax on motor car expenses',
-  sourceText: textFor(med.file), officialUrl: motor.url
+  sourceText: selectIrasMasKnowledgeQuotes({ ...med, sourceText: textFor(med.file) }).join('\n\n'), officialUrl: motor.url
 };
 assert.equal(supportIrasMasKnowledgeRule(medicalOnlyEvidenceForMotorIssue), false,
   'medical-only passages cannot support a motor-car issue even when the original query leads with staff medical expenses');
@@ -218,7 +224,7 @@ assert.equal(hasIrasMasKnowledgeContradiction(medicalOnlyEvidenceForMotorIssue),
   'compound cross-family issues veto legacy first-match support');
 const motorOnlyEvidenceForMedicalIssue = {
   ...med, query: compoundMedicalAndMotorQuery, subject: 'GST input tax on staff medical expenses',
-  sourceText: textFor(motor.file), officialUrl: med.url
+  sourceText: selectIrasMasKnowledgeQuotes({ ...motor, sourceText: textFor(motor.file) }).join('\n\n'), officialUrl: med.url
 };
 assert.equal(supportIrasMasKnowledgeRule(motorOnlyEvidenceForMedicalIssue), false,
   'motor-only passages cannot support a staff-medical issue');

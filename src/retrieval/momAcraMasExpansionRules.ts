@@ -23,12 +23,13 @@ export interface MomAcraMasExpansionRuleEvidence {
 }
 
 type ExpansionRule = 'MOM_SALARY_DEDUCTIONS' | 'ACRA_SECRETARY_REQUIREMENTS' |
-  'MAS_VCFM_ANNUAL_DECLARATION' | 'MAS_VCFM_NIL_MISCONDUCT_RETURN';
+  'MAS_VCFM_ANNUAL_DECLARATION' | 'MAS_VCFM_NIL_MISCONDUCT_RETURN' | 'MAS_VCFM_TOOLKIT_SCOPE';
 type ExpansionAuthority = MomAcraMasExpansionRuleEvidence['authority'];
 
 const MOM_DEDUCTIONS_URL = 'https://www.mom.gov.sg/employment-practices/salary/salary-deductions';
 const ACRA_SECRETARY_URL = 'https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/';
 const MAS_VCFM_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf';
+const MAS_VCFM_MISCONDUCT_FAQ_URL = 'https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf';
 export { MAS_VCFM_TOOLKIT_URL };
 const MAX_QUOTE_LENGTH = 5_000;
 
@@ -77,6 +78,13 @@ function hasPersonalOrHistoricalScope(query: string): boolean {
     || /\b(?:calculate|compute|estimate|how much|what amount|amount of deduction|eligible (?:person|candidate) for this role)\b/i.test(query);
 }
 
+function isCurrentVcfmNilFaqQuestion(query: string): boolean {
+  const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
+  const mentionedYears = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
+  return mentionedYears.every(year => year === currentYear || year === '2027')
+    && !/\b(?:which rules? applied|what applied|historical|historic|previous|prior|former|superseded|before|as at|at that time)\b/i.test(query);
+}
+
 function isAcraSecretaryCompanyFactRequest(query: string): boolean {
   const companyFacts = /\b(?:our|this|the)\s+(?:(?:singapore|private|public|local)\s+){0,2}company\b/i.test(query)
     && /\b(?:incorporated|registered|registration)\b/i.test(query)
@@ -118,16 +126,19 @@ function recognizeRule(input: Pick<MomAcraMasExpansionRuleRequest,
     return 'ACRA_SECRETARY_REQUIREMENTS';
   }
 
-  if (input.authority === 'MAS' && input.topicId === 'mas-regulatory-reporting'
-    && /\b(?:vcfm|venture capital fund manager)\b/i.test(text)
-    && /\b(?:annual declarations?|form 25a|annual returns?|nil returns?|misconduct reports?|misconduct declarations?)\b/i.test(input.query)
-    && /\b(?:when|due|deadline|what|which|file|submit|requirement|form|declaration|return)\b/i.test(input.query)) {
-    if (/\b(?:nil return|no misconduct|nil misconduct|declaration of nil return)\b/i.test(input.query)) {
-      return 'MAS_VCFM_NIL_MISCONDUCT_RETURN';
-    }
-    if (/\b(?:annual declarations?|form 25a|annual returns?)\b/i.test(input.query)) {
-      return 'MAS_VCFM_ANNUAL_DECLARATION';
-    }
+  if (input.authority === 'MAS' && ['mas-regulatory-reporting', 'mas-vcfm'].includes(input.topicId)
+    && /\b(?:vcfm|venture capital fund manager)\b/i.test(text)) {
+    const annualQuestion = /\b(?:annual declarations?|form\s*25\s*a|annual returns?)\b/i.test(input.query);
+    const nilQuestion = /\b(?:nil[- ]return|no misconduct|nil[- ]misconduct|declaration of nil return|misconduct return)\b/i.test(input.query);
+    const scopeQuestion = /\b(?:toolkit|checklist|scope|fund[- ]level|outside the sfa|all fund returns?|all obligations?|(?:all|every) (?:reporting )?obligations?)\b/i.test(input.query)
+      && /\b(?:toolkit scope|checklist|scope|fund[- ]level|all fund returns?|funds? (?:we|it|the manager) manage|outside the sfa|all obligations?)\b/i.test(input.subject);
+    if (scopeQuestion) return 'MAS_VCFM_TOOLKIT_SCOPE';
+    const subjectAsksAnnual = /\b(?:annual declaration|form\s*25\s*a|annual return)\b/i.test(input.subject);
+    const subjectAsksNil = /\b(?:nil return|misconduct)\b/i.test(input.subject);
+    if (annualQuestion && subjectAsksAnnual) return 'MAS_VCFM_ANNUAL_DECLARATION';
+    if (nilQuestion && subjectAsksNil) return 'MAS_VCFM_NIL_MISCONDUCT_RETURN';
+    if (annualQuestion && !nilQuestion) return 'MAS_VCFM_ANNUAL_DECLARATION';
+    if (nilQuestion && !annualQuestion) return 'MAS_VCFM_NIL_MISCONDUCT_RETURN';
   }
   return undefined;
 }
@@ -174,6 +185,17 @@ function masReportingRow(source: string, rule: 'MAS_VCFM_ANNUAL_DECLARATION' | '
     /\b19\s+to submit to mas\b/i) || '';
 }
 
+function masVcfmScopePassage(sourceText: string): string | undefined {
+  return span(sourceText, /This\s+Compliance\s+Toolkit\s+aims\s+to\s+provide\s+guidance\s+on:/i,
+    /VCFMs\s+are\s+welcomed\s+to\s+provide\s+suggestions\s+on\s+this\s+toolkit\s+using\s+the\s+Guided\s+Form\s+at\s+Contact\s+Us\./i);
+}
+
+function masVcfmNilFaqPassage(sourceText: string): string | undefined {
+  return span(sourceText,
+    /\b13\s+Are\s+FIs\s+required\s+to\s+submit\s+to\s+MAS\s+a\s+declaration\s+of\s+nil\s+return\s+of\s+misconduct\s+of\s+representatives\s+or\s+broking\s+staff\s+for\s+the\s+calendar\s+year\s+ended\s+31\s+December\s+2026\?/i,
+    /Under\s+the\s+Misconduct\s+Reporting\s+Notices,\s+which\s+take\s+effect\s+on\s+1\s+January\s+2027,\s+FIs\s+are\s+not\s+required\s+to\s+submit\s+to\s+MAS\s+a\s+declaration\s+of\s+nil\s+return\s+of\s+misconduct\s+of\s+representatives\s+or\s+broking\s+staff\./i);
+}
+
 function hasConflict(source: string, rule: ExpansionRule): boolean {
   const text = visibleText(source).toLowerCase();
   if (/\b(?:it is false that|it is not true that|it is incorrect that|it is not the case that|does not state that)\b/i.test(text)) {
@@ -201,10 +223,16 @@ function hasConflict(source: string, rule: ExpansionRule): boolean {
     return Boolean(deadline && deadline !== '1' && deadline !== 'one');
   }
   if (rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN') {
-    const row = normalizedSource(masReportingRow(source, rule));
-    const deadline = row.match(/\bwithin\s+(\d+|one|two|three|four|five|six|seven|eight|nine|ten|fourteen|thirty)\s+days?\s+after\b/i)?.[1]?.toLowerCase();
-    const reversedApplicability = /this applies to vcfms that have(?! not\b)[\s\S]{0,160}submitted any misconduct report[\s\S]{0,120}preceding calendar year/i.test(row);
-    return reversedApplicability || Boolean(deadline && deadline !== '14' && deadline !== 'fourteen');
+    const faq = normalizedSource(masVcfmNilFaqPassage(source) || '');
+    if (faq) {
+      return /\byes\b[\s\S]{0,220}\b(?:mas requires|fis are required to submit)[\s\S]{0,220}\bnil return\b[\s\S]{0,160}\bcalendar year ending 31 december 2026\b/i.test(faq)
+        || /under the misconduct reporting notices[\s\S]{0,180}\bfis are required to submit[\s\S]{0,120}\bnil return\b/i.test(faq);
+    }
+    return false;
+  }
+  if (rule === 'MAS_VCFM_TOOLKIT_SCOPE') {
+    return /(?:this )?toolkit (?:is|remains) exhaustive/i.test(text)
+      || /toolkit[^.!?]{0,100}(?:covers|includes) all fund[- ]level requirements/i.test(text);
   }
   return false;
 }
@@ -285,21 +313,12 @@ function masVcfmAnnualDeclarationFacts(source: string): boolean {
 }
 
 function masVcfmNilMisconductFacts(source: string): boolean {
-  const text = normalizedSource(masReportingRow(source, 'MAS_VCFM_NIL_MISCONDUCT_RETURN'));
-  return /\b18 to submit an annual declaration\b/.test(text)
-    && /was no misconduct report/.test(text)
-    && /declaration of nil/.test(text)
-    && /return/.test(text)
-    && /misconduct/.test(text)
-    && /representatives/.test(text)
-    && /within 14 days after calendar/.test(text)
-    && /year/.test(text)
-    && /end/.test(text)
-    && /paragraph 9/.test(text)
-    && /notice on reporting/.test(text)
-    && /this applies to vcfms that have not/.test(text)
-    && /submitted any misconduct report/.test(text)
-    && /preceding calendar year/.test(text);
+  const text = normalizedSource(masVcfmNilFaqPassage(source) || '');
+  return /\b13 are fis required to submit to mas a declaration of nil return of misconduct of representatives or broking staff for the calendar year ended 31 december 2026\?/.test(text)
+    && /no\. mas does not require fis to submit a declaration of nil return of misconduct of representatives or broking staff for the calendar year ending 31 december 2026/.test(text)
+    && /notwithstanding the requirement under paragraph 6 of the following notices/.test(text)
+    && /sfa 04.n11 notice on reporting of misconduct of representatives by holders of capital markets services licence and exempt financial institutions/.test(text)
+    && /under the misconduct reporting notices, which take effect on 1 january 2027, fis are not required to submit to mas a declaration of nil return of misconduct of representatives or broking staff/.test(text);
 }
 
 function proves(rule: ExpansionRule, source: string): boolean {
@@ -309,6 +328,16 @@ function proves(rule: ExpansionRule, source: string): boolean {
     case 'ACRA_SECRETARY_REQUIREMENTS': return acraSecretaryFacts(source);
     case 'MAS_VCFM_ANNUAL_DECLARATION': return masVcfmAnnualDeclarationFacts(source);
     case 'MAS_VCFM_NIL_MISCONDUCT_RETURN': return masVcfmNilMisconductFacts(source);
+    case 'MAS_VCFM_TOOLKIT_SCOPE': {
+      const scope = normalizedSource(masVcfmScopePassage(source) || '');
+      return /compliance toolkit aims to provide guidance on/.test(scope)
+        && /common applications, forms and submissions pursuant to the sfa/.test(scope)
+        && /applicable to vcfms/.test(scope)
+        && /it is not exhaustive/.test(scope)
+        && /excludes reporting obligations that fall outside the sfa/.test(scope)
+        && /fund[- ]level requirements/.test(scope)
+        && /relevant to: vcfms/.test(normalizedSource(source));
+    }
   }
 }
 
@@ -353,8 +382,12 @@ function selectedQuotes(rule: ExpansionRule, sourceText: string): string[] {
       /\b17\s+to report to mas\b/i);
     return quote ? [quote] : [];
   }
-  const quote = span(sourceText, /\b18\s+to submit an annual declaration\b/i,
-    /\b19\s+to submit to mas\b/i);
+  if (rule === 'MAS_VCFM_TOOLKIT_SCOPE') {
+    const quote = masVcfmScopePassage(sourceText);
+    const population = /Relevant to:\s*(?:\|\s*)?VCFMs/i.exec(visibleText(sourceText))?.[0];
+    return quote && population ? [quote, population] : [];
+  }
+  const quote = masVcfmNilFaqPassage(sourceText);
   return quote ? [quote] : [];
 }
 
@@ -363,7 +396,8 @@ export function supportMomAcraMasExpansionRule(input: MomAcraMasExpansionRuleReq
   const rule = recognizeRule(input);
   if (!rule) return undefined;
   if (!isCurrentGeneralQuestion(input.query) &&
-      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(input.query))) return false;
+      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(input.query)) &&
+      !(rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN' && isCurrentVcfmNilFaqQuestion(input.query))) return false;
   if (input.officialUrl && input.officialUrl !== sourceUrl(rule)) return false;
   return proves(rule, input.sourceText);
 }
@@ -384,7 +418,14 @@ export function selectMomAcraMasExpansionQuotes(input: MomAcraMasExpansionRuleRe
 function sourceUrl(rule: ExpansionRule): string {
   if (rule === 'MOM_SALARY_DEDUCTIONS') return MOM_DEDUCTIONS_URL;
   if (rule === 'ACRA_SECRETARY_REQUIREMENTS') return ACRA_SECRETARY_URL;
+  if (rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN') return MAS_VCFM_MISCONDUCT_FAQ_URL;
   return MAS_VCFM_TOOLKIT_URL;
+}
+
+/** A VCFM-specific issue cannot borrow a different licence class's source. */
+export function expectedMasVcfmExpansionSource(input: MomAcraMasExpansionRuleRequest): string | undefined {
+  const rule = recognizeRule(input);
+  return rule?.startsWith('MAS_VCFM_') ? sourceUrl(rule) : undefined;
 }
 
 function answerText(rule: ExpansionRule): string {
@@ -397,7 +438,10 @@ function answerText(rule: ExpansionRule): string {
   if (rule === 'MAS_VCFM_ANNUAL_DECLARATION') {
     return 'MAS’s current VCFM compliance toolkit says a venture capital fund manager must submit Form 25A, an annual declaration of changes to key appointments, assets under management, investor types and numbers, fund types, and deals, within one month after its financial year end. The toolkit cites Regulation 14(6) of the Securities and Futures (Licensing and Conduct of Business) Regulations. The due date for a specific manager depends on its financial year end.';
   }
-  return 'MAS’s current VCFM compliance toolkit says a venture capital fund manager that submitted no Misconduct Report in the preceding calendar year must submit a Declaration of Nil Return of Misconduct of Representatives within 14 days after calendar year end. The toolkit cites paragraph 9 of the Notice on Reporting of Misconduct of Representatives. This nil-return duty is conditional on no report having been submitted for that preceding year.';
+  if (rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN') {
+    return 'MAS FAQ 13 says that financial institutions covered by SFA 04-N11 are not required to submit a nil misconduct declaration for the calendar year ending 31 December 2026, notwithstanding the existing Notice wording. The Misconduct Reporting Notices effective 1 January 2027 also do not require nil declarations. If you mean a different reporting year, identify that calendar year: this FAQ passage does not establish its deadline.';
+  }
+  return 'MAS describes the VCFM toolkit as a reference for common applications, forms and submissions under the Securities and Futures Act. MAS says it is not exhaustive and expressly excludes reporting obligations outside the SFA and fund-level requirements. Therefore, Form 25A does not establish that every reporting obligation of each managed fund is complete. Identify applicable fund-level requirements separately for each fund and relevant activity; this source does not provide a complete fund-level checklist.';
 }
 
 function expectedSource(rule: ExpansionRule, source: AuthorityPresentedSource): boolean {
@@ -416,8 +460,10 @@ function issueSubjectMatches(rule: ExpansionRule, subject: string): boolean {
   if (rule === 'ACRA_SECRETARY_REQUIREMENTS') return /\b(?:company )?secretar(?:y|ies)\b/i.test(subject);
   if (rule === 'MAS_VCFM_ANNUAL_DECLARATION') return /\b(?:vcfm|venture capital fund manager)\b/i.test(subject)
     && /\b(?:annual declarations?|form 25a|annual returns?)\b/i.test(subject);
-  return /\b(?:vcfm|venture capital fund manager)\b/i.test(subject)
+  if (rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN') return /\b(?:vcfm|venture capital fund manager)\b/i.test(subject)
     && /\b(?:nil return|misconduct)\b/i.test(subject);
+  return /\b(?:vcfm|venture capital fund manager)\b/i.test(subject)
+    && /\b(?:toolkit scope|fund.level requirements)\b/i.test(subject);
 }
 
 /** Renders only from current, exact-URL, issue-bound official claims in one fetched document revision. */
@@ -429,10 +475,11 @@ export function getMomAcraMasExpansionEvidence(
   const rule = recognizeRule({ authority: stream.authority, topicId: inferTopicId(stream.authority),
     query, subject: issue.subject });
   if (!rule || (!isCurrentGeneralQuestion(query) &&
-      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(query)))) return undefined;
+      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(query)) &&
+      !(rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN' && isCurrentVcfmNilFaqQuestion(query)))) return undefined;
   const authority = ruleAuthority(rule);
   const expectedDomain = rule === 'ACRA_SECRETARY_REQUIREMENTS' ? 'ACRA_CORPORATE'
-    : rule === 'MAS_VCFM_ANNUAL_DECLARATION' || rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN'
+    : rule.startsWith('MAS_VCFM_')
       ? 'MAS_FUNDS' : 'MOM_EMPLOYMENT';
   const expectedPopulations = rule === 'MOM_SALARY_DEDUCTIONS' ? ['Employee', 'Employer'] : ['Company'];
   if (stream.authority !== authority || stream.domain !== expectedDomain

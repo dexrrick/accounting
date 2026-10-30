@@ -49,9 +49,10 @@ const examples = [
     answer: /Form 25A.*1 month|one month.*Form 25A/i },
   { id: 'vcfm-nil-misconduct', authority: 'MAS', domain: 'MAS_FUNDS', population: 'COMPANY', topic: 'mas-regulatory-reporting',
     query: 'When must a VCFM submit a nil return of misconduct if it reported no misconduct in the preceding calendar year?',
-    subject: 'VCFM nil return of misconduct filing requirements', file: 'mas-vcfm-toolkit.pdf',
-    title: 'Compliance Toolkit for Venture Capital Fund Managers', url: MAS_VCFM_TOOLKIT_URL,
-    answer: /14 days.*calendar year end|calendar.year.end.*14 days/i }
+    subject: 'VCFM nil return of misconduct filing requirements', file: '../statutoryKnowledge20261030/mas-misconduct-faq-native.pdf',
+    title: 'FAQs on Misconduct Reporting Notices under the FAA, IA and SFA',
+    url: 'https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf',
+    answer: /not required to submit[\s\S]*2026[\s\S]*2027[\s\S]*do not require nil declarations/i }
 ];
 const nilExample = examples.find(example => example.id === 'vcfm-nil-misconduct');
 examples.push(

@@ -18,10 +18,15 @@ export interface StatutoryWorkflowRequest {
 
 export type StatutoryWorkflowRuleId =
   | 'ACRA_ENTITY_INFORMATION_UPDATE_DEADLINES'
+  | 'ACRA_REGISTERED_OFFICE_REQUIREMENTS'
   | 'IRAS_COMPANY_TAX_RECORD_RETENTION'
+  | 'IRAS_COMPANY_APPROVED_DONATIONS'
   | 'CPF_CONTRIBUTION_REFUND_DEADLINES'
+  | 'CPF_CONTRIBUTION_RECORD_RECTIFICATIONS'
   | 'MOM_ITEMISED_PAYSLIP_REQUIREMENTS'
-  | 'MAS_LFMC_KEY_APPOINTMENTS';
+  | 'MAS_LFMC_KEY_APPOINTMENTS'
+  | 'MAS_VCFM_CHANGE_NOTIFICATIONS'
+  | 'MAS_VCFM_BUSINESS_CESSATION';
 
 export interface StatutoryWorkflowRule {
   id: StatutoryWorkflowRuleId;
@@ -52,11 +57,15 @@ type Rule = StatutoryWorkflowRule & {
 const ACRA_ENTITY_URL = 'https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/';
 const IRAS_RECORDS_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements';
 const CPF_REFUNDS_URL = 'https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions';
+const CPF_RECTIFICATIONS_URL = 'https://www.cpf.gov.sg/employer/compliance-and-rectifications';
+const IRAS_DONATIONS_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f)';
+const ACRA_REGISTERED_OFFICE_URL = 'https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/';
 const MOM_PAYSLIPS_URL = 'https://www.mom.gov.sg/employment-practices/salary/itemised-payslips';
 const MAS_LFMC_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
+const MAS_VCFM_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf';
 
 /**
- * Source-backed workflow guidance for five current administrative procedures.
+ * Source-backed workflow guidance for bounded statutory procedures and conditions.
  * These records are retrieval pointers and proof contracts; their metadata does
  * not admit or activate a source. Every displayed explanation still requires
  * exact-URL, issue-bound quotes from one verified source revision.
@@ -89,8 +98,8 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /foreign companies[^.!?\n]{0,100}\b(?:14|15|60) days\b/i,
       /foreign companies[^.!?\n]{0,100}\b(?:30|thirty) days\b[^.!?\n]{0,100}\b(?:14|fourteen) days\b/i
     ],
-    queryPattern: /\b(?:entity information|registered entities?|registered office|entity email|business email|company email|email address|business activities|update\w*|changes? to (?:our|the|an) entity)\b/i,
-    subjectPattern: /\b(?:entity information|registered entity|registered office|entity email|email address|business activities|entity update|change of entity information|notification deadline)\b/i
+    queryPattern: /\b(?:entity information|registered entities?|registered office|entity email|business email|company email|email address|business activities)\b[^.!?;\n]{0,160}\b(?:chang\w*|updat\w*|notif\w*|deadline)\b|\b(?:chang\w*|updat\w*|notif\w*|deadline)\b[^.!?;\n]{0,160}\b(?:entity information|registered entities?|registered office|entity email|business email|company email|email address|business activities)\b/i,
+    subjectPattern: /^(?!.*\b(?:office access|access hours|public access|office hours|registered office requirements|registered office location|records and notices)\b)(?=.*\b(?:entity information|registered entity|registered office|entity email|email address|business activities|entity update|change of entity information|notification deadline)\b)/i
   },
   {
     id: 'IRAS_COMPANY_TAX_RECORD_RETENTION', authority: 'IRAS', topicIds: ['iras-company-record-retention'],
@@ -126,7 +135,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /struck off[^.!?\n]{0,220}\bat least (?:6|3) years after[^.!?\n]{0,70}dissolv/i,
       /wound up[^.!?\n]{0,220}\bat least (?:6|3) years from[^.!?\n]{0,70}dissolv/i
     ],
-    queryPattern: /\b(?:corporate tax|company tax|income tax|business records?|accounting records?|source documents?|invoices?|books and papers|record[- ]keeping|records? retention|record custod(?:y|ian)|dissolv\w*|struck off|wound up|keep (?:our|the|company) records?)\b/i,
+    queryPattern: /\b(?:corporate tax|company tax|income tax|business records?|accounting records?|source documents?|bank statements?|invoices?|books and papers|record[- ]keeping|records? retention|record custod(?:y|ian)|dissolv\w*|struck off|wound up|keep (?:our|the|company) records?)\b/i,
     subjectPattern: /\b(?:company (?:tax )?record|corporate (?:tax )?record|business record|books and papers|record retention|record[- ]keeping|record custod|dissolv\w*|wound up|struck off)\b/i
   },
   {
@@ -165,7 +174,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /AW ceiling[^.!?\n]{0,220}\brefunded automatically\b/i
     ],
     queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund\w*|overpaid|overpayment|excess contribution|wrongly paid|mistaken contribution|paid in error|repayment|recover\w*|money back)\b|\b(?:refund\w*|overpaid|overpayment|excess contribution|mistaken contribution|recover\w*|money back)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
-    subjectPattern: /\b(?:cpf|contribution|refund|repayment)\b/i
+    subjectPattern: /^(?!.*\b(?:rectif\w*|wrong wages?|underpaid|underpayment|contribution records?|adjustment)\b)(?=.*\b(?:cpf|contribution|refund|repayment)\b)/i
   },
   {
     id: 'MOM_ITEMISED_PAYSLIP_REQUIREMENTS', authority: 'MOM', topicIds: ['mom-itemised-payslips'],
@@ -173,12 +182,12 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
     population: 'Employees covered by the Employment Act and their employers',
     provisions: ['Employment Act coverage as stated by MOM. No section number is added from the captured page.'],
-    rule: 'Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically.',
-    conditions: ['The requirement applies to employees covered by the Employment Act.', 'MOM permits soft or hard copy, including handwritten.', 'The fallback is three working days after payment only when the employer cannot give it with payment.'],
+    rule: 'Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the pay slip must be given within three working days of payment. For termination or dismissal, it must be given together with outstanding salary. MOM allows a soft or hard copy, including handwritten. The pay slip must include the employer and employee names, payment date, basic salary, salary period, applicable allowances, other payments, deductions and total net salary; overtime hours, pay and period are included where applicable. If payments are made more than once a month, pay slips may be consolidated, but the consolidated slip must show all payments since the last slip. Employers must retain issued pay slips: the latest two years for current employees, and the last two years for ex-employees for one year after they leave.',
+    conditions: ['The requirements apply to employees covered by the Employment Act.', 'Only applicable pay slip items need to be shown; overtime items 9 to 11 need not be included when overtime pay does not apply.', 'The fallback is three working days after payment only when the employer cannot give the pay slip with payment.', 'Consolidation is permitted for multiple monthly payments, but must include every payment since the previous slip.'],
     exceptions: ['Items that do not apply need not be shown; MOM’s page gives overtime items as an example.', 'This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker.'],
-    requiredFacts: ['Employment Act coverage.', 'Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary.'],
+    requiredFacts: ['Employment Act coverage.', 'Salary period, payment date and pay components applicable to the employee.', 'Whether pay slips are consolidated, whether overtime applies, current or former employee status, and the employee’s departure date if applicable.'],
     effectiveDateEvidence: 'The page states that the itemised-payslip duty begins on 1 April 2016. This does not establish that every detailed condition in the current page applied unchanged from that date.',
-    limitations: ['Three working days are not converted into calendar days.', 'The captured page does not establish current coverage of a particular worker.'],
+    limitations: ['Three working days are not converted into calendar days.', 'The captured page does not establish current coverage of a particular worker or calculate a case-specific final salary.'],
     requiredSourceTerms: [
       'From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.',
       'Employers must issue itemised pay slips to all employees covered by the Employment Act.',
@@ -187,7 +196,14 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       'Give together with payment to employee.',
       'If unable to give together, to be given within three working days of payment.',
       'In the case of termination or dismissal, must give pay slip together with outstanding salary.',
-      'Format | Soft or hard copy (including handwritten)'
+      'Format | Soft or hard copy (including handwritten)',
+      'If payments are made more than once a month, employers can consolidate pay slips.',
+      'The consolidated pay slip must contain details of all payments made since the last pay slip.',
+      'Full name of employer.', 'Full name of employee.', 'Basic salary', 'Start and end date of salary period.',
+      'Allowances paid for salary period', 'Any other additional payment for each salary period',
+      'Deductions made for each salary period', 'Net salary paid in total.',
+      'Employers must keep a record of all pay slips issued.', 'For current employees: Latest two years.',
+      'For ex-employees: Last two years, to be kept for one year after the employee leaves employment.'
     ],
     quoteMatchers: [
       /From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act\./i,
@@ -195,7 +211,10 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /Pay slips must include the items below, unless an item is not applicable\.[\s\S]{0,200}if overtime pay does not apply to you, your pay slip need not include items 9 to 11\./i,
       /Give together with payment to employee\.[\s\S]{0,200}If unable to give together, to be given within three working days of payment\./i,
       /In the case of termination or dismissal, must give pay slip together with outstanding salary\./i,
-      /Format\s*\|\s*Soft or hard copy \(including handwritten\)/i
+      /Format\s*\|\s*Soft or hard copy \(including handwritten\)/i,
+      /If payments are made more than once a month, employers can consolidate pay slips\.[\s\S]{0,220}The consolidated pay slip must contain details of all payments made since the last pay slip\./i,
+      /Items to include[\s\S]{0,2400}Full name of employer\.[\s\S]{0,240}Full name of employee\.[\s\S]{0,2200}Net salary paid in total\./i,
+      /Employers must keep a record of all pay slips issued\.[\s\S]{0,250}For current employees:\s*Latest two years\.[\s\S]{0,250}For ex-employees:\s*Last two years, to be kept for one year after the employee leaves employment\./i
     ],
     contradictionPatterns: [
       /within (?:five|5|three) calendar days of payment/i,
@@ -241,6 +260,169 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     ],
     queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,220}\b(?:appoint\w*|appointment|CEO|director|Form 11|executive|non.executive|role change|nature of (?:the )?appointment)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11|executive\s*(?:to|into|becomes?)\s*non.executive|non.executive\s*(?:to|into|becomes?)\s*executive|nature of (?:the )?appointment)\b[\s\S]{0,220}\b(?:LFMC|licensed fund management company)\b/i,
     subjectPattern: /\b(?:LFMC|fund management|CEO|director|Form 11|key appointment)\b/i
+  },
+  {
+    id: 'IRAS_COMPANY_APPROVED_DONATIONS', authority: 'IRAS', topicIds: ['iras-cit-donations'],
+    officialUrl: IRAS_DONATIONS_URL, title: 'Tax Treatment of Business Expenses (A-F)',
+    fixtureFile: 'iras-donations-native.html', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Companies computing Singapore corporate income tax',
+    provisions: ['IRAS corporate income tax business-expense guidance; the cited page does not identify a statutory section number.'],
+    rule: 'Donations are non-deductible expenses in arriving at adjusted profit. For donations made from 1 January 2016 through 31 December 2029, a company may claim a deduction of 2.5 times the amount donated to an approved Institution of a Public Character (IPC) or the Singapore Government to benefit the local community. The company must provide its UEN to the approved IPC. IRAS says approved donation amounts are pre-filled in Form C-S, Form C-S (Lite) or Form C based on information obtained from IPCs. In the tax computation, add back all donations, then deduct 2.5 times approved donations; the deduction is on a preceding-financial-year basis.',
+    conditions: ['The 2.5-times deduction applies to donations made from 1 January 2016 through 31 December 2029 under the captured current guidance.', 'The donee must be an approved IPC or the Singapore Government, and a Government donation must benefit the local community.', 'For an IPC donation, the company must provide its UEN to the IPC to receive the deduction.', 'Approved donations are considered on a preceding-financial-year basis.'],
+    exceptions: ['Donations outside the approved-donation category remain non-deductible business expenses under this cited rule.', 'This record does not cover individual income-tax donations, other incentive schemes, tax-exemption computation, or whether a named donee is currently approved.'],
+    requiredFacts: ['Donation date and financial year.', 'Donee identity and current approved-IPC status, or whether a Singapore Government donation benefits the local community.', 'Donation amount and the amount recorded by IRAS; whether the company provided its UEN to the IPC.'],
+    effectiveDateEvidence: 'The captured IRAS page states the 2.5-times relief applies to donations made 1 January 2016 through 31 December 2029 and says the end date was extended in Budget 2026. The page does not establish the rule before 2016 or after 2029.',
+    limitations: ['This guidance does not calculate the company’s adjusted profit, chargeable income or tax deduction amount.', 'Confirm that the donee and donation are eligible and reconcile the amount with the applicable YA before filing.'],
+    requiredSourceTerms: [
+      'Donations are non-deductible expenses as they are not incurred in the production of income.',
+      'donations made from 1 Jan 2016 to 31 Dec 2029', 'tax deduction of 2.5 times the amount donated',
+      'approved Institution of a Public Character (IPC) or the Singapore Government to benefit the local community',
+      'required to provide its Unique Entity Number (UEN) to the approved IPC',
+      'approved donation amounts will be pre-filled in the Form C-S/ Form C-S (Lite)/ Form C',
+      'Add back all donations made (approved donations or otherwise)',
+      'Claim a tax deduction of 2.5 times the amount of approved donations.',
+      'Tax deduction on approved donations is allowable on a preceding financial year basis.'
+    ],
+    quoteMatchers: [
+      /Donations\s+Donations are non-deductible expenses as they are not incurred in the production of income\.[\s\S]{0,700}donations made from 1 Jan 2016 to 31 Dec 2029[\s\S]{0,600}approved Institution of a Public Character \(IPC\) or the Singapore Government to benefit the local community/i,
+      /Your company is required to provide its Unique Entity Number \(UEN\) to the approved IPC[\s\S]{0,450}approved donation amounts will be pre-filled in the Form C-S\/ Form C-S \(Lite\)\/ Form C/i,
+      /Step 1: Add back all donations made \(approved donations or otherwise\)[\s\S]{0,500}Step 2: Claim a tax deduction of 2\.5 times the amount of approved donations\.[\s\S]{0,250}preceding financial year basis/i
+    ],
+    contradictionPatterns: [
+      /all donations (?:are|remain) deductible/i,
+      /approved donations[^.!?\n]{0,160}\b(?:1\.5|three) times\b/i,
+      /the 2\.5 times deduction[^.!?\n]{0,140}\b(?:after|beyond) 31 Dec 2029\b/i
+    ],
+    queryPattern: /\b(?:donat\w*|give|gave|giving|gift)\b[\s\S]{0,180}\b(?:corporate income tax|company tax|tax computation|tax deduction|Form C-S|Form C|approved IPC|Singapore Government|IPC|UEN|deduct\w*)\b|\b(?:corporate income tax|company tax|tax computation|tax deduction)\b[\s\S]{0,180}\b(?:donat\w*|give|gave|giving|gift|approved IPC|IPC)\b/i,
+    subjectPattern: /\b(?:corporate income tax|company tax|tax computation|donation|approved IPC)\b/i
+  },
+  {
+    id: 'CPF_CONTRIBUTION_RECORD_RECTIFICATIONS', authority: 'CPF', topicIds: ['cpf-record-rectifications'],
+    officialUrl: CPF_RECTIFICATIONS_URL, title: 'Compliance and rectifications',
+    fixtureFile: 'cpf-rectifications-native.html', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Employers correcting CPF contribution or wage records for employees',
+    provisions: ['CPF Board employer compliance and rectification guidance; the cited page does not assign statutory section numbers to the listed application choices.'],
+    rule: 'Rectification depends on the error. Employers must rectify omitted or underpaid CPF contributions immediately, using the usual monthly contribution submission for arrears; delay can increase late-payment interest. If wages were declared incorrectly, inform CPF Board and ensure future submissions are accurate. For overpaid contributions, apply for a refund or adjustment. A refund returns excess money, while an adjustment changes the contribution record; CPF Board lists changing the contribution month or year, CPF Submission Number, or payment recipient as adjustment examples.',
+    conditions: ['Underpayment or omitted contributions are rectified immediately through the normal monthly submission process.', 'Incorrect declared wages should be reported to CPF Board; future submissions must be accurate.', 'For overpayment, choose refund when seeking excess money back or adjustment when correcting the contribution record.'],
+    exceptions: ['This procedure guide does not determine the correct wage classification, contribution rate, or amount owed in a particular payroll case.', 'Overpaid contribution refunds remain subject to the separate refund process and its conditions.'],
+    requiredFacts: ['What was wrong: contribution amount, wages declared, contribution month/year, CSN or recipient.', 'The affected employee, correct wage and contribution period, payment details, and whether money should be returned or only the record changed.'],
+    effectiveDateEvidence: 'The captured compliance page was last updated 4 November 2025 but states no separate legal commencement date. The capture and update dates do not establish historical application.',
+    limitations: ['No contribution amount, refund deadline, or case acceptance is calculated by this general rectification rule.', 'Use the current application route for the employer type and error category.'],
+    requiredSourceTerms: [
+      'You will need to rectify any omission or underpayment of CPF contributions immediately.',
+      'submit these CPF contribution arrears in the same way that you submit your monthly CPF contribution submissions',
+      'higher late payment interest on the outstanding CPF contributions',
+      'If you have overpaid CPF contributions for your employee(s), you can apply for a refund/an adjustment.',
+      'If you have declared wages incorrectly, you should inform the CPF Board and ensure that wages are accurately declared in future CPF submissions.',
+      'You can apply for a refund if you are seeking a return of the monies paid in excess or in error to your employees.',
+      'You can apply for an adjustment if you want to change the contributions record.',
+      'changing of contributions month and year, CPF Submission Number (CSN) or payment recipient'
+    ],
+    quoteMatchers: [
+      /You will need to rectify any omission or underpayment of CPF contributions immediately\.[\s\S]{0,500}submit these CPF contribution arrears in the same way that you submit your monthly CPF contribution submissions[\s\S]{0,500}higher late payment interest on the outstanding CPF contributions\./i,
+      /If you have overpaid CPF contributions for your employee\(s\), you can apply for a refund\/an adjustment\./i,
+      /If you have declared wages incorrectly, you should inform the CPF Board and ensure that wages are accurately declared in future CPF submissions\./i,
+      /You can apply for a refund if you are seeking a return of the monies paid in excess or in error to your employees\.[\s\S]{0,700}You can apply for an adjustment if you want to change the contributions record\.[\s\S]{0,400}changing of contributions month and year, CPF Submission Number \(CSN\) or payment recipient/i
+    ],
+    contradictionPatterns: [
+      /underpaid CPF contributions[^.!?\n]{0,160}\b(?:may wait|can wait|only after a refund)\b/i,
+      /wrong wages declared[^.!?\n]{0,180}\b(?:no need to inform|do not need to inform)\b/i,
+      /adjustment of contributions paid[^.!?\n]{0,180}\b(?:returns?|refunds?) the money to the employer/i
+    ],
+    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:rectif\w*|wrong wages?|wages? declared incorrectly|underpaid|underpayment|overpaid|overpayment|adjust(?:ment)? the record|contribution record)\b|\b(?:rectif\w*|wrong wages?|wages? declared incorrectly|underpaid|underpayment|overpaid|overpayment|adjust(?:ment)? the record|contribution record)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
+    subjectPattern: /\b(?:CPF|contribution)\b[\s\S]{0,100}\b(?:rectif\w*|wage records?|overpayment|underpayment|adjustment)\b/i
+  },
+  {
+    id: 'ACRA_REGISTERED_OFFICE_REQUIREMENTS', authority: 'ACRA', topicIds: ['acra_registered-office'],
+    officialUrl: ACRA_REGISTERED_OFFICE_URL, title: 'Registering a local company via Bizfile',
+    fixtureFile: 'acra-registered-office-native.html', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_HTML',
+    population: 'Local companies registering with ACRA via Bizfile',
+    provisions: ['ACRA local-company registration guidance; the cited page does not identify a Companies Act section for these particulars.'],
+    rule: 'For a local company, the registered office is the official Singapore address where ACRA and others can send communications and notices and where company records and registers are kept. It must be open to the public for at least three hours on each business day and open and accessible during normal business hours on each business day. It need not be the place where the company carries on its business activities.',
+    conditions: ['The page is guidance for local-company registration via Bizfile.', 'The source states both a minimum of three public-access hours each business day and public access during normal business hours.', 'The registered office may differ from the place where business is carried on.'],
+    exceptions: ['This source does not establish registered-office requirements for foreign companies, LLPs, VCCs or other entity types.'],
+    requiredFacts: ['Entity type and whether it is a local company.', 'The proposed Singapore address, public-access hours on business days, and where company records and registers will be kept.'],
+    effectiveDateEvidence: 'The captured registration guide does not state a legal commencement date. Its retrieval date is not treated as an effective date.',
+    limitations: ['This is ACRA guidance for local-company registration; it does not establish every ongoing filing duty or requirements for other entity classes.', 'A specific address conclusion requires the entity type, address and access arrangements.'],
+    requiredSourceTerms: [
+      'Office hours', 'Must be open to the public for at least three hours on each business day.',
+      'Registered office address', 'ACRA and others can send communications and notices to your company.',
+      'You must keep your company records and registers.', 'Must be a Singapore address.',
+      'Must be open and accessible to the public during normal business hours on each business day.',
+      'Does not have to be the same place where you run your business activities.'
+    ],
+    quoteMatchers: [
+      /Office hours\s+Must be open to the public for at least three hours on each business day\.[\s\S]{0,180}public access and delivery of legal papers\./i,
+      /Registered office address[\s\S]{0,850}Must be a Singapore address\.[\s\S]{0,240}Must be open and accessible to the public during normal business hours on each business day\.[\s\S]{0,250}Does not have to be the same place where you run your business activities\./i
+    ],
+    contradictionPatterns: [
+      /registered office address[^.!?\n]{0,180}\b(?:need not|does not need to|not required to) be accessible\b/i,
+      /registered office[^.!?\n]{0,180}\b(?:must|has to) be (?:the )?same (?:place|address) where (?:the )?business operates/i,
+      /registered office[^.!?\n]{0,180}\b(?:foreign companies|LLPs|VCCs)\b/i
+    ],
+    queryPattern: /\b(?:registered office|office hours)\b[\s\S]{0,180}\b(?:access\w*|Singapore address|public|three hours|business hours|records|registers|same place|location|requirements?)\b|\b(?:access\w*|Singapore address|public|three hours|business hours|records|registers|requirements?)\b[\s\S]{0,180}\bregistered office\b/i,
+    subjectPattern: /^(?=.*\b(?:ACRA|local compan\w*|registered office|office hours)\b)(?=.*\b(?:access|requirements?|location|records?|notices|public)\b)/i
+  },
+  {
+    id: 'MAS_VCFM_CHANGE_NOTIFICATIONS', authority: 'MAS', topicIds: ['mas-vcfm-change-notifications'],
+    officialUrl: MAS_VCFM_TOOLKIT_URL, title: 'Compliance Toolkit for Venture Capital Fund Managers',
+    fixtureFile: 'mas-vcfm-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
+    population: 'Venture Capital Fund Managers (VCFMs)',
+    provisions: ['MAS VCFM Compliance Toolkit row 11, identified as a licence condition. The row does not cite a separate statutory section.'],
+    rule: 'A VCFM must notify MAS using Form 23A within 14 days from the date of a change to particulars of the VCFM, including its name, principal place of business, contact details, shareholdings or organisational chart, or particulars of its CEO, directors or shareholders, including resignations and appointments.',
+    conditions: ['This notification is for VCFMs and covers the particulars listed in row 11.', 'The toolkit states a 14-day period from the change; it does not say that the period is 14 working days.', 'Form 23A is a notification; this row does not state that it replaces any separate prior-approval requirement.'],
+    exceptions: ['This row is not the LFMC Form 11 appointment rule and does not establish a duty for other CMS licence categories.', 'The toolkit revision/update date does not establish the historical legal commencement of this licence condition.'],
+    requiredFacts: ['Confirm that the manager is a VCFM.', 'What particular changed, the person or entity affected, and the date of change.'],
+    effectiveDateEvidence: 'The PDF marks row 11 as updated in December 2024 but does not state when the licence condition commenced. That update note is not used to answer historical-law questions.',
+    limitations: ['The toolkit gives a bounded row 11 summary, not every VCFM reporting duty or a historical legal-version determination.', 'No date arithmetic is applied without an unambiguous change date.'],
+    requiredSourceTerms: [
+      '11 To notify MAS of any change in:', 'particulars of a VCFM', 'limited to change in name, principal',
+      'particulars of its CEO, Directors, and', 'shareholders, including resignation and', 'appointments',
+      'Form 23A', 'in Particulars for', 'Venture Capital', 'Fund Managers',
+      'Within 14 days from the date', 'of change', 'Licence condition'
+    ],
+    quoteMatchers: [
+      /\b11\s+(?:\|\s*)?To notify MAS of any change in:[\s\S]{0,2500}?(?=\b12\s+(?:\|\s*)?To notify MAS on suspension|$)/i
+    ],
+    contradictionPatterns: [
+      /Form 23A[^.!?\n]{0,180}\b(?:prior approval|before the change)\b/i,
+      /within 14 working days from the date of change/i,
+      /VCFM particulars[^.!?\n]{0,180}\bno notification required\b/i
+    ],
+    queryPattern: /\b(?:VCFM|venture capital fund manager)\b[\s\S]{0,220}\b(?:Form\s*23A|change in particulars|particulars|change of (?:name|contact|shareholding)|resign\w*|appoint\w*)\b|\b(?:Form\s*23A|change in particulars)\b[\s\S]{0,220}\b(?:VCFM|venture capital fund manager)\b/i,
+    subjectPattern: /\b(?:VCFM|venture capital fund manager|Form\s*23A|change in particulars)\b/i
+  },
+  {
+    id: 'MAS_VCFM_BUSINESS_CESSATION', authority: 'MAS', topicIds: ['mas-vcfm-business-cessation'],
+    officialUrl: MAS_VCFM_TOOLKIT_URL, title: 'Compliance Toolkit for Venture Capital Fund Managers',
+    fixtureFile: 'mas-vcfm-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
+    population: 'Venture Capital Fund Managers (VCFMs)',
+    provisions: ['MAS VCFM Compliance Toolkit row 6, which cites section 93 of the Securities and Futures Act and regulation 11 of the Securities and Futures (Licensing and Conduct of Business) Regulations.'],
+    rule: 'A VCFM must submit Form 7, Notice of Cessation of Business, if it ceases to carry on any or all regulated activities. For cessation, the toolkit says to notify MAS within 14 days after the cessation and accompany Form 7 with an audit certification, in no prescribed format, that the VCFM has fully discharged all customer obligations. A VCFM that has not commenced any or all regulated activities by the end of six months from the CMS licence grant must submit Form 7 immediately after that six-month period ends.',
+    conditions: ['The cessation deadline applies to cessation of any or all regulated activities.', 'The non-commencement rule applies when any or all regulated activities have not commenced by the end of six months from the licence grant.', 'Form 7 cessation filing includes the stated audit certification of discharged customer obligations.'],
+    exceptions: ['This is a VCFM notification in the toolkit; it does not say that Form 7 is a prior-approval application.', 'The toolkit does not establish the same process for an LFMC or another CMS licence category.'],
+    requiredFacts: ['Confirm the licence holder is a VCFM.', 'Whether the event is cessation or non-commencement, the regulated activity affected, and the cessation date or CMS licence grant date.', 'For cessation, whether the required customer-obligations audit certification is available.'],
+    effectiveDateEvidence: 'The captured PDF identifies row 6 and its cited SFA/LCBR references but does not establish a historical effective date. The PDF revision date is not used as the legal commencement date.',
+    limitations: ['Do not calculate the non-commencement date without the CMS licence grant date or convert “immediately” into an invented day count.', 'This bounded rule does not cover other VCFM notifications, winding-up duties or client-specific cessation consequences.'],
+    requiredSourceTerms: [
+      '6 To notify MAS where a VCFM:', 'ceases to carry on business in any or all', 'regulated activities',
+      'has not commenced business in any or', 'all regulated activities by the end of the',
+      'period of 6 months from the date of the', 'grant of the licence',
+      'Form 7', 'audit', 'certification', 'fully discharged all', 'customer obligations',
+      'within 14 days after the', 'cessation of any or all', 'immediately after the end of',
+      '6 months from the date of', 'the grant of the CMS licence',
+      'Section 93 of the SFA', 'and Regulation 11 of', 'the LCBR'
+    ],
+    quoteMatchers: [
+      /\b6\s+(?:\|\s*)?To notify MAS where a VCFM:[\s\S]{0,3500}?(?=\b7\s+(?:\|\s*)?To notify MAS of any matter|$)/i
+    ],
+    contradictionPatterns: [
+      /VCFM cessation[^.!?\n]{0,180}\b(?:prior approval|before cessation)\b/i,
+      /non.commencement[^.!?\n]{0,180}\bwithin 14 days after the cessation\b/i,
+      /Form 7[^.!?\n]{0,200}\bno audit certification\b/i
+    ],
+    queryPattern: /\b(?:VCFM|venture capital fund manager)\b[\s\S]{0,220}\b(?:Form\s*7|cessation|ceases? to carry|not commenced|non.commencement|six months|6 months)\b|\b(?:Form\s*7|cessation|non.commencement)\b[\s\S]{0,220}\b(?:VCFM|venture capital fund manager)\b/i,
+    subjectPattern: /\b(?:VCFM|venture capital fund manager|Form\s*7|cessation|non.commencement)\b/i
   }
 ]);
 
@@ -253,7 +435,7 @@ function recognizeRule(input: Pick<StatutoryWorkflowRequest, 'authority' | 'topi
 
 function cleanedSource(sourceText: string): string {
   if (!/<(?:!doctype|html|head|body|main|article|section|div|p|table|tr|td|li|h[1-6])\b/i.test(sourceText)) {
-    return sourceText.replace(/\r/g, '').replace(/[\t ]+\n/g, '\n').trim();
+    return sourceText.replace(/\r/g, '').replace(/[\t ]+/g, ' ').replace(/ +\n/g, '\n').trim();
   }
   return (/<table\b/i.test(sourceText) ? cleanHtmlTextPreservingTableCells(sourceText) : cleanHtmlText(sourceText))
     .replace(/\r/g, '').replace(/\n{2,}/g, '\n').trim();
@@ -280,7 +462,11 @@ function sourceProves(rule: Rule, sourceText: string): boolean {
 }
 
 function hasAllRequiredTerms(rule: Rule, sourceText: string): boolean {
-  const clean = normalizedSourceTerms(cleanedSource(sourceText));
+  const source = cleanedSource(sourceText);
+  // PDF cells are interleaved by line. Require every premise inside the
+  // numbered row, so another row cannot supply a missing form or deadline.
+  const rowScoped = rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS' || rule.id === 'MAS_VCFM_BUSINESS_CESSATION';
+  const clean = normalizedSourceTerms(rowScoped ? rule.quoteMatchers[0].exec(source)?.[0] || '' : source);
   return rule.requiredSourceTerms.every(term => clean.includes(normalizedSourceTerms(term)));
 }
 
@@ -458,23 +644,75 @@ function cpfRefundDateApplication(query: string): string | undefined {
   const conditionClauses = query.split(/[.!?;\n]+/);
   const negativeBonusCondition = /\b(?:bonus|wages?|payment)\b[^.!?\n]{0,80}\b(?:not|never|isn't|wasn't)\s+(?:subject to|conditional on)\b[^.!?\n]{0,80}\b(?:repayment|service|employment|retention|performance|condition)\b/i;
   const hasNoOriginalServiceCondition = conditionClauses.some(clause =>
-    negativeBonusCondition.test(clause) || /\bno\s+(?:original\s+)?(?:service|employment|retention|performance|repayment)\s+condition\b/i.test(clause));
-  const positiveBonusRepaymentCondition = /\b(?:joining\s+)?bonus\b[^.!?\n]{0,80}\b(?:subject to|conditional on|paid on condition that)\b[^.!?\n]{0,80}\b(?:repayment|service|employment|retention|performance|condition)\b|\b(?:repayment|service|employment|retention|performance)\s+condition\b[^.!?\n]{0,80}\b(?:joining\s+)?bonus\b/i;
+    negativeBonusCondition.test(clause) || /\bno\s+(?:original\s+)?(?:service|employment|retention|performance|repayment)\s+condition\b/i.test(clause))
+    || /\b(?:not subject to|not conditional on)\b[^.!?;\n]{0,80}\b(?:any\s+)?(?:service|employment|retention|performance)\s+condition\b/i.test(query);
+  const positiveBonusRepaymentCondition = /\b(?:joining\s+)?bonus\b[^.!?\n]{0,140}\b(?:subject to|conditional on|paid on condition that|repayable if|repayable upon|becomes? repayable if|becomes? repayable upon|must be repaid if|has to be repaid if|must be returned if|has to be returned if|must be given back if|has to be given back if)\b[^.!?\n]{0,100}\b(?:repayment|repay|return|give back|resign\w*|leav\w*|depart\w*|service|employment|retention|performance|condition)\b|\b(?:repayment|service|employment|retention|performance)\s+condition\b[^.!?\n]{0,80}\b(?:joining\s+)?bonus\b/i;
+  const crossSentenceBonusRepaymentCondition = /\b(?:joining|sign[- ]on|retention)\s+bonus\b[\s\S]{0,100}\b(?:it|this|the bonus)\b[\s\S]{0,60}\b(?:repay\w*|return\w*|give back|pay back|reclaim\w*)\b[\s\S]{0,100}\b(?:if|when|upon|unless)\b[\s\S]{0,100}\b(?:resign\w*|leav\w*|depart\w*|fail\w*|service|employment|retention)\b/i;
   const bonusRepaymentCondition = conditionClauses.some(clause =>
-    positiveBonusRepaymentCondition.test(clause) && !negativeBonusCondition.test(clause));
+    positiveBonusRepaymentCondition.test(clause) && !negativeBonusCondition.test(clause))
+    || crossSentenceBonusRepaymentCondition.test(query);
   const conditionalEvidence = explicitlyConditional || bonusRepaymentCondition;
   const explicitlyNotConditional = /\b(?:not|isn't|wasn't)\s+(?:a\s+)?conditional\s+(?:payment|(?:joining\s+)?bonus|wages?)\b|\b(?:payment|(?:joining\s+)?bonus|wages?)\s+(?:is|was)\s+not\s+conditional\b/i.test(query);
   const ordinaryDuplicate = /\bordinary\s+(?:joining\s+)?bonus\b|\b(?:payroll|payment) duplicat(?:ion|ed)\b|\bpaid\s+(?:the\s+)?(?:joining\s+)?bonus\s+(?:twice|again)\b/i.test(query);
   const conflictingConditionalFacts = conditionalEvidence && (explicitlyUnconditionalBonus || explicitlyNotConditional || ordinaryDuplicate || hasNoOriginalServiceCondition);
   if (conflictingConditionalFacts) return undefined;
+  const explicitlyOrdinaryFacts = explicitlyUnconditionalBonus || explicitlyNotConditional || ordinaryDuplicate || hasNoOriginalServiceCondition;
+  const mentionsWage = /\b(?:bonus|wages?|salary|remuneration|payroll payment)\b/i.test(query);
+  const mentionsRepayment = /\b(?:repay\w*|return\w*|give back|pay back|reclaim\w*)\b/i.test(query);
+  const mentionsServiceCondition = /\b(?:conditional|condition|service|employment|retention|resign\w*|leav\w*|depart\w*|early)\b/i.test(query);
+  const ambiguousRepaymentDate = conditionClauses.some(clause => {
+    if (!/\b(?:repay\w*|repayment|repayable)\b/i.test(clause)) return false;
+    const dates = [...clause.matchAll(new RegExp(datePattern, 'gi'))];
+    return dates.length > 1 ||
+      /\b(?:unclear|uncertain|not sure|unknown|cannot determine|don't know|do not know|either|alternatively)\b/i.test(clause);
+  });
+  if (!conditionalEvidence && !explicitlyOrdinaryFacts && mentionsWage && mentionsRepayment && ambiguousRepaymentDate) {
+    return undefined;
+  }
+  if (!conditionalEvidence && !explicitlyOrdinaryFacts && mentionsWage && mentionsRepayment && mentionsServiceCondition) {
+    return undefined;
+  }
   const conditional = conditionalEvidence && !explicitlyUnconditionalBonus && !explicitlyNotConditional && !ordinaryDuplicate;
   let suppliedDate: string | undefined;
   if (conditional) {
-    const wageReference = String.raw`(?:conditional\s+)?(?:joining\s+)?(?:bonus|wages?)`;
-    const contractualDueDate = new RegExp(String.raw`(?:\bunder (?:the )?employment terms\b[^.!?;\n]{0,100}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on\s+|\b(?:the\s+)?${wageReference}\s+repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?\s*)${datePattern}`, 'gi');
-    const dueDates = [...query.matchAll(contractualDueDate)].map(match => match[1]);
-    const unboundAgreedDueDate = /\b(?:mutual agreement|contractual|agreed)\b[^.!?;\n]{0,100}\brepayment due date\b/i.test(query);
-    if (dueDates.length !== 1 || unboundAgreedDueDate) return undefined;
+    const wageReference = String.raw`(?:(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|(?:conditional\s+)?wages?)`;
+    const dateSuffix = String.raw`\s*${datePattern}`;
+    const repaymentDateClauses = conditionClauses.filter(clause =>
+      /\b(?:repay\w*|repayment|repayable)\b/i.test(clause) &&
+      [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 0);
+    const hasCompetingRepaymentDates = repaymentDateClauses.some(clause =>
+      [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 1 ||
+      /\b(?:unclear|uncertain|not sure|unknown|cannot determine|don't know|do not know|either|alternatively)\b/i.test(clause));
+    if (hasCompetingRepaymentDates) return undefined;
+    const hasUnownedRepaymentDate = repaymentDateClauses.some(clause => {
+      const trimmed = clause.replace(/^\s*(?:CPF refund deadline:\s*)?/i, '').trim();
+      const bareGenericStart = /^(?:the\s+)?(?:repayment due date|(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due)\b/i.test(trimmed);
+      const explicitlyWageOwned = new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:due date|(?:is|was|becomes?)\s+due)\b`, 'i').test(trimmed) ||
+        /\b(?:bonus|wages?|salary|remuneration|payroll payment)\b/i.test(trimmed);
+      const unambiguousEmployeePronoun = /\bemployee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this)\b/i.test(trimmed);
+      return !bareGenericStart && !explicitlyWageOwned && !unambiguousEmployeePronoun;
+    });
+    if (hasUnownedRepaymentDate) return undefined;
+    const dueDatePatterns = [
+      new RegExp(String.raw`\b${wageReference}\s+repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
+      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
+      new RegExp(String.raw`\bunder (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\b[^.!?;\n]{0,120}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on${dateSuffix}`, 'gi'),
+      new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
+      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
+      // A pronoun is safe only when the question describes a single repayable
+      // wage and no separate loan, advance or debt that could own the date.
+      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this|(?:the\s+)?(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|the\s+conditional wages?)\s+on${dateSuffix}`, 'gi')
+    ];
+    const hasSeparateDebt = /\b(?:loan|advance|debt)\b/i.test(query);
+    const hasSeparateNonWageRepayment = /\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b[^.!?;\n]{0,120}\b(?:repay\w*|repaid|return\w*|due)\b|\b(?:repay\w*|repayment)\b[^.!?;\n]{0,120}\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b/i.test(query);
+    const namedBonusKinds = new Set([...query.matchAll(/\b(joining|sign[- ]on|retention|performance|completion|annual)\s+bonus\b/gi)]
+      .map(match => match[1].toLowerCase().replace(/[- ]/g, ' ')));
+    const hasSeparateWageTransactions = namedBonusKinds.size > 1
+      || /\b(?:another|second|separate|different|multiple|several|two)\b[^.!?;\n]{0,60}\b(?:bonus|wages?|payment|transaction)\b/i.test(query)
+      || /\bbonus\b[^.!?;\n]{0,100}\b(?:and|plus|as well as)\b[^.!?;\n]{0,80}\bbonus(?:es)?\b/i.test(query);
+    const dueDates = dueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)].map(match => match[1]));
+    const conflictingDueDateLanguage = /\b(?:mutual agreement|contractual|agreed)\b[^.!?;\n]{0,100}\brepayment due date\b/i.test(query);
+    if (dueDates.length !== 1 || conflictingDueDateLanguage || hasSeparateDebt || hasSeparateNonWageRepayment || hasSeparateWageTransactions) return undefined;
     suppliedDate = dueDates[0];
   } else {
     const paymentRecordLabels = [...query.matchAll(/\bPAYMENTS RECEIVED ON\b/gi)];
@@ -526,21 +764,23 @@ export function getStatutoryWorkflowEvidence(
   stream: AuthorityPresentedWorkstream,
   issue: AuthorityPresentedIssue
 ): { authority: Rule['authority']; title: string; officialUrl: string; text: string } | undefined {
-  const rule = STATUTORY_WORKFLOW_RULES_20261029.find(candidate => candidate.authority === stream.authority
-    && candidate.queryPattern.test(query) && candidate.subjectPattern.test(issue.subject));
-  if (!rule || !scopeAllowsCurrentRule(query)) return undefined;
   const domainsByAuthority: Record<Rule['authority'], readonly string[]> = {
     ACRA: ['ACRA_CORPORATE'], IRAS: ['IRAS_CORPORATE_TAX'], CPF: ['CPF_PAYROLL', 'CPF_CONTRIBUTIONS'],
-    MOM: ['MOM_EMPLOYMENT'], MAS: ['MAS_FUNDS']
+    MOM: ['MOM_EMPLOYMENT'], MAS: ['MAS_FUNDS', 'MAS_REGULATORY_REPORTING']
   };
   const populationsByAuthority: Record<Rule['authority'], readonly string[]> = {
     ACRA: ['Company', 'COMPANY'], IRAS: ['Company', 'COMPANY'], CPF: ['Employer', 'EMPLOYER'],
     MOM: ['Employer', 'EMPLOYER', 'Employee', 'EMPLOYEE'], MAS: ['Company', 'COMPANY']
   };
-  if (!domainsByAuthority[rule.authority].includes(stream.domain) || !populationsByAuthority[rule.authority].includes(issue.population)
-      || !['NOT_REQUIRED', 'UNRESOLVED'].includes(issue.applicationStatus) || issue.evidenceStatus !== 'VERIFIED'
+  if (!['NOT_REQUIRED', 'UNRESOLVED'].includes(issue.applicationStatus) || issue.evidenceStatus !== 'VERIFIED'
       || !['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT'].includes(issue.operation)
       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
+  const rule = STATUTORY_WORKFLOW_RULES_20261029.find(candidate => candidate.authority === stream.authority
+    && candidate.queryPattern.test(query) && candidate.subjectPattern.test(issue.subject)
+    && scopeAllowsCurrentRule(query) && domainsByAuthority[candidate.authority].includes(stream.domain)
+    && populationsByAuthority[candidate.authority].includes(issue.population)
+    && stream.sources.some(candidateSource => sourceFor(candidate, candidateSource, issue.id)));
+  if (!rule) return undefined;
   const source = stream.sources.find(candidate => sourceFor(rule, candidate, issue.id));
   if (!source) return undefined;
   const text = answerText(rule, query);

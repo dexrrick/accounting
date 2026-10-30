@@ -49,7 +49,17 @@
       "excerptFixture": "mas-vcfm-annual-declarations.txt",
       "excerptContentSha256": "2d5ab3af37e27eeed482330ba509980123e1ef996dcbffee5e4dea20ab8fa429",
       "productionUse": false,
-      "notes": "Raw application/pdf fixture is the verified official source body. An earlier request without a browser User-Agent returned a maintenance HTML page and was replaced; runtime authority evidence must retain the extracted PDF hash and source locator."
+      "notes": "Raw application/pdf fixture is the verified official source body. An earlier request without a browser User-Agent returned a maintenance HTML page and was replaced; runtime authority evidence must retain the extracted PDF hash and source locator.",
+      "scopeEvidence": {
+        "page": 1,
+        "population": "Venture Capital Fund Managers (VCFMs)",
+        "passage": "This compliance toolkit aims to provide VCFMs with a simple reference on the common applications, forms and submissions pursuant to the SFA that are applicable to VCFMs. However, it is not exhaustive, and VCFMs are expected to be familiar with all legislations and requirements that are applicable to them. For the avoidance of doubt, this toolkit excludes reporting obligations that fall outside the SFA; as well as fund-level requirements.",
+        "conditions": ["The source describes common applications, forms and submissions under the SFA applicable to VCFMs."],
+        "exclusions": ["Reporting obligations that fall outside the SFA", "Fund-level requirements"],
+        "effectiveDateEvidence": "The VCFM toolkit identifies version 1.1 issued 2 October 2020 and last revised 29 May 2026; that revision date is not treated as the commencement date of a legal requirement.",
+        "requiredFacts": ["Identify the specific managed fund, its structure and activity, and the separate fund-level or outside-SFA requirement being assessed."],
+        "limitations": ["The scope passage proves the toolkit is not exhaustive; it does not establish a particular fund-level form, duty, deadline or exemption.", "Do not infer that Form 25A completes every duty of each fund the VCFM manages."]
+      }
     }
   ]
 }

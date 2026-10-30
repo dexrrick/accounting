@@ -44,6 +44,8 @@ export interface IrasMasKnowledgeRuleMetadata {
   fixture: string;
   nativePdfFixture?: string;
   fixtureKind: IrasMasKnowledgeFixtureKind;
+  sourceSection?: string;
+  sourcePassage?: string;
   authorityAndProvisions: readonly string[];
   population: string;
   rule: string;
@@ -79,8 +81,10 @@ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMe
   },
   {
     id: 'IRAS_GST_MOTOR_CAR_INPUT_TAX', authority: 'IRAS', topicIds: ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'],
-    officialUrl: IRAS_MOTOR_URL, title: 'Conditions for Claiming Input Tax — Motor Vehicles',
+    officialUrl: IRAS_MOTOR_URL, title: 'Conditions for Claiming Input Tax',
     fixture: 'iras-mas-input-tax-native.html', fixtureKind: 'IRAS_NATIVE_HTML_PAGE',
+    sourceSection: 'Motor Vehicles Expenses accordion — Other motor vehicles row',
+    sourcePassage: "Yes, input tax claims are allowed on motor vehicles (e.g. lorry, van, motorcycle) that do not fall under the definition of a 'motor car'*, if the conditions for claiming input tax are met.",
     authorityAndProvisions: ['GST (General) Regulations regulations 25(1) and 27, as identified in IRAS guidance'],
     population: 'GST-registered businesses incurring motor-car and motor-vehicle expenses',
     rule: 'Purchase and running input tax on a motor car is generally disallowed under regulation 27 unless the vehicle is excluded from the regulation 25(1) definition or a stated situation falls outside regulation 27. IRAS describes eligible pay-per-trip chauffeured private-hire transport from 1 April 2022, third-party use expenses from 1 January 2023, and other vehicles such as lorries, vans and motorcycles that are not motor cars, in each case subject to ordinary input-tax conditions.',
@@ -199,17 +203,20 @@ function isMedicalInsurancePremiumPremise(input: Pick<IrasMasKnowledgeRequest, '
   return /\binsurance\s+premiums?\b|\b(?:medical|health|accident)\s+insurance\b|\binsurance\s+(?:policy|policies)\s+for\s+(?:medical|health|accident)\b/i.test(queryText(input));
 }
 
-type GstInputFamily = 'medical' | 'motor' | 'compound' | undefined;
+type GstInputFamily = 'medical' | 'motor' | 'commercial-vehicle' | 'compound' | undefined;
 
 function gstInputFamily(text: string, topicId: string): GstInputFamily {
-  const hasGstClaim = /\b(?:input tax|input gst|gst claim|claim gst|gst)\b/i.test(text);
+  const normalizedText = text.toLowerCase().replace(/[-_]/g, ' ');
+  const hasGstClaim = /\b(?:input tax|input gst|gst claim|claim gst|gst)\b/i.test(normalizedText);
   if (!hasGstClaim) return undefined;
   const medicalAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax'].includes(topicId);
   const motorAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId);
-  const medical = medicalAllowed && ( /\b(?:medical|health screening|primary care plan|pcp|work injury compensation)\b/i.test(text)
-    || isMedicalInsurancePremiumPremise({ query: text, subject: '' }));
-  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense|expenses? (?:for|of|on) (?:a\s+)?subsidiary(?:'s|’s)?\s+car)\b/i.test(text);
-  if (medical && motor) return 'compound';
+  const medical = medicalAllowed && ( /\b(?:medical|health screening|primary care plan|pcp|work injury compensation|check[- ]?ups?)\b/i.test(normalizedText)
+    || isMedicalInsurancePremiumPremise({ query: normalizedText, subject: '' }));
+  const commercialVehicle = motorAllowed && /\b(?:delivery|commercial|goods)\s+van\b/i.test(normalizedText);
+  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense|expenses? (?:for|of|on) (?:a\s+)?subsidiary(?:'s|’s)?\s+car)\b/i.test(normalizedText);
+  if (medical && (motor || commercialVehicle)) return 'compound';
+  if (commercialVehicle) return 'commercial-vehicle';
   if (medical) return 'medical';
   if (motor) return 'motor';
   return undefined;
@@ -219,7 +226,8 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
   if (input.authority !== 'IRAS') return false;
   const subjectFamily = gstInputFamily(input.subject, input.topicId);
   const queryFamily = gstInputFamily(input.query, input.topicId);
-  return subjectFamily === 'compound' || queryFamily === 'compound'
+  if (queryFamily === 'compound') return !['medical', 'motor', 'commercial-vehicle'].includes(subjectFamily || '');
+  return subjectFamily === 'compound'
     || Boolean(subjectFamily && queryFamily && subjectFamily !== queryFamily);
 }
 
@@ -237,10 +245,12 @@ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' 
     // a generic subject, but cannot redirect an already specific subject.
     const subjectFamily = gstInputFamily(input.subject, input.topicId);
     if (subjectFamily === 'medical') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[0];
+    if (subjectFamily === 'commercial-vehicle') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[1];
     if (subjectFamily === 'motor') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[1];
     if (subjectFamily === 'compound') return undefined;
     const queryFamily = gstInputFamily(input.query, input.topicId);
     if (queryFamily === 'medical') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[0];
+    if (queryFamily === 'commercial-vehicle') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[1];
     if (queryFamily === 'motor') return IRAS_MAS_KNOWLEDGE_RULES_20261027B[1];
     if (queryFamily === 'compound') return undefined;
   }
@@ -419,6 +429,11 @@ export function selectIrasMasKnowledgeQuotes(request: IrasMasKnowledgeRequest): 
 /** Scoped to these six specific families so current adjacent proof is untouched. */
 export function hasIrasMasKnowledgeContradiction(request: IrasMasKnowledgeRequest): boolean {
   if (hasGstInputScopeConflict(request)) return true;
+  // Each split issue must prove its own family; a compound request cannot
+  // recover missing motor/medical premises through legacy generic coverage.
+  if (request.authority === 'IRAS' && gstInputFamily(request.query, request.topicId) === 'compound'
+      && ['medical', 'motor', 'commercial-vehicle'].includes(gstInputFamily(request.subject, request.topicId) || '')
+      && supportIrasMasKnowledgeRule(request) === false) return true;
   const rule = namedRule(request);
   return Boolean(rule && ((rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && isMedicalInsurancePremiumPremise(request))
     || (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && hasConflictingMasNoticeIdentity(request.query))
@@ -471,7 +486,12 @@ export function getIrasMasKnowledgeEvidence(
       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
   const source = stream.sources.find(candidate => sourceFor(resolved, candidate, issue.id));
   if (!source) return undefined;
-  return { authority: resolved.authority, title: source.title, officialUrl: resolved.officialUrl, text: answerText(resolved, query) };
+  const commercialVehicleOnly = resolved.id === 'IRAS_GST_MOTOR_CAR_INPUT_TAX'
+    && gstInputFamily(issue.subject, resolved.topicIds[0]) === 'commercial-vehicle';
+  const text = commercialVehicleOnly
+    ? 'IRAS says input tax on other motor vehicles such as delivery vans is not blocked under the motor-car restriction, because those vehicles do not fall within the motor-car definition. A GST-registered business may claim input tax on the van purchase and running expenses only if the ordinary input-tax conditions are met; the vehicle classification and supporting claim facts still matter.'
+    : answerText(resolved, query);
+  return { authority: resolved.authority, title: source.title, officialUrl: resolved.officialUrl, text };
 }
 
 function proofQuery(rule: Rule): string {
