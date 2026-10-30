@@ -1,0 +1,44 @@
+Statutory corrections: review handoff
+
+Goal/status
+Four reported edge cases corrected; bounded ACRA/MAS commencement and practical answers expanded; MOM leave guidance corrected; four original source captures restored without changing expected hashes. Local implementation and verification are complete for this iteration. Publication of this exact repository and selected payload was subsequently approved by the user.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-corrections-expansion-20261030
+Implementation review target: e955803c17027c25baa12174174cedcfe59009ad
+Comparison base: 5d24ecc8aa7db7ac96c207171d0dae49d9caeb90
+PR: none.
+Capture-time working copy, now committed, identified by artifacts/statutory-review-edge-corrections-20261030/continued/final-source-state.json. That snapshot lists 22 changed/new files and their hashes. Also include the restored tests/fixtures/statutoryExpansionSources/cpf-wage-classification.txt, whose original SHA-256 is 67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd. The implementation and selected evidence are available at the implementation target after push. A following documentation-only commit adds this handoff; the final response supplies the verified branch-head SHA.
+
+Changes and main files
+CPF refund dates require a matching payment/wage condition and reject conflicting records; ordinary duplicated bonuses do not become conditional wages. Refund timing does not suppress independent monetary or journal requests. ACRA multiple changes cannot produce an unsupported overall not-late conclusion. IRAS retention considers the later applicable YA/dissolution minimum. Ordinary chronological then is not historical-law intent.
+Bounded source-commencement discussion distinguishes the ACRA 20 October change and future MAS N24 commencement from earlier duties. Competing notices cannot borrow N24 proof. Practical secretary/refund/leave/LFMC notification questions reach existing source-backed rules, with entity and mixed-request guards.
+Main files: src/retrieval/statutoryWorkflows20261029.ts, statutoryCommencementScope.ts, targetDateResolver.ts, acraMomKnowledge20261027b.ts, irasMasKnowledge20261027b.ts, momAcraMasExpansionRules.ts; src/services/semanticQuestionUnderstanding.ts; src/classification/questionClassifier.ts; src/standards/coverageRegistry.ts and statutes/mom.ts. Registered whole-application regressions cover material positive and negative cases. Four file-specific .gitattributes entries preserve exact recovered source bytes.
+
+Verification
+Node 22; maintained src/scripts/tests scoped lint, typecheck, Vite and Worker builds passed. Final smoke: 157/157. Final full suite: 180/180. Fixed100 original/enriched offline replays passed; no evidence-path losses, enriched verified paths remain 69. This does not establish whole-100 answer correctness.
+Independent code review: no remaining material findings. Bounded answer grading: previous 50 questions = 49 correct/1 unsupported; new 10 = 8 correct/2 partial. All 44 previously correct answers preserved. Forty-nine unchanged answers retained prior grades after independent byte/hash comparison; eleven changed complete answers were re-adjudicated. These are offline results, not production accuracy.
+Default root-wide lint still flags existing archived artifacts; scoped maintained-code lint passed, with no lint gate changed. Intermediate review/fallback failures were corrected before the final clean runs. No CI, live-model, browser or production verification; no merge, deployment or source activation.
+
+Remaining concerns and review focus
+Precise VCFM QDC form/source requirements remain unsupported. The combined medical-expense/delivery-van GST answer omits the van issue. Combined VCFM nil-return/fund-level scope remains partial. Some bonus wording and whole-question completeness remain limited. Generic MAS commencement can retain UNRECOGNIZED scenario metadata with statutory query intent; no demonstrated UI defect or browser acceptance.
+Review payment-condition/date association, separate filing events, missing facts, entity/notice identity, historical/future scope, exact URL/revision-bound quotations, independent mixed requests, and original fixture provenance with unchanged digest gates.
+
+Individual local evidence
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\completion-summary.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\independent-final-review.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\answer-review-input.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\preservation-report.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\verified-final\validation-results.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\verified-final\smoke.log
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\continued\verified-final\full.log
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\fixture-recovery.json
+D:\Accounting\artifacts\statutory-review-edge-corrections-20261030\qdc-source-investigation.json
+
+Proposed publication payload
+Reviewed source/tests/fixtures, this handoff, selected grading/replay/preservation/fixture-recovery reports and final validation logs under the task artifact directory. Exclude unrelated prior artifacts, temporary files, combined fixture copies and intermediate logs. The user explicitly confirmed this destination and payload; unrelated artifacts remain local.
+
+Ready-to-copy review prompt
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-corrections-expansion-20261030, against base 5d24ecc8aa7db7ac96c207171d0dae49d9caeb90. Inspect implementation commit e955803c17027c25baa12174174cedcfe59009ad plus the following handoff-only branch-head commit. Selected evidence is committed; unrelated/intermediate artifacts remain local. Capture-time snapshots saying uncommitted describe their earlier capture state. Confirm the exact commit or local snapshot you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
+
