@@ -1,0 +1,89 @@
+tests/regression/test_sidequest_1_1.mjs:6:3: warning eslint(no-unused-vars): Identifier 'postProcessAIResponse' is imported but never used. help: Consider removing this import.
+tests/regression/test_sidequest_1_1.mjs:13:10: warning eslint(no-unused-vars): Identifier 'defaultSourceRetriever' is imported but never used. help: Consider removing this import.
+tests/regression/test_sidequest_correction.mjs:5:39: warning eslint(no-unused-vars): Identifier 'processAccountingQuery' is imported but never used. help: Consider removing this import.
+tests/regression/test_shared_question_residuals.mjs:87:80: warning eslint(no-useless-escape): Unnecessary escape character '\'' help: Replace `\'` with `'`.
+src/engine/scenarioParser.ts:638:134: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:638:136: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/engine/scenarioParser.ts:638:149: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:638:151: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/engine/scenarioParser.ts:639:30: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:639:32: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/engine/scenarioParser.ts:639:45: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:639:47: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/engine/scenarioParser.ts:2464:32: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:2464:34: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/engine/scenarioParser.ts:2464:47: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/engine/scenarioParser.ts:2464:49: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+scripts/rerun_gemini_remediation.mjs:475:98: warning eslint(no-unused-vars): Parameter 'dependencies' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+tests/evaluation/singapore/iras-public-rule-excerpts-v1.mjs:429:11: warning eslint(no-unused-vars): Variable 'result' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+src/retrieval/targetDateResolver.ts:229:47: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/retrieval/targetDateResolver.ts:229:49: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+src/retrieval/targetDateResolver.ts:229:63: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/retrieval/targetDateResolver.ts:229:65: warning eslint(no-useless-escape): Unnecessary escape character '-' help: Replace `\-` with `-`.
+scripts/prepare_r2_verification_harness.mjs:118:26: warning eslint(no-useless-escape): Unnecessary escape character '`' help: Replace `\`` with ```.
+scripts/prepare_r2_verification_harness.mjs:118:59: warning eslint(no-useless-escape): Unnecessary escape character '$' help: Replace `\$` with `$`.
+scripts/prepare_r2_verification_harness.mjs:118:99: warning eslint(no-useless-escape): Unnecessary escape character '$' help: Replace `\$` with `$`.
+scripts/prepare_r2_verification_harness.mjs:118:143: warning eslint(no-useless-escape): Unnecessary escape character '$' help: Replace `\$` with `$`.
+scripts/prepare_r2_verification_harness.mjs:118:180: warning eslint(no-useless-escape): Unnecessary escape character '`' help: Replace `\`` with ```.
+scripts/cloudflare_verification_receipt_sink.mjs:11:7: warning eslint(no-unused-vars): Variable 'EMPTY_SHA256' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_grounded_reasoning.mjs:7:3: warning eslint(no-unused-vars): Identifier 'formulateApplicationRules' is imported but never used. help: Consider removing this import.
+tests/regression/test_authority_semantic_concept_ownership.mjs:116:16: warning eslint(no-unused-vars): Parameter 'index' is declared but never used. Unused parameters should start with a '_'. help: Consider removing this parameter.
+tests/regression/test_iras_first_runner_safety.mjs:103:15: warning eslint(no-unused-vars): Variable 'index' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_iras_first_runner_safety.mjs:312:5: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+tests/regression/test_mom_acra_mas_expansion_rules.mjs:16:7: warning eslint(no-unused-vars): Variable 'fixture' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_followup_accounting_state.mjs:17:5: warning eslint(no-unused-vars): Variable 'testsFailed' is assigned a value but never used. Unused variables should start with a '_'. help: Did you mean to use this variable?
+tests/regression/test_followup_accounting_state.mjs:823:12: warning eslint(no-unused-vars): Catch parameter '_err' is caught but never used. help: Consider handling this error.
+tests/regression/test_followup_accounting_state.mjs:838:12: warning eslint(no-unused-vars): Catch parameter '_err' is caught but never used. help: Consider handling this error.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v8.mjs:814:9: warning eslint(no-unused-vars): Variable 'pinnedBefore' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v8.mjs:986:12: warning eslint(no-useless-catch): Unnecessary catch clause help: Remove the catch clause, since it does not provide any additional error handling or functionality beyond what the finalizer already provides.
+tests/evaluation/singapore/semantic-contract-followup-evaluation.mjs:157:7: warning eslint(no-unused-vars): Variable 'POPULATIONS' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/semantic-contract-followup-evaluation.mjs:158:7: warning eslint(no-unused-vars): Variable 'DOMAINS' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/semantic-contract-followup-evaluation.mjs:162:7: warning eslint(no-unused-vars): Variable 'AUTHORITIES' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/semantic-contract-followup-evaluation.mjs:169:7: warning eslint(no-unused-vars): Variable 'EVIDENCE_REQUIREMENTS' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/semantic-contract-followup-evaluation.mjs:509:9: warning eslint(no-unused-vars): Variable 'authorityById' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+src/retrieval/officialSourceTransport.ts:57:46: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+src/retrieval/officialSourceTransport.ts:124:66: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v7.mjs:801:9: warning eslint(no-unused-vars): Variable 'pinnedBefore' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v7.mjs:973:12: warning eslint(no-useless-catch): Unnecessary catch clause help: Remove the catch clause, since it does not provide any additional error handling or functionality beyond what the finalizer already provides.
+tests/regression/test_acra_b2_managed_admission.mjs:24:35: warning eslint(no-unused-vars): Identifier 'computeSha256Bytes' is imported but never used. help: Consider removing this import.
+tests/regression/test_mas_subsection_preview_lifecycle.mjs:632:9: warning eslint(no-unused-vars): Variable 'runtimeCandidates' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+src/retrieval/officialSourceProxy.ts:177:62: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+src/retrieval/officialSourceProxy.ts:225:65: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+src/retrieval/officialSourceProxy.ts:249:63: warning eslint(no-control-regex): Unexpected control characters help: Avoid matching control characters in regular expressions. If intentional, disable this rule for the expression.
+tests/evaluation/singapore/semantic-contract-diagnosis.mjs:85:10: warning eslint(no-unused-vars): Function 'shapeField' is declared but never used. help: Consider removing this declaration.
+tests/regression/test_acra_annual_return_filing_duty_evidence_scope.mjs:15:7: warning eslint(no-unused-vars): Variable 'title' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_iras_mapped_evidence_diagnostic_v5.mjs:345:11: warning eslint(no-unused-vars): Variable 'failedPlan' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_iras_mapped_evidence_diagnostic_v4.mjs:4:10: warning eslint(no-unused-vars): Identifier 'tmpdir' is imported but never used. help: Consider removing this import.
+tests/regression/test_iras_mapped_evidence_diagnostic_v4.mjs:239:11: warning eslint(no-unused-vars): Variable 'failedPlan' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_iras_cpf_cash_top_up_individual_workstream.mjs:52:7: warning eslint(no-unused-vars): Variable 'sourceText' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v6.mjs:752:9: warning eslint(no-unused-vars): Variable 'pinnedBefore' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v6.mjs:919:12: warning eslint(no-useless-catch): Unnecessary catch clause help: Remove the catch clause, since it does not provide any additional error handling or functionality beyond what the finalizer already provides.
+tests/regression/test_iras_mapped_evidence_diagnostic_v7.mjs:446:11: warning eslint(no-unused-vars): Variable 'failedPlan' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_semantic_reliability_experiment.mjs:13:3: warning eslint(no-unused-vars): Identifier 'hashRelevantSources' is imported but never used. help: Consider removing this import.
+tests/regression/test_iras_mapped_evidence_diagnostic_v6.mjs:390:11: warning eslint(no-unused-vars): Variable 'failedPlan' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_phase3_coverage.mjs:2:41: warning eslint(no-unused-vars): Identifier 'SourceFreshnessManager' is imported but never used. help: Consider removing this import.
+tests/regression/test_phase3_coverage.mjs:3:37: warning eslint(no-unused-vars): Identifier 'TargetDateResolver' is imported but never used. help: Consider removing this import.
+tests/regression/test_phase3_coverage.mjs:4:35: warning eslint(no-unused-vars): Identifier 'getAllAuthoritativeSources' is imported but never used. help: Consider removing this import.
+tests/regression/test_phase3_coverage.mjs:4:63: warning eslint(no-unused-vars): Identifier 'buildUnifiedSourceRegistry' is imported but never used. help: Consider removing this import.
+tests/regression/test_performance_architecture.mjs:2:10: warning eslint(no-unused-vars): Identifier 'classifyQuestion' is imported but never used. help: Consider removing this import.
+tests/regression/test_performance_architecture.mjs:13:10: warning eslint(no-unused-vars): Identifier 'defaultCitationVerifier' is imported but never used. help: Consider removing this import.
+tests/regression/test_iras_first_targeted_acceptance_v4.mjs:44:3: warning eslint(no-unused-vars): Identifier 'sha256' is imported but never used. help: Consider removing this import.
+tests/regression/test_iras_first_targeted_acceptance_v4.mjs:50:7: warning eslint(no-unused-vars): Variable 'ROOT' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/regression/test_semantic_contract_followup_runner.mjs:93:5: warning eslint(no-unused-vars): Variable 'runIndex' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+src/components/ManualMasReviewPanel.tsx:73:5: warning react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+tests/regression/test_iras_mapped_evidence_diagnostic_v8.mjs:477:11: warning eslint(no-unused-vars): Variable 'failedPlan' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+src/utils/jsonRepair.ts:29:12: warning eslint(no-unused-vars): Catch parameter '_fastErr' is caught but never used. help: Consider handling this error.
+src/utils/jsonRepair.ts:42:12: warning eslint(no-unused-vars): Catch parameter '_sliceErr' is caught but never used. help: Consider handling this error.
+src/utils/jsonRepair.ts:54:12: warning eslint(no-unused-vars): Catch parameter '_repairErr' is caught but never used. help: Consider handling this error.
+src/utils/jsonRepair.ts:73:16: warning eslint(no-unused-vars): Catch parameter '_reconstructErr' is caught but never used. help: Consider handling this error.
+src/utils/jsonRepair.ts:224:14: warning eslint(no-unused-vars): Catch parameter '_e' is caught but never used. help: Consider handling this error.
+src/utils/jsonRepair.ts:47:40: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/utils/jsonRepair.ts:50:38: warning eslint(no-useless-escape): Unnecessary escape character '}' help: Replace `\}` with `}`.
+src/utils/jsonRepair.ts:97:39: warning eslint(no-useless-escape): Unnecessary escape character '[' help: Replace `\[` with `[`.
+src/utils/jsonRepair.ts:221:27: warning eslint(no-useless-escape): Unnecessary escape character '/' help: Replace `\/` with `/`.
+src/utils/jsonRepair.ts:222:25: warning eslint(no-useless-escape): Unnecessary escape character '}' help: Replace `\}` with `}`.
+tests/regression/test_iras_v2_measurement_safety.mjs:338:5: warning eslint(no-unsafe-finally): Unsafe `finally` block. help: Control flow inside `try` or `catch` blocks will be overwritten by this statement.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v4.mjs:614:9: warning eslint(no-unused-vars): Variable 'pinnedBefore' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v4.mjs:761:12: warning eslint(no-useless-catch): Unnecessary catch clause help: Remove the catch clause, since it does not provide any additional error handling or functionality beyond what the finalizer already provides.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v5.mjs:719:9: warning eslint(no-unused-vars): Variable 'pinnedBefore' is declared but never used. Unused variables should start with a '_'. help: Consider removing this declaration.
+tests/evaluation/singapore/iras-mapped-evidence-diagnostic-v5.mjs:886:12: warning eslint(no-useless-catch): Unnecessary catch clause help: Remove the catch clause, since it does not provide any additional error handling or functionality beyond what the finalizer already provides.

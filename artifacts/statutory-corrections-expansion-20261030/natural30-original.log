@@ -1,0 +1,12 @@
+{
+  "output": "D:\\Accounting\\artifacts\\statutory-corrections-expansion-20261030\\natural30-original.json",
+  "cases": 30,
+  "verifiedByAuthority": {
+    "IRAS": 5,
+    "CPF": 5,
+    "MOM": 5,
+    "ACRA": 5,
+    "MAS": 5
+  },
+  "explanationCases": 25
+}

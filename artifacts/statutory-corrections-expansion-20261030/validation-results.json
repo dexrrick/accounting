@@ -1,0 +1,62 @@
+[
+  {
+    "completedUTC": "2026-10-30T00:30:38.9390121Z",
+    "startedUTC": "2026-10-30T00:30:38.7093572Z",
+    "check": "lint",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:30:43.6508225Z",
+    "startedUTC": "2026-10-30T00:30:38.9578978Z",
+    "check": "typecheck",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:30:46.2638278Z",
+    "startedUTC": "2026-10-30T00:30:43.6533738Z",
+    "check": "vite-build",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:30:47.0306023Z",
+    "startedUTC": "2026-10-30T00:30:46.2663546Z",
+    "check": "worker-build",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:34:08.3682217Z",
+    "startedUTC": "2026-10-30T00:30:47.0322239Z",
+    "check": "smoke",
+    "exitCode": 1
+  },
+  {
+    "completedUTC": "2026-10-30T00:37:49.4936913Z",
+    "startedUTC": "2026-10-30T00:34:08.3695545Z",
+    "check": "full",
+    "exitCode": 1
+  },
+  {
+    "completedUTC": "2026-10-30T00:37:53.0332165Z",
+    "startedUTC": "2026-10-30T00:37:49.4950048Z",
+    "check": "fixed100-original",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:38:03.5374254Z",
+    "startedUTC": "2026-10-30T00:37:53.0344494Z",
+    "check": "fixed100-enriched",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:38:07.5080253Z",
+    "startedUTC": "2026-10-30T00:38:03.5388734Z",
+    "check": "natural30-original",
+    "exitCode": 0
+  },
+  {
+    "completedUTC": "2026-10-30T00:38:11.4011693Z",
+    "startedUTC": "2026-10-30T00:38:07.5094799Z",
+    "check": "natural30-enriched",
+    "exitCode": 0
+  }
+]

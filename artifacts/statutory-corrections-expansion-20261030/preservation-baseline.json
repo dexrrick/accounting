@@ -1,0 +1,322 @@
+{
+  "provenance": "artifacts/statutory-knowledge-next-20261027/final-20261028/",
+  "verified": [
+    {
+      "id": "iras-gst-filing-01",
+      "question": "When is a Singapore GST return due after each quarter?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-gst-filing-02",
+      "question": "What is the GST filing deadline for an F5 return?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-gst-filing-03",
+      "question": "Must we file a nil GST return if there was no activity this quarter?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-gst-filing-04",
+      "question": "What is the normal GST filing deadline and can a business seek an extension?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-gst-filing-05",
+      "question": "When is the GST return due after an accounting period ends?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-eci-03",
+      "question": "Is there a general waiver from filing ECI and what conditions apply?",
+      "pipelineStatus": "VERIFIED",
+      "citations": [
+        {
+          "title": "Estimated Chargeable Income (ECI) Filing | Inland Revenue Authority of Singapore (IRAS) (offline fixture title)",
+          "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+          "provenance": "LIVE_EXTERNAL",
+          "claims": [
+            {
+              "text": "Your company has to file ECI within 3 months from the end of your financial year unless:\n\n• Your company qualifies for the ECI filing waiver; or\n\n• Your company is specifically not required to file ECI.",
+              "quote": "Your company has to file ECI within 3 months from the end of your financial year unless:\n\n• Your company qualifies for the ECI filing waiver; or\n\n• Your company is specifically not required to file ECI.",
+              "supportKind": "EXACT_SOURCE_QUOTE",
+              "fetchedSourceBinding": {
+                "recordId": "LIVE_TOPIC_iras-cit-eci_430acfe20e0d",
+                "documentHash": "430acfe20e0dcdf42abeca19e4d3612885359e9170db6e7aff9a293f6d9e0a09",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+                "retrievedAt": "2026-10-28T13:19:17.432Z"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "iras-withholding-tax-01",
+      "question": "Does Singapore withholding tax apply to a payment made overseas?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-withholding-tax-02",
+      "question": "We are paying a foreign consultant; how do we determine whether WHT is due?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-withholding-tax-03",
+      "question": "What facts decide if a payment to a non-resident attracts withholding tax?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "iras-withholding-tax-05",
+      "question": "What WHT checks should finance make before paying a non-resident company for services?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-additional-wages-definition-01",
+      "question": "What does CPF mean by Additional Wages?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-additional-wages-definition-02",
+      "question": "How can payroll distinguish AW from Ordinary Wages?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-additional-wages-definition-03",
+      "question": "What kind of wage payment is an Additional Wage for CPF?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-additional-wages-definition-04",
+      "question": "Is an annual performance bonus treated as AW or OW?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-due-date-01",
+      "question": "When must employers pay the CPF contributions for a month?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-due-date-02",
+      "question": "What is the CPF contribution remittance deadline?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-due-date-03",
+      "question": "We paid salary in September; when are the CPF contributions due?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-due-date-04",
+      "question": "By which date should the employer settle monthly CPF?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-01",
+      "question": "What information determines the CPF contribution rate for an employee?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-03",
+      "question": "Why do two employees with different ages or PR status have different CPF rates?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-01",
+      "question": "How is the CPF Additional Wage ceiling for bonuses worked out?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-02",
+      "question": "What formula determines how much AW can attract CPF?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-03",
+      "question": "How do OW payments affect the Additional Wage limit?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-04",
+      "question": "Explain the CPF Additional Wage ceiling for an employee who receives a bonus.",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-final-salary-01",
+      "question": "When is final salary due if an employee serves the full notice period?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-final-salary-02",
+      "question": "How soon must salary be paid after a resignation without notice?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-final-salary-03",
+      "question": "What timing applies to final salary after dismissal for misconduct?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-final-salary-04",
+      "question": "Does employer termination change when the last salary is paid?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-annual-leave-01",
+      "question": "When does statutory paid annual leave begin under the Employment Act?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-annual-leave-02",
+      "question": "What is the minimum annual leave entitlement and how does it increase?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-annual-leave-03",
+      "question": "How many days of annual leave does an eligible employee receive after eight years?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-annual-leave-04",
+      "question": "For an eligible employee in the 2018 leave year, what statutory annual leave rule applied?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-salary-deductions-01",
+      "question": "Can an employer deduct a staff shortage from salary?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-salary-deductions-02",
+      "question": "What kinds of salary deductions are permitted by MOM?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-salary-deductions-03",
+      "question": "Our employee damaged a company item; what can payroll deduct?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mom-salary-deductions-04",
+      "question": "What facts determine whether a salary deduction is lawful?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-annual-returns-02",
+      "question": "When is a Singapore private company’s annual return due after its financial year end?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-audit-exemption-01",
+      "question": "What tests make a Singapore private company a small company for audit exemption?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-audit-exemption-02",
+      "question": "How many small company criteria must be met to qualify for audit exemption?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-audit-exemption-03",
+      "question": "Do the audit exemption thresholds have to be met for one year or two?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-audit-exemption-04",
+      "question": "What financial and employee measures are used for the small company audit test?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "acra-secretary-appointment-03",
+      "question": "Can the sole director also act as the company secretary?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-fund-management-licence-01",
+      "question": "Does an LFMC need a CMS licence?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-fund-management-licence-02",
+      "question": "If our firm manages funds, when is an MAS licence generally required?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-fund-management-licence-03",
+      "question": "Does conducting regulated fund management require an LFMC licence?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-fund-management-licence-04",
+      "question": "What is the general licensing rule for fund management under the SFA?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-vcfm-01",
+      "question": "What is MAS’s VCFM regime for venture capital fund managers?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-vcfm-02",
+      "question": "Can a firm that manages VC funds use a simplified licensing path?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-vcfm-03",
+      "question": "How does an MAS venture capital fund manager differ from an LFMC?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-vcfm-04",
+      "question": "What facts determine whether a manager can use the VCFM regime?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-class-exemptions-01",
+      "question": "Are there class exemptions from the fund management licensing requirement?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-class-exemptions-02",
+      "question": "When can a fund manager operate without an MAS licence?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-class-exemptions-03",
+      "question": "Does managing money for a related corporation automatically exempt a firm?",
+      "pipelineStatus": "VERIFIED"
+    },
+    {
+      "id": "mas-class-exemptions-04",
+      "question": "What are examples of fund management activities that may be class exempt?",
+      "pipelineStatus": "VERIFIED"
+    }
+  ],
+  "explained": [
+    "natural-iras-01",
+    "natural-iras-02",
+    "natural-iras-03",
+    "natural-iras-04",
+    "natural-iras-05",
+    "natural-cpf-01",
+    "natural-cpf-02",
+    "natural-cpf-03",
+    "natural-cpf-04",
+    "natural-cpf-05",
+    "natural-mom-01",
+    "natural-mom-02",
+    "natural-mom-03",
+    "natural-mom-04",
+    "natural-mom-05",
+    "natural-acra-01",
+    "natural-acra-02",
+    "natural-acra-03",
+    "natural-acra-04",
+    "natural-acra-05",
+    "natural-mas-01",
+    "natural-mas-02",
+    "natural-mas-03",
+    "natural-mas-04",
+    "natural-mas-05"
+  ]
+}

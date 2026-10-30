@@ -1,0 +1,44 @@
+{
+  "base": "59cede9c83c27d8398a97a49ddb246a547e771a8",
+  "records": [
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html",
+      "manifestExpected": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+      "worktreeSha256": "1cabd7a07b53d7c27a878692c9eea1eed51646a463b2a958bdff6f7c67c3b3b5",
+      "worktreeBytes": 9761,
+      "reviewedBlobSha256": "653748ab49cfd4984803d0616e49e5dd952de08d8fb6a08426e7715ff7f596cc",
+      "reviewedBlobBytes": 9711,
+      "lfNormalizedSha256": "653748ab49cfd4984803d0616e49e5dd952de08d8fb6a08426e7715ff7f596cc",
+      "reviewedMatchesExpectation": false,
+      "normalizedMatchesReviewed": true,
+      "gitEol": "i/lf    w/crlf  attr/text=auto        \ttests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html"
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html",
+      "manifestExpected": "9c70f7305f2d41440ea82f194d517f4ee5c235c117dab04fc3a09105355a9aac",
+      "worktreeSha256": "2d8cc4eb456e66c0d158ba65e282b60e59ea18bd12136feb588f368d4ed279c4",
+      "worktreeBytes": 62492,
+      "reviewedBlobSha256": "9db95e8b4482c15679578ee285abb5de942b914948ff0f2acee5ba90729bd507",
+      "reviewedBlobBytes": 61703,
+      "lfNormalizedSha256": "9db95e8b4482c15679578ee285abb5de942b914948ff0f2acee5ba90729bd507",
+      "reviewedMatchesExpectation": false,
+      "normalizedMatchesReviewed": true,
+      "gitEol": "i/lf    w/crlf  attr/text=auto        \ttests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html"
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/acra-company-secretary-native.html",
+      "manifestExpected": "53db082b8686ee7cea205d7ce29c5fde6de51e16a7c389acb8241322d0560956",
+      "worktreeSha256": "53db082b8686ee7cea205d7ce29c5fde6de51e16a7c389acb8241322d0560956",
+      "worktreeBytes": 547099,
+      "reviewedBlobSha256": "53db082b8686ee7cea205d7ce29c5fde6de51e16a7c389acb8241322d0560956",
+      "reviewedBlobBytes": 547099,
+      "lfNormalizedSha256": "53db082b8686ee7cea205d7ce29c5fde6de51e16a7c389acb8241322d0560956",
+      "reviewedMatchesExpectation": true,
+      "normalizedMatchesReviewed": true,
+      "gitEol": "i/none  w/none  attr/text=auto        \ttests/fixtures/statutoryExpansionSources/acra-company-secretary-native.html"
+    }
+  ],
+  "changedFixtures": false,
+  "changedExpectations": false,
+  "conclusion": "IRAS input-tax excerpt and MOM native response expected digests already disagree with their reviewed Git blobs. Windows CRLF explains an additional raw worktree delta, not the original mismatch. Exact expected captures are not recovered by restoring these blobs. No fixtures, expectations or test gates were changed. ACRA companion matches its expected digest."
+}
