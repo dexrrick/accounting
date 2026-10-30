@@ -11,6 +11,7 @@ import {
   supportAcraMomKnowledgeRule
 } from '../../src/retrieval/acraMomKnowledge20261027b.ts';
 import { hasPracticalExpansionContradiction, practicalExpansionPointers, supportPracticalExpansionRule } from '../../src/retrieval/practicalStatutoryExpansion.ts';
+import { processAccountingQuery } from '../../src/services/geminiService.ts';
 
 const fixtureDir = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('acra-mom-source-manifest.json', fixtureDir), 'utf8'));
@@ -360,5 +361,38 @@ const salaryDeductionPointerRequest = {
 };
 assert.ok(!practicalExpansionPointers(salaryDeductionPointerRequest).some(pointer => pointer.url === legacySalaryRequest.officialUrl),
   'The final-salary source pointer is not selected for a salary-deduction question merely because both use the broad salary topic.');
+
+const graduatedSickLeaveApplicationCases = [
+  {
+    id: 'four-month sick leave',
+    query: 'An employee covered by the Employment Act has completed four months of service, supplied the required medical certificate and informed us within twenty-four hours. Is the statutory entitlement already fourteen outpatient sick-leave days plus sixty hospitalisation days?',
+    expected: [/8\/30 at 4 months/i],
+    wrongFourMonthFullEntitlement: /(?:at|after) four months[^.\n]{0,100}(?:14|fourteen)[^.\n]{0,100}(?:60|sixty)|(?:14|fourteen) outpatient[^.\n]{0,100}(?:60|sixty) hospitalisation days[^.\n]{0,100}(?:at|after) four months/i
+  },
+  {
+    id: 'five-month sick leave',
+    query: 'An employee covered by the Employment Act has completed five months of service, supplied the required medical certificate and informed us within twenty-four hours. Is the statutory entitlement already fourteen outpatient sick-leave days plus sixty hospitalisation days?',
+    expected: [/11\/45 at 5 months/i],
+    wrongFiveMonthFullEntitlement: /(?:at|after) five months[^.\n]{0,100}(?:14|fourteen)[^.\n]{0,100}(?:60|sixty)|(?:14|fourteen) outpatient[^.\n]{0,100}(?:60|sixty) hospitalisation days[^.\n]{0,100}(?:at|after) five months/i
+  }
+];
+for (const sample of graduatedSickLeaveApplicationCases) {
+  const response = await processAccountingQuery(sample.query, null, 'SFRS_I', undefined, undefined, [], undefined, {});
+  assert.equal(response.scenarioState.scenarioType, 'SINGAPORE_STATUTORY_ADVISORY',
+    `${sample.id}: the complete question uses the normal statutory advisory path`);
+  for (const expected of sample.expected) assert.match(response.messageText, expected,
+    `${sample.id}: the rendered statutory schedule states the applicable outpatient and hospitalisation allowance`);
+  assert.match(response.messageText, /eligible for paid annual leave after at least 3 months of service/i,
+    `${sample.id}: the bundled rule gives the correct annual-leave eligibility threshold`);
+  assert.match(response.messageText, /60-day maximum includes outpatient sick leave|hospitalisation days include.*outpatient/i,
+    `${sample.id}: hospitalisation leave includes outpatient leave rather than adding a separate allowance`);
+  assert.match(response.messageText, /leave already taken|after leave already taken/i,
+    `${sample.id}: remaining leave depends on prior leave use`);
+  assert.doesNotMatch(response.messageText,
+    /Employees who have served for at least 12 months are entitled to statutory paid annual leave|Minimum 7 days after 1 year of service/i,
+    `${sample.id}: the answer does not repeat the incorrect 12-month annual-leave eligibility claim`);
+  assert.doesNotMatch(response.messageText, sample.wrongFourMonthFullEntitlement || sample.wrongFiveMonthFullEntitlement,
+    `${sample.id}: the applicable graduated entitlement is not replaced by the full 14/60 schedule`);
+}
 
 console.log('ACRA/MOM statutory knowledge rules passed (7 complete source families, transition-date guards and numeric/polarity mutations).');

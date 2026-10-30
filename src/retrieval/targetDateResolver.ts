@@ -5,11 +5,12 @@ export interface TargetDateResolution {
   rawMatchedText?: string;
   isHistorical?: boolean;
   /** A recognised input fact, rather than a request for the law in that period. */
-  dateRole?: 'CURRENT_WORKFLOW_FACT';
+  dateRole?: 'CURRENT_WORKFLOW_FACT' | 'DECLARED_COMMENCEMENT';
 }
 
 import { getSingaporeDateString } from '../utils/dateUtils';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
+import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from './statutoryCommencementScope';
 
 const MONTH_MAP: Record<string, string> = {
   jan: '01', january: '01',
@@ -30,7 +31,7 @@ const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2
 
 /** Identifies requests for the legal version governing an earlier period. */
 export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
-  return /\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
+  return /\b(?:historical|historic|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
 }
 
 function section13wDisposalDate(query: string): string | undefined {
@@ -157,6 +158,9 @@ export class TargetDateResolver {
     const versionContext = /\b(?:historical|historic|previous|prior|past|former|superseded|effective date|effective during|which law|which rules?|applicable law|year of assessment|\bya\s*20\d{2}|basis period|payroll year|rate table|legal|statutory|in force|governed|law|rules? applied|rate)\b/i.test(query);
     const otherAuthorityOrDomain = /\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|acra|mas|monetary authority|income tax|corporate tax|tax relief|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?)\b/i.test(query);
     const unresolved = (): TargetDateResolution => ({ confidence: 'LOW', source: 'NONE', isHistorical: false });
+    if (acraOfficerCommencementScope(query) || masSfa04N24CommencementScope(query)) {
+      return { ...unresolved(), dateRole: 'DECLARED_COMMENCEMENT' };
+    }
     if (TargetDateResolver.isCurrentWorkflowFactDate(query)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
 
     const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&

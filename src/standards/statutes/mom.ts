@@ -153,13 +153,13 @@ import type { SingaporeStatuteRule } from './types';export const MOM_STATUTE_RUL
     sectionOrSchedule: 'Section 88A & Section 89',
     ruleTitle: 'Annual Leave and Paid Sick / Hospitalisation Leave Statutory Entitlements',
     category: 'MOM_LABOUR',
-    principle: 'Employees covered by the Employment Act who have served an employer for at least 3 months are entitled to paid sick leave. Employees who have served for at least 12 months are entitled to statutory paid annual leave.',
+    principle: 'Employees covered by the Employment Act are eligible for paid annual leave after at least 3 months of service, including probation; annual leave is pro-rated by completed months where applicable, with 7 days for the first 12 months and one additional day for each subsequent 12 months up to 14 days. Paid sick leave is available after at least 3 months and is pro-rated by service until the full outpatient and hospitalisation entitlement applies at 6 months.',
     verbatimStatuteText: 'An employee who has served an employer for a period of not less than 3 months shall be entitled to paid annual leave of 7 days in respect of the first 12 months of continuous service with the employer and an additional one day’s paid annual leave for every subsequent 12 months of continuous service with the same employer, subject to a maximum of 14 days of paid annual leave. An employee who has served for at least 3 months is entitled to paid sick leave not exceeding 14 days if no hospitalisation is necessary, or 60 days if hospitalisation is necessary.',
     application: 'Leave administration and payroll accrual calculations for permanent and contract employees.',
     practicalRules: [
-      'Paid Annual Leave (Section 88A): Minimum 7 days after 1 year of service, increasing by 1 additional day per completed year of service, up to a statutory maximum of 14 days for 8 or more years of service.',
-      'Paid Outpatient Sick Leave (Section 89): Up to 14 days per calendar year if certified by an approved medical practitioner. Graduated during first 6 months of employment (5 days at 3 months, 8 days at 4 months, 11 days at 5 months, 14 days at 6+ months).',
-      'Paid Hospitalisation Leave (Section 89): Up to 60 days per calendar year (which includes the 14 days of outpatient sick leave).',
+      'Paid Annual Leave (Section 88A): Eligibility begins after 3 months of service, including probation. For 3 to 12 months of service, pro-rate by completed months using 7 days for the first service year; exclude approved unpaid-leave periods from the pro-rating calculation. Entitlement increases by 1 day for each subsequent 12 months of service, up to 14 days.',
+      'Paid Outpatient Sick Leave (Section 89): Up to 14 days per calendar year if certified by an approved medical practitioner. The graduated outpatient/hospitalisation entitlements are 5/15 days at 3 months, 8/30 at 4 months, 11/45 at 5 months, and 14/60 at 6 months or more.',
+      'Paid Hospitalisation Leave (Section 89): The 60-day maximum includes outpatient sick leave; the two limits are not additive. Actual available leave is capped by the applicable entitlement after leave already taken and qualifying certification.',
       'Public Holidays (Section 88): 11 statutory gazetted public holidays per year. If required to work on a public holiday, an employee is entitled to an extra day of basic salary or a day off in lieu.'
     ],
     canonicalUrl: 'https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P110-#pr89-',

@@ -1,0 +1,20 @@
+{
+  "reviewer": "/root/independent_review",
+  "recording": "Supervisor transcription of independent complete-answer review in this chat",
+  "answers": "novel10-before.json",
+  "scope": "Frozen ten-question offline application probe; not production accuracy",
+  "totals": { "CORRECT": 3, "PARTIAL": 2, "UNSUPPORTED": 4, "INCORRECT": 1 },
+  "grades": [
+    {"id":"novel-acra-01","grade":"UNSUPPORTED","reason":"Secretary duties/annual-return quotations do not answer sole-director eligibility or six-month appointment deadline."},
+    {"id":"novel-acra-02","grade":"CORRECT","reason":"Distinguishes fourteen/thirty days from each change and rejects waiting for annual return."},
+    {"id":"novel-iras-01","grade":"CORRECT","reason":"Both waiver tests, tax ECI versus book loss, missing facts and ordinary filing period explained."},
+    {"id":"novel-iras-02","grade":"PARTIAL","reason":"Medical restrictions explained; delivery-van issue omitted."},
+    {"id":"novel-cpf-01","grade":"UNSUPPORTED","reason":"Contribution-rate/computation gaps instead of refund deadline, missing payment date and employee-share guidance."},
+    {"id":"novel-cpf-02","grade":"CORRECT","reason":"Conditional-wage timing distinguished and missing repayment date prevents definite deadline/time bar."},
+    {"id":"novel-mom-01","grade":"INCORRECT","reason":"Legacy directive incorrectly claims twelve-month annual-leave eligibility and omits four-month hospitalisation cap."},
+    {"id":"novel-mom-02","grade":"UNSUPPORTED","reason":"Admission gaps instead of probation eligibility, proration and missing balance facts."},
+    {"id":"novel-mas-01","grade":"UNSUPPORTED","reason":"Generic licensing quotations instead of row 17 notifications and row 3 approval distinction."},
+    {"id":"novel-mas-02","grade":"PARTIAL","reason":"Form 25A correct; VCFM nil-return timing and fund-level scope not established."}
+  ],
+  "limitations": ["No independent test, model or live retrieval execution by the reviewer", "Verification labels were not treated as complete-answer correctness"]
+}

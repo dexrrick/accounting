@@ -11,6 +11,7 @@ import {
   selectIrasMasKnowledgeQuotes,
   supportIrasMasKnowledgeRule
 } from '../../src/retrieval/irasMasKnowledge20261027b.ts';
+import { hasConflictingMasNoticeIdentity } from '../../src/retrieval/statutoryCommencementScope.ts';
 
 const fixtureRoot = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('iras-mas-source-manifest.json', fixtureRoot), 'utf8'));
@@ -135,6 +136,18 @@ for (const scenario of cases) {
   assert.match(evidence.text, /requires|confirm|needs|conditions|facts/i, `${scenario.id} keeps case facts separate`);
   assert.equal(getIrasMasKnowledgeEvidence(scenario.query, stream, { ...issue, applicationStatus: 'VERIFIED' }), undefined,
     `${scenario.id} does not present a general answer as verified case application`);
+  if (scenario.id === 'mas-new-notice') {
+    const wrongNoticeQuery = 'Can misconduct Notice SFA 04-N11 effective 1 January 2027 already govern an October 2026 report?';
+    const wrongNoticeRequest = { ...request, query: wrongNoticeQuery };
+    assert.equal(hasConflictingMasNoticeIdentity(wrongNoticeQuery), true,
+      'an explicit N11 query cannot be treated as the N24 source identity');
+    assert.equal(supportIrasMasKnowledgeRule(wrongNoticeRequest), false,
+      'the N24 source proof rejects a question explicitly naming N11');
+    assert.equal(hasIrasMasKnowledgeContradiction(wrongNoticeRequest), true,
+      'a competing notice identity vetoes legacy N24 fallback');
+    assert.equal(getIrasMasKnowledgeEvidence(wrongNoticeQuery, stream, issue), undefined,
+      'the exact N24 document cannot render its answer for an N11 query');
+  }
 }
 
 const med = cases[0];

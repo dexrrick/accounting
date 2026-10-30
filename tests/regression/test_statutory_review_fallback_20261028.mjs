@@ -143,7 +143,7 @@ refined(
 );
 refined(
   'What does MAS Notice SFA 04-N24 require from 1 January 2027 for CMS licence holders?',
-  'mas-notices-guidelines', { domain: 'MAS_FUNDS', population: 'COMPANY', subject: /SFA 04-N24 reporting of misconduct.*1 January 2027/i }
+  'mas-regulatory-reporting', { domain: 'MAS_FUNDS', population: 'COMPANY', subject: /SFA 04-N24 reporting of misconduct.*1 January 2027/i }
 );
 refined(
   'For monthly wages above S$50 but not more than S$500, is the employee CPF share nil while the employer share remains payable?',

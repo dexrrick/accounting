@@ -1,0 +1,90 @@
+{
+  "headCommit": "5d24ecc8aa7db7ac96c207171d0dae49d9caeb90",
+  "liveAcceptance": "No live model/browser/CI/production acceptance, merge, deployment or source activation",
+  "finalValidation": {
+    "rootLintQualification": "Default root-wide lint previously failed on existing archived artifacts. Maintained src/scripts/tests scoped lint passed; lint gates were not changed.",
+    "smokeFailed": 0,
+    "fullFailed": 0,
+    "fullPassed": 180,
+    "smokePassed": 157,
+    "allChecksPassed": true,
+    "checks": [
+      {
+        "completedUTC": "2026-10-30T04:40:19.0036905Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:40:18.8547997Z",
+        "check": "scoped-lint"
+      },
+      {
+        "completedUTC": "2026-10-30T04:40:23.2696679Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:40:19.0199585Z",
+        "check": "typecheck"
+      },
+      {
+        "completedUTC": "2026-10-30T04:40:25.5111316Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:40:23.2725007Z",
+        "check": "vite-build"
+      },
+      {
+        "completedUTC": "2026-10-30T04:40:26.3159376Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:40:25.5140655Z",
+        "check": "worker-build"
+      },
+      {
+        "completedUTC": "2026-10-30T04:43:49.2233423Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:40:26.3174871Z",
+        "check": "smoke"
+      },
+      {
+        "completedUTC": "2026-10-30T04:47:27.4965196Z",
+        "exitCode": 0,
+        "startedUTC": "2026-10-30T04:43:49.224718Z",
+        "check": "full"
+      }
+    ]
+  },
+  "work": "Uncommitted local changes; no publication or deployment",
+  "evidence": [
+    "verified-final/validation-results.json",
+    "independent-final-review.json",
+    "preservation-report.json",
+    "final-source-state.json",
+    "../fixture-recovery.json"
+  ],
+  "fixtureRecovery": "Four exact original captures restored from hash-verified review overlay; expected hashes and test gates unchanged",
+  "remaining": [
+    "Precise VCFM QDC form/source requirement unsupported",
+    "Combined medical-expense and delivery-van GST question remains partial",
+    "VCFM Form25A/nil-return/fund-scope combination remains partial",
+    "Some natural-language bonus variants and whole-question completeness remain limited"
+  ],
+  "review": "No remaining material code findings in independent review",
+  "status": "CORRECTIONS_COMPLETE_BOUNDED_COVERAGE_IMPROVED",
+  "branch": "codex/statutory-corrections-expansion-20261030",
+  "preservation": {
+    "newProbePriorCorrectPreserved": "3/3",
+    "gradingRegressions": [],
+    "evidencePathAuditPassed": true,
+    "qualification": "Evidence-path coverage is separate from answer correctness. Fixed100 was not freshly adjudicated for whole-answer accuracy.",
+    "priorCorrectPreserved": "44/44",
+    "enrichedFixed100VerifiedPaths": 69
+  },
+  "answerEvaluation": {
+    "old50": {
+      "CORRECT": 49,
+      "PARTIAL": 0,
+      "UNSUPPORTED": 1,
+      "INCORRECT": 0
+    },
+    "novel10": {
+      "CORRECT": 8,
+      "PARTIAL": 2,
+      "UNSUPPORTED": 0,
+      "INCORRECT": 0
+    }
+  }
+}

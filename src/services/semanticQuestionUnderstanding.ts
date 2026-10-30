@@ -2,6 +2,7 @@ import { isExplicitForeignTaxOnlyQuestion, type QuestionClassificationResult } f
 import type { SingaporeKnowledgeDomain } from '../standards/coverageRegistry';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
+import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from '../retrieval/statutoryCommencementScope';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
 import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
@@ -2803,10 +2804,28 @@ function refineTaxonomyRuleIntent(
     /\bpublic holidays?\b/i.test(text) &&
     /\bnon working day\b/i.test(text) && /\b(?:contractual )?rest day\b/i.test(text) &&
     /\b(?:falls?|difference|rather than|versus|compared)\b/i.test(text);
+  const boundedAcraCommencement = acraOfficerCommencementScope(query);
+  const boundedMasCommencement = masSfa04N24CommencementScope(query);
+  const separateAnnualReturnQuestion = topicIds.has('acra_annual-returns') &&
+    /\b(?:annual return|annual-return)\b[^.!?;]{0,90}\b(?:filing deadline|deadline|due date|when must|how to file|filing process|file the return)\b/i.test(text);
+  const acraSecretaryCompanyFacts = topicIds.has('acra_company-secretary') &&
+    /\b(?:our|this|the)\s+(?:(?:singapore|local|private|public)\s+){0,2}company\b/i.test(text) &&
+    /\b(?:incorporated|registered|registration)\b/i.test(text) &&
+    /\b(?:one|sole|single|only) director\b/i.test(text) &&
+    /\b(?:company secretary|secretary position)\b/i.test(text) &&
+    !/\b(?:foreign compan(?:y|ies)|overseas[- ]incorporated|incorporated overseas|variable capital compan(?:y|ies)|\bvcc\b|sole proprietorship|partnership|limited liability partnership|business trust)\b/i.test(text);
+  const acraAnnualReturnSecretarySubstitute = acraSecretaryCompanyFacts &&
+    /\bannual return\b/i.test(text) &&
+    /\b(?:leave|keep|remain|stay|wait|defer)\b[^.!?;]{0,90}\b(?:until|through|up to)\b[^.!?;]{0,45}\bannual return\b/i.test(text);
+  const boundedAcraSecretaryCase = acraSecretaryCompanyFacts &&
+    /\b(?:become|act as|same person|leave|keep|empty|vacant|appoint\w*|appointment|within|how soon|deadline)\b/i.test(text) &&
+    (!topicIds.has('acra_annual-returns') || acraAnnualReturnSecretarySubstitute);
   // Contextualization is a demotion: only do it when the query has one clear
   // request. If another sentence, question, or coordinated instruction may
   // independently ask about a topic, keep that topic mapped as requested.
-  const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison;
+  const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison
+    || Boolean(boundedAcraCommencement || boundedMasCommencement ||
+      (boundedAcraSecretaryCase && !separateAnnualReturnQuestion));
   const asksForAmount = /\b(?:calculate|compute|work\s+out|estimate|how much (?:cpf|tax|salary|wht|gst|money|will|do|does|would|should)|what amount (?:is|are|do|does|would|will))\b/i.test(query);
   if (asksForAmount || /\b(?:prepare|post|journal entry|calculate my|calculate our)\b/i.test(query)) return issue;
 
@@ -2963,6 +2982,15 @@ function refineTaxonomyRuleIntent(
     if (asksSickLeaveServiceEntitlement || asksSickLeaveOverlap) {
       return makeRuleIssue('MOM sick and hospitalisation leave eligibility and entitlement', 'EMPLOYEE');
     }
+    const asksAnnualLeaveEligibilityWithUnknownBalanceFacts = topicIds.has('mom_annual_leave') &&
+      /\bannual leave\b/i.test(text) && /\bprobation\b/i.test(text) &&
+      /\b(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+(?:completed\s+)?months?\b/i.test(text) &&
+      /\bexact (?:remaining )?balance\b/i.test(text) &&
+      /\bwithout (?:knowing|the)\b[^.!?;]{0,100}\b(?:approved unpaid leave|unpaid leave period|leave already used|leave used)\b/i.test(text) &&
+      !/\b(?:calculate|compute|work out|how many days exactly)\b/i.test(text);
+    if (population !== 'UNKNOWN' && employmentActEmployeeScope && asksAnnualLeaveEligibilityWithUnknownBalanceFacts) {
+      return makeRuleIssue('MOM annual leave eligibility, entitlement and proration', population);
+    }
     const asksItemisedPayslipRule = topicIds.has('mom-itemised-payslips') &&
       /\b(?:itemi[sz]ed (?:pay ?slips?|statements?)|pay ?slips?|payslips?)\b/i.test(text) &&
       /\b(?:employer|employee|worker|staff|me|my employer)\b/i.test(text) &&
@@ -3052,17 +3080,20 @@ function refineTaxonomyRuleIntent(
       return makeRuleIssue('ACRA annual return AGM declaration and filing requirements', 'COMPANY', ['acra_agm']);
     }
     if (topicIds.has('acra-annual-return-officer-particulars') &&
-        /\b(?:annual return|annual return filing)\b/i.test(text) &&
-        /\b(?:officer particulars?|auditors?|directors?|chief executives?|\bceo\b|perform\w* the ceo role)\b/i.test(text)) {
+        (/\b(?:annual return|annual return filing)\b/i.test(text) || Boolean(boundedAcraCommencement)) &&
+        (/\b(?:officer particulars?|auditors?|directors?|chief executives?|\bceo\b|perform\w* the ceo role|carry\w* out[^.!?;]{0,60}(?:ceo|chief executive))\b/i.test(text)
+          || Boolean(boundedAcraCommencement))) {
       const asksSeparateAnnualReturnOutcome = /\b(?:deadline|due date|extension|penalt\w*|filing process|filing procedure|how to file|when must (?:the )?company file|filing deadline)\b/i.test(text);
       const contextualAnnualReturn = asksSeparateAnnualReturnOutcome ? [] : ['acra_annual-returns'];
       return makeRuleIssue('ACRA annual return officer particulars and CEO role confirmation', 'COMPANY', contextualAnnualReturn);
     }
-    if (topicIds.has('acra_company-secretary') &&
-        /\b(?:company secretary|secretary appointment)\b/i.test(text) &&
-        /\b(?:appoint\w*|appointment|when must|how soon|deadline|within)\b/i.test(text) &&
-        /\b(?:in general|general rule|every company|all companies|a (?:singapore )?company|singapore companies|companies)\b/i.test(text)) {
-      return makeRuleIssue('ACRA general company secretary appointment requirements', 'COMPANY');
+    const asksCompanySecretaryAppointment = topicIds.has('acra_company-secretary') &&
+      /\b(?:company secretary|secretary appointment|secretary position)\b/i.test(text) &&
+      /\b(?:appoint\w*|appointment|when must|how soon|deadline|within|become|same person|leave|empty|vacant)\b/i.test(text);
+    if (asksCompanySecretaryAppointment &&
+        (boundedAcraSecretaryCase || /\b(?:in general|general rule|every company|all companies|a (?:singapore )?company|singapore companies|companies)\b/i.test(text))) {
+      const contextualAnnualReturn = acraAnnualReturnSecretarySubstitute && !separateAnnualReturnQuestion ? ['acra_annual-returns'] : [];
+      return makeRuleIssue('ACRA company secretary appointment and sole-director requirements', 'COMPANY', contextualAnnualReturn);
     }
     if (topicIds.has('acra_xbrl') &&
         /\b(?:xbrl|financial statement template)\b/i.test(text) &&
@@ -3108,6 +3139,23 @@ function refineTaxonomyRuleIntent(
           ...issue.mappedTopicIds.filter(topicId => topicId === 'mas-lfmc')])]
       };
       return roleChangeIssue;
+    }
+
+    const asksLfmcSubsequentNotificationComparison = topicIds.has('mas-lfmc-key-appointments') &&
+      /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
+      /\b(?:ceo resign\w*|resign\w*|resignation)\b/i.test(text) &&
+      (/\b(?:director|ceo)\b[\s\S]{0,120}\b(?:address|particulars?)\b|\b(?:address|particulars?)\b[\s\S]{0,120}\b(?:director|ceo)\b/i.test(text)) &&
+      /\b(?:notification|notify|same|outer limit|14[- ]day|fourteen[- ]day|form 11|appointment approval|row 3|row 17)\b/i.test(text);
+    if (asksLfmcSubsequentNotificationComparison) {
+      const asksSeparateLicensingQuestion = hasSeparateMasLfmcLicensingAsk(query);
+      const notificationIssue = makeRuleIssue('MAS LFMC CEO and Director appointment and subsequent notification requirements', 'COMPANY');
+      if (!asksSeparateLicensingQuestion) return {
+        ...notificationIssue,
+        mappedTopicIds: notificationIssue.mappedTopicIds.filter(topicId => topicId !== 'mas-lfmc'),
+        contextualTopicIds: [...new Set([...(notificationIssue.contextualTopicIds || []),
+          ...issue.mappedTopicIds.filter(topicId => topicId === 'mas-lfmc')])]
+      };
+      return notificationIssue;
     }
   }
 
@@ -3186,15 +3234,21 @@ function refineTaxonomyRuleIntent(
 
   const separateCmsLicenceQuestion = /\b(?:and|also|or)\b[^.!?;]{0,35}\b(?:what|which)\b[^.!?;]{0,35}\b(?:cms\s+)?licen[cs]e\b/i.test(text) ||
     hasSeparateMasLfmcLicensingAsk(query);
-  const futureSfa04N24Notice = /\b(?:sfa\s*04[- ]n24|notice\s+sfa\s*04[- ]n24)\b/i.test(text) &&
-    /\b2027\b/i.test(text) &&
-    !/\b(?:historical|historic|before 2027|prior to 2027|which law was in force|legal rule in force|transition before)\b/i.test(text);
+  const futureSfa04N24Notice = Boolean(boundedMasCommencement);
   if (issue.domain === 'MAS_FUNDS' && futureSfa04N24Notice && topicIds.has('mas-cms-licence') &&
       !separateCmsLicenceQuestion) {
     return contextualizeTopics(['mas-cms-licence']);
   }
-  if (issue.domain === 'MAS_FUNDS' && futureSfa04N24Notice && topicIds.has('mas-notices-guidelines')) {
-    return makeRuleIssue('SFA 04-N24 reporting of misconduct by representatives from 1 January 2027', 'COMPANY');
+  if (issue.domain === 'MAS_FUNDS' && futureSfa04N24Notice &&
+      (topicIds.has('mas-notices-guidelines') || topicIds.has('mas-regulatory-reporting'))) {
+    const noticeIssue = makeRuleIssue('SFA 04-N24 reporting of misconduct by representatives from 1 January 2027', 'COMPANY');
+    return {
+      ...noticeIssue,
+      mappedTopicIds: [...new Set([...noticeIssue.mappedTopicIds.filter(id => id !== 'mas-notices-guidelines'),
+        'mas-regulatory-reporting'])],
+      contextualTopicIds: [...new Set([...(noticeIssue.contextualTopicIds || []),
+        ...(topicIds.has('mas-notices-guidelines') ? ['mas-notices-guidelines'] : [])])]
+    };
   }
 
   const lfmcFinancialReporting = /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
@@ -3223,7 +3277,7 @@ function refineTaxonomyRuleIntent(
 }
 
 function isCpfEmployerRefundContext(query: string): boolean {
-  const employerApplicantContext = /\b(?:we (?:paid|found|submitted|contributed|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query);
+  const employerApplicantContext = /\b(?:we (?:paid|found|discover\w*|submitted|contributed|overpaid|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query);
   const individualEmployeeVoice = /\b(?:my employer|to my employer|my (?:own |joining )?(?:bonus|wages?|cpf)|i (?:have|had|need|must|want|would) to repay)\b/i.test(query);
   return /\b(?:cpf|central provident fund)\b/i.test(query) &&
     /\b(?:refund\w*|overpaid|overpayment|excess (?:cpf )?contributions?|wrongly paid|mistaken (?:cpf )?contributions?|paid in error|recover\w*|money back)\b/i.test(query) &&

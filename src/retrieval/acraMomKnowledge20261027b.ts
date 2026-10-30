@@ -5,6 +5,7 @@ import type {
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import { acraOfficerCommencementScope } from './statutoryCommencementScope';
 
 export interface AcraMomKnowledgeRuleRequest {
   authority: string;
@@ -69,7 +70,7 @@ const RULES: readonly Rule[] = [
     limitations: ['General change explanation only; does not verify what particulars are currently recorded for an entity.', 'Do not apply this change to filings submitted before 20 October 2026 without contemporaneous evidence.', 'The notice gives examples of particulars and says “where applicable”; it is not a field-by-field eform schema.'],
     requiredSourceTerms: ['commence on 20 october 2026', 'will need to confirm that the latest particulars provided to acra are accurate', 'directors, chief executive officers, secretaries, auditors and relevant members', 'identification details, nationality, contact address, appointment dates, registered office address', 'additional question in the annual return eform', 'individuals performing the role of chief executive officer', 'companies limited by guarantee', 'total number of members'],
     quoteMatchers: [/The next phase of amendments[^.]*commence on 20 October 2026\./i, /Companies filing annual returns[^.]*relevant members\./i, /These include particulars[^.]*where applicable\./i, /There will also be an additional question[^.]*company\./i, /For companies limited by guarantee[^.]*accurate\./i],
-    queryPattern: /(?=[\s\S]*\b(?:annual[- ]returns?|annual filing)\b)(?=[\s\S]*\b(?:officers?|directors?|secretar(?:y|ies)|auditors?|ceos?|chief executive|particulars?|member count)\b)/i,
+    queryPattern: /(?=[\s\S]*\b(?:annual[- ]returns?|annual filing|return)\b)(?=[\s\S]*\b(?:officers?|directors?|secretar(?:y|ies)|auditors?|ceos?|chief executive|particulars?|member count|officer[- ]confirm(?:ation)?|new question)\b)/i,
     subjectPattern: /\b(?:annual returns?|officer particular|director|secretary|auditor|chief executive|ceo)\b/i
   },
   {
@@ -198,6 +199,7 @@ function exactOfficialUrl(actual: string | undefined, expected: string): boolean
 }
 
 function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
+  if (rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020' && acraOfficerCommencementScope(query)) return false;
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
   const explicitDates = [...new Set([...query.matchAll(/\b(?:\d{1,2}\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,)?\s+\d{4}\b|\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b|\b\d{4}-\d{2}-\d{2}\b/gi)].map(match => match[0].toLowerCase().replace(/,/g, '').replace(/\s+/g, ' ').trim()))];
   const allowedBoundary = rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020' ? '20 october 2026'
@@ -381,8 +383,17 @@ function sourceFor(rule: Rule, source: AuthorityPresentedSource, issueId: string
       .some(group => sourceSupports(rule, group.map(claim => claim.text).join('\n')));
 }
 
-function answerText(rule: Rule): string {
-  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} A case-specific conclusion requires: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}`;
+function answerText(rule: Rule, query: string): string {
+  const scope = rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020'
+    ? acraOfficerCommencementScope(query) : undefined;
+  const commencementClarification = scope?.filingDate
+    ? scope.filingDate < '2026-10-20'
+      ? 'The stated commencement does not make this new change applicable to the filing date supplied before 20 October 2026. This notice does not establish the complete requirements that governed that earlier filing.'
+      : 'For a filing dated 20 October 2026 or later, the notice states that this change applies from its commencement date.'
+    : scope
+      ? 'The notice states that the new change applies from 20 October 2026; it does not establish what requirements governed filings before that date.'
+      : '';
+  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} A case-specific conclusion requires: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')} ${commencementClarification}`.trim();
 }
 
 /** Adds a general rule explanation only when verified issue-bound claims from one exact official source support it. */
@@ -407,5 +418,5 @@ export function getAcraMomKnowledgeEvidence(
       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
   const source = stream.sources.find(candidate => sourceFor(rule, candidate, issue.id));
   if (!source) return undefined;
-  return { authority: rule.authority, title: source.title, officialUrl: rule.officialUrl, text: answerText(rule) };
+  return { authority: rule.authority, title: source.title, officialUrl: rule.officialUrl, text: answerText(rule, query) };
 }

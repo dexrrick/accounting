@@ -1,0 +1,119 @@
+{
+  "status": "FOUR_ORIGINAL_CAPTURES_RESTORED_ALL_FIVE_MANIFEST_ENTRIES_MATCH",
+  "archive": {
+    "path": "artifacts/statutory-expansion-20261026/review-source-overlay.zip",
+    "sha256": "bd14810bb85b1bdc9af4200a9c2e844a577b6bd843d08626173a2c6578bd3631",
+    "adjacentSha256Record": "artifacts/statutory-expansion-20261026/review-source-overlay.zip.sha256",
+    "signature": "No digital signature was verified; the archive hash matches the adjacent SHA-256 record."
+  },
+  "provenance": {
+    "manifest": "artifacts/statutory-expansion-20261026/implementation-manifest.json",
+    "sourceOverlayEntryRoot": "source/",
+    "reviewHandoff": "artifacts/statutory-expansion-20261026/review-handoff.txt",
+    "publishedSnapshotCommit": "c66586b4a6c13afd41d2e468a9c8e4504a55286e",
+    "baseCommit": "051f503f26b162038e19a5a0d2cd430e851f02cf"
+  },
+  "fixtures": [
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html",
+      "archiveEntry": "source/tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html",
+      "bytes": 9756,
+      "expectedSha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+      "restoredSha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+      "gitTextAttribute": "unset",
+      "gitWhitespace": "-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol"
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html",
+      "archiveEntry": "source/tests/fixtures/statutoryExpansionSources/mom-salary-deductions-native.html",
+      "bytes": 62360,
+      "expectedSha256": "9c70f7305f2d41440ea82f194d517f4ee5c235c117dab04fc3a09105355a9aac",
+      "restoredSha256": "9c70f7305f2d41440ea82f194d517f4ee5c235c117dab04fc3a09105355a9aac",
+      "gitTextAttribute": "unset",
+      "gitWhitespace": "-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol"
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/iras-eci-filing-native.html",
+      "archiveEntry": "source/tests/fixtures/statutoryExpansionSources/iras-eci-filing-native.html",
+      "bytes": 4503,
+      "expectedSha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+      "restoredSha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+      "gitTextAttribute": "unset",
+      "gitWhitespace": "-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol"
+    },
+    {
+      "path": "tests/fixtures/statutoryExpansionSources/cpf-wage-classification.txt",
+      "archiveEntry": "source/tests/fixtures/statutoryExpansionSources/cpf-wage-classification.txt",
+      "bytes": 2247,
+      "expectedSha256": "67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd",
+      "restoredSha256": "67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd",
+      "gitTextAttribute": "unset",
+      "gitWhitespace": "-blank-at-eol,-blank-at-eof,-space-before-tab,cr-at-eol"
+    }
+  ],
+  "focusedResults": [
+    {
+      "suite": "tests/regression/test_iras_cpf_expansion_rules.mjs",
+      "exitCode": 1,
+      "result": "Failed before reaching the restored input-tax fixture assertion: iras-eci-filing-native.html SHA-256 mismatch; actual 14aada17d5ee0157e65c8f90a1b8536b6975f52b5c52dc85448b6d508d86ebbc, expected 43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7."
+    },
+    {
+      "suite": "tests/regression/test_mom_acra_mas_expansion_rules.mjs",
+      "exitCode": 0,
+      "result": "MOM/ACRA/MAS statutory expansion rule checks passed."
+    },
+    {
+      "suite": "tests/regression/test_iras_cpf_expansion_rules.mjs",
+      "exitCode": 0,
+      "result": "IRAS/CPF statutory expansion rules: passed."
+    }
+  ],
+  "changes": "Only four manifest-listed original fixture captures and four path-specific .gitattributes rules were changed. No expected hashes or regression gates were edited.",
+  "manifestAudit": {
+    "manifest": "tests/fixtures/statutoryExpansionSources/iras-cpf-source-manifest.json",
+    "allListedSourceAndFullPageHashesMatch": true,
+    "entries": [
+      {
+        "path": "tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-native.html",
+        "bytes": 9756,
+        "expectedSha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+        "actualSha256": "555b359e9042a5f0ba717a379857902833c5e813a1f97d2e5b456a76648749c6",
+        "matches": true
+      },
+      {
+        "path": "tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-page.html",
+        "bytes": 327552,
+        "expectedSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "actualSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+        "matches": true
+      },
+      {
+        "path": "tests/fixtures/statutoryExpansionSources/iras-eci-filing-native.html",
+        "bytes": 4503,
+        "expectedSha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+        "actualSha256": "43845c83661d3c49a75f3b564d1c64c882a926056cbca25335ce3350b9cf6ca7",
+        "matches": true
+      },
+      {
+        "path": "tests/fixtures/statutoryExpansionSources/iras-eci-filing-page.html",
+        "bytes": 321653,
+        "expectedSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+        "actualSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+        "matches": true
+      },
+      {
+        "path": "tests/fixtures/statutoryExpansionSources/cpf-wage-classification.txt",
+        "bytes": 2247,
+        "expectedSha256": "67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd",
+        "actualSha256": "67e8dbbb06449244a56995440ec9ff62e475660cc00382665b8faa1a33e7f7bd",
+        "matches": true
+      }
+    ]
+  },
+  "recoveryHistory": {
+    "additionalRestoration": "Recovered ECI native excerpt and CPF wage-classification text from the same archive after full manifest audit exposed those mismatches.",
+    "priorFocusedAttemptRetained": true,
+    "finalIrAsSuiteResult": "PASS",
+    "priorMomSuiteResult": "PASS"
+  }
+}

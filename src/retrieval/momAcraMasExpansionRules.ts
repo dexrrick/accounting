@@ -64,13 +64,39 @@ function visibleText(value: string): string {
     .trim();
 }
 
-function hasPersonalOrHistoricalScope(query: string): boolean {
+function hasNonCurrentHistoricalScope(query: string): boolean {
   const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
   const mentionedYears = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
   return !mentionedYears.every(year => year === currentYear)
-    || /\b(?:historical|historic|previous|prior year|former|old|superseded)\b/i.test(query)
+    || /\b(?:historical|historic|previous|prior year|former|old|superseded)\b/i.test(query);
+}
+
+function hasPersonalOrHistoricalScope(query: string): boolean {
+  return hasNonCurrentHistoricalScope(query)
     || /\b(?:my|our|this|these)\s+(?:company|employer|employee|salary|fund|fund manager|secretary)\b/i.test(query)
     || /\b(?:calculate|compute|estimate|how much|what amount|amount of deduction|eligible (?:person|candidate) for this role)\b/i.test(query);
+}
+
+function isAcraSecretaryCompanyFactRequest(query: string): boolean {
+  const companyFacts = /\b(?:our|this|the)\s+(?:(?:singapore|private|public|local)\s+){0,2}company\b/i.test(query)
+    && /\b(?:incorporated|registered|registration)\b/i.test(query)
+    && /\b(?:one|sole|single|only)\s+director\b/i.test(query)
+    && /\bcompany\s+secretar(?:y|ies)\b/i.test(query);
+  const asksKnownSecretaryRequirement = /\b(?:become|act as|same person|appoint\w*|appointment|leave|keep|empty|vacan\w*|within|deadline)\b/i.test(query)
+    && /\b(?:six|6)\s+months?\b|\bannual return\b/i.test(query);
+  return companyFacts && asksKnownSecretaryRequirement;
+}
+
+function isBoundedAcraSecretaryCompanyFactQuestion(query: string): boolean {
+  const outOfScopeEntity = /\b(?:foreign compan(?:y|ies)|overseas[- ]incorporated|incorporated overseas|variable capital compan(?:y|ies)|\bvcc\b|sole proprietorship|partnership|limited liability partnership|business trust)\b/i.test(query);
+  const referenceDate = TargetDateResolver.CURRENT_SYSTEM_DATE;
+  const resolvedDate = defaultTargetDateResolver.resolveTargetDate(query, referenceDate);
+  const explicitHistoricalCutoff = /\b(?:before|prior to|earlier than)\s+(?:(?:the|date of)\s+)?(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})\b/i.test(query);
+  const relativeHistoricalPeriod = /\b(?:last|previous|prior|past)\s+(?:\d+\s+)?(?:days?|weeks?|months?|quarters?|years?|financial years?|reporting periods?)\b|\b(?:yesterday|the day before|earlier this (?:week|month|quarter|year))\b/i.test(query);
+  return isAcraSecretaryCompanyFactRequest(query) && !outOfScopeEntity
+    && !hasNonCurrentHistoricalScope(query)
+    && !(resolvedDate.source === 'EXPLICIT' && resolvedDate.targetDate !== referenceDate)
+    && !explicitHistoricalCutoff && !relativeHistoricalPeriod;
 }
 
 function recognizeRule(input: Pick<MomAcraMasExpansionRuleRequest,
@@ -86,7 +112,8 @@ function recognizeRule(input: Pick<MomAcraMasExpansionRuleRequest,
 
   if (input.authority === 'ACRA' && input.topicId === 'acra_company-secretary'
     && /\b(?:company\s+secretar(?:y|ies)|secretary)\b/i.test(input.query)
-    && /\b(?:eligible|eligibility|qualif\w*|who can|who may|requirements?|residen(?:t|cy|ce)|vacan(?:cy|t)|appoint(?:ment|ed)?|deadline|fine|duties|responsibilities)\b/i.test(input.query)
+    && (/\b(?:eligible|eligibility|qualif\w*|who can|who may|requirements?|residen(?:t|cy|ce)|vacan(?:cy|t)|appoint(?:ment|ed)?|deadline|fine|duties|responsibilities)\b/i.test(input.query)
+      || isAcraSecretaryCompanyFactRequest(input.query))
     && /\b(?:company\s+secretar(?:y|ies)|secretary)\b/i.test(input.subject)) {
     return 'ACRA_SECRETARY_REQUIREMENTS';
   }
@@ -335,7 +362,8 @@ function selectedQuotes(rule: ExpansionRule, sourceText: string): string[] {
 export function supportMomAcraMasExpansionRule(input: MomAcraMasExpansionRuleRequest): boolean | undefined {
   const rule = recognizeRule(input);
   if (!rule) return undefined;
-  if (!isCurrentGeneralQuestion(input.query)) return false;
+  if (!isCurrentGeneralQuestion(input.query) &&
+      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(input.query))) return false;
   if (input.officialUrl && input.officialUrl !== sourceUrl(rule)) return false;
   return proves(rule, input.sourceText);
 }
@@ -400,7 +428,8 @@ export function getMomAcraMasExpansionEvidence(
 ): MomAcraMasExpansionRuleEvidence | undefined {
   const rule = recognizeRule({ authority: stream.authority, topicId: inferTopicId(stream.authority),
     query, subject: issue.subject });
-  if (!rule || !isCurrentGeneralQuestion(query)) return undefined;
+  if (!rule || (!isCurrentGeneralQuestion(query) &&
+      !(rule === 'ACRA_SECRETARY_REQUIREMENTS' && isBoundedAcraSecretaryCompanyFactQuestion(query)))) return undefined;
   const authority = ruleAuthority(rule);
   const expectedDomain = rule === 'ACRA_SECRETARY_REQUIREMENTS' ? 'ACRA_CORPORATE'
     : rule === 'MAS_VCFM_ANNUAL_DECLARATION' || rule === 'MAS_VCFM_NIL_MISCONDUCT_RETURN'

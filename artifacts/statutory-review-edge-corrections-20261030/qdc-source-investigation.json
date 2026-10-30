@@ -1,0 +1,11 @@
+{
+  "checkedOnSingaporeDate": "30/10/2026",
+  "status": "PRECISE_VCFM_QDC_FORM_NOT_ESTABLISHED",
+  "checks": [
+    { "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf", "result": "VCFM-specific toolkit inspected; no QDC or Quarterly text match. Absence is not proof of exemption." },
+    { "url": "https://www.mas.gov.sg/statistics/survey-submissions", "result": "Official public survey directory inspected; no QDC entry found. Other surveys cannot substitute for the precise QDC requirement." },
+    { "url": "https://masnet.mas.gov.sg/dcg/", "result": "Official public migration directory inspected; no Quarterly Fund entry found." },
+    { "method": "Targeted web searches", "result": "Industry accounts discuss QDC, but no exact first-party VCFM form, scope and deadline evidence was verified. These accounts were not admitted as authoritative statutory rules." }
+  ],
+  "limits": "No inference from generic LFMC financial-return rows, no inferred VCFM exemption, no precise form or deadline invented, no source activation."
+}

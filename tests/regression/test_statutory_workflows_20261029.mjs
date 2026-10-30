@@ -22,6 +22,28 @@ const priorManifestRoot = new URL('../fixtures/statutoryDevelopment20261027/', i
 const priorManifest = JSON.parse(readFileSync(new URL('iras-cpf-mas-source-manifest.json', priorManifestRoot), 'utf8'));
 const resolver = new TargetDateResolver();
 
+const ordinaryBonusRefundQuestion = 'We accidentally paid our employee’s ordinary bonus twice. This was a payroll duplication, not a conditional payment. Under the employment terms, the employee had to repay the bonus on 15/09/2026. The payment record says PAYMENTS RECEIVED ON 01/10/2025. What is our CPF refund deadline?';
+const ordinaryBonusRefundClassification = classifyQuestion(ordinaryBonusRefundQuestion);
+assert.equal(ordinaryBonusRefundClassification.intent, 'STATUTORY_ADVISORY',
+  'Dates in a CPF refund-timing request do not turn an ordinary payroll duplication into a payroll calculation.');
+assert.equal(ordinaryBonusRefundClassification.calculationRequired, false);
+assert.equal(ordinaryBonusRefundClassification.journalEntryRequired, false);
+const explicitPayrollCalculationClassification = classifyQuestion('Calculate an employee’s monthly salary and CPF contribution on a salary of SGD 5,000.');
+assert.equal(explicitPayrollCalculationClassification.intent, 'TRANSACTION');
+assert.equal(explicitPayrollCalculationClassification.calculationRequired, true,
+  'An explicit salary and CPF amount calculation remains a calculation request.');
+assert.equal(explicitPayrollCalculationClassification.journalEntryRequired, true,
+  'An explicit salary and CPF amount calculation retains its payroll-entry path.');
+const cpfAmountAndRefundClassification = classifyQuestion('How many dollars of CPF do we owe on the employee salary of S$5,000, and when should we request a refund of last month’s overpayment?');
+assert.equal(cpfAmountAndRefundClassification.calculationRequired, true,
+  'A separate CPF dollar amount request remains a calculation when it shares a question with refund timing.');
+const variedCpfAmountAndRefundClassification = classifyQuestion('What CPF contribution amount is due on an employee salary of S$5,000, and when should we request a refund for last month’s overpayment?');
+assert.equal(variedCpfAmountAndRefundClassification.calculationRequired, true,
+  'A differently worded contribution-amount question also remains calculable beside refund timing.');
+const explicitPayrollJournalClassification = classifyQuestion('Show the journal entry for an employee salary of SGD 5,000 and employer CPF contributions.');
+assert.equal(explicitPayrollJournalClassification.journalEntryRequired, true,
+  'An explicit salary and CPF journal request retains the payroll-entry path.');
+
 for (const [question, topic] of [
   ['When must an employer issue an itemised payslip, and when must salary be paid?', 'mom-salary-payment'],
   ['What is the CPF employer refund deadline, and when are monthly CPF contributions payable?', 'cpf-contribution-due-dates'],
@@ -39,6 +61,7 @@ for (const [question, topic] of [
 for (const question of [
   'Our registered office address changed on 1 January 2010. What deadline did we have back then?',
   'Our registered office address changed on 1 January 2010. What deadline did we have at that time?',
+  'Our registered office address changed on 1 January 2010. What rules applied then?',
   'Our registered office address changed on 12 October 2026. What was the public holiday pay entitlement then?'
 ]) {
   assert.equal(resolver.resolveAuthorityEvidenceDate(question, '2026-10-29').source, 'EXPLICIT',
@@ -190,12 +213,20 @@ for (const sample of cases) {
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 31/02/2026.', 'NO_MATCH', /one-year outer limit is/i],
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 29/02/2024.', 'NO_MATCH', /one-year outer limit is/i],
       ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 15/09/2026; a mutual agreement set the repayment due date as 20/09/2026.', 'NO_MATCH', /one-year outer limit is/i],
-      ['We received a mistaken CPF contribution; what is the refund deadline? PAYMENTS RECEIVED ON 6 November 2025.', 'MATCH', /one-year outer limit 06\/11\/2026/i]
+      ['We received a mistaken CPF contribution; what is the refund deadline? PAYMENTS RECEIVED ON 6 November 2025.', 'MATCH', /one-year outer limit 06\/11\/2026/i],
+      ['We accidentally paid our employee’s ordinary bonus twice. This was a payroll duplication, not a conditional payment. Under the employment terms, the employee had to repay the bonus on 15/09/2026. The payment record says PAYMENTS RECEIVED ON 01/10/2025. What is our CPF refund deadline?', 'MATCH', /one-year outer limit 01\/10\/2026/i, /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: the bonus was not subject to any service condition. Under the employment terms, the employee had to repay the bonus on 15/09/2026. PAYMENTS RECEIVED ON 01/10/2025.', 'MATCH', /one-year outer limit 01\/10\/2026/i, /one-year outer limit is 15\/09\/2027/i],
+      ['CPF was paid on a conditional bonus, but this was an ordinary payroll duplication, not a conditional payment. The employee must repay the bonus on 15/09/2026. PAYMENTS RECEIVED ON 01/10/2025. What is our CPF refund deadline?', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF overpayment refund deadline: the payment record says PAYMENTS RECEIVED ON 01/10/2025; a second record says PAYMENTS RECEIVED ON 01/10/2025. We do not know which record relates to the overpayment.', 'NO_MATCH', /one-year outer limit is/i]
     ];
-    for (const [query, outcome, pattern] of dateApplications) {
+    for (const [query, outcome, pattern, forbidden] of dateApplications) {
       const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
       assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
-      if (outcome === 'MATCH') assert.match(dateExplanation.text, pattern);
+      if (outcome === 'MATCH') {
+        assert.match(dateExplanation.text, pattern);
+        if (forbidden) assert.doesNotMatch(dateExplanation.text, forbidden,
+          'Explicit payroll-duplication facts use the ordinary payment date rather than a bonus repayment date.');
+      }
       else assert.doesNotMatch(dateExplanation.text, pattern,
         'Invalid, leap-day, or competing dates do not produce a calculated deadline.');
     }
@@ -387,7 +418,48 @@ const appCases = [
     expected: /prior MAS approval using Form 11.*Non-Executive to Executive.*already being on the board does not remove approval.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*specifically attached to the resignation/i },
   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
     query: 'We paid wrongly submitted CPF contributions on 6 November 2025. The payment record says PAYMENTS RECEIVED ON 6 November 2025. When is the refund request due?',
-    expected: /PAYMENTS RECEIVED ON.*06\/11\/2025.*one-year outer limit 06\/11\/2026/i }
+    expected: /PAYMENTS RECEIVED ON.*06\/11\/2025.*one-year outer limit 06\/11\/2026/i },
+  { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+    query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed 20 days ago, and our entity email changed forty days ago. Are we late with both updates?',
+    expected: /within 30 days/i, forbidden: /20 days is within the foreign-company 30-day period.*not yet late/i },
+  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
+    query: 'Our company has YA 2025 records and was dissolved on 01/01/2026. Can we shred the records on 01/10/2030?',
+    expected: /YA-based period for YA 2025 ends on 31 December 2029.*five-year post-dissolution period from 01\/01\/2026 ends on 01\/01\/2031.*retain the records through at least 01\/01\/2031.*do not shred the records then/i },
+  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
+    query: 'Our company has YA 2025 records, was wound up on 01/01/2025 and dissolved on 01/01/2026. Can we shred the records on 01/01/2031?',
+    expected: /post-dissolution period from 01\/01\/2026.*retain the records through at least 01\/01\/2031.*do not shred the records then/i },
+  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
+    query: 'Our company has YA 2025 records and was dissolved, and plans to shred records on 01/10/2030. Is that safe?',
+    expected: /dissolution date is not reliably stated.*do not treat the YA-based period as sufficient for destruction/i,
+    forbidden: /2035|safe to shred|may destroy the records/i },
+  { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+    query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed 20 days ago. The company email was updated 40 days ago. Are both changes still within the notification period?',
+    expected: /within 30 days/i, forbidden: /20 days is within the foreign-company 30-day period.*not yet late/i },
+  { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+    query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed 20 days ago. Our entity email was also updated, but I do not know when. Are both updates late?',
+    expected: /within 30 days/i, forbidden: /20 days is within the foreign-company 30-day period.*not yet late/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We overpaid CPF on an unconditional joining bonus. The payment record says PAYMENTS RECEIVED ON 01/10/2025, and a separate staff-loan repayment is due on 15/09/2026. What is the refund deadline?',
+    expected: /one-year outer limit 01\/10\/2026/i, forbidden: /one-year outer limit is 15\/09\/2027/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We overpaid CPF. One payment record says PAYMENTS RECEIVED ON 01/10/2025, another says PAYMENTS RECEIVED ON 15/09/2026. We do not know which record relates to this overpayment. What is our refund deadline?',
+    expected: /immediately and no later than one year.*PAYMENTS RECEIVED ON/i,
+    forbidden: /one-year outer limit(?: is)? (?:01\/10\/2026|15\/09\/2027)/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: ordinaryBonusRefundQuestion,
+    expected: /one-year outer limit 01\/10\/2026/i, forbidden: /one-year outer limit is 15\/09\/2027/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We overpaid CPF on an ordinary wage payment. It was not subject to any service condition. Under the employment terms, the employee had to repay that wage on 15/09/2026. The payment record says PAYMENTS RECEIVED ON 01/10/2025. What is the refund deadline?',
+    expected: /one-year outer limit 01\/10\/2026/i, forbidden: /one-year outer limit is 15\/09\/2027/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF was paid on a conditional joining bonus. Under the employment terms, the employee had to repay a staff loan rather than the bonus on 15/09/2026. What is the employer refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i, forbidden: /one-year outer limit is 15\/09\/2027/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026, but a mutual agreement sets the bonus repayment due date as 20/09/2026. We are applying for a refund. Which date is used?',
+    expected: /conditional-wage refunds use the repayment due date/i, forbidden: /one-year outer limit is 15\/09\/2027|one-year outer limit is 20\/09\/2027/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025, then later we discovered the mistake. Do we have a year to request our money back?',
+    expected: /06\/11\/2026.*discovery of the error does not restart/i },
 ];
 const appFixtureBodies = new Map(manifest.sources.map(item => [item.url,
   readFileSync(new URL(item.fixture, fixtureRoot))]));
@@ -436,10 +508,12 @@ try {
         `${sample.authority}: processAccountingQuery rendered the source-backed workflow explanation.`);
       assert.match(response.messageText, new RegExp(sample.expected.source, 'i'),
         `${sample.authority}: the rendered answer includes the substantive workflow rule.`);
+      if (sample.forbidden) assert.doesNotMatch(response.messageText, new RegExp(sample.forbidden.source, 'i'),
+        `${sample.authority}: the rendered answer withholds an unsupported case-specific deadline conclusion.`);
       appResults.push({ authority: sample.authority, topic: sample.topic, ok: true,
         evidenceStatus: stream.evidenceStatus, officialUrl: sample.url });
     } catch (error) {
-      appResults.push({ authority: sample.authority, topic: sample.topic, ok: false,
+      appResults.push({ authority: sample.authority, topic: sample.topic, query: sample.query, ok: false,
         failure: String(error?.message || error).slice(0, 240),
         answer: (() => {
           const marker = `${sample.authority} rule explanation:`;

@@ -5,6 +5,7 @@ import type {
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
 import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+import { hasConflictingMasNoticeIdentity, masSfa04N24CommencementScope } from './statutoryCommencementScope';
 
 export interface IrasMasKnowledgeRequest {
   authority: string;
@@ -271,6 +272,7 @@ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' 
 }
 
 function hasNonCurrentScope(query: string, rule: Rule): boolean {
+  if (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && masSfa04N24CommencementScope(query)) return false;
   if (query.length > MAX_QUERY_LENGTH || /\b(?:historical|historic|last year|previous|prior period|past period|former rule|superseded rule)\b/i.test(query)) return true;
   const asksLegalVersion = /\b(?:effective(?: date)?|in force|came into force|took effect|commenced on|which law applied|governed by|legal|statutory)\b/i.test(query);
   const hasDatedWhtPayment = rule.id === 'IRAS_WHT_FILING_DATE' && !asksLegalVersion &&
@@ -397,6 +399,7 @@ function exactUrl(actual: string | undefined, expected: string): boolean {
 export function supportIrasMasKnowledgeRule(request: IrasMasKnowledgeRequest): boolean | undefined {
   const rule = namedRule(request);
   if (!rule) return undefined;
+  if (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && hasConflictingMasNoticeIdentity(request.query)) return false;
   if (hasGstInputScopeConflict(request)) return false;
   if (rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && isMedicalInsurancePremiumPremise(request)) return false;
   if (rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' && request.officialUrl !== undefined && request.officialUrl !== rule.officialUrl) return false;
@@ -418,6 +421,7 @@ export function hasIrasMasKnowledgeContradiction(request: IrasMasKnowledgeReques
   if (hasGstInputScopeConflict(request)) return true;
   const rule = namedRule(request);
   return Boolean(rule && ((rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && isMedicalInsurancePremiumPremise(request))
+    || (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && hasConflictingMasNoticeIdentity(request.query))
     || (rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && hasNonCurrentScope(request.query, rule))
     || contradicts(rule, request.sourceText)));
 }
@@ -453,7 +457,9 @@ export function getIrasMasKnowledgeEvidence(
     if (candidate.authority !== stream.authority) return false;
     return namedRule({ authority: stream.authority, topicId: candidate.topicIds[0], query, subject: issue.subject })?.id === candidate.id;
   });
-  if (!resolved || hasNonCurrentScope(query, resolved) || stream.authority !== resolved.authority) return undefined;
+  if (!resolved || stream.authority !== resolved.authority
+      || (resolved.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' && hasConflictingMasNoticeIdentity(query))
+      || hasNonCurrentScope(query, resolved)) return undefined;
   // Authority workstreams use IRAS_CORPORATE_TAX for ECI/WHT; issue topic/domain
   // semantics remain specific to IRAS income tax and are not rewritten here.
   const expectedDomain = resolved.authority === 'IRAS'
@@ -465,7 +471,7 @@ export function getIrasMasKnowledgeEvidence(
       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
   const source = stream.sources.find(candidate => sourceFor(resolved, candidate, issue.id));
   if (!source) return undefined;
-  return { authority: resolved.authority, title: source.title, officialUrl: resolved.officialUrl, text: answerText(resolved) };
+  return { authority: resolved.authority, title: source.title, officialUrl: resolved.officialUrl, text: answerText(resolved, query) };
 }
 
 function proofQuery(rule: Rule): string {
@@ -492,14 +498,20 @@ function proofSubject(rule: Rule): string {
   }
 }
 
-function answerText(rule: Rule): string {
+function answerText(rule: Rule, query: string): string {
   switch (rule.id) {
     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return 'IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts.';
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
     case 'IRAS_ECI_PRACTICAL_WAIVER': return 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
-    case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'MAS Notice SFA 04-N24 takes effect on 1 January 2027. It applies to CMS licence holders and persons exempt under SFA section 99(1)(a)–(d), for misconduct by their representatives and former representatives. A CMI must submit a Misconduct Report no later than 21 calendar days after the date it first has reasonable grounds to believe the current or former representative committed misconduct during the representative period, unless the Authority allows a longer period in writing. Paragraph 20 addresses a pre-2027 reasonable-grounds case where no Misconduct Report in the form set out in the cancelled Notice had been submitted by 1 January 2027: the report under SFA 04-N24 is due within 21 calendar days after 1 January 2027, or a longer period allowed in writing. Paragraph 21 keeps the cancelled Notice applicable where a report was submitted before 1 January 2027 or was required by 31 December 2026. A case-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts.';
+    case 'MAS_SFA_MISCONDUCT_REPORTING_2027': {
+      const scope = masSfa04N24CommencementScope(query);
+      const clarification = scope?.refersTo2026Matter
+        ? 'The ordinary SFA 04-N24 rule is not yet in effect for an October or December 2026 matter. The 2027 notice does not by itself establish what earlier reporting duty applied or prove that none existed. Paragraph 21 must be checked first: it continues the cancelled Notice for matters with a report already submitted before 1 January 2027 or due by 31 December 2026. Paragraph 20 applies only to its separate pre-2027 reasonable-grounds cases not covered by that paragraph 21 transition.'
+        : 'The notice’s stated commencement is 1 January 2027; this source does not establish what reporting duties applied before that date.';
+      return `MAS Notice SFA 04-N24 takes effect on 1 January 2027. It applies to CMS licence holders and persons exempt under SFA section 99(1)(a)–(d), for misconduct by their representatives and former representatives. A CMI must submit a Misconduct Report no later than 21 calendar days after the date it first has reasonable grounds to believe the current or former representative committed misconduct during the representative period, unless the Authority allows a longer period in writing. Paragraph 21 keeps the cancelled Notice applicable where a report was submitted before 1 January 2027 or was required by 31 December 2026. Paragraph 20 addresses a pre-2027 reasonable-grounds case where no Misconduct Report in the form set out in the cancelled Notice had been submitted by 1 January 2027: the report under SFA 04-N24 is due within 21 calendar days after 1 January 2027, or a longer period allowed in writing. A case-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts. ${clarification}`;
+    }
     case 'MAS_LFMC_TOOLKIT_SCOPE': return 'The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits.';
   }
 }

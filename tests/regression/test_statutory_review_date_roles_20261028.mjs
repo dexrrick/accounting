@@ -89,14 +89,16 @@ assert.equal(supportAcraMomKnowledgeRule(acraInput), true,
 assert.ok(selectAcraMomKnowledgeQuotes(acraInput).length > 0);
 
 const preCommencement = 'Our return was filed on 19 October 2026. Did the officer-confirmation change that commenced on 20 October already govern that filing?';
-assert.notEqual(resolver.resolveAuthorityEvidenceDate(preCommencement, currentDate).source, 'NONE');
-assert.notEqual(supportAcraMomKnowledgeRule({ ...acraInput, query: preCommencement }), true,
-  'The change is not applied to a specific pre-commencement filing.');
+assert.deepEqual(resolver.resolveAuthorityEvidenceDate(preCommencement, currentDate),
+  { confidence: 'LOW', source: 'NONE', isHistorical: false, dateRole: 'DECLARED_COMMENCEMENT' },
+  'The declared commencement is discussed without treating the filing date as the law-version target.');
+assert.equal(supportAcraMomKnowledgeRule({ ...acraInput, query: preCommencement }), true,
+  'The exact commencement source supports the new change not governing the specific pre-commencement filing.');
 assert.notEqual(resolver.resolveAuthorityEvidenceDate('What historical officer particulars applied to annual returns in 2024?', currentDate).source, 'NONE');
 const specificAcraFiling = 'Our return was filed on 19 October 2026. Did the officer-confirmation change already govern that filing?';
 assert.deepEqual(resolver.resolveAuthorityEvidenceDate(specificAcraFiling, currentDate),
-  resolver.resolveTargetDate(specificAcraFiling, currentDate),
-  'A filing-date-specific ACRA question retains the original date resolution.');
+  { confidence: 'LOW', source: 'NONE', isHistorical: false, dateRole: 'DECLARED_COMMENCEMENT' },
+  'A filing-date comparison uses the declared commencement boundary rather than targeting the event date.');
 assert.equal(resolver.resolveAuthorityEvidenceDate('What MAS reporting duties take effect on 1 January 2027?', currentDate).targetDate, '2027-01-01');
 
 console.log('Statutory evidence date-role regressions passed.');

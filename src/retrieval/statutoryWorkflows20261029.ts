@@ -377,11 +377,17 @@ function acraForeignCompanyDeadlineApplication(query: string): string | undefine
     const days = /^\d+$/.test(elapsed) ? Number(elapsed) : words[elapsed.toLowerCase()];
     return Number.isInteger(days) ? { days, index: match.index } : undefined;
   };
-  const changeClause = query.split(/[.!?;]+/).find(clause =>
+  const changeClauses = query.split(/[.!?;]+/).filter(clause =>
     /\b(?:change\w*|updat\w*)\b/i.test(clause) &&
     /\b(?:registered office|entity email|business email|company email|business activities|entity information|registered address|office address)\b/i.test(clause) &&
     parseElapsedDays(clause) !== undefined);
-  if (!changeClause) return undefined;
+  if (changeClauses.length !== 1) return undefined;
+  const changeClause = changeClauses[0];
+  // A single sentence may describe more than one separately timed change.
+  // Without a date-to-change association, the oldest deadline cannot safely
+  // be inferred from whichever date happens to appear first.
+  if ([...query.matchAll(/\b(?:change\w*|updat\w*)\b/gi)].length > 1 ||
+      [...changeClause.matchAll(new RegExp(String.raw`\b${dayCountPattern}\s+days?\s+ago\b`, 'gi'))].length > 1) return undefined;
   const elapsed = parseElapsedDays(changeClause);
   if (!elapsed || elapsed.days > 30) return undefined;
   const beforeElapsed = changeClause.slice(0, elapsed.index);
@@ -391,18 +397,49 @@ function acraForeignCompanyDeadlineApplication(query: string): string | undefine
 }
 
 function irasRecordRetentionApplication(query: string): string | undefined {
-  const ya = /\b(?:YA|Year of Assessment)\s*(20\d{2})\b/i.exec(query)?.[1];
-  if (!ya) return undefined;
-  const endYear = Number(ya) + 4;
-  if (!Number.isSafeInteger(endYear) || endYear < 2000 || endYear > 9999) return undefined;
-  const disposal = /\b(?:shred|destroy|discard|dispose of)\w*\b[^.!?;\n]{0,80}?\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b/i.exec(query);
-  let application = `For YA ${ya}, retain the records through at least 31 December ${endYear}.`;
-  if (disposal) {
-    const day = Number(disposal[1]), month = Number(disposal[2]), year = Number(disposal[3]);
-    const proposed = new Date(Date.UTC(year, month - 1, day));
-    if (!Number.isFinite(proposed.getTime()) || proposed.getUTCFullYear() !== year || proposed.getUTCMonth() !== month - 1 || proposed.getUTCDate() !== day) return undefined;
-    const limit = new Date(Date.UTC(endYear, 11, 31));
-    if (proposed <= limit) application += ` The proposed disposal date ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year} is before the end of that period, so do not shred the records then.`;
+  const yearsOfAssessment = [...new Set([...query.matchAll(/\b(?:YA|Year of Assessment)\s*(20\d{2})\b/gi)].map(match => match[1]))];
+  if (yearsOfAssessment.length > 1) return undefined;
+  const ya = yearsOfAssessment[0];
+  const endYear = ya ? Number(ya) + 4 : undefined;
+  if (endYear !== undefined && (!Number.isSafeInteger(endYear) || endYear < 2000 || endYear > 9999)) return undefined;
+
+  const explicitDatePattern = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})`;
+  const dissolutionDatePattern = new RegExp(String.raw`\b(?:dissolved|dissolution)\b\s*(?:(?:on|date\s*(?:is|was|of)?|was|is)\s*:?\s*)?(${explicitDatePattern})`, 'gi');
+  const dissolutionDates = [...query.matchAll(dissolutionDatePattern)].map(match => match[1]);
+  if (dissolutionDates.length > 1) return undefined;
+  const dissolutionDate = dissolutionDates[0];
+  const disposalDatePattern = new RegExp(String.raw`\b(?:shred\w*|destroy\w*|discard\w*|dispose of)\b[^0-9.!?;\n]{0,70}(${explicitDatePattern})`, 'gi');
+  const disposalDates = [...query.matchAll(disposalDatePattern)].map(match => match[1]);
+  if (disposalDates.length > 1) return undefined;
+
+  const deadlines: Array<{ date: string; description: string }> = [];
+  if (ya && endYear !== undefined) deadlines.push({ date: `${endYear}-12-31`, description: `the YA-based period for YA ${ya}` });
+  if (dissolutionDate) {
+    const dissolutionIso = strictSuppliedDateIso(dissolutionDate);
+    if (!dissolutionIso || dissolutionIso.slice(5) === '02-29') return undefined;
+    const dissolutionDeadline = new Date(`${dissolutionIso}T00:00:00Z`);
+    dissolutionDeadline.setUTCFullYear(dissolutionDeadline.getUTCFullYear() + 5);
+    if (!Number.isFinite(dissolutionDeadline.getTime())) return undefined;
+    deadlines.push({ date: dissolutionDeadline.toISOString().slice(0, 10), description: `the five-year post-dissolution period from ${formatSingaporeDate(dissolutionIso)}` });
+  }
+  if (!deadlines.length) return undefined;
+  const deadline = deadlines.reduce((latest, candidate) => candidate.date > latest.date ? candidate : latest);
+  let application = deadlines.length > 1
+    ? `The YA-based period for YA ${ya} ends on 31 December ${endYear}, and ${deadlines[1].description} ends on ${formatSingaporeDate(deadlines[1].date)}. Apply the later minimum and retain the records through at least ${formatSingaporeDate(deadline.date)}.`
+    : ya
+      ? `For YA ${ya}, retain the records through at least 31 December ${endYear}.`
+      : `The dissolution-based period runs for at least five years, through ${formatSingaporeDate(deadline.date)}. The relevant YA is also needed to compare the ordinary YA-based retention period before concluding when the records may safely be destroyed.`;
+  if (!dissolutionDate && /\b(?:dissolv\w*|struck off|wound up)\b/i.test(query)) {
+    application += ' The dissolution date is not reliably stated, so the separate post-dissolution period cannot be compared; do not treat the YA-based period as sufficient for destruction.';
+  }
+  if (disposalDates.length === 1) {
+    const proposedIso = strictSuppliedDateIso(disposalDates[0]);
+    if (!proposedIso) return undefined;
+    if (proposedIso <= deadline.date) {
+      application += deadlines.length > 1
+        ? ` The proposed disposal date ${formatSingaporeDate(proposedIso)} is before the later applicable period ends, so do not shred the records then.`
+        : ` The proposed disposal date ${formatSingaporeDate(proposedIso)} is before the end of that period, so do not shred the records then.`;
+    }
   }
   if (/\b(?:tax return|return)\b[^.!?;]{0,50}\b(?:filed|filing|submitted|completed)\b|\b(?:filed|filing|submitted|completed)\b[^.!?;]{0,50}\b(?:tax return|return)\b/i.test(query)) {
     application += ' Filing the tax return does not end the retention period.';
@@ -410,17 +447,40 @@ function irasRecordRetentionApplication(query: string): string | undefined {
   return application;
 }
 
+function formatSingaporeDate(iso: string): string {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+}
+
 function cpfRefundDateApplication(query: string): string | undefined {
   const datePattern = String.raw`(\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})`;
-  const conditional = /\b(?:conditional wages?|conditional bonus|joining bonus|repayable (?:wages?|bonus)|bonus[^.!?;\n]{0,60}\b(?:repayable|repayment)|(?:repayable|repayment)[^.!?;\n]{0,60}\bbonus|bonus subject to repayment|wages? subject to repayment)\b/i.test(query);
+  const explicitlyUnconditionalBonus = /\b(?:unconditional|non[- ]repayable)\s+(?:joining\s+)?bonus\b/i.test(query);
+  const explicitlyConditional = /\bconditional\s+(?:joining\s+)?bonus\b|\bconditional wages?\b/i.test(query);
+  const conditionClauses = query.split(/[.!?;\n]+/);
+  const negativeBonusCondition = /\b(?:bonus|wages?|payment)\b[^.!?\n]{0,80}\b(?:not|never|isn't|wasn't)\s+(?:subject to|conditional on)\b[^.!?\n]{0,80}\b(?:repayment|service|employment|retention|performance|condition)\b/i;
+  const hasNoOriginalServiceCondition = conditionClauses.some(clause =>
+    negativeBonusCondition.test(clause) || /\bno\s+(?:original\s+)?(?:service|employment|retention|performance|repayment)\s+condition\b/i.test(clause));
+  const positiveBonusRepaymentCondition = /\b(?:joining\s+)?bonus\b[^.!?\n]{0,80}\b(?:subject to|conditional on|paid on condition that)\b[^.!?\n]{0,80}\b(?:repayment|service|employment|retention|performance|condition)\b|\b(?:repayment|service|employment|retention|performance)\s+condition\b[^.!?\n]{0,80}\b(?:joining\s+)?bonus\b/i;
+  const bonusRepaymentCondition = conditionClauses.some(clause =>
+    positiveBonusRepaymentCondition.test(clause) && !negativeBonusCondition.test(clause));
+  const conditionalEvidence = explicitlyConditional || bonusRepaymentCondition;
+  const explicitlyNotConditional = /\b(?:not|isn't|wasn't)\s+(?:a\s+)?conditional\s+(?:payment|(?:joining\s+)?bonus|wages?)\b|\b(?:payment|(?:joining\s+)?bonus|wages?)\s+(?:is|was)\s+not\s+conditional\b/i.test(query);
+  const ordinaryDuplicate = /\bordinary\s+(?:joining\s+)?bonus\b|\b(?:payroll|payment) duplicat(?:ion|ed)\b|\bpaid\s+(?:the\s+)?(?:joining\s+)?bonus\s+(?:twice|again)\b/i.test(query);
+  const conflictingConditionalFacts = conditionalEvidence && (explicitlyUnconditionalBonus || explicitlyNotConditional || ordinaryDuplicate || hasNoOriginalServiceCondition);
+  if (conflictingConditionalFacts) return undefined;
+  const conditional = conditionalEvidence && !explicitlyUnconditionalBonus && !explicitlyNotConditional && !ordinaryDuplicate;
   let suppliedDate: string | undefined;
   if (conditional) {
-    const contractualDueDate = new RegExp(String.raw`(?:\bunder (?:the )?employment terms\b[^.!?;\n]{0,100}\b(?:had|has|have|was|were) to repay\b[^.!?;\n]{0,100}\bon\s+${datePattern}|\b(?:contractual|mutually agreed|agreed) repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?\s*${datePattern}|\b(?:employment terms|employment agreement|mutual agreement)\b[^.!?;\n]{0,100}\b(?:repayment|repay\w*|wages? due to be repaid)\b[^.!?;\n]{0,60}\b(?:due on|due date (?:is|as)|on)\s+${datePattern})`, 'gi');
-    const dueDates = [...query.matchAll(contractualDueDate)].map(match => match[1] || match[2] || match[3]);
-    if (dueDates.length !== 1) return undefined;
+    const wageReference = String.raw`(?:conditional\s+)?(?:joining\s+)?(?:bonus|wages?)`;
+    const contractualDueDate = new RegExp(String.raw`(?:\bunder (?:the )?employment terms\b[^.!?;\n]{0,100}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on\s+|\b(?:the\s+)?${wageReference}\s+repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?\s*)${datePattern}`, 'gi');
+    const dueDates = [...query.matchAll(contractualDueDate)].map(match => match[1]);
+    const unboundAgreedDueDate = /\b(?:mutual agreement|contractual|agreed)\b[^.!?;\n]{0,100}\brepayment due date\b/i.test(query);
+    if (dueDates.length !== 1 || unboundAgreedDueDate) return undefined;
     suppliedDate = dueDates[0];
   } else {
-    suppliedDate = new RegExp(String.raw`\bPAYMENTS RECEIVED ON\b\s*:?\s*${datePattern}`, 'i').exec(query)?.[1];
+    const paymentRecordLabels = [...query.matchAll(/\bPAYMENTS RECEIVED ON\b/gi)];
+    if (paymentRecordLabels.length !== 1) return undefined;
+    const paymentDateStart = paymentRecordLabels[0].index! + paymentRecordLabels[0][0].length;
+    suppliedDate = new RegExp(String.raw`^\s*:?\s*${datePattern}`, 'i').exec(query.slice(paymentDateStart))?.[1];
   }
   if (!suppliedDate) return undefined;
   const suppliedIso = strictSuppliedDateIso(suppliedDate);

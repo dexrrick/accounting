@@ -1,0 +1,18 @@
+{
+  "checkedOnSingaporeDate": "30/10/2026",
+  "scope": "First-party source checks for this local correction iteration; no source activation or release approval",
+  "sources": [
+    { "authority": "CPF", "url": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions", "finding": "Ordinary refunds use the contribution payment date; conditional-wage refunds use the repayment due date for those wages. Unrelated loan dates do not establish that date." },
+    { "authority": "ACRA", "url": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/", "finding": "Foreign-company changes have a 30-day notification period. A later change cannot establish timeliness of an earlier change." },
+    { "authority": "IRAS", "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements", "finding": "Ordinary YA retention and post-dissolution retention are separate requirements; both must be considered." },
+    { "authority": "ACRA", "url": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/", "finding": "Declared commencement is 20 October 2026, including updated annual-return officer particulars and the additional CEO-role question. This notice does not establish all earlier filing duties." },
+    { "authority": "MAS", "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en", "finding": "Paragraphs 1, 2 and 5 establish commencement, population and initial report trigger. Paragraphs 20 and 21 distinguish transition cases, with prior-notice cases preserved by paragraph 21." },
+    { "authority": "MAS", "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf", "finding": "The VCFM-specific toolkit was inspected separately. Text searches found no QDC or Quarterly entry; this does not establish a QDC exemption or the precise form. Additional authoritative evidence remains necessary." }
+  ],
+  "additionalSourceChecks": [
+    { "authority": "CPF", "url": "https://ask.gov.sg/cpf/questions/cm0f52l3v03gtpz7aapvc7079", "finding": "Conditional-wage repayment arises from non-fulfilment of conditions tied to the original payment. Repayment of an ordinary duplicate payroll payment does not by itself establish conditional wages." },
+    { "authority": "MOM", "url": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement", "finding": "Annual-leave eligibility begins at three months, including probation; completed-month pro-rating and approved unpaid-leave exclusions apply." },
+    { "authority": "MOM", "url": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement", "finding": "Graduated outpatient/hospitalisation entitlements are 5/15, 8/30, 11/45 and 14/60 at three, four, five and at least six months. Hospitalisation limits include outpatient leave." }
+  ],
+  "fixtureIntegrity": "Four original captures were subsequently recovered byte-for-byte from a hash-verified earlier source overlay. Existing expected digests and test gates are unchanged; file-specific byte-preservation attributes prevent line-ending conversion. See fixture-recovery.json for provenance, hashes and the all-five manifest-entry audit."
+}

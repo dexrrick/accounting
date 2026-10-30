@@ -1,0 +1,38 @@
+{
+  "reviewer": "/root/independent_review",
+  "recording": "Supervisor transcription of independent code and complete-answer reviews in this chat",
+  "codeReview": "No remaining material findings after the recorded corrections",
+  "packetSha256": "aeda39190311fc5e36aaadd07171da911b1767fa19009c2f42b4b977be556da0",
+  "verification": { "answerPairsChecked": 60, "answerHashesRecomputed": 120, "byteIdenticalPairs": 49, "changedPairs": 11, "hashOrEqualityErrors": [], "packetMatchesOriginalBeforeAndAfterReports": true },
+  "totals": {
+    "old50": { "CORRECT": 49, "PARTIAL": 0, "UNSUPPORTED": 1, "INCORRECT": 0 },
+    "novel10": { "CORRECT": 8, "PARTIAL": 2, "UNSUPPORTED": 0, "INCORRECT": 0 }
+  },
+  "changedAnswerGrades": [
+    {"id":"hold-acra-03","grade":"CORRECT","reason":"Declared commencement excludes retrospective application to the earlier filing without establishing all earlier duties."},
+    {"id":"hold-mas-03","grade":"CORRECT","reason":"Future N24 commencement distinguished from October 2026 duties; paragraph 21 precedence preserved."},
+    {"id":"fresh-mas-02","grade":"CORRECT","reason":"Correct CMI population, representative scope, reasonable-grounds trigger, 21 calendar days and written-extension exception."},
+    {"id":"reviewfresh-acra-01","grade":"CORRECT","reason":"Correct earlier CEO-question filing comparison; complete answer independently hash-verified equal to hold-acra-03."},
+    {"id":"reviewfresh-mas-02","grade":"CORRECT","reason":"Does not apply future rules to December 2026 or infer absence of earlier duties; transition conditions distinguished."},
+    {"id":"fresh29-iras-02","grade":"CORRECT","reason":"Preserves officer/liquidator distinction and dissolution anchor; five-year minimum is not presented as sufficient for all records."},
+    {"id":"novel-acra-01","grade":"CORRECT","reason":"Sole-director prohibition and six-month appointment deadline run from registration, not annual return."},
+    {"id":"novel-cpf-01","grade":"CORRECT","reason":"Payment-based timing and employee-share duty explained; missing payment record prevents fabricated deadline."},
+    {"id":"novel-mom-01","grade":"CORRECT","reason":"Three-month annual-leave eligibility and four-month 8/30 sick-leave schedule, inclusion rule and prior-use limits stated."},
+    {"id":"novel-mom-02","grade":"CORRECT","reason":"Probation eligibility, pro-rating, unpaid-leave exclusion and missing balance facts explained without fabrication."},
+    {"id":"novel-mas-01","grade":"CORRECT","reason":"Approval versus later notification distinguished; additional fourteen-day outer limit specifically attached to resignation."}
+  ],
+  "preservation": { "oldPreviouslyCorrectPreserved": "44/44", "novelPreviouslyCorrectPreserved": "3/3", "gradingRegressions": [] },
+  "remaining": {
+    "hold-mas-04": "UNSUPPORTED: precise VCFM QDC form not established by generic LFMC financial-return guidance",
+    "novel-iras-02": "PARTIAL: correct medical guidance omits the delivery-van issue",
+    "novel-mas-02": "PARTIAL: correct Form 25A guidance omits separate VCFM nil-return timing and fund-level scope"
+  },
+  "limitations": [
+    "Bounded offline application evaluation; not whole-100 or production accuracy",
+    "The 49 unchanged answers retain prior substantive grades after independent exact-byte and hash comparison; they were not freshly re-adjudicated",
+    "Changed complete answers checked against retained evidence and expected/forbidden claims independently of VERIFIED labels",
+    "Corrected MOM directive uses a registered rule presentation distinct from the fetched-source evidence path",
+    "Generic completeness warnings remain, including an extraneous CMS/applicability gap in reviewfresh-mas-02",
+    "No tests, live retrieval, model calls, browser acceptance or CI checks performed by the grading review"
+  ]
+}

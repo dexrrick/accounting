@@ -52,6 +52,8 @@ const testSuites = [
   { name: 'Statutory Knowledge Production Path', file: 'test_statutory_knowledge_pipeline_20261027.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'ACRA and MOM Source-backed Knowledge', file: 'test_acra_mom_knowledge_20261027b.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Five-family Statutory Workflow Source Proof', file: 'test_statutory_workflows_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Practical Statutory Router Refinements', file: 'test_statutory_practical_router_refinements_20261030.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Declared Commencement Source Scope Full Applications', file: 'test_statutory_commencement_scope_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Statutory Actual Answer Routing Repairs', file: 'test_statutory_review_application_answer_repairs_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Statutory Existing Rule Actual Application Mappings', file: 'test_statutory_review_application_existing_rule_mappings_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Statutory Practical Source Expansion Full Applications', file: 'test_statutory_priority3_source_expansions_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

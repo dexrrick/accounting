@@ -337,14 +337,24 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const asksCpfContributionRates =
     /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
     /\b(?:rates?|percentages?|contribution table|rate table)\b/.test(entryIntentQuery);
+  const asksCpfRefundProcedure =
+    /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
+    /\brefunds?\b/.test(entryIntentQuery) &&
+    /\b(?:deadline|when|due|apply|application|request|procedure|how long|time limit)\b/.test(entryIntentQuery);
   const explicitlyCalculatesCpfContribution =
     /\b(?:calculat\w*|comput\w*|work out|estimate\b|estimating\b|how much)\b/.test(entryIntentQuery) ||
-    /\b(?:cpf|contribution) amount\b/.test(entryIntentQuery);
+    /\b(?:cpf|contribution) amount\b/.test(entryIntentQuery) ||
+    /\bhow many\s+(?:singapore\s+)?(?:dollars?|cents?)\b/.test(entryIntentQuery) ||
+    /\b(?:cpf|contribution) amount\b[^.!?;\n]{0,40}\b(?:due|owe|owed|payable)\b/.test(entryIntentQuery) ||
+    /\b(?:amount|contribution)\s+(?:due|owed|payable)\b/.test(entryIntentQuery) ||
+    /\b(?:owe|owing|owed)\b[^.!?;\n]{0,60}\b(?:cpf|contribution)\b/.test(entryIntentQuery);
   const hasPayrollCalculation =
     (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
     (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
     (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') ||
-      explicitlyCalculatesCpfContribution || (/\d+/.test(entryIntentQuery) && !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution)));
+      explicitlyCalculatesCpfContribution || (/\d+/.test(entryIntentQuery) &&
+        !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution) &&
+        !(asksCpfRefundProcedure && !explicitlyCalculatesCpfContribution)));
 
   // 2. Map Authorities
   const authorities: string[] = [];
