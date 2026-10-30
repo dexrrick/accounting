@@ -26,10 +26,10 @@ function practicalRuleForIssue(
   stream: AuthorityPresentedWorkstream,
   issue: AuthorityEvidencePresentation['workstreams'][number]['issues'][number]
 ) {
-  return getAcraMomKnowledgeEvidence(query, stream, issue) ||
+  return getStatutoryWorkflowEvidence(query, stream, issue) ||
+    getAcraMomKnowledgeEvidence(query, stream, issue) ||
     getIrasMasKnowledgeEvidence(query, stream, issue) ||
     getCpfPayrollKnowledgeEvidence(query, stream, issue) ||
-    getStatutoryWorkflowEvidence(query, stream, issue) ||
     getAcraMomPracticalEvidence(query, stream, issue) ||
     getIrasCpfMasPracticalEvidence(query, stream, issue) ||
     getIrasCpfExpansionEvidence(query, stream, issue) ||
@@ -59,7 +59,17 @@ export function renderAuthorityEvidenceResponseText(
     issues.some(({ practicalRule, momSalaryRule }) => Boolean(practicalRule || momSalaryRule)));
   const generalGuidancePrefix = hasVerifiedGeneralGuidance && presentation.status !== 'VERIFIED'
     ? 'Verified general guidance is available. ' : '';
-  const overall = presentation.status === 'INSUFFICIENT'
+  // A missing whole-request assessment is distinct from a missing source
+  // premise. This changes presentation only; it never upgrades evidence status.
+  const allListedGuidanceSupported = issueExplanations.length > 0 &&
+    issueExplanations.every(({ stream, issues }) => stream.evidenceStatus === 'VERIFIED' &&
+      stream.gaps.length === 0 && issues.length > 0 && issues.every(({ issue, practicalRule, momSalaryRule }) =>
+        issue.evidenceStatus === 'VERIFIED' && issue.gaps.length === 0 && Boolean(practicalRule || momSalaryRule)));
+  const onlyCoverageAssessmentMissing = !requestComplete && allListedGuidanceSupported &&
+    presentation.gaps.every(gap => gap === 'Issue plan: The reconciled issue plan does not establish coverage of the complete question.');
+  const overall = onlyCoverageAssessmentMissing
+    ? `${generalGuidancePrefix}Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved.' : '.'}`
+    : presentation.status === 'INSUFFICIENT'
     ? `${generalGuidancePrefix}Evidence is incomplete for one or more material issues.`
     : !requestComplete && evidenceVerified
       ? `${generalGuidancePrefix}Evidence verified for mapped issues; full request coverage unconfirmed${presentation.applicationStatus === 'UNRESOLVED' ? ', and application to the case remains unresolved' : '.'}`
@@ -70,15 +80,23 @@ export function renderAuthorityEvidenceResponseText(
     '### Statutory Compliance & Legal Authority',
     '',
     `**Whole-question status:** ${overall}`,
+    ...(hasVerifiedGeneralGuidance ? [
+      '',
+      `**General statutory guidance:** ${allListedGuidanceSupported ? 'Verified for all listed issues.' : 'Verified for the issues identified below; other issues remain incomplete.'}`,
+      `**Individual applicability:** ${presentation.applicationStatus === 'UNRESOLVED' ? 'Additional case facts or checks are required; see the issue-level limitations.' : 'General guidance does not by itself establish eligibility or compliance in an individual case.'}`,
+      `**Material evidence gaps:** ${onlyCoverageAssessmentMissing ? 'None identified within the listed guidance. Full request coverage still requires an independent assessment.' : 'See the evidence gaps and coverage limitations below.'}`
+    ] : []),
     ...(hasBalancedJournal ? ['', 'The deterministic journal remains available in the Double Entry Journal tab.'] : [])
   ];
 
   const requestedYears = [...new Set([...presentation.query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))]
     .filter(year => year !== TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
-  if (requestedYears.length > 0 && presentation.workstreams.length > 0 &&
+  const dateScope = new TargetDateResolver().resolveAuthorityEvidenceDate(presentation.query);
+  if (requestedYears.length > 0 && dateScope.dateRole !== 'CURRENT_WORKFLOW_FACT' && presentation.workstreams.length > 0 &&
       presentation.workstreams.every(stream => stream.evidenceStatus === 'INSUFFICIENT')) {
     lines.push('', `**Applicability limitation:** The available evidence does not establish the requested rule for ${requestedYears.join(', ')}. An official source whose legal applicability covers that period is needed. A current page, its retrieval date, or a document's original issue date alone cannot establish the requirements for an earlier or later period.`);
-    if (presentation.workstreams.some(stream => stream.authority === 'CPF')) {
+    if (presentation.workstreams.some(stream => stream.authority === 'CPF') &&
+        /\b(?:rates?|percentage|calculate|computation|how much|contribution table)\b/i.test(presentation.query)) {
       lines.push('A CPF amount would also require the contribution table applicable to that payroll period, citizenship or PR status and year, age, and relevant wages.');
     }
     if (presentation.workstreams.some(stream => stream.authority === 'ACRA')) {

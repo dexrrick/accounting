@@ -89,6 +89,7 @@ const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.ac
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
 const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
 const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
+  'MAS:mas-lfmc': ['not exhaustive', 'outside the SFA', 'fund-level requirements'],
   'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
   'ACRA:acra-annual-return-officer-particulars': ['Companies filing annual returns will need to confirm'],
   'IRAS:iras-wht-filing-payment-due-date': ['file and pay WHT', '15th of the second month'],

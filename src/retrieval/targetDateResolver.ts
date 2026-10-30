@@ -28,6 +28,11 @@ const MONTH_MAP: Record<string, string> = {
 
 const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})`;
 
+/** Identifies requests for the legal version governing an earlier period. */
+export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
+  return /\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
+}
+
 function section13wDisposalDate(query: string): string | undefined {
   const candidates: Array<{ date: string; distance: number }> = [];
   for (const action of query.matchAll(/\b(?:dispos\w*|sold|sale)\b/gi)) {
@@ -86,38 +91,60 @@ export class TargetDateResolver {
   }
 
   /** Recognises fact dates only within one current compliance workflow. */
-  private static isCurrentWorkflowFactDate(query: string, currentDate: string): boolean {
-    if (/\b(?:historical|historic|back then|at that time|at that date|at the time|then|previous law|prior law|former rule|superseded|in force|governed|effective|as of|as at|which law|what law|rules? applied|requirements? applied|used to)\b/i.test(query)) return false;
+  private static isCurrentWorkflowFactDate(query: string): boolean {
+    if (hasHistoricalStatutoryVersionIntent(query)) return false;
     // These distinct requests must retain their date scope even without an authority acronym.
-    if (/\b(?:gst|goods and services tax|withholding tax|wht|public holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
-    const years = [...new Set([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))];
+    if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
     const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
-    if (years.length !== 1) return false;
-    if (dates.length === 0) {
-      return Number(years[0]) <= Number(currentDate.slice(0, 4)) &&
-        /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(query) &&
-        /\b(?:company|corporate|business)\b/i.test(query) &&
-        /\b(?:records?|documents?|books|record[- ]keeping)\b/i.test(query) &&
-        /\b(?:retain|retention|keep|keeping|discard)\b/i.test(query) &&
-        !/\b(?:acra|cpf|mom|mas|were|was|did)\b/i.test(query);
-    }
-    if (dates.length !== 1 || years[0] !== currentDate.slice(0, 4) ||
-        (query.match(/\?/g) || []).length > 1) return false;
-    const date = EXPLICIT_DATE_PATTERN;
-    const nearDate = (role: string): boolean => new RegExp(`${role}[^.!?;\\n]{0,75}${date}`, 'i').test(query);
+    const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+    if (dates.length === 0 && years.length === 0) return false;
+    const allYearsExplained = years.every(year => {
+      const insideDate = dates.some(date => year.index! >= date.index! &&
+        year.index! < date.index! + date[0].length);
+      if (insideDate) return true;
+      const nearby = query.slice(Math.max(0, year.index! - 35), year.index! + year[0].length + 30);
+      return /\b(?:ya|year of assessment|financial year|year ended|basis period|payment|paid|repayment|repay\w*|bonus|joining|applying|discovery|found|dissolution|date of change|payroll|salary|spr|permanent resident|conversion|became|obtained|contribution year|anniversary)\b/i.test(nearby);
+    });
+    if (!allYearsExplained) return false;
+
+    // Each explicit date must have a role in the relevant workflow. This lets
+    // users supply several facts (period end, YA, dissolution, payment, or
+    // repayment due date) without allowing an unrelated date to set the law.
+    const everyDateHasRole = (roles: RegExp): boolean => dates.every(date => {
+      const before = query.slice(0, date.index!);
+      const after = query.slice(date.index! + date[0].length);
+      const sentenceStart = Math.max(before.lastIndexOf('.'), before.lastIndexOf('?'), before.lastIndexOf('!'), before.lastIndexOf(';')) + 1;
+      const nextSentenceEnds = [after.indexOf('.'), after.indexOf('?'), after.indexOf('!'), after.indexOf(';')]
+        .filter(index => index >= 0);
+      const sentenceEnd = nextSentenceEnds.length ? date.index! + date[0].length + Math.min(...nextSentenceEnds) : query.length;
+      const context = query.slice(Math.max(sentenceStart, date.index! - 55),
+        Math.min(sentenceEnd, date.index! + date[0].length + 25));
+      return roles.test(context);
+    });
+    const hasRetentionSubject = /\b(?:company|corporate|business)\b/i.test(query) &&
+      /\b(?:records?|documents?|books|invoices?|record[- ]keeping|record retention)\b/i.test(query) &&
+      /\b(?:retain|retention|keep|keeping|shred|destroy|discard|dissolv\w*|struck off|wound up|how long)\b/i.test(query);
+    const hasRetentionWorkflowDates = hasRetentionSubject &&
+      everyDateHasRole(/\b(?:year ended|accounts? for|ya\s*20\d{2}|year of assessment|dissolv\w*|struck off|wound up|shred\w*|destroy\w*|discard\w*|retain\w*|keep\w*)\b/i);
     const entityChange = /\b(?:acra|registered office|entity email|entity information|entity details)\b/i.test(query) &&
-      nearDate(String.raw`\b(?:changed|updated|change occurred|date of (?:the )?change)\b`) &&
+      everyDateHasRole(/\b(?:changed|updated|change occurred|date of (?:the )?change|fil(?:e|ed|ing)|annual return)\b/i) &&
       !/\b(?:cpf|mom|mas|income tax|employment act|fund management)\b/i.test(query);
-    const cpfRefund = /\b(?:cpf|central provident fund)\b/i.test(query) && /\brefund\w*\b/i.test(query) &&
-      nearDate(String.raw`\b(?:paid|payment|payments received on|repayment|wages? repayable)\b`) &&
+    const cpfRefund = /\b(?:cpf|central provident fund)\b/i.test(query) &&
+      /\b(?:refund\w*|overpaid|overpayment|mistaken|wrongly paid|money back|recover\w*)\b/i.test(query) &&
+      everyDateHasRole(/\b(?:paid|payment|payments received on|repayment|repay\w*|wages? repayable|discover\w*|found|mistake|error|conditional wages?)\b/i) &&
       !/\b(?:acra|mom|mas|income tax|employment act|fund management)\b/i.test(query);
     const payslip = /\b(?:itemi[sz]ed pay ?slips?|pay ?slips?)\b/i.test(query) &&
-      nearDate(String.raw`\b(?:payment|paid|termination|dismissal|salary payment)\b`) &&
+      everyDateHasRole(/\b(?:payment|paid|termination|dismissal|salary payment|pay period|salary period)\b/i) &&
       !/\b(?:acra|cpf|mas|income tax|fund management)\b/i.test(query);
     const appointment = /\b(?:lfmc|licensed fund management company)\b/i.test(query) &&
-      nearDate(String.raw`\b(?:appoint\w*|ceo|chief executive|director)\b`) &&
+      everyDateHasRole(/\b(?:appoint\w*|ceo|chief executive|director|executive|non.executive|role change)\b/i) &&
       !/\b(?:acra|cpf|mom|income tax|employment act)\b/i.test(query);
-    return entityChange || cpfRefund || payslip || appointment;
+    const prYearTiming = /\b(?:permanent resident|spr|pr)\b/i.test(query) &&
+      /\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(query) &&
+      /\b(?:when|what date|what day|move into|transition into|begin|start)\b/i.test(query) &&
+      dates.length > 0 && everyDateHasRole(/\b(?:obtained|became|conversion|converted|granted|anniversary|contribution year)\b/i);
+    const irasRecords = hasRetentionWorkflowDates && !/\b(?:gst|cpf|mom|mas|acra|employment act|fund management)\b/i.test(query);
+    return irasRecords || entityChange || cpfRefund || payslip || appointment || prYearTiming;
   }
 
   /** Resolves dates for statutory evidence separately from accounting transaction dates. */
@@ -130,7 +157,7 @@ export class TargetDateResolver {
     const versionContext = /\b(?:historical|historic|previous|prior|past|former|superseded|effective date|effective during|which law|which rules?|applicable law|year of assessment|\bya\s*20\d{2}|basis period|payroll year|rate table|legal|statutory|in force|governed|law|rules? applied|rate)\b/i.test(query);
     const otherAuthorityOrDomain = /\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|acra|mas|monetary authority|income tax|corporate tax|tax relief|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?)\b/i.test(query);
     const unresolved = (): TargetDateResolution => ({ confidence: 'LOW', source: 'NONE', isHistorical: false });
-    if (TargetDateResolver.isCurrentWorkflowFactDate(query, currentDate)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
+    if (TargetDateResolver.isCurrentWorkflowFactDate(query)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
 
     const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&
       /\b(?:filing|due date|deadline|when\b[^.!?;\n]{0,65}\b(?:file|filed|paid))\b/i.test(query) &&

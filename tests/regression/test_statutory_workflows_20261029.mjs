@@ -79,7 +79,7 @@ const cases = [
     id: 'mas-lfmc-appointment', authority: 'MAS', topic: 'mas-lfmc-key-appointments',
     query: 'For our LFMC, is MAS prior approval on Form 11 needed before appointing a CEO or director, and how is this different from row 17 notifications?',
     subject: 'LFMC CEO and director appointment prior approval under Form 11', fixture: 'mas-lfmc-toolkit.pdf',
-    rendered: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification.*Executive-to-Non-Executive/i
+    rendered: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*resignation/i
   }
 ];
 
@@ -184,6 +184,49 @@ for (const sample of cases) {
   assert.match(explanation.text, new RegExp(sample.rendered.source, 'i'),
     `${sample.id}: substantive source-backed rule content is returned.`);
 
+  if (sample.id === 'cpf-refund') {
+    const dateApplications = [
+      ['CPF refund deadline: CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
+      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 31/02/2026.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 29/02/2024.', 'NO_MATCH', /one-year outer limit is/i],
+      ['CPF refund deadline: CPF was paid on a conditional bonus. Under the employment terms, the employee had to repay it on 15/09/2026; a mutual agreement set the repayment due date as 20/09/2026.', 'NO_MATCH', /one-year outer limit is/i],
+      ['We received a mistaken CPF contribution; what is the refund deadline? PAYMENTS RECEIVED ON 6 November 2025.', 'MATCH', /one-year outer limit 06\/11\/2026/i]
+    ];
+    for (const [query, outcome, pattern] of dateApplications) {
+      const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
+      assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
+      if (outcome === 'MATCH') assert.match(dateExplanation.text, pattern);
+      else assert.doesNotMatch(dateExplanation.text, pattern,
+        'Invalid, leap-day, or competing dates do not produce a calculated deadline.');
+    }
+  }
+  if (sample.id === 'iras-record-retention') {
+    const ya2025Query = 'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?';
+    const application = getStatutoryWorkflowEvidence(ya2025Query, stream, issue);
+    assert.ok(application, 'The frozen non-December-FYE question matches the company-record workflow.');
+    assert.match(application.text, /For YA 2025, retain the records through at least 31 December 2029\./i);
+    assert.match(application.text, /proposed disposal date 01\/10\/2029 is before the end of that period, so do not shred/i);
+    assert.match(application.text, /filing the tax return does not end the retention period/i);
+  }
+  if (sample.id === 'acra-entity-changes') {
+    const negatedForeign = 'We are a Singapore company, not a foreign company. Our registered office changed 20 days ago. Are we late?';
+    const irrelevantElapsedDays = 'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office update is pending, but an employee resigned 20 days ago. What ACRA deadline applies?';
+    const overDeadlineElapsedDays = [
+      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed 35 days ago. Are we late?',
+      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed thirty-five days ago. Are we late?',
+      'We are an overseas-incorporated company registered in Singapore as a foreign company. Our registered office changed thirty five days ago. Are we late?',
+      'We are an overseas-incorporated company registered in Singapore as a foreign company. An employee resigned 20 days ago; our registered office changed thirty-five days ago. Are we late?'
+    ];
+    for (const query of [negatedForeign, irrelevantElapsedDays, ...overDeadlineElapsedDays]) {
+      const application = getStatutoryWorkflowEvidence(query, stream, issue);
+      assert.ok(application, 'An uncertain or unrelated elapsed period still receives general ACRA guidance.');
+      assert.doesNotMatch(application.text, /20 days is within the foreign-company 30-day period/i,
+        'A date is applied only to an affirmatively stated foreign-company information change.');
+      assert.doesNotMatch(application.text, /not yet late/i,
+        'An elapsed period above the stated 30-day limit cannot be described as timely.');
+    }
+  }
+
   if (sample.dateRoleQuery) {
     const date = resolver.resolveAuthorityEvidenceDate(sample.dateRoleQuery, '2026-10-29');
     assert.equal(date.source, 'NONE', `${sample.id}: fact date does not select a different legal version.`);
@@ -221,6 +264,11 @@ for (const question of [
   assert.equal(supportStatutoryWorkflowRule({ ...sourceOf(cpf).input, query: question }), false,
     'Unresolved bare years and retrospective wording cannot be proved by current guidance.');
 }
+const historicalIrasQuestion = 'For our company accounting records for YA 2015, what retention period did the law require?';
+assert.notEqual(resolver.resolveAuthorityEvidenceDate(historicalIrasQuestion, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
+  'Past-tense statutory-duty wording preserves the historical YA scope.');
+assert.equal(supportStatutoryWorkflowRule({ ...sourceOf(iras).input, query: historicalIrasQuestion }), false,
+  'Current IRAS guidance cannot answer what the law required for the earlier YA.');
 assert.equal(resolver.resolveAuthorityEvidenceDate(
   'We paid CPF contributions on 1 October 2026. What is the refund deadline and what CPF contribution rate applies?',
   '2026-10-29').source, 'EXPLICIT', 'A separate rate request keeps its period even within the same authority.');
@@ -241,6 +289,19 @@ for (const [sample, original, incorrect] of [
   assert.equal(hasStatutoryWorkflowContradiction(mutated), true, `${sample.id}: the explicit changed premise is exposed to fallback veto.`);
 }
 
+const { input: masInput } = sourceOf(mas);
+for (const [before, incorrect] of [
+  ['As soon as practicable', 'At a later date'],
+  ['14 days from the date of', '30 days from the date of']
+]) {
+  assert.ok(masInput.sourceText.includes(before), `MAS row 17 timing premise exists: ${before}`);
+  const changed = { ...masInput, sourceText: masInput.sourceText.replace(before, incorrect) };
+  assert.equal(supportStatutoryWorkflowRule(changed), false,
+    'MAS row 17 must prove the practical deadline and the resignation-only 14-day period.');
+  assert.deepEqual(selectStatutoryWorkflowQuotes(changed), [],
+    'A changed row 17 time limit cannot be displayed as source-backed guidance.');
+}
+
 for (const [query, expectedDate] of [
   [acra.dateRoleQuery, '2026-10-12'],
   [cpf.dateRoleQuery, '2026-10-01']
@@ -250,6 +311,24 @@ for (const [query, expectedDate] of [
 }
 assert.equal(resolver.resolveAuthorityEvidenceDate(iras.query, '2026-10-29').source, 'NONE',
   'An explicitly supplied YA can be applied to the current company-record guidance.');
+for (const query of [
+  'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?',
+  'A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?',
+  'We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?',
+  'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
+  'An employee obtained SPR status on 7 August 2025. Is the move into the second CPF contribution year on 7 August 2026, or at the start of September?'
+]) {
+  assert.equal(resolver.resolveAuthorityEvidenceDate(query, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
+    'Multiple dated facts remain current-rule inputs when their workflow roles are identified.');
+}
+for (const query of [
+  'What deadline did we have under the ACRA rule for a change on 12 October 2010?',
+  'Which rules did ACRA apply to an address change on 12 October 2010?',
+  'What were the company record-retention requirements in YA 2010?'
+]) {
+  assert.notEqual(resolver.resolveAuthorityEvidenceDate(query, '2026-10-29').dateRole, 'CURRENT_WORKFLOW_FACT',
+    'Past-law and historical applicability wording cannot be treated as a current-workflow fact date.');
+}
 assert.equal(resolver.resolveAuthorityEvidenceDate('What rules were in force for company record retention in YA 2023?', '2026-10-29').targetDate,
   '2023-01-01', 'An explicit historical legal-version request keeps its prior target date.');
 assert.equal(resolver.resolveAuthorityEvidenceDate('What was the ACRA rule in force when our address changed on 12 October 2025?', '2026-10-29').targetDate,
@@ -274,6 +353,12 @@ for (const sample of cases) {
 // the ordinary application entry must route and render each natural question.
 const appCases = [
   { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
+    query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?',
+    expected: /foreign companies have 30 days.*20 days is within the foreign-company 30-day period.*not yet late/i },
+  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
+    query: 'Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?',
+    expected: /YA 2025.*31 December 2029.*01\/10\/2029.*before the end of that period, so do not shred.*filing the tax return does not end the retention period/i },
+  { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
     query: 'Our company changed its registered office address on 12 October 2026. By when must we notify ACRA?',
     expected: /14 days from the date of change|14 days from the date of the change/i },
   { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
@@ -287,7 +372,22 @@ const appCases = [
     expected: /together with payment.*three working days.*soft or hard copy/i },
   { authority: 'MAS', topic: 'mas-lfmc-key-appointments', url: manifest.sources.find(item => item.fixture === 'mas-lfmc-toolkit.pdf').url,
     query: 'Our LFMC plans to appoint a director. Does Form 11 require prior MAS approval?',
-    expected: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification/i }
+    expected: /prior MAS approval.*Form 11.*before appointing.*row 17.*separate subsequent notification/i },
+  { authority: 'IRAS', topic: 'iras-company-record-retention', url: manifest.sources.find(item => item.fixture === 'iras-company-records.html').url,
+    query: 'A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?',
+    expected: /officer immediately before dissolution.*five years after dissolution.*liquidator/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?',
+    expected: /06\/11\/2026.*discovery of the error does not restart/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
+    expected: /^(?=[\s\S]*15\/09\/2027)(?=[\s\S]*before applying, the employer must return the employee share directly to the employee)[\s\S]*$/i },
+  { authority: 'MAS', topic: 'mas-lfmc-key-appointments', url: manifest.sources.find(item => item.fixture === 'mas-lfmc-toolkit.pdf').url,
+    query: 'At our LFMC, an existing non-executive director will take an executive role. Since he is already on the board, can we simply notify MAS afterwards? Would moving an executive director into a non-executive role follow the same process?',
+    expected: /prior MAS approval using Form 11.*Non-Executive to Executive.*already being on the board does not remove approval.*Executive-to-Non-Executive.*as soon as practicable.*14.days.*specifically attached to the resignation/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'We paid wrongly submitted CPF contributions on 6 November 2025. The payment record says PAYMENTS RECEIVED ON 6 November 2025. When is the refund request due?',
+    expected: /PAYMENTS RECEIVED ON.*06\/11\/2025.*one-year outer limit 06\/11\/2026/i }
 ];
 const appFixtureBodies = new Map(manifest.sources.map(item => [item.url,
   readFileSync(new URL(item.fixture, fixtureRoot))]));
@@ -316,9 +416,11 @@ try {
   for (const sample of appCases) {
     let workstreams;
     let stream;
+    let answerText = '';
     try {
       const response = await processAccountingQuery(sample.query, null, 'SFRS_I', undefined, undefined, [], undefined,
         { onAuthorityWorkstreams: result => { workstreams = result; } });
+      answerText = response.messageText;
       assert.ok(workstreams, `${sample.authority}: processAccountingQuery reached authority workstreams.`);
       assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY', `${sample.authority}: the normal entry kept statutory advice on the advisory path.`);
       const presentation = createAuthorityEvidencePresentation(workstreams);
@@ -339,6 +441,13 @@ try {
     } catch (error) {
       appResults.push({ authority: sample.authority, topic: sample.topic, ok: false,
         failure: String(error?.message || error).slice(0, 240),
+        answer: (() => {
+          const marker = `${sample.authority} rule explanation:`;
+          const start = answerText.toLowerCase().indexOf(marker.toLowerCase());
+          if (start < 0) return answerText.slice(-1_200);
+          const end = answerText.indexOf('\n\n**Source:', start);
+          return answerText.slice(start, end >= 0 ? end : start + 4_000);
+        })(),
         issues: (stream?.issues || []).map(issue => ({
           subject: issue.subject, topicIds: issue.topicIds, operation: issue.operation,
           status: issue.evidenceStatus,
@@ -346,6 +455,23 @@ try {
         })) });
     }
   }
+  const employeeVoicedCpfQueries = [
+    'I have to repay my joining bonus to my employer. Can I request a CPF refund?',
+    'My employer made mistaken CPF contributions on my joining bonus; can I request money back?'
+  ];
+  for (const query of employeeVoicedCpfQueries) {
+    const { issuePlan } = reconcileQuestionUnderstanding(query, classifyQuestion(query),
+      { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' });
+    assert.ok(!issuePlan.issues.some(issue => issue.population === 'EMPLOYER' &&
+      /CPF employer refund timing/i.test(issue.subject)),
+    'An employee asking about their own bonus cannot be interpreted as the employer applicant.');
+    const response = await processAccountingQuery(query, null, 'SFRS_I', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(response.messageText, /CPF rule explanation:/i,
+      'Employee-voiced refund requests do not invent employer-only employee-share duties.');
+  }
+  const historicalResponse = await processAccountingQuery(historicalIrasQuestion, null, 'SFRS_I', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(historicalResponse.messageText, /IRAS rule explanation:[\s\S]{0,500}at least five years from the relevant Year of Assessment/i,
+    'The full application does not answer a historical legal-duty question with current guidance.');
 } finally {
   globalThis.fetch = previousFetch;
 }

@@ -115,7 +115,7 @@ const previousFetch = globalThis.fetch;
 const applicationResults = new Map();
 try {
   globalThis.fetch = strictOfflineFetch;
-  for (const [id, question] of [...cases, ['separate-ihc-tax', separateIhcTaxQuestion]]) {
+for (const [id, question] of [...cases, ['separate-ihc-tax', separateIhcTaxQuestion]]) {
     const response = await processAccountingQuery(question, null, 'IFRS', undefined, undefined, [], undefined);
     applicationResults.set(id, response);
   }
@@ -134,7 +134,9 @@ for (const [id] of cases) {
   assert.deepEqual(response.scenarioState.directGroups || [], [], `${id} does not create accounting journals`);
   assert.match(response.messageText, /Verified general guidance is available/i,
     `${id} identifies verified general rule evidence`);
-  assert.match(response.messageText, /Evidence is incomplete for one or more material issues/i,
+  assert.equal(response.scenarioState.authorityEvidencePresentation.status, 'INSUFFICIENT',
+    `${id} does not upgrade whole-question verification when only mapped guidance is supported`);
+  assert.match(response.messageText, /full request coverage unconfirmed|Evidence is incomplete for one or more material issues/i,
     `${id} preserves the distinction between verified rule evidence and whole-question coverage`);
 }
 
@@ -155,6 +157,7 @@ assert.match(whtAnswer, /only the payment attributable to the services rendered 
   'the WHT answer apportions a mixed-location service fee');
 assert.match(whtAnswer, /17%/i, 'the WHT answer states the existing prevailing rate for Singapore-work fees');
 assert.match(whtAnswer, /DTA/i, 'the WHT answer preserves treaty qualifications');
+
 
 assert.doesNotMatch(applicationResults.get('separate-ihc-tax').messageText, /ECI filing waiver|nil ECI|\$5 million/i,
   'a separate IHC tax question does not receive the ECI waiver answer');

@@ -147,8 +147,8 @@ const RULES: readonly Rule[] = [
     limitations: ['Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts.', 'Does not replace separate rest-day, overtime or part-time rules.'],
     requiredSourceTerms: ['covered by the employment act', '11 paid public holidays', 'you were not absent on the working day immediately before or after a holiday without consent or a reasonable excuse', 'you are on authorised leave (e.g. sick leave, annual leave, unpaid leave) on the day immediately before or after a holiday', 'not entitled to holiday pay if the holiday falls on your approved unpaid leave', 'falls on a rest day', 'following working day will be a paid public holiday', 'non-working day', 'one extra day', 'gross rate', 'work on a public holiday', 'extra day', 'basic rate', 'part 4'],
     quoteMatchers: [/If covered by the Employment Act[^.]*year\./i, /The gazetted holidays are[^.]*Christmas Day\./i, /You are entitled to your gross rate of pay on a public holiday, if:[\s\S]*?You are on authorised leave[^.]*\./i, /You are not entitled to holiday pay if the holiday falls on your approved unpaid leave\./i, /If a holiday falls on a non-working day[^.]*in lieu\./i, /If it falls on a rest day[^.]*paid holiday\./i, /By default, an employee required to work[^.]*\./i, /Time off in lieu may be used[^.]*Part IV\./i, /An employee not covered by the Employment Act[^.]*contract\./i],
-    queryPattern: /\bpublic holida(?:y|ys)\b[\s\S]{0,180}\b(?:entitl|paid|pay|work|off|day|rate|employment act)\b|\b(?:entitl|paid|pay|work|off|day|rate)\b[\s\S]{0,180}\bpublic holida(?:y|ys)\b/i,
-    subjectPattern: /\bpublic holida(?:y|ys)\b/i
+    queryPattern: /\bpublic[- ]holida(?:y|ys)\b[\s\S]{0,180}\b(?:entitl|paid|pay|work|off|day|rate|employment act)\b|\b(?:entitl|paid|pay|work|off|day|rate)\b[\s\S]{0,180}\bpublic[- ]holida(?:y|ys)\b/i,
+    subjectPattern: /\bpublic[- ]holida(?:y|ys)\b/i
   },
   {
     id: 'MOM_FINAL_SALARY_DEADLINES', authority: 'MOM', topicIds: ['mom-salary-payment'], officialUrl: MOM_FINAL_SALARY_URL,

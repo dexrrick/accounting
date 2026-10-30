@@ -5,7 +5,7 @@ import type {
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
-import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+import { defaultTargetDateResolver, hasHistoricalStatutoryVersionIntent, TargetDateResolver } from './targetDateResolver';
 
 export interface StatutoryWorkflowRequest {
   authority: string;
@@ -73,7 +73,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     exceptions: ['The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods.'],
     requiredFacts: ['Entity type and the category of information changed.', 'The date of the change and any category-specific filing facts.'],
     effectiveDateEvidence: 'The captured page does not state a legal commencement date. Its retrieval date is not treated as an effective date.',
-    limitations: ['General current page guidance only; no deadline date is calculated here.', 'For an entity-specific answer, confirm the entity category and the actual change date.'],
+    limitations: ['A calendar deadline requires a confirmed change date and entity category.', 'For an entity-specific answer, confirm the applicable filing route.'],
     requiredSourceTerms: [
       'All registered entities must notify ACRA of any changes within 14 days from the date of change, except foreign companies which have 30 days.',
       'Within 14 days from the date of the change', 'Within 30 days from the date of the change',
@@ -140,7 +140,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     exceptions: ['Excess Additional Wage ceiling contributions are a prompt-application category.', 'CPF Annual Limit excess contributions paid from 2023 are refunded automatically to the employer from February 2024; this is distinct from an application for an AW-ceiling refund.'],
     requiredFacts: ['Refund category and CPF payment date.', 'For conditional wages, the contractual or mutually agreed repayment due date.', 'Whether the employee share was returned and funds remain available in CPF account(s).', 'For AW or annual-limit excess, the relevant year and excess category.'],
     effectiveDateEvidence: 'The page’s annual-limit statement explicitly starts in February 2024 and applies to excess paid from 2023. Other page-update dates are not treated as effective dates.',
-    limitations: ['No refund due date is computed, including for leap-year anniversaries.', 'The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund.'],
+    limitations: ['Do not infer a refund deadline when the payment date, conditional-wage repayment date or calendar anniversary is unclear.', 'The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund.'],
     requiredSourceTerms: [
       'Any request for refund of CPF contributions paid must be made immediately and no later than one year from the date of payment of the CPF contributions.',
       'PAYMENTS RECEIVED ON', 'field in your record of payment to determine the date of payment',
@@ -164,7 +164,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /annual limit[^.!?\n]{0,220}\b(?:must apply|application required|not refunded automatically)\b/i,
       /AW ceiling[^.!?\n]{0,220}\brefunded automatically\b/i
     ],
-    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund|overpaid|excess contribution|wrongly paid|repayment)\b|\b(?:refund|overpaid|excess contribution)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
+    queryPattern: /\b(?:cpf|central provident fund)\b[\s\S]{0,180}\b(?:refund\w*|overpaid|overpayment|excess contribution|wrongly paid|mistaken contribution|paid in error|repayment|recover\w*|money back)\b|\b(?:refund\w*|overpaid|overpayment|excess contribution|mistaken contribution|recover\w*|money back)\b[\s\S]{0,180}\b(?:cpf|central provident fund)\b/i,
     subjectPattern: /\b(?:cpf|contribution|refund|repayment)\b/i
   },
   {
@@ -212,8 +212,8 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     fixtureFile: 'mas-lfmc-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
     population: 'Licensed Fund Management Companies (LFMCs)',
     provisions: ['MAS LFMC Compliance Toolkit requirement 3, which cites section 96 of the Securities and Futures Act and regulation 12 of the Securities and Futures (Licensing and Conduct of Business) Regulations.'],
-    rule: 'The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11.',
-    conditions: ['The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope.', 'Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3.'],
+    rule: 'The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive; already being on the board does not remove approval for that change. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11. Row 17 gives “As soon as practicable” for these notifications; its additional no-later-than-14-days limit is specifically attached to the resignation in item (i).',
+    conditions: ['The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope.', 'Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3. Its 14-day time limit applies to item (i), resignation.'],
     exceptions: ['This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements.', 'The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements.'],
     requiredFacts: ['Whether the firm is an LFMC.', 'Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change.'],
     effectiveDateEvidence: 'The retained PDF identifies its issue/revision dates only; neither those dates nor row 17’s update note establishes legal commencement for row 3.',
@@ -223,12 +223,14 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       '3 To seek MAS’ approval', 'Form 11 - Appointment', 'Prior | to | the', 'appointment of a Chief Executive Officer',
       'Section 96 of the SFA', 'Regulation 12 of',
       '(CEO) or Director;', 'nature of Director appointment from Non-',
-      '17 To notify MAS of', 'resignation of CEO', 'Executive', 'Non-Executive',
+      '17 To notify MAS of', 'resignation of CEO', 'As soon as practicable', 'for (i), no later than',
+      '14 days from the date of', 'the resignation', 'nature of the appointment of a Director',
+      'Executive to one that is', 'Non-Executive',
       'change in particulars', 'provided in Form 11'
     ],
     quoteMatchers: [
       /3 To seek MAS’ approval[\s\S]{0,1000}Form 11[\s\S]{0,240}Prior\s*\|\s*to\s*\|\s*the[\s\S]{0,500}Section 96 of the SFA[\s\S]{0,500}Regulation 12 of[\s\S]{0,300}\(CEO\) or Director;[\s\S]{0,300}nature of Director appointment from Non-[\s\S]{0,200}Executive to Executive[\s\S]{0,200}Executive to Executive/i,
-      /17 To notify MAS of[\s\S]{0,2200}resignation of CEO[\s\S]{0,1800}Non-Executive[\s\S]{0,1800}provided in Form 11/i,
+      /17 To notify MAS of \(i\)[\s\S]{0,300}resignation of CEO[\s\S]{0,300}As soon as practicable[\s\S]{0,250}for \(i\), no later than[\s\S]{0,250}nature of the appointment of a Director[\s\S]{0,250}14 days from the date of[\s\S]{0,250}from one that is Executive to one that is[\s\S]{0,150}the resignation[\s\S]{0,150}Non-Executive[\s\S]{0,1600}provided in Form 11/i,
       /Relevant to:\s*\|\s*LFMCs/i
     ],
     contradictionPatterns: [
@@ -237,7 +239,7 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
       /row 3[^.!?\n]{0,220}\bnotification\b/i,
       /17 To notify MAS[^\n]{0,900}\bprior approval\b/i
     ],
-    queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,180}\b(?:appoint\w*|appointment|CEO|director|Form 11)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11)\b[\s\S]{0,180}\b(?:LFMC|licensed fund management company)\b/i,
+    queryPattern: /\b(?:LFMC|licensed fund management company|fund manager)\b[\s\S]{0,220}\b(?:appoint\w*|appointment|CEO|director|Form 11|executive|non.executive|role change|nature of (?:the )?appointment)\b|\b(?:appoint\w*|appointment|CEO|director|Form 11|executive\s*(?:to|into|becomes?)\s*non.executive|non.executive\s*(?:to|into|becomes?)\s*executive|nature of (?:the )?appointment)\b[\s\S]{0,220}\b(?:LFMC|licensed fund management company)\b/i,
     subjectPattern: /\b(?:LFMC|fund management|CEO|director|Form 11|key appointment)\b/i
   }
 ]);
@@ -287,12 +289,8 @@ function hasAllRequiredQuotes(rule: Rule, sourceText: string): boolean {
   return rule.quoteMatchers.every(pattern => pattern.test(clean));
 }
 
-function historicalVersionRequest(query: string): boolean {
-  return /\b(?:historical|historic|back then|at that time|at that date|used to|what was|what were|previous law|prior law|former rule|superseded|in force|what (?:law|rules?|requirements?) applied|which (?:law|rules?) applied|law applicable in|rules? applicable in|effective as of)\b/i.test(query);
-}
-
 function scopeAllowsCurrentRule(query: string): boolean {
-  if (historicalVersionRequest(query)) return false;
+  if (hasHistoricalStatutoryVersionIntent(query)) return false;
   const resolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query);
   const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
   const hasNonCurrentYear = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].some(match => match[0] !== currentYear);
@@ -347,8 +345,119 @@ function sourceFor(rule: Rule, source: AuthorityPresentedSource, issueId: string
       .some(group => sourceProves(rule, group.map(claim => claim.text).join('\n')));
 }
 
-function answerText(rule: Rule): string {
-  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} For case-specific application, consider: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}`;
+function answerText(rule: Rule, query: string): string {
+  const application = rule.id === 'ACRA_ENTITY_INFORMATION_UPDATE_DEADLINES'
+    ? acraForeignCompanyDeadlineApplication(query)
+    : rule.id === 'IRAS_COMPANY_TAX_RECORD_RETENTION'
+      ? irasRecordRetentionApplication(query)
+      : undefined;
+  return `${rule.rule} ${rule.conditions.join(' ')} ${rule.exceptions.join(' ')} For case-specific application, consider: ${rule.requiredFacts.join(' ')} ${rule.limitations.join(' ')}${application ? ` ${application}` : ''}`;
+}
+
+function acraForeignCompanyDeadlineApplication(query: string): string | undefined {
+  if (!/\b(?:registered in Singapore as (?:a )?foreign compan(?:y|ies)|we are (?:an? )?(?:overseas[- ]incorporated )?foreign compan(?:y|ies)|(?:our|the) compan(?:y|ies) (?:is|are) (?:an? )?foreign compan(?:y|ies))\b/i.test(query) ||
+      /\b(?:not|never|isn't|aren't|not sure|unclear|whether|maybe|possibly)\b[^.!?;]{0,60}\bforeign compan(?:y|ies)\b/i.test(query)) return undefined;
+  const dayCountPattern = String.raw`(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty[- ]one|twenty[- ]two|twenty[- ]three|twenty[- ]four|twenty[- ]five|twenty[- ]six|twenty[- ]seven|twenty[- ]eight|twenty[- ]nine|twenty|thirty)`;
+  const parseElapsedDays = (clause: string): { days: number; index: number } | undefined => {
+    const match = new RegExp(String.raw`\b${dayCountPattern}\s+days?\s+ago\b`, 'i').exec(clause);
+    if (!match) return undefined;
+    const before = clause.slice(0, match.index);
+    if (/\b(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[ -]$/i.test(before) ||
+        /\b(?:one|two|three|four|five|six|seven|eight|nine) hundred(?: and)?[ -]$/i.test(before)) return undefined;
+    const elapsed = match[1];
+    const words: Record<string, number> = {
+      one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+      ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+      seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21, 'twenty one': 21,
+      'twenty-two': 22, 'twenty two': 22, 'twenty-three': 23, 'twenty three': 23,
+      'twenty-four': 24, 'twenty four': 24, 'twenty-five': 25, 'twenty five': 25,
+      'twenty-six': 26, 'twenty six': 26, 'twenty-seven': 27, 'twenty seven': 27,
+      'twenty-eight': 28, 'twenty eight': 28, 'twenty-nine': 29, 'twenty nine': 29, thirty: 30
+    };
+    const days = /^\d+$/.test(elapsed) ? Number(elapsed) : words[elapsed.toLowerCase()];
+    return Number.isInteger(days) ? { days, index: match.index } : undefined;
+  };
+  const changeClause = query.split(/[.!?;]+/).find(clause =>
+    /\b(?:change\w*|updat\w*)\b/i.test(clause) &&
+    /\b(?:registered office|entity email|business email|company email|business activities|entity information|registered address|office address)\b/i.test(clause) &&
+    parseElapsedDays(clause) !== undefined);
+  if (!changeClause) return undefined;
+  const elapsed = parseElapsedDays(changeClause);
+  if (!elapsed || elapsed.days > 30) return undefined;
+  const beforeElapsed = changeClause.slice(0, elapsed.index);
+  const lastChange = [...beforeElapsed.matchAll(/\b(?:change\w*|updat\w*)\b/gi)].at(-1);
+  if (!lastChange || /\b(?:resign\w*|quit\w*|terminat\w*|dismiss\w*|paid|paying|contribut\w*|discover\w*|found|submitted|filed|joined|left)\b/i.test(beforeElapsed.slice(lastChange.index! + lastChange[0].length))) return undefined;
+  return `On the stated facts, ${elapsed.days} days is within the foreign-company 30-day period, so the company is not yet late. Notify ACRA within that period.`;
+}
+
+function irasRecordRetentionApplication(query: string): string | undefined {
+  const ya = /\b(?:YA|Year of Assessment)\s*(20\d{2})\b/i.exec(query)?.[1];
+  if (!ya) return undefined;
+  const endYear = Number(ya) + 4;
+  if (!Number.isSafeInteger(endYear) || endYear < 2000 || endYear > 9999) return undefined;
+  const disposal = /\b(?:shred|destroy|discard|dispose of)\w*\b[^.!?;\n]{0,80}?\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b/i.exec(query);
+  let application = `For YA ${ya}, retain the records through at least 31 December ${endYear}.`;
+  if (disposal) {
+    const day = Number(disposal[1]), month = Number(disposal[2]), year = Number(disposal[3]);
+    const proposed = new Date(Date.UTC(year, month - 1, day));
+    if (!Number.isFinite(proposed.getTime()) || proposed.getUTCFullYear() !== year || proposed.getUTCMonth() !== month - 1 || proposed.getUTCDate() !== day) return undefined;
+    const limit = new Date(Date.UTC(endYear, 11, 31));
+    if (proposed <= limit) application += ` The proposed disposal date ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year} is before the end of that period, so do not shred the records then.`;
+  }
+  if (/\b(?:tax return|return)\b[^.!?;]{0,50}\b(?:filed|filing|submitted|completed)\b|\b(?:filed|filing|submitted|completed)\b[^.!?;]{0,50}\b(?:tax return|return)\b/i.test(query)) {
+    application += ' Filing the tax return does not end the retention period.';
+  }
+  return application;
+}
+
+function cpfRefundDateApplication(query: string): string | undefined {
+  const datePattern = String.raw`(\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2})`;
+  const conditional = /\b(?:conditional wages?|conditional bonus|joining bonus|repayable (?:wages?|bonus)|bonus[^.!?;\n]{0,60}\b(?:repayable|repayment)|(?:repayable|repayment)[^.!?;\n]{0,60}\bbonus|bonus subject to repayment|wages? subject to repayment)\b/i.test(query);
+  let suppliedDate: string | undefined;
+  if (conditional) {
+    const contractualDueDate = new RegExp(String.raw`(?:\bunder (?:the )?employment terms\b[^.!?;\n]{0,100}\b(?:had|has|have|was|were) to repay\b[^.!?;\n]{0,100}\bon\s+${datePattern}|\b(?:contractual|mutually agreed|agreed) repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?\s*${datePattern}|\b(?:employment terms|employment agreement|mutual agreement)\b[^.!?;\n]{0,100}\b(?:repayment|repay\w*|wages? due to be repaid)\b[^.!?;\n]{0,60}\b(?:due on|due date (?:is|as)|on)\s+${datePattern})`, 'gi');
+    const dueDates = [...query.matchAll(contractualDueDate)].map(match => match[1] || match[2] || match[3]);
+    if (dueDates.length !== 1) return undefined;
+    suppliedDate = dueDates[0];
+  } else {
+    suppliedDate = new RegExp(String.raw`\bPAYMENTS RECEIVED ON\b\s*:?\s*${datePattern}`, 'i').exec(query)?.[1];
+  }
+  if (!suppliedDate) return undefined;
+  const suppliedIso = strictSuppliedDateIso(suppliedDate);
+  if (!suppliedIso) return undefined;
+  const resolved = defaultTargetDateResolver.resolveTargetDate(suppliedDate);
+  if (!resolved.targetDate || resolved.confidence !== 'HIGH' || resolved.targetDate !== suppliedIso) return undefined;
+  const original = new Date(`${resolved.targetDate}T00:00:00Z`);
+  if (!Number.isFinite(original.getTime()) || original.toISOString().slice(0, 10) !== resolved.targetDate ||
+      resolved.targetDate.slice(5, 7) === '02' && resolved.targetDate.slice(8, 10) === '29') return undefined;
+  const deadline = new Date(`${resolved.targetDate}T00:00:00Z`);
+  deadline.setUTCFullYear(deadline.getUTCFullYear() + 1);
+  if (!Number.isFinite(deadline.getTime())) return undefined;
+  const deadlineIso = deadline.toISOString().slice(0, 10);
+  if (new Date(`${deadlineIso}T00:00:00Z`).toISOString().slice(0, 10) !== deadlineIso) return undefined;
+  const formatDate = (iso: string): string => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
+  return conditional
+    ? `For the supplied conditional-wage repayment due date of ${formatDate(resolved.targetDate)}, the one-year outer limit is ${formatDate(deadlineIso)}.`
+    : `The payment record’s “PAYMENTS RECEIVED ON” date is ${formatDate(resolved.targetDate)}, making the one-year outer limit ${formatDate(deadlineIso)}; discovery of the error does not restart that period.`;
+}
+
+function strictSuppliedDateIso(value: string): string | undefined {
+  let year: number, month: number, day: number;
+  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
+  if (match) [, day, month, year] = match.map(Number);
+  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) {
+    [, year, month, day] = match.map(Number);
+  } else if ((match = /^(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+(20\d{2})$/i.exec(value))) {
+    const monthNumber = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+      .indexOf(match[2].slice(0, 3).toLowerCase()) + 1;
+    day = Number(match[1]);
+    year = Number(match[3]);
+    month = monthNumber;
+  } else return undefined;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (!Number.isFinite(date.getTime()) || date.getUTCFullYear() !== year ||
+      date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 /** Renders a general explanation only from exact-URL, issue-bound quotes in one verified document revision. */
@@ -374,5 +483,8 @@ export function getStatutoryWorkflowEvidence(
       || !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
   const source = stream.sources.find(candidate => sourceFor(rule, candidate, issue.id));
   if (!source) return undefined;
-  return { authority: rule.authority, title: source.title || rule.title, officialUrl: rule.officialUrl, text: answerText(rule) };
+  const text = answerText(rule, query);
+  const dateApplication = rule.id === 'CPF_CONTRIBUTION_REFUND_DEADLINES' ? cpfRefundDateApplication(query) : undefined;
+  return { authority: rule.authority, title: source.title || rule.title, officialUrl: rule.officialUrl,
+    text: dateApplication ? `${text} ${dateApplication}` : text };
 }

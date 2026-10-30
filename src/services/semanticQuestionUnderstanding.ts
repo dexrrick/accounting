@@ -2799,10 +2799,14 @@ function refineTaxonomyRuleIntent(
 ): SemanticQuestionIssue & { contextualTopicIds?: string[] } {
   const topicIds = new Set(issue.mappedTopicIds);
   const text = query.toLowerCase().replace(/[-_]/g, ' ');
+  const boundedPublicHolidayRestDayComparison = topicIds.has('mom-public-holidays') &&
+    /\bpublic holidays?\b/i.test(text) &&
+    /\bnon working day\b/i.test(text) && /\b(?:contractual )?rest day\b/i.test(text) &&
+    /\b(?:falls?|difference|rather than|versus|compared)\b/i.test(text);
   // Contextualization is a demotion: only do it when the query has one clear
   // request. If another sentence, question, or coordinated instruction may
   // independently ask about a topic, keep that topic mapped as requested.
-  const mayDemoteToContext = !hasIndependentSemanticClause(query);
+  const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison;
   const asksForAmount = /\b(?:calculate|compute|work\s+out|estimate|how much (?:cpf|tax|salary|wht|gst|money|will|do|does|would|should)|what amount (?:is|are|do|does|would|will))\b/i.test(query);
   if (asksForAmount || /\b(?:prepare|post|journal entry|calculate my|calculate our)\b/i.test(query)) return issue;
 
@@ -2837,25 +2841,33 @@ function refineTaxonomyRuleIntent(
   };
 
   if (issue.domain === 'CPF_PAYROLL') {
-    const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') &&
-      /\b(?:cpf|central provident fund)\b/i.test(text) &&
-      /\b(?:refund\w*|overpaid|excess contribution|wrongly paid|paid in error)\b/i.test(text) &&
-      /\b(?:employer|payroll|company|business|our employee|we paid)\b/i.test(text) &&
-      !/\b(?:individual|member|my own|my personal)\b/i.test(text);
+    const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') && isCpfEmployerRefundContext(text);
     if (asksEmployerCpfRefund) {
       const asksSeparateRatesOrCalculation = /\b(?:rates?|percentages?|calculate|compute|contribution table|how much contribution)\b/i.test(text);
+      const incidentalRefundTopics = isCpfEmployerRefundContext(text) ? [
+        ...(!explicitlyAsksCpfWageClassification(text)
+          ? ['cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-bonus-backpay'] : []),
+        ...(!/\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax relief)\b/i.test(text)
+          ? ['iras-individual-cpf-relief'] : [])
+      ] : [];
       const asksSeparateContributionPayment = /\b(?:when|deadline|due date)\b[^?!;]{0,65}\b(?:pay|submit|remit)\b[^?!;]{0,35}\b(?:cpf|contributions?)\b/i.test(query) ||
         query.split(/[.!?;]|\b(?:and|or|also|plus|additionally)\b/i).some(clause =>
           !/\brefund\w*\b/i.test(clause) && /\bcontributions?\b[^?!;]{0,55}\b(?:due|payable)\b/i.test(clause));
       const refundIssue = makeRuleIssue('CPF employer refund timing and application requirements', 'EMPLOYER',
         asksSeparateRatesOrCalculation ? [] : ['cpf_contribution_rates', 'cpf-contribution-computation']);
+      const asksExplicitTaxQuestion = /\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax withholding)\b/i.test(text);
+      const incidentalBonusTaxTopic = /\b(?:bonus|joining bonus|conditional wage)\b/i.test(text) && !asksExplicitTaxQuestion
+        ? ['iras-employee-bonus-timing'] : [];
       if (!asksSeparateRatesOrCalculation) return {
         ...refundIssue,
         mappedTopicIds: refundIssue.mappedTopicIds.filter(topicId =>
           !['cpf_contribution_rates', 'cpf-contribution-computation'].includes(topicId) &&
+          !incidentalRefundTopics.includes(topicId) &&
+          !incidentalBonusTaxTopic.includes(topicId) &&
           (topicId !== 'cpf-contribution-due-dates' || asksSeparateContributionPayment)),
         contextualTopicIds: [...new Set([...(refundIssue.contextualTopicIds || []),
-          ...['cpf_contribution_rates', 'cpf-contribution-computation'].filter(topicId => topicIds.has(topicId))])]
+          ...['cpf_contribution_rates', 'cpf-contribution-computation', ...incidentalRefundTopics,
+            ...incidentalBonusTaxTopic].filter(topicId => topicIds.has(topicId))])]
       };
       return refundIssue;
     }
@@ -2906,7 +2918,8 @@ function refineTaxonomyRuleIntent(
     if (asksAgeRate && (topicIds.has('cpf_contribution_rates') || topicIds.has('cpf-contribution-computation')) &&
         /\b(?:age|birthday|percentages?|rates?|rate band|contribution table)\b/i.test(text)) {
       const population: SemanticPopulation = /\bemployer\b/i.test(text) ? 'EMPLOYER'
-        : /\b(?:employee|worker|staff member)\b/i.test(text) ? 'EMPLOYEE' : 'UNKNOWN';
+        : /\b(?:employee|worker|staff member)\b/i.test(text) ? 'EMPLOYEE'
+          : /\b(?:on|within) (?:our|the) payroll\b/i.test(text) ? 'EMPLOYER' : 'UNKNOWN';
       if (population !== 'UNKNOWN') return makeRuleIssue('CPF contribution rates by age group', population);
     }
 
@@ -2994,9 +3007,16 @@ function refineTaxonomyRuleIntent(
       return makeRuleIssue('Final salary payment deadlines by termination reason', population);
     }
     if (population !== 'UNKNOWN' && topicIds.has('mom-public-holidays') &&
-        /\bpublic holidays?\b/i.test(text) &&
-        /\b(?:pay|entitle\w*|non.work\w*|rest day|day off|absence|work\w* on)\b/i.test(text)) {
-      return makeRuleIssue('Public holiday entitlement and pay', population);
+        /\bpublic[- ]holidays?\b/i.test(text) &&
+        /\b(?:pay|entitle\w*|non.work\w*|day off|absence|work\w* on|falls?|difference|compar\w*|treatment|eligib\w*)\b/i.test(text)) {
+      const asksRestDayWork = /\b(?:work|working|worked)\s+on\s+(?:the\s+)?(?:contractual\s+)?rest[- ]day\b|\brest[- ]day(?:\s+(?:work|working|pay|payment|compensation))\b|\b(?:swap|exchange)\b[^.!?;]{0,50}\brest[- ]day\b/i.test(text);
+      const asksOvertimeRule = /\b(?:overtime|extra hours|hours worked beyond|overtime limit)\b/i.test(text);
+      const contextualHolidayTopics = [
+        ...(topicIds.has('mom-rest-days') && !asksRestDayWork ? ['mom-rest-days'] : []),
+        ...(topicIds.has('mom_overtime') && !asksOvertimeRule ? ['mom_overtime'] : []),
+        ...(topicIds.has('mom-part-iv-overtime') && !asksOvertimeRule ? ['mom-part-iv-overtime'] : [])
+      ];
+      return makeRuleIssue('Public holiday entitlement and pay', population, contextualHolidayTopics);
     }
   }
 
@@ -3052,11 +3072,15 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'MAS_FUNDS') {
+    const describesLfmcDirectorRoleTransition = /\bdirector\b/i.test(text) &&
+      /\bexecutive\b/i.test(text) && /\bnon[- ]executive\b/i.test(text) &&
+      /\b(?:take|takes|taking|move|moves|moving|change|changes|changing|become|becomes|becoming)\b/i.test(text);
     const asksLfmcInitialAppointmentRule = topicIds.has('mas-lfmc-key-appointments') &&
       /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
       /\b(?:appoint\w*|appointment|form 11|prior approval)\b/i.test(text) &&
       /\b(?:ceo|chief executive|director)\b/i.test(text) &&
-      !/\b(?:vcfm|venture capital fund manager|row\s*17|resign\w*|resignation|change(?:d)?(?:\s+(?:of|in))?\s+particulars?|updated? particulars?|executive to non.executive)\b/i.test(text);
+      !describesLfmcDirectorRoleTransition &&
+      !/\b(?:vcfm|venture capital fund manager|row\s*17|resign\w*|resignation|change(?:d)?(?:\s+(?:of|in))?\s+particulars?|updated? particulars?|executive to non.executive|non[- ]executive director.{0,100}executive role|executive director.{0,100}non[- ]executive role)\b/i.test(text);
     if (asksLfmcInitialAppointmentRule) {
       const asksSeparateLicensingQuestion = hasSeparateMasLfmcLicensingAsk(query);
       const appointmentIssue = makeRuleIssue('MAS LFMC CEO and Director appointment approval', 'COMPANY',
@@ -3068,6 +3092,22 @@ function refineTaxonomyRuleIntent(
           ...issue.mappedTopicIds.filter(topicId => topicId === 'mas-lfmc')])]
       };
       return appointmentIssue;
+    }
+
+    const asksLfmcDirectorRoleChange = topicIds.has('mas-lfmc-key-appointments') &&
+      /\b(?:lfmc|licensed fund management company|licensed fund manager)\b/i.test(text) &&
+      describesLfmcDirectorRoleTransition;
+    if (asksLfmcDirectorRoleChange) {
+      const asksSeparateLicensingQuestion = hasSeparateMasLfmcLicensingAsk(query);
+      const roleChangeIssue = makeRuleIssue('MAS LFMC Director Executive and Non-Executive role changes', 'COMPANY',
+        asksSeparateLicensingQuestion ? [] : ['mas-lfmc']);
+      if (!asksSeparateLicensingQuestion) return {
+        ...roleChangeIssue,
+        mappedTopicIds: roleChangeIssue.mappedTopicIds.filter(topicId => topicId !== 'mas-lfmc'),
+        contextualTopicIds: [...new Set([...(roleChangeIssue.contextualTopicIds || []),
+          ...issue.mappedTopicIds.filter(topicId => topicId === 'mas-lfmc')])]
+      };
+      return roleChangeIssue;
     }
   }
 
@@ -3096,7 +3136,7 @@ function refineTaxonomyRuleIntent(
   const explicitBusinessScope = /\b(?:company|business|employer|our|we paid|we use|gst.registered business)\b/i.test(text);
   if (issue.domain === 'IRAS_GST' &&
       [...topicIds].some(id => ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(id)) &&
-      /\b(?:motor cars?|passenger cars?|company cars?)\b/i.test(text) &&
+      /\b(?:motor cars?|passenger cars?|company cars?|subsidiar(?:y|ies)['’]?s? (?:motor )?cars?)\b/i.test(text) &&
       /\b(?:gst|input tax|input gst)\b/i.test(text) && explicitBusinessScope) {
     return makeRuleIssue('GST input tax on business motor cars', 'COMPANY');
   }
@@ -3182,13 +3222,36 @@ function refineTaxonomyRuleIntent(
   return issue;
 }
 
+function isCpfEmployerRefundContext(query: string): boolean {
+  const employerApplicantContext = /\b(?:we (?:paid|found|submitted|contributed|are applying|applied)|our (?:company|business|payroll|employee|employees|staff|payment|contribution|money back)|(?:an?|the) employer\b[^.!?;\n]{0,100}\b(?:paid|contributed|overpaid|submitted|appl\w*|request\w*|refund\w*)\b)\b/i.test(query);
+  const individualEmployeeVoice = /\b(?:my employer|to my employer|my (?:own |joining )?(?:bonus|wages?|cpf)|i (?:have|had|need|must|want|would) to repay)\b/i.test(query);
+  return /\b(?:cpf|central provident fund)\b/i.test(query) &&
+    /\b(?:refund\w*|overpaid|overpayment|excess (?:cpf )?contributions?|wrongly paid|mistaken (?:cpf )?contributions?|paid in error|recover\w*|money back)\b/i.test(query) &&
+    employerApplicantContext && !individualEmployeeVoice &&
+    !/\b(?:individual|member|my own|my personal)\b/i.test(query);
+}
+
+function explicitlyAsksCpfWageClassification(query: string): boolean {
+  return /\b(?:additional wages?|ordinary wages?|aw ceiling|ow ceiling|classif(?:y|ication)|which wage category|is .{0,40} a (?:ordinary|additional) wage|cpf rate on .{0,30}bonus)\b/i.test(query);
+}
+
 function independentlyRecognizedTopics(query: string, classification: QuestionClassificationResult) {
   const decomposition = defaultQueryTopicResolver.decomposeQuery(query);
   const candidateIds = [...new Set([...decomposition.topics.map(topic => topic.id), ...classification.topicIds])];
+  const cpfRefundContext = isCpfEmployerRefundContext(query);
+  const incidentalCpfRefundTopics = cpfRefundContext
+    ? new Set([
+      ...(!explicitlyAsksCpfWageClassification(query)
+        ? ['cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-bonus-backpay'] : []),
+      ...(!/\b(?:iras|income tax|taxable|tax treatment|tax reporting|tax relief)\b/i.test(query)
+        ? ['iras-individual-cpf-relief'] : [])
+    ])
+    : new Set<string>();
   const topics = defaultQueryTopicResolver.resolveTopicIds(candidateIds).filter(topic =>
-    topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
-    topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
-    topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_'));
+    !incidentalCpfRefundTopics.has(topic.id) &&
+    (topic.domainId.startsWith('ACCOUNTING_') || topic.domainId.startsWith('IRAS_') ||
+      topic.domainId.startsWith('CPF_') || topic.domainId.startsWith('MOM_') ||
+      topic.domainId.startsWith('ACRA_') || topic.domainId.startsWith('MAS_')));
   return {
     topics,
     rawTopicIds: [...new Set(decomposition.topics.map(topic => topic.id))],

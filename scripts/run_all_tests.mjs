@@ -54,6 +54,7 @@ const testSuites = [
   { name: 'Five-family Statutory Workflow Source Proof', file: 'test_statutory_workflows_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Statutory Actual Answer Routing Repairs', file: 'test_statutory_review_application_answer_repairs_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Statutory Existing Rule Actual Application Mappings', file: 'test_statutory_review_application_existing_rule_mappings_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Statutory Practical Source Expansion Full Applications', file: 'test_statutory_priority3_source_expansions_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS and MAS Source-backed Knowledge', file: 'test_iras_mas_knowledge_20261027b.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS Native WHT Filing and Treaty Production Proof', file: 'test_iras_wht_filing_treaty_production.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'IRAS General Rule Actual Application Path', file: 'test_iras_general_rule_actual_path_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

@@ -28,9 +28,11 @@ export type IrasMasKnowledgeRuleId =
   | 'IRAS_ECI_PRACTICAL_WAIVER'
   | 'IRAS_WHT_SERVICES'
   | 'IRAS_WHT_FILING_DATE'
-  | 'MAS_SFA_MISCONDUCT_REPORTING_2027';
+  | 'MAS_SFA_MISCONDUCT_REPORTING_2027'
+  | 'MAS_LFMC_TOOLKIT_SCOPE';
 
-export type IrasMasKnowledgeFixtureKind = 'IRAS_NATIVE_HTML_PAGE' | 'IRAS_VISIBLE_PAGE_EXCERPT' | 'MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT';
+export type IrasMasKnowledgeFixtureKind = 'IRAS_NATIVE_HTML_PAGE' | 'IRAS_VISIBLE_PAGE_EXCERPT'
+  | 'MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT' | 'MAS_LFMC_TOOLKIT_NATIVE_PDF';
 
 export interface IrasMasKnowledgeRuleMetadata {
   id: IrasMasKnowledgeRuleId;
@@ -57,6 +59,7 @@ const IRAS_ECI_URL = 'https://www.iras.gov.sg/taxes/corporate-income-tax/estimat
 const IRAS_WHT_SERVICES_URL = 'https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax';
 const IRAS_WHT_DATE_URL = 'https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date';
 const MAS_MISCONDUCT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en';
+const MAS_LFMC_TOOLKIT_URL = 'https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf';
 
 /** Source URLs, legal dates and scope are kept with the rule; fixtures identify their retained capture form. */
 export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMetadata[] = Object.freeze([
@@ -138,6 +141,20 @@ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMe
     requiredFacts: ['Whether the entity is a CMS licence holder or exempt under SFA section 99(1)(a)–(d).', 'Whether the subject was a representative when the alleged conduct occurred.', 'The date first reasonable grounds arose.', 'Whether a report was submitted under the cancelled Notice before 1 January 2027 or was due by 31 December 2026.'],
     effectiveDateEvidence: 'The Notice itself says it takes effect on 1 January 2027, cancels SFA 04-N11 that day, and states transitional provisions for pre-2027 matters. The notice issue date (30 December 2025) is not treated as its effective date.',
     limitations: ['This bounded rule covers the Notice commencement, covered CMI population, initial Misconduct Report deadline and transitional provisions only; it does not explain Investigation Reports, Update Reports or all misconduct categories.', 'It is manager-level reporting about representatives and does not establish fund/VCC-level return requirements or QDC reporting.', 'The retained visible-text excerpt is limited to paragraphs 1, 2, 5, 20 and 21; the native official PDF is the primary document.', 'A company-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts.']
+  },
+  {
+    id: 'MAS_LFMC_TOOLKIT_SCOPE', authority: 'MAS', topicIds: ['mas-lfmc'],
+    officialUrl: MAS_LFMC_TOOLKIT_URL, title: 'Compliance Toolkit for Licensed Fund Management Companies',
+    fixture: 'mas-lfmc-native-extract.txt', nativePdfFixture: 'mas-lfmc-toolkit.pdf',
+    fixtureKind: 'MAS_LFMC_TOOLKIT_NATIVE_PDF',
+    authorityAndProvisions: ['MAS LFMC SFA Compliance Toolkit, page 2 scope description; no statutory section is attributed to the toolkit.'],
+    population: 'Licensed fund management companies using this SFA compliance toolkit',
+    rule: 'MAS describes this toolkit as a reference to common applications, forms and submissions under the Securities and Futures Act that apply to LFMCs. MAS expressly says the toolkit is not exhaustive and excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes.',
+    conditions: ['The scope statement applies to this LFMC toolkit and its stated SFA coverage.'],
+    exceptions: ['This toolkit cannot be treated as a complete checklist of LFMC obligations, obligations outside the SFA, or fund-level requirements.'],
+    requiredFacts: ['The applicable fund-level rules and other legislation must be identified separately for the relevant activities and fund.'],
+    effectiveDateEvidence: 'The retained PDF is the version last revised 29 May 2026; its revision date identifies the document version, not the commencement of every requirement.',
+    limitations: ['Do not generalise this LFMC toolkit scope to VCFMs, other licence classes or every MAS regulatory obligation.']
   }
 ]);
 
@@ -190,7 +207,7 @@ function gstInputFamily(text: string, topicId: string): GstInputFamily {
   const motorAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId);
   const medical = medicalAllowed && ( /\b(?:medical|health screening|primary care plan|pcp|work injury compensation)\b/i.test(text)
     || isMedicalInsurancePremiumPremise({ query: text, subject: '' }));
-  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense)\b/i.test(text);
+  const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense|expenses? (?:for|of|on) (?:a\s+)?subsidiary(?:'s|’s)?\s+car)\b/i.test(text);
   if (medical && motor) return 'compound';
   if (medical) return 'medical';
   if (motor) return 'motor';
@@ -207,6 +224,13 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
 
 function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
   const text = queryText(input);
+  if (input.authority === 'MAS' && input.topicId === 'mas-lfmc' &&
+      /\b(?:lfmc|licensed fund management company|licensed investment manager)\b/i.test(text) &&
+      /\b(?:toolkit|checklist)\b/i.test(text) &&
+      /\b(?:complete|comprehensive|all duties|fund.level|outside (?:the )?sfa|non.sfa|scope)\b/i.test(text) &&
+      !/\b(?:vcfm|venture capital fund manager|other licence class)\b/i.test(text)) {
+    return IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'MAS_LFMC_TOOLKIT_SCOPE');
+  }
   if (input.authority === 'IRAS') {
     // The issue/concept subject owns the family. The original query can clarify
     // a generic subject, but cannot redirect an already specific subject.
@@ -276,6 +300,14 @@ function hasNonCurrentScope(query: string, rule: Rule): boolean {
       || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`)));
 }
 
+function toolkitScopePassagePatterns(): RegExp[] {
+  return [
+    /This Compliance Toolkit aims to provide guidance on:[\s\S]{0,500}?Applications for approvals from MAS;[\s\S]{0,300}?Notifications to be submitted to MAS;[\s\S]{0,300}?Regulatory submissions to MAS[\s\S]{0,160}?applicable to LFMCs/i,
+    /This compliance toolkit aims to provide LFMCs with a simple reference[^.]{0,250}?applicable to LFMCs\.[\s\S]{0,180}?However, it is not exhaustive,[\s\S]{0,220}?all legislations and requirements that are applicable to them\./i,
+    /For the avoidance of doubt, this toolkit excludes reporting obligations that fall outside the SFA; as well as fund-level requirements \(e\.g\. Code of Collective Investment Scheme\)\./i
+  ];
+}
+
 function passagePatterns(rule: Rule): RegExp[] {
   switch (rule.id) {
     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return [
@@ -326,6 +358,7 @@ function passagePatterns(rule: Rule): RegExp[] {
       /20\s*\|?\s*Despite paragraph 5, where a CMI[\s\S]{0,1800}?has not submitted to the Authority a Misconduct Report[\s\S]{0,700}?the CMI must submit to the Authority a Misconduct Report in relation to the misconduct under this Notice[\s\S]{0,500}?no later than 21 calendar days, or such longer period as the Authority may allow in writing, after 1 January 2027\./i,
       /21\s*\|?\s*This Notice does not apply to or in relation to any of the following[\s\S]{0,1800}?the Cancelled Notice as in force immediately before 1 January 2027 continues to apply to or in relation to any of the following as if this Notice has not been issued:[\s\S]{0,1300}?any case for which a CMI submitted a Misconduct Report under the Cancelled Notice[\s\S]{0,500}?any case for which a CMI was required under the Cancelled Notice to submit a Misconduct Report[\s\S]{0,500}?by 31 December 2026,[\s\S]{0,500}?any electronic system which may be established by the Authority in place of MASNET\./i
     ];
+    case 'MAS_LFMC_TOOLKIT_SCOPE': return toolkitScopePassagePatterns();
   }
 }
 
@@ -333,7 +366,7 @@ function normalized(value: string): string { return plainText(value).replace(/\s
 
 function extracts(rule: Rule, sourceText: string): string[] {
   const source = normalized(sourceText);
-  const patterns = passagePatterns(rule);
+  const patterns = rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? toolkitScopePassagePatterns() : passagePatterns(rule);
   const slices = patterns.map(pattern => pattern.exec(source)?.[0]?.trim()).filter((value): value is string => Boolean(value));
   return slices.length === patterns.length && slices.every(slice => slice.length <= MAX_PASSAGE_LENGTH) ? [...new Set(slices)] : [];
 }
@@ -347,6 +380,7 @@ function contradicts(rule: Rule, sourceText: string): boolean {
     case 'IRAS_WHT_SERVICES': return /services performed in singapore[^.]{0,140}withholding tax is not applicable|only the overseas work[^.]{0,100}subject to withholding tax|services performed in singapore[^.]{0,130}\b(?:10|15|20) percent\b/i.test(text);
     case 'IRAS_WHT_FILING_DATE': return /(?:no need|not required) to file wht[^.]{0,120}(?:dta|ari)|wht (?:is )?due by the 15th of the following month/i.test(text);
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return /takes effect from 1 january 2026|no later than 14 calendar days[^.]{0,100}(?:misconduct report|reasonable grounds)|does not apply to former representatives|the CMI must not submit a Misconduct Report/i.test(text);
+    case 'MAS_LFMC_TOOLKIT_SCOPE': return /(?:toolkit|checklist) (?:is|remains) exhaustive|covers? all (?:fund.level|non.sfa|outside the sfa) requirements/i.test(text);
   }
 }
 
@@ -365,9 +399,12 @@ export function supportIrasMasKnowledgeRule(request: IrasMasKnowledgeRequest): b
   if (!rule) return undefined;
   if (hasGstInputScopeConflict(request)) return false;
   if (rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && isMedicalInsurancePremiumPremise(request)) return false;
+  if (rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' && request.officialUrl !== undefined && request.officialUrl !== rule.officialUrl) return false;
   if (!exactUrl(request.officialUrl, rule.officialUrl) || hasNonCurrentScope(request.query, rule)) return false;
   const text = normalized(request.sourceText);
-  return !contradicts(rule, text) && extracts(rule, text).length === passagePatterns(rule).length;
+  const requiredPassageCount = rule.id === 'MAS_LFMC_TOOLKIT_SCOPE'
+    ? toolkitScopePassagePatterns().length : passagePatterns(rule).length;
+  return !contradicts(rule, text) && extracts(rule, text).length === requiredPassageCount;
 }
 
 export function selectIrasMasKnowledgeQuotes(request: IrasMasKnowledgeRequest): string[] {
@@ -439,6 +476,7 @@ function proofQuery(rule: Rule): string {
     case 'IRAS_WHT_SERVICES': return 'Does WHT apply to service fees paid to a non-resident company?';
     case 'IRAS_WHT_FILING_DATE': return 'What is the WHT filing and payment due date?';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'What does Notice SFA 04-N24 require from 1 January 2027?';
+    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'Does the LFMC toolkit cover all requirements including obligations outside the SFA and fund-level duties?';
   }
 }
 
@@ -450,16 +488,18 @@ function proofSubject(rule: Rule): string {
     case 'IRAS_WHT_SERVICES': return 'Withholding tax on non-resident service payments';
     case 'IRAS_WHT_FILING_DATE': return 'Withholding tax filing and payment deadline';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'SFA 04-N24 reporting of misconduct by representatives from 1 January 2027';
+    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'MAS LFMC toolkit scope and fund-level requirements';
   }
 }
 
 function answerText(rule: Rule): string {
   switch (rule.id) {
     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return 'IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts.';
-    case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim. All exceptions remain subject to the ordinary claim conditions and records.';
+    case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
     case 'IRAS_ECI_PRACTICAL_WAIVER': return 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'MAS Notice SFA 04-N24 takes effect on 1 January 2027. It applies to CMS licence holders and persons exempt under SFA section 99(1)(a)–(d), for misconduct by their representatives and former representatives. A CMI must submit a Misconduct Report no later than 21 calendar days after the date it first has reasonable grounds to believe the current or former representative committed misconduct during the representative period, unless the Authority allows a longer period in writing. Paragraph 20 addresses a pre-2027 reasonable-grounds case where no Misconduct Report in the form set out in the cancelled Notice had been submitted by 1 January 2027: the report under SFA 04-N24 is due within 21 calendar days after 1 January 2027, or a longer period allowed in writing. Paragraph 21 keeps the cancelled Notice applicable where a report was submitted before 1 January 2027 or was required by 31 December 2026. A case-specific conclusion requires the CMI status, representative period, reasonable-grounds date and transition facts.';
+    case 'MAS_LFMC_TOOLKIT_SCOPE': return 'The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits.';
   }
 }

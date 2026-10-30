@@ -58,6 +58,21 @@ assert.match(completeGeneralText, /MOM rule explanation:[\s\S]*case-specific con
 assert.match(completeGeneralText, /Verified general guidance is available[\s\S]*full request coverage unconfirmed/);
 assert.doesNotMatch(completeGeneralText, /Whole-question status: The resolved material issues have verified evidence/);
 
+const coverageOnly = presentation({
+  status: 'INSUFFICIENT', evidenceStatus: 'INSUFFICIENT', workstreams: [sickLeaveWorkstream()],
+  gaps: ['Issue plan: The reconciled issue plan does not establish coverage of the complete question.']
+});
+const coverageOnlyText = renderAuthorityEvidenceResponseText(coverageOnly, false);
+assert.equal(coverageOnly.status, 'INSUFFICIENT', 'Rendering never upgrades whole-question status.');
+assert.match(coverageOnlyText, /General statutory guidance:\*\* Verified for all listed issues/);
+assert.match(coverageOnlyText, /full request coverage unconfirmed/);
+assert.doesNotMatch(coverageOnlyText, /Evidence is incomplete for one or more material issues/,
+  'An unperformed whole-request assessment is distinct from a missing statutory premise.');
+assert.match(renderAuthorityEvidenceResponseText({ ...coverageOnly,
+  gaps: [...coverageOnly.gaps, 'A separate requested issue has no evidence.'] }, false),
+  /Evidence is incomplete for one or more material issues/,
+  'An additional material gap retains the incomplete warning.');
+
 const generalWithMissingFacts = presentation({
   status: 'CONDITIONAL', applicationStatus: 'UNRESOLVED',
   workstreams: [sickLeaveWorkstream({ population: 'Not established', operation: 'CHECK_ELIGIBILITY', applicationStatus: 'UNRESOLVED' })]
