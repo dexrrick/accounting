@@ -43,6 +43,7 @@ import {
 import { buildAuthorityWorkstreams } from './authorityWorkstreams';
 import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
 import {
+  hasMomRulesAndUnresolvedAccountingJournal,
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
 } from '../utils/authorityEvidenceRouting';
@@ -688,7 +689,13 @@ export async function processAccountingQuery(
     );
     const standaloneAuthorityQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
       (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested && !isShortSemanticFollowUp(userInput));
-    if (standaloneAuthorityQuestion) {
+    // No supported accounting application has been established for this mixed
+    // plan. Parsing its combined amounts as payroll would misattribute sale
+    // proceeds as salary and invent employee/CPF facts.
+    const unresolvedMixedJournal = hasMomRulesAndUnresolvedAccountingJournal(
+      reconciledQuestionUnderstanding.issuePlan, classification
+    );
+    if (standaloneAuthorityQuestion || unresolvedMixedJournal) {
       activeScenario = null;
       amendmentResolution = resolveFactAmendment(userInput, null);
       const currentUserTurn = [...chatHistory].reverse().find(message =>
@@ -700,14 +707,19 @@ export async function processAccountingQuery(
       return attachAmendmentProvenance({
         messageText: authorityEvidenceMessage,
         scenarioState: {
-          scenarioType: 'AUTHORITY_ADVISORY',
+          scenarioType: unresolvedMixedJournal ? 'UNRECOGNIZED' : 'AUTHORITY_ADVISORY',
           rawQuery: userInput,
-          transactionTitle: 'Whole-question statutory review',
+          transactionTitle: unresolvedMixedJournal ? 'Unresolved accounting and statutory obligations' : 'Whole-question statutory review',
           functionalCurrency: 'SGD',
           transactionCurrency: 'SGD',
           directGroups: [],
-          missingFields: [],
-          isComplete: authorityEvidencePresentation.status !== 'INSUFFICIENT',
+          missingFields: unresolvedMixedJournal ? [{
+            fieldKey: 'independentAccountingFacts',
+            fieldName: 'Separate sale and final-salary facts',
+            prompt: 'Please confirm the sale settlement and measurement details separately from the salary rate, pay period and departure facts.',
+            whyNeeded: 'Sale proceeds cannot establish an employee’s salary or CPF contribution.'
+          }] : [],
+          isComplete: !unresolvedMixedJournal && authorityEvidencePresentation.status !== 'INSUFFICIENT',
           queryIntent: classification.intent,
           primaryDomain: 'MULTI_AUTHORITY',
           requestCompletenessContext

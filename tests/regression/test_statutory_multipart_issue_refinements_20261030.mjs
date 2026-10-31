@@ -201,6 +201,9 @@ assert.ok(dismissalFinalSalaryAmount.some(issue => /itemised payslip issue and d
   !dismissalFinalSalaryAmount.some(issue => /Final salary payment deadlines by termination reason/i.test(issue.subject)),
   'A separately requested payslip deadline is mapped without turning a salary amount request into a final-pay timing answer.');
 for (const query of [
+  'How much final wages do we owe after resignation, and when must we issue the payslip?',
+  'What amount of final salary do we owe after resignation, and when must we issue the payslip?',
+  'Calculate the final pay after termination and explain payslip delivery.',
   'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?',
   'After an employee resigns, how much final salary do we owe, and how must we deliver the itemised payslip?',
   'After an employee resigns, how much final salary do we owe, and must we issue an itemised payslip?',
@@ -268,6 +271,30 @@ assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: journalWithMixedMOM.
 assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: missingSalaryFactsWithPayslip.issuePlan,
   classification: missingSalaryFactsWithPayslip.classification, explicitIrasEvidenceRequest: false, hasImages: true }), false,
   'Image requests stay outside the bounded final-salary evidence route.');
+const saleAndFinalSalary = planFor(
+  'We sold goods for S$10,000. After an employee resigns, how much final salary do we owe and when must we issue the payslip?');
+assert.equal(saleAndFinalSalary.classification.journalEntryRequired, true,
+  'The independent sale retains its journal requirement beside the statutory calculation.');
+const saleJournalIssue = saleAndFinalSalary.issuePlan.issues.find(issue =>
+  issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL');
+assert.ok(saleJournalIssue, 'The accounting obligation remains in the plan that reaches the answer renderer.');
+assert.equal(saleJournalIssue.status, 'UNRESOLVED', 'An incomplete sale does not manufacture a journal.');
+assert.deepEqual(saleJournalIssue.mappedTopicIds, [], 'The accounting gap does not invent a source mapping.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.issuePlan,
+  classification: saleAndFinalSalary.classification, explicitIrasEvidenceRequest: false, hasImages: false }), true,
+  'The payslip rule is resolved beside the retained accounting gap.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.issuePlan,
+  classification: saleAndFinalSalary.classification, explicitIrasEvidenceRequest: false, hasImages: true }), false,
+  'The mixed accounting gap cannot admit an image request to the bounded MOM route.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.issuePlan,
+  classification: { ...saleAndFinalSalary.classification, taxAnalysisRequired: true },
+  explicitIrasEvidenceRequest: true, hasImages: false }), false,
+  'An actual tax-analysis obligation cannot be bypassed by the mixed MOM route.');
+const salePlanWithoutJournal = structuredClone(saleAndFinalSalary.issuePlan);
+salePlanWithoutJournal.issues = salePlanWithoutJournal.issues.filter(issue => issue.id !== saleJournalIssue.id);
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: salePlanWithoutJournal,
+  classification: saleAndFinalSalary.classification, explicitIrasEvidenceRequest: false, hasImages: false }), false,
+  'Classification alone cannot route the sale through a plan that discarded its accounting obligation.');
 const deductionWithMixedMOM = planFor(
   'After an employee resigns, how much final salary do we owe, when must we issue the itemised payslip, and can we deduct S$400 for a uniform?');
 assert.ok(deductionWithMixedMOM.issuePlan.issues.some(issue => /salary deduction/i.test(issue.subject) &&

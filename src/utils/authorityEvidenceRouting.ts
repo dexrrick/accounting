@@ -127,28 +127,50 @@ function hasBoundedMomFinalSalaryAndPayslipIssues(
   if (!classification.calculationRequired || classification.journalEntryRequired ||
       classification.accountingAnalysisRequired || classification.taxAnalysisRequired ||
       !classification.authorities.includes('MOM') ||
-      !classification.domains.includes('MOM_EMPLOYMENT') ||
-      issuePlan.issues.length < 2 || issuePlan.issues.length > 3) return false;
-  const salary = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+      !classification.domains.includes('MOM_EMPLOYMENT')) return false;
+  return hasBoundedMomFinalSalaryAndPayslipPlan(issuePlan.issues);
+}
+
+function hasBoundedMomFinalSalaryAndPayslipPlan(issues: SemanticIssueReconciliation['issues']): boolean {
+  if (issues.length < 2 || issues.length > 3) return false;
+  const salary = issues.find(issue => issue.status === 'MAPPED' &&
     issue.subject === 'Final salary amount calculation by termination reason' &&
     issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'CALCULATE' &&
     issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
     issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
     issue.mappedTopicIds[0] === 'mom-salary-payment');
-  const payslip = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+  const payslip = issues.find(issue => issue.status === 'MAPPED' &&
     issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
     issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
     issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
     issue.mappedTopicIds[0] === 'mom-itemised-payslips');
   if (!salary || !payslip || salary.id === payslip.id) return false;
-  if (issuePlan.issues.length === 2) return true;
-  const deduction = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+  if (issues.length === 2) return true;
+  const deduction = issues.find(issue => issue.status === 'MAPPED' &&
     issue.subject === 'MOM employer salary deduction authorization, purpose and limits' &&
     issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
     issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
     issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
     issue.mappedTopicIds[0] === 'mom-salary-payment');
   return Boolean(deduction && deduction.id !== salary.id && deduction.id !== payslip.id);
+}
+
+export function hasMomRulesAndUnresolvedAccountingJournal(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (issuePlan.source !== 'TAXONOMY_FALLBACK' || !classification.journalEntryRequired ||
+      !classification.calculationRequired || classification.taxAnalysisRequired ||
+      !classification.authorities.includes('MOM') ||
+      !classification.domains.includes('MOM_EMPLOYMENT')) return false;
+  const accounting = issuePlan.issues.filter(issue => issue.domain === 'ACCOUNTING');
+  if (accounting.length !== 1) return false;
+  const journal = accounting[0];
+  if (journal.operation !== 'PREPARE_JOURNAL' || journal.status !== 'UNRESOLVED' ||
+      journal.unresolvedReason !== 'NO_COVERAGE_TOPIC' || journal.mappedTopicIds.length !== 0 ||
+      journal.governingAuthorities.length !== 1 ||
+      journal.governingAuthorities[0] !== 'ACCOUNTING_STANDARDS') return false;
+  return hasBoundedMomFinalSalaryAndPayslipPlan(issuePlan.issues.filter(issue => issue.id !== journal.id));
 }
 
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
@@ -171,6 +193,11 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   // same per-issue evidence path when transaction classification would
   // otherwise bypass the independently answerable payslip obligation.
   if (hasBoundedMomFinalSalaryAndPayslipIssues(issuePlan, classification)) return true;
+
+  // Resolve the independently supported MOM rules while retaining an explicit
+  // accounting journal gap. This route cannot turn the whole request into a
+  // standalone statutory answer or claim that a journal has been prepared.
+  if (hasMomRulesAndUnresolvedAccountingJournal(issuePlan, classification)) return true;
 
   if (input.explicitIrasEvidenceRequest &&
       classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&

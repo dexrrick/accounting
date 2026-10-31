@@ -1,0 +1,44 @@
+{
+  "reviewer": "/root/independent_review (reviewer custom agent)",
+  "recordedBy": "Supervisor from the independent reviewer's final report",
+  "baseCommit": "ad18118f7e3280cf3025e95e67357b16e8f3b996",
+  "conclusion": "No remaining material findings within the requested scope.",
+  "checks": [
+    "Registered multipart refinement suite passed.",
+    "Twelve application-entry probes passed: filing owner/type mismatches, ordinary tax exclusions, both mixed-query clause orders and all four departure/payslip cases.",
+    "Previous review findings, timing-only decomposition and negated calculation intent are corrected.",
+    "FYE/type interpretation is shared between date resolution and rendering.",
+    "Mixed salary/payslip routing retains an explicit unresolved accounting obligation without inventing a journal or salary amount.",
+    "Final guard re-review: original mixed query and both clause orders, with and without a prior journal, return no journal groups, isComplete=false and a separate-facts clarification. No prior journal leaks.",
+    "Ordinary SGD1,800 credit sales with and without explicit journal requests retain balanced Trade Receivables debit and Revenue credit entries.",
+    "Final compatibility restoration preserves the original per-issue accounting and explicit-journal standalone guards; rechecked mixed cases remain incomplete with no journal groups."
+  ],
+  "limits": [
+    "Generic sales lacking settlement facts and final-salary arithmetic remain unresolved.",
+    "Broad suites and corpus preservation are supervisor checks, not independently rerun by this reviewer.",
+    "No CI or live-model acceptance was performed by the reviewer."
+  ],
+  "resolvedDuringReview": [
+    "Listing status borrowed from an unrelated named company or partner.",
+    "Leading advisory wording suppressing an independent sale obligation.",
+    "Timing-only salary/payslip decomposition regression.",
+    "Negated salary calculation interpreted inconsistently.",
+    "Filing target differing from the FYE owner.",
+    "Overbroad clause classification turning ordinary tax advice into journal intent.",
+    "Supervisor found hidden payroll journal using sale proceeds; final guard prevents combined-amount payroll parsing for the unresolved mixed plan."
+  ],
+  "hashScope": "SHA256 of reviewed working-tree bytes; Git line-ending normalization may differ in published blobs.",
+  "reviewedFiles": {
+    "src/classification/questionClassifier.ts": "af703baa706d793cfb409b63d21d9f3a39479786fdb1996ee4301fc18e8c4794",
+    "src/retrieval/acraMomKnowledge20261027b.ts": "993fa556a7f379414fdcbf2b460f76a185bae502aaf9d72d9ee3a2458a8b8a78",
+    "src/retrieval/companyFyeDate.ts": "62ce8102880943cced31a8c0e26cda59f99166283dd56de6cac39a49966c3b24",
+    "src/retrieval/targetDateResolver.ts": "924eb65c33326f7fec0705283a0bb7ca5446c5fa83aa8c9b0486b6fa6a1db929",
+    "src/services/geminiService.ts": "aeeedec32975f4b47b5064ac1fe7b3f410b99455546e68f9377bab9be8dfaf4a",
+    "src/services/semanticQuestionUnderstanding.ts": "c9d0d27c03613b719573ee6441f63e07b9f7f78e0548ca868f8339844c0ad8c5",
+    "src/standards/coverageRegistry.ts": "8fb00ebc9b9b9bb5449a2e86c07da5d40a1a799062d98cfe810be4eb7fd46e54",
+    "src/utils/authorityEvidenceRouting.ts": "818a50871a085734d6549cd4a76f9128bcc29cfc7071539a40f04354b12bc72e",
+    "src/utils/momFinalPayIntent.ts": "34cf2bcd9f00681be138f0b1c605dadd0751c453d0abf343756d1816e00edaf1",
+    "tests/regression/test_acra_mom_knowledge_20261027b.mjs": "1e08b82264cd1226f5ae94e2e68a0f492dfee3c7ef5b9f3dc297c93e537e81b3",
+    "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs": "12d085b32574348939049046e94a6dc20c62c48b79cbed9e8c656f8b65d89af6"
+  }
+}

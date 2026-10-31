@@ -36,6 +36,24 @@ assert.equal(newCompanyFinancialStatementClassification.intent, 'STATUTORY_ADVIS
 assert.equal(newCompanyFinancialStatementClassification.accountingAnalysisRequired, false,
   'The annual-return filing question is not mistaken for financial-statement accounting analysis.');
 assert.ok(newCompanyFinancialStatementClassification.authorities.includes('ACRA'));
+const negatedFinalPayCalculation = classifyQuestion(
+  'Do not calculate final salary after resignation; only explain when the itemised payslip must be issued.');
+assert.equal(negatedFinalPayCalculation.calculationRequired, false,
+  'A negated final-salary calculation request stays negated through shared intent normalization.');
+assert.equal(negatedFinalPayCalculation.journalEntryRequired, false,
+  'A negated final-salary calculation does not create a journal obligation.');
+for (const query of [
+  'We bought goods for S$10,000 for our GST-registered business. Can we claim the input tax?',
+  'We acquired an asset for S$10,000. Is it deductible for corporate income tax?'
+]) {
+  const classification = classifyQuestion(query);
+  assert.equal(classification.intent, 'STATUTORY_ADVISORY',
+    'Tax eligibility questions remain statutory advice even when they describe an acquisition.');
+  assert.equal(classification.journalEntryRequired, false,
+    'A tax claim question does not gain an unsolicited journal requirement from its transaction wording.');
+  assert.equal(classification.calculationRequired, false,
+    'A tax eligibility question does not become a transaction calculation merely because it contains an amount.');
+}
 const financialStatementAccountingClassification = classifyQuestion(
   'We need prepare financial statements for the annual return and record our lease under IFRS 16.');
 assert.equal(financialStatementAccountingClassification.accountingAnalysisRequired, true,
@@ -574,6 +592,7 @@ assert.match(currentArDeadlineAnswer.text, /general annual-return date is 31\/07
 assert.match(currentArDeadlineAnswer.text, /additional month applies, making the date 31\/08\/2026/,
   'The branch-register date remains conditional when the relevant facts are not given.');
 for (const [fyeQuery, expectedArDate] of [
+  ['Our listed public company FYE is 31 December 2025. When is our annual return due?', '31/05/2026'],
   ['Our private company FYE is 2025-12-31. When is our annual return due?', '31/07/2026'],
   ['Our private company FYE was 31/12/2025. When is our annual return due?', '31/07/2026'],
   ['Our private company financial year end of 31 December 2025. When is our annual return due?', '31/07/2026'],
@@ -592,6 +611,14 @@ assert.equal(parseCompanyFyeDate('Our private company FYE is 31/12/2025 and our 
   'Multiple FYE dates fail closed as ambiguous.');
 assert.equal(parseCompanyFyeDate('Another private company FYE is 31/12/2025.'), undefined,
   'A date owned by another company is not treated as this company’s FYE.');
+for (const relationship of ['competitor', 'supplier', 'client', 'subsidiary']) {
+  const query = `A ${relationship}'s private company FYE is 31/12/2025. When is our private company's annual return due?`;
+  assert.equal(parseCompanyFyeDate(query), undefined,
+    `An FYE attributed to the ${relationship} cannot supply our company's filing date.`);
+}
+assert.equal(parseCompanyFyeDate(
+  "A competitor's listed company FYE is 31/12/2025. When is our private company's annual return due?"), undefined,
+  "A listed company's FYE cannot supply the private company's annual-return date.");
 assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(
   'Historically, our private company FYE was 31/12/2025. When was the annual return due?').dateRole,
   undefined, 'Historical-law questions do not become current workflow facts.');
@@ -1029,6 +1056,63 @@ try {
   assert.match(response.messageText, /all Companies Act section 201A conditions/i);
   assert.doesNotMatch(response.messageText, /variable capital company|VCC/i,
     'The unspecified company is not silently treated as a VCC.');
+  for (const query of [
+    'We bought goods for S$10,000 for our GST-registered business. Can we claim the input tax?',
+    'We acquired an asset for S$10,000. Is it deductible for corporate income tax?'
+  ]) {
+    const taxResponse = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.equal(taxResponse.scenarioState.queryIntent, 'STATUTORY_ADVISORY',
+      'Tax deduction and input-tax eligibility remain on the statutory advisory path.');
+    assert.deepEqual(taxResponse.scenarioState.directGroups || [], [],
+      'An ordinary tax eligibility question does not produce an unsolicited journal.');
+  }
+  for (const relationship of ['competitor', 'supplier', 'client', 'subsidiary']) {
+    const query = `A ${relationship}'s private company FYE is 31/12/2025. When is our private company's annual return due?`;
+    const unrelatedFyeResponse = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(unrelatedFyeResponse.messageText,
+      /For the stated FYE and company type, the general annual-return date is 31\/07\/2026/,
+      `The ${relationship}'s FYE does not produce an individual filing deadline for our company.`);
+  }
+  const twoCompanyFyeResponse = await processAccountingQuery(
+    'Our private company FYE is 31/12/2025 and our subsidiary private company FYE is 30/06/2025. When is our annual return due?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(twoCompanyFyeResponse.messageText,
+    /For the stated FYE and company type, the general annual-return date is \d{2}\/\d{2}\/2026/,
+    'Multiple company FYE facts do not produce an individual annual-return date.');
+  const mixedEntityTypeResponse = await processAccountingQuery(
+    "A competitor's listed company FYE is 31/12/2025. When is our private company's annual return due?",
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(mixedEntityTypeResponse.messageText,
+    /For the stated FYE and company type, the general annual-return date is 31\/05\/2026/,
+      "Another listed company's FYE and listing status cannot be attributed to our private company.");
+  for (const query of [
+    'Our company FYE is 31/12/2025. Acme is a private company. When is our annual return due?',
+    'Our company FYE is 31/12/2025. Our partner operates a listed company. When is our annual return due?',
+    'Our company FYE is 31/12/2025. Our company supplies Acme, which is a listed company. When is our annual return due?'
+  ]) {
+    const unrelatedCompanyTypeResponse = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(unrelatedCompanyTypeResponse.messageText,
+      /For the stated FYE and company type, the general annual-return date is \d{2}\/\d{2}\/2026/,
+      'A named company or partner status cannot be borrowed as the FYE owner’s listing status.');
+  }
+  const genericCompanyTypeResponse = await processAccountingQuery(
+    'Our company FYE is 31/12/2025. When is the annual return due for a non-listed company?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.match(genericCompanyTypeResponse.messageText,
+    /For the stated FYE and company type, the general annual-return date is 31\/07\/2026/,
+    'A generic company type in the deadline question remains usable when there is no competing entity.');
+  for (const query of [
+    "Our private company FYE is 31/12/2025. When is Acme's annual return due?",
+    'Our private company FYE is 31/12/2025. When is Acme’s AGM due?',
+    'Our private company FYE is 31/12/2025. When is the annual return due for Acme?',
+    'Our private company FYE is 31/12/2025. When must our supplier file the annual return?',
+    'Our private company FYE is 31/12/2025. When must Acme hold its AGM?',
+    'Our private company FYE is 31/12/2025. Acme is a private company. When is its annual return due?'
+  ]) {
+    const mismatchedTargetResponse = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(mismatchedTargetResponse.messageText, /\b(?:31\/(?:05|07|08)|30\/(?:04|06))\/2026\b/,
+      `An unrelated or ambiguous filing target cannot use our FYE to calculate a deadline: ${query}`);
+  }
   let finalSalaryWorkstreams;
   const finalSalaryQuery = 'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?';
   const finalSalaryResponse = await processAccountingQuery(finalSalaryQuery, null, 'IFRS', undefined, undefined, [], undefined,
@@ -1052,6 +1136,96 @@ try {
     'The independent payslip timing rule is answerable alongside the unresolved calculation.');
   assert.match(payslipText, /\[Itemised pay slips\]\(https:\/\/www\.mom\.gov\.sg\/employment-practices\/salary\/itemised-payslips\)/i,
     'The payslip answer remains tied to its official evidence.');
+  for (const query of [
+    'How much final wages do we owe after resignation, and when must we issue the payslip?',
+    'What amount of final salary do we owe after resignation, and when must we issue the payslip?',
+    'Calculate the final pay after termination and explain payslip delivery.'
+  ]) {
+    let workstreams;
+    const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.ok(workstreams, `Final pay and payslip clauses reach the statutory evidence path: ${query}`);
+    assert.ok(workstreams.issuePlan.issues.some(issue => issue.operation === 'CALCULATE' &&
+      issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'mom-salary-payment'),
+    `Final wages/salary/pay is classified as its own amount calculation: ${query}`);
+    assert.ok(workstreams.issuePlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+      issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'mom-itemised-payslips'),
+    `The payslip obligation remains separate: ${query}`);
+    assert.match(response.messageText, /Application unresolved/i,
+      `No final salary amount is fabricated without sufficient facts: ${query}`);
+    assert.match(response.messageText,
+      /In the case of termination or dismissal, must give pay slip together with outstanding salary\./i,
+      `The termination-specific payslip duty is quoted from the official source: ${query}`);
+    assert.match(response.messageText,
+      /If unable to give together, to be given within three working days of payment\./i,
+      `The ordinary payslip timing remains separately available: ${query}`);
+    assert.match(response.messageText,
+      /\[Itemised pay slips\]\(https:\/\/www\.mom\.gov\.sg\/employment-practices\/salary\/itemised-payslips\)/i);
+  }
+  const departurePayslipCases = [
+    {
+      label: 'resignation with notice',
+      query: 'An employee resigns and serves the required notice. When is the final salary due, and when must we issue the itemised payslip?',
+      salaryRule: /Employee resigns and serves the required notice period[^\n]*last day of employment/i
+    },
+    {
+      label: 'resignation without notice',
+      query: 'An employee resigns without serving notice. When is the final salary due, and when must we issue the itemised payslip?',
+      salaryRule: /Employee resigns and does not serve the notice period[^\n]*within 7 days of the last day of employment/i
+    },
+    {
+      label: 'employer termination',
+      query: 'The employer terminates the employee contract. When is the final salary due, and when must we issue the itemised payslip?',
+      salaryRule: /Employer terminates the contract[^\n]*within 3 working days from date of termination/i
+    },
+    {
+      label: 'misconduct dismissal',
+      query: 'The employee is dismissed for misconduct. When is the final salary due, and when must we issue the itemised payslip?',
+      salaryRule: /Dismissal on grounds of misconduct[^\n]*within 3 working days from date of dismissal/i
+    }
+  ];
+  for (const sample of departurePayslipCases) {
+    const response = await processAccountingQuery(sample.query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.match(response.messageText, sample.salaryRule,
+      `${sample.label}: the final-pay rule stays bound to the specified departure path.`);
+    assert.match(response.messageText, /If unable to give together, to be given within three working days of payment\./i,
+      `${sample.label}: the ordinary payslip timing is stated with its fallback condition.`);
+    assert.match(response.messageText, /In the case of termination or dismissal, must give pay slip together with outstanding salary\./i,
+      `${sample.label}: the termination and dismissal payslip rule stays explicitly qualified.`);
+    assert.match(response.messageText,
+      /\[Itemised pay slips\]\(https:\/\/www\.mom\.gov\.sg\/employment-practices\/salary\/itemised-payslips\)/i,
+      `${sample.label}: the payslip guidance remains linked to the official MOM page.`);
+  }
+  const mixedSaleQuery = 'We sold goods for S$10,000. After an employee resigns, how much final salary do we owe and when must we issue the payslip?';
+  const mixedSaleResponse = await processAccountingQuery(mixedSaleQuery, null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.deepEqual(mixedSaleResponse.scenarioState.directGroups || [], [],
+    'Sale proceeds cannot become a salary, CPF or other invented journal while both applications remain unresolved.');
+  assert.equal(mixedSaleResponse.scenarioState.queryIntent, 'TRANSACTION',
+    'The sale remains an accounting transaction in a multipart salary-and-payslip question.');
+  assert.match(mixedSaleResponse.messageText, /S\$10,000|10000|sales transaction|sale proceeds|settlement/i,
+    'The accounting sale obligation or its missing settlement facts remain visible beside MOM guidance.');
+  assert.doesNotMatch(mixedSaleResponse.messageText, /final salary.{0,80}(?:S\$10,000|10000)/i,
+    'The sale proceeds are not misattributed as final salary.');
+  for (const query of [
+    'Explain when we must issue a payslip and calculate the final salary after resignation. We sold goods for S$10,000.',
+    'We sold goods for S$10,000. Explain when we must issue a payslip and calculate the final salary after resignation.'
+  ]) {
+    let workstreams;
+    const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.ok(workstreams, 'A standalone explanatory opening does not discard the independent sales obligation.');
+    assert.deepEqual(response.scenarioState.directGroups || [], [],
+      'An unresolved mixed plan cannot expose a fabricated payroll journal in either clause order.');
+    assert.equal(response.scenarioState.queryIntent, 'TRANSACTION',
+      'The independent sale remains transaction intent regardless of clause order.');
+    assert.ok(workstreams.issuePlan.issues.some(issue => issue.domain === 'ACCOUNTING' &&
+      issue.operation === 'PREPARE_JOURNAL' && issue.status === 'UNRESOLVED'),
+    'The unresolved sales journal obligation remains visible beside the bounded MOM answers.');
+    assert.match(response.messageText, /S\$10,000|10000|sales transaction|sale proceeds|settlement/i,
+      'The sale amount or its unresolved accounting obligation remains visible.');
+    assert.doesNotMatch(response.messageText, /final salary.{0,80}(?:S\$10,000|10000)/i,
+      'The sales proceeds are not attributed to final salary.');
+  }
   let salaryRateWorkstreams;
   const salaryRateQuery = 'An employee earns S$5,000 per month. After resignation, calculate the final salary we owe, and how must we deliver the itemised payslip?';
   const salaryRateResponse = await processAccountingQuery(salaryRateQuery, null, 'IFRS', undefined, undefined, [], undefined,

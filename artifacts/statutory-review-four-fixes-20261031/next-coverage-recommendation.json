@@ -1,0 +1,28 @@
+{
+  "scope": "Recommendation only; no unrelated statutory rules expanded in this corrective batch.",
+  "evidence": "artifacts/statutory-p2-corrections-20261031/quality-report.json and remaining-coverage-gaps.json; retained full answers in final75.json and fresh15.json",
+  "nextRecommendedBatch": {
+    "subject": "CPF wage classification and applicable-year boundaries, with explicit employee and payable-date ownership",
+    "existingAcceptanceCases": ["Frozen75 cpf-01", "Frozen75 cpf-04", "Frozen75 cpf-06", "Frozen75 cpf-07", "Fresh15 fresh31-cpf-01", "Fresh15 fresh31-cpf-02"],
+    "reason": "These practical payroll questions are still unsupported. They require complete source-backed application to earned, contractually payable and PR-grant dates rather than more questions or a larger rate table.",
+    "implementationDirection": "First inspect existing CPF sources and rules. Independently bind each employee, wage period, payable date and PR date. Retrieve only missing first-party premises with applicability evidence. Then validate complete answers to these existing questions, including exceptions and uncertainty."
+  },
+  "distinctions": [
+    {
+      "type": "Interpretation and routing",
+      "observed": "Frozen75 cpf-01 was grouped with a contribution-rate issue although the question asks wage classification. cpf-04 includes a separate IRAS bonus-timing issue and a 2025 applicability limitation although it asks which AW-ceiling year follows the contractual payable date.",
+      "implication": "Adding sources alone will not resolve wrong topic selection or date ownership. Preserve safeguards while assigning each date its actual role."
+    },
+    {
+      "type": "Evidence and applicability",
+      "observed": "Frozen75 cpf-06, mom-02 and mom-14 report candidate-admission or quotation-verification gaps. Existing rules already describe final-salary timing and payslip retention.",
+      "implication": "Do not call every unsupported answer missing knowledge. Trace the rejected source, population and applicable date, then repair the owning evidence path where the official rule is already represented."
+    },
+    {
+      "type": "Candidate missing knowledge or incomplete application",
+      "observed": "Quality reports retain partial WHT application, salary-deduction permissions and notification duties, ACRA dormant/filing/AGM details, MAS form/period requirements and historical cases.",
+      "implication": "Before expansion, identify the exact absent premise and its official source. These are candidate gaps, not proof that every corresponding rule is absent. Current guidance must not be used to invent historical applicability."
+    }
+  ],
+  "completionMeasure": "Improved independently graded answerability on the retained questions, with preserved correct answers; question counts and verified citations alone are insufficient."
+}

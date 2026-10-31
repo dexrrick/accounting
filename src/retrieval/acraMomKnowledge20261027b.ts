@@ -8,7 +8,7 @@ import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapte
 import { getAcraAnnualReturnDeadlineTablePassage } from './acraAnnualReturnFilingRule';
 import { acraOfficerCommencementScope } from './statutoryCommencementScope';
 import { defaultTargetDateResolver } from './targetDateResolver';
-import { parseCompanyFyeDate } from './companyFyeDate';
+import { parseCompanyFyeCompanyType, parseCompanyFyeDate } from './companyFyeDate';
 import { selectAcraSmallCompanyAuditFactsQuotes, supportsAcraSmallCompanyAuditFacts } from './momAcraMasCoverageRules';
 
 export interface AcraMomKnowledgeRuleRequest {
@@ -648,11 +648,7 @@ function acraAnnualReturnBranchRegisterStatus(query: string): 'APPLIES' | 'EXCLU
 }
 
 function acraCompanyTypeForDeadline(query: string): 'listed' | 'non-listed' | undefined {
-  if (/\b(?:another|other|second|different|competitor)\s+(?:listed\s+|non[- ]listed\s+|private\s+)?company\b/i.test(query)) return undefined;
-  const privateOrNonListed = /\bprivate company\b|\bnon[- ]listed company\b/i.test(query);
-  const listed = /(?<!non[- ])\blisted company\b/i.test(query) && !/\bnot\s+(?:a\s+)?listed company\b/i.test(query);
-  if (privateOrNonListed === listed) return undefined;
-  return listed ? 'listed' : 'non-listed';
+  return parseCompanyFyeCompanyType(query);
 }
 
 function parseAcraDate(query: string, pattern: RegExp): Date | undefined {

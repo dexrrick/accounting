@@ -1,0 +1,782 @@
+{
+  "scope": "Task-specific processAccountingQuery examples; not additions to the frozen evaluation corpora.",
+  "access": "Summaries and selected excerpts are published; full before-results.json and after-results.json remain local-only.",
+  "cases": [
+    {
+      "query": "We sold goods for S$10,000.",
+      "before": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+        "excerpts": [
+          "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction."
+        ]
+      },
+      "after": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+        "excerpts": [
+          "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction."
+        ]
+      }
+    },
+    {
+      "query": "We sold goods for S$10,000 cash. The goods had a cost of S$6,000.",
+      "before": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+        "excerpts": [
+          "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction."
+        ]
+      },
+      "after": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+        "excerpts": [
+          "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction."
+        ]
+      }
+    },
+    {
+      "query": "A competitor's private company FYE is 31/12/2025. When is our private company's annual return due?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [
+          "31/07/2026"
+        ],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "4cf846607e12378f561fb542bdc792097ce483fec6043ebc76dce77d6cc1ae6d",
+        "excerpts": [
+          ". Listed status, share capital and branch register maintained outside Singapore. The general deadlines here describe current guidance; a past filing year requires evidence for that year. Check ACRA for a company-specific deadline and any approved extension.  For the stated FYE and company type, the general annual-return date is 31/07/2026. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date 31/08/2026. [Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/)",
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "78a33f236abf38d7fc94e780d12e261f225742b741edad6a7c4727fd99b3701f",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      }
+    },
+    {
+      "query": "A supplier's private company FYE is 31/12/2025. When is our private company's annual return due?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [
+          "31/07/2026"
+        ],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "4cf846607e12378f561fb542bdc792097ce483fec6043ebc76dce77d6cc1ae6d",
+        "excerpts": [
+          ". Listed status, share capital and branch register maintained outside Singapore. The general deadlines here describe current guidance; a past filing year requires evidence for that year. Check ACRA for a company-specific deadline and any approved extension.  For the stated FYE and company type, the general annual-return date is 31/07/2026. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date 31/08/2026. [Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/)",
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "78a33f236abf38d7fc94e780d12e261f225742b741edad6a7c4727fd99b3701f",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      }
+    },
+    {
+      "query": "A client's private company FYE is 31/12/2025. When is our private company's annual return due?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [
+          "31/07/2026"
+        ],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "4cf846607e12378f561fb542bdc792097ce483fec6043ebc76dce77d6cc1ae6d",
+        "excerpts": [
+          ". Listed status, share capital and branch register maintained outside Singapore. The general deadlines here describe current guidance; a past filing year requires evidence for that year. Check ACRA for a company-specific deadline and any approved extension.  For the stated FYE and company type, the general annual-return date is 31/07/2026. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date 31/08/2026. [Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/)",
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "78a33f236abf38d7fc94e780d12e261f225742b741edad6a7c4727fd99b3701f",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      }
+    },
+    {
+      "query": "A subsidiary's private company FYE is 31/12/2025. When is our private company's annual return due?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [
+          "31/07/2026"
+        ],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "4cf846607e12378f561fb542bdc792097ce483fec6043ebc76dce77d6cc1ae6d",
+        "excerpts": [
+          ". Listed status, share capital and branch register maintained outside Singapore. The general deadlines here describe current guidance; a past filing year requires evidence for that year. Check ACRA for a company-specific deadline and any approved extension.  For the stated FYE and company type, the general annual-return date is 31/07/2026. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date 31/08/2026. [Deadline & requirements for annual returns | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/)",
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "78a33f236abf38d7fc94e780d12e261f225742b741edad6a7c4727fd99b3701f",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: listing status, overseas branch register status. No due date has been calculated."
+        ]
+      }
+    },
+    {
+      "query": "Our private company FYE is 31/12/2025 and our subsidiary private company FYE is 30/06/2025. When is the annual return due?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "8c6ea22d4a9a08e6c87597b6cb19e024aee319a8e3d75be5ae1e1d674dfa3b5d",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: financial year end (conflicting dates), listing status, overseas branch register status. No due date has been calculated."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "ACRA annual return filing deadline",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "acra_annual-returns"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "8c6ea22d4a9a08e6c87597b6cb19e024aee319a8e3d75be5ae1e1d674dfa3b5d",
+        "excerpts": [
+          "- **Application unresolved:** Company facts required to calculate the annual return deadline: financial year end (conflicting dates), listing status, overseas branch register status. No due date has been calculated."
+        ]
+      }
+    },
+    {
+      "query": "How much final wages do we owe after resignation, and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+        "excerpts": [
+          "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "cb67963996aa09fb796b3f43af54c438a898618f0559d82684fab2072154d7a3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      }
+    },
+    {
+      "query": "What amount of final salary do we owe after resignation, and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "cb67963996aa09fb796b3f43af54c438a898618f0559d82684fab2072154d7a3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "cb67963996aa09fb796b3f43af54c438a898618f0559d82684fab2072154d7a3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      }
+    },
+    {
+      "query": "Calculate the final pay after termination and explain payslip delivery.",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Itemised Payslip Requirements",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": false,
+        "payslipTerminationRule": false,
+        "officialPayslipLink": false,
+        "responseSha256": "8da460aeb1b1bfba5bd4fdbd799a3c62204aa058abfca82f1e9ffaed19404f97",
+        "excerpts": [
+          "- **Application unresolved:** For Itemised Payslip Requirements, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "cb67963996aa09fb796b3f43af54c438a898618f0559d82684fab2072154d7a3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      }
+    },
+    {
+      "query": "We sold goods for S$10,000. After an employee resigns, how much final salary do we owe and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "cb67963996aa09fb796b3f43af54c438a898618f0559d82684fab2072154d7a3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      },
+      "after": {
+        "scenarioType": "UNRECOGNIZED",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "Final salary amount calculation by termination reason",
+            "operation": "CALCULATE",
+            "topicIds": [
+              "mom-salary-payment"
+            ]
+          },
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          },
+          {
+            "subject": "Accounting journal for the independent transaction; clarify settlement and measurement facts",
+            "operation": "PREPARE_JOURNAL",
+            "topicIds": []
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": true,
+        "calculationObligationVisible": true,
+        "calculationUnresolved": true,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "31daa3a83eaef6d3ab51fa0193a1ab92e91967ed9091498c9a4f3e005ad9e7e3",
+        "excerpts": [
+          "**Final salary amount calculation by termination reason** (party in scope: Employer)",
+          "- **Application unresolved:** For Final salary amount calculation by termination reason, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.",
+          "**Accounting journal for the independent transaction; clarify settlement and measurement facts** (party in scope: Company)",
+          "- **Application unresolved:** For Accounting journal for the independent transaction; clarify settlement and measurement facts, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established."
+        ]
+      }
+    },
+    {
+      "query": "An employee resigned after serving notice. When is outstanding salary due and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      }
+    },
+    {
+      "query": "An employee resigned without serving notice. When is outstanding salary due and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      }
+    },
+    {
+      "query": "We terminated an employee. When is outstanding salary due and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      }
+    },
+    {
+      "query": "We dismissed an employee for misconduct. When is outstanding salary due and when must we issue the payslip?",
+      "before": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      },
+      "after": {
+        "scenarioType": "AUTHORITY_ADVISORY",
+        "directJournalGroups": 0,
+        "issues": [
+          {
+            "subject": "MOM itemised payslip issue and delivery requirements",
+            "operation": "EXPLAIN_RULE",
+            "topicIds": [
+              "mom-itemised-payslips"
+            ]
+          }
+        ],
+        "appliedDeadlineDates": [],
+        "accountingObligationVisible": false,
+        "calculationObligationVisible": false,
+        "calculationUnresolved": false,
+        "payslipOrdinaryRule": true,
+        "payslipTerminationRule": true,
+        "officialPayslipLink": true,
+        "responseSha256": "c13b8aeab2878c5547f5dcd11ef564338c71ee9ff47f7ed7027c9526efef6909",
+        "excerpts": []
+      }
+    }
+  ]
+}

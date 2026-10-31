@@ -1,0 +1,257 @@
+{
+  "status": "LOCAL_CORRECTIONS_VERIFIED",
+  "baseCommit": "ad18118f7e3280cf3025e95e67357b16e8f3b996",
+  "reviewedPriorImplementation": "a4035b6e34d49373df0e4b2a0f3a3ee3e7800fc9",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "findings": {
+    "fyeOwnership": "CONFIRMED_FIXED",
+    "finalSalaryDetection": "CONFIRMED_FIXED",
+    "independentJournalObligation": "CONFIRMED_FIXED",
+    "terminationPayslip": "TEST_GAP_FIXED_EXISTING_RULE_PRESERVED"
+  },
+  "checks": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-10-31T15:22:36.0013897Z",
+      "completedUTC": "2026-10-31T15:22:36.5384449Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:36.5572184Z",
+      "completedUTC": "2026-10-31T15:22:36.6812680Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:36.6837902Z",
+      "completedUTC": "2026-10-31T15:22:42.1144731Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:42.1185376Z",
+      "completedUTC": "2026-10-31T15:22:44.9673870Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:44.9690934Z",
+      "completedUTC": "2026-10-31T15:22:45.8128452Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:45.8143298Z",
+      "completedUTC": "2026-10-31T15:26:33.7128914Z"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:26:33.7140581Z",
+      "completedUTC": "2026-10-31T15:30:37.4986464Z"
+    }
+  ],
+  "suites": {
+    "smoke": {
+      "passed": 159,
+      "failed": 0
+    },
+    "full": {
+      "passed": 182,
+      "failed": 0
+    }
+  },
+  "captures": [
+    {
+      "check": "final75",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:30.4646581Z",
+      "completedUTC": "2026-10-31T15:22:46.4547890Z"
+    },
+    {
+      "check": "final60",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:22:46.4733553Z",
+      "completedUTC": "2026-10-31T15:23:01.5892162Z"
+    },
+    {
+      "check": "fresh15",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:23:01.5928151Z",
+      "completedUTC": "2026-10-31T15:23:06.3860861Z"
+    },
+    {
+      "check": "fixed100-original",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:23:06.3878623Z",
+      "completedUTC": "2026-10-31T15:23:10.7916947Z"
+    },
+    {
+      "check": "fixed100-enriched",
+      "exitCode": 0,
+      "startedUTC": "2026-10-31T15:23:10.7935141Z",
+      "completedUTC": "2026-10-31T15:23:24.3081007Z"
+    }
+  ],
+  "corpora": {
+    "final75": {
+      "cases": 75,
+      "unchangedAnswers": 75,
+      "priorCorrect": 30,
+      "preservedCorrect": 30,
+      "beforeCounts": {
+        "CORRECT": 30,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 37
+      },
+      "afterCounts": {
+        "CORRECT": 30,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 37
+      },
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "final60": {
+      "cases": 60,
+      "unchangedAnswers": 60,
+      "priorCorrect": 59,
+      "preservedCorrect": 59,
+      "beforeCounts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "afterCounts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fresh15": {
+      "cases": 15,
+      "unchangedAnswers": 15,
+      "priorCorrect": 4,
+      "preservedCorrect": 4,
+      "beforeCounts": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 11
+      },
+      "afterCounts": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 11
+      },
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fixed100-original": {
+      "cases": 100,
+      "unchangedAnswers": 100,
+      "priorCorrect": 50,
+      "preservedCorrect": 50,
+      "beforeCounts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "afterCounts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "evidencePaths": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "eci03EvidenceStatus": "INSUFFICIENT",
+      "verifiedPathLosses": []
+    },
+    "fixed100-enriched": {
+      "cases": 100,
+      "unchangedAnswers": 100,
+      "priorCorrect": 66,
+      "preservedCorrect": 66,
+      "beforeCounts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "afterCounts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "evidencePaths": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/VERIFIED": 15,
+        "ACRA/INSUFFICIENT": 5,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "eci03EvidenceStatus": "VERIFIED",
+      "verifiedPathLosses": []
+    }
+  },
+  "frozenInputFilesChecked": 78,
+  "changedInputs": [],
+  "sourceHashDrift": [],
+  "answerReview": "All 350 frozen configuration answers are byte-identical to prior captures; all 209 prior correct answers preserved. Grades are inherited after hash checks, not newly scored from citations. Task-specific changed responses were independently inspected, including actual journal data.",
+  "rootLintException": {
+    "errors": 34,
+    "paths": [
+      "artifacts/fresh-acceptance-2026-10-24/prepare.mjs"
+    ],
+    "tracked": false,
+    "note": "Existing untracked archived prepare.mjs; maintained src/scripts/tests lint passed."
+  },
+  "environment": "Canonical Node 22.23.3; retained os.userInfo compatibility shim and offline external-fetch guard. Default Node 24 preflight failed before product tests. Final broad suites used normal Windows process access.",
+  "interruptedChecks": [
+    "First smoke run interrupted for final ownership/tax review corrections.",
+    "Second smoke run interrupted after supervisor detected a hidden fabricated payroll journal in the new mixed route; corrected guard has a failing-before/passing-after zero-journal assertion."
+  ],
+  "resolvedIntermediateFailures": [
+    "A completed intermediate smoke run passed 157/159; the broad payroll-classification guard failed an existing semantic CPF/IRAS no-journal test and was restored to per-issue behavior. The targeted test passed afterward.",
+    "The other intermediate smoke failure was EEXIST in archived compatibility: six temporary files from the interrupted run were preserved under interrupted-test-temporaries, then the targeted compatibility suite passed."
+  ],
+  "limits": [
+    "No final-salary arithmetic added; missing facts remain unresolved.",
+    "The unspecified goods sale retains a journal obligation and clarification, not an invented journal.",
+    "Conservative entity binding can withhold an individual deadline for ambiguous/multipart ownership.",
+    "CI was not manually dispatched or inspected. No live integration suite, browser/model acceptance, source activation, PR, merge or deployment performed.",
+    "Raw captures, replay helpers and full logs are local-only; bounded summaries are published."
+  ],
+  "nextCoverageRecommendation": "CPF wage classification and payable-date/PR boundary ownership; distinguish source-premise gaps from interpretation and evidence admission failures. See next-coverage-recommendation.json."
+}

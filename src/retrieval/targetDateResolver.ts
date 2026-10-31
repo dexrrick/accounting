@@ -11,7 +11,7 @@ export interface TargetDateResolution {
 import { getSingaporeDateString } from '../utils/dateUtils';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from './statutoryCommencementScope';
-import { parseCompanyFyeDate } from './companyFyeDate';
+import { parseCompanyFyeCompanyType, parseCompanyFyeDate } from './companyFyeDate';
 
 const MONTH_MAP: Record<string, string> = {
   jan: '01', january: '01',
@@ -75,12 +75,8 @@ function currentCompanyAcraFyeWorkflowDate(
   if (!requestsDeadline) return undefined;
 
   const fyeDate = parseCompanyFyeDate(query);
-  if (!fyeDate) return undefined;
-  const comparisonText = query.replace(/\b(?:like|unlike|compared with|as for)\s+(?:a\s+)?(?:private|listed|non[- ]listed) company\b/gi, ' ');
-  const hasListedCompany = /(?<!non[- ])\blisted company\b|\bpublic company\b/i.test(comparisonText) &&
-    !/\bnot\s+(?:a\s+)?listed company\b/i.test(comparisonText);
-  const hasPrivateCompany = /\bprivate company\b|\bnon[- ]listed company\b/i.test(comparisonText);
-  if (hasListedCompany === hasPrivateCompany) return undefined;
+  const companyType = parseCompanyFyeCompanyType(query);
+  if (!fyeDate || !companyType) return undefined;
 
   const year = Number(fyeDate.slice(0, 4));
   const currentYear = Number(currentDate.slice(0, 4));

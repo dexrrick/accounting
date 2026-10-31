@@ -17,6 +17,7 @@ import {
   proveRequestedTopicOwnership
 } from './requestedTopicOwnership';
 import { removeNegatedJournalDirectives, removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
+import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -2815,8 +2816,7 @@ function isLfmcToolkitFundScopeQuestion(query: string): boolean {
 }
 
 function asksFinalSalaryAmountRequest(query: string): boolean {
-  return /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query) ||
-    /\b(?:final|last)\s+(?:salary|pay|wages?)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(query);
+  return isFinalSalaryAmountRequest(query);
 }
 
 /** Refines only an explicitly requested, already recognized current-rule family. */
@@ -3882,10 +3882,11 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
   const asksFinalSalaryTiming = /\b(?:when|how soon|deadline|due|by what date)\b/i.test(query);
   const asksPayslipIssueDeliveryOrTiming = /\b(?:when|how soon|deadline|due|within)\b/i.test(query) &&
     /\b(?:payslips?|pay slips?)\b/i.test(query) ||
-    /\b(?:how|must|should|can|do|does|what|where)\b[^.!?;]{0,100}\b(?:issue|deliver|give|provide|send)\w*\b[^.!?;]{0,100}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b/i.test(query);
+    /\b(?:how|must|should|can|do|does|what|where)\b[^.!?;]{0,100}\b(?:issue|deliver|give|provide|send)\w*\b[^.!?;]{0,100}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b/i.test(query) ||
+    /\b(?:explain|describe|outline)\b[^.!?;]{0,80}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b[^.!?;]{0,40}\b(?:delivery|issue)\b/i.test(query);
   const asksTerminationFinalPayAndPayslip = momFinalSalaryAndPayslip >= 0 &&
     /\b(?:resign\w*|notice|dismiss\w*|terminat\w*|end of employment)\b/i.test(query) &&
-    /\b(?:final|last)\s+(?:salary|pay)\b/i.test(query) &&
+    /\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query) &&
     /\b(?:payslips?|pay slips?)\b/i.test(query) && hasIndependentSemanticClause(query) &&
     asksPayslipIssueDeliveryOrTiming;
   if (asksTerminationFinalPayAndPayslip) {
@@ -4128,9 +4129,35 @@ export function reconcileQuestionUnderstanding(
 ): ReconciledQuestionUnderstanding {
   const currentRequestCompletenessContext = ensureRequestCompletenessContext(query, requestCompletenessContext, understanding);
   const reconciled = reconcileLegacyQuestionUnderstanding(query, classification, understanding);
+  const issuePlan = reconcileSemanticIssuePlan(query, classification, understanding, currentRequestCompletenessContext);
+  const independentTransactionAction = /\b(?:sold|sale|bought|purchased|purchase|acquired|disposed of)\b/i.test(query);
+  const explicitJournalRequest = /\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies))\b/i.test(query);
+  if (issuePlan.source === 'TAXONOMY_FALLBACK' && classification.journalEntryRequired &&
+      isFinalSalaryAmountRequest(query) && independentTransactionAction &&
+      !explicitJournalRequest && !issuePlan.issues.some(issue => issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')) {
+    const accountingIssue: SemanticQuestionIssue = {
+      subject: 'Accounting journal for the independent transaction; clarify settlement and measurement facts',
+      population: 'COMPANY',
+      domain: 'ACCOUNTING',
+      governingAuthorities: ['ACCOUNTING_STANDARDS'],
+      contextualAuthorities: [],
+      operation: 'PREPARE_JOURNAL',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+      confidence: 1
+    };
+    issuePlan.issues.push({
+      ...accountingIssue,
+      id: stableIssueId(accountingIssue),
+      status: 'UNRESOLVED',
+      unresolvedReason: 'NO_COVERAGE_TOPIC'
+    });
+    issuePlan.coverageEstablished = false;
+    issuePlan.hasUnmappedResidual = true;
+  }
   return {
     ...reconciled,
-    issuePlan: reconcileSemanticIssuePlan(query, classification, understanding, currentRequestCompletenessContext),
+    issuePlan,
     requestCompletenessContext: currentRequestCompletenessContext
   };
 }

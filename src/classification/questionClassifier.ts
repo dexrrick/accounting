@@ -2,6 +2,7 @@ import { getCoverageTopicsByIds, type SingaporeKnowledgeDomain } from '../standa
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
 import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
+import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -361,8 +362,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:is|are|does|do|what|which|whether|prove|subject to|attract)\b/i.test(entryIntentQuery);
   const asksSalaryDeductionGuidance = /\b(?:salary|wage|pay)\b[^.!?;]{0,80}\b(?:deduct\w*|withhold\w*)\b|\b(?:deduct\w*|withhold\w*)\b[^.!?;]{0,80}\b(?:salary|wage|pay)\b/i.test(entryIntentQuery);
   const hasExplicitPayrollAmount = /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\b|\b(?:salary|wages?|earns?|earnings|monthly pay)\s+(?:of|at|is)?\s*\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery);
-  const asksFinalSalaryAmount = /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay)\b/i.test(entryIntentQuery) ||
-    /\b(?:final|last)\s+(?:salary|pay)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(entryIntentQuery);
+  const asksFinalSalaryAmount = isFinalSalaryAmountRequest(entryIntentQuery);
   const hasExplicitSalaryBasis = /\b(?:salary|wages?|earns?|earning|earnings|monthly pay|pay rate|hourly rate|daily rate)\b\s+(?:of|at|is)?\s*(?:(?:S\$|SGD\s*\$?|\$)\s*)?\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery) ||
     /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\s*(?:per|\/)\s*(?:month|day|hour|week|year)\b/i.test(entryIntentQuery) &&
       !/\b(?:deduct\w*|deduction\w*)\b/i.test(entryIntentQuery);
@@ -375,7 +375,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   const explicitlyRequestsProratedPayroll =
     /\b(?:what if|what will|what would|calculat\w*|comput\w*|estimat\w*)\b[\s\S]{0,140}\b(?:pro[- ]?rat\w*)\b[\s\S]{0,80}\b(?:payroll|salary|wages?)\b/i.test(entryIntentQuery) &&
     /\b(?:resign\w*|last day|termination|ceas\w*)\b/i.test(entryIntentQuery);
-  const hasPayrollCalculation =
+  const hasPayrollCalculation = asksFinalSalaryAmount ||
     (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
     (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
     (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') ||
@@ -468,23 +468,38 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
     explicitlyCalculatesCpfContribution && asksCpfRefundProcedure && !asksForEntries;
 
-  const isConceptualOrAdvisory =
-    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(q.trim()) ||
-    q.includes('do we qualify') ||
-    q.includes('is it deductible') ||
-    q.includes('is it claimable') ||
-    q.includes('can i claim') ||
-    q.includes('can we claim');
+  const isConceptualOrAdvisoryQuery = (value: string) =>
+    /^(what is|what are|explain|define|definition|describe|overview|difference between|how does|summarise|summarize|can i|can we|do we qualify|does it qualify|is it allowed|is it deductible|is it claimable|must we|must i|guidance on|requirements for|criteria for)\b/i.test(value.trim()) ||
+    value.includes('do we qualify') ||
+    value.includes('is it deductible') ||
+    value.includes('is it claimable') ||
+    value.includes('can i claim') ||
+    value.includes('can we claim');
+  const isConceptualOrAdvisory = isConceptualOrAdvisoryQuery(q);
 
   const hasTransactionAction =
     (q.includes('bought') || q.includes('sold') || q.includes('purchased') || q.includes('acquired') || q.includes('invested') || q.includes('disposed of')) &&
     (asksForEntries || q.includes('shares') || q.includes('usd') || q.includes('asset') || q.includes('goods'));
+
+  // A conceptual opening clause can suppress an independent sale in a mixed
+  // final-pay request. Keep this narrow so ordinary tax and advisory questions
+  // retain the classifier's whole-query journal safeguards.
+  const independentFinalSalaryTransactionAction = asksFinalSalaryAmount && q
+    .split(/[.!?;\n]+|\b(?:and|also|then)\b/i)
+    .some(clause => {
+      const transactionClause = clause.trim();
+      const hasAction = /\b(?:bought|sold|purchased|acquired|invested|disposed of)\b/i.test(transactionClause);
+      const hasTransactionContext = asksForEntries || /\b(?:shares|usd|asset|goods)\b/i.test(transactionClause);
+      return hasAction && hasTransactionContext && !isConceptualOrAdvisoryQuery(transactionClause);
+    });
+  const hasActiveTransactionAction = (hasTransactionAction && !isConceptualOrAdvisory) ||
+    independentFinalSalaryTransactionAction;
   const calculationIntentQuery = entryIntentQuery;
 
   let intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID' = 'STATUTORY_ADVISORY';
   if (asksForEntries && isConceptualOrAdvisory) {
     intent = 'HYBRID';
-  } else if (asksForEntries || (hasTransactionAction && !isConceptualOrAdvisory) || hasPayrollCalculation) {
+  } else if (asksForEntries || hasActiveTransactionAction || hasPayrollCalculation) {
     intent = 'TRANSACTION';
   } else {
     intent = 'STATUTORY_ADVISORY';
@@ -493,7 +508,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // Journal entry is required if user asked for entries, active transaction, or payroll calculation
   const journalEntryRequired = asksForEntries ||
     (hasPayrollCalculation && !mixedCpfContributionAndRefundRequest && !asksFinalSalaryAmount) ||
-    (hasTransactionAction && !isConceptualOrAdvisory && !mixedCpfContributionAndRefundRequest && !asksFinalSalaryAmount);
+    (hasActiveTransactionAction && !mixedCpfContributionAndRefundRequest);
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
@@ -505,7 +520,8 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     calculationIntentQuery.includes('foreign exchange') ||
     calculationIntentQuery.includes('tax payable') ||
     hasPayrollCalculation ||
-    (intent === 'TRANSACTION' && /\d+/.test(calculationIntentQuery) && !isConceptualOrAdvisory);
+    (intent === 'TRANSACTION' && /\d+/.test(calculationIntentQuery) &&
+      (!isConceptualOrAdvisory || independentFinalSalaryTransactionAction));
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
