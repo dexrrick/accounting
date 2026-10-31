@@ -1,0 +1,46 @@
+Review handoff — statutory ownership and multipart obligations
+
+Goal and status
+The three confirmed application defects are corrected. The fourth finding was a missing regression matrix: the termination payslip rule already existed and is now tested for resignation with notice, resignation without notice, employer termination and misconduct dismissal. Independent review reports no remaining material findings within this scope. No unrelated statutory content was expanded.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-knowledge-expansion-20261030
+Implementation and evidence commit: 1aa35ab296481e9cb93b41f6992efec49faae629
+Correction base: ad18118f7e3280cf3025e95e67357b16e8f3b996
+Previously reviewed implementation: a4035b6e34d49373df0e4b2a0f3a3ee3e7800fc9 (the base adds only prior handoff/CI documentation).
+No PR was created. This handoff is a documentation-only successor to the implementation above. The final pushed documentation head is reported in the chat.
+
+Changes and review focus
+1. FYE, listing status and requested filing owner must agree. Shared parsing now withholds an individual date for unrelated/ambiguous entities; it preserves calendar validation, ISO/DD/MM/YYYY/named-month forms, historical safeguards and explicit listed-public/non-listed distinctions. Inspect src/retrieval/companyFyeDate.ts:13 and :37, targetDateResolver.ts:78, and acraMomKnowledge20261027b.ts:651.
+2. A shared final-pay calculation detector handles salary/pay/wages and negation. Salary CALCULATE and payslip EXPLAIN_RULE remain separate; missing salary facts do not become an amount or automatic journal. Inspect src/utils/momFinalPayIntent.ts:4, questionClassifier.ts:487, semanticQuestionUnderstanding.ts:4133 and coverageRegistry.ts:652.
+3. An independent sale retains a PREPARE_JOURNAL obligation in either clause order. The unresolved mixed plan returns a concrete clarification and no journal groups, preventing sale proceeds from becoming salary/CPF. Ordinary tax advice retains its previous advisory behavior. Inspect src/utils/authorityEvidenceRouting.ts and src/services/geminiService.ts around unresolvedMixedJournal.
+4. The application matrix at tests/regression/test_acra_mom_knowledge_20261027b.mjs:1165 checks the ordinary conditional payslip fallback separately from termination/dismissal delivery with outstanding salary. The current official guidance was checked at https://www.mom.gov.sg/employment-practices/salary/itemised-payslips and https://www.mom.gov.sg/employment-practices/salary/paying-salary. Source fixtures were not changed. The registered multipart refinement suite also checks journal/tax/image exclusions.
+
+Before/after application responses
+- Competitor/supplier/client/subsidiary FYE: before, another entity's 31/12/2025 produced our 31/07/2026 annual-return date; after, no individual filing date is generated. Reverse ownership, named-company status, AGM and multiple-company controls are covered.
+- "How much final wages ... payslip?": before, unsupported transaction offline; after, an unresolved final-salary calculation plus separately sourced payslip guidance. "Calculate the final pay ... payslip delivery" previously assigned CALCULATE to payslips; it now has the same separated obligations. The existing "What amount of final salary" control remains supported.
+- S$10,000 sale plus final salary/payslip: before, the sale disappeared from a MOM-only response; after, accounting journal, salary calculation and payslip rule are all visible. The unspecified sale remains incomplete with zero journal groups. An intermediate repair exposed a hidden payroll journal from sale proceeds; actual-state regression assertions and independent re-review verify that it is now blocked, including when a previous journal exists.
+
+Verification
+Canonical Node 22.23.3; focused application, multipart, authority-presentation, archived-compatibility and bookkeeping checks passed. Maintained src/scripts/tests lint, TypeScript, Vite and Worker builds passed. Complete smoke: 159/159; complete full regression: 182/182.
+Root lint still has 34 parse errors in the pre-existing untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs; maintained-code lint is separately green. Default Node 24/preflight user-profile failure was resolved for testing with the retained Node 22 compatibility setup. Offline protection remained enabled. Intermediate interruptions and the resolved 157/159 smoke attempt are recorded in completion-summary.json; neither is claimed as a final passing run.
+
+All 350 frozen configuration answers are byte-identical; all 209 prior correct answers are preserved. Counts are CORRECT/PARTIAL/INCORRECT/UNSUPPORTED:
+Frozen75 30/8/0/37; Earlier60 59/0/0/1; Fresh15 4/0/0/11; Fixed100 original 50/12/0/38; Fixed100 enriched 66/8/0/26. No frozen question, expected answer or source fixture changed. All five captures exited 0 with zero external/model requests. Original ECI evidence remains insufficient; enriched ECI evidence is separate. These are inherited answer-quality grades after full-answer hash checks, not new grades inferred from verified citations.
+
+CI was not manually dispatched or inspected. No live integration suite, browser/model acceptance, source activation, merge or deployment was performed.
+
+Remaining limitations and next expansion
+This adds no final-salary calculator or general multipart accounting parser. Unknown facts and complex entity ownership may remain unresolved; no sale or salary journal should be invented. Practical coverage remains partial. Next recommended batch: CPF OW/AW wage classification with employee/payable-date/PR boundary ownership, using the retained unanswered cases. Distinguish existing knowledge blocked by routing/date/evidence admission from genuinely missing official premises. Do not increase corpus counts to imply better answerability. IRAS WHT application, MOM deduction duties, ACRA filing details and MAS form/period requirements remain subsequent gaps.
+
+Evidence (pinned to the implementation commit)
+https://github.com/dexrrick/accounting/blob/1aa35ab296481e9cb93b41f6992efec49faae629/artifacts/statutory-review-four-fixes-20261031/completion-summary.json
+https://github.com/dexrrick/accounting/blob/1aa35ab296481e9cb93b41f6992efec49faae629/artifacts/statutory-review-four-fixes-20261031/preservation-comparison.json
+https://github.com/dexrrick/accounting/blob/1aa35ab296481e9cb93b41f6992efec49faae629/artifacts/statutory-review-four-fixes-20261031/application-before-after.json
+https://github.com/dexrrick/accounting/blob/1aa35ab296481e9cb93b41f6992efec49faae629/artifacts/statutory-review-four-fixes-20261031/independent-review.json
+https://github.com/dexrrick/accounting/blob/1aa35ab296481e9cb93b41f6992efec49faae629/artifacts/statutory-review-four-fixes-20261031/next-coverage-recommendation.json
+Full raw captures, logs, intermediate diagnostics and replay helpers remain local-only under D:\Accounting\artifacts\statutory-review-four-fixes-20261031 and are unavailable through GitHub. No application implementation or regression-test changes remain uncommitted/unpushed after the confirmed publication; pre-existing unrelated archives and local evidence remain untracked/ignored.
+
+Ready-to-copy review prompt
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-knowledge-expansion-20261030, implementation commit 1aa35ab296481e9cb93b41f6992efec49faae629 against base ad18118f7e3280cf3025e95e67357b16e8f3b996 using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Focus on entity/date ownership, separate obligations, actual returned journal groups, tax exclusions and source applicability. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
