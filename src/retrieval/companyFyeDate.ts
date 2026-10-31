@@ -11,7 +11,9 @@ const FILING_SUBJECT = String.raw`(?:annual[- ]returns?|annual general meeting|a
 
 /** An owned FYE cannot answer a filing request for another or unidentified party. */
 function hasUnrelatedFilingOwner(query: string): boolean {
-  const text = query.replace(/\b(?:our|my|this|the)\s+(?:(?:local|singapore|private|public|listed|non[- ]listed)\s+){0,2}company(?:['’]s)?\b/gi, 'our company');
+  const text = query
+    .replace(/\bfor\s+(?:the\s+)?filing(?:\s+purposes?)?(?=\s*(?:[,!.?;]|$)|\s+(?:(?:and|but)\s+)?(?:what|which|when|how)\b)/gi, '')
+    .replace(/\b(?:our|my|this|the)\s+(?:(?:local|singapore|private|public|listed|non[- ]listed)\s+){0,2}company(?:['’]s)?\b/gi, 'our company');
   if (new RegExp(String.raw`\b[\p{L}\p{N}&.-]+['’]s\s+(?:(?:next|first|usual)\s+)?${FILING_SUBJECT}\b`, 'iu').test(text) ||
       new RegExp(String.raw`\b(?:their|your|his|her)\s+${FILING_SUBJECT}\b`, 'i').test(text)) return true;
 
@@ -43,7 +45,8 @@ export function parseCompanyFyeCompanyType(query: string): 'listed' | 'non-liste
   const boundOwnerTypes = [...ownerTypes, ...(sameOwnerStatement?.[1] ? [sameOwnerStatement[1].toLowerCase()] : [])]
     .map(value => value === 'listed' ? 'listed' : 'non-listed');
   if (new Set(boundOwnerTypes).size > 1) return undefined;
-  const hasOtherEntityCue = /\b(?:another|other|different|second|competitor|supplier|vendor|client|customer|subsidiary|parent|affiliate|partner)\b/i.test(query) ||
+  const hasOtherEntityCue = /\b(?:another|different|second|competitor|supplier|vendor|client|customer|subsidiary|parent|affiliate|partner)\b/i.test(query) ||
+    /\bother\s+(?:company|entity|party|business)\b/i.test(query) ||
     /\b(?!(?:our|my|this|the|it|we|company)\b)[\p{L}][\p{L}\p{N}&.'’-]*\s+(?:is|operates|has)\s+(?:a|an)\s+(?:non[- ]listed|private|listed)\s+company\b/iu.test(query);
   const genericDeadlineType = /\bdue\s+for\s+(?:a\s+)?(non[- ]listed|private|listed)\s+company\b/i.exec(query)?.[1]?.toLowerCase();
   const genericType = genericDeadlineType ? genericDeadlineType === 'listed' ? 'listed' : 'non-listed' : undefined;

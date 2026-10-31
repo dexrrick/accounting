@@ -612,11 +612,9 @@ function answerText(rule: Rule, query: string): string {
       if (rule.id === 'ACRA_AR_DEADLINES') {
         const branchRegisterStatus = acraAnnualReturnBranchRegisterStatus(query);
         const branchDeadline = addMonths(fye, monthCount + 1);
-        application = branchRegisterStatus === 'APPLIES'
-          ? ` For the stated FYE and company type, the annual-return date is ${formatAcraDate(branchDeadline)} because the question also states share capital and an overseas branch register.`
-          : branchRegisterStatus === 'EXCLUDED'
-            ? ` For the stated FYE and company type, the annual-return date is ${formatAcraDate(deadline)}; the additional month does not apply on the stated company facts.`
-            : ` For the stated FYE and company type, the general annual-return date is ${formatAcraDate(deadline)}. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date ${formatAcraDate(branchDeadline)}.`;
+        application = branchRegisterStatus === 'UNKNOWN'
+          ? ` For the stated FYE and company type, the general annual-return date is ${formatAcraDate(deadline)}. If the company has share capital and maintains an overseas branch register, one additional month applies, making the date ${formatAcraDate(branchDeadline)}.`
+          : '';
       } else {
         application = ` For the stated FYE, the ${period} date is ${formatAcraDate(deadline)}, using the ${monthCount}-month rule for the identified company type.`;
       }

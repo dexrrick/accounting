@@ -13,6 +13,7 @@ import {
 } from '../../src/retrieval/acraMomKnowledge20261027b.ts';
 import { hasPracticalExpansionContradiction, practicalExpansionPointers, supportPracticalExpansionRule } from '../../src/retrieval/practicalStatutoryExpansion.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { identifyAcraAnnualReturnCompanyFacts } from '../../src/engine/acraAnnualReturnApplication.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { reconcileQuestionUnderstanding } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { loadStatutoryKnowledgeSources } from '../../scripts/load_statutory_knowledge_sources.mjs';
@@ -21,7 +22,7 @@ import { defaultExternalSourceValidator } from '../../src/retrieval/externalSour
 import { supportsAcraSmallCompanyAuditFacts } from '../../src/retrieval/momAcraMasCoverageRules.ts';
 import { getAcraAnnualReturnDeadlineTablePassage, supportsAcraAnnualReturnDeadlineEvidence } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { defaultTargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
-import { parseCompanyFyeDate } from '../../src/retrieval/companyFyeDate.ts';
+import { parseCompanyFyeCompanyType, parseCompanyFyeDate } from '../../src/retrieval/companyFyeDate.ts';
 
 const fixtureDir = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('acra-mom-source-manifest.json', fixtureDir), 'utf8'));
@@ -605,6 +606,54 @@ for (const [fyeQuery, expectedArDate] of [
   assert.ok(answer, `The ACRA deadline answer parses the owned FYE: ${fyeQuery}`);
   assert.match(answer.text, new RegExp(`general annual-return date is ${expectedArDate.replaceAll('/', '\\/')}`));
 }
+for (const filingPurposeQuery of [
+  'Our private company FYE is 31/12/2025. When is the annual return due for filing?',
+  'Our private company FYE is 31/12/2025. When is our annual return due and what other filings are needed?',
+  'Our private company FYE is 31/12/2025. When is our annual return due for filing and what other filings are needed?'
+]) {
+  assert.equal(parseCompanyFyeDate(filingPurposeQuery), '2025-12-31',
+    `Filing-purpose or additional-filing wording does not detach the owned FYE: ${filingPurposeQuery}`);
+  assert.equal(parseCompanyFyeCompanyType(filingPurposeQuery), 'non-listed',
+    `The private company type stays bound to its own FYE in a multipart filing question: ${filingPurposeQuery}`);
+}
+for (const unrelatedOwnerAfterPurposeQuery of [
+  'Our private company FYE is 31/12/2025. When is our annual return due for filing for a competitor?',
+  'Our private company FYE is 31/12/2025. When is our annual return due for filing for Alpha?',
+  'Our private company FYE is 31/12/2025. When is our annual return due for filing and when is a competitor\'s annual return due?'
+]) {
+  assert.equal(parseCompanyFyeDate(unrelatedOwnerAfterPurposeQuery), undefined,
+    `A separate owner after the purpose phrase still invalidates the date attribution: ${unrelatedOwnerAfterPurposeQuery}`);
+  assert.equal(parseCompanyFyeCompanyType(unrelatedOwnerAfterPurposeQuery), undefined,
+    `A separate filing owner after the purpose phrase keeps company type unresolved: ${unrelatedOwnerAfterPurposeQuery}`);
+}
+assert.equal(parseCompanyFyeCompanyType(
+  'Our private company FYE is 31/12/2025. When is the annual return due for a listed company?'), undefined,
+  'A conflicting generic company type does not override the explicitly owned private-company status.');
+assert.equal(parseCompanyFyeCompanyType(
+  'Our private company FYE is 31/12/2025. When is our annual return due and what other company filings are needed?'), undefined,
+  'Other-company wording remains an entity cue, distinct from other filings generally.');
+const privateFyeFacts = identifyAcraAnnualReturnCompanyFacts(
+  'Our private company FYE is 31/12/2025. It has no overseas branch register. When is our annual return due?');
+assert.equal(privateFyeFacts.listingStatus, 'NON_LISTED',
+  'An explicitly owned private-company FYE supplies its listing category to filing-date application.');
+assert.equal(privateFyeFacts.hasOverseasBranchRegister, false);
+assert.deepEqual(privateFyeFacts.unresolvedFacts, [],
+  'Known private-company status and an explicit no-branch fact resolve the date inputs.');
+const conflictingPrivateFacts = identifyAcraAnnualReturnCompanyFacts(
+  'Our private company FYE is 31/12/2025. Our company is listed. It has no overseas branch register. When is our annual return due?');
+assert.match(conflictingPrivateFacts.unresolvedFacts.join(' '), /listing status.*conflicting/i,
+  'Conflicting owned-company type facts keep listing status unresolved.');
+const ambiguousPrivateFacts = identifyAcraAnnualReturnCompanyFacts(
+  'Our private company FYE is 31/12/2025. Acme is a listed company. It has no overseas branch register. When is our annual return due?');
+assert.match(ambiguousPrivateFacts.unresolvedFacts.join(' '), /listing status.*ambiguous/i,
+  'A named company’s listing status is not attributed to the private FYE owner.');
+const conditionalPrivateFacts = identifyAcraAnnualReturnCompanyFacts(
+  'If our private company FYE is 31/12/2025 and it has no overseas branch register, when is its annual return due?');
+assert.match(conditionalPrivateFacts.unresolvedFacts.join(' '), /listing status.*uncertain/i,
+  'Conditional private-company wording does not become an asserted listing fact.');
+assert.equal(parseCompanyFyeDate(
+  'A supplier\'s private company FYE is 31/12/2025. When is our annual return due for filing?'), undefined,
+  'Filing-purpose wording does not allow a supplier-owned FYE to be borrowed.');
 assert.equal(parseCompanyFyeDate('Our private company FYE is 31/02/2025.'), undefined,
   'An invalid calendar date is not normalized into a different FYE.');
 assert.equal(parseCompanyFyeDate('Our private company FYE is 31/12/2025 and our FYE was 30/06/2026.'), undefined,
@@ -636,16 +685,16 @@ assert.match(listedAnnualReturn?.text ?? '', /general annual-return date is 31\/
   'A listed company annual-return deadline retains its five-month period.');
 const positiveBranchRegisterAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'),
   'Our private company FYE is 31 December 2025. It has share capital and maintains an overseas branch register. What is its annual return deadline?');
-assert.match(positiveBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/08\/2026/,
-  'The additional month applies when both affirmative facts belong to the queried company.');
+assert.doesNotMatch(positiveBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/08\/2026/,
+  'A company-specific date is withheld while the admitted evidence has not been applied to the stated FYE.');
 const noBranchRegisterAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'),
   'Our private company FYE is 31 December 2025. It has share capital and has no overseas branch register. What is its annual return deadline?');
-assert.match(noBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/07\/2026/);
+assert.doesNotMatch(noBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/07\/2026/);
 assert.doesNotMatch(noBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/08\/2026/,
   'An explicit absence of an overseas branch register defeats the additional month.');
 const noShareCapitalAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'),
   'Our private company FYE is 31 December 2025. It has no share capital and maintains an overseas branch register. What is its annual return deadline?');
-assert.match(noShareCapitalAnswer?.text ?? '', /annual-return date is 31\/07\/2026/);
+assert.doesNotMatch(noShareCapitalAnswer?.text ?? '', /annual-return date is 31\/07\/2026/);
 assert.doesNotMatch(noShareCapitalAnswer?.text ?? '', /annual-return date is 31\/08\/2026/,
   'An explicit absence of share capital defeats the additional month.');
 const crossSentenceBranchFactsAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'),
@@ -1101,6 +1150,68 @@ try {
   assert.match(genericCompanyTypeResponse.messageText,
     /For the stated FYE and company type, the general annual-return date is 31\/07\/2026/,
     'A generic company type in the deadline question remains usable when there is no competing entity.');
+  const filingPurposeResponse = await processAccountingQuery(
+    'Our private company FYE is 31/12/2025. When is the annual return due for filing?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.match(filingPurposeResponse.messageText, /Verified official source excerpt/i,
+    'The application recognizes the company-owned FYE despite the ordinary purpose phrase "for filing".');
+  assert.doesNotMatch(filingPurposeResponse.messageText, /Applicability limitation/i,
+    'The filing-purpose phrase does not make the supplied current workflow FYE look like an unsupported historical query.');
+  assert.match(filingPurposeResponse.messageText, /Application unresolved/i,
+    'The application retains its unresolved limitation while company facts remain incomplete.');
+  assert.doesNotMatch(filingPurposeResponse.messageText, /Company facts required to calculate the annual return deadline: listing status/i,
+    'The explicitly stated private-company status does not remain an artificial missing fact.');
+  assert.match(filingPurposeResponse.messageText, /overseas branch register status/i,
+    'The application still asks for the genuinely missing branch-register fact.');
+  assert.match(filingPurposeResponse.messageText, /Verified official source excerpt/i,
+    'The application retrieves and presents the official deadline table for the company-owned FYE.');
+  assert.doesNotMatch(filingPurposeResponse.messageText, /annual-return date is 31\/07\/2026/i,
+    'The application does not state a company-specific date when branch-register facts remain missing.');
+  const filingPurposeAndMultipartResponse = await processAccountingQuery(
+    'Our private company FYE is 31/12/2025. When is our annual return due for filing and what other filings are needed?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.match(filingPurposeAndMultipartResponse.messageText, /Verified official source excerpt/i,
+    'The actual application retains official annual-return evidence across the purpose phrase and following clause.');
+  assert.doesNotMatch(filingPurposeAndMultipartResponse.messageText, /Applicability limitation/i,
+    'The multipart purpose wording does not make the supplied FYE appear historically unsupported.');
+  assert.doesNotMatch(filingPurposeAndMultipartResponse.messageText,
+    /Company facts required to calculate the annual return deadline: listing status/i,
+    'The multipart application uses the explicitly stated private-company type.');
+  assert.match(filingPurposeAndMultipartResponse.messageText, /overseas branch register status/i,
+    'The genuine missing branch-register fact remains unresolved.');
+  const otherFilingsResponse = await processAccountingQuery(
+    'Our private company FYE is 31/12/2025. When is our annual return due and what other filings are needed?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.match(otherFilingsResponse.messageText, /Verified general guidance is available/i,
+    'Asking about other filing obligations does not suppress the owned company type or its verified annual-return guidance.');
+  assert.match(otherFilingsResponse.messageText, /general annual-return date is 31\/07\/2026/,
+    'The multipart application response retains the supported general date and its stated limitations.');
+  assert.match(otherFilingsResponse.messageText, /additional month applies, making the date 31\/08\/2026/i,
+    'The application keeps the branch-register extension conditional.');
+  const knownNoBranchResponse = await processAccountingQuery(
+    'Our private company FYE is 31/12/2025. It has no overseas branch register. When is our annual return due?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(knownNoBranchResponse.messageText,
+    /annual-return date is 31\/07\/2026/i,
+    'The actual application withholds an exact date when admitted evidence is not verified for the FYE.');
+  assert.match(knownNoBranchResponse.messageText,
+    /\*\*Application unresolved:\*\* The admitted evidence was not verified against the stated financial year end; no date is calculated\./i,
+    'The app exposes the target-date evidence limitation and does not contradict it with an unverified date.');
+  const supplierFilingPurposeResponse = await processAccountingQuery(
+    "A supplier's private company FYE is 31/12/2025. When is our annual return due for filing?",
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(supplierFilingPurposeResponse.messageText,
+    /For the stated FYE and company type, the general annual-return date is 31\/07\/2026/,
+    'The filing-purpose wording never permits a supplier-owned FYE to supply our company date.');
+  for (const query of [
+    'Our private company FYE is 31/12/2025. When is our annual return due for filing for a competitor?',
+    "Our private company FYE is 31/12/2025. When is our annual return due for filing and when is a competitor's annual return due?"
+  ]) {
+    const unrelatedOwnerAfterPurposeResponse = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {});
+    assert.doesNotMatch(unrelatedOwnerAfterPurposeResponse.messageText,
+      /For the stated FYE and company type, the general annual-return date is 31\/07\/2026/,
+      `A filing owner after the ordinary purpose phrase cannot borrow our FYE: ${query}`);
+  }
   for (const query of [
     "Our private company FYE is 31/12/2025. When is Acme's annual return due?",
     'Our private company FYE is 31/12/2025. When is Acme’s AGM due?',
