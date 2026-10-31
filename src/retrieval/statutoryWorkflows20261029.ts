@@ -676,32 +676,40 @@ function cpfRefundDateApplication(query: string): string | undefined {
   let suppliedDate: string | undefined;
   if (conditional) {
     const wageReference = String.raw`(?:(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|(?:conditional\s+)?wages?)`;
-    const dateSuffix = String.raw`\s*${datePattern}`;
     const repaymentDateClauses = conditionClauses.filter(clause =>
       /\b(?:repay\w*|repayment|repayable)\b/i.test(clause) &&
       [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 0);
     const hasCompetingRepaymentDates = repaymentDateClauses.some(clause =>
       [...clause.matchAll(new RegExp(datePattern, 'gi'))].length > 1 ||
       /\b(?:unclear|uncertain|not sure|unknown|cannot determine|don't know|do not know|either|alternatively)\b/i.test(clause));
-    if (hasCompetingRepaymentDates) return undefined;
-    const hasUnownedRepaymentDate = repaymentDateClauses.some(clause => {
-      const trimmed = clause.replace(/^\s*(?:CPF refund deadline:\s*)?/i, '').trim();
-      const bareGenericStart = /^(?:the\s+)?(?:repayment due date|(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due)\b/i.test(trimmed);
-      const explicitlyWageOwned = new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:due date|(?:is|was|becomes?)\s+due)\b`, 'i').test(trimmed) ||
-        /\b(?:bonus|wages?|salary|remuneration|payroll payment)\b/i.test(trimmed);
-      const unambiguousEmployeePronoun = /\bemployee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this)\b/i.test(trimmed);
-      return !bareGenericStart && !explicitlyWageOwned && !unambiguousEmployeePronoun;
-    });
-    if (hasUnownedRepaymentDate) return undefined;
+    if (hasCompetingRepaymentDates || repaymentDateClauses.length > 1) return undefined;
+    const employmentDateTail = String.raw`under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)`;
+    const serviceConditionDateTail = String.raw`after (?:the employee )?(?:leav\w*|resign\w*|depart\w*)(?: early)?`;
+    const dateEnding = String.raw`(?=\s*(?:(?:${employmentDateTail}|${serviceConditionDateTail})\s*)?(?:[.!?;]|$))`;
+    const ownedDateSuffix = String.raw`\s*${datePattern}${dateEnding}`;
+    // Contextual dates and pronouns need a directly preceding wage condition.
+    // Employment terms can also contain non-wage obligations.
+    const wageCondition = new RegExp(String.raw`^(?:(?:the|our)\s+)?${wageReference}\s+(?:is conditional on completing (?:\d+|[a-z]+) months? (?:of )?service|(?:must|has to) be (?:repaid|returned) if the employee (?:leaves|resigns|departs) early|becomes? repayable upon resignation)$`, 'i');
+    const hasImmediateWageAntecedent = (index: number): boolean => {
+      const preceding = query.slice(0, index).split(/[.!?;\n]+/)
+        .map(clause => clause.replace(/^\s*CPF refund deadline:\s*/i, '').trim()).filter(Boolean);
+      const last = preceding.at(-1) || '';
+      if (wageCondition.test(last)) return true;
+      const prior = preceding.at(-2) || '';
+      return /^(?:it|this|the bonus)\s+/i.test(last)
+        && wageCondition.test(last.replace(/^(?:it|this|the bonus)\s+/i, 'The bonus '))
+        && new RegExp(String.raw`^(?:CPF was paid on|we paid)\s+(?:a|an|the)\s+${wageReference}$`, 'i').test(prior);
+    };
     const dueDatePatterns = [
-      new RegExp(String.raw`\b${wageReference}\s+repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
-      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?repayment due date\b[^.!?;\n]{0,40}\b(?:is|was|of|:)?${dateSuffix}`, 'gi'),
-      new RegExp(String.raw`\bunder (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\b[^.!?;\n]{0,120}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on${dateSuffix}`, 'gi'),
-      new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
-      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due\b[^.!?;\n]{0,100}\bon${dateSuffix}`, 'gi'),
-      // A pronoun is safe only when the question describes a single repayable
-      // wage and no separate loan, advance or debt that could own the date.
-      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this|(?:the\s+)?(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|the\s+conditional wages?)\s+on${dateSuffix}`, 'gi')
+      new RegExp(String.raw`\b${wageReference}\s+repayment due date\s*(?:(?:is|was|of)\s*|:\s*)?${ownedDateSuffix}`, 'gi'),
+      new RegExp(String.raw`\bunder (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\b[^.!?;\n]{0,120}\b(?:had|has|have|was|were) to repay\s+(?:the\s+)?${wageReference}\s+on${ownedDateSuffix}`, 'gi'),
+      new RegExp(String.raw`\b${wageReference}\s+repayment\s+(?:is|was|becomes?)\s+due\s+(?:under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\s+)?on${ownedDateSuffix}`, 'gi'),
+      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:(?:the\s+)?(?:conditional\s+)?(?:(?:joining|sign[- ]on|retention)\s+)?bonus|the\s+conditional wages?)\s+on${ownedDateSuffix}`, 'gi')
+    ];
+    const contextualDueDatePatterns = [
+      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?repayment due date\s*(?:(?:is|was|of)\s*|:\s*)?${datePattern}\s+${employmentDateTail}(?=[.!?;]|$)`, 'gi'),
+      new RegExp(String.raw`(?:^|[.!?;\n])\s*(?:CPF refund deadline:\s*)?(?:the\s+)?(?:repayment|repayable)\s+(?:is|was|becomes?)\s+due\s+under (?:the )?(?:terms of employment|employment terms|employment agreement|employment contract)\s+on${ownedDateSuffix}`, 'gi'),
+      new RegExp(String.raw`\b(?:the\s+)?employee\s+(?:must|has to|is required to)\s+repay\s+(?:it|this)\s+on${ownedDateSuffix}`, 'gi')
     ];
     const hasSeparateDebt = /\b(?:loan|advance|debt)\b/i.test(query);
     const hasSeparateNonWageRepayment = /\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b[^.!?;\n]{0,120}\b(?:repay\w*|repaid|return\w*|due)\b|\b(?:repay\w*|repayment)\b[^.!?;\n]{0,120}\b(?:training|course|education|recruitment|relocation|equipment|uniform|accommodation|housing|travel)\s+(?:expenses?|costs?|fees?)\b/i.test(query);
@@ -710,7 +718,11 @@ function cpfRefundDateApplication(query: string): string | undefined {
     const hasSeparateWageTransactions = namedBonusKinds.size > 1
       || /\b(?:another|second|separate|different|multiple|several|two)\b[^.!?;\n]{0,60}\b(?:bonus|wages?|payment|transaction)\b/i.test(query)
       || /\bbonus\b[^.!?;\n]{0,100}\b(?:and|plus|as well as)\b[^.!?;\n]{0,80}\bbonus(?:es)?\b/i.test(query);
-    const dueDates = dueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)].map(match => match[1]));
+    const dueDates = [
+      ...dueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)].map(match => match[1])),
+      ...contextualDueDatePatterns.flatMap(pattern => [...query.matchAll(pattern)]
+        .filter(match => hasImmediateWageAntecedent(match.index!)).map(match => match[1]))
+    ];
     const conflictingDueDateLanguage = /\b(?:mutual agreement|contractual|agreed)\b[^.!?;\n]{0,100}\brepayment due date\b/i.test(query);
     if (dueDates.length !== 1 || conflictingDueDateLanguage || hasSeparateDebt || hasSeparateNonWageRepayment || hasSeparateWageTransactions) return undefined;
     suppliedDate = dueDates[0];

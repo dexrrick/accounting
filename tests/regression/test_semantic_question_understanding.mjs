@@ -81,8 +81,13 @@ assert.equal(acraAgmProcessPlan.coverageEstablished, false,
   'The ACRA process rule does not claim completeness for the full user request.');
 assert.equal(acraAgmProcessPlan.hasUnmappedResidual, true);
 const acraAgmWithSeparateDeadlinePlan = taxonomyPlan(`${acraAgmProcessQuery} Also, when are annual returns due?`);
-assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_agm')),
-  'A separate AGM request is not demoted to context.');
+assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_annual-returns')),
+  'A separate annual-return filing deadline remains mapped.');
+assert.ok(acraAgmWithSeparateDeadlinePlan.issues.some(item => item.contextualTopicIds?.includes('acra_agm')),
+  'The AGM declaration remains context for the annual-return process ask.');
+const acraAgmWithSeparateCompliancePlan = taxonomyPlan(`${acraAgmProcessQuery} Also, when must the AGM be held?`);
+assert.ok(acraAgmWithSeparateCompliancePlan.issues.some(item => item.mappedTopicIds.includes('acra_agm')),
+  'An independent AGM compliance or date question remains mapped.');
 
 const masToolkitQuery = 'Does MAS\'s LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?';
 const masToolkitPlan = taxonomyPlan(masToolkitQuery);
@@ -100,7 +105,26 @@ assert.ok(masToolkitWithSeparateLicencePlan.issues.some(item => item.mappedTopic
 const acraEntityChangeQuery = 'Our Singapore company\'s registered office address and entity email changed on 12 October. When must we notify ACRA, and can we wait until the annual return?';
 const acraEntityChangePlan = taxonomyPlan(acraEntityChangeQuery);
 assert.ok(acraEntityChangePlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
-assert.equal(acraEntityChangePlan.issues.find(item => item.mappedTopicIds.includes('acra-entity-information-changes'))?.operation, 'EXPLAIN_RULE');
+const acraEntityChangeIssue = acraEntityChangePlan.issues.find(item => item.mappedTopicIds.includes('acra-entity-information-changes'));
+assert.equal(acraEntityChangeIssue?.operation, 'EXPLAIN_RULE');
+assert.ok(acraEntityChangeIssue?.contextualTopicIds?.includes('acra_annual-returns'),
+  'Waiting until the annual return is context for the entity-update deadline question.');
+const acraEntityUpdatesAcrossCompanyTypesQuery = 'Our group has a Singapore-incorporated subsidiary and a foreign company registered in Singapore. Both changed their entity email addresses twelve days ago. Do they have the same ACRA notification deadline, and can either wait until its annual return?';
+const acraEntityUpdatesAcrossCompanyTypesPlan = taxonomyPlan(acraEntityUpdatesAcrossCompanyTypesQuery);
+assert.equal(acraEntityUpdatesAcrossCompanyTypesPlan.issues.length, 1);
+assert.deepEqual(acraEntityUpdatesAcrossCompanyTypesPlan.issues[0].mappedTopicIds, ['acra-entity-information-changes']);
+assert.ok(acraEntityUpdatesAcrossCompanyTypesPlan.issues[0].contextualTopicIds?.includes('acra_annual-returns'),
+  'An annual-return deferral mention does not become an independent filing-deadline request.');
+const acraEntityUpdatesWithSeparateReturnDeadlinePlan = taxonomyPlan(`${acraEntityUpdatesAcrossCompanyTypesQuery} Separately, what is the annual return filing deadline?`);
+assert.ok(acraEntityUpdatesWithSeparateReturnDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra-entity-information-changes')));
+assert.ok(acraEntityUpdatesWithSeparateReturnDeadlinePlan.issues.some(item => item.mappedTopicIds.includes('acra_annual-returns')),
+  'A separately requested annual-return deadline remains mapped.');
+const acraBusinessEmailDeferralQuery = 'Our Singapore-incorporated private company changed its business email ten days ago. Can the secretary wait until the next annual return to tell ACRA?';
+const acraBusinessEmailDeferralPlan = taxonomyPlan(acraBusinessEmailDeferralQuery);
+assert.equal(acraBusinessEmailDeferralPlan.issues.length, 1);
+assert.deepEqual(acraBusinessEmailDeferralPlan.issues[0].mappedTopicIds, ['acra-entity-information-changes']);
+assert.ok(acraBusinessEmailDeferralPlan.issues[0].contextualTopicIds?.includes('acra_annual-returns'),
+  'The annual-return mention is proposed delay context for the company email update.');
 assert.equal(acraEntityChangePlan.coverageEstablished, false);
 assert.equal(acraEntityChangePlan.hasUnmappedResidual, true);
 const acraEntityAndOfficeRequirementsPlan = taxonomyPlan(`${acraEntityChangeQuery} Also, what must the registered office address be?`);

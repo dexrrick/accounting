@@ -1,0 +1,1003 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: Examples for computation of Additional Wage (AW) Ceiling
+Canonical official URL: https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1
+Capture date (Singapore): 2026-10-27
+Capture method: original official PDF bytes are retained and SHA-256 verified; the following is text extracted from those bytes by pypdf 5.4.1. Layout follows the PDF page order. The original PDF is the source of record.
+
+1 
+ 
+Examples for computation of Additional Wage (AW) Ceiling 
+ 
+The AW ceiling determines the maximum amount of AW subject to CPF contributions for the year. An employee’s AW ceiling is computed on a 
+per employer, per year basis. The AW ceiling applies to all Singapore Citizens and Singapore Permanent Residents (SPR). 
+ 
+AW ceiling Calculation 
+ 
+ 
+The AW ceiling is computed using the following formula:  
+$102,000 - Total Ordinary Wages (OW) subject to CPF for the year  
+ 
+For the year 2026, the AW ceiling is 
+$102,000 – ($8,000* x 12) 
+ 
+* The OW ceiling is capped at $8,000 for 2026.  
+ 
+Note: The applicable AW ceiling depends on the due and payable date of the AW. For example, if the 2025 bonus is due and payable to the employee in 2026, then the employer should contribute 
+according to the 2026 AW ceiling. 
+ 
+ 
+Step 1: At every AW payment, employers should estimate the AW ceiling by using the current year’s estimated monthly OW. Employers should 
+either: 
+a) Submit a refund application online (select the option: Refund of payments made for 1 employee/platform worker) immediately if any excess 
+contributions on AW are detected; or 
+b) Pay the shortfall in contributions on AW, if any. 
+ 
+Step 2: In the last month of employment or end of the year in December (whichever is earlier),  employers should re-calculate the AW 
+ceiling based on the actual OW subject to CPF paid up till the last month of employment or in December and pay any shortfall in CPF contributions 
+together with the employee's contributions for his last month of employment  or in December . If there are any excess CPF contributions, you 
+should submit a refund application online. 
+ 
+For the examples below, we assume that the monthly contribution rates applicable for the employee is for Singaporeans and SPRs (from third 
+year and onwards). If your employee is a SPR in the first or second year of SPR status, please use the applicable monthly contribution rates. 
+ 
+  
+
+2 
+ 
+1. Employee earns more than $8,000 of Ordinary Wage (OW) 
+My employee who is below 55 years old, earned a monthly salary of $9,000. He will be receiving a total Additional Wage (AW) of $100,000 in 
+2026. 
+ 
+Estimated Additional Wage (AW) ceiling:  
+$102,000 – ($8,000 x 12) = $6,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 9,000 8,000 1,360 1,600 12,000 6,000 1,020 1,200 
+Feb 9,000 8,000 1,360 1,600 - - - - 
+Mar 9,000 8,000 1,360 1,600 - - - - 
+Apr 9,000 8,000 1,360 1,600 - - - - 
+May 9,000 8,000 1,360 1,600 - - - - 
+Jun 9,000 8,000 1,360 1,600 10,000 0 0 0 
+Jul 9,000 8,000 1,360 1,600 - - - - 
+Aug 9,000 8,000 1,360 1,600 - - - - 
+Sep 9,000 8,000 1,360 1,600 - - - - 
+Oct 9,000 8,000 1,360 1,600 - - - - 
+Nov 9,000 8,000 1,360 1,600 - - - - 
+Dec 9,000 8,000 1,360 1,600 78,000 0 0 0 
+Total 96,000 81,600 16,320 19,200 100,000 20,400 1,020 1,200 
+ 
+The maximum AW that is subject to CPF in 2026 would be $6,000. The remaining AW of $94,000 (remaining AW of $6,000 paid in January 2026, 
+$10,000 paid in June 2026 and $78,000 paid in December 2026) would not be subject to CPF, if your employee works till the end of the year.  
+ 
+ 
+
+3 
+ 
+2. Employee earns less than $8,000 of Ordinary Wage (OW) 
+My employee who is below 55 years old, earned a monthly salary of $4,500. He will be receiving a total Additional Wage (AW) of $100,000 in 
+2026.  
+ 
+Estimated Additional Wage (AW) ceiling:  
+$102,000 – ($4,500 x 12) = $48,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 4,500 4,500 765 900 - - - - 
+Feb 4,500 4,500 765 900 5,000 5,000 850 1,000 
+Mar 4,500 4,500 765 900 40,000 40,000 6,800 8,000 
+Apr 4,500 4,500 765 900 - - - - 
+May 4,500 4,500 765 900 - - - - 
+Jun 4,500 4,500 765 900 - - - - 
+Jul 4,500 4,500 765 900 - - - - 
+Aug 4,500 4,500 765 900 - - - - 
+Sep 4,500 4,500 765 900 - - - - 
+Oct 4,500 4,500 765 900 - - - - 
+Nov 4,500 4,500 765 900 - - - - 
+Dec 4,500 4,500 765 900 55,000 3,000 510 600 
+Total 54,000 54,000 9,180 10,800 100,000 48,000 8,160 9,600 
+ 
+The maximum AW that is subject to CPF in 2026 would be $48,000. The remaining AW of $52,000 paid in December 2026 would not be subject 
+to CPF, if your employee works till the end of the year.  
+ 
+ 
+ 
+
+4 
+ 
+3. Employee’s Ordinary Wage (OW) increased during the year. 
+My employee who is below 55 years old, earned a monthly salary of $4,500 from January to March 2026. His salary then increased to $8,000 
+from April to December 2026. He will be receiving a total Additional Wage (AW) of $100,000 in 2026.  
+ 
+Estimated Additional Wage (AW) ceiling in January 2026:  
+$102,000 – ($4,500 x 12) = $48,000 
+ 
+Re-calculation of AW ceiling in May and December 2026*: 
+$102,000 – [($4,500 x 3) + ($8,000 x 9)] = $16,500  
+ 
+* Re-calculation to be done as there were adjustments to the OW in April 2026 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 4,500 4,500 765 900 10,000 10,000 1,700 2,000 
+Feb 4,500 4,500 765 900 - - - - 
+Mar 4,500 4,500 765 900 - - - - 
+Apr 8,000 8,000 1,360 1,600 - - - - 
+May 8,000 8,000 1,360 1,600 45,000 6,500 1,105 1,300 
+Jun 8,000 8,000 1,360 1,600 - - - - 
+Jul 8,000 8,000 1,360 1,600 - - - - 
+Aug 8,000 8,000 1,360 1,600 - - - - 
+Sep 8,000 8,000 1,360 1,600 - - - - 
+Oct 8,000 8,000 1,360 1,600 - - - - 
+Nov 8,000 8,000 1,360 1,600 - - - - 
+Dec 8,000 8,000 1,360 1,600 45,000 0 0 0 
+Total 85,500 85,500 14,535 17,100 100,000 16,500 2,805 3,300 
+ 
+With the increment of your employee’s OW in April 2026, his AW subject to CPF in 2026 would be $16,500 (from May 2026 onwards) instead of 
+$48,000. The remaining AW of $83,500 would not be subject to CPF, if your employee works till the end of the year.  
+ 
+
+5 
+ 
+4. Employee’s Ordinary Wage (OW) decreased during the year. 
+My employee who is below 55 years old, earned a monthly salary of $8,000 from January to June 2026. His salary decreased to $5,000 from 
+July to December 2026. He will be receiving a total Additional Wage (AW) of $100,000 in 2026.  
+ 
+Estimated Additional Wage (AW) ceiling in February, April and June 2026 before OW changes: 
+$102,000 – ($8,000 x 12) = $6,000  
+ 
+Re-calculation of AW ceiling in August and October 2026: 
+$102,000 – [($8,000 x 6) + ($5,000 x 6)] = $24,000 
+  
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW 
+Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 8,000 8,000 1,360 1,600 - - - - 
+Feb 8,000 8,000 1,360 1,600 5,000 5,000 850 1,000 
+Mar 8,000 8,000 1,360 1,600 - - - - 
+Apr 8,000 8,000 1,360 1,600 20,000 1,000 170 200 
+May 8,000 8,000 1,360 1,600 - - - - 
+Jun 8,000 8,000 1,360 1,600 20,000 0 0 0 
+Jul 5,000 5,000 850 1,000 - - - - 
+Aug 5,000 5,000 850 1,000 20,000 18,000 3,060 3,600 
+Sep 5,000 5,000 850 1,000 - - - - 
+Oct 5,000 5,000 850 1,000 35,000 0 0 0 
+Nov 5,000 5,000 850 1,000 - - - - 
+Dec 5,000 5,000 850 1,000 - - - - 
+Total 78,000 78,000 13,260 15,600 100,000 24,000 4,080 4,800 
+ 
+With the decrease in your employee’s OW from July 2026, his AW subject to CPF in 2026 would be $24,000 instead of $6,000. The employer is 
+required to re-calculate the AW ceiling in August 2026 as it is the next AW paid after the decrease in salary and pay the CPF on AW of $18,000 
+in August 2026.  
+
+6 
+ 
+5. Employee joined the company during the year.  
+My employee who is below 55 years old, earned a monthly salary of $10,000 starting from June 2026. He will be receiving a total Additional 
+Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in September and December 2026:  
+$102,000 – ($8,000 x 7) = $46,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jun 10,000 8,000 1,360 1,600 - - - - 
+Jul 10,000 8,000 1,360 1,600 - - - - 
+Aug 10,000 8,000 1,360 1,600 - - - - 
+Sep 10,000 8,000 1,360 1,600 50,000 46,000 7,820 9,200 
+Oct 10,000 8,000 1,360 1,600 - - - - 
+Nov 10,000 8,000 1,360 1,600 - - - - 
+Dec 10,000 8,000 1,360 1,600 50,000 0 0 0 
+Total 70,000 56,000 9,520 11,200 100,000 46,000 7,820 9,200 
+ 
+Your employee’s AW subject to CPF in 2026 would be $46,000. The remaining AW of $54,000 (comprising the $4,000 paid in Sep 2026 and 
+$50,000 paid in Dec 2026) would not be subject to CPF, if your employee works till the end of the year.  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+7 
+ 
+6. Employee left employment during the year (Scenario A) 
+My employee who is below 55 years old, earned a monthly salary of $10,000. He subsequently left employment in August 2026. He will be 
+receiving a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January and March 2026:  
+$102,000 – ($8,000 x 12) = $6,000 
+ 
+Re-calculation of AW ceiling in the last month of employment (August 2026): 
+$102,000 – ($8,000 x 8) = $38,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 70,000 6,000 1,020 1,200 
+Feb 10,000 8,000 1,360 1,600 - - - - 
+Mar 10,000 8,000 1,360 1,600 30,000 0 0 0 
+Apr 10,000 8,000 1,360 1,600 - - - - 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 10,000 8,000 1,360 1,600 - - - - 
+Jul 10,000 8,000 1,360 1,600 - - - - 
+Aug 10,000 8,000 1,360 1,600 - 32,000 5,440 6,400 
+Total 80,000 64,000 10,880 12,800 100,000 38,000 6,460 7,600 
+ 
+The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on AW of $32,000 
+in August 2026. 
+ 
+ 
+ 
+ 
+ 
+
+8 
+ 
+7. Employee left employment during the year (Scenario B) 
+My employee who is below 55 years old, earned a monthly salary of $9,000. He subsequently left employment in early June 2026, and his 
+salary was prorated at $1,500. The company then paid him a bonus of $54,000 in July 2026. He received a total Additional Wage (AW) of 
+$100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January, February, March, April and May 2026:  
+$102,000 – ($8,000 x 12) = $6,000 
+ 
+Re-calculation of AW ceiling in the last month of employment (June 2026) and July 2026: 
+$102,000 – [($8,000 x 5) + $1,500] = $60,500 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 9,000 8,000 1,360 1,600 3,000 3,000 510 600 
+Feb 9,000 8,000 1,360 1,600 12,000 3,000 510 600 
+Mar 9,000 8,000 1,360 1,600 4,000 0 0 0 
+Apr 9,000 8,000 1,360 1,600 12,000 0 0 0 
+May 9,000 8,000 1,360 1,600 15,000 0 0 0 
+Jun 1,500 1,500 255 300 0 40,000 6,800 8,000 
+Jul - - - - 54,000 14,500 2,465 2,900 
+Total 46,500 41,500 7,055 8,300 100,000 60,500 10,285 12,100 
+ 
+June 2026: The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on AW 
+of $40,000. This is because the AW given to the employee up to June 2026 was only $46,000, which is below the AW ceiling of $60,500. 
+ 
+July 2026: The employee received another AW of $54,000 (after he left employment). Hence, the employer needs to re-calculate the AW ceiling 
+and pay CPF on AW of the remaining $14,500 ($60,500 less $46,000). 
+ 
+ 
+
+9 
+ 
+8. Employee left employment during the year (Scenario C) 
+My employee who is below 55 years old, earned a monthly salary of $4,000. He subsequently left employment in May 2026, and the company 
+paid a bonus of $18,500 in June 2026. He received a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January, February, March and April 2026:  
+$102,000 – ($4,000 x 12) = $54,000 
+ 
+Re-calculation of AW ceiling in the last month of employment (May 2026) and June 2026: 
+$102,000 – ($4,000 x 5) = $82,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 4,000 4,000 680 800 2,500 2,500 425 500 
+Feb 4,000 4,000 680 800 33,500 33,500 5,695 6,700 
+Mar 4,000 4,000 680 800 3,500 3,500 595 700 
+Apr 4,000 4,000 680 800 18,500 14,500 2,465 2,900 
+May 4,000 4,000 680 800 23,500 27,500 4,675 5,500 
+Jun - - - - 18,500 500 85 100 
+Total 20,000 20,000 3,400 4,000 100,000 82,000 13,940 16,400 
+ 
+May 2026: The employer is required to re -calculate the AW ceiling in the employee’s last month of employment and pay CPF shortfall on the 
+remaining AW of $4,000 for April 2026 and CPF on the full AW of $23,500 for May 2026. This is because the total AW paid to the employee up 
+to May 2026 was only $81,500, which is below the re-calculated AW ceiling.  
+ 
+June 2026: The employee received another AW of $18,500 (after he left employment). The employer would therefore need to re-calculate the 
+AW ceiling and pay CPF on AW of $500. 
+ 
+ 
+ 
+
+10 
+ 
+9. Employee left employment during the year (Scenario D) 
+My employee who is below 55 years old, earned a monthly salary of $10,000. He subsequently left employment in June 2026, and the company 
+paid a bonus of $62,372.64 in July 2026. He received a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January, February and March 2026: 
+$102,000 – ($8,000 x 12) = $6,000  
+ 
+Re-calculation of AW ceiling in the last month of employment (June 2026) and July 2026: 
+$102,000 – ($8,000 x 6) = $54,000  
+  
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 2,850.60 2,850.60 485 570 
+Feb 10,000 8,000 1,360 1,600 3,753.82 3,149.40 536 629 
+Mar 10,000 8,000 1,360 1,600 25,000 0 0 0 
+Apr 10,000 8,000 1,360 1,600 6,022.94 0 0 0 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 10,000 8,000 1,360 1,600 - 
+ 
+31,627.36 5,377 6,325 
+Jul - - - - 62,372.64 16,372.64 2,784 3,274 
+Total 60,000 48,000 8,160 9,600 100,000 54,000 9,182 10,798 
+ 
+June 2026: The employer is required to re -calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on 
+AW of $31,627.36 (refer to calculation in table below). This is because the AW paid to the employee up to June 2026 was only $37,627.36, which 
+is below the re-calculated AW ceiling of $54,000.  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+11 
+ 
+Total contribution payable on AW in June and July 2026 is calculated as follow: 
+ 
+Month in which CPF is payable AW subject to CPF ($) Total CPF 
+payable ($) 
+Employer Share of 
+CPF payable ($) 
+Employee Share of 
+CPF payable ($) 
+Jun 2026 (re-calculation) (3,753.82 - 3,149.40) + 25,000 + 
+6,022.94 = 31,627.36 11,702 5,377 6,325 
+Jul 2026 (re-calculation, capped 
+at $54,000) 
+54,000 - 6,000 - 31,627.36= 
+16,372.64 16,372.64 2,784 3,274 
+ 
+July 2026: Although the employer had paid the CPF shortfall on AW in June 2026, there was another AW of $62,372.64 paid to the employee 
+after he left employment in June 2026. The employer would therefore need to pay another CPF shortfall on AW of $16,372.64. 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+12 
+ 
+10. Employee change of age group during the year  
+My employee who turned 55 years old in June 2026 earned a monthly salary of $10,000 . He will be receiving a total Additional Wage (AW) of 
+$100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling: 
+$102,000 – ($8,000 x 12) = $6,000  
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 - - - - 
+Feb 10,000 8,000 1,360 1,600 5,000 5,000 850 1,000 
+Mar 10,000 8,000 1,360 1,600 - - - - 
+Apr 10,000 8,000 1,360 1,600 5,000 1,000 170 200 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 
+Turns 55 10,000 8,000 1,360 1,600 5,000 0 0 0 
+Jul 10,000 8,000 1,280 1,440 - - - - 
+Aug 10,000 8,000 1,280 1,440 20,000 0 0 0 
+Sep 10,000 8,000 1,280 1,440 - - - - 
+Oct 10,000 8,000 1,280 1,440 65,000 0 0 0 
+Nov 10,000 8,000 1,280 1,440 - - - - 
+Dec 10,000 8,000 1,280 1,440 - - - - 
+Total 120,000 96,000 15,840 18,240 100,000 6,000 1,020 1,200 
+ 
+The maximum AW subject to CPF in 2026 would be $6,000. The remaining AW of $94,000 would not be subject to CPF, if your employee works 
+till the end of the year. 
+ 
+ 
+ 
+
+13 
+ 
+11. Employee change of Original Wage (OW) and age group during the year  
+My employee who turned 55 years old in June 2026, earned a monthly salary of $ 10,000 from January to June 2026 and $5,000 from July to 
+December 2026. He will be receiving a total Additional Wage (AW) of $100,000 in 2026.  
+ 
+Estimated Additional Wage (AW) ceiling in February, April and June 2026 before OW changes: 
+$102,000 – ($8,000 x 12) = $6,000  
+ 
+Re-calculation of AW ceiling in August and October 2026: 
+$102,000 – ($8,000 x 6) – ($5,000 x 6) = $24,000  
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 - - - - 
+Feb 10,000 8,000 1,360 1,600 20,000 6,000 1,020 1,200 
+Mar 10,000 8,000 1,360 1,600 - - - - 
+Apr 10,000 8,000 1,360 1,600 20,000 0 0 0 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 
+Turns 55 10,000 8,000 1,360 1,600 20,000 0 0 0 
+Jul 5,000 5,000 800 900 - - - - 
+Aug 5,000 5,000 800 900 20,000 18,000 3,060 3,600 
+Sep 5,000 5,000 800 900 - - - - 
+Oct 5,000 5,000 800 900 20,000 0 0 0 
+Nov 5,000 5,000 800 900 - - - - 
+Dec 5,000 5,000 800 900 - - - - 
+Total 90,000 78,000 12,960 15,000 100,000 24,000 4,080 4,800 
+ 
+The employer is required to re -calculate the AW ceiling and pay the CPF shortfall on AW of $ 18,000 in August 2026. For the AW of $18,000 
+(comprising the remaining AW of $14,000 paid in February 2026 and AW of $4,000 paid in April 2026 ), the contribution rate of 37% should be 
+used. The new contribution rate of 34% following the age group change shall only be applied once all AW paid before the age group change has 
+been fully subject to CPF contributions. 
+ 
+
+14 
+ 
+ 
+12. Employee change of age group and left employment during the year (Scenario A) 
+My employee who turned 55 years old in June 2026, earned a monthly salary of $10,000. He subsequently left employment in August 2026. He 
+received a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January 2026:  
+$102,000 – ($8,000 x 12) = $6,000  
+ 
+Re-calculation of AW ceiling in the last month of employment (August 2026): 
+$102,000 – ($8,000 x 8) = $38,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 3,000 3,000 510 600 
+Feb 10,000 8,000 1,360 1,600 - - - - 
+Mar 10,000 8,000 1,360 1,600 - - - - 
+Apr 10,000 8,000 1,360 1,600 - - - - 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 
+Turns 55 10,000 8,000 1,360 1,600 - - - - 
+Jul 10,000 8,000 1,280 1,440 - - - - 
+Aug 10,000 8,000 1,280 1,440 97,000 35,000 5,600 6,300 
+Total 80,000 64,000 10,720 12,480 100,000 38,000 6,110 6,900 
+ 
+The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on AW of $35,000 
+in August 2026.  
+ 
+Do note that the CPF shortfall on AW paid in August 2026 shall be calculated as follow: 
+a) Remaining AW of $3,000 paid in January 2026 should use the contribution rate as of January 2026 (37%) 
+b) AW of $32,000 paid in August 2026 should use the contribution rates as of August 2026 (34%)  
+ 
+
+15 
+ 
+13. Employee change of age group and left employment during the year (Scenario B) 
+My employee who turned 55 years old in June 2026 earned a monthly salary of $ 10,000 from February 2026. He left employment in early 
+November 2026, and his salary was prorated to $2,000. The company paid an AW of $60,000 in December 2026. He received a total Additional 
+Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in February 2026:  
+$102,000 – ($8,000 x 11) = $14,000  
+ 
+Re-calculation of AW ceiling in the last month of employment (November 2026) and December 2026: 
+$102,000 – [($8,000 x 9) – $2,000] = $ 28,000 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Feb 10,000 8,000 1,360 1,600 40,000 14,000 2,380 2,800 
+Mar 10,000 8,000 1,360 1,600 - - - - 
+Apr 10,000 8,000 1,360 1,600 - - - - 
+May 10,000 8,000 1,360 1,600 - - - - 
+Jun 
+Turns 55 10,000 8,000 1,360 1,600 - - - - 
+Jul 10,000 8,000 1,280 1,440 - - - - 
+Aug 10,000 8,000 1,280 1,440 - - - - 
+Sep 10,000 8,000 1,280 1,440 - - - - 
+Oct 10,000 8,000 1,280 1,440 - - - - 
+Nov 2,000 2,000 320 360 - 14,000 2,380 2,800 
+Dec - - - - 60,000 0 0 0 
+Total 92,000 74,000 12,240 14,120 100,000 28,000 4,760 5,600 
+ 
+November 2026: The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall 
+on AW of $ 14,000. The CPF shortfall shall be calculated using the  contribution rates as of January 2026 (37%). This is because th is AW of 
+$14,000 is part of the AW paid in January 2026. 
+ 
+
+16 
+ 
+December 2026: The employee was given another AW of $60,000  after he left employment. However, no further contributions are required as 
+the maximum AW ceiling of $28,000 was reached in November 2026. 
+  
+
+17 
+ 
+ 
+14. Employee change of age group and left employment during the year (Scenario C) 
+My employee who turned 55 years old in March 2026 earned a monthly salary of $10,000. He left employment in June 2026, and the company 
+paid an AW of $62,372.64 in July 2026. He received a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in January, February, March and April 2026: 
+$102,000 – ($8,000 x 12) = $6,000 
+ 
+Re-calculation of AW ceiling in the last month of employment (June 2026) and July 2026: 
+$102,000 – ($8,000 x 6) = $54,000 
+  
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 2,850.60 2,850.60 485 570 
+Feb 10,000 8,000 1,360 1,600 3,100.40 3,100.40 527 620 
+Mar 
+Turns 55 10,000 8,000 1,360 1,600 24,000.50 49 9 9 
+Apr 10,000 8,000 1,280 1,440 7,022.50 0 0 0 
+May 10,000 8,000 1,280 1,440 - - - - 
+Jun 10,000 8,000 1,280 1,440 - 30,974 5,196 6,054 
+Jul - - - - 63,025.64 17,026 2,725 3,064 
+Total 60,000 48,000 7,920 9,120 100,000 54,000 8,933 10,308 
+ 
+June 2026: The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on AW 
+of $30,974. This is because the AW paid to the employee up to June 2026 was only $36,974, which is below the re-calculated AW ceiling of $54,000.  
+ 
+Total contribution payable on AW in June and July 2026 is calculated as follows: 
+Month in which CPF is 
+payable AW subject to CPF ($) Total CPF 
+payable ($) 
+Employer Share of 
+CPF payable ($) 
+Employee Share of 
+CPF payable ($) 
+Jun 2026 (re-calculation) (24,000.50 – 49) + 7,022.50 = 30,974 11,250 
+5,196 
+(24,000.50 – 49) * 17%  
++ 
+(7,022.50 * 16%) 
+6,054 
+(24,000.50 – 49) * 20% 
++ 
+(7,022.50 * 18%) 
+
+18 
+ 
+Jul 2026 (re-calculation, capped 
+at $54,000) 54,000 – 6,000 – 30,974 = 17,026 6,389 2,725 3,064 
+ 
+Do note that the CPF shortfall on AW paid in June 2026 shall be calculated as follow: 
+a) Remaining AW of $23,951.50 paid in March 2026 should use the contribution rate as of March 2026 (37%) 
+b) AW of $7,022.50 paid in April 2026 should use the contribution rate as of April 2026 (34%) 
+ 
+July 2026: Although the employer had paid the CPF shortfall on AW in June 2026, there was another AW of $63,025.64 paid to the employee after 
+he left employment in June 2026. The employer would therefore need to pay the CPF shortfall on AW of $17,026. 
+ 
+ 
+ 
+ 
+ 
+ 
+  
+
+19 
+ 
+ 
+15. Employee left and re-joined the company 
+My employee who is below 55 years old  earned a monthly salary of $10,000 from Jan to April 2026.  He received Additional Wages (AW) of 
+$30,000 in February 2026. He left employment in April 2026. 
+ 
+Subsequently, he re -joined the company in September 2026 with a monthly salary of $11,000. He also receiv ed another AW of $70,000 in 
+December 2026. He received a total Additional Wage (AW) of $100,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling in February 2026: 
+$102,000 – ($8,000 x 12) = $6,000   
+ 
+AW ceiling as at last month of employment (April 2026): 
+$102,000 – ($8,000 x 4) = $70,000  
+ 
+Re-calculation of AW ceiling in December 2026: 
+$102,000 – ($8,000 x 4) – ($8,000 x 4) = $38,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 10,000 8,000 1,360 1,600 - - - - 
+Feb 10,000 8,000 1,360 1,600 30,000 6,000 1,020 1,200 
+Mar 10,000 8,000 1,360 1,600 - - - - 
+Apr 10,000 8,000 1,360 1,600 - 24,000 4,080 4,800 
+May - - - - - - - - 
+Jun - - - - - - - - 
+Jul - - - - - - - - 
+Aug - - - - - - - - 
+Sep 11,000 8,000 1,360 1,600 - - - - 
+Oct 11,000 8,000 1,360 1,600 - - - - 
+
+20 
+ 
+Nov 11,000 8,000 1,360 1,600 - - - - 
+Dec 11,000 8,000 1,360 1,600 70,000 8,000 1,360 1,600 
+Total 84,000 64,000 10,880 12,800 100,000 38,000 6,460 7,600 
+ 
+April 2026: The employer is required to re-calculate the AW ceiling in the employee’s last month of employment and pay the CPF shortfall on the 
+remaining AW of $24,000 paid in February 2026, up to the calculated AW ceiling of $70,000.  
+ 
+December 2026: As the employee re -joined the company in September 2026, the employer is required to re -calculate the AW ceiling and pay 
+CPF on the $8,000 of AW paid in December 2026, up to the re-calculated AW ceiling of $38,000. 
+  
+
+21 
+ 
+ 
+16. Employee earns less than $750 of Ordinary Wage (OW) with fluctuating Additional Wage (AW) 
+My employee who is below 55 years old, earned a monthly salary of $500. He will be receiving a total Additional Wage (AW) of $162,000 in 2026. 
+ 
+Estimated Additional Wage (AW) ceiling: 
+$102,000 – ($500 x 12) = $96,000 
+ 
+ 
+Month / 
+Year 2026 
+OW Paid 
+ 
+($) 
+OW Subject 
+to CPF 
+($) 
+CPF Payable on OW AW Paid 
+ 
+($) 
+AW Subject 
+to CPF 
+($) 
+CPF Payable on AW 
+Employer 
+($) 
+Employee 
+($) 
+Employer 
+($) 
+Employee 
+($) 
+Jan 500 500 85 100 22,000 22,000 3,740 4,400 
+Feb 500 500 85 100 10,000 10,000 1,700 2,000 
+Mar 500 500 85 100 3,000 3,000 510 600 
+Apr 500 500 85 100 25,800 25,800 4,386 5,160 
+May 500 500 85 100 15,000 15,000 2,550 3,000 
+Jun 500 500 85 100 20,100 20,100 3,417 4,020 
+Jul 500 500 85 100 30,000 100 17 20 
+Aug 500 500 85 100 2,000 0 0 0 
+Sep 500 500 85 100 5,000 0 0 0 
+Oct 500 500 85 100 10,000 0 0 0 
+Nov 500 500 85 100 15,000 0 0 0 
+Dec 500 500 85 100 4,100 0 0 0 
+Total 6,000 6,000 1,020 1,200 162,000 96,000 16,320 19,200 
+ 
+Do note that the applicable CPF contribution rates is based on the employee’s total wages for the calendar month  before capping the AW paid 
+subject to CPF. For example, in July 2026, the employee’s total wages prior to capping the AW is $30,500, i.e. more than $750, the contribution 
+rate of 37% should be applied on the wages subject to CPF. 
+ 

@@ -4,6 +4,7 @@ import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolve
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
+import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
@@ -306,5 +307,52 @@ incompleteMasClaims.sources[0].claims = incompleteMasClaims.sources[0].claims.fi
 assert.equal(getCpfMasPracticalRuleEvidence(samples[1].query, incompleteMasClaims, incompleteMasClaims.issues[0]), undefined);
 const historicalQuery = 'Under MAS guidance, what licensing rule applied in 2023 for fund management?';
 assert.equal(getCpfMasPracticalRuleEvidence(historicalQuery, mas.presentedStream, mas.presentedIssue), undefined);
+
+const cpfBaseAndBonusQuery = 'In October 2026, one employee has S$8,700 of Ordinary Wages and a separate annual bonus. Is the CPF-able monthly OW base S$8,700, and does capping OW also prove that none of the bonus attracts CPF?';
+const cpfBaseAndBonusClassification = classifyQuestion(cpfBaseAndBonusQuery);
+assert.equal(cpfBaseAndBonusClassification.intent, 'STATUTORY_ADVISORY',
+  'An OW base/ceiling applicability question remains statutory guidance even when it includes a wage amount.');
+assert.equal(cpfBaseAndBonusClassification.calculationRequired, false,
+  'A provided OW amount does not request contribution arithmetic.');
+assert.equal(cpfBaseAndBonusClassification.journalEntryRequired, false,
+  'A base/ceiling question does not request payroll journal entries.');
+assert.ok(cpfBaseAndBonusClassification.authorities.includes('CPF'),
+  'The base and bonus applicability question remains routed to CPF Board.');
+
+const frozenCpf02Classification = classifyQuestion(
+  'An employee has S$9,200 monthly OW in 2026. What OW base is subject to CPF before applying the employee\'s rate?'
+);
+assert.equal(frozenCpf02Classification.journalEntryRequired, false,
+  'The previously correct Frozen75 CPF-02 OW-base question remains advisory.');
+
+const contributionJournalControl = classifyQuestion(
+  'Calculate the employer and employee CPF contribution amounts and prepare balanced payroll journal entries for a 40-year-old Singapore citizen with October 2026 Ordinary Wages of S$8,700.'
+);
+assert.equal(contributionJournalControl.intent, 'TRANSACTION',
+  'An explicit CPF contribution calculation remains transactional.');
+assert.equal(contributionJournalControl.calculationRequired, true,
+  'An explicit CPF contribution amount request still requires calculation.');
+assert.equal(contributionJournalControl.journalEntryRequired, true,
+  'An explicit payroll journal request still routes to journal preparation.');
+
+const previousFetch = globalThis.fetch;
+const modelEndpoint = /(?:generativelanguage\.googleapis\.com|api\.openai\.com|openai\.azure\.com|\/generateContent(?:\?|$)|\/chat\/completions(?:\?|$))/i;
+try {
+  globalThis.fetch = async input => {
+    const url = input && typeof input === 'object' && typeof input.url === 'string' ? input.url : String(input);
+    if (modelEndpoint.test(url)) throw new Error(`Unexpected model request: ${url}`);
+    return new Response('No source in focused offline classifier regression.', { status: 404 });
+  };
+  const cpfBaseAndBonusResponse = await processAccountingQuery(cpfBaseAndBonusQuery, null, 'SFRS_I');
+  assert.equal(cpfBaseAndBonusResponse.scenarioState.scenarioType, 'AUTHORITY_ADVISORY',
+    'The full application handles OW base and bonus-ceiling applicability as statutory advice.');
+  assert.deepEqual(cpfBaseAndBonusResponse.scenarioState.directGroups || [], [],
+    'The full application does not create a contribution journal for an applicability question.');
+  assert.doesNotMatch(cpfBaseAndBonusResponse.messageText,
+    /Statutory Payroll & CPF Assessment|termination pay|net salary|employer contribution payable\s*[:=]/i,
+    'The advisory response does not fall through to a fabricated payroll calculation.');
+} finally {
+  globalThis.fetch = previousFetch;
+}
 
 console.log('CPF Additional Wages and MAS fund-management licensing offline regressions passed.');

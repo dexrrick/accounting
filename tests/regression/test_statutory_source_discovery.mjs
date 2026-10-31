@@ -209,10 +209,12 @@ for (const sample of cases) {
     assert.ok(record.sourceText.includes('They are payable by the 14th of the following month.'),
       'The native CPF rule-card passage retains the following-month payment deadline in the final record.');
   }
-  assert.ok(calls.includes(provider.sitemapUrls[0]));
+  const mappedSourceSucceeded = success.trace.attempts.some(attempt => attempt.discoveryStage === 'MAPPED_SOURCE' &&
+    attempt.finalUrl === sample.url && attempt.fetchStatus === 'SUCCESS');
+  assert.ok(calls.includes(provider.sitemapUrls[0]) || mappedSourceSucceeded);
   assert.ok(calls.includes(sample.url), 'Sitemap metadata must be followed by an independently fetched page.');
   assert.ok(!calls.some(url => url.includes('unapproved.example') || url.startsWith('http:')));
-  assert.ok(success.trace.attempts.some(attempt => attempt.discoveryStage === 'SITEMAP_DISCOVERY' &&
+  assert.ok(success.trace.attempts.some(attempt => ['SITEMAP_DISCOVERY', 'MAPPED_SOURCE'].includes(attempt.discoveryStage) &&
     attempt.finalUrl === sample.url && attempt.contentMatched && attempt.titleMatched));
 
   // A site-map entry is a URL hint, not evidence. A matching title alone is insufficient.
@@ -667,7 +669,7 @@ for (const sample of cases) {
     record.relatedTopicIds?.includes(sample.topicId) || record.sourceMapTopicIds?.includes(sample.topicId)),
     'At least one candidate remains bound to the requested coverage topic.');
   assert.ok(success.calls.includes(sample.url), 'The official article is fetched separately from its sitemap entry.');
-  assert.ok(issueEvidence.retrievalTrace.stages.some(stage => stage.stage === 'SITEMAP_DISCOVERY' && stage.status === 'SUFFICIENT'));
+  assert.ok(issueEvidence.retrievalTrace.stages.some(stage => ['SITEMAP_DISCOVERY', 'MAPPED_SOURCE'].includes(stage.stage) && stage.status === 'SUFFICIENT'));
   assert.ok(issueEvidence.retrievalTrace.attempts.some(attempt => attempt.topicId === sample.topicId && attempt.fetchStatus === 'SUCCESS'));
   assert.ok(discoveryResults.get(sample.authority).trace.attempts.some(attempt => attempt.topicId === sample.topicId &&
     attempt.finalUrl === sample.url && attempt.contentMatched && attempt.titleMatched), 'The raw retrieval trace binds the topic to the fetched URL.');

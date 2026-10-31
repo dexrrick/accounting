@@ -12,6 +12,7 @@ import {
   supportIrasMasKnowledgeRule
 } from '../../src/retrieval/irasMasKnowledge20261027b.ts';
 import { hasConflictingMasNoticeIdentity } from '../../src/retrieval/statutoryCommencementScope.ts';
+import { TargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
 
 const fixtureRoot = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('iras-mas-source-manifest.json', fixtureRoot), 'utf8'));
@@ -238,6 +239,61 @@ assert.equal(supportIrasMasKnowledgeRule({ ...med, query: 'Can we recover GST on
 const eci = cases[2];
 assert.equal(supportIrasMasKnowledgeRule({ ...eci, query: 'For YA 2024, can this historical company skip ECI if revenue is S$5m or below and ECI is nil?', sourceText: textFor(eci.file) }), false,
   'current source capture does not establish an older YA rule');
+const currentYear = Number(TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
+const currentFyeQuestion = `Our company year ended 30 June ${currentYear}. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?`;
+const currentFyeRequest = { ...eci, query: currentFyeQuestion, sourceText: textFor(eci.file) };
+assert.equal(supportIrasMasKnowledgeRule(currentFyeRequest), true,
+  'a strictly labelled, valid current-year FYE is a workflow fact, not a request for historical ECI law');
+assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
+  query: currentFyeQuestion.replace(`30 June ${currentYear}`, `31 February ${currentYear}`) }), false,
+  'an invalid current-year FYE date is not normalized into an ECI calculation');
+assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
+  query: `${currentFyeQuestion} The supplier invoice was due 15 September ${currentYear}.` }), false,
+  'a separate obligation date cannot be used to support the current-year ECI calculation');
+assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
+  query: `The supplier company year ended 30 June ${currentYear}. Can it skip ECI if revenue was S$4.8 million and ECI is S$30,000?` }), false,
+  'a third-party company FYE is not assigned to the company in the ECI issue');
+assert.equal(supportIrasMasKnowledgeRule({ ...currentFyeRequest,
+  query: `Our financial year ended 30 June ${currentYear}, but the reporting period was extended to 30 September ${currentYear}. When is ECI due?` }), false,
+  'competing FYE claims do not produce a filing deadline');
+const currentFyeIssue = {
+  id: 'issue-eci-current-fye', subject: 'Company ECI waiver and nil ECI filing rule', population: 'Company',
+  operation: 'FILING_REQUIREMENT', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: []
+};
+const eciManifestSource = manifest.sources.find(source => source.url === currentFyeRequest.url);
+const currentFyeStream = {
+  id: 'stream-eci-current-fye', authority: 'IRAS', authorityLabel: 'IRAS', domain: 'IRAS_CORPORATE_TAX',
+  domainLabel: 'IRAS corporate tax', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED',
+  issues: [currentFyeIssue], sources: [{ key: 'source-eci-current-fye', title: eciManifestSource.title,
+    publisher: 'IRAS', documentTitle: eciManifestSource.title, officialUrl: eciManifestSource.url,
+    provenance: 'LIVE_EXTERNAL', claims: [{ text: currentFyeRequest.sourceText, supportKind: 'EXACT_SOURCE_QUOTE',
+      issueIds: [currentFyeIssue.id], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: {
+        recordId: 'record-eci-current-fye', documentHash: eciManifestSource.sourceResponseSha256 || eciManifestSource.sha256,
+        canonicalUrl: eciManifestSource.url, retrievedAt: '2026-10-27T05:14:21Z'
+      } }] }], gaps: []
+};
+const currentFyeEvidence = getIrasMasKnowledgeEvidence(currentFyeQuestion, currentFyeStream, currentFyeIssue);
+assert.ok(currentFyeEvidence, 'the issue-bound current IRAS ECI source supports a case-specific application');
+assert.match(currentFyeEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
+assert.match(currentFyeEvidence.text, /revenue below the threshold does not qualify when ECI is positive/);
+const septemberFyeQuestion = currentFyeQuestion.replace(`30 June ${currentYear}`, `30 September ${currentYear}`);
+const septemberFyeEvidence = getIrasMasKnowledgeEvidence(septemberFyeQuestion, currentFyeStream, currentFyeIssue);
+assert.ok(septemberFyeEvidence, 'a single, company-owned September FYE remains supported');
+assert.match(septemberFyeEvidence.text, new RegExp(`three-month ECI filing deadline is 31/12/${currentYear}`),
+  'month-end FYE uses IRAS quarter-end deadline when the target month ends later');
+const borrowedMetricsEvidence = getIrasMasKnowledgeEvidence(
+  `${currentFyeQuestion} The supplier revenue was S$3 million and the supplier ECI was nil.`, currentFyeStream, currentFyeIssue);
+assert.ok(borrowedMetricsEvidence, 'unambiguous owned FYE can still support its filing deadline');
+assert.match(borrowedMetricsEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
+assert.doesNotMatch(borrowedMetricsEvidence.text, /S\$30,000 is positive|The general waiver is unavailable/,
+  'a numeric conclusion is not drawn from figures that may belong to another company');
+const disownedEciEvidence = getIrasMasKnowledgeEvidence(
+  `${currentFyeQuestion} Revenue was S$4.8 million but the ECI of S$30,000 is not ours. Can we skip filing?`,
+  currentFyeStream, currentFyeIssue);
+assert.ok(disownedEciEvidence, 'the company-owned FYE still supports its deadline when ECI is disowned');
+assert.match(disownedEciEvidence.text, new RegExp(`three-month ECI filing deadline is 30/09/${currentYear}`));
+assert.doesNotMatch(disownedEciEvidence.text, /S\$30,000 is positive|The general waiver is unavailable/,
+  'a disowned ECI amount does not become a conclusion about the queried company');
 const futureMisconduct = cases[5];
 assert.equal(supportIrasMasKnowledgeRule({ ...futureMisconduct, query: 'What were misconduct reporting deadlines for former representatives in 2026?', sourceText: masNativeText }), undefined,
   'future Notice is not applied to a 2026 reporting period');

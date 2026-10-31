@@ -161,7 +161,11 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   // for accounting analysis. Keep that filing language from setting the
   // generic financial-statement accounting signal unless the query also asks
   // about accounting work or describes an actual transaction.
-  const isAcraXbrlFilingAdvisory = topicIds.includes('acra_xbrl') &&
+  const isAcraFinancialStatementFilingAdvisory = topicIds.includes('acra_financial_statements') &&
+    /\bfinancial statements?\b/i.test(entryIntentQuery) &&
+    /\b(?:annual[- ]return|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b/i.test(entryIntentQuery) &&
+    /\b(?:company|companies|incorporat\w*|annual[- ]return|dormant)\b/i.test(entryIntentQuery);
+  const isAcraXbrlFilingAdvisory = (topicIds.includes('acra_xbrl') || isAcraFinancialStatementFilingAdvisory) &&
     !/\b(?:journal|bookkeeping|debit|credit|how to record|how do i record|accounting treatment|recognition|measurement|depreciat\w*|amorti\w*|capitalis\w*|capitaliz\w*|sfrs|ifrs|ias\s*\d*|intangible assets?|financial assets?|trade discount|accruals?|leases?|rou asset|fvtpl|fvtoci|balance sheet|p&l|statement of profit|statement of comprehensive income|restatement|restate|reclassif\w*|presentation of income|revenue presentation|bought|sold|purchased|acquired|invested|disposed of|issued|allotted)\b/i.test(entryIntentQuery);
 
   // 1. Domain Indicator Detection
@@ -351,12 +355,17 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:owe|owing|owed)\b[^.!?;\n]{0,60}\b(?:cpf|contribution)\b/.test(entryIntentQuery);
   const asksCpfShareApplicability = /\b(?:is|are)\s+there\s+(?:an?\s+)?(?:employee|employer)(?:'s)?\s+(?:cpf\s+)?share\b|\b(?:does|do)\s+(?:an?\s+)?(?:employee|employer)\b[^.!?;]{0,50}\b(?:have|pay|contribute)\b[^.!?;]{0,35}\b(?:cpf\s+)?share\b/i.test(entryIntentQuery);
   const asksCpfWageClassification = /\b(?:which|what)\b[^.!?;]{0,100}\b(?:items?|components?|payments?)\b[^.!?;]{0,100}\b(?:wages?|cpf|attract)\b|\b(?:cpf|central provident fund)\b[^.!?;]{0,100}\b(?:which|what)\b[^.!?;]{0,80}\b(?:items?|components?|payments?)\b/i.test(entryIntentQuery);
+  const asksCpfWageBaseOrCeilingApplicability =
+    /\b(?:ordinary wages?|additional wages?|ow|aw)\b/i.test(entryIntentQuery) &&
+    /\b(?:base|ceiling|cap(?:ping|ped)?)\b/i.test(entryIntentQuery) &&
+    /\b(?:is|are|does|do|what|which|whether|prove|subject to|attract)\b/i.test(entryIntentQuery);
   const asksSalaryDeductionGuidance = /\b(?:salary|wage|pay)\b[^.!?;]{0,80}\b(?:deduct\w*|withhold\w*)\b|\b(?:deduct\w*|withhold\w*)\b[^.!?;]{0,80}\b(?:salary|wage|pay)\b/i.test(entryIntentQuery);
   const hasExplicitPayrollAmount = /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\b|\b(?:salary|wages?|earns?|earnings|monthly pay)\s+(?:of|at|is)?\s*\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery);
   const numericPayrollFallbackIsCalculation = hasExplicitPayrollAmount &&
     !asksSalaryDeductionGuidance &&
     !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution) &&
     !(asksCpfRefundProcedure && !explicitlyCalculatesCpfContribution) &&
+    !(asksCpfWageBaseOrCeilingApplicability && !explicitlyCalculatesCpfContribution) &&
     !asksCpfShareApplicability && !asksCpfWageClassification;
   const explicitlyRequestsProratedPayroll =
     /\b(?:what if|what will|what would|calculat\w*|comput\w*|estimat\w*)\b[\s\S]{0,140}\b(?:pro[- ]?rat\w*)\b[\s\S]{0,80}\b(?:payroll|salary|wages?)\b/i.test(entryIntentQuery) &&

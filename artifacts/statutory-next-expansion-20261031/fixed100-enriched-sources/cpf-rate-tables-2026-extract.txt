@@ -1,0 +1,410 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: CPF Contribution Rate Table from 1 January 2026
+Canonical official URL: https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf
+Capture date (Singapore): 2026-10-27
+Capture method: original official PDF bytes are retained and SHA-256 verified; the following is text extracted from those bytes by pypdf 5.4.1. Layout follows the PDF page order. The original PDF is the source of record.
+
+ 
+1 
+ 
+Table 1 
+ 
+ 
+CPF Contribution Rate Table from 1 January 2026 
+for Singapore Citizens or Singapore Permanent Residents (3 rd year onwards) 
+ 
+Employee’s  
+Age (Years) 
+Employee’s total wages 
+for the calendar month 
+Total CPF contributions 
+(Employer’s & Employee’s share) 
+Employee’s share 
+of CPF contributions 
+55 & below 
+ $50 or less Nil  Nil  
+ > $50 to $500 17% (TW) Nil 
+ > $500 to $750 17% (TW) + 0.6 (TW - $500) 0.6 (TW - $500) 
+ > $750 
+[37% (OW)]* + 37% (AW) 
+* Max. of $2,960 
+[20% (OW)]* + 20% (AW) 
+* Max. of $1,600 
+Above 55 - 60  
+ $50 or less Nil  Nil  
+ > $50 to $500 16% (TW) Nil 
+ > $500 to $750 16% (TW) + 0.54 (TW - $500) 0.54 (TW - $500) 
+ > $750 
+[34% (OW)]* + 34% (AW) 
+* Max. of $2,720 
+[18% (OW)]* + 18% (AW) 
+* Max. of $1,440 
+Above 60 - 65  
+ $50 or less Nil  Nil  
+ > $50 to $500 12.5% (TW) Nil 
+ > $500 to $750 12.5% (TW) + 0.375 (TW - $500) 0.375 (TW - $500) 
+ > $750 
+[25% (OW)]* + 25% (AW) 
+*Max. of $2,000 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000  
+Above 65 - 70 
+ $50 or less Nil Nil 
+ > $50 to $500 9% (TW) Nil 
+ > $500 to $750 9% (TW) + 0.225 (TW - $500) 0.225 (TW - $500) 
+ > $750 
+[16.5% (OW)]* + 16.5% (AW) 
+* Max. of $1,320 
+[7.5% (OW)]* + 7.5% (AW) 
+* Max. of $600 
+Above 70 
+ $50 or less Nil  Nil  
+ > $50 to $500 7.5% (TW) Nil 
+ > $500 to $750 7.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Notes: 
+For Private Sector / Non-Pensionable Employees (Ministries, Statutory Bodies & Aided Schools)  
+OW: Ordinary Wages (capped at OW ceiling of $8,000) 
+AW: Additional Wages 
+TW: Total Wages = OW + AW 
+Max: Maximum contribution on OW 
+ 
+Steps to compute CPF contribution: 
+1) Compute the total CPF contribution (rounded to the nearest dollar), i.e., to be rounded down for an amount less than 50 cents and rounded up for an  amount of 50 
+cents and above. 
+2) Compute the employee’s share of CPF contribution (rounded down to the nearest dollar). 
+3) Employer’s share = Total contribution - Employee’s share 
+4) If there is only OW payable for the month, the maximum contribution on OW is to be rounded to the nearest dollar for the tota l CPF contributions and rounded down 
+to the nearest dollar for employee’s share of CPF contributions. If there are OW and AW payabl e for the same month, compute and sum up the CPF contributions 
+that are payable for OW and AW and apply the rounding rules accordingly.  
+5) To compute CPF contributions, use the CPF contribution  calculator (cpf.gov.sg/employer > Tools and services > Calculators > CPF contribution calculator).  
+ 
+These rates are also applicable to 1st and 2nd year Singapore Permanent Resident (SPR) employees and their employers after CPF Board approves their joint application 
+to contribute to CPF at full employer- full employee rates. 
+ 
+
+ 
+2 
+ 
+Table 2 
+ 
+CPF Contribution Rate Table from 1 January 2026 
+for Singapore Permanent Residents (SPR) during 1 st year of SPR status  
+under Graduated contribution rates (G/G) 
+ 
+Employee’s  
+Age (Years) 
+Employee’s total wages 
+for the calendar month 
+Total CPF contributions 
+(Employer’s & Employee’s share) 
+Employee’s share 
+of CPF contributions 
+55 & below 
+ $50 or less Nil  Nil  
+ > $50 to $500 4% (TW) Nil 
+ > $500 to $750 4% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[9% (OW)]* + 9% (AW) 
+* Max. of $720 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Above 55 - 60  
+ $50 or less Nil  Nil  
+ > $50 to $500 4% (TW) Nil 
+ > $500 to $750 4% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[9% (OW)]* + 9% (AW) 
+* Max. of $720 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Above 60 - 65  
+ $50 or less Nil  Nil  
+ > $50 to $500 3.5% (TW) Nil 
+ > $500 to $750 3.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[8.5% (OW)]* + 8.5% (AW) 
+* Max. of $680 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Above 65 
+ $50 or less Nil  Nil  
+ > $50 to $500 3.5% (TW) Nil 
+ > $500 to $750 3.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[8.5% (OW)]* + 8.5% (AW) 
+* Max. of $680 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+ 
+Notes: 
+For Private Sector / Non-Pensionable Employees (Statutory Bodies & Aided Schools)  
+OW: Ordinary Wages (capped at OW ceiling of $8,000) 
+AW: Additional Wages 
+TW: Total Wages = OW + AW 
+Max: Maximum contribution on OW 
+ 
+Steps to compute CPF contribution: 
+1) Compute the total CPF contribution (rounded to the nearest dollar), i.e., to be rounded down for an amount less than 50 cents  and rounded up for an amount of 50 
+cents and above. 
+2) Compute the employee’s share of CPF contribution (rounded down to the nearest dollar).  
+3) Employer’s share = Total contribution - Employee’s share 
+4) If there is only OW payable for the month, the maximum contribution on OW is to be rounded to the nearest dollar for the tota l CPF contributions and rounded down 
+to the nearest dollar for employee’s share of CPF contributions. If there are OW and AW payabl e for the same month, compute and sum up the CPF contributions 
+that are payable for OW and AW and apply the rounding rules accordingly.  
+5) To compute CPF contributions, use the CPF contribution calculator (cpf.gov.sg/employer > Tools and services > Calculators > C PF contribution calculator). 
+ 
+There are no changes to the graduated employer and employee rates since 1 January 2016.  
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+ 
+3 
+ 
+Table 3 
+ 
+CPF Contribution Rate Table from 1 January 2026 
+for Singapore Permanent Residents (SPR) during 2 nd year of SPR status  
+under Graduated contribution rates (G/G) 
+ 
+Employee’s  
+Age (Years) 
+Employee’s total wages 
+for the calendar month 
+Total CPF contributions 
+(Employer’s & Employee’s share) 
+Employee’s share 
+of CPF contributions 
+55 & below 
+ $50 or less Nil  Nil  
+ > $50 to $500 9% (TW) Nil 
+ > $500 to $750 9% (TW) + 0.45 (TW - $500) 0.45 (TW - $500) 
+ > $750 
+[24% (OW)]* + 24% (AW) 
+* Max. of $1,920 
+[15% (OW)]* + 15% (AW) 
+* Max. of $1,200 
+Above 55 - 60  
+ $50 or less Nil  Nil  
+ > $50 to $500 6% (TW) Nil 
+ > $500 to $750 6% (TW) + 0.375 (TW - $500) 0.375 (TW - $500) 
+ > $750 
+[18.5% (OW)]* + 18.5% (AW) 
+* Max. of $1,480 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000  
+Above 60 - 65  
+ $50 or less Nil  Nil  
+ > $50 to $500 3.5% (TW) Nil 
+ > $500 to $750 3.5% (TW) + 0.225 (TW - $500) 0.225 (TW - $500) 
+ > $750 
+[11% (OW)]* + 11% (AW) 
+* Max. of $880 
+[7.5% (OW)]* + 7.5% (AW) 
+* Max. of $600 
+Above 65 
+ $50 or less Nil  Nil  
+ > $50 to $500 3.5% (TW) Nil 
+ > $500 to $750 3.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[8.5% (OW)]* + 8.5% (AW) 
+* Max. of $680 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+ 
+Notes: 
+For Private Sector / Non-Pensionable Employees (Statutory Bodies & Aided Schools)  
+OW: Ordinary Wages (capped at OW ceiling of $8,000) 
+AW: Additional Wages 
+TW: Total Wages = OW + AW 
+Max: Maximum contribution on OW 
+ 
+Steps to compute CPF contribution: 
+1) Compute the total CPF contribution (rounded to the nearest dollar), i.e., to be rounded down for an amount less than 50 cents and rounded  up for an amount of 50 
+cents and above. 
+2) Compute the employee’s share of CPF contribution (rounded down to the nearest dollar).  
+3) Employer’s share = Total contribution - Employee’s share 
+4) If there is only OW payable for the month, the maximum contribution on OW is to be rounded to the nearest dollar for the tota l CPF contributions and rounded down 
+to the nearest dollar for employee’s share of CPF contributions. If there are OW and AW payabl e for the same month, compute and sum up the CPF contributions 
+that are payable for OW and AW and apply the rounding rules accordingly.  
+5) To compute CPF contributions, use the CPF contribution calculator (cpf.gov.sg/employer > Tools and services > Calculators > C PF contribution calculator). 
+ 
+There are no changes to the graduated employer and employee rates since 1 January 2016.  
+ 
+  
+
+ 
+4 
+ 
+Table 4 
+ 
+CPF Contribution Rate Table from 1 January 2026 
+for Singapore Permanent Residents (SPR) during 1 st year of SPR status  
+under Full Employer & Graduated Employee contribution rates (F/G) 
+ 
+Employee’s  
+Age (Years) 
+Employee’s total wages 
+for the calendar month 
+Total CPF contributions 
+(Employer’s & Employee’s share) 
+Employee’s share 
+of CPF contributions 
+55 & below 
+ $50 or less Nil  Nil  
+ > $50 to $500 17% (TW) Nil 
+ > $500 to $750 17% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[22% (OW)]* + 22% (AW) 
+*Max. of $1,760 
+[5% (OW)]* + 5% (AW) 
+*Max. of $400 
+Above 55 - 60  
+ $50 or less Nil  Nil  
+ > $50 to $500 16% (TW) Nil 
+ > $500 to $750 16% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[21% (OW)]* + 21% (AW) 
+*Max. of $1,680 
+[5% (OW)]* + 5% (AW) 
+*Max. of $400  
+Above 60 - 65  
+ $50 or less Nil  Nil  
+ > $50 to $500 12.5% (TW) Nil 
+ > $500 to $750 12.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[17.5% (OW)]* + 17.5% (AW) 
+* Max. of $1,400 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Above 65 - 70 
+ $50 or less Nil Nil  
+ > $50 to $500 9% (TW) Nil 
+ > $500 to $750 9% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[14% (OW)]* + 14% (AW) 
+* Max. of $1,120 
+[5% (OW)]* + 5% (AW) 
+*Max. of $400 
+Above 70 
+ $50 or less Nil  Nil  
+ > $50 to $500 7.5% (TW) Nil 
+ > $500 to $750 7.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000 
+[5% (OW)]* + 5% (AW) 
+*Max. of $400 
+Notes: 
+For Private Sector / Non-Pensionable Employees (Ministries, Statutory Bodies & Aided Schools) 
+OW: Ordinary Wages (capped at OW ceiling of $8,000) 
+AW: Additional Wages 
+TW: Total Wages = OW + AW 
+Max: Maximum contribution on OW 
+ 
+Steps to compute CPF contribution: 
+1) Compute the total CPF contribution (rounded to the nearest dollar), i.e., to be rounded down for an amount less than 50 cents and rounded up for an amount of 50 
+cents and above. 
+2) Compute the employee’s share of CPF contribution (rounded down to the nearest dollar).  
+3) Employer’s share = Total contribution - Employee’s share 
+4) If there is only OW payable for the month, the maximum contribution on OW is to be rounded to the nearest dollar for the tota l CPF contributions and rounded down 
+to the nearest dollar for employee’s share of CPF contributions. If there are OW and AW payabl e for the same month, compute and sum up the CPF contributions 
+that are payable for OW and AW and apply the rounding rules accordingly.  
+5) To compute CPF contributions, use the CPF contribution calculator (cpf.gov.sg/employer > Tools and services > Calculators > C PF contribution calculator). 
+6)  
+These rates are applicable to employees of Private Sector, Statutory Bodies and Aided Schools after CPF Board approves the jo int application by an employer and his 1st 
+year SPR employee to contribute to CPF at higher rates. I f an employer and employee have jointly applied to pay at the full rates for both employer and employee, please 
+refer to Table 1 above for the rates. 
+
+ 
+5 
+ 
+Table 5 
+ 
+CPF Contribution Rate Table from 1 January 2026  
+for Singapore Permanent Residents (SPR) during 2 nd year of SPR status  
+under Full Employer & Graduated Employee contribution rates (F/G) 
+ 
+Employee’s  
+Age (Years) 
+Employee’s total wages 
+for the calendar month 
+Total CPF contributions 
+(Employer’s & Employee’s share) 
+Employee’s share 
+of CPF contributions 
+55 & below 
+ $50 or less Nil  Nil  
+ > $50 to $500 17% (TW) Nil 
+ > $500 to $750 17% (TW) + 0.45 (TW - $500) 0.45 (TW - $500) 
+ > $750 
+[32% (OW)]* + 32% (AW) 
+* Max. of $2,560 
+[15% (OW)]* + 15% (AW) 
+* Max. of $1,200 
+Above 55 - 60  
+ $50 or less Nil  Nil  
+ > $50 to $500 16% (TW) Nil 
+ > $500 to $750 16% (TW) + 0.375 (TW - $500) 0.375 (TW - $500) 
+ > $750 
+[28.5% (OW)]* + 28.5% (AW) 
+* Max. of $2,280 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000 
+Above 60 - 65  
+ $50 or less Nil  Nil  
+ > $50 to $500 12.5% (TW) Nil 
+ > $500 to $750 12.5% (TW) + 0.225 (TW - $500) 0.225 (TW - $500) 
+ > $750 
+[20% (OW)]* + 20% (AW) 
+ * Max. of $1,600 
+[7.5% (OW)]* + 7.5% (AW) 
+* Max. of $600 
+Above 65 - 70 
+ $50 or less Nil  Nil  
+ > $50 to $500 9% (TW) Nil 
+ > $500 to $750 9% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[14% (OW)]* + 14% (AW) 
+* Max. of $1,120 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400 
+Above 70 
+ $50 or less Nil  Nil  
+ > $50 to $500 7.5% (TW) Nil 
+ > $500 to $750 7.5% (TW) + 0.15 (TW - $500) 0.15 (TW - $500) 
+ > $750 
+[12.5% (OW)]* + 12.5% (AW) 
+* Max. of $1,000 
+[5% (OW)]* + 5% (AW) 
+* Max. of $400  
+Notes: 
+For Private Sector / Non-Pensionable Employees (Ministries, Statutory Bodies & Aided Schools)  
+OW: Ordinary Wages (capped at OW ceiling of $8,000) 
+AW: Additional Wages 
+TW: Total Wages = OW + AW 
+Max: Maximum contribution on OW 
+ 
+Steps to compute CPF contribution: 
+1) Compute the total CPF contribution (rounded to the nearest dollar), i.e., to be rounded down for an amount less than 50 cents and rounded up for an amount of 50 
+cents and above. 
+2) Compute the employee’s share of CPF contribution (rounded down to the nearest dollar).  
+3) Employer’s share = Total contribution - Employee’s share 
+4) If there is only OW payable for the month, the maximum contribution on OW is to be rounded to the nearest dollar for the tota l CPF contributions and rounded down 
+to the nearest dollar for employee’s share of CPF contributions. If there are OW and AW payabl e for the same month, compute and sum up the CPF contributions 
+that are payable for OW and AW and apply the rounding rules accordingly.  
+5) To compute CPF contributions, use the CPF contribution calculator (cpf.gov.sg/employer > Tools and services > Calculators > C PF contribution calculator). 
+ 
+These rates are applicable to employees of Private Sector, Statutory Bodies and Aided Schools after CPF Board approves the joint application by an employer and his 2nd 
+year SPR employee to contribute to CPF at higher rates. I f an employer and employee have jointly applied to pay at the full rates for both employer and employee, please 
+refer to Table 1 above for the rates. 

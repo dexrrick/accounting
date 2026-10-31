@@ -245,6 +245,12 @@ for (const sample of cases) {
 
   if (sample.id === 'cpf-refund') {
     const dateApplications = [
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025.', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The repayment due date is 15 September 2026 for our supplier deposit. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early, and the repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the deadline?', 'NO_MATCH', /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i],
+      ['CPF refund deadline: The joining bonus must be repaid if the employee leaves early. The bonus repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
       ['CPF refund deadline: CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
       ['CPF refund deadline: CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025.', 'MATCH', /one-year outer limit is 15\/09\/2027/i, /one-year outer limit 01\/10\/2026/i],
       ['CPF refund deadline: The joining bonus is conditional on completing twelve months of service. The employee must repay it on 15 September 2026 after leaving early.', 'MATCH', /one-year outer limit is 15\/09\/2027/i],
@@ -272,7 +278,7 @@ for (const sample of cases) {
     ];
     for (const [query, outcome, pattern, forbidden] of dateApplications) {
       const dateExplanation = getStatutoryWorkflowEvidence(query, stream, issue);
-      assert.ok(dateExplanation, 'A date variant in the same refund family retains a verified general explanation.');
+      assert.ok(dateExplanation, `${query}: a date variant in the same refund family retains a verified general explanation.`);
       if (outcome === 'MATCH') {
         assert.match(dateExplanation.text, pattern, query);
         if (forbidden) assert.doesNotMatch(dateExplanation.text, forbidden,
@@ -434,6 +440,14 @@ for (const sample of cases) {
 // No semantic fixture, mapped-topic injection, live source call or model call:
 // the ordinary application entry must route and render each natural question.
 const appCases = [
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The employee must repay it on 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i,
+    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'The joining bonus must be repaid if the employee leaves early. The employee also owes a supplier deposit. The repayment due date is 15 September 2026 under the employment agreement. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i,
+    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
   { authority: 'ACRA', topic: 'acra-entity-information-changes', url: manifest.sources.find(item => item.fixture === 'acra-entity-updates.html').url,
     query: 'We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?',
     expected: /foreign companies have 30 days.*20 days is within the foreign-company 30-day period.*not yet late/i },
@@ -464,6 +478,10 @@ const appCases = [
   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
     query: 'CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board’s refund before returning the employee’s contribution share?',
     expected: /^(?=[\s\S]*15\/09\/2027)(?=[\s\S]*before applying, the employer must return the employee share directly to the employee)[\s\S]*$/i },
+  { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
+    query: 'The joining bonus must be repaid if the employee leaves early. The repayment due date for our supplier deposit is 15 September 2026. PAYMENTS RECEIVED ON 1 October 2025. What is the CPF refund deadline?',
+    expected: /conditional-wage refunds use the repayment due date/i,
+    forbidden: /one-year outer limit(?: is)? (?:15\/09\/2027|01\/10\/2026)/i },
   { authority: 'CPF', topic: 'cpf-adjustments-refunds', url: manifest.sources.find(item => item.fixture === 'cpf-refunds.html').url,
     query: 'CPF was paid on a joining bonus that is repayable if the employee resigns within twelve months. The employee resigned, and the bonus repayment due date was 15 September 2026. The CPF payment record shows 1 October 2025. What is our CPF refund deadline?',
     expected: /one-year outer limit is 15\/09\/2027/i, forbidden: /one-year outer limit 01\/10\/2026/i },

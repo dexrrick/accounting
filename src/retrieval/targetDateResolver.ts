@@ -29,9 +29,93 @@ const MONTH_MAP: Record<string, string> = {
 
 const EXPLICIT_DATE_PATTERN = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d{2})`;
 
+/** Returns one strictly valid current-year FYE date explicitly owned by the queried company. */
+export function currentCompanyEciFyeWorkflowDate(
+  query: string,
+  currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
+): string | undefined {
+  const fyePattern = new RegExp(String.raw`\b(?:(?:our|this|the)\s+company(?:['’]s)?|our)\s+(?:fye|financial year end|(?:financial )?year ended)\s*(?:(?:is|was|on|:)\s*)?(${EXPLICIT_DATE_PATTERN})`, 'gi');
+  const fyeMatches = [...query.matchAll(fyePattern)];
+  const explicitDates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+  if (fyeMatches.length !== 1 || explicitDates.length !== 1 || years.length !== 1
+      || fyeMatches[0][1] !== explicitDates[0][0] || years[0][0] !== currentDate.slice(0, 4)
+      || hasHistoricalStatutoryVersionIntent(query)) return undefined;
+
+  const value = fyeMatches[0][1];
+  let year: number, month: number, day: number;
+  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
+  if (match) [, day, month, year] = match.map(Number);
+  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) {
+    [, year, month, day] = match.map(Number);
+  } else if ((match = /^(\d{1,2})\s+([a-z]+)\s+(20\d{2})$/i.exec(value))) {
+    const monthNumber = MONTH_MAP[match[2].toLowerCase()];
+    if (!monthNumber) return undefined;
+    month = Number(monthNumber);
+    day = Number(match[1]);
+    year = Number(match[3]);
+  } else return undefined;
+  if (![year, month, day].every(Number.isInteger)) return undefined;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/** Recognizes one company FYE supplied as a current ACRA AGM/annual-return workflow fact. */
+function currentCompanyAcraFyeWorkflowDate(
+  query: string,
+  currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
+): string | undefined {
+  if (hasHistoricalStatutoryVersionIntent(query) ||
+      /\b(?:cpf|central provident fund|mom|ministry of manpower|iras|income tax|gst|goods and services tax|mas|ifrs|sfrs)\b/i.test(query) ||
+      /\b(?:another|other|second|different|competitor)\s+(?:listed\s+|non[- ]listed\s+|private\s+)?company\b/i.test(query)) return undefined;
+  const requestsDeadline = /\b(?:agm|annual general meeting|annual[- ]return)\b/i.test(query) &&
+    /\b(?:deadline|due|when must|how soon|how many months|within how many months|usual|(?:four|five|six|seven|eight|\d+)\s+months?\s+(?:later|after))\b/i.test(query);
+  if (!requestsDeadline) return undefined;
+  const fyePattern = new RegExp(String.raw`\b(?:(?:our|this|the)\s+)?(?:(?:local|singapore|private|public|listed|non[- ]listed)\s+){0,2}company(?:['’]s)?\s+(?:fye|financial year end)\s*(?:(?:is|was|on|:|of)\s*)?(${EXPLICIT_DATE_PATTERN})`, 'gi');
+  const fyeMatches = [...query.matchAll(fyePattern)];
+  const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+  if (fyeMatches.length !== 1 || dates.length !== 1 || years.length !== 1 ||
+      fyeMatches[0][1] !== dates[0][0] || years[0][0] !== dates[0][0].slice(-4)) return undefined;
+  const comparisonText = query.replace(/\b(?:like|unlike|compared with|as for)\s+(?:a\s+)?(?:private|listed|non[- ]listed) company\b/gi, ' ');
+  const hasListedCompany = /(?<!non[- ])\blisted company\b|\bpublic company\b/i.test(comparisonText) &&
+    !/\bnot\s+(?:a\s+)?listed company\b/i.test(comparisonText);
+  const hasPrivateCompany = /\bprivate company\b|\bnon[- ]listed company\b/i.test(comparisonText);
+  if (hasListedCompany === hasPrivateCompany) return undefined;
+
+  const value = fyeMatches[0][1];
+  let year: number, month: number, day: number;
+  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
+  if (match) [, day, month, year] = match.map(Number);
+  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) [, year, month, day] = match.map(Number);
+  else if ((match = /^(\d{1,2})\s+([a-z]+)\s+(20\d{2})$/i.exec(value))) {
+    const monthNumber = MONTH_MAP[match[2].toLowerCase()];
+    if (!monthNumber) return undefined;
+    month = Number(monthNumber);
+    day = Number(match[1]);
+    year = Number(match[3]);
+  } else return undefined;
+  if (![year, month, day].every(Number.isInteger)) return undefined;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  const currentYear = Number(currentDate.slice(0, 4));
+  if (year < currentYear - 1 || year > currentYear) return undefined;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function isCurrentAcraAuditCriteriaFact(query: string): boolean {
+  return /\b(?:small[- ]company|small company|private company)\b/i.test(query)
+    && /\baudit exemption\b/i.test(query)
+    && /\bthis year and last year\b/i.test(query)
+    && !hasHistoricalStatutoryVersionIntent(query)
+    && !/\b(?:19|20)\d{2}\b|\d{1,2}[/-]\d{1,2}[/-]20\d{2}\b|20\d{2}-\d{2}-\d{2}\b/i.test(query)
+    && !/\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|iras|income tax|corporate tax|tax relief|mas|monetary authority|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?|annual[- ]returns?|agm|annual general meeting|xbrl|fye|officer|company secretary|extension of time|\beot\b|financial statements?)\b/i.test(query);
+}
+
 /** Identifies requests for the legal version governing an earlier period. */
 export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
-  return /\b(?:historical|historic|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
+  return /\b(?:historical(?:ly)?|historic(?:ally)?|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
 }
 
 function section13wDisposalDate(query: string): string | undefined {
@@ -92,10 +176,19 @@ export class TargetDateResolver {
   }
 
   /** Recognises fact dates only within one current compliance workflow. */
-  private static isCurrentWorkflowFactDate(query: string): boolean {
+  private static isCurrentWorkflowFactDate(
+    query: string,
+    currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
+  ): boolean {
     if (hasHistoricalStatutoryVersionIntent(query)) return false;
     // These distinct requests must retain their date scope even without an authority acronym.
     if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
+    if (isCurrentAcraAuditCriteriaFact(query)) return true;
+    const currentCompanyFye = currentCompanyEciFyeWorkflowDate(query, currentDate);
+    if (currentCompanyFye && /\b(?:eci|estimated chargeable income)\b/i.test(query)
+        && /\b(?:deadline|due|file|filing|waiver|skip|exempt|qualif\w*)\b/i.test(query)
+        && !/\b(?:gst|goods and services tax|cpf|central provident fund|mom|acra|mas|withholding tax|\bwht\b|ifrs|sfrs)\b/i.test(query)) return true;
+    if (currentCompanyAcraFyeWorkflowDate(query, currentDate)) return true;
     const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
     const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
     if (dates.length === 0 && years.length === 0) return false;
@@ -123,7 +216,7 @@ export class TargetDateResolver {
       return roles.test(context);
     });
     const hasRetentionSubject = /\b(?:company|corporate|business)\b/i.test(query) &&
-      /\b(?:records?|documents?|books|invoices?|record[- ]keeping|record retention)\b/i.test(query) &&
+      /\b(?:records?|documents?|books|invoices?|bank statements?|record[- ]keeping|record retention)\b/i.test(query) &&
       /\b(?:retain|retention|keep|keeping|shred|destroy|discard|dissolv\w*|struck off|wound up|how long)\b/i.test(query);
     const hasRetentionWorkflowDates = hasRetentionSubject &&
       everyDateHasRole(/\b(?:year ended|accounts? for|ya\s*20\d{2}|year of assessment|dissolv\w*|struck off|wound up|shred\w*|destroy\w*|discard\w*|retain\w*|keep\w*)\b/i);
@@ -140,6 +233,15 @@ export class TargetDateResolver {
     const appointment = /\b(?:lfmc|licensed fund management company)\b/i.test(query) &&
       everyDateHasRole(/\b(?:appoint\w*|ceo|chief executive|director|executive|non.executive|role change)\b/i) &&
       !/\b(?:acra|cpf|mom|income tax|employment act)\b/i.test(query);
+    const vcfmChange = /\b(?:vcfm|venture capital fund manager)\b/i.test(query) &&
+      /\b(?:appoint\w*|resign\w*|change in particulars|particulars changed)\b/i.test(query) &&
+      /\b(?:form\s*23a|current (?:vcfm )?toolkit|notification)\b/i.test(query) &&
+      years.length === 1 && years[0][0] === currentDate.slice(0, 4) &&
+      everyDateHasRole(/\b(?:appoint\w*|resign\w*|change|particulars)\b/i) &&
+      !/\b(?:acra|cpf|mom|ministry of manpower|iras|income tax|corporate tax|employment act)\b/i.test(query) &&
+      !/\b(?:annual[- ]returns?|agm|annual general meeting|ceo confirmation|officer confirmation|officer particulars?)\b/i.test(query) &&
+      !/\b(?:rules? applied|historical|historic|former|previous|prior|effective during|in force)\b/i.test(query);
+    if (vcfmChange) return true;
     const prYearTiming = /\b(?:permanent resident|spr|pr)\b/i.test(query) &&
       /\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(query) &&
       /\b(?:when|what date|what day|move into|transition into|begin|start)\b/i.test(query) &&
@@ -161,7 +263,7 @@ export class TargetDateResolver {
     if (acraOfficerCommencementScope(query) || masSfa04N24CommencementScope(query)) {
       return { ...unresolved(), dateRole: 'DECLARED_COMMENCEMENT' };
     }
-    if (TargetDateResolver.isCurrentWorkflowFactDate(query)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
+    if (TargetDateResolver.isCurrentWorkflowFactDate(query, currentDate)) return { ...unresolved(), dateRole: 'CURRENT_WORKFLOW_FACT' };
 
     const asksWhtDeadline = /\b(?:wht|withholding tax)\b/i.test(query) &&
       /\b(?:filing|due date|deadline|when\b[^.!?;\n]{0,65}\b(?:file|filed|paid))\b/i.test(query) &&

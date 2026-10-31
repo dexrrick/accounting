@@ -34,6 +34,8 @@ import {
 } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
+import { isAcraAuditExemptionContextRequest } from '../retrieval/acraMomKnowledge20261027b';
+import { supportsAcraSmallCompanyAuditFacts } from '../retrieval/momAcraMasCoverageRules';
 import { cleanHtmlText } from '../retrieval/sourceAdapters';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
@@ -1547,7 +1549,8 @@ export async function resolveMappedOfficialSourceFallback(
   const registeredIrasTopics = [...expandedTopics.values()].filter(topic => topic.domainId.startsWith('IRAS_'));
   const historicalIrasScopeRequested = targetIsHistorical || registeredIrasTopics.some(topic =>
     topic.status === 'HISTORICAL' || isUndatedHistoricalStatutoryRequest(topic, query)
-  ) || (registeredIrasTopics.length === 0 && UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
+  ) || (registeredIrasTopics.length === 0 && targetDateResolution.dateRole !== 'CURRENT_WORKFLOW_FACT' &&
+    UNRESOLVED_RELATIVE_HISTORICAL_PERIOD.test(query));
 
   // Determine historical scope before constructing a provisional topic. An
   // unmatched historical question cannot use a query-only context to bypass
@@ -1655,6 +1658,12 @@ export async function resolveMappedOfficialSourceFallback(
       : undefined;
     const scopedCoverageSubject = options.evidenceScope?.context.primarySubject ||
       semanticIrasContext?.primarySubject || topic.title;
+    const acraAuditContextCandidate = {
+      authority: topic.authorities[0] || '', topicId: topic.id, query,
+      subject: scopedCoverageSubject, officialUrl: candidateUrl
+    };
+    const acraAuditExemptionContextRequest = isAcraAuditExemptionContextRequest(acraAuditContextCandidate)
+      ? acraAuditContextCandidate : undefined;
     const expansionRequest = { authority: topic.authorities[0] || '', topicId: topic.id,
       query, subject: scopedCoverageSubject, sourceText: '', officialUrl: candidateUrl };
     const expansionOwned = (supportPracticalExpansionRule(expansionRequest)) !== undefined;
@@ -1677,7 +1686,8 @@ export async function resolveMappedOfficialSourceFallback(
       requireSubstantiveBody: topic.domainId.startsWith('CPF_') || topic.domainId === 'ACRA_COMPANIES' ||
         topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_'),
       cpfOrdinaryWageDefinitionRequest,
-      cpfAdditionalWageDefinitionRequest
+      cpfAdditionalWageDefinitionRequest,
+      acraAuditExemptionContextRequest
     };
     let result = successfulPageFetches.get(candidateUrl);
     if (!result) {
@@ -1855,7 +1865,8 @@ export async function resolveMappedOfficialSourceFallback(
     // headings and standalone/card links for company guidance. Inline-linked
     // legal wording remains intact in rule prose, lists and tables.
     const ruleDocument = topic.domainId === 'ACRA_COMPANIES'
-      ? result.content.replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ')
+      ? (acraAuditExemptionContextRequest ? result.content
+        : result.content.replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' '))
         .replace(/<(p|div|li)\b[^>]*>\s*<a\b[^>]*>(?:(?!<\/a\s*>)[\s\S])*<\/a\s*>\s*<\/\1\s*>/gi, ' ')
         .replace(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/gi, (anchor, contents: string) =>
           /<(?:div|section|p)\b/i.test(contents) ? ' ' : anchor)
@@ -1894,8 +1905,15 @@ export async function resolveMappedOfficialSourceFallback(
       authority: topic.authorities[0], topicId: topic.id, subject: scopedCoverageSubject,
       query, sourceText: contentValidation.substantiveText || '', officialUrl: candidateUrl
     };
+    if (acraAuditExemptionContextRequest && !supportsAcraSmallCompanyAuditFacts(coverageRequest.sourceText)) {
+      attempt.fetchStatus = 'TOPIC_MISMATCH';
+      attempt.contentMatched = false;
+      attempt.error = 'Fetched ACRA audit guidance does not preserve the exact company and group section criteria in its retained source record.';
+      return undefined;
+    }
     const irasCpfCoverageProof = supportIrasCpfCoverageRule(coverageRequest);
-    const momAcraMasCoverageProof = supportMomAcraMasCoverageRule(coverageRequest);
+    const momAcraMasCoverageProof = acraAuditExemptionContextRequest
+      ? undefined : supportMomAcraMasCoverageRule(coverageRequest);
     const expansionCoverageProof = supportPracticalExpansionRule(coverageRequest);
     const completeCoverageProof = expansionCoverageProof ?? irasCpfCoverageProof ?? momAcraMasCoverageProof;
     const practicalSourceProofs = [
@@ -2057,10 +2075,10 @@ export async function resolveMappedOfficialSourceFallback(
         // mapped standard topics.
         record.sourceMapScope !== 'FRAMEWORK'
       ));
-    const historicalStatutoryQuery = Boolean(discoveryProviderForTopic(topic)) && Boolean(
-      isUndatedHistoricalStatutoryRequest(topic, query) ||
-      targetIsHistorical
-    );
+    const historicalStatutoryQuery = Boolean(discoveryProviderForTopic(topic)) &&
+      targetDateResolution.dateRole !== 'CURRENT_WORKFLOW_FACT' && Boolean(
+        isUndatedHistoricalStatutoryRequest(topic, query) || targetIsHistorical
+      );
     const applicablePointers = pointers.filter(pointer => hasVerifiedHistoricalStatutoryScope(topic, pointer, targetDate, targetIsHistorical, query));
     return { topic, pointers, applicablePointers, historicalStatutoryQuery };
   });

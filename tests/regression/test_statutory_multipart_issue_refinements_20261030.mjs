@@ -174,6 +174,41 @@ const salaryDeduction = planFor('Can we deduct S$400 from an employee salary for
 assert.ok(salaryDeduction.some(issue => issue.subject === 'MOM employer salary deduction authorization, purpose and limits' && issue.population === 'EMPLOYER'));
 const salaryFrequency = planFor('Can an employer pay salary every two months?').issuePlan.issues;
 assert.ok(salaryFrequency.some(issue => issue.subject === 'MOM salary payment frequency and statutory deadline' && issue.population === 'EMPLOYER'));
+const twoMonthlySalaryDue = planFor('Our payroll vendor says CPF contributions for June are due on 14 July. What is the contribution due date and what is the 14th?').issuePlan.issues;
+assert.ok(twoMonthlySalaryDue.some(issue => issue.domain === 'CPF_PAYROLL' &&
+  issue.operation === 'FILING_REQUIREMENT' && issue.population === 'EMPLOYER' &&
+  issue.mappedTopicIds.includes('cpf-contribution-due-dates') &&
+  !issue.mappedTopicIds.includes('cpf_contribution_rates')),
+  'CPF contribution due-date questions remain separate from age-rate selection.');
+
+const fourMonthSickLeave = planFor('A covered employee has four completed months of service and a medical certificate for hospitalisation. How much paid sick leave can they have?').issuePlan.issues;
+assert.ok(fourMonthSickLeave.some(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+  issue.population === 'EMPLOYEE' && issue.mappedTopicIds.includes('mom_sick_leave')),
+  'A stated completed service period maps to the employee leave entitlement without losing its party.');
+
+const dismissalAndPayslip = planFor('We dismissed an employee for misconduct, but payroll cannot release final salary on that day. How soon must we pay, and when is a payslip due?').issuePlan.issues;
+assert.ok(dismissalAndPayslip.some(issue => /final salary payment deadlines/i.test(issue.subject) &&
+  issue.operation === 'FILING_REQUIREMENT' && issue.mappedTopicIds.includes('mom-salary-payment')) &&
+  dismissalAndPayslip.some(issue => /itemised payslip issue and delivery/i.test(issue.subject) &&
+    issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-itemised-payslips')),
+  'Final-pay and payslip obligations retain distinct evidence issues in one request.');
+const dismissalFinalSalaryAmount = planFor('We dismissed an employee for misconduct. How much final salary must we pay, and when is a payslip due?').issuePlan.issues;
+assert.ok(dismissalFinalSalaryAmount.some(issue => issue.operation === 'CALCULATE' &&
+  issue.mappedTopicIds.includes('mom-salary-payment')),
+  'A final-salary amount request keeps its CALCULATE operation when a payslip deadline is also asked.');
+assert.ok(dismissalFinalSalaryAmount.some(issue => /itemised payslip issue and delivery/i.test(issue.subject) &&
+  issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-itemised-payslips')) &&
+  !dismissalFinalSalaryAmount.some(issue => /Final salary payment deadlines by termination reason/i.test(issue.subject)),
+  'A separately requested payslip deadline is mapped without turning a salary amount request into a final-pay timing answer.');
+const dismissalAndUniformDeduction = planFor('We dismissed an employee for misconduct. When is final salary due, when must we give a payslip, and can we deduct a uniform cost?').issuePlan.issues;
+assert.ok(dismissalAndUniformDeduction.some(issue => /salary deduction/i.test(issue.subject) &&
+  issue.mappedTopicIds.includes('mom-salary-payment')),
+  'A requested salary deduction issue survives the independent final-pay and payslip timing clauses.');
+assert.ok(dismissalAndUniformDeduction.some(issue => /Final salary payment deadlines by termination reason/i.test(issue.subject) &&
+  issue.operation === 'FILING_REQUIREMENT') &&
+  dismissalAndUniformDeduction.some(issue => /itemised payslip issue and delivery/i.test(issue.subject) &&
+    issue.operation === 'EXPLAIN_RULE'),
+  'Explicit final-pay and payslip timing requests are appended while retaining the independent deduction issue.');
 const payslipRetention = planFor('For current employees and a former employee, how long must we keep itemised payslip records, and may we keep them electronically?').issuePlan.issues;
 assert.ok(payslipRetention.some(issue => /itemised payslip content, delivery format and retention/i.test(issue.subject) && issue.population === 'EMPLOYER'));
 

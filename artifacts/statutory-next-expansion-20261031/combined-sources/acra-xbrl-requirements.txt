@@ -1,0 +1,64 @@
+Financial statements: Filing requirements & exemptions
+Last updated on 20 October 2026.
+
+Who must prepare and file
+All Singapore-incorporated companies must:
+Prepare financial statements, except dormant relevant companies.
+File financial statements with ACRA, unless exempted.
+All financial statements that you file as part of your annual return will be available for public purchase.
+
+Dormant relevant company
+You do not need to prepare and file financial statements if your company meets all of the requirements under section 201A of the Companies Act.
+Your company meets the substantial assets test. You need to meet either criterion to pass the substantial assets test:
+Your total assets at any time during the financial year did not exceed $500,000.
+As a parent company, the consolidated total assets of your group at any time during the financial year did not exceed $500,000.
+Your company has been dormant from either the time of formation or the end of the previous financial year. A company is considered dormant when it has no significant accounting transactions during the financial year. An accounting transaction is one that affects the financial statements of a company.
+Your company is not a listed company or a subsidiary of a listed company.
+
+Solvent exempt private company (EPC)
+You do not need to file financial statements if you meet both of the conditions below. However, you can choose to file financial statements voluntarily.
+You need to meet either EPC requirement:
+Private company: You have fewer than 20 members and no corporation holds beneficial interest in your shares (directly or indirectly).
+Government-owned company: You are a private company owned by the Government and declared an EPC by Gazette.
+You are solvent where you can meet your debts as and when they are due. Note: You need to make an online declaration of solvency when you file your annual return.
+
+Filing requirements for companies
+The type and extent of filing depend on your company's nature and the size of its operations.
+Smaller and non-publicly accountable companies, including insolvent EPCs that cannot pay their debts as and when they are due:
+Simplified XBRL financial statements; and a PDF copy of your financial statements authorised by directors.
+Banks, finance and insurance companies:
+XBRL FSH (Banks) or XBRL FSH (Insurance) financial statements; and a PDF copy of your financial statements authorised by directors.
+Companies limited by guarantee; or companies using other accounting standards upon approval by ACRA:
+PDF copy of your financial statements authorised by directors.
+All other Singapore-incorporated companies, including insolvent EPCs that are not small and non-publicly accountable and are required to file financial statements:
+Full XBRL financial statements.
+Solvent EPCs which voluntarily choose to file:
+(Optional) Financial statements in XBRL format. The required XBRL template (Full XBRL or Simplified XBRL) depends on the size of your company's operations and whether it is a non-publicly accountable company.
+(Optional) PDF copy of your financial statements authorised by directors.
+
+Smaller and non-publicly accountable companies
+A smaller company is one where both conditions are met:
+Revenue for the current financial year does not exceed $500,000.
+Total assets for the current financial year do not exceed $500,000.
+What is a non-publicly accountable company
+Your company is non-publicly accountable if it is:
+Not a listed company.
+Not a banking and payment system entity.
+Not an insurance entity.
+Not a capital market infrastructure provider.
+Not a capital markets intermediary.
+Not any other regulated entity.
+
+Types of XBRL templates
+XBRL (eXtensible Business Reporting Language) is a digital format that captures financial data in a structured way.
+Full XBRL template: About 210 data elements; primary statements and selected notes to the financial statement.
+Simplified XBRL template: About 120 data elements; complete information in financial performance and position statements and selected notes to the financial statement.
+XBRL FSH (banks) template: About 80 data elements for banking companies.
+XBRL FSH (insurance) template: About 80 data elements for insurance companies.
+
+Technical guides and resources
+XBRL filing requirements (from 19 October 2026 onwards).
+ACRA Taxonomy 2026 in Excel Format lists all taxonomy elements and their corresponding references within ACRA Taxonomy 2026. Last updated October 2026.
+Sample XBRL Instance is a sample XBRL file which contains a company's full set of financial statements in XBRL format in ACRA Taxonomy 2026. Last updated February 2026.
+ACRA Taxonomy 2026 in ZIP format contains the actual ACRA Taxonomy 2026 files that software tools will use. Last updated February 2026.
+Taxonomy Architecture Guide 2026. Last updated February 2026.

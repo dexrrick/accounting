@@ -9,6 +9,10 @@ import {
   type BoundedStatutoryAdvisoryRequest
 } from './statutoryAdvisorySupport';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import {
+  isAcraAuditExemptionContextRequest,
+  type AcraAuditExemptionContextRequest
+} from './acraMomKnowledge20261027b';
 
 /**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
@@ -81,6 +85,8 @@ export interface TopicContentExpectation {
   cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
   /** Enables the native Additional Wages definition card only for its bounded request. */
   cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Preserves the one registered ACRA audit-exemption conditional heading for its bounded request. */
+  acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -482,6 +488,27 @@ function isHiddenMarkupElement(element: BalancedMarkupElement): boolean {
   return isHiddenMarkupAttributes(element.attributes);
 }
 
+function removeHiddenAcraAuditMarkup(
+  markup: string,
+  request: AcraAuditExemptionContextRequest
+): string | undefined {
+  if (!isAcraAuditExemptionContextRequest(request)) return markup;
+  const elements = parseBalancedMarkupElements(markup);
+  if (!elements) return undefined;
+  const hiddenSubtrees = elements.filter(isHiddenMarkupElement).filter(element => {
+    for (let parent = element.parent; parent; parent = parent.parent) {
+      if (isHiddenMarkupElement(parent)) return false;
+    }
+    return true;
+  });
+  if (hiddenSubtrees.some(element => element.end === undefined)) return undefined;
+  const filteredMarkup = hiddenSubtrees.sort((left, right) => right.start - left.start).reduce((currentMarkup, element) => {
+    const end = element.end;
+    return end === undefined ? currentMarkup : currentMarkup.slice(0, element.start) + currentMarkup.slice(end);
+  }, markup);
+  return filteredMarkup;
+}
+
 function isHiddenMarkupAttributes(attributes: string): boolean {
   return /(?:^|\s)hidden(?:\s|=|\/|$)/i.test(attributes)
     || /(?:^|\s)aria-hidden\s*=\s*(?:"true"|'true'|true)(?:\s|$)/i.test(attributes)
@@ -565,6 +592,87 @@ function preserveSupportedCpfWageCard(
     return markupWithoutComments.slice(0, cardStart) + '<div>' + ruleMarkup + '</div>' + markupWithoutComments.slice(cardEnd);
   }
   return mainMarkup;
+}
+
+const ACRA_AUDIT_CONTEXT_HEADING = 'If your company is newly incorporated (less than two years old)';
+const ACRA_AUDIT_CONTEXT_ELIGIBILITY = 'You qualify for audit exemption if you meet the criteria in the current financial year.';
+const ACRA_AUDIT_GROUP_CONTEXT_HEADING = 'If your company is part of a group';
+const ACRA_AUDIT_GROUP_CRITERIA = 'Your entire group (including foreign entities) meets at least two of these quantitative criteria for the immediate past two consecutive financial years:';
+const ACRA_AUDIT_SECTION_BOUNDARIES = [
+  'Maintaining your exemption status',
+  'Frequently asked questions (FAQs)'
+] as const;
+
+/** Retain only the exact native section labels needed by the complete ACRA audit proof. */
+function preserveAcraAuditExemptionContext(
+  mainMarkup: string,
+  request: AcraAuditExemptionContextRequest
+): string {
+  if (!isAcraAuditExemptionContextRequest(request)) return mainMarkup;
+  const elements = parseBalancedMarkupElements(mainMarkup);
+  if (!elements) return mainMarkup;
+
+  const replacements: Array<{ start: number; end: number; text: string }> = [];
+  const summaryLabels = [ACRA_AUDIT_CONTEXT_HEADING, ACRA_AUDIT_GROUP_CONTEXT_HEADING];
+  for (const label of summaryLabels) {
+    const matches = elements.filter(element => element.tagName === 'summary' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)
+        .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')).trim() === label);
+    if (matches.length !== 1) continue;
+    const summary = matches[0];
+    const details = summary.parent?.tagName === 'details' ? summary.parent : undefined;
+    if (!details || summary.end === undefined || !isVisibleAcraAuditContextPath(summary, details) ||
+        !hasOnlyVisibleAcraAuditContextDescendants(summary, elements)) continue;
+    if (label === ACRA_AUDIT_CONTEXT_HEADING) {
+      const eligibility = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_CONTEXT_ELIGIBILITY &&
+        isVisibleAcraAuditContextPath(element, details) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+      if (eligibility.length !== 1 || eligibility[0].start <= summary.end) continue;
+    } else {
+      const criteria = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_GROUP_CRITERIA &&
+        isVisibleAcraAuditContextPath(element, details));
+      if (criteria.length !== 1) continue;
+    }
+    replacements.push({ start: summary.start, end: summary.end, text: `<p>${mainMarkup.slice(summary.contentStart, summary.contentEnd)}</p>` });
+  }
+
+  for (const label of ACRA_AUDIT_SECTION_BOUNDARIES) {
+    const matches = elements.filter(element => element.tagName === 'h2' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === label &&
+      isVisibleAcraAuditContextPath(element) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+    if (matches.length === 1) {
+      const heading = matches[0];
+      if (heading.end !== undefined) replacements.push({
+        start: heading.start, end: heading.end,
+        text: `<p>${mainMarkup.slice(heading.contentStart, heading.contentEnd)}</p>`
+      });
+    }
+  }
+
+  return replacements.sort((left, right) => right.start - left.start).reduce((markup, replacement) =>
+    markup.slice(0, replacement.start) + replacement.text + markup.slice(replacement.end), mainMarkup);
+}
+
+function hasOnlyVisibleAcraAuditContextDescendants(
+  element: BalancedMarkupElement,
+  elements: readonly BalancedMarkupElement[]
+): boolean {
+  return !elements.some(descendant => isInsideElement(descendant, element) &&
+    (descendant.tagName === 'a' || (descendant.tagName !== 'svg' && isHiddenMarkupElement(descendant))));
+}
+
+function isVisibleAcraAuditContextPath(element: BalancedMarkupElement, stopAt?: BalancedMarkupElement): boolean {
+  let foundStop = stopAt === undefined;
+  for (let current: BalancedMarkupElement | undefined = element; current; current = current.parent) {
+    const identity = `${markupAttribute(current.attributes, 'class')} ${markupAttribute(current.attributes, 'id')}`;
+    if (isHiddenMarkupElement(current) || current.tagName === 'a' || RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+        /\b(?:navigation|navbar|breadcrumb|menu|sidebar|carousel|teaser|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity)) {
+      return false;
+    }
+    if (current === stopAt) foundStop = true;
+  }
+  return foundStop;
 }
 interface MarkupElementContext {
   tagName: string;
@@ -680,6 +788,7 @@ function extractVisiblePageText(
     preferMainContent?: boolean;
     requireSubstantiveBody?: boolean;
     requireAcraAnnualReturnDeadlineTable?: boolean;
+    acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
     cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
     cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
   } = {}
@@ -737,11 +846,17 @@ function extractVisiblePageText(
       visibleMarkup = visibleMarkup.replace(tableMarkup, `<p>${tableMarker}</p>`);
     }
   }
+  if (options.acraAuditExemptionContextRequest) {
+    const visibleAuditMarkup = removeHiddenAcraAuditMarkup(visibleMarkup, options.acraAuditExemptionContextRequest);
+    if (visibleAuditMarkup === undefined) return '';
+    visibleMarkup = visibleAuditMarkup;
+  }
   if (options.requireSubstantiveBody) {
     visibleMarkup = removeNavigationalSummaryLead(visibleMarkup, rawDocument);
-    visibleMarkup = visibleMarkup
-      .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
     visibleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(visibleMarkup)));
+    if (options.acraAuditExemptionContextRequest) visibleMarkup = preserveAcraAuditExemptionContext(
+      visibleMarkup, options.acraAuditExemptionContextRequest
+    );
     visibleMarkup = extractRuleBearingMarkup(visibleMarkup);
   }
   // Keep nested list-item identity after HTML cleanup so evidence-only fallback
@@ -937,6 +1052,7 @@ export class ExternalSourceValidator {
       preferMainContent: expectation.preferMainContent,
       requireSubstantiveBody: expectation.requireSubstantiveBody,
       requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
+      acraAuditExemptionContextRequest: expectation.acraAuditExemptionContextRequest,
       cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
       cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest
     });

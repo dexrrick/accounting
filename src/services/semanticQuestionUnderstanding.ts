@@ -2776,6 +2776,27 @@ function hasIndependentSemanticClause(query: string): boolean {
     /;\s*\S/.test(query) || (query.match(/\?/g) || []).length > 1 || /\?\s+\S/.test(query) || /\.\s+\S/.test(query);
 }
 
+const requestClauseOpening = /^(?:please\s+)?(?:can|could|may|must|should|do|does|is|are|what|which|when|where|who|how|explain|tell|list|describe|confirm|check|advise|clarify)\b/i;
+
+function splitRequestClauses(query: string): string[] {
+  return query.split(/[.!?;]+|\bseparately,?\s+|,\s*(?:and\s+)?(?=(?:what|which|when|where|who|how|can|could|may|must|should|do|does|is|are|explain|tell|list|describe|confirm|check)\b)|\band\s+(?=(?:what|which|when|where|who|how|can|could|may|must|should|do|does|is|are|explain|tell|list|describe|confirm|check)\b)/i)
+    .map(clause => clause.trim()).filter(clause => requestClauseOpening.test(clause));
+}
+
+function hasIndependentAcraAnnualReturnDeadlineQuestion(query: string): boolean {
+  return splitRequestClauses(query).some(clause =>
+    /\bannual[- ]returns?\b/i.test(clause) &&
+    /\b(?:deadline|due date|filing date|filing time|timeframe|time frame|within|how many months?|how long|how soon|what date|by what date|when\s+(?:must|should|do|does|is|are|can|will|would))\b/i.test(clause) &&
+    isAcraAnnualReturnDeadlineQuestion(clause));
+}
+
+function hasIndependentAcraAgmRequirementQuestion(query: string): boolean {
+  return splitRequestClauses(query).some(clause =>
+    /\b(?:agm|annual general meetings?)\b/i.test(clause) &&
+    /\b(?:hold|convene|deadline|due date|what date|when|requirement|required)\b/i.test(clause) &&
+    !/\b(?:declare|declaration|details|enter)\b/i.test(clause));
+}
+
 function isLfmcToolkitFundScopeQuestion(query: string): boolean {
   const text = query.toLowerCase();
   if (/\b(?:foreign|overseas|vcfm|venture capital fund manager|not\s+(?:an?\s+)?lfmc|qdc)\b/i.test(text)) return false;
@@ -2800,6 +2821,7 @@ function refineTaxonomyRuleIntent(
 ): SemanticQuestionIssue & { contextualTopicIds?: string[] } {
   const topicIds = new Set(issue.mappedTopicIds);
   const text = query.toLowerCase().replace(/[-_]/g, ' ');
+  const requestClauses = splitRequestClauses(query);
   const boundedPublicHolidayRestDayComparison = topicIds.has('mom-public-holidays') &&
     /\bpublic holidays?\b/i.test(text) &&
     /\bnon working day\b/i.test(text) && /\b(?:contractual )?rest day\b/i.test(text) &&
@@ -2807,7 +2829,20 @@ function refineTaxonomyRuleIntent(
   const boundedAcraCommencement = acraOfficerCommencementScope(query);
   const boundedMasCommencement = masSfa04N24CommencementScope(query);
   const separateAnnualReturnQuestion = topicIds.has('acra_annual-returns') &&
-    /\b(?:annual return|annual-return)\b[^.!?;]{0,90}\b(?:filing deadline|deadline|due date|when must|how to file|filing process|file the return)\b/i.test(text);
+    (hasIndependentAcraAnnualReturnDeadlineQuestion(query) ||
+      /\b(?:annual return|annual-return)\b[^.!?;]{0,90}\b(?:how to file|filing process|file the return)\b/i.test(text) ||
+      /\b(?:how|steps?|process|file|filing)\b[^.!?;]{0,90}\bannual[- ]returns?\b/i.test(text) ||
+      topicIds.has('acra_agm') && /\b(?:agm|annual general meetings?)\b/i.test(text)
+        && /\b(?:declare|declaration|details|enter|what date)\b/i.test(text));
+  const financialStatementQuestionHasSecondaryRequest = requestClauses.length !== 1 ||
+    (query.match(/\?/g) || []).length !== 1 || !/\?\s*$/.test(query) ||
+    /(?:,|\band\b|\bseparately\b|\balso\b)\s+(?:what|how|when|where|which|who|must|should|can|do|does|explain|tell|list|describe|confirm|check|advise|clarify)\b/i.test(query);
+  const financialStatementRequest = requestClauses.find(clause =>
+    /\bfinancial statements?\b/i.test(clause) &&
+    /\b(?:prepar\w*|file|filing|omit|exempt\w*|dormant|newly incorporat\w*)\b/i.test(clause) &&
+    /\b(?:annual return|company|incorporat\w*|dormant|exempt\w*|file|filing)\b/i.test(clause));
+  const boundedAcraFinancialStatementFiling = topicIds.has('acra_financial_statements') && Boolean(financialStatementRequest) &&
+    !separateAnnualReturnQuestion && !financialStatementQuestionHasSecondaryRequest;
   const acraSecretaryCompanyFacts = topicIds.has('acra_company-secretary') &&
     /\b(?:our|this|the)\s+(?:(?:singapore|local|private|public)\s+){0,2}company\b/i.test(text) &&
     /\b(?:incorporated|registered|registration)\b/i.test(text) &&
@@ -2825,7 +2860,15 @@ function refineTaxonomyRuleIntent(
   // independently ask about a topic, keep that topic mapped as requested.
   const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison
     || Boolean(boundedAcraCommencement || boundedMasCommencement ||
-      (boundedAcraSecretaryCase && !separateAnnualReturnQuestion));
+      (boundedAcraSecretaryCase && !separateAnnualReturnQuestion) || boundedAcraFinancialStatementFiling);
+  const asksFinalSalaryAmount = issue.domain === 'MOM_EMPLOYMENT' &&
+    /\bhow much (?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query);
+  if (asksFinalSalaryAmount) return {
+    ...issue,
+    operation: 'CALCULATE',
+    evidenceRequirement: deriveEvidenceRequirement(issue.domain, 'CALCULATE'),
+    confidence: 1
+  };
   const asksForAmount = /\b(?:calculate|compute|work\s+out|estimate|how much (?:cpf|tax|salary|wht|gst|money|will|do|does|would|should)|what amount (?:is|are|do|does|would|will))\b/i.test(query);
   if (asksForAmount || /\b(?:prepare|post|journal entry|calculate my|calculate our)\b/i.test(query)) return issue;
 
@@ -2897,6 +2940,23 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'CPF_PAYROLL') {
+    const asksCpfContributionDueDateAndEnforcement = topicIds.has('cpf-contribution-due-dates') &&
+      [...topicIds].every(topicId => ['cpf-contribution-due-dates', 'cpf_contribution_rates'].includes(topicId)) &&
+      /\bcpf\b/i.test(query) && /\bcontributions?\b/i.test(query) &&
+      /\b(?:due date|deadline|when (?:are|is)|by when)\b/i.test(query) &&
+      /\b(?:14th|fourteenth)\b/i.test(query) && !hasCpfRateOrAmountOutcome(query, '') &&
+      !/\b(?:historical|historic|which law|rules? applied|applicable law|effective during|as of)\b/i.test(query);
+    if (asksCpfContributionDueDateAndEnforcement) {
+      const dueDateIssue = makeRuleIssue('CPF contribution due dates and late-payment enforcement cut-off', 'EMPLOYER');
+      return {
+        ...dueDateIssue,
+        operation: 'FILING_REQUIREMENT',
+        evidenceRequirement: deriveEvidenceRequirement(issue.domain, 'FILING_REQUIREMENT'),
+        mappedTopicIds: dueDateIssue.mappedTopicIds.filter(topicId => topicId === 'cpf-contribution-due-dates'),
+        contextualTopicIds: [...new Set([...(dueDateIssue.contextualTopicIds || []),
+          ...topicIds].filter(topicId => topicId !== 'cpf-contribution-due-dates'))]
+      };
+    }
     const asksEmployerCpfRefund = topicIds.has('cpf-adjustments-refunds') && isCpfEmployerRefundContext(text);
     if (asksEmployerCpfRefund) {
       const asksSeparateRatesOrCalculation = /\b(?:rates?|percentages?|calculate|compute|contribution table|how much contribution)\b/i.test(text);
@@ -3032,7 +3092,7 @@ function refineTaxonomyRuleIntent(
     const asksSickLeaveServiceEntitlement = topicIds.has('mom_sick_leave') &&
       /\b(?:sick leave|medical leave|hospitali[sz]ation leave)\b/i.test(text) &&
       /\b(?:\d+|four|five|six)\s+(?:completed\s+)?months?(?:\s+(?:of service|with the employer))?\b/i.test(text) &&
-      /\b(?:statutory|full|entitlement|days?)\b/i.test(text);
+      /\b(?:statutory|full|entitlement|days?|how much|can they have|may they take)\b/i.test(text);
     const asksSickLeaveOverlap = topicIds.has('mom_sick_leave') &&
       /\b(?:sick leave|medical leave|hospitali[sz]ation leave)\b/i.test(text) &&
       /\b60[ -]?days?\b/i.test(text) && /\b14(?:\s+outpatient)?[ -]?days?\b/i.test(text) &&
@@ -3107,8 +3167,56 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'ACRA_CORPORATE') {
+    const asksAcraAnnualReturnDeadline = topicIds.has('acra_annual-returns') &&
+      /\bannual[- ]returns?\b/i.test(text) &&
+      hasIndependentAcraAnnualReturnDeadlineQuestion(query) &&
+      !/\b(?:extension|eot|more time|additional time|extend\w*)\b/i.test(text);
+    if (asksAcraAnnualReturnDeadline) {
+      const separateAgmRequirement = topicIds.has('acra_agm') && hasIndependentAcraAgmRequirementQuestion(query);
+      const deadlineIssue = makeRuleIssue(
+        separateAgmRequirement ? 'ACRA annual return filing deadline and AGM requirements' : 'ACRA annual return filing deadline',
+        'COMPANY');
+      if (!topicIds.has('acra_agm') || separateAgmRequirement) return deadlineIssue;
+      return {
+        ...deadlineIssue,
+        mappedTopicIds: deadlineIssue.mappedTopicIds.filter(topicId => topicId !== 'acra_agm'),
+        contextualTopicIds: [...new Set([...(deadlineIssue.contextualTopicIds || []), 'acra_agm'])]
+      };
+    }
+
+    const asksAcraAuditExemption = topicIds.has('acra_small_company') &&
+      (/\b(?:small[- ]company|small company|quantitative criteria)\b/i.test(text) ||
+        /\baudit exemption thresholds?\b/i.test(text) && requestClauses.length === 1) &&
+      /\b(?:audit exemption|audit exempt|qualif\w*)\b/i.test(text);
+    if (asksAcraAuditExemption) {
+      const auditIssue = makeRuleIssue('ACRA small-company audit exemption criteria', 'COMPANY', ['acra_audit-requirements']);
+      return {
+        ...auditIssue,
+        mappedTopicIds: auditIssue.mappedTopicIds.filter(topicId => topicId === 'acra_small_company'),
+        ...(topicIds.has('acra_audit-requirements') ? {
+          contextualTopicIds: [...new Set([...(auditIssue.contextualTopicIds || []), 'acra_audit-requirements'])]
+        } : {})
+      };
+    }
+
+    const asksAcraFyeChange = topicIds.has('acra-entity-information-changes') &&
+      /\b(?:fye|financial year end)\b/i.test(text) &&
+      /\b(?:change|changing|changed|move|shift)\b/i.test(text) &&
+      /\b(?:missed|passed|deadline|due|time|late|extend|gain)\b/i.test(text);
+    if (asksAcraFyeChange) {
+      const fyeIssue = makeRuleIssue('ACRA financial year end change restrictions and approval requirements', 'COMPANY',
+        ['acra_agm', 'acra_annual-returns']);
+      return {
+        ...fyeIssue,
+        mappedTopicIds: ['acra-entity-information-changes'],
+        contextualTopicIds: [...new Set([...(fyeIssue.contextualTopicIds || []),
+          ...['acra_agm', 'acra_annual-returns'].filter(topicId => topicIds.has(topicId))])]
+      };
+    }
+
     const asksCompanyEntityUpdateRule = topicIds.has('acra-entity-information-changes') &&
-      /\b(?:company|companies|business|registered entity)\b/i.test(text) &&
+      (/\b(?:company|companies|business|registered entity)\b/i.test(text) ||
+        /\b(?:fye|financial year end)\b/i.test(text)) &&
       /\b(?:registered office|entity email|business email|company email|business activities|entity information|address|particulars|information)\b/i.test(text) &&
       /\b(?:change\w*|updat\w*|notif\w*|inform\w*|report\w*)\b/i.test(text) &&
       !/\b(?:vcc|variable capital compan(?:y|ies))\b/i.test(text);
@@ -3135,15 +3243,34 @@ function refineTaxonomyRuleIntent(
       /\b(?:exempt|dispensed|waiv\w*)\b/i.test(text) &&
       /\b(?:still|must we|do we|need to|should we)\b/i.test(text);
     if (asksAnnualReturnAgmDeclaration) {
-      return makeRuleIssue('ACRA annual return AGM declaration and filing requirements', 'COMPANY', ['acra_agm']);
+      const declarationIssue = makeRuleIssue('ACRA annual return AGM declaration and filing requirements', 'COMPANY');
+      if (hasIndependentAcraAgmRequirementQuestion(query)) return declarationIssue;
+      return {
+        ...declarationIssue,
+        mappedTopicIds: declarationIssue.mappedTopicIds.filter(topicId => topicId !== 'acra_agm'),
+        contextualTopicIds: [...new Set([...(declarationIssue.contextualTopicIds || []), 'acra_agm'])]
+      };
     }
     if (topicIds.has('acra-annual-return-officer-particulars') &&
         (/\b(?:annual return|annual return filing)\b/i.test(text) || Boolean(boundedAcraCommencement)) &&
         (/\b(?:officer particulars?|auditors?|directors?|chief executives?|\bceo\b|perform\w* the ceo role|carry\w* out[^.!?;]{0,60}(?:ceo|chief executive))\b/i.test(text)
           || Boolean(boundedAcraCommencement))) {
       const asksSeparateAnnualReturnOutcome = /\b(?:deadline|due date|extension|penalt\w*|filing process|filing procedure|how to file|when must (?:the )?company file|filing deadline)\b/i.test(text);
-      const contextualAnnualReturn = asksSeparateAnnualReturnOutcome ? [] : ['acra_annual-returns'];
-      return makeRuleIssue('ACRA annual return officer particulars and CEO role confirmation', 'COMPANY', contextualAnnualReturn);
+      const coordinatesDirectorsAndAuditors = /\bdirectors?\b/i.test(text) && /\bauditors?\b/i.test(text);
+      const asksCeoRoleConfirmation = !coordinatesDirectorsAndAuditors &&
+        (Boolean(boundedAcraCommencement) || /\b(?:chief executives?|ceo)\b/i.test(text));
+      const contextualAnnualReturn = asksCeoRoleConfirmation && !asksSeparateAnnualReturnOutcome ? ['acra_annual-returns'] : [];
+      const officerSubject = asksCeoRoleConfirmation
+        ? 'ACRA annual return officer particulars and CEO role confirmation'
+        : 'ACRA annual return officer particulars';
+      const officerIssue = makeRuleIssue(officerSubject, 'COMPANY', contextualAnnualReturn);
+      return asksCeoRoleConfirmation && !asksSeparateAnnualReturnOutcome && issue.mappedTopicIds.includes('acra_annual-returns')
+        ? {
+          ...officerIssue,
+          mappedTopicIds: officerIssue.mappedTopicIds.filter(topicId => topicId !== 'acra_annual-returns'),
+          contextualTopicIds: [...new Set([...(officerIssue.contextualTopicIds || []), 'acra_annual-returns'])]
+        }
+        : officerIssue;
     }
     const asksCompanySecretaryAppointment = topicIds.has('acra_company-secretary') &&
       /\b(?:company secretary|secretary appointment|secretary position)\b/i.test(text) &&
@@ -3152,6 +3279,10 @@ function refineTaxonomyRuleIntent(
         (boundedAcraSecretaryCase || /\b(?:in general|general rule|every company|all companies|a (?:singapore )?company|singapore companies|companies)\b/i.test(text))) {
       const contextualAnnualReturn = acraAnnualReturnSecretarySubstitute && !separateAnnualReturnQuestion ? ['acra_annual-returns'] : [];
       return makeRuleIssue('ACRA company secretary appointment and sole-director requirements', 'COMPANY', contextualAnnualReturn);
+    }
+    if (boundedAcraFinancialStatementFiling) {
+      const contextualAnnualReturn = separateAnnualReturnQuestion ? [] : ['acra_annual-returns'];
+      return makeRuleIssue('ACRA financial statement preparation and filing exemptions', 'COMPANY', contextualAnnualReturn);
     }
     if (topicIds.has('acra_xbrl') &&
         /\b(?:xbrl|financial statement template)\b/i.test(text) &&
@@ -3616,7 +3747,11 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
   originalIssues: TIssue[],
   addId: (issue: SemanticQuestionIssue) => string
 ): TIssue[] {
-  const issues = [...originalIssues];
+  const spuriousAcraDeadlineSPass = !/\bS[- ]Pass\b/i.test(query) &&
+    /\b(?:agm|annual general meeting)\b[\s\S]{0,90}\bpassed\b|\bpassed\b[\s\S]{0,90}\b(?:agm|annual general meeting)\b/i.test(query);
+  const issues = spuriousAcraDeadlineSPass
+    ? originalIssues.filter(issue => !issue.mappedTopicIds.includes('mom-work-passes-s-pass') || !/^S Pass$/i.test(issue.subject))
+    : [...originalIssues];
   const cloneAsRequestedIssue = (
     template: TIssue,
     subject: string,
@@ -3637,6 +3772,69 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
     return { ...issue, id: addId(issue), status: 'MAPPED' } as TIssue;
   };
   const alreadyHasSubject = (pattern: RegExp) => issues.some(issue => pattern.test(issue.subject));
+
+  const acraDeadlineIssues = issues.filter(issue => issue.domain === 'ACRA_CORPORATE' &&
+    issue.mappedTopicIds.includes('acra_agm') && issue.mappedTopicIds.includes('acra_annual-returns'));
+  const asksBothAcraDeadlines = /\b(?:agm|annual general meeting)\b/i.test(query) &&
+    /\bannual returns?\b/i.test(query) &&
+    /\b(?:deadlines?|due dates?|when must|when should|when can|how soon|usual)\b/i.test(query);
+  if (asksBothAcraDeadlines && acraDeadlineIssues.length > 0) {
+    const combined = acraDeadlineIssues[0];
+    const index = issues.indexOf(combined);
+    issues[index] = cloneAsRequestedIssue(combined,
+      'ACRA annual general meeting deadline and exemption requirements', ['acra_agm'], 'COMPANY', 'FILING_REQUIREMENT');
+    if (!alreadyHasSubject(/ACRA annual return filing deadline/i)) {
+      issues.push(cloneAsRequestedIssue(combined,
+        'ACRA annual return filing deadline', ['acra_annual-returns'], 'COMPANY', 'FILING_REQUIREMENT'));
+    }
+  }
+
+  const acraXbrlIssue = issues.find(issue => issue.domain === 'ACRA_CORPORATE' &&
+    issue.mappedTopicIds.includes('acra_xbrl'));
+  const asksPdfAndStatementSigning = /\bpdf\b/i.test(query) &&
+    /\b(?:director|directors)\b[^.!?;]{0,80}\b(?:sign|signature|signing)\b/i.test(query) &&
+    /\b(?:statement|statements)\b/i.test(query);
+  if (acraXbrlIssue && asksPdfAndStatementSigning &&
+      !alreadyHasSubject(/ACRA annual return directors.? statement signing requirements/i)) {
+    const index = issues.indexOf(acraXbrlIssue);
+    const xbrlTopics = acraXbrlIssue.mappedTopicIds.filter(topicId => topicId !== 'acra_annual-returns');
+    if (xbrlTopics.length > 0) {
+      issues[index] = cloneAsRequestedIssue(acraXbrlIssue,
+        'ACRA XBRL financial statement filing requirements and exemptions', xbrlTopics, 'COMPANY', 'FILING_REQUIREMENT');
+    }
+    issues.push(cloneAsRequestedIssue(acraXbrlIssue,
+      'ACRA annual return directors’ statement signing requirements', ['acra_annual-returns'], 'COMPANY', 'FILING_REQUIREMENT'));
+  }
+
+  const acraDeclarationIssue = issues.find(issue => issue.domain === 'ACRA_CORPORATE' &&
+    issue.mappedTopicIds.includes('acra_agm'));
+  const asksAnnualReturnAgmDeclaration = /\bannual[- ]returns?\b/i.test(query) &&
+    /\b(?:agm|annual general meeting)\b/i.test(query) &&
+    /\b(?:declare|declaration|details|enter|what date)\b/i.test(query) &&
+    /\b(?:dispensed|exempt|still|declare|details)\b/i.test(query);
+  if (acraDeclarationIssue && asksAnnualReturnAgmDeclaration && hasIndependentAcraAgmRequirementQuestion(query) &&
+      !alreadyHasSubject(/ACRA annual return filing process and requirements/i)) {
+    const declarationIndex = issues.indexOf(acraDeclarationIssue);
+    issues[declarationIndex] = cloneAsRequestedIssue(acraDeclarationIssue,
+      'ACRA AGM exemption and declaration requirements', ['acra_agm'], 'COMPANY', 'FILING_REQUIREMENT');
+    issues.push(cloneAsRequestedIssue(acraDeclarationIssue,
+      'ACRA annual return filing process and requirements', ['acra_annual-returns'], 'COMPANY', 'FILING_REQUIREMENT'));
+  }
+
+  const acraExtensionIssue = issues.find(issue => issue.domain === 'ACRA_CORPORATE' &&
+    issue.mappedTopicIds.includes('acra_annual-returns') && issue.mappedTopicIds.includes('acra_agm'));
+  const asksBothAcraExtensions = /\b(?:extension|eot|more time|60[- ]day|two months?)\b/i.test(query) &&
+    /\bannual[- ]returns?\b/i.test(query) && /\b(?:agm|annual general meeting)\b/i.test(query) &&
+    /\b(?:does|will|can|must|apply|remove|also|both|and)\b/i.test(query);
+  if (acraExtensionIssue && asksBothAcraExtensions) {
+    const index = issues.indexOf(acraExtensionIssue);
+    issues[index] = cloneAsRequestedIssue(acraExtensionIssue,
+      'ACRA annual return extension of time requirements', ['acra_annual-returns'], 'COMPANY', 'FILING_REQUIREMENT');
+    if (!alreadyHasSubject(/ACRA AGM extension and continuing AGM requirements/i)) {
+      issues.push(cloneAsRequestedIssue(acraExtensionIssue,
+        'ACRA AGM extension and continuing AGM requirements', ['acra_agm'], 'COMPANY', 'FILING_REQUIREMENT'));
+    }
+  }
 
   const irasInputTax = issues.find(issue => issue.domain === 'IRAS_GST' &&
     issue.mappedTopicIds.some(topicId => ['iras-gst-input-tax', 'iras-gst-blocked-input-tax'].includes(topicId)));
@@ -3672,6 +3870,51 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
 
   const momSalaryIssueIndex = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
     issue.mappedTopicIds.includes('mom-salary-payment'));
+  const momFinalSalaryAndPayslip = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+    issue.mappedTopicIds.includes('mom-itemised-payslips'));
+  const asksFinalSalaryAmount = /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay)\b/i.test(query) ||
+    /\b(?:final|last)\s+(?:salary|pay)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(query);
+  const asksSalaryDeductionOutcome = /\b(?:deduct\w*|deduction\w*)\b/i.test(query) &&
+    /\b(?:can|may|lawful|allowed|permitted|authori[sz]ed|should|must)\b/i.test(query);
+  const asksFinalSalaryTiming = /\b(?:when|how soon|deadline|due|by what date)\b/i.test(query);
+  const asksPayslipTiming = /\b(?:when|how soon|deadline|due|within)\b/i.test(query) &&
+    /\b(?:payslips?|pay slips?)\b/i.test(query);
+  const asksDismissalFinalPayAndPayslip = momFinalSalaryAndPayslip >= 0 &&
+    /\b(?:dismiss\w*|terminat\w*)\b/i.test(query) && /\bmisconduct\b/i.test(query) &&
+    /\b(?:final|last)\s+(?:salary|pay)\b/i.test(query) &&
+    /\b(?:payslips?|pay slips?)\b/i.test(query) && hasIndependentSemanticClause(query) &&
+    asksPayslipTiming;
+  if (asksDismissalFinalPayAndPayslip) {
+    const template = issues[momFinalSalaryAndPayslip];
+    const payslipTopics = template.mappedTopicIds.filter(topicId => topicId === 'mom-itemised-payslips');
+    const compatibleTimingTopics = template.mappedTopicIds.every(topicId =>
+      topicId === 'mom-itemised-payslips' || topicId === 'mom-salary-payment');
+    const pureTimingRequest = asksFinalSalaryTiming && !asksFinalSalaryAmount && !asksSalaryDeductionOutcome;
+    const compatibleTimingPayslipIssue = template.operation === 'EXPLAIN_RULE' &&
+      template.population === 'EMPLOYER' && compatibleTimingTopics &&
+      payslipTopics.length === 1 && !template.contextualTopicIds?.length;
+    if (pureTimingRequest && compatibleTimingPayslipIssue) {
+      issues[momFinalSalaryAndPayslip] = cloneAsRequestedIssue(template,
+        'MOM itemised payslip issue and delivery requirements', payslipTopics,
+        template.population, template.operation);
+      if (!alreadyHasSubject(/Final salary payment deadlines by termination reason/i)) {
+        issues.push(cloneAsRequestedIssue(template,
+          'Final salary payment deadlines by termination reason', ['mom-salary-payment'], 'EMPLOYER', 'FILING_REQUIREMENT'));
+      }
+    } else {
+      if (!alreadyHasSubject(/MOM itemised payslip issue and delivery requirements/i)) {
+        issues.push(cloneAsRequestedIssue(template,
+          'MOM itemised payslip issue and delivery requirements', payslipTopics,
+          template.population, 'EXPLAIN_RULE'));
+      }
+      if (asksFinalSalaryTiming && !asksFinalSalaryAmount &&
+          !alreadyHasSubject(/Final salary payment deadlines by termination reason/i)) {
+        issues.push(cloneAsRequestedIssue(template,
+          'Final salary payment deadlines by termination reason', ['mom-salary-payment'], 'EMPLOYER', 'FILING_REQUIREMENT'));
+      }
+    }
+  }
+
   const asksSalaryDeduction = /\b(?:salary|wages?)\b/i.test(query) &&
     /\b(?:deduct\w*|deduction\w*)\b/i.test(query) &&
     /\b(?:can|may|lawful|allowed|permitted|authori[sz]ed|should|must)\b/i.test(query);

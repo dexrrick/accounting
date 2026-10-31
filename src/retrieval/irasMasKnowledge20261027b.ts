@@ -4,7 +4,7 @@ import type {
   AuthorityPresentedWorkstream
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
-import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+import { currentCompanyEciFyeWorkflowDate, defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
 import { hasConflictingMasNoticeIdentity, masSfa04N24CommencementScope } from './statutoryCommencementScope';
 
 export interface IrasMasKnowledgeRequest {
@@ -309,7 +309,9 @@ function hasNonCurrentScope(query: string, rule: Rule): boolean {
   return resolved.source === 'EXPLICIT' && resolved.targetDate !== TargetDateResolver.CURRENT_SYSTEM_DATE
     && !((rule.id === 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX' && resolved.targetDate === '2021-10-01')
       || (rule.id === 'IRAS_GST_MOTOR_CAR_INPUT_TAX' && ['2022-04-01', '2023-01-01'].includes(resolved.targetDate ?? ''))
-      || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`)));
+      || (hasDatedWhtPayment && resolved.targetDate?.startsWith(`${currentYear}-`))
+      || (rule.id === 'IRAS_ECI_PRACTICAL_WAIVER'
+        && currentCompanyEciFyeWorkflowDate(query) === resolved.targetDate));
 }
 
 function toolkitScopePassagePatterns(): RegExp[] {
@@ -522,7 +524,7 @@ function answerText(rule: Rule, query: string): string {
   switch (rule.id) {
     case 'IRAS_GST_STAFF_MEDICAL_INPUT_TAX': return 'IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts.';
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
-    case 'IRAS_ECI_PRACTICAL_WAIVER': return 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
+    case 'IRAS_ECI_PRACTICAL_WAIVER': return eciAnswerText(query);
     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': {
@@ -534,4 +536,28 @@ function answerText(rule: Rule, query: string): string {
     }
     case 'MAS_LFMC_TOOLKIT_SCOPE': return 'The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits.';
   }
+}
+
+function eciAnswerText(query: string): string {
+  const explanation = 'IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category.';
+  const fye = currentCompanyEciFyeWorkflowDate(query);
+  if (!fye) return explanation;
+
+  const deadline = addMonthsClamped(fye, 3);
+  return `${explanation} For the stated FYE of ${formatSingaporeIso(fye)}, the three-month ECI filing deadline is ${formatSingaporeIso(deadline)}, unless a filing exception applies.`;
+}
+
+function addMonthsClamped(iso: string, months: number): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const monthIndex = month - 1 + months;
+  const targetYear = year + Math.floor(monthIndex / 12);
+  const targetMonth = monthIndex % 12;
+  const targetLastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+  const sourceLastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const targetDay = day === sourceLastDay ? targetLastDay : Math.min(day, targetLastDay);
+  return `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`;
+}
+
+function formatSingaporeIso(iso: string): string {
+  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 }

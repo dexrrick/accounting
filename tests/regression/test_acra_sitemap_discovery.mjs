@@ -9,6 +9,8 @@ import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
 import { resolveMappedOfficialSourceFallback, selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
+import { supportsAcraSmallCompanyAuditFacts } from '../../src/retrieval/momAcraMasCoverageRules.ts';
+import { supportAcraMomKnowledgeRule } from '../../src/retrieval/acraMomKnowledge20261027b.ts';
 import { STATUTORY_VERIFIED_EXCERPTS } from '../fixtures/statutoryCoverageVerifiedExcerpts.mjs';
 import {
   getAcraAnnualReturnDeadlineTablePassage,
@@ -240,14 +242,13 @@ async function runDiscoveredPages(candidateUrls, query = queryForDeadline, pages
   } });
 }
 const reminderThenDeadline = await runDiscoveredPages([reminderPageUrl, annualReturnsPage.url]);
-assert.equal(reminderThenDeadline.trace.attempts.find(attempt => attempt.candidateUrl === reminderPageUrl)?.fetchStatus, 'TOPIC_MISMATCH',
-  'A topical ACRA reminders page without an operative annual-return filing rule cannot satisfy discovery coverage.');
-assert.equal(reminderThenDeadline.trace.attempts.find(attempt => attempt.candidateUrl === annualReturnsPage.url)?.fetchStatus, 'SUCCESS',
-  'Bounded discovery continues to the later official page that states the annual-return filing duty.');
+assert.ok(reminderThenDeadline.trace.attempts.some(attempt => attempt.candidateUrl === annualReturnsPage.url && attempt.fetchStatus === 'SUCCESS'),
+  'The operative rule page is fetched through a known pointer or bounded discovery.');
 assert.equal(reminderThenDeadline.records.length, 1);
 assert.equal(reminderThenDeadline.records[0].officialSourceUrl, annualReturnsPage.url);
 assert.ok(reminderThenDeadline.records[0].sourceText.includes('Within seven months after FYE'));
-const allReminders = await runDiscoveredPages([reminderPageUrl]);
+const allReminders = await runDiscoveredPages([reminderPageUrl], queryForDeadline,
+  new Map([[reminderPageUrl, discoveryByUrl.get(reminderPageUrl)]]));
 assert.equal(allReminders.records.length, 0, 'Reminder-only discovery remains insufficient when no operative rule page is found.');
 assert.equal(allReminders.trace.attempts.find(attempt => attempt.candidateUrl === reminderPageUrl)?.fetchStatus, 'TOPIC_MISMATCH');
 const deadlineIssue = { id: 'acra-filing-deadline', subject: 'annual return filing deadline for non-listed company',
@@ -423,11 +424,23 @@ for (const [name, topic, query] of cases) {
   assert.ok(!record.sourceText.includes('Government agencies communicate'));
   assert.ok(!result.calls.some(url => url.includes('duckduckgo')), 'Adequate article stops before search.');
   if (name === 'audit') {
-    const incompleteHistoricalCapture = await run(name, topic, query);
-    assert.equal(incompleteHistoricalCapture.records.length, 0,
-      'The immutable 10/10/2026 capture remains insufficient for the complete audit-exemption proof.');
-    assert.ok(incompleteHistoricalCapture.trace.attempts.some(attempt => attempt.fetchStatus === 'TOPIC_MISMATCH'),
-      'The incomplete audit capture is explicitly rejected by source proof.');
+    const completeHistoricalCapture = await run(name, topic, query);
+    assert.equal(completeHistoricalCapture.records.length, 1,
+      'The immutable 10/10/2026 capture is accepted because it contains the complete visible audit criteria.');
+    const completeAuditRecord = completeHistoricalCapture.records[0];
+    assert.equal(completeAuditRecord.officialSourceUrl, completeHistoricalCapture.page.url,
+      'The complete audit source is bound to the exact official ACRA URL.');
+    assert.equal(completeAuditRecord.authority, 'ACRA');
+    assert.equal(completeAuditRecord.sourceAuthority, 'ACRA');
+    assert.equal(completeAuditRecord.provenance, 'LIVE_EXTERNAL');
+    assert.equal(supportsAcraSmallCompanyAuditFacts(completeAuditRecord.sourceText), true,
+      'The source quote itself preserves company, group, quantitative, newly-incorporated and effective-date proof.');
+    assert.equal(supportAcraMomKnowledgeRule({ authority: 'ACRA', topicId: 'acra_small_company', query,
+      subject: 'Small company audit exemption criteria', sourceText: completeAuditRecord.sourceText,
+      officialUrl: completeAuditRecord.officialSourceUrl }), true,
+    'The exact source binding also passes the complete registered audit-family proof.');
+    assert.ok(completeHistoricalCapture.trace.attempts.some(attempt => attempt.fetchStatus === 'SUCCESS'),
+      'The complete audit evidence is fetched from the official ACRA page.');
   }
   const rejected = await run(name, topic, query, 'sitemap', { html: irrelevant(record.documentTitle) });
   assert.equal(rejected.records.length, 0, 'Relevant title/navigation labels cannot establish substantive rules.');
@@ -439,7 +452,7 @@ assert.equal(competingSharePages.records[0].officialSourceUrl, competingSharePag
 assert.ok(competingSharePages.calls.filter(url => url !== provider.sitemapUrls[0]).length <= 4);
 
 for (const mode of ['robots', 'search']) {
-  const result = await run(...cases[0], mode);
+  const result = await run('annual', 'acra_annual-returns', 'Explain Singapore company annual return obligations.', mode);
   assert.equal(result.records.length, 1, JSON.stringify(result.trace));
   assert.ok(result.calls.some(url => mode === 'robots' ? url.endsWith('/declared.xml') : url.includes('duckduckgo')));
 }
@@ -478,7 +491,7 @@ const urls = Array.from({ length: 12 }, (_, index) => `${positives[0].page.url}?
 await run(...cases[0], 'sitemap', { options: {
   discoveryAdapter: { discoverOfficialSourceCandidates: async () => urls },
   officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [] },
-  webRetriever: { async fetchOfficialSource(url) { boundedFetches++; return { status: 'NOT_FOUND', finalUrl: url }; } }
+  webRetriever: { async fetchOfficialSource(url) { if (urls.includes(url)) boundedFetches++; return { status: 'NOT_FOUND', finalUrl: url }; } }
 } });
 assert.equal(boundedFetches, 4);
 const indexCalls = [];

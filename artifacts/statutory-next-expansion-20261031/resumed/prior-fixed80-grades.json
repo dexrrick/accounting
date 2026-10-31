@@ -1,0 +1,487 @@
+{
+  "reviewer": "/root/fixed100_grading",
+  "scope": "Complete original/enriched answers independently graded before resumption; ACRA20 pending; unchanged responses may inherit grades only by byte identity.",
+  "captures": "resumed/before/fixed100-{original,enriched}.json",
+  "rows": [
+    {
+      "id": "iras-input-tax-01",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-input-tax-02",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-input-tax-03",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-input-tax-04",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-input-tax-05",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-gst-filing-01",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-gst-filing-02",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-gst-filing-03",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-gst-filing-04",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-gst-filing-05",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-eci-01",
+      "authority": "IRAS",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-eci-02",
+      "authority": "IRAS",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-eci-03",
+      "authority": "IRAS",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-eci-04",
+      "authority": "IRAS",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-eci-05",
+      "authority": "IRAS",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "iras-withholding-tax-01",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "iras-withholding-tax-02",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "iras-withholding-tax-03",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "iras-withholding-tax-04",
+      "authority": "IRAS",
+      "original": "PARTIAL",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "iras-withholding-tax-05",
+      "authority": "IRAS",
+      "original": "CORRECT",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "cpf-additional-wages-definition-01",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-additional-wages-definition-02",
+      "authority": "CPF",
+      "original": "PARTIAL",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "cpf-additional-wages-definition-03",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-additional-wages-definition-04",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-due-date-01",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-due-date-02",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-due-date-03",
+      "authority": "CPF",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "cpf-cpf-due-date-04",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-01",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-02",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-03",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-rate-factors-04",
+      "authority": "CPF",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-01",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-02",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-03",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-aw-ceiling-04",
+      "authority": "CPF",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-01",
+      "authority": "CPF",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-02",
+      "authority": "CPF",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-03",
+      "authority": "CPF",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "cpf-cpf-bonus-classification-04",
+      "authority": "CPF",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-salary-timing-01",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-salary-timing-02",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-salary-timing-03",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-salary-timing-04",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-final-salary-01",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-final-salary-02",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-final-salary-03",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-final-salary-04",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-annual-leave-01",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-annual-leave-02",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-annual-leave-03",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-annual-leave-04",
+      "authority": "MOM",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "mom-salary-deductions-01",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-salary-deductions-02",
+      "authority": "MOM",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "mom-salary-deductions-03",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-salary-deductions-04",
+      "authority": "MOM",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mom-overtime-eligibility-01",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-overtime-eligibility-02",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-overtime-eligibility-03",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mom-overtime-eligibility-04",
+      "authority": "MOM",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-fund-management-licence-01",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-fund-management-licence-02",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-fund-management-licence-03",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-fund-management-licence-04",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-vcfm-01",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-vcfm-02",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-vcfm-03",
+      "authority": "MAS",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "mas-vcfm-04",
+      "authority": "MAS",
+      "original": "PARTIAL",
+      "enriched": "PARTIAL"
+    },
+    {
+      "id": "mas-class-exemptions-01",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-class-exemptions-02",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-class-exemptions-03",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-class-exemptions-04",
+      "authority": "MAS",
+      "original": "CORRECT",
+      "enriched": "CORRECT"
+    },
+    {
+      "id": "mas-qdc-reporting-01",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-qdc-reporting-02",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-qdc-reporting-03",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-qdc-reporting-04",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-regulatory-notifications-01",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-regulatory-notifications-02",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-regulatory-notifications-03",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    },
+    {
+      "id": "mas-regulatory-notifications-04",
+      "authority": "MAS",
+      "original": "UNSUPPORTED",
+      "enriched": "UNSUPPORTED"
+    }
+  ]
+}

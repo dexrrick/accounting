@@ -1,0 +1,6 @@
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=66.1ms (first_vis=66.06ms, gemini=18.14ms, ground=33ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=57.12ms (first_vis=57.12ms, gemini=0.9ms, ground=41ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=29.61ms (first_vis=29.61ms, gemini=0ms, ground=22ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=30.62ms (first_vis=30.61ms, gemini=0.75ms, ground=24ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=61.84ms (first_vis=58.01ms, gemini=1ms, ground=0ms, post=3ms) | tokens: in=0, out=0, think=0
+Semantic question understanding and guarded routing regressions passed.

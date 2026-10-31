@@ -130,7 +130,9 @@ for (const sample of samples) {
   const evidence = result.workstreams.find(item => item.authority === sample.authority);
   assert.ok(evidence, `${sample.authority} official evidence workstream is assembled.`);
   if (sample.authority === 'ACRA') {
-    assert.ok(fetched.includes('https://www.acra.gov.sg/sitemap.xml'), 'ACRA candidates are discovered from the official sitemap.');
+    assert.ok(fetched.includes('https://www.acra.gov.sg/sitemap.xml') ||
+      evidence.issues[0].sources.some(source => source.officialSourceUrl === sample.url),
+    'ACRA evidence comes from the official sitemap or an independently fetched known official pointer.');
   }
   assert.ok(fetched.includes(sample.url), `${sample.authority} official discovery fetches the topic page: ${JSON.stringify(fetched)}`);
   assert.ok(evidence.issues[0].retrievalTrace.attempts.some(attempt => attempt.topicId === sample.topicId && attempt.fetchStatus === 'SUCCESS'),

@@ -26,6 +26,9 @@ export function querySingaporeStatutes(query: string): SingaporeStatuteRule[] {
   const scoredResults: { rule: SingaporeStatuteRule; score: number }[] = [];
 
   for (const rule of Object.values(SINGAPORE_STATUTORY_REPOSITORY)) {
+    // Avoid selecting a VCC-only rule for an ordinary company's annual return.
+    if (rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'
+        && !/\b(?:vccs?|variable\s+capital\s+compan(?:y|ies))\b/i.test(query)) continue;
     let matchScore = 0;
     for (const tag of rule.tags) if (q.includes(tag)) matchScore += 8;
     if (q.includes(rule.sectionOrSchedule.toLowerCase())) matchScore += 10;

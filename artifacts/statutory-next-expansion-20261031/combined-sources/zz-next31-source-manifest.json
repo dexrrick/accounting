@@ -1,0 +1,164 @@
+{
+  "capturedOnSingaporeDate": "31/10/2026",
+  "purpose": "Native first-party ACRA pages retained for bounded offline development and regression replay; no source activation.",
+  "captureMethod": "Native response bytes from HTTPS fetch; fixtureSha256 records exact retained bytes.",
+  "sources": [
+    {
+      "authority": "ACRA",
+      "title": "Due dates and requirements for annual general meetings (AGMs)",
+      "fixture": "acra-agm-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "topicIds": [
+        "acra_agm"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.269Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "89cd923e7dd652935dca26b2cfed7e8a4a2674d48253bafbcb00022a3ae2d3ce",
+      "byteLength": 498026
+    },
+    {
+      "authority": "ACRA",
+      "title": "Step 4.2: Choosing a company’s financial year end (FYE)",
+      "fixture": "acra-fye-native.html",
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/choosing-a-companys-financial-year-end/",
+      "finalResponseUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/choosing-a-companys-financial-year-end/",
+      "topicIds": [
+        "acra_annual-returns"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.305Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "dce3a0f9f300b06def396908e793fccf93bacd29873d0f3da12c637b2e680167",
+      "byteLength": 530973
+    },
+    {
+      "authority": "ACRA",
+      "title": "Deadline and requirements for annual returns",
+      "fixture": "acra-annual-return-deadlines-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "topicIds": [
+        "acra_annual-returns"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.370Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "0bd30bad5f99825f23afcf87fbc3cbb42890818bfb5ce1607e82379007c65319",
+      "byteLength": 502072
+    },
+    {
+      "authority": "ACRA",
+      "title": "Audit exemptions: Small company concept",
+      "fixture": "acra-audit-exemptions-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "topicIds": [
+        "acra_small_company",
+        "acra_audit-requirements"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.401Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "d03731c7113fe32af7baef1c465d2a5257b12eb5e6ba5907dafeaa6415b35b77",
+      "byteLength": 501674
+    },
+    {
+      "authority": "ACRA",
+      "title": "Financial statements: Filing requirements & exemptions",
+      "fixture": "acra-xbrl-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "topicIds": [
+        "acra_financial_statements",
+        "acra_xbrl"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.423Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "8e13816db7c87bfbb05195244c6397f0ed70ccd583ef468ddbd0d1be6b98d39f",
+      "byteLength": 781334
+    },
+    {
+      "authority": "ACRA",
+      "title": "Appointing company directors and other key officers",
+      "fixture": "acra-officers-native.html",
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "finalResponseUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "topicIds": [
+        "acra_company-secretary",
+        "acra_directors"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.448Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "3de7976dc7e46210e631ab630f5a4f950aa8e21740a9cfaa10bdf2f279cb56b8",
+      "byteLength": 547648
+    },
+    {
+      "authority": "ACRA",
+      "title": "Updating company information, officers & shareholders",
+      "fixture": "acra-updating-company-information-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/maintaining-local-companys-information-registers/updating-company-information-officers-shareholders/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/maintaining-local-companys-information-registers/updating-company-information-officers-shareholders/",
+      "topicIds": [
+        "acra-entity-information-changes"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.472Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "7975307f6f32e45f6b1e44414aa4f2eba937ade389f628d99900b5f9a0480596",
+      "byteLength": 544460
+    },
+    {
+      "authority": "ACRA",
+      "title": "Reporting a position holder’s resignation or disqualification",
+      "fixture": "acra-position-holder-resignation-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/resignation-or-disqualification-company-directors/reporting/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/resignation-or-disqualification-company-directors/reporting/",
+      "topicIds": [
+        "acra-entity-information-changes",
+        "acra_company-secretary"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.507Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "3043c1f568a1064712e8482885e308c184b2648b559c19edd6c10a7799887a43",
+      "byteLength": 510985
+    },
+    {
+      "authority": "ACRA",
+      "title": "Applying for an extension of time (EOT) to file annual returns",
+      "fixture": "acra-annual-return-extension-native.html",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+      "finalResponseUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+      "topicIds": [
+        "acra_annual-returns"
+      ],
+      "retrievedAtUTC": "2026-10-30T22:34:35.542Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "fixtureSha256": "c499fec77bd21c311bb7140b6ca74d930543806f6cc6a4b1f0ffd9ab890d5244",
+      "byteLength": 548305
+    }
+  ]
+}

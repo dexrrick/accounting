@@ -218,10 +218,16 @@ assert.equal(provesMomSalaryPaymentSource(wagesQuery, nativeSalaryFixtureText), 
   'The MOM rule remains complete with the fetched page’s native paragraph and list boundaries.');
 assert.equal(provesMomSalaryPaymentSource(wagesQuery, salaryFixtureText), true,
   'The natural wages query is proved by the retained page’s separate monthly-pay and seven-day statements.');
+const twoMonthlyPayQuery = 'We want to pay salary every two months because our shop is seasonal. Is that allowed for an employee covered by the Employment Act?';
+assert.equal(provesMomSalaryPaymentSource(twoMonthlyPayQuery, nativeSalaryFixtureText), true,
+  'A proposed two-month salary interval is checked against MOM’s monthly frequency and deadline guidance.');
 assert.equal(supportMomSalaryPaymentIssue(wagesQuery, regularSalarySubject, salaryFixtureText), true,
   'Full-source issue ownership accepts the same retained MOM page for the wages paraphrase.');
 assert.equal(supportMomSalaryPaymentIssue(bareSalaryDeadlineQuery, regularSalarySubject, salaryFixtureText), true,
   'A bare salary deadline question remains owned when it names the salary period and has no final-pay or overtime context.');
+assert.equal(supportMomSalaryPaymentIssue(twoMonthlyPayQuery,
+  'MOM salary payment frequency and statutory deadline', nativeSalaryFixtureText), true,
+  'The mapped frequency issue accepts the exact current monthly-payment rule despite its statutory-deadline label.');
 assert.ok(selectMomSalaryPaymentRuleQuote(bareSalaryDeadlineQuery, nativeSalaryFixtureText),
   'The bare salary deadline uses the same complete exact-source span.');
 assert.equal(supportMomSalaryPaymentIssue('When must wages be paid after the pay period?', regularSalarySubject, salaryFixtureText), undefined,

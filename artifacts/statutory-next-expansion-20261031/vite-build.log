@@ -1,0 +1,128 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/externalSourceValidator.ts:1:48). Add the file extension
+  - import "./acraAnnualReturnFilingRule" without a file extension (src/retrieval/externalSourceValidator.ts:5:8). Add the file extension
+  - import "./statutoryAdvisorySupport" without a file extension (src/retrieval/externalSourceValidator.ts:10:8). Add the file extension
+  - import "./sourceAdapters" without a file extension (src/retrieval/externalSourceValidator.ts:11:66). Add the file extension
+  - import "./acraMomKnowledge20261027b" without a file extension (src/retrieval/externalSourceValidator.ts:15:8). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/acraAnnualReturnFilingRule.ts:1:49). Add the file extension
+  - import "../utils/authorityEvidencePresentation" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:5:8). Add the file extension
+  - import "../utils/evidenceTextBoundaries" without a file extension (src/retrieval/statutoryAdvisorySupport.ts:1:53). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/retrieval/sourceAdapters.ts:1:63). Add the file extension
+  - import "../utils/authorityEvidencePresentation" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:6:49). Add the file extension
+  - import "./masCmsRuleSupport" without a file extension (src/retrieval/statutoryAdvisorySupport.ts:2:60). Add the file extension
+  - import "./liveRegulatoryFeed" without a file extension (src/retrieval/sourceAdapters.ts:2:64). Add the file extension
+  - import "./sourceAdapters" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:7:66). Add the file extension
+  - import "./acraAnnualReturnFilingRule" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:8:57). Add the file extension
+  - import "./controlledWebRetriever" without a file extension (src/retrieval/sourceAdapters.ts:3:45). Add the file extension
+  - import "./statutoryCommencementScope" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:9:46). Add the file extension
+  - import "../types/accounting" without a file extension (src/retrieval/sourceAdapters.ts:4:41). Add the file extension
+  - import "./targetDateResolver" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:10:43). Add the file extension
+  - import "../standards/sourceVersioning" without a file extension (src/retrieval/sourceAdapters.ts:5:53). Add the file extension
+  - import "./momAcraMasCoverageRules" without a file extension (src/retrieval/acraMomKnowledge20261027b.ts:11:92). Add the file extension
+  - import "./statutoryAdvisorySupport" without a file extension (src/retrieval/masCmsRuleSupport.ts:1:59). Add the file extension
+  - import "./unifiedSourceModel" without a file extension (src/standards/sourceVersioning.ts:1:91). Add the file extension
+  - import "../utils/authorityEvidencePresentation" without a file extension (src/retrieval/momAcraMasCoverageRules.ts:5:8). Add the file extension
+  - import "../types/authorityEvidence" without a file extension (src/utils/authorityEvidencePresentation.ts:1:100). Add the file extension
+  - import "../utils/dateUtils" without a file extension (src/retrieval/targetDateResolver.ts:11:40). Add the file extension
+  - import "../utils/authorityEvidencePresentation" without a file extension (src/retrieval/momAcraMasCoverageRules.ts:6:49). Add the file extension
+  - import "./masLicensingComparisonPolicy" without a file extension (src/standards/sourceVersioning.ts:9:8). Add the file extension
+  - import "../types/authorityEvidence" without a file extension (src/utils/authorityEvidencePresentation.ts:2:74). Add the file extension
+  - import "./targetDateResolver" without a file extension (src/retrieval/momAcraMasCoverageRules.ts:7:63). Add the file extension
+  - import "./statutoryDateScope" without a file extension (src/retrieval/targetDateResolver.ts:12:52). Add the file extension
+  - import "../services/semanticQuestionUnderstanding" without a file extension (src/utils/authorityEvidencePresentation.ts:3:40). Add the file extension
+  - import "./statutoryCommencementScope" without a file extension (src/retrieval/targetDateResolver.ts:13:76). Add the file extension
+  - import "../verification/claimEvidenceVerifier" without a file extension (src/utils/authorityEvidencePresentation.ts:4:44). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/utils/authorityEvidencePresentation.ts:5:73). Add the file extension
+  - import "../services/requestCompleteness" without a file extension (src/utils/authorityEvidencePresentation.ts:9:8). Add the file extension
+  - import "./statutoryLinkResolver" without a file extension (src/utils/authorityEvidencePresentation.ts:10:36). Add the file extension
+  - import "../standards/singaporeStatutesKnowledge" without a file extension (src/utils/statutoryLinkResolver.ts:1:72). Add the file extension
+  - import "./rawRequestInventory" without a file extension (src/services/requestCompleteness.ts:11:8). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/utils/statutoryLinkResolver.ts:2:76). Add the file extension
+  - import "./semanticQuestionUnderstanding" without a file extension (src/services/requestCompleteness.ts:16:8). Add the file extension
+  - import "../types/accounting" without a file extension (src/utils/statutoryLinkResolver.ts:3:41). Add the file extension
+  - import "../standards/approvedSourceRegistry" without a file extension (src/utils/statutoryLinkResolver.ts:4:100). Add the file extension
+  - import "../types/accounting" without a file extension (src/standards/singaporeStatutesKnowledge.ts:1:62). Add the file extension
+  - import "../types/accounting" without a file extension (src/standards/unifiedSourceModel.ts:1:54). Add the file extension
+  - import "../classification/questionClassifier" without a file extension (src/services/semanticQuestionUnderstanding.ts:1:85). Add the file extension
+  - import "./standardsKnowledge" without a file extension (src/standards/unifiedSourceModel.ts:2:38). Add the file extension
+  - import "./statutes/acra" without a file extension (src/standards/singaporeStatutesKnowledge.ts:2:36). Add the file extension
+  - import "../standards/coverageRegistry" without a file extension (src/services/semanticQuestionUnderstanding.ts:2:47). Add the file extension
+  - import "./singaporeStatutesKnowledge" without a file extension (src/standards/unifiedSourceModel.ts:3:48). Add the file extension
+  - import "./statutes/cpf" without a file extension (src/standards/singaporeStatutesKnowledge.ts:3:35). Add the file extension
+  - import "../standards/coverageRegistry" without a file extension (src/services/semanticQuestionUnderstanding.ts:3:40). Add the file extension
+  - import "./sourceFreshnessManager" without a file extension (src/standards/unifiedSourceModel.ts:8:8). Add the file extension
+  - import "./statutes/gst" without a file extension (src/standards/singaporeStatutesKnowledge.ts:4:35). Add the file extension
+  - import "../retrieval/queryTopicResolver" without a file extension (src/services/semanticQuestionUnderstanding.ts:4:90). Add the file extension
+  - import "./sourceVersioning" without a file extension (src/standards/unifiedSourceModel.ts:9:48). Add the file extension
+  - import "../retrieval/statutoryCommencementScope" without a file extension (src/services/semanticQuestionUnderstanding.ts:5:76). Add the file extension
+  - import "./approvedSourceRegistry" without a file extension (src/standards/unifiedSourceModel.ts:10:70). Add the file extension
+  - import "./statutes/iras" without a file extension (src/standards/singaporeStatutesKnowledge.ts:5:36). Add the file extension
+  - import "../retrieval/acraAnnualReturnFilingRule" without a file extension (src/services/semanticQuestionUnderstanding.ts:6:52). Add the file extension
+  - import "./coverageRegistry" without a file extension (src/standards/unifiedSourceModel.ts:11:74). Add the file extension
+  - import "./sourceFreshnessManager" without a file extension (src/standards/unifiedSourceModel.ts:19:38). Add the file extension
+  - import "./statutes/mas" without a file extension (src/standards/singaporeStatutesKnowledge.ts:6:35). Add the file extension
+  - import "./statutes/mom" without a file extension (src/standards/singaporeStatutesKnowledge.ts:7:35). Add the file extension
+  - import "../engine/acraAnnualReturnApplication" without a file extension (src/services/semanticQuestionUnderstanding.ts:7:93). Add the file extension
+  - import "./statutes/types" without a file extension (src/standards/singaporeStatutesKnowledge.ts:8:43). Add the file extension
+  - import "../types/provider" without a file extension (src/services/semanticQuestionUnderstanding.ts:8:39). Add the file extension
+  - import "./statutes/types" without a file extension (src/standards/singaporeStatutesKnowledge.ts:10:43). Add the file extension
+  - import "./aiTransport" without a file extension (src/services/semanticQuestionUnderstanding.ts:9:75). Add the file extension
+  - import "./requestCompleteness" without a file extension (src/services/semanticQuestionUnderstanding.ts:13:8). Add the file extension
+  - import "./requestedTopicOwnership" without a file extension (src/services/semanticQuestionUnderstanding.ts:18:8). Add the file extension
+  - import "../utils/journalRequestIntent" without a file extension (src/services/semanticQuestionUnderstanding.ts:19:79). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/acra.ts:1:43). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/iras.ts:1:43). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/mom.ts:1:43). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/cpf.ts:1:43). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/mas.ts:1:43). Add the file extension
+  - import "./types" without a file extension (src/standards/statutes/gst.ts:1:43). Add the file extension
+  - import "./unifiedSourceModel" without a file extension (src/standards/sourceFreshnessManager.ts:1:48). Add the file extension
+  - import "../types/accounting" without a file extension (src/standards/standardsKnowledge.ts:1:59). Add the file extension
+  - import "../types/accounting" without a file extension (src/standards/coverageRegistry.ts:1:54). Add the file extension
+  - import "../standards/coverageRegistry" without a file extension (src/services/requestedTopicOwnership.ts:1:62). Add the file extension
+  - import "../types/conversationState" without a file extension (src/retrieval/queryTopicResolver.ts:6:8). Add the file extension
+  - import "../standards/coverageRegistry" without a file extension (src/classification/questionClassifier.ts:1:71). Add the file extension
+  - import "../types/authorityEvidence" without a file extension (src/engine/acraAnnualReturnApplication.ts:1:71). Add the file extension
+  - import "../types/provider" without a file extension (src/services/aiTransport.ts:10:39). Add the file extension
+  - import "../utils/dateUtils" without a file extension (src/standards/sourceFreshnessManager.ts:2:40). Add the file extension
+  - import "./rawRequestInventory" without a file extension (src/services/requestedTopicOwnership.ts:8:8). Add the file extension
+  - import "../retrieval/queryTopicResolver" without a file extension (src/classification/questionClassifier.ts:2:43). Add the file extension
+  - import "../standards/unifiedSourceModel" without a file extension (src/engine/acraAnnualReturnApplication.ts:2:76). Add the file extension
+  - import "../services/transactionUnderstandingService" without a file extension (src/retrieval/queryTopicResolver.ts:7:47). Add the file extension
+  - import "../retrieval/statutoryDateScope" without a file extension (src/classification/questionClassifier.ts:3:52). Add the file extension
+  - import "../verification/claimEvidenceVerifier" without a file extension (src/engine/acraAnnualReturnApplication.ts:3:44). Add the file extension
+  - import "../standards/coverageRegistry" without a file extension (src/retrieval/queryTopicResolver.ts:12:8). Add the file extension
+  - import "./geminiProxyTransport" without a file extension (src/services/aiTransport.ts:11:29). Add the file extension
+  - import "../utils/journalRequestIntent" without a file extension (src/classification/questionClassifier.ts:4:47). Add the file extension
+  - import "../retrieval/acraAnnualReturnFilingRule" without a file extension (src/engine/acraAnnualReturnApplication.ts:8:8). Add the file extension
+  - import "../standards/semanticAccountingRules" without a file extension (src/retrieval/queryTopicResolver.ts:16:8). Add the file extension
+  - import "../utils/dateUtils" without a file extension (src/engine/acraAnnualReturnApplication.ts:9:61). Add the file extension
+  - import "../utils/journalRequestIntent" without a file extension (src/retrieval/queryTopicResolver.ts:21:8). Add the file extension
+  - import "../types/conversationState" without a file extension (src/standards/semanticAccountingRules.ts:6:8). Add the file extension
+  - import "../retrieval/retrievalConfig" without a file extension (src/standards/semanticAccountingRules.ts:7:34). Add the file extension
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+vite v8.3.1 building client environment for production...
+transforming...
+✓ 2018 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                              0.97 kB │ gzip:   0.51 kB
+dist/assets/pdf.worker.min-Dkey6ZUl.mjs  1,321.30 kB
+dist/assets/index-BScSUBev.css              55.48 kB │ gzip:   9.87 kB
+dist/assets/pdf.worker.min-WWY7VKxM.js       0.06 kB │ gzip:   0.08 kB
+dist/assets/pdf-K_hI6WaP.js                488.17 kB │ gzip: 148.19 kB
+dist/assets/index-U9waaOtE.js            2,440.81 kB │ gzip: 668.53 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 15.69s
+[PLUGIN_TIMINGS] JavaScript callbacks ran for 2.3s of this 15.7s build (15%).
+The slowest callbacks, timed inside each callback (the wait before a callback starts is excluded, the time it awaits is included):
+  - plugin vite:css transform (12%, 1.8s, 1 call)
+  - plugin vite:asset load (10%, 1.6s, 1 call)
+These rows add up to more than the total. Callbacks can overlap, so the same time counts for more than one row.
+See https://rolldown.rs/reference/InputOptions.checks#bundlertimings for more details.
+

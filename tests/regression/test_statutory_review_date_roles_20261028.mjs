@@ -6,6 +6,28 @@ import { ACRA_MOM_KNOWLEDGE_RULES_20261027B, supportAcraMomKnowledgeRule, select
 
 const resolver = new TargetDateResolver();
 const currentDate = '2026-10-28';
+assert.equal(resolver.resolveAuthorityEvidenceDate('For YA 2023, may we shred our company bank statements once we submit the tax return?', currentDate).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'An explicit YA used to determine a record-retention end date is a case fact, not a request for the historical rule version.');
+assert.notEqual(resolver.resolveAuthorityEvidenceDate('What record-retention law applied in YA 2023?', currentDate).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'An explicit past-law question remains subject to historical-version evidence.');
+assert.equal(resolver.resolveAuthorityEvidenceDate('Our VCFM appointed a director on 4 May 2026. Which notification form and deadline appear in the current VCFM toolkit?', currentDate).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'A dated VCFM appointment is treated as an event date for current notification guidance.');
+assert.notEqual(resolver.resolveAuthorityEvidenceDate('Which Form 23A rules applied to a VCFM appointment on 4 May 2023?', currentDate).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'A past VCFM appointment with explicit historical-rule intent retains its historical scope.');
+const mixedVcfmAcraDate = 'Our VCFM appointed a director on 4 May 2026. Which notification appears in the current VCFM toolkit? Separately, did our ACRA annual return filing that day require CEO confirmation?';
+assert.deepEqual(
+  (({ targetDate, confidence, source, isHistorical }) => ({ targetDate, confidence, source, isHistorical }))(
+    resolver.resolveAuthorityEvidenceDate(mixedVcfmAcraDate, currentDate)),
+  { targetDate: '2026-05-04', confidence: 'HIGH', source: 'EXPLICIT', isHistorical: true },
+  'A separate ACRA filing question prevents the VCFM current-workflow rule from consuming the explicit May date.'
+);
+const mixedVcfmCompanyAnnualReturnDate = 'Our VCFM appointed a director on 4 May 2026. Which notification appears in the current VCFM toolkit? Separately, did our company annual return filing that day require CEO confirmation?';
+assert.deepEqual(
+  (({ targetDate, confidence, source, isHistorical }) => ({ targetDate, confidence, source, isHistorical }))(
+    resolver.resolveAuthorityEvidenceDate(mixedVcfmCompanyAnnualReturnDate, currentDate)),
+  { targetDate: '2026-05-04', confidence: 'HIGH', source: 'EXPLICIT', isHistorical: true },
+  'An acronym-free separate company annual-return obligation also prevents whole-query VCFM date resolution.'
+);
 const whtRule = IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_WHT_FILING_DATE');
 assert.ok(whtRule);
 const whtSource = readFileSync(new URL(`../fixtures/statutoryKnowledge20261027b/${whtRule.fixture}`, import.meta.url), 'utf8');
@@ -22,6 +44,37 @@ for (const [query, date] of [
   assert.equal(supportIrasMasKnowledgeRule({ authority: 'IRAS', topicId: 'iras-wht-filing-payment-due-date',
     query, subject: whtSubject, sourceText: whtSource, officialUrl: whtRule.officialUrl }), true,
   'The current WHT filing rule supports an ordinary dated payment question.');
+}
+
+const eciRule = IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_ECI_PRACTICAL_WAIVER');
+assert.ok(eciRule);
+const eciSource = readFileSync(new URL(`../fixtures/statutoryKnowledge20261027b/${eciRule.fixture}`, import.meta.url), 'utf8');
+const currentCompanyFye = 'Our company year ended 30 June 2026. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?';
+assert.equal(resolver.resolveTargetDate(currentCompanyFye, currentDate).targetDate, '2026-06-30',
+  'the general date resolver continues to expose the supplied FYE fact');
+assert.equal(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
+  'a current-year company-owned ECI FYE does not set the source-law date');
+assert.equal(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, currentDate).targetDate, undefined);
+assert.notEqual(resolver.resolveAuthorityEvidenceDate(currentCompanyFye, '2027-01-02').dateRole, 'CURRENT_WORKFLOW_FACT',
+  'the workflow-year boundary follows the supplied reference date');
+const abbreviatedCompanyFye = 'Our company year ended 30 Jun 2026. When is ECI due?';
+assert.equal(resolver.resolveAuthorityEvidenceDate(abbreviatedCompanyFye, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
+  'the exact canonical month abbreviation Jun remains accepted');
+assert.equal(supportIrasMasKnowledgeRule({ authority: 'IRAS', topicId: 'iras-cit-eci', query: currentCompanyFye,
+  subject: 'Company ECI filing and due date', sourceText: eciSource, officialUrl: eciRule.officialUrl }), true,
+  'the retained IRAS ECI source supports the current-year FYE workflow question');
+for (const query of [
+  'The supplier company year ended 30 June 2026. When is ECI due?',
+  'Our company year ended 30 June 2026. The supplier invoice was due 15 September 2026. When is ECI due?',
+  'Our company year ended 30 Junk 2026. When is ECI due?',
+  'Our company year ended 30 Juny 2026. When is ECI due?',
+  'Our company year ended 31 February 2026. When is ECI due?',
+  'Our company year ended 30 June 2025. When is ECI due?',
+  'Our company year ended 30 June 2026. Which ECI rules were in force for that period?',
+  'Our company year ended 30 June 2026. When is ECI due, and what journal entry should I post?'
+]) {
+  assert.notEqual(resolver.resolveAuthorityEvidenceDate(query, currentDate).dateRole, 'CURRENT_WORKFLOW_FACT',
+    `a third-party, competing, invalid, old, or legal-version date retains its date scope: ${query}`);
 }
 
 const mixedWht = 'A contract was signed on 15 March 2025 and we paid a non-resident on 1 October 2026. Which WHT filing deadline applies?';

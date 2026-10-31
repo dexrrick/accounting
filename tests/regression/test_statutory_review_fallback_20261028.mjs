@@ -50,10 +50,12 @@ refined(
   'Can a licensed investment manager use the MAS LFMC compliance toolkit as a complete checklist for the funds it manages, including duties outside the Securities and Futures Act?',
   'mas-lfmc', { domain: 'MAS_FUNDS', population: 'COMPANY', subject: /MAS LFMC toolkit scope and fund-level requirements/i }
 );
-refined(
+const currentCeoConfirmation = refined(
   'Does the October 2026 annual-return change ask whether somebody actually performs the CEO role?',
   'acra-annual-return-officer-particulars', { domain: 'ACRA_CORPORATE', population: 'COMPANY', subject: /ACRA annual return officer particulars/i }
 );
+assert.ok(currentCeoConfirmation.issue.contextualTopicIds?.includes('acra_annual-returns'),
+  'A current CEO-role confirmation question keeps the annual-return parent contextual.');
 refined(
   'For ACRA financial-statement filing, is meeting the small-company size limits enough to use Simplified XBRL if the company is publicly accountable?',
   'acra_xbrl', { domain: 'ACRA_CORPORATE', population: 'COMPANY', subject: /ACRA XBRL financial statement filing/i }

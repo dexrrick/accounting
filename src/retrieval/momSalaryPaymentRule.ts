@@ -31,8 +31,11 @@ function requestedRule(query: string): MomSalaryPaymentRuleKind | undefined {
   const explicitlyRegularSalary = /\b(?:regular|normal|monthly)\s+(?:salary|salaries|pay|wages?)\b/i.test(query);
   const asksBareSalaryPeriodDeadline = /\b(?:when|due|deadline|how soon|what date|by what date)\b/i.test(query) &&
     /\bsalary\b/i.test(query) && /\b(?:salary|pay)\s+period\b/i.test(query);
-  const asksRegularFrequency = /\b(?:how\s+often|frequency(?:\s+of)?)\b/i.test(query) &&
-    /\b(?:(?:regular\s+)?salar(?:y|ies)|wages?)\b/i.test(query) && /\b(?:pay|paid|payment|paying)\b/i.test(query) &&
+  const asksRegularFrequency = (
+    /\b(?:how\s+often|frequency(?:\s+of)?)\b/i.test(query) ||
+    /\b(?:pay|paying|payment)\b[^.!?;]{0,55}\bevery\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+months?\b/i.test(query)
+  ) && /\b(?:(?:regular\s+)?salar(?:y|ies)|wages?)\b/i.test(query) &&
+    /\b(?:pay|paid|payment|paying)\b/i.test(query) &&
     (!hasOvertimeContext || explicitlyRegularSalary);
   const asksRegularDate = /\b(?:when|due|deadline|how\s+soon|what date|by what date|can|may|is it permissible|is it okay)\b/i.test(query) &&
     (/\b(?:(?:regular|normal|monthly)\s+(?:salar(?:y|ies)|pay|wages?)|regular\s+pay)\b/i.test(query) || asksBareSalaryPeriodDeadline) &&
@@ -194,8 +197,9 @@ function isCompatibleSalaryIssueSubject(query: string, subject: string, kind: Mo
   if (/\b(?:final|commission|tax\s+clearance|resignation|termination|calculate|amount|historical|previous|former|old)\b/i.test(subject)) return false;
   if (kind === 'OVERTIME_SALARY') return /\bovertime\s+(?:salary|pay)\b/i.test(subject);
   return /\bregular\s+salary\b/i.test(subject) ||
-    /\bsalary\s+payment\s+frequency\s+and\s+due\s+dates?\b/i.test(subject) &&
-    /\bregular\s+salary\b/i.test(query);
+    /\bsalary\s+payment\s+frequency\s+and\s+(?:statutory\s+)?(?:due\s+dates?|deadlines?)\b/i.test(subject) &&
+    (/\bregular\s+salary\b/i.test(query) ||
+      /\b(?:pay|paying|payment)\b[^.!?;]{0,55}\bevery\s+(?:one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+months?\b/i.test(query));
 }
 
 /**

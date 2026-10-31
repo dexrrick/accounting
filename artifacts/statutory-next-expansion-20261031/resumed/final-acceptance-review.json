@@ -1,0 +1,605 @@
+{
+  "reviewer": "/root/final_acceptance_review",
+  "status": "INCOMPLETE_RESERVE_CHECKPOINT",
+  "Frozen75": {
+    "counts": {
+      "CORRECT": 30,
+      "PARTIAL": 8,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 37
+    },
+    "perAuthority": {
+      "IRAS": {
+        "CORRECT": 6,
+        "PARTIAL": 4,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 5
+      },
+      "CPF": {
+        "CORRECT": 7,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 8
+      },
+      "MOM": {
+        "CORRECT": 7,
+        "PARTIAL": 1,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 7
+      },
+      "ACRA": {
+        "CORRECT": 4,
+        "PARTIAL": 3,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 8
+      },
+      "MAS": {
+        "CORRECT": 6,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 9
+      }
+    },
+    "priorCorrectPreserved": "22/22",
+    "grades": [
+      {
+        "id": "iras-01",
+        "authority": "IRAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-02",
+        "authority": "IRAS",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-03",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-04",
+        "authority": "IRAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-05",
+        "authority": "IRAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-06",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-07",
+        "authority": "IRAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-08",
+        "authority": "IRAS",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-09",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "iras-10",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-11",
+        "authority": "IRAS",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-12",
+        "authority": "IRAS",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-13",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-14",
+        "authority": "IRAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "iras-15",
+        "authority": "IRAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-01",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-02",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-03",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-04",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-05",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-06",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-07",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-08",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "cpf-09",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-10",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-11",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-12",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-13",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-14",
+        "authority": "CPF",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "cpf-15",
+        "authority": "CPF",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-01",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-02",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-03",
+        "authority": "MOM",
+        "baselineGrade": "PARTIAL",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "mom-04",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "mom-05",
+        "authority": "MOM",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-06",
+        "authority": "MOM",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-07",
+        "authority": "MOM",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-08",
+        "authority": "MOM",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-09",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-10",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "mom-11",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-12",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-13",
+        "authority": "MOM",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-14",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mom-15",
+        "authority": "MOM",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "acra-01",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "acra-02",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-03",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "acra-04",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-05",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "acra-06",
+        "authority": "ACRA",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "acra-07",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "PARTIAL",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-08",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-09",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-10",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-11",
+        "authority": "ACRA",
+        "baselineGrade": "PARTIAL",
+        "grade": "PARTIAL",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-12",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "PARTIAL",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-13",
+        "authority": "ACRA",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-14",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "acra-15",
+        "authority": "ACRA",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "mas-01",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-02",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-03",
+        "authority": "MAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-04",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-05",
+        "authority": "MAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-06",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "CORRECT",
+        "reviewMethod": "INDEPENDENT_REVIEW_OR_CONFIRMED_BYTE_IDENTITY"
+      },
+      {
+        "id": "mas-07",
+        "authority": "MAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-08",
+        "authority": "MAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-09",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-10",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-11",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-12",
+        "authority": "MAS",
+        "baselineGrade": "CORRECT",
+        "grade": "CORRECT",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-13",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-14",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      },
+      {
+        "id": "mas-15",
+        "authority": "MAS",
+        "baselineGrade": "UNSUPPORTED",
+        "grade": "UNSUPPORTED",
+        "reviewMethod": "BYTE_IDENTICAL_TO_BASELINE"
+      }
+    ]
+  },
+  "Earlier60": {
+    "counts": {
+      "CORRECT": 58,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 2
+    },
+    "priorCorrectPreserved": "58/59",
+    "regression": "fresh29-acra-01: entity-email 14-day notification answer replaced by annual-return evidence gaps",
+    "unchangedUnsupported": "hold-mas-04"
+  },
+  "fresh15": {
+    "counts": {
+      "CORRECT": 4,
+      "PARTIAL": 0,
+      "INCORRECT": 0,
+      "UNSUPPORTED": 11
+    },
+    "correctIds": [
+      "fresh31-acra-05",
+      "fresh31-cpf-03",
+      "fresh31-mom-02",
+      "fresh31-mas-01"
+    ],
+    "notes": "All other eleven unsupported. CPF02 fabricated payroll journal removed; OW/AW question remains unanswered."
+  },
+  "limitations": [
+    "Code diff review incomplete",
+    "Fixed100 ACRA20 answer grading incomplete",
+    "Within-configuration Fixed100 answer preservation not fully reviewed",
+    "Fixed100 enriched acra-annual-returns-02 verified-path loss needs full before/after answer review; path status is not answer correctness",
+    "No CI, live model/browser, production or release acceptance"
+  ]
+}

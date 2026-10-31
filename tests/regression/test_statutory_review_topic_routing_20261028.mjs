@@ -44,4 +44,62 @@ for (const question of [
   assert.ok(!ids.includes('mas-regulatory-reporting'), `Unrelated fund question should not route to reporting: ${question}`);
 }
 
+const masDirectorNotifications = 'At our LFMC, an existing director\'s residential address changes and the CEO resigns during the same week. Do both notifications have the same fourteen-day outer limit, and is changing the director\'s particulars treated as a fresh Form 11 appointment approval?';
+const masDirectorTopicIds = classifyQuestion(masDirectorNotifications).topicIds;
+const masDirectorResolverTopicIds = defaultQueryTopicResolver.decomposeQuery(masDirectorNotifications).topics.map(topic => topic.id);
+assert.ok(masDirectorTopicIds.includes('mas-lfmc-key-appointments'));
+assert.ok(!masDirectorTopicIds.includes('acra-entity-information-changes'),
+  'An LFMC director address update without ACRA or company-entity scope stays with MAS.');
+assert.ok(!masDirectorResolverTopicIds.includes('acra-entity-information-changes'),
+  'The ACRA entity query pattern does not claim an LFMC-only director address change.');
+
+const explicitAcraEntityUpdate = 'Our Singapore company changed its financial year end after missing the filing deadline. What ACRA approval applies?';
+assert.ok(classifyQuestion(explicitAcraEntityUpdate).topicIds.includes('acra-entity-information-changes'),
+  'A company-scoped FYE change retains ACRA entity-change routing.');
+assert.ok(defaultQueryTopicResolver.decomposeQuery(explicitAcraEntityUpdate).topics
+  .some(topic => topic.id === 'acra-entity-information-changes'),
+'Official FYE aliases remain discoverable when a company is explicitly in scope.');
+
+const inferredCompanyFyeChange = 'Our FYE is 31 December and the AGM deadline has passed. Can we change FYE now to gain time before the annual return is filed?';
+assert.ok(classifyQuestion(inferredCompanyFyeChange).topicIds.includes('acra-entity-information-changes'),
+  'An FYE change tied to AGM and annual-return compliance establishes bounded company scope.');
+assert.ok(defaultQueryTopicResolver.decomposeQuery(inferredCompanyFyeChange).topics
+  .some(topic => topic.id === 'acra-entity-information-changes'),
+'The bounded FYE-change scenario resolves to the existing ACRA entity-change family.');
+
+const masFundForm25aQuery = 'At our VCFM, the fund financial year end is 31 December. When is Form 25A due?';
+for (const topicIds of [classifyQuestion(masFundForm25aQuery).topicIds,
+  defaultQueryTopicResolver.decomposeQuery(masFundForm25aQuery).topics.map(topic => topic.id)]) {
+  assert.ok(topicIds.includes('mas-regulatory-reporting'), 'A fund Form 25A deadline remains within MAS reporting scope.');
+  assert.ok(!topicIds.includes('acra-entity-information-changes'),
+    'A generic fund FYE and Form 25A request does not imply a company FYE change.');
+}
+
+const annualReturnDeadlineWithFye = 'For a Singapore private company with a 31 December financial year end, what is the general annual-return filing deadline in months after financial year end? Explain the rule only; do not prepare a journal.';
+for (const topicIds of [classifyQuestion(annualReturnDeadlineWithFye).topicIds,
+  defaultQueryTopicResolver.decomposeQuery(annualReturnDeadlineWithFye).topics.map(topic => topic.id)]) {
+  assert.ok(topicIds.includes('acra_annual-returns'), 'An annual-return deadline remains mapped for a company with a stated FYE.');
+  assert.ok(!topicIds.includes('acra-entity-information-changes'),
+    'A stated financial year end and filing deadline alone do not imply an entity update.');
+}
+
+const explicitAcraEntityRequestBesideMas = `${masDirectorNotifications} Separately, our foreign company registered in Singapore changed its entity email. What ACRA notification deadline applies?`;
+assert.ok(classifyQuestion(explicitAcraEntityRequestBesideMas).topicIds.includes('acra-entity-information-changes'),
+  'An independent explicit ACRA entity-update request remains mapped beside the MAS question.');
+assert.ok(defaultQueryTopicResolver.decomposeQuery(explicitAcraEntityRequestBesideMas).topics
+  .some(topic => topic.id === 'acra-entity-information-changes'),
+'Explicit ACRA entity-update aliases remain discoverable in a mixed-authority query.');
+
+const auditThresholdPeriodQuestion = 'Do the audit exemption thresholds have to be met for one year or two?';
+const auditThresholdPeriodPlan = reconcileQuestionUnderstanding(auditThresholdPeriodQuestion,
+  classifyQuestion(auditThresholdPeriodQuestion), { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }).issuePlan;
+assert.ok(auditThresholdPeriodPlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+  issue.mappedTopicIds.includes('acra_small_company')),
+  'A question about the audit thresholds period reaches the existing small-company rule.');
+const separateAuditorDutyQuestion = `${auditThresholdPeriodQuestion} Separately, what are the statutory audit requirements?`;
+const separateAuditorDutyPlan = reconcileQuestionUnderstanding(separateAuditorDutyQuestion,
+  classifyQuestion(separateAuditorDutyQuestion), { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }).issuePlan;
+assert.ok(separateAuditorDutyPlan.issues.some(issue => issue.mappedTopicIds.includes('acra_audit-requirements')),
+  'A separate audit-requirements request is not demoted by the threshold-period alias.');
+
 console.log('Statutory paraphrase topic-routing regressions passed.');

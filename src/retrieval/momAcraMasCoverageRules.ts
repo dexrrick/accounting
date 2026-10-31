@@ -233,7 +233,7 @@ function hasSingleFiftyEmployeeCriterion(section: string): boolean {
   return matches.length === 1 && matches[0][1] === '50' && !negatesThreshold;
 }
 
-function acraSmallCompanyFacts(text: string): boolean {
+export function supportsAcraSmallCompanyAuditFacts(text: string): boolean {
   const source = visibleText(text).toLowerCase();
   const smallCompanyStart = /to qualify for audit exemption as a small company/i;
   const companyCriteriaStart = /your company meets at least two of these quantitative criteria for the immediate past two consecutive financial years/i;
@@ -337,7 +337,7 @@ function proves(rule: CoverageRule, text: string): boolean {
     .test(visibleText(text))) return false;
   switch (rule) {
     case 'MOM_FINAL_SALARY': return momFinalSalaryFacts(text);
-    case 'ACRA_SMALL_COMPANY': return acraSmallCompanyFacts(text);
+    case 'ACRA_SMALL_COMPANY': return supportsAcraSmallCompanyAuditFacts(text);
     case 'MAS_VCFM': return masVcfmFacts(text);
     case 'MAS_CLASS_EXEMPTION': return masClassExemptionFacts(text);
   }
@@ -367,6 +367,17 @@ function paragraphsForRule(rule: CoverageRule, text: string): string[] {
     /if your company is able to operate under an existing class exemption/i,
     /paragraph 5 of the second schedule to the securities and futures \(licensing and conduct of business\) regulations\s*\.?/i);
   return [exemption].filter((item): item is string => Boolean(item));
+}
+
+/** Reuses the bounded legacy audit passage after the strict company/group proof succeeds. */
+export function selectAcraSmallCompanyAuditFactsQuotes(sourceText: string): string[] {
+  if (!supportsAcraSmallCompanyAuditFacts(sourceText)) return [];
+  const source = visibleText(sourceText);
+  const commencement = /[^.!?\n]*financial years beginning on or after 1 july 2015[^.!?\n]*[.!?]/i.exec(source)?.[0]?.trim();
+  const auditRule = paragraphsForRule('ACRA_SMALL_COMPANY', sourceText)[0];
+  if (!commencement || !auditRule || commencement.length > MAX_QUOTE_LENGTH || auditRule.length > MAX_QUOTE_LENGTH) return [];
+  const quotes = [...new Set([commencement, auditRule])];
+  return supportsAcraSmallCompanyAuditFacts(quotes.join('\n')) ? quotes : [];
 }
 
 /** Full fetched-source proof. False for an owned but incomplete or contradictory request. */
