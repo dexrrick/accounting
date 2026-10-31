@@ -194,12 +194,111 @@ assert.ok(dismissalAndPayslip.some(issue => /final salary payment deadlines/i.te
   'Final-pay and payslip obligations retain distinct evidence issues in one request.');
 const dismissalFinalSalaryAmount = planFor('We dismissed an employee for misconduct. How much final salary must we pay, and when is a payslip due?').issuePlan.issues;
 assert.ok(dismissalFinalSalaryAmount.some(issue => issue.operation === 'CALCULATE' &&
-  issue.mappedTopicIds.includes('mom-salary-payment')),
-  'A final-salary amount request keeps its CALCULATE operation when a payslip deadline is also asked.');
+  issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')),
+  'A final-salary amount request keeps only the salary topic in its CALCULATE issue.');
 assert.ok(dismissalFinalSalaryAmount.some(issue => /itemised payslip issue and delivery/i.test(issue.subject) &&
   issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-itemised-payslips')) &&
   !dismissalFinalSalaryAmount.some(issue => /Final salary payment deadlines by termination reason/i.test(issue.subject)),
   'A separately requested payslip deadline is mapped without turning a salary amount request into a final-pay timing answer.');
+for (const query of [
+  'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?',
+  'After an employee resigns, how much final salary do we owe, and how must we deliver the itemised payslip?',
+  'After an employee resigns, how much final salary do we owe, and must we issue an itemised payslip?',
+  'An employee resigned after giving notice. How much final salary do we owe, and when must we issue the itemised payslip?',
+  'An employee resigned without notice. How much final salary do we owe, and when must we issue the itemised payslip?',
+  'We terminated an employee. How much final salary do we owe, and when must we issue the itemised payslip?',
+  'We dismissed an employee for misconduct. How much final salary do we owe, and when must we issue the itemised payslip?'
+]) {
+  const result = planFor(query);
+  const issues = result.issuePlan.issues;
+  assert.ok(issues.some(issue => issue.operation === 'CALCULATE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')),
+    `Only final salary is assigned CALCULATE: ${query}`);
+  assert.ok(issues.some(issue => /itemised payslip issue and delivery/i.test(issue.subject) &&
+    issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds.includes('mom-itemised-payslips')),
+    `Payslip timing remains an independently answerable rule: ${query}`);
+  assert.ok(result.classification.missingFacts.includes(
+    'Contractual salary rate for final salary calculation'));
+  assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: result.issuePlan,
+    classification: result.classification, explicitIrasEvidenceRequest: false, hasImages: false }), true,
+  `The evidence path presents the payslip duty even when salary calculation facts are absent: ${query}`);
+  assert.equal(result.classification.journalEntryRequired, false,
+    'A statutory final-salary amount request alone does not request a journal entry.');
+}
+const calculatedSalaryWithPayslip = planFor(
+  'After an employee resigns, calculate the final salary we owe and when must we issue the itemised payslip?');
+assert.ok(calculatedSalaryWithPayslip.issuePlan.issues.some(issue => issue.operation === 'CALCULATE' &&
+  issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')),
+  'Calculate wording keeps the final-salary issue as a calculation.');
+assert.ok(calculatedSalaryWithPayslip.issuePlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+  issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-itemised-payslips')),
+  'Calculate wording still separates an independently requested payslip rule.');
+const salaryWithPayslipContext = planFor(
+  'After an employee resigns, how much final salary do we owe? The itemised payslip was issued yesterday.').issuePlan.issues;
+assert.ok(!salaryWithPayslipContext.some(issue => issue.mappedTopicIds.includes('mom-itemised-payslips')),
+  'A past payslip mention does not become a separately requested obligation.');
+const missingSalaryFactsWithPayslip = planFor(
+  'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?');
+assert.equal(missingSalaryFactsWithPayslip.classification.calculationRequired, true,
+  'The amount request remains a calculation despite unspecified payroll facts.');
+assert.ok(missingSalaryFactsWithPayslip.classification.missingFacts.includes(
+  'Contractual salary rate for final salary calculation'));
+assert.ok(missingSalaryFactsWithPayslip.issuePlan.issues.some(issue =>
+  issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-itemised-payslips')),
+  'Missing salary calculation facts do not suppress the separately answerable payslip rule.');
+const salaryOnlyCalculation = planFor('How much final salary do we owe after resignation?');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: salaryOnlyCalculation.issuePlan,
+  classification: salaryOnlyCalculation.classification, explicitIrasEvidenceRequest: false, hasImages: false }), false,
+  'A lone final-salary calculation keeps its existing transaction path.');
+const specifiedSalaryWithPayslip = planFor(
+  'An employee earns S$5,000 per month. After resignation, how much final salary do we owe and when must we issue the itemised payslip?');
+assert.ok(!specifiedSalaryWithPayslip.classification.missingFacts.includes(
+  'Contractual salary rate for final salary calculation'),
+  'An explicitly stated salary rate does not receive the missing-salary-rate fact.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: specifiedSalaryWithPayslip.issuePlan,
+  classification: specifiedSalaryWithPayslip.classification, explicitIrasEvidenceRequest: false, hasImages: false }), true,
+  'The evidence path can surface the payslip rule while the salary amount remains case-specific.');
+const journalWithMixedMOM = planFor(
+  'After an employee resigns, how much final salary do we owe, when must we issue the payslip, and prepare the payroll journal entry.');
+assert.equal(journalWithMixedMOM.classification.journalEntryRequired, true);
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: journalWithMixedMOM.issuePlan,
+  classification: journalWithMixedMOM.classification, explicitIrasEvidenceRequest: false, hasImages: false }), false,
+  'An explicit journal request stays outside the statutory evidence route.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: missingSalaryFactsWithPayslip.issuePlan,
+  classification: missingSalaryFactsWithPayslip.classification, explicitIrasEvidenceRequest: false, hasImages: true }), false,
+  'Image requests stay outside the bounded final-salary evidence route.');
+const deductionWithMixedMOM = planFor(
+  'After an employee resigns, how much final salary do we owe, when must we issue the itemised payslip, and can we deduct S$400 for a uniform?');
+assert.ok(deductionWithMixedMOM.issuePlan.issues.some(issue => /salary deduction/i.test(issue.subject) &&
+  issue.operation === 'EXPLAIN_RULE' && issue.population === 'EMPLOYER'),
+  'A S$400 deduction request remains a separate MOM rule issue.');
+assert.ok(deductionWithMixedMOM.classification.missingFacts.includes(
+  'Contractual salary rate for final salary calculation'),
+  'An unrelated deduction amount does not satisfy the final-salary basis.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: deductionWithMixedMOM.issuePlan,
+  classification: deductionWithMixedMOM.classification, explicitIrasEvidenceRequest: false, hasImages: false }), true,
+  'The bounded evidence path still presents the payslip rule beside the salary calculation and deduction issue.');
+const mixedMomMarkedForIrasByClassifier = shouldUseAuthorityEvidenceRuntime({
+  issuePlan: deductionWithMixedMOM.issuePlan,
+  classification: { ...deductionWithMixedMOM.classification, taxAnalysisRequired: true },
+  explicitIrasEvidenceRequest: true,
+  hasImages: false
+});
+assert.equal(mixedMomMarkedForIrasByClassifier, false,
+  'The bounded MOM route rejects an explicit IRAS tax-analysis request even if the planned issues are all MOM.');
+const explicitIrasTaxQuery = planFor(
+  'After an employee resigns without notice, how much final salary do we owe, when must we issue the itemised payslip, and what tax must we withhold from the final pay for IRAS?');
+assert.equal(explicitIrasTaxQuery.classification.taxAnalysisRequired, true,
+  'The negative control is recognized as an explicit tax-analysis request.');
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: explicitIrasTaxQuery.issuePlan,
+  classification: explicitIrasTaxQuery.classification, explicitIrasEvidenceRequest: true, hasImages: false }), false,
+  'An explicit IRAS tax question does not enter the bounded MOM-only evidence route.');
+const salaryDeductionWithMixedMOM = planFor(
+  'After an employee resigns, how much final salary do we owe, when must we issue the payslip, and can we deduct a uniform cost?').issuePlan.issues;
+assert.ok(salaryDeductionWithMixedMOM.some(issue => /salary deduction/i.test(issue.subject) &&
+  issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-salary-payment')),
+  'A separate salary deduction rule survives a final-salary calculation and payslip obligation.');
 const dismissalAndUniformDeduction = planFor('We dismissed an employee for misconduct. When is final salary due, when must we give a payslip, and can we deduct a uniform cost?').issuePlan.issues;
 assert.ok(dismissalAndUniformDeduction.some(issue => /salary deduction/i.test(issue.subject) &&
   issue.mappedTopicIds.includes('mom-salary-payment')),

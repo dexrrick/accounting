@@ -120,6 +120,37 @@ function hasBoundedCpfCalculationAndRefundIssues(
   return Boolean(calculation && refund && calculation.id !== refund.id);
 }
 
+function hasBoundedMomFinalSalaryAndPayslipIssues(
+  issuePlan: SemanticIssueReconciliation,
+  classification: QuestionClassificationResult
+): boolean {
+  if (!classification.calculationRequired || classification.journalEntryRequired ||
+      classification.accountingAnalysisRequired || classification.taxAnalysisRequired ||
+      !classification.authorities.includes('MOM') ||
+      !classification.domains.includes('MOM_EMPLOYMENT') ||
+      issuePlan.issues.length < 2 || issuePlan.issues.length > 3) return false;
+  const salary = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.subject === 'Final salary amount calculation by termination reason' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'CALCULATE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-salary-payment');
+  const payslip = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-itemised-payslips');
+  if (!salary || !payslip || salary.id === payslip.id) return false;
+  if (issuePlan.issues.length === 2) return true;
+  const deduction = issuePlan.issues.find(issue => issue.status === 'MAPPED' &&
+    issue.subject === 'MOM employer salary deduction authorization, purpose and limits' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.operation === 'EXPLAIN_RULE' &&
+    issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'MOM' && issue.mappedTopicIds.length === 1 &&
+    issue.mappedTopicIds[0] === 'mom-salary-payment');
+  return Boolean(deduction && deduction.id !== salary.id && deduction.id !== payslip.id);
+}
+
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */
 export function shouldUseAuthorityEvidenceRuntime(input: {
   issuePlan: SemanticIssueReconciliation;
@@ -135,6 +166,11 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   // Missing calculation facts are mandatory, and ordinary journal/accounting
   // requests remain on their established transaction path.
   if (hasBoundedCpfCalculationAndRefundIssues(issuePlan, classification)) return true;
+
+  // A requested final-salary amount and a separate payslip rule need the
+  // same per-issue evidence path when transaction classification would
+  // otherwise bypass the independently answerable payslip obligation.
+  if (hasBoundedMomFinalSalaryAndPayslipIssues(issuePlan, classification)) return true;
 
   if (input.explicitIrasEvidenceRequest &&
       classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&

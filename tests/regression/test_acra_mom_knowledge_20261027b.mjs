@@ -21,6 +21,7 @@ import { defaultExternalSourceValidator } from '../../src/retrieval/externalSour
 import { supportsAcraSmallCompanyAuditFacts } from '../../src/retrieval/momAcraMasCoverageRules.ts';
 import { getAcraAnnualReturnDeadlineTablePassage, supportsAcraAnnualReturnDeadlineEvidence } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { defaultTargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
+import { parseCompanyFyeDate } from '../../src/retrieval/companyFyeDate.ts';
 
 const fixtureDir = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('acra-mom-source-manifest.json', fixtureDir), 'utf8'));
@@ -572,6 +573,40 @@ assert.ok(currentArDeadlineAnswer, 'A single company FYE and listing status supp
 assert.match(currentArDeadlineAnswer.text, /general annual-return date is 31\/07\/2026/);
 assert.match(currentArDeadlineAnswer.text, /additional month applies, making the date 31\/08\/2026/,
   'The branch-register date remains conditional when the relevant facts are not given.');
+for (const [fyeQuery, expectedArDate] of [
+  ['Our private company FYE is 2025-12-31. When is our annual return due?', '31/07/2026'],
+  ['Our private company FYE was 31/12/2025. When is our annual return due?', '31/07/2026'],
+  ['Our private company financial year end of 31 December 2025. When is our annual return due?', '31/07/2026'],
+  ['Our private company FYE: 31 December 2025. When is our annual return due?', '31/07/2026'],
+  ['Our private company year ended 31 December 2025. When is our annual return due?', '31/07/2026']
+]) {
+  const resolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(fyeQuery);
+  assert.equal(resolution.dateRole, 'CURRENT_WORKFLOW_FACT', `The FYE remains a current workflow fact: ${fyeQuery}`);
+  const answer = renderAcra31Rule(acra31AnnualReturnRow, fyeQuery);
+  assert.ok(answer, `The ACRA deadline answer parses the owned FYE: ${fyeQuery}`);
+  assert.match(answer.text, new RegExp(`general annual-return date is ${expectedArDate.replaceAll('/', '\\/')}`));
+}
+assert.equal(parseCompanyFyeDate('Our private company FYE is 31/02/2025.'), undefined,
+  'An invalid calendar date is not normalized into a different FYE.');
+assert.equal(parseCompanyFyeDate('Our private company FYE is 31/12/2025 and our FYE was 30/06/2026.'), undefined,
+  'Multiple FYE dates fail closed as ambiguous.');
+assert.equal(parseCompanyFyeDate('Another private company FYE is 31/12/2025.'), undefined,
+  'A date owned by another company is not treated as this company’s FYE.');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(
+  'Historically, our private company FYE was 31/12/2025. When was the annual return due?').dateRole,
+  undefined, 'Historical-law questions do not become current workflow facts.');
+const isoFyeAgm = renderAcra31Rule(acra31Cases.find(row => row.id === 'agm-deadlines'),
+  'Our private company FYE is 2025-12-31. When is our AGM due?');
+assert.match(isoFyeAgm?.text ?? '', /AGM date is 30\/06\/2026/i,
+  'A non-listed company AGM deadline uses the same strictly parsed ISO FYE.');
+const listedAgm = renderAcra31Rule(acra31Cases.find(row => row.id === 'agm-deadlines'),
+  'Our listed company FYE is 2025-12-31. When is our AGM due?');
+assert.match(listedAgm?.text ?? '', /AGM date is 30\/04\/2026/i,
+  'A listed company AGM deadline retains its four-month period.');
+const listedAnnualReturn = renderAcra31Rule(acra31AnnualReturnRow,
+  'Our listed company FYE is 2025-12-31. When is our annual return due?');
+assert.match(listedAnnualReturn?.text ?? '', /general annual-return date is 31\/05\/2026/,
+  'A listed company annual-return deadline retains its five-month period.');
 const positiveBranchRegisterAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'),
   'Our private company FYE is 31 December 2025. It has share capital and maintains an overseas branch register. What is its annual return deadline?');
 assert.match(positiveBranchRegisterAnswer?.text ?? '', /annual-return date is 31\/08\/2026/,
@@ -994,6 +1029,65 @@ try {
   assert.match(response.messageText, /all Companies Act section 201A conditions/i);
   assert.doesNotMatch(response.messageText, /variable capital company|VCC/i,
     'The unspecified company is not silently treated as a VCC.');
+  let finalSalaryWorkstreams;
+  const finalSalaryQuery = 'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?';
+  const finalSalaryResponse = await processAccountingQuery(finalSalaryQuery, null, 'IFRS', undefined, undefined, [], undefined,
+    { onAuthorityWorkstreams: value => { finalSalaryWorkstreams = value; } });
+  assert.ok(finalSalaryWorkstreams, 'The incomplete salary calculation and independent payslip rule reach the evidence runtime.');
+  assert.ok(finalSalaryWorkstreams.issuePlan.issues.some(issue => issue.operation === 'CALCULATE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')));
+  assert.ok(finalSalaryWorkstreams.issuePlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-itemised-payslips')));
+  assert.equal(finalSalaryResponse.scenarioState.scenarioType, 'AUTHORITY_ADVISORY');
+  const finalSalaryTextStart = finalSalaryResponse.messageText.indexOf('**Final salary amount calculation by termination reason**');
+  const payslipTextStart = finalSalaryResponse.messageText.indexOf('**MOM itemised payslip issue and delivery requirements**');
+  assert.ok(finalSalaryTextStart >= 0 && payslipTextStart > finalSalaryTextStart);
+  const finalSalaryText = finalSalaryResponse.messageText.slice(finalSalaryTextStart, payslipTextStart);
+  const payslipText = finalSalaryResponse.messageText.slice(payslipTextStart);
+  assert.match(finalSalaryText, /Application unresolved/i,
+    'The service does not invent a final-salary amount without its salary basis.');
+  assert.doesNotMatch(finalSalaryText, /(?:S\$|SGD\s*\$?)\s*[\d,]+(?:\.\d+)?/i);
+  assert.match(payslipText, /MOM rule explanation/i);
+  assert.match(payslipText, /within three working days of payment/i,
+    'The independent payslip timing rule is answerable alongside the unresolved calculation.');
+  assert.match(payslipText, /\[Itemised pay slips\]\(https:\/\/www\.mom\.gov\.sg\/employment-practices\/salary\/itemised-payslips\)/i,
+    'The payslip answer remains tied to its official evidence.');
+  let salaryRateWorkstreams;
+  const salaryRateQuery = 'An employee earns S$5,000 per month. After resignation, calculate the final salary we owe, and how must we deliver the itemised payslip?';
+  const salaryRateResponse = await processAccountingQuery(salaryRateQuery, null, 'IFRS', undefined, undefined, [], undefined,
+    { onAuthorityWorkstreams: value => { salaryRateWorkstreams = value; } });
+  assert.ok(salaryRateWorkstreams, 'A stated salary rate with missing separation facts still reaches the bounded evidence path.');
+  assert.ok(salaryRateWorkstreams.issuePlan.issues.some(issue => issue.operation === 'CALCULATE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')));
+  assert.ok(salaryRateWorkstreams.issuePlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-itemised-payslips')));
+  const salaryRateTextStart = salaryRateResponse.messageText.indexOf('**Final salary amount calculation by termination reason**');
+  const salaryRatePayslipStart = salaryRateResponse.messageText.indexOf('**MOM itemised payslip issue and delivery requirements**');
+  assert.ok(salaryRateTextStart >= 0 && salaryRatePayslipStart > salaryRateTextStart);
+  assert.match(salaryRateResponse.messageText.slice(salaryRateTextStart, salaryRatePayslipStart), /Application unresolved/i,
+    'A monthly salary rate alone does not produce a final-salary amount without separation and payroll-period facts.');
+  assert.match(salaryRateResponse.messageText.slice(salaryRatePayslipStart), /MOM rule explanation/i);
+  assert.match(salaryRateResponse.messageText.slice(salaryRatePayslipStart), /within three working days of payment/i);
+  let uniformDeductionWorkstreams;
+  const uniformDeductionQuery = 'After an employee resigns without notice, how much final salary do we owe, when must we issue the itemised payslip, and may we deduct S$400 for a uniform?';
+  const uniformDeductionResponse = await processAccountingQuery(uniformDeductionQuery, null, 'IFRS', undefined, undefined, [], undefined,
+    { onAuthorityWorkstreams: value => { uniformDeductionWorkstreams = value; } });
+  assert.ok(uniformDeductionWorkstreams,
+    'The mixed final-salary, payslip, and uniform-deduction request reaches per-issue statutory evidence.');
+  assert.ok(uniformDeductionWorkstreams.issuePlan.issues.some(issue => issue.operation === 'CALCULATE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-salary-payment')));
+  assert.ok(uniformDeductionWorkstreams.issuePlan.issues.some(issue => issue.operation === 'EXPLAIN_RULE' &&
+    issue.mappedTopicIds.length === 1 && issue.mappedTopicIds.includes('mom-itemised-payslips')));
+  assert.ok(uniformDeductionWorkstreams.issuePlan.issues.some(issue => /salary deduction/i.test(issue.subject) &&
+    issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-salary-payment')));
+  assert.equal(uniformDeductionResponse.scenarioState.scenarioType, 'AUTHORITY_ADVISORY');
+  assert.match(uniformDeductionResponse.messageText, /Application unresolved/i,
+    'The final-salary amount remains unresolved instead of being invented.');
+  assert.match(uniformDeductionResponse.messageText, /within three working days of payment/i,
+    'The separately requested payslip rule remains available.');
+  assert.match(uniformDeductionResponse.messageText,
+    /MOM employer salary deduction authorization, purpose and limits/i,
+    'The uniform deduction stays a distinct MOM issue even if its evidence does not fully answer the individual amount.');
   const solventEpcQuery = 'Does a solvent Singapore exempt private company have to file financial statements with ACRA, or may it choose to file them voluntarily?';
   const solventEpcResponse = await processAccountingQuery(solventEpcQuery, null, 'IFRS', undefined, undefined, [], undefined, {});
   assert.deepEqual(solventEpcResponse.scenarioState.directGroups || [], [], 'The filing question does not create a journal.');

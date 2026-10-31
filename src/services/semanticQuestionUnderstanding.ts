@@ -2814,6 +2814,11 @@ function isLfmcToolkitFundScopeQuestion(query: string): boolean {
   return isLfmc && (toolkitScopeQuestion || managerReturnDischargeQuestion);
 }
 
+function asksFinalSalaryAmountRequest(query: string): boolean {
+  return /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query) ||
+    /\b(?:final|last)\s+(?:salary|pay|wages?)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(query);
+}
+
 /** Refines only an explicitly requested, already recognized current-rule family. */
 function refineTaxonomyRuleIntent(
   query: string,
@@ -2861,8 +2866,7 @@ function refineTaxonomyRuleIntent(
   const mayDemoteToContext = !hasIndependentSemanticClause(query) || boundedPublicHolidayRestDayComparison
     || Boolean(boundedAcraCommencement || boundedMasCommencement ||
       (boundedAcraSecretaryCase && !separateAnnualReturnQuestion) || boundedAcraFinancialStatementFiling);
-  const asksFinalSalaryAmount = issue.domain === 'MOM_EMPLOYMENT' &&
-    /\bhow much (?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query);
+  const asksFinalSalaryAmount = issue.domain === 'MOM_EMPLOYMENT' && asksFinalSalaryAmountRequest(query);
   if (asksFinalSalaryAmount) return {
     ...issue,
     operation: 'CALCULATE',
@@ -3872,45 +3876,57 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
     issue.mappedTopicIds.includes('mom-salary-payment'));
   const momFinalSalaryAndPayslip = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
     issue.mappedTopicIds.includes('mom-itemised-payslips'));
-  const asksFinalSalaryAmount = /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay)\b/i.test(query) ||
-    /\b(?:final|last)\s+(?:salary|pay)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(query);
+  const asksFinalSalaryAmount = asksFinalSalaryAmountRequest(query);
   const asksSalaryDeductionOutcome = /\b(?:deduct\w*|deduction\w*)\b/i.test(query) &&
     /\b(?:can|may|lawful|allowed|permitted|authori[sz]ed|should|must)\b/i.test(query);
   const asksFinalSalaryTiming = /\b(?:when|how soon|deadline|due|by what date)\b/i.test(query);
-  const asksPayslipTiming = /\b(?:when|how soon|deadline|due|within)\b/i.test(query) &&
-    /\b(?:payslips?|pay slips?)\b/i.test(query);
-  const asksDismissalFinalPayAndPayslip = momFinalSalaryAndPayslip >= 0 &&
-    /\b(?:dismiss\w*|terminat\w*)\b/i.test(query) && /\bmisconduct\b/i.test(query) &&
+  const asksPayslipIssueDeliveryOrTiming = /\b(?:when|how soon|deadline|due|within)\b/i.test(query) &&
+    /\b(?:payslips?|pay slips?)\b/i.test(query) ||
+    /\b(?:how|must|should|can|do|does|what|where)\b[^.!?;]{0,100}\b(?:issue|deliver|give|provide|send)\w*\b[^.!?;]{0,100}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b/i.test(query);
+  const asksTerminationFinalPayAndPayslip = momFinalSalaryAndPayslip >= 0 &&
+    /\b(?:resign\w*|notice|dismiss\w*|terminat\w*|end of employment)\b/i.test(query) &&
     /\b(?:final|last)\s+(?:salary|pay)\b/i.test(query) &&
     /\b(?:payslips?|pay slips?)\b/i.test(query) && hasIndependentSemanticClause(query) &&
-    asksPayslipTiming;
-  if (asksDismissalFinalPayAndPayslip) {
+    asksPayslipIssueDeliveryOrTiming;
+  if (asksTerminationFinalPayAndPayslip) {
     const template = issues[momFinalSalaryAndPayslip];
     const payslipTopics = template.mappedTopicIds.filter(topicId => topicId === 'mom-itemised-payslips');
+    const salaryTopics = template.mappedTopicIds.filter(topicId => topicId === 'mom-salary-payment');
     const compatibleTimingTopics = template.mappedTopicIds.every(topicId =>
       topicId === 'mom-itemised-payslips' || topicId === 'mom-salary-payment');
     const pureTimingRequest = asksFinalSalaryTiming && !asksFinalSalaryAmount && !asksSalaryDeductionOutcome;
     const compatibleTimingPayslipIssue = template.operation === 'EXPLAIN_RULE' &&
-      template.population === 'EMPLOYER' && compatibleTimingTopics &&
+      compatibleTimingTopics &&
       payslipTopics.length === 1 && !template.contextualTopicIds?.length;
     if (pureTimingRequest && compatibleTimingPayslipIssue) {
       issues[momFinalSalaryAndPayslip] = cloneAsRequestedIssue(template,
         'MOM itemised payslip issue and delivery requirements', payslipTopics,
-        template.population, template.operation);
+        'EMPLOYER', template.operation);
       if (!alreadyHasSubject(/Final salary payment deadlines by termination reason/i)) {
         issues.push(cloneAsRequestedIssue(template,
           'Final salary payment deadlines by termination reason', ['mom-salary-payment'], 'EMPLOYER', 'FILING_REQUIREMENT'));
       }
     } else {
+      if (asksFinalSalaryAmount && salaryTopics.length === 1 && template.operation === 'CALCULATE') {
+        issues[momFinalSalaryAndPayslip] = cloneAsRequestedIssue(template,
+          'Final salary amount calculation by termination reason', salaryTopics,
+          'EMPLOYER', 'CALCULATE');
+      }
       if (!alreadyHasSubject(/MOM itemised payslip issue and delivery requirements/i)) {
         issues.push(cloneAsRequestedIssue(template,
           'MOM itemised payslip issue and delivery requirements', payslipTopics,
-          template.population, 'EXPLAIN_RULE'));
+          'EMPLOYER', 'EXPLAIN_RULE'));
       }
       if (asksFinalSalaryTiming && !asksFinalSalaryAmount &&
           !alreadyHasSubject(/Final salary payment deadlines by termination reason/i)) {
         issues.push(cloneAsRequestedIssue(template,
           'Final salary payment deadlines by termination reason', ['mom-salary-payment'], 'EMPLOYER', 'FILING_REQUIREMENT'));
+      }
+      if (asksSalaryDeductionOutcome && salaryTopics.length === 1 &&
+          !alreadyHasSubject(/MOM employer salary deduction authorization, purpose and limits/i)) {
+        issues.push(cloneAsRequestedIssue(template,
+          'MOM employer salary deduction authorization, purpose and limits', salaryTopics,
+          'EMPLOYER', 'EXPLAIN_RULE'));
       }
     }
   }

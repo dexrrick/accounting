@@ -1,0 +1,34 @@
+{
+  "status": "OFFLINE_VALIDATED_AND_INDEPENDENTLY_REVIEWED",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "originalComparisonBase": "2f8abb90a1af5303eaeeaf98c184644b5ea3e323",
+  "reviewedPriorImplementation": "80034813f8bcb3b6ac58b5d017bd2c9a85f52620",
+  "startingRemoteHeadAndCorrectionBase": "2184ee0592076dd1891113a3ad74cb014eb439eb",
+  "findings": {
+    "acraFyeDateParsing": "CONFIRMED_AND_CORRECTED",
+    "momMixedCalculationPayslip": "CONFIRMED_AND_CORRECTED"
+  },
+  "smoke": "159/159 passed",
+  "full": "182/182 passed",
+  "maintainedLintTypecheckViteWorker": "Passed",
+  "rootLint": "34 errors in pre-existing untracked archive; absent from committed tree",
+  "previouslyCorrectAnswers": "All preserved byte-for-byte in all five configurations",
+  "changedCorpusAnswer": "Frozen75 acra-15 remains UNSUPPORTED; no correctness gain claimed",
+  "frozenInputs": "Unchanged",
+  "allFinalCaptures": "Zero network and model requests",
+  "finalSourceTestHashDrift": [],
+  "independentCodeReview": "No remaining material findings in requested scope",
+  "prepublicationUsage": {
+    "fiveHourRemainingPercent": 55,
+    "sevenDayRemainingPercent": 4,
+    "sevenDayResetSingapore": "04/11/2026 20:31:07",
+    "resetCreditConsumed": false
+  },
+  "limitations": [
+    "Final salary calculation remains explicitly unresolved; no numeric salary calculator added.",
+    "ACRA general deadline examples retain exceptions and unresolved individual applicability checks.",
+    "No live-model/browser, deployment or production acceptance.",
+    "Publication SHAs and available CI evidence are recorded in the successor review-handoff.md."
+  ]
+}

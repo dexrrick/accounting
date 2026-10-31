@@ -361,6 +361,11 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:is|are|does|do|what|which|whether|prove|subject to|attract)\b/i.test(entryIntentQuery);
   const asksSalaryDeductionGuidance = /\b(?:salary|wage|pay)\b[^.!?;]{0,80}\b(?:deduct\w*|withhold\w*)\b|\b(?:deduct\w*|withhold\w*)\b[^.!?;]{0,80}\b(?:salary|wage|pay)\b/i.test(entryIntentQuery);
   const hasExplicitPayrollAmount = /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\b|\b(?:salary|wages?|earns?|earnings|monthly pay)\s+(?:of|at|is)?\s*\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery);
+  const asksFinalSalaryAmount = /\b(?:how much|what amount|calculate|compute|estimate|work out)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay)\b/i.test(entryIntentQuery) ||
+    /\b(?:final|last)\s+(?:salary|pay)\b[^.!?;]{0,80}\b(?:amount|calculate|compute|estimate|work out)\b/i.test(entryIntentQuery);
+  const hasExplicitSalaryBasis = /\b(?:salary|wages?|earns?|earning|earnings|monthly pay|pay rate|hourly rate|daily rate)\b\s+(?:of|at|is)?\s*(?:(?:S\$|SGD\s*\$?|\$)\s*)?\d[\d,]*(?:\.\d+)?\b/i.test(entryIntentQuery) ||
+    /(?:\b(?:S\$|SGD\s*\$?)|\$)\s*\d[\d,]*(?:\.\d+)?\s*(?:per|\/)\s*(?:month|day|hour|week|year)\b/i.test(entryIntentQuery) &&
+      !/\b(?:deduct\w*|deduction\w*)\b/i.test(entryIntentQuery);
   const numericPayrollFallbackIsCalculation = hasExplicitPayrollAmount &&
     !asksSalaryDeductionGuidance &&
     !(asksCpfContributionRates && !explicitlyCalculatesCpfContribution) &&
@@ -486,8 +491,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Journal entry is required if user asked for entries, active transaction, or payroll calculation
-  const journalEntryRequired = asksForEntries || (hasPayrollCalculation && !mixedCpfContributionAndRefundRequest) ||
-    (hasTransactionAction && !isConceptualOrAdvisory && !mixedCpfContributionAndRefundRequest);
+  const journalEntryRequired = asksForEntries ||
+    (hasPayrollCalculation && !mixedCpfContributionAndRefundRequest && !asksFinalSalaryAmount) ||
+    (hasTransactionAction && !isConceptualOrAdvisory && !mixedCpfContributionAndRefundRequest && !asksFinalSalaryAmount);
 
   // Calculation required ONLY if quantitative computation requested or active quantitative transaction
   const calculationRequired =
@@ -503,6 +509,9 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
+  if (asksFinalSalaryAmount && !hasExplicitSalaryBasis) {
+    missingFacts.push('Contractual salary rate for final salary calculation');
+  }
   if (hasPayrollCalculation && /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
       (explicitlyCalculatesCpfContribution || /\b(?:salary|wages?|wage|payroll)\b/.test(entryIntentQuery))) {
     if (!/\b(?:age|aged|age band|years? old|date of birth)\b/i.test(entryIntentQuery)) {

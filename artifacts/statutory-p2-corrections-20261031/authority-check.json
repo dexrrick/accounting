@@ -1,0 +1,22 @@
+{
+  "checkedOnSingaporeDate": "31/10/2026",
+  "scope": "Interpretation fixes only; existing statutory rule content and source fixtures are preserved.",
+  "sources": [
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "finding": "Current deadline table confirms listed/non-listed annual-return periods of five/seven months; share capital plus overseas branch register changes these to six/eight months."
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "finding": "Current AGM guidance retains distinct listed and non-listed company deadlines. Retained native source fixtures remain the regression evidence."
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "finding": "Final salary timing distinguishes resignation serving notice, resignation without notice, misconduct dismissal, and employer termination. Amount calculation is a separate request."
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "finding": "Payslip issuance, permitted format and timing are separate statutory duties. Timing is tied to salary payment, with distinct termination/dismissal wording."
+    }
+  ]
+}

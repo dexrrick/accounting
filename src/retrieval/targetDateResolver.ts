@@ -11,6 +11,7 @@ export interface TargetDateResolution {
 import { getSingaporeDateString } from '../utils/dateUtils';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
 import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from './statutoryCommencementScope';
+import { parseCompanyFyeDate } from './companyFyeDate';
 
 const MONTH_MAP: Record<string, string> = {
   jan: '01', january: '01',
@@ -72,38 +73,19 @@ function currentCompanyAcraFyeWorkflowDate(
   const requestsDeadline = /\b(?:agm|annual general meeting|annual[- ]return)\b/i.test(query) &&
     /\b(?:deadline|due|when must|how soon|how many months|within how many months|usual|(?:four|five|six|seven|eight|\d+)\s+months?\s+(?:later|after))\b/i.test(query);
   if (!requestsDeadline) return undefined;
-  const fyePattern = new RegExp(String.raw`\b(?:(?:our|this|the)\s+)?(?:(?:local|singapore|private|public|listed|non[- ]listed)\s+){0,2}company(?:['’]s)?\s+(?:fye|financial year end)\s*(?:(?:is|was|on|:|of)\s*)?(${EXPLICIT_DATE_PATTERN})`, 'gi');
-  const fyeMatches = [...query.matchAll(fyePattern)];
-  const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
-  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
-  if (fyeMatches.length !== 1 || dates.length !== 1 || years.length !== 1 ||
-      fyeMatches[0][1] !== dates[0][0] || years[0][0] !== dates[0][0].slice(-4)) return undefined;
+
+  const fyeDate = parseCompanyFyeDate(query);
+  if (!fyeDate) return undefined;
   const comparisonText = query.replace(/\b(?:like|unlike|compared with|as for)\s+(?:a\s+)?(?:private|listed|non[- ]listed) company\b/gi, ' ');
   const hasListedCompany = /(?<!non[- ])\blisted company\b|\bpublic company\b/i.test(comparisonText) &&
     !/\bnot\s+(?:a\s+)?listed company\b/i.test(comparisonText);
   const hasPrivateCompany = /\bprivate company\b|\bnon[- ]listed company\b/i.test(comparisonText);
   if (hasListedCompany === hasPrivateCompany) return undefined;
 
-  const value = fyeMatches[0][1];
-  let year: number, month: number, day: number;
-  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
-  if (match) [, day, month, year] = match.map(Number);
-  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) [, year, month, day] = match.map(Number);
-  else if ((match = /^(\d{1,2})\s+([a-z]+)\s+(20\d{2})$/i.exec(value))) {
-    const monthNumber = MONTH_MAP[match[2].toLowerCase()];
-    if (!monthNumber) return undefined;
-    month = Number(monthNumber);
-    day = Number(match[1]);
-    year = Number(match[3]);
-  } else return undefined;
-  if (![year, month, day].every(Number.isInteger)) return undefined;
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  const year = Number(fyeDate.slice(0, 4));
   const currentYear = Number(currentDate.slice(0, 4));
-  if (year < currentYear - 1 || year > currentYear) return undefined;
-  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return year >= currentYear - 1 && year <= currentYear ? fyeDate : undefined;
 }
-
 function isCurrentAcraAuditCriteriaFact(query: string): boolean {
   return /\b(?:small[- ]company|small company|private company)\b/i.test(query)
     && /\baudit exemption\b/i.test(query)

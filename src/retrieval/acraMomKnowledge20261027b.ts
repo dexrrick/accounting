@@ -8,6 +8,7 @@ import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapte
 import { getAcraAnnualReturnDeadlineTablePassage } from './acraAnnualReturnFilingRule';
 import { acraOfficerCommencementScope } from './statutoryCommencementScope';
 import { defaultTargetDateResolver } from './targetDateResolver';
+import { parseCompanyFyeDate } from './companyFyeDate';
 import { selectAcraSmallCompanyAuditFactsQuotes, supportsAcraSmallCompanyAuditFacts } from './momAcraMasCoverageRules';
 
 export interface AcraMomKnowledgeRuleRequest {
@@ -328,7 +329,8 @@ function exactOfficialUrl(actual: string | undefined, expected: string): boolean
 function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
   if (rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020' && acraOfficerCommencementScope(query)) return false;
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
-  const fyeDate = parseAcraDate(query, new RegExp(String.raw`\b(?:fye|financial year end)\b(?:\s+(?:is|of))?\s*(${ACRA_DATE_CAPTURE})\b`, 'i'));
+  const fyeDateText = parseCompanyFyeDate(query);
+  const fyeDate = fyeDateText ? new Date(fyeDateText + 'T00:00:00.000Z') : undefined;
   const fyeTime = fyeDate?.getTime();
   const agmBoundary = Date.UTC(2018, 7, 31);
   const historicalRuleIntent = /\b(?:historical|historically|prior rules?|previous rules?|former requirements?|what applied|at that time|then-applicable|past rules?)\b/i.test(query);
@@ -599,7 +601,8 @@ function answerText(rule: Rule, query: string): string {
     if (deadline) application = ` The stated registration date reaches its six-month appointment deadline on ${formatAcraDate(deadline)}.`;
   }
   if ([ 'ACRA_AGM_DEADLINES', 'ACRA_AR_DEADLINES' ].includes(rule.id)) {
-    const fye = parseAcraDate(query, new RegExp(String.raw`\b(?:fye|financial year end)\b(?:\s+(?:is|of))?\s*(${ACRA_DATE_CAPTURE})\b`, 'i'));
+    const fyeDateText = parseCompanyFyeDate(query);
+    const fye = fyeDateText ? new Date(fyeDateText + 'T00:00:00.000Z') : undefined;
     const companyType = acraCompanyTypeForDeadline(query);
     const monthCount = rule.id === 'ACRA_AGM_DEADLINES' ? companyType === 'listed' ? 4 : 6
       : companyType === 'listed' ? 5 : 7;
