@@ -1,0 +1,53 @@
+Review handoff — mixed IRAS reporting and CPF ownership/date corrections
+
+Goal and status
+Correct the four reported defects: suppressed explicit IRAS reporting, cross-employee OW amount attribution, mixed employee/staff/worker PR-date ownership, and rejection of derived PR anniversary years. Implementation and local verification are complete. Independent review's two additional P2 findings were corrected and re-reviewed with no remaining material findings in scope.
+
+Publication is blocked: automatic approval review rejected the GitHub push, including a retry after destination and fixture-payload checks. No push occurred. Explicit approval is required to publish the code, synthetic application responses and review evidence to the public repository below. This handoff is prepared locally; it does not imply GitHub availability.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-knowledge-expansion-20261030
+Implementation and evidence commit: f78cdb480f6de2f0767168b823387b113618dad4
+Base commit: 7206fc15439e221de19c1fedd7b4f00e086b6e31
+Last verified GitHub branch head: 7206fc15439e221de19c1fedd7b4f00e086b6e31
+PR: none created.
+The implementation commit is local and unpushed, so GitHub cannot yet serve its diff or evidence. This handoff is a documentation-only successor; the chat reports that successor's full local head SHA. Review the implementation commit against the base above once publication is approved and verified.
+
+Changes
+1. src/services/semanticQuestionUnderstanding.ts preserves explicit IR8A, IR8S, AIS and employment-income reporting asks in mixed CPF/bonus questions. Verb-led wording such as "report the annual bonus as employment income" is covered. CPF-only bonus questions still suppress incidental IRAS topics.
+2. src/retrieval/cpfPayrollKnowledge20261027b.ts collects all OW candidates and withholds a single monthly base when employee/month ownership is ambiguous. It does not introduce a general per-employee payroll parser. Existing single-employee OW ceiling and bonus/OW separation controls remain.
+3. The same CPF module normalizes employee/staff/worker identifiers and question-owner case. One employee's PR grant date cannot determine another's personal boundaries or conversion-month OW proration. The owner detector selects the actual question rather than an appended issue subject.
+4. src/retrieval/targetDateResolver.ts provides one clause-scoped predicate reused by source admission and date resolution. A 2026 grant can produce 2027/2028 contribution-year boundaries. Separately scoped future payroll periods, unsupported rates and out-of-range years remain excluded. The older PR-year fallback is also guarded for current-grant cases.
+Regression coverage extends three existing registered suites: test_cpf_payroll_knowledge_20261027b.mjs, test_statutory_cpf_expansion_20261101.mjs and test_statutory_multipart_issue_refinements_20261030.mjs. No statutory rates or source fixtures changed.
+
+Verification actually performed
+Local environment: canonical Node 22.23.3, retained userInfo compatibility preload and offline external-fetch guard; normal Windows process access for isolated decoder checks.
+Passed: three focused suites, maintained src/scripts/tests lint, TypeScript project build, Vite build, Worker build, smoke 161/161, full regression 184/184, and final diff whitespace checks.
+Root lint failed with 34 pre-existing parsing errors in the untracked archive artifacts/fresh-acceptance-2026-10-24/prepare.mjs. Maintained-code lint passed separately; that archive is not included in this change.
+The initial broad-validation run was interrupted after static checks when review found two P2 issues. Both were corrected before the final passing build/suite run. Intermediate results are retained separately and are not claimed as final validation.
+All 350 frozen configuration answers are byte-identical to the prior completed capture; all 213 previously correct answers are preserved by full-answer hash comparison. Original questions and source profiles remain unchanged. These are inherited prior grades after exact hash equality, not fresh grades inferred from evidence status. All five preservation captures and the six-case application capture recorded zero external/model requests.
+Independent re-review passed five source/date probes and three routing probes. No remaining material finding was reported in the reviewed scope.
+No CI was dispatched or inspected for the unpushed commit. No live integration suite, browser/model acceptance, source activation, merge or deployment occurred. Local results establish neither CI nor live acceptance.
+
+Remaining concerns and review focus
+The exact two-employee OW application composite still returns incomplete evidence. The selected AW-answer helper now withholds a borrowed amount and explains per-employee/month scope; it does not calculate both employee bases end to end.
+IRAS and CPF issue retention does not establish complete mixed-question answerability or evidence admission. Expanded fixture-based PR checks do not activate the added source in the intended live runtime.
+Inspect explicit reporting intent versus incidental context; employee/month/date ownership; same-owner aliases; each non-current year's own clause; long future-payroll wording; historical/future-rate exclusions; and preservation of single-employee and earlier PR-year controls. Do not interpret topic or source counts as answer correctness.
+The broader statutory backlog remains outside this patch: IRAS withholding tax, MOM deductions, ACRA filing applicability and MAS reporting.
+
+Evidence
+All following paths are local under D:/Accounting/artifacts/statutory-review-cpf-four-fixes-20261101/ and are committed in the unpushed implementation commit:
+- completion-summary.json — actual checks, file hashes and limitations; its UNCOMMITTED label records the pre-publication validation state.
+- validation-results.json — final check exit codes and timestamps.
+- interrupted-pre-review-validation-results.json — interrupted earlier run.
+- review-result.json — initial P2 findings, corrections and final independent review.
+- preservation-comparison.json — five original-profile comparisons.
+- answer-preservation-hashes.json — per-answer baseline/current hashes and inherited grades for all 350 configurations.
+- application-responses.json — six complete actual offline application answers, with evidence statuses.
+- reported-cases.json — original four reproductions and two reviewer follow-ups.
+- starting-input-hashes.json — frozen input/evidence hashes.
+Raw corpus captures, complete console logs and temporary replay helpers remain local-only and untracked. None of the new code or evidence is available through GitHub until push approval succeeds. There are no uncommitted implementation/test changes after the implementation commit; unrelated pre-existing untracked archives remain outside the publication scope.
+
+Ready-to-copy review prompt
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-knowledge-expansion-20261030, implementation commit f78cdb480f6de2f0767168b823387b113618dad4 against base 7206fc15439e221de19c1fedd7b4f00e086b6e31 using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.

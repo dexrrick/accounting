@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "localImplementationCommit": "f78cdb480f6de2f0767168b823387b113618dad4",
+  "lastVerifiedRemoteHead": "7206fc15439e221de19c1fedd7b4f00e086b6e31",
+  "status": "PUSH_BLOCKED_BY_AUTOMATIC_APPROVAL_REVIEW",
+  "rejectedAttempts": 2,
+  "reason": "Automatic review requires explicit approval of this code/evidence payload to the specific public GitHub destination; general push authorization was not accepted.",
+  "followupChecks": "Connected GitHub repository metadata confirmed admin/push access and matching origin. The nine staged evidence JSON files parsed successfully; scans detected no private keys, credential patterns or email addresses. Application answers were generated offline from six synthetic regression questions and public CPF guidance. The same push was still rejected after these checks.",
+  "nextStep": "Obtain explicit user approval to push the fixes, synthetic application responses, review artifacts and handoff to this repository/branch; then retry through normal approval review and verify the remote head.",
+  "noBypassAttempted": true
+}
