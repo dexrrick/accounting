@@ -1,0 +1,52 @@
+Review handoff — four CPF/IRAS interpretation regressions
+
+Goal/status: Repair the four independently reproduced regressions without changing statutory rates, frozen questions or source profiles. Implementation, final independent review and local verification are complete. No material findings remain in the bounded reviewed scope.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-knowledge-expansion-20261030
+Implementation commit: b2dbf2885d3b19655dc825fec017b3e2d624c8f2
+Original requested review base: 7206fc15439e221de19c1fedd7b4f00e086b6e31
+Incremental repair base: 0c11ef10a2b52e92db6688598fa03e39e8e04554
+Previously reviewed implementation: f78cdb480f6de2f0767168b823387b113618dad4
+Remote-verified implementation head before this documentation successor: b2dbf2885d3b19655dc825fec017b3e2d624c8f2
+No PR created. Final documentation head is verified separately in the delivery message.
+
+Delivered behavior (exact original prompts and short synthetic response excerpts are in response-excerpts.json)
+1. Article ownership: before, CPF VERIFIED borrowed A's 15/03/2026 PR date and March OW proration for the foreigner. After, CPF general guidance remains VERIFIED but explains that wages while a foreigner are not CPF-payable and withholds another employee's personal boundary/proration. Established lowercase aliases and possessives, including E1's, retain the correct owner.
+2. Future bonus: before, a 31/03/2027 bonus payable clause was classified CURRENT_WORKFLOW_FACT and CPF VERIFIED. After, source admission rejects it, CPF is INSUFFICIENT, and the answer retains the explicit 2027 applicability limitation. Derived 2027/2028 boundaries from a 2026 grant and separate current-year wage questions remain supported. Attached payroll clauses are checked on both sides of the date and across clear temporal references such as "then".
+3. Ordinary prose: before, "employee has" and "employee is" caused a false multiple-employee warning. After, the answer gives the S$5,000 monthly OW base and explains the separate AW ceiling; the bonus is not treated as OW or automatically exempt. Genuine employee/month ambiguity still withholds a universal amount.
+4. Descriptive income: before, the CPF VERIFIED answer acquired an unrequested IRAS INSUFFICIENT issue and material gap. After, the original question has only CPF VERIFIED with no listed material evidence gap. Explicit IR8A/IR8S/AIS, employment-income, imperative and passive reporting requests remain represented; factual relative clauses do not create reporting intent.
+
+Files
+- src/retrieval/cpfPayrollKnowledge20261027b.ts: shared explicit employee-reference extraction and article-safe question ownership.
+- src/retrieval/targetDateResolver.ts: boundary-only date guard retains attached payroll relationships; source admission reuses it.
+- src/services/semanticQuestionUnderstanding.ts: reporting intent follows the request predicate and reporting object.
+- tests/regression/test_statutory_cpf_expansion_20261101.mjs and test_statutory_multipart_issue_refinements_20261030.mjs: original application regressions, source/date checks, planned issues, answer content/status, adjacent controls and review findings.
+
+Actual verification
+Canonical Node 22.23.3, retained userInfo compatibility preload, offline external-fetch guard and fixture-backed application tests. Passed: three focused suites, maintained src/scripts/tests lint, TypeScript, Vite build, Worker build, smoke 161/161, full regression 184/184, and final whitespace check. No full-suite run was started until independent review was clear.
+Root lint failed with 34 pre-existing parsing errors in untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs. Maintained-code lint passed; that archive was neither edited nor published.
+Final independent review passed 19/19 offline application probes after correcting the confirmed findings. The reviewer inspected the final source/test diff and made no changes.
+All five original frozen configurations replayed with unchanged questions and source profiles. All 350 complete answers are byte-identical to the prior completed captures; all 213 previously correct answers are preserved. Prior grades are inherited after full-answer SHA-256 equality, not freshly inferred from evidence labels. Each replay recorded zero external/model requests; frozen input hashes have no drift.
+GitHub returned no combined-status entries and no PR-triggered workflow runs for the implementation SHA. The workflow connector is limited to PR-triggered runs and its first page; this is not a comprehensive all-event audit or a passing CI result. No CI was manually dispatched. The maintained CI workflow triggers on main/master pushes and PRs to main/master, not this feature-branch push.
+No live integration suite, browser/model acceptance, source activation, merge or deployment occurred. Fixture results and reported hashes establish neither CI nor live acceptance.
+
+Remaining concerns and separate coverage gaps
+No unresolved material finding in the four reported defects within the reviewed/tested scope. This remains bounded deterministic language handling, not general entity or temporal understanding. Mapped-issue VERIFIED status does not establish full request coverage or individual applicability. Future payroll needs evidence applicable to that period. The existing multi-employee/month safeguard withholds unsafe universal amounts; it does not calculate arbitrary employee payroll composites. Broader IRAS, MOM, ACRA and MAS coverage gaps remain separate from this repair.
+Code, tests and selected concise reports are committed and published. Full before/after responses, five raw corpus captures, console logs, temporary replay helpers, the initial reserve checkpoint and unrelated pre-existing untracked archives remain local-only and unavailable through GitHub. No uncommitted or unpushed implementation/test changes remain after publication.
+
+Evidence (pinned to implementation commit)
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/completion-summary.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/validation-results.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/independent-review.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/response-excerpts.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/preservation-comparison.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/answer-preservation-hashes.json
+- https://github.com/dexrrick/accounting/blob/b2dbf2885d3b19655dc825fec017b3e2d624c8f2/artifacts/statutory-cpf-regressions-20261101/starting-input-hashes.json
+CI details and publication receipt accompany this documentation successor.
+
+Review focus: employee identity versus prose/articles; ownership across aliases and possessives; payroll dates versus derived boundaries; source-support/date gate agreement; requested reporting action/object versus descriptive context; unsafe amount assignment; source integrity and preserved answers.
+
+Ready-to-copy review prompt
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-knowledge-expansion-20261030, implementation commit b2dbf2885d3b19655dc825fec017b3e2d624c8f2 against base 7206fc15439e221de19c1fedd7b4f00e086b6e31 (incremental repair base 0c11ef10a2b52e92db6688598fa03e39e8e04554) using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
