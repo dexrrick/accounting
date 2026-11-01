@@ -197,6 +197,10 @@ assert.doesNotMatch(multiEmployeeOwResponse.messageText, /stated monthly OW base
   'the exact multi-employee application question does not assign employee A’s OW conclusion to employee B');
 assert.match(multiEmployeeOwResponse.messageText, /Evidence is incomplete|Evidence incomplete/i,
   'the current application leaves this unsupported composite unresolved instead of guessing');
+const alphanumericEmployeeOwQuery = 'In October 2026, employee E1 has S$3,000 of Ordinary Wages and an annual bonus. Staff E2 has S$9,000 of Ordinary Wages and an annual bonus. Which employee hits the CPF OW ceiling?';
+const alphanumericEmployeeOwResponse = await processAccountingQuery(alphanumericEmployeeOwQuery, null, 'IFRS');
+assert.doesNotMatch(alphanumericEmployeeOwResponse.messageText, /stated monthly OW base is S\$3,000/i,
+  'alphanumeric employee identifiers still trigger the multi-employee safeguard');
 
 const multiMonthOwQuery = 'Employee A had S$3,000 of Ordinary Wages in March 2026 and S$9,000 of Ordinary Wages in October 2026, plus an annual bonus. What is the OW base for the monthly ceiling in each month?';
 const multiMonthOwResponse = await processAccountingQuery(multiMonthOwQuery, null, 'IFRS');
@@ -242,6 +246,143 @@ assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: curr
   'current 2026 OW questions remain answerable when a derived 2027 anniversary boundary is also requested');
 assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(currentWageAndDerivedBoundaryQuestion).dateRole,
   'CURRENT_WORKFLOW_FACT', 'the current 2026 OW period stays in scope with a derived 2027 boundary');
+const currentWageQuestionBeforeBoundary = 'An employee obtained PR on 15 March 2026. Is CPF due on March OW, and does the first contribution year end on 31 March 2027?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: currentWageQuestionBeforeBoundary }), true,
+  'an independent current wage question before a derived boundary keeps its established source support');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(currentWageQuestionBeforeBoundary).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'the current wage question is not mistaken for payroll attached to the later boundary date');
+
+const futureBonusPayableClause = 'A foreign employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027, when his bonus becomes payable. Does the bonus attract CPF?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: futureBonusPayableClause }), false,
+  'a future payable bonus clause attached to an anniversary date remains outside the source scope');
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(futureBonusPayableClause).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'a date attached to a future payable bonus is not admitted as only a derived boundary');
+const coordinatedFutureBonusPayableClause = 'A foreign employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027, and his bonus becomes payable then. Does the bonus attract CPF?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: coordinatedFutureBonusPayableClause }), false,
+  'a coordinated payroll clause remains attached to the non-current boundary date');
+const sharedDatePayrollQueries = [
+  'An employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027, and we pay him a bonus then. Does the bonus attract CPF?',
+  'An employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027. His bonus becomes payable then. Does the bonus attract CPF?',
+  'A foreign employee became a Singapore PR on 15 March 2026. His bonus becomes payable, when the first contribution year ends on 31 March 2027. Does the bonus attract CPF?',
+  'A foreign employee became a Singapore PR on 15 March 2026. His bonus becomes payable then, when the first contribution year ends on 31 March 2027. Does the bonus attract CPF?'
+];
+for (const query of sharedDatePayrollQueries) {
+  assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query }), false,
+    'a payroll clause that shares the non-current date is not admitted as boundary-only support');
+  assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query).dateRole, 'CURRENT_WORKFLOW_FACT',
+    'a shared-date payroll clause does not become a current workflow fact');
+  let workstreams;
+  const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {
+    onAuthorityWorkstreams: value => { workstreams = value; }
+  });
+  const issues = workstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+  assert.ok(issues.some(issue => issue.domain === 'CPF_PAYROLL' && issue.evidenceStatus !== 'VERIFIED'),
+    'the application does not verify the future bonus from a boundary-only source');
+  assert.match(response.messageText, /Applicability limitation:[^\n]*2027/i,
+    'the application preserves the future-year limitation for a bonus sharing the boundary date');
+}
+const separateSentenceWageAndBoundary = 'An employee obtained PR on 15 March 2026. His October 2026 wages were paid as usual. Does the first contribution year end on 31 March 2027?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: separateSentenceWageAndBoundary }), true,
+  'a current payroll fact in an earlier sentence does not invalidate an independent derived boundary');
+let futureBonusWorkstreams;
+const futureBonusResponse = await processAccountingQuery(futureBonusPayableClause, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { futureBonusWorkstreams = value; }
+});
+const futureBonusIssues = futureBonusWorkstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+assert.ok(futureBonusIssues.some(issue => issue.domain === 'CPF_PAYROLL' && issue.evidenceStatus !== 'VERIFIED'),
+  'the actual application does not mark the future bonus question verified from the boundary-only source');
+assert.match(futureBonusResponse.messageText, /Applicability limitation:[^\n]*2027/i,
+  'the application keeps the future-period applicability limitation');
+
+const ownerMismatchQueries = [
+  'Employee A became a Singapore PR on 15 March 2026. Employee B remains a foreigner. Is CPF due on a foreigner’s March Ordinary Wages and what is the first-year boundary?',
+  'When does a foreigner’s first CPF contribution year end?'
+];
+for (const [index, query] of ownerMismatchQueries.entries()) {
+  let workstreams;
+  const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {
+    onAuthorityWorkstreams: value => { workstreams = value; }
+  });
+  const plannedIssues = workstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+  assert.ok(plannedIssues.some(issue => issue.domain === 'CPF_PAYROLL'), `${query}: CPF issue remains represented`);
+  assert.doesNotMatch(response.messageText, /31\/03\/2027|01\/04\/2027|15\/03\/2026|pro-rated portion from/i,
+    `${query}: do not borrow an employee's date or proration for an unresolved foreigner`);
+  if (index === 0) assert.match(response.messageText, /CPF is not payable on the wages of an employee while that employee remains a foreigner/i,
+    'the application preserves the foreigner’s no-CPF result while withholding the other employee’s personal dates');
+}
+const lowercaseEmployeeAliasQuery = 'Employee a became a Singapore PR on 15 March 2026. Staff a’s March Ordinary Wages are being reviewed. Is CPF due on a’s March OW from the grant date?';
+const lowercaseAliasResponse = await processAccountingQuery(lowercaseEmployeeAliasQuery, null, 'IFRS');
+assert.match(lowercaseAliasResponse.messageText, /15\/03\/2026/,
+  'lowercase employee designators and same-person staff aliases retain their own PR date');
+assert.match(lowercaseAliasResponse.messageText, /pro-rated portion from 15\/03\/2026 through 31\/03\/2026/i,
+  'a lowercase possessive reference can resolve to the explicitly established employee');
+const lowercaseMultiEmployeeOwnerQuery = 'Employee a became a Singapore PR on 15 March 2026. Employee b remains a foreigner. Is CPF due on a’s March Ordinary Wages?';
+const lowercaseMultiEmployeeOwnerResponse = await processAccountingQuery(lowercaseMultiEmployeeOwnerQuery, null, 'IFRS');
+assert.match(lowercaseMultiEmployeeOwnerResponse.messageText, /15\/03\/2026/,
+  'a lowercase possessive distinguishes employee a from employee b in a multi-employee query');
+assert.match(lowercaseMultiEmployeeOwnerResponse.messageText, /pro-rated portion from 15\/03\/2026 through 31\/03\/2026/i,
+  'the lower-case possessive receives only its matching employee’s proration');
+const alphanumericOwnerQuery = 'Employee E1 became a Singapore PR on 15 March 2026. Staff E2 remains a foreigner. Is CPF due on E1’s March Ordinary Wages and what is the first-year boundary?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: alphanumericOwnerQuery }), true,
+  'an alphanumeric employee possessive can bind the explicit PR date to E1');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(alphanumericOwnerQuery).dateRole, 'CURRENT_WORKFLOW_FACT',
+  'the named employee PR date remains an admitted current fact when the question explicitly identifies E1');
+let alphanumericOwnerWorkstreams;
+const alphanumericOwnerResponse = await processAccountingQuery(alphanumericOwnerQuery, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { alphanumericOwnerWorkstreams = value; }
+});
+const alphanumericOwnerIssues = alphanumericOwnerWorkstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+assert.ok(alphanumericOwnerIssues.some(issue => issue.domain === 'CPF_PAYROLL' && issue.evidenceStatus === 'VERIFIED'),
+  'the application verifies CPF for the employee whose PR date is explicitly requested');
+assert.match(alphanumericOwnerResponse.messageText, /15\/03\/2026/,
+  'the application applies E1’s explicit PR date');
+assert.match(alphanumericOwnerResponse.messageText, /first-year boundary ends 31\/03\/2027/i,
+  'the application calculates the boundary for E1 instead of treating E1 as a foreigner');
+
+const singleEmployeeOwQuery = 'In October 2026, one employee has a separate annual bonus of S$20,000 and Ordinary Wages of S$5,000. The same employee is paid monthly. Is the CPF-able monthly OW base S$5,000, and does capping OW prove none of the bonus attracts CPF?';
+let singleEmployeeOwWorkstreams;
+const singleEmployeeOwResponse = await processAccountingQuery(singleEmployeeOwQuery, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { singleEmployeeOwWorkstreams = value; }
+});
+const singleEmployeeOwIssues = singleEmployeeOwWorkstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+assert.equal(singleEmployeeOwIssues.filter(issue => issue.domain === 'CPF_PAYROLL').length, 1,
+  'ordinary prose about one employee has one CPF issue');
+assert.match(singleEmployeeOwResponse.messageText, /stated monthly OW base is S\$5,000/i,
+  'repeated ordinary prose about the same employee retains the OW amount');
+assert.doesNotMatch(singleEmployeeOwResponse.messageText, /more than one employee or OW amount/i,
+  'the words "has" and "is" are not employee identifiers');
+
+const descriptiveIncomeCpfQuery = 'In October 2026, one employee has a separate annual bonus of S$20,000 and Ordinary Wages of S$5,000. The employment income includes both amounts. Is the CPF-able monthly OW base S$5,000, and does capping OW prove none of the bonus attracts CPF?';
+let descriptiveIncomeWorkstreams;
+const descriptiveIncomeResponse = await processAccountingQuery(descriptiveIncomeCpfQuery, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { descriptiveIncomeWorkstreams = value; }
+});
+const descriptiveIncomeIssues = descriptiveIncomeWorkstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+assert.ok(descriptiveIncomeIssues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'the descriptive-income query retains its requested CPF issue');
+assert.equal(descriptiveIncomeIssues.some(issue => issue.domain.startsWith('IRAS')), false,
+  'descriptive employment-income context does not add an IRAS reporting request');
+assert.match(descriptiveIncomeResponse.messageText, /\*\*Status:\*\* Evidence verified/i,
+  'the final answer status stays verified for the sole requested CPF issue');
+assert.match(descriptiveIncomeResponse.messageText, /\*\*Material evidence gaps:\*\* None identified/i,
+  'the final answer does not report an unrequested IRAS evidence gap');
+assert.match(descriptiveIncomeResponse.messageText, /stated monthly OW base is S\$5,000/i,
+  'the final answer retains the supported monthly OW base');
+for (const query of [
+  'Does CPF apply to the annual bonus that the employment income includes?',
+  'Does CPF apply to the annual bonus which is included in employment income?'
+]) {
+  let workstreams;
+  const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {
+    onAuthorityWorkstreams: value => { workstreams = value; }
+  });
+  const issues = workstreams?.workstreams?.flatMap(stream => stream.issues) || [];
+  assert.ok(issues.some(issue => issue.domain === 'CPF_PAYROLL'), `${query}: preserve the requested CPF issue`);
+  assert.equal(issues.some(issue => issue.domain.startsWith('IRAS')), false,
+    `${query}: descriptive relative wording does not create an IRAS reporting issue`);
+  assert.doesNotMatch(response.messageText, /Auto-Inclusion Scheme and Employment Income Reporting|IRAS AIS/i,
+    `${query}: the final answer contains no unrequested IRAS evidence gap`);
+}
 
 const mixedIrasCpfQuery = 'Should we report the annual bonus in IR8A, and does CPF apply to this bonus?';
 let mixedIrasCpfWorkstreams;
@@ -262,5 +403,15 @@ assert.ok(employmentIncomeCpfIssues.some(issue => issue.domain.startsWith('IRAS'
   'actual application planning retains employment-income reporting alongside CPF');
 assert.ok(employmentIncomeCpfIssues.some(issue => issue.domain === 'CPF_PAYROLL'),
   'actual application planning retains CPF for employment-income bonus wording');
+const passiveCommaReportingQuery = 'Should the annual bonus, which was earned in 2025, be reported as employment income, and does CPF apply to this bonus?';
+let passiveCommaReportingWorkstreams;
+await processAccountingQuery(passiveCommaReportingQuery, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { passiveCommaReportingWorkstreams = value; }
+});
+const passiveCommaReportingIssues = passiveCommaReportingWorkstreams?.workstreams?.flatMap(workstream => workstream.issues) || [];
+assert.ok(passiveCommaReportingIssues.some(issue => issue.domain.startsWith('IRAS')),
+  'application planning retains passive employment-income reporting after a nonrestrictive relative clause');
+assert.ok(passiveCommaReportingIssues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'application planning retains CPF alongside comma-bounded passive reporting');
 
 console.log(`Statutory CPF expansion: ${results.length} actual app cases and date/source negative controls passed.`);

@@ -867,8 +867,8 @@ function exactPrConversionDate(dateText: string): string | undefined {
 }
 
 function hasUnboundNamedPrGrantDate(query: string): boolean {
-  const employees = [...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)];
-  const employeeIds = [...new Set(employees.map(match => match[1].toUpperCase()))];
+  const employees = namedEmployeeReferences(query);
+  const employeeIds = [...new Set(employees.map(match => match.id))];
   if (employeeIds.length < 2) return false;
   const datePattern = new RegExp(String.raw`\b(?:obtained|became|was\s+granted|granted|converted\s+(?:to|into))\b[^.!?;]{0,100}\b(?:singapore\s+)?(?:permanent\s+resident|pr|spr)\b[^.!?;]{0,50}\b${EXPLICIT_PR_DATE}\b`, 'i');
   if (!datePattern.test(query)) return false;
@@ -877,13 +877,26 @@ function hasUnboundNamedPrGrantDate(query: string): boolean {
     const start = mention.index!;
     const end = employees[index + 1]?.index ?? query.length;
     return datePattern.test(query.slice(start, end));
-  }).map(match => match[1].toUpperCase());
+  }).map(match => match.id);
   const clauses = query.split(/[.!?;]/).map(clause => clause.trim()).filter(Boolean);
   const finalQuestion = clauses.slice().reverse().find(clause =>
     /^(?:what|when|who|where|how|which|is|are|do|does|can|could|should|will|would|did|was|were)\b/i.test(clause)
   ) || clauses.at(-1) || '';
-  const questionOwners = employeeIds.filter(id => new RegExp(String.raw`\b${id}(?:['’]s)?\b`, 'i').test(finalQuestion));
+  const questionOwners = employeeIds.filter(id => {
+    const explicitAlias = namedEmployeeReferences(finalQuestion).some(reference => reference.id === id);
+    const idParts = id.match(/[A-Z]+|\d+/g) || [];
+    const idPattern = idParts.join('[- ]*');
+    const explicitPossessive = idPattern.length > 0 && new RegExp(String.raw`\b${idPattern}['’]s\b`, 'i').test(finalQuestion);
+    return explicitAlias || explicitPossessive;
+  });
   return statusOwners.length !== 1 || questionOwners.length !== 1 || statusOwners[0] !== questionOwners[0];
+}
+
+/** Recognize compact explicit employee IDs without treating ordinary lowercase verbs as names. */
+function namedEmployeeReferences(query: string): Array<{ id: string; index: number }> {
+  return [...query.matchAll(/\b(?:employee|staff|worker)\s+([a-z0-9]+(?:-[a-z0-9]+)?)\b/gi)]
+    .filter(match => /^[a-z]$/i.test(match[1]) || /^\d+$/.test(match[1]) || /^id[- ]?\d+$/i.test(match[1]) || /^[A-Z][A-Z0-9-]*$/.test(match[1]))
+    .map(match => ({ id: match[1].replace(/[-\s]/g, '').toUpperCase(), index: match.index! }));
 }
 
 function statedPrConversionDate(query: string): string | undefined {
@@ -955,8 +968,7 @@ function statedOrdinaryWageAmounts(query: string): number[] {
 function statedOrdinaryWageAmount(query: string): number | undefined {
   const values = statedOrdinaryWageAmounts(query);
   const unique = [...new Set(values)];
-  const people = [...new Set([...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)]
-    .map(match => match[1].toUpperCase()))];
+  const people = [...new Set(namedEmployeeReferences(query).map(match => match.id))];
   const months = [...new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]
     .map(match => match[0].toLowerCase()))];
   if (people.length > 1 || unique.length > 1 || (values.length > 1 && months.length > 1)) return undefined;
@@ -966,8 +978,7 @@ function statedOrdinaryWageAmount(query: string): number | undefined {
 function additionalWageCeilingAnswer(query: string): string {
   const payableIn2026 = /\b(?:due and payable|payable|due)\b[^.!?;]{0,70}\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+2026\b/i.test(query);
   const ordinaryWages = statedOrdinaryWageAmount(query);
-  const namedPeople = new Set([...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)]
-    .map(match => match[1].toUpperCase()));
+  const namedPeople = new Set(namedEmployeeReferences(query).map(match => match.id));
   const owAmounts = statedOrdinaryWageAmounts(query);
   const hasDifferentOwAmounts = new Set(owAmounts).size > 1;
   const namedMonths = new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]

@@ -1,0 +1,115 @@
+{
+  "status": "IMPLEMENTED_REVIEWED_LOCALLY_VALIDATED_AWAITING_PUBLICATION",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "startingHead": "0c11ef10a2b52e92db6688598fa03e39e8e04554",
+  "reviewedImplementation": "f78cdb480f6de2f0767168b823387b113618dad4",
+  "requestedReviewBase": "7206fc15439e221de19c1fedd7b4f00e086b6e31",
+  "runtime": "Canonical Node 22.23.3 with retained userInfo compatibility preload and offline external-fetch guard",
+  "files": [
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "sha256": "2d15aeb52e867e1bc1bf08bf5a664a75591019ba2efb5b0c83f605ba16c82827"
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "808a1b49e1303a7a1e38b93fa9990725efa5de8a9c763ce6a87afc3d37979544"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "d17e7b0e7e032dd4c6c370cbca5cc1b33df060ae5ca21e8b6b4360fe97218c88"
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "sha256": "915a8d14dbbb3b49202387c8bc1a580ad527d37368de97bde8006b686f344e5f"
+    },
+    {
+      "path": "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs",
+      "sha256": "685046a5a5c14bdf39afadb868a77be2793a440ce00733c4db95a452444a4e61"
+    }
+  ],
+  "checks": [
+    {
+      "check": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-11-01T13:22:19.5986897Z",
+      "completedUTC": "2026-11-01T13:22:23.5927995Z"
+    },
+    {
+      "check": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:22:23.6252113Z",
+      "completedUTC": "2026-11-01T13:22:23.8046186Z"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:22:23.8077995Z",
+      "completedUTC": "2026-11-01T13:22:33.6376917Z"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:22:33.6422590Z",
+      "completedUTC": "2026-11-01T13:22:51.2988567Z"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:22:51.3004358Z",
+      "completedUTC": "2026-11-01T13:22:52.4702010Z"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:22:52.4716714Z",
+      "completedUTC": "2026-11-01T13:27:51.0481860Z"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedUTC": "2026-11-01T13:27:51.0495050Z",
+      "completedUTC": "2026-11-01T13:33:11.4760589Z"
+    }
+  ],
+  "suiteCounts": {
+    "smoke": {
+      "passed": 161,
+      "failed": 0
+    },
+    "full": {
+      "passed": 184,
+      "failed": 0
+    }
+  },
+  "focusedSuites": [
+    "test_cpf_payroll_knowledge_20261027b.mjs",
+    "test_statutory_cpf_expansion_20261101.mjs",
+    "test_statutory_multipart_issue_refinements_20261030.mjs"
+  ],
+  "rootLintLimitation": "34 pre-existing parsing errors in untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs; maintained src/scripts/tests lint passes",
+  "independentReview": {
+    "finalApplicationProbesPassed": 19,
+    "unresolvedMaterialFindings": []
+  },
+  "preservation": {
+    "unchangedConfigurationAnswers": 350,
+    "previouslyCorrectAnswersPreserved": 213,
+    "externalRequests": 0,
+    "modelRequests": 0,
+    "interpretation": "Inherited prior grades after complete-answer hash equality; not a fresh quality grade or live acceptance."
+  },
+  "unchangedScope": [
+    "Statutory rates",
+    "Frozen questions and source profiles",
+    "Deployment configuration"
+  ],
+  "limitations": [
+    "Whole-question coverage and individual applicability remain separate from mapped-issue evidence status.",
+    "Future payroll still requires official evidence applicable to that period.",
+    "The existing multi-employee/month safeguard withholds a universal OW base; this patch does not implement a general per-employee payroll solver.",
+    "Broader IRAS, MOM, ACRA and MAS coverage gaps remain outside this repair.",
+    "No CI dispatched, live integration/browser/model acceptance, source activation, merge or deployment."
+  ],
+  "localOnly": "Full before/after responses, five raw corpus captures, logs, temporary replay helpers and unrelated pre-existing untracked archives are outside publication scope."
+}

@@ -2777,10 +2777,28 @@ function isIncidentalCpfBonusTaxGroup(
   topics: ReturnType<typeof defaultQueryTopicResolver.decomposeQuery>['topics']
 ): boolean {
   const topicIds = topics.map(topic => topic.id);
-  const explicitlyRequestsBonusIncomeReporting =
-    /\b(?:report|include|declare|file|submit|furnish|provide)\w*\b/i.test(query) &&
-    /\b(?:employment income|employee income|employee earnings)\b/i.test(query) &&
-    /\b(?:bonus|aws)\b/i.test(query);
+  const reportingIntentQuery = query.replace(/,\s*(?:that|which|who)\b[^,.!?;]*,/gi, ' ');
+  const requestClauses = splitRequestClauses(reportingIntentQuery);
+  const imperativeClauses = reportingIntentQuery.split(/[.!?;]+/).map(clause => clause.trim())
+    .filter(clause => /^(?:please\s+)?(?:report|include|declare|file|submit|furnish|provide)\b/i.test(clause));
+  const explicitlyRequestsBonusIncomeReporting = [...requestClauses, ...imperativeClauses].some(clause => {
+    const relativeClauseStart = /\b(?:that|which|who)\b/i.exec(clause);
+    const relativeFollowsBonus = relativeClauseStart &&
+      /\b(?:annual\s+)?(?:bonus|aws)\b[^.!?;]*$/i.test(clause.slice(0, relativeClauseStart.index));
+    const mainPredicate = relativeFollowsBonus
+      ? clause.slice(0, relativeClauseStart.index)
+      : clause;
+    const hasReportingAction = /\b(?:report|include|declare|file|submit|furnish|provide)\w*\b/i.test(mainPredicate);
+    const hasBonusObject = /\b(?:annual\s+)?(?:bonus|aws)\b/i.test(mainPredicate);
+    const hasEmploymentIncomeObject = /\b(?:employment income|employee income|employee earnings)\b/i.test(mainPredicate);
+    const hasReportingForm = /\b(?:ir8[as]|ais|auto[- ]inclusion scheme)\b/i.test(mainPredicate);
+    const relativeClauseObject = relativeFollowsBonus &&
+      /\b(?:employment income|employee income|employee earnings)\b/i.test(clause);
+    const relativeClauseForm = relativeFollowsBonus &&
+      /\b(?:ir8[as]|ais|auto[- ]inclusion scheme)\b/i.test(clause);
+    return hasReportingForm || (hasReportingAction && hasBonusObject &&
+      (hasEmploymentIncomeObject || relativeClauseObject || relativeClauseForm));
+  });
   return /\b(?:cpf|central provident fund|aw ceiling|additional wage)\b/i.test(query) &&
     /\b(?:bonus|annual bonus|aws)\b/i.test(query) &&
     !/\b(?:tax|taxes|taxable|iras|ir8[as]|ais|employment income reporting|auto-inclusion|income reporting|filing obligation|filing requirement)\b/i.test(query) &&

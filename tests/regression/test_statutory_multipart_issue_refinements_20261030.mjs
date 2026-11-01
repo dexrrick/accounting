@@ -25,6 +25,49 @@ assert.ok(employmentIncomeCpfBonusPlan.issuePlan.issues.some(issue => issue.doma
   'explicit employment-income reporting remains an IRAS issue when CPF is also requested');
 assert.ok(employmentIncomeCpfBonusPlan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
   'the employment-income reporting wording retains its independent CPF issue');
+for (const [query, form] of [
+  ['Should we report this annual bonus in IR8A, and does CPF apply?', 'IR8A'],
+  ['Should we report this annual bonus in IR8S, and does CPF apply?', 'IR8S'],
+  ['Should we report this annual bonus under AIS, and does CPF apply?', 'AIS']
+]) {
+  const plan = planFor(query);
+  assert.ok(plan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')),
+    `an explicit ${form} request retains an IRAS issue`);
+  assert.ok(plan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+    `an explicit ${form} request retains its independent CPF issue`);
+}
+for (const [query, wording] of [
+  ['Please report the annual bonus as employment income, and explain whether CPF applies to this bonus.', 'polite imperative reporting request'],
+  ['Report the annual bonus as employment income. Does CPF apply to this bonus?', 'standalone imperative reporting request'],
+  ['Should the annual bonus be included in employment income, and does CPF apply to the bonus?', 'passive reporting request'],
+  ['Should we report that annual bonus as employment income, and does CPF apply to the bonus?', 'demonstrative bonus reference'],
+  ['Can you confirm that we should report the annual bonus as employment income, and does CPF apply?', 'reporting request in a complement clause'],
+  ['Should we report the annual bonus that was paid in March as employment income, and does CPF apply?', 'reporting object after a relative clause'],
+  ['Should the annual bonus, which was earned in 2025, be reported as employment income, and does CPF apply to this bonus?', 'passive reporting request with a comma-bounded relative clause']
+]) {
+  const plan = planFor(query);
+  assert.ok(plan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')),
+    `${wording} retains its explicit IRAS request`);
+  assert.ok(plan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+    `${wording} retains its independent CPF request`);
+}
+for (const query of [
+  'Does CPF apply to the annual bonus that the employment income includes?',
+  'Does CPF apply to the annual bonus which is included in employment income?'
+]) {
+  const plan = planFor(query);
+  assert.ok(plan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+    'the request retains its CPF issue');
+  assert.equal(plan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')), false,
+    'employment-income wording in a descriptive relative clause is not a reporting request');
+}
+const reportingRequestAfterRelativeSentence = planFor(
+  'Does CPF apply to the annual bonus, which the employment income includes. Should we report the annual bonus as employment income, and does CPF apply?'
+);
+assert.ok(reportingRequestAfterRelativeSentence.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')),
+  'a descriptive relative clause cannot consume an explicit IRAS request in the next sentence');
+assert.ok(reportingRequestAfterRelativeSentence.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'the second sentence retains its independent CPF request');
 const incidentalIrasCpfBonusPlan = planFor('Does CPF apply to an annual bonus?');
 assert.equal(incidentalIrasCpfBonusPlan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')), false,
   'an incidental IRAS bonus taxonomy topic remains suppressed for a CPF-only question');

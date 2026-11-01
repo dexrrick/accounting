@@ -1,0 +1,81 @@
+{
+  "status": "FINAL_REVIEW_PASSED",
+  "reviewer": "Independent reviewer custom agent",
+  "scope": "Working diff and bounded offline natural-language variants for all four requested defects",
+  "initialChecks": {
+    "applicationVariantExecutions": 18,
+    "additionalIssuePlanProbes": 4,
+    "note": "Three initial abbreviated ownership queries used the fallback route and were replaced by fully routed wording. No live/model verification."
+  },
+  "initialFindings": [
+    {
+      "severity": "P2",
+      "file": "src/retrieval/targetDateResolver.ts",
+      "query": "A foreign employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027, and we pay him a bonus then. Does the bonus attract CPF?",
+      "observed": "Source support true, CURRENT_WORKFLOW_FACT, CPF VERIFIED, no 2027 applicability limitation",
+      "required": "Preserve the shared future payroll date regardless of clause subject"
+    },
+    {
+      "severity": "P2",
+      "file": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "query": "Employee E1 became a Singapore PR on 15 March 2026. Staff E2 remains a foreigner. Is CPF due on E1’s March Ordinary Wages and what is the first-year boundary?",
+      "observed": "Answer incorrectly describes the established PR employee as a foreigner without a boundary",
+      "required": "Accept possessives of safely established alphanumeric identifiers"
+    },
+    {
+      "severity": "P2",
+      "file": "src/services/semanticQuestionUnderstanding.ts",
+      "queries": [
+        "Does CPF apply to the annual bonus that the employment income includes?",
+        "Does CPF apply to the annual bonus which is included in employment income?",
+        "Please report the annual bonus as employment income, and explain whether CPF applies to this bonus.",
+        "Report the annual bonus as employment income. Does CPF apply to this bonus?"
+      ],
+      "observed": "Factual relative clauses add IRAS INSUFFICIENT; report-led imperatives lose IRAS",
+      "required": "Bind reporting intent and object to the requested predicate; preserve direct imperatives"
+    }
+  ],
+  "passingInitialControls": [
+    "Lowercase a/b with a’s and article ownership withholding",
+    "ALPHA/BETA employee safeguards and repeated ordinary prose",
+    "No-comma and reversed future bonus-date clauses",
+    "Current-year wages with derived boundaries",
+    "Explicit interrogative reporting requests"
+  ],
+  "secondReview": {
+    "status": "TWO_P2_FINDINGS",
+    "applicationVariants": 17,
+    "passed": 15,
+    "priorFindings": "All three exact initial findings corrected",
+    "findings": [
+      {
+        "file": "src/retrieval/targetDateResolver.ts",
+        "query": "A foreign employee became a Singapore PR on 15 March 2026. His bonus becomes payable, when the first contribution year ends on 31 March 2027. Does the bonus attract CPF?",
+        "result": "Boundary-only predicate true; CURRENT_WORKFLOW_FACT. The payable then, when variant also marks CPF VERIFIED."
+      },
+      {
+        "file": "src/services/semanticQuestionUnderstanding.ts",
+        "query": "Should the annual bonus, which was earned in 2025, be reported as employment income, and does CPF apply to this bonus?",
+        "result": "Only CPF planned; reporting predicate lost after relative clause"
+      }
+    ],
+    "noLiveOrModelVerification": true
+  },
+  "finalReview": {
+    "applicationProbes": 19,
+    "passed": 19,
+    "remainingMaterialFindings": [],
+    "scope": "Final source/test diff and bounded offline application variants covering all four requested defects and all confirmed review findings",
+    "controls": [
+      "Lowercase and E1 possessives; article-safe ownership",
+      "Attached future dates including reversed comma clauses and cross-sentence then",
+      "Current-year wages with derived boundaries",
+      "Single-employee prose and genuine distinct identifiers",
+      "Descriptive income suppression; explicit, imperative, passive-relative, IR8S and two-sentence reporting"
+    ],
+    "whitespaceCheck": "PASSED",
+    "sourceOrTestFilesModifiedByReviewer": false,
+    "liveSourceOrModelVerification": "NOT_RUN",
+    "fullSuiteOrCI": "Not performed by reviewer; supervisor validation reported separately"
+  }
+}

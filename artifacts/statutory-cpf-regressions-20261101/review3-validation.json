@@ -1,0 +1,7 @@
+{
+  "suite": "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs",
+  "exitCode": 0,
+  "startedUTC": "2026-11-01T13:20:12.9696261Z",
+  "completedUTC": "2026-11-01T13:20:14.6604062Z",
+  "log": "D:\\Accounting\\artifacts\\statutory-cpf-regressions-20261101\\test_statutory_multipart_issue_refinements_20261030.mjs.review3.log"
+}

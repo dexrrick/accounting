@@ -115,18 +115,41 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
     clauseStart = separator.index! + separator[0].length;
   }
   clauses.push({ start: clauseStart, end: query.length, text: query.slice(clauseStart).trim() });
+  const nonEmptyClauses = clauses.filter(clause => clause.text.length > 0);
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
   return years.every(yearMatch => {
     const year = yearMatch[0];
     if (year === currentYear) return true;
     const offset = Number(year) - Number(grantYear);
     if (offset < 1 || offset > 2) return false;
-    const clause = clauses.find(candidate => candidate.start <= yearMatch.index! && yearMatch.index! < candidate.end)?.text;
+    const clause = nonEmptyClauses.find(candidate => candidate.start <= yearMatch.index! && yearMatch.index! < candidate.end)?.text;
     if (!clause) return false;
     const namesContributionYear = /\b(?:first|second|third|1st|2nd|3rd)[- ](?:(?:pr|spr|cpf)\s+)?(?:contribution\s+)?year\b/i.test(clause);
     const describesBoundary = /\b(?:boundary|anniversary|end|ends|ending|through|until|start|starts|begin|begins)\b/i.test(clause);
     const describesPayrollOrLaw = /\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|salary|bonus|payroll|payable|due|rate table|rates?|rules?|law|legal|tax)\b/i.test(clause);
-    return namesContributionYear && describesBoundary && !describesPayrollOrLaw;
+    const yearClauseIndex = nonEmptyClauses.findIndex(candidate => candidate.start <= yearMatch.index! && yearMatch.index! < candidate.end);
+    const yearClause = nonEmptyClauses[yearClauseIndex];
+    const previousClause = nonEmptyClauses[yearClauseIndex - 1];
+    const previousAdjacentText = previousClause ? query.slice(previousClause.end, yearClause.start) : '';
+    const previousSameSentence = previousClause && !/[.!?;]/.test(previousAdjacentText) &&
+      /^[\s,]*(?:and|or)?[\s,]*(?:when|where|while|once|in which|on which|at which)?[\s,]*$/i.test(previousAdjacentText);
+    const previousClauseHasPayroll = Boolean(previousClause && /\b(?:bonus|additional wages?|ordinary wages?|\baw\b|\bow\b|payroll|payable|salary|wages?)\b/i.test(previousClause.text));
+    const previousClauseHasOwnYear = Boolean(previousClause && /\b(?:19|20)\d{2}\b/.test(previousClause.text));
+    const previousClauseIsIndependentQuestion = Boolean(previousClause &&
+      /^(?:is|are|do|does|can|could|should|will|would|what|when|which|how|where|who)\b/i.test(previousClause.text));
+    const previousClauseSharesBoundaryDate = Boolean(previousClause && previousClauseHasPayroll && !previousClauseHasOwnYear &&
+      (/\b(?:then|on that date|at that time|on the same date|at the same time)\b/i.test(previousClause.text) ||
+        (previousSameSentence && !previousClauseIsIndependentQuestion &&
+          /^\s*(?:when|where|while|once|in which|on which|at which)\b/i.test(yearClause.text))));
+    const nextClause = nonEmptyClauses[yearClauseIndex + 1];
+    const adjacentText = nextClause ? query.slice(yearClause.end, nextClause.start) : '';
+    const sameSentence = nextClause && !/[.!?;]/.test(adjacentText) && /^[\s,]*(?:and|or)?[\s,]*$/i.test(adjacentText);
+    const nextClauseHasPayroll = Boolean(nextClause && /\b(?:bonus|additional wages?|ordinary wages?|\baw\b|\bow\b|payroll|payable|salary|wages?)\b/i.test(nextClause.text));
+    const nextClauseHasOwnYear = Boolean(nextClause && /\b(?:19|20)\d{2}\b/.test(nextClause.text));
+    const sharesBoundaryDate = Boolean(nextClause && nextClauseHasPayroll && !nextClauseHasOwnYear &&
+      (/\b(?:then|on that date|at that time|on the same date|at the same time)\b/i.test(nextClause.text) || sameSentence));
+    const attachedPayrollClause = sharesBoundaryDate || previousClauseSharesBoundaryDate;
+    return namesContributionYear && describesBoundary && !describesPayrollOrLaw && !attachedPayrollClause;
   });
 }
 
