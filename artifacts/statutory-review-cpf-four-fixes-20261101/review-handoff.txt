@@ -3,16 +3,16 @@ Review handoff — mixed IRAS reporting and CPF ownership/date corrections
 Goal and status
 Correct the four reported defects: suppressed explicit IRAS reporting, cross-employee OW amount attribution, mixed employee/staff/worker PR-date ownership, and rejection of derived PR anniversary years. Implementation and local verification are complete. Independent review's two additional P2 findings were corrected and re-reviewed with no remaining material findings in scope.
 
-Publication is blocked: automatic approval review rejected the GitHub push, including a retry after destination and fixture-payload checks. No push occurred. Explicit approval is required to publish the code, synthetic application responses and review evidence to the public repository below. This handoff is prepared locally; it does not imply GitHub availability.
+The implementation, synthetic application responses and review evidence are published. Two initial push attempts were rejected by automatic approval review; the user then explicitly approved this payload and destination. Push succeeded and the remote head was verified as 2f1c3dc884f2d97c5086729d1e4827cec8606c9d. The historical publication-blocked.json record is superseded by publication.json. This handoff is a documentation-only successor; the final published documentation head is reported in the chat.
 
 Exact review target
 Repository: https://github.com/dexrrick/accounting
 Branch: codex/statutory-knowledge-expansion-20261030
 Implementation and evidence commit: f78cdb480f6de2f0767168b823387b113618dad4
 Base commit: 7206fc15439e221de19c1fedd7b4f00e086b6e31
-Last verified GitHub branch head: 7206fc15439e221de19c1fedd7b4f00e086b6e31
+First verified published head including implementation and initial handoff: 2f1c3dc884f2d97c5086729d1e4827cec8606c9d
 PR: none created.
-The implementation commit is local and unpushed, so GitHub cannot yet serve its diff or evidence. This handoff is a documentation-only successor; the chat reports that successor's full local head SHA. Review the implementation commit against the base above once publication is approved and verified.
+The implementation commit and evidence are available through GitHub. Review f78cdb480f6de2f0767168b823387b113618dad4 against the base above. The later documentation commits do not change implementation or tests.
 
 Changes
 1. src/services/semanticQuestionUnderstanding.ts preserves explicit IR8A, IR8S, AIS and employment-income reporting asks in mixed CPF/bonus questions. Verb-led wording such as "report the annual bonus as employment income" is covered. CPF-only bonus questions still suppress incidental IRAS topics.
@@ -28,7 +28,7 @@ Root lint failed with 34 pre-existing parsing errors in the untracked archive ar
 The initial broad-validation run was interrupted after static checks when review found two P2 issues. Both were corrected before the final passing build/suite run. Intermediate results are retained separately and are not claimed as final validation.
 All 350 frozen configuration answers are byte-identical to the prior completed capture; all 213 previously correct answers are preserved by full-answer hash comparison. Original questions and source profiles remain unchanged. These are inherited prior grades after exact hash equality, not fresh grades inferred from evidence status. All five preservation captures and the six-case application capture recorded zero external/model requests.
 Independent re-review passed five source/date probes and three routing probes. No remaining material finding was reported in the reviewed scope.
-No CI was dispatched or inspected for the unpushed commit. No live integration suite, browser/model acceptance, source activation, merge or deployment occurred. Local results establish neither CI nor live acceptance.
+After push, the GitHub connector returned no combined-status entries and no PR-triggered workflow runs for the implementation SHA. The workflow tool is limited to PR-triggered runs and its first page; this is not a comprehensive all-event CI audit or a passing CI result. No CI was manually dispatched. No live integration suite, browser/model acceptance, source activation, merge or deployment occurred. Local results establish neither CI nor live acceptance.
 
 Remaining concerns and review focus
 The exact two-employee OW application composite still returns incomplete evidence. The selected AW-answer helper now withholds a borrowed amount and explains per-employee/month scope; it does not calculate both employee bases end to end.
@@ -37,17 +37,18 @@ Inspect explicit reporting intent versus incidental context; employee/month/date
 The broader statutory backlog remains outside this patch: IRAS withholding tax, MOM deductions, ACRA filing applicability and MAS reporting.
 
 Evidence
-All following paths are local under D:/Accounting/artifacts/statutory-review-cpf-four-fixes-20261101/ and are committed in the unpushed implementation commit:
-- completion-summary.json — actual checks, file hashes and limitations; its UNCOMMITTED label records the pre-publication validation state.
-- validation-results.json — final check exit codes and timestamps.
-- interrupted-pre-review-validation-results.json — interrupted earlier run.
-- review-result.json — initial P2 findings, corrections and final independent review.
-- preservation-comparison.json — five original-profile comparisons.
-- answer-preservation-hashes.json — per-answer baseline/current hashes and inherited grades for all 350 configurations.
-- application-responses.json — six complete actual offline application answers, with evidence statuses.
-- reported-cases.json — original four reproductions and two reviewer follow-ups.
-- starting-input-hashes.json — frozen input/evidence hashes.
-Raw corpus captures, complete console logs and temporary replay helpers remain local-only and untracked. None of the new code or evidence is available through GitHub until push approval succeeds. There are no uncommitted implementation/test changes after the implementation commit; unrelated pre-existing untracked archives remain outside the publication scope.
+Individual published reports, pinned to the implementation commit:
+- [Completion summary](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/completion-summary.json) — actual checks, file hashes and limitations; its UNCOMMITTED label records the pre-publication validation state.
+- [Final validation](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/validation-results.json) — check exit codes and timestamps.
+- [Interrupted earlier run](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/interrupted-pre-review-validation-results.json).
+- [Independent review](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/review-result.json) — initial P2 findings, corrections and final result.
+- [Preservation comparison](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/preservation-comparison.json) — five original-profile configurations.
+- [350 answer hashes](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/answer-preservation-hashes.json) — baseline/current hashes and inherited grades.
+- [Actual application responses](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/application-responses.json) — six complete offline answers with evidence statuses.
+- [Reported scenarios](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/reported-cases.json).
+- [Frozen input hashes](https://github.com/dexrrick/accounting/blob/f78cdb480f6de2f0767168b823387b113618dad4/artifacts/statutory-review-cpf-four-fixes-20261101/starting-input-hashes.json).
+Local report directory: D:/Accounting/artifacts/statutory-review-cpf-four-fixes-20261101/.
+Raw corpus captures, complete console logs and temporary replay helpers remain local-only and untracked, unavailable through GitHub. Implementation and regression-test work are committed and pushed; unrelated pre-existing untracked archives remain outside the publication scope. Final documentation publication is verified separately in the chat.
 
 Ready-to-copy review prompt
 Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-knowledge-expansion-20261030, implementation commit f78cdb480f6de2f0767168b823387b113618dad4 against base 7206fc15439e221de19c1fedd7b4f00e086b6e31 using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
