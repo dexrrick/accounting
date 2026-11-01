@@ -474,6 +474,37 @@ const stream = {
   domainLabel: 'CPF contributions', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED',
   issues: [issue], sources: [presentationSource], gaps: []
 };
+const awCeilingIssue = {
+  id: 'cpf-aw-ceiling-issue', subject: 'CPF additional wage ceiling and OW/bonus treatment', population: 'Employer',
+  operation: 'EXPLAIN_RULE', evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: []
+};
+const awCeilingHash = createHash('sha256').update(awText).digest('hex');
+const awCeilingSource = {
+  key: 'cpf-aw-ceiling-source', title: 'CPF Annual Wage Ceiling', publisher: 'CPF Board',
+  documentTitle: 'CPF Additional Wage ceiling 2026',
+  officialUrl: requests[3].officialUrl, provenance: 'LIVE_EXTERNAL', claims: [{
+    text: awText, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [awCeilingIssue.id], provenance: 'LIVE_EXTERNAL',
+    fetchedSourceBinding: {
+      recordId: 'cpf-aw-ceiling-official-extract', documentHash: awCeilingHash,
+      canonicalUrl: requests[3].officialUrl, retrievedAt: '2026-10-27T00:00:00Z'
+    }
+  }]
+};
+const awCeilingStream = { ...stream, issues: [awCeilingIssue], sources: [awCeilingSource] };
+const multiEmployeeOwAnswer = getCpfPayrollKnowledgeEvidence(
+  'In October 2026, employee A has S$3,000 of Ordinary Wages and an annual bonus. Employee B has S$9,000 of Ordinary Wages and an annual bonus. Which employee hits the CPF OW ceiling?',
+  awCeilingStream, awCeilingIssue
+);
+assert.match(multiEmployeeOwAnswer?.text || '', /more than one employee or OW amount/i,
+  'when the AW ceiling response helper is selected, it asks for per-employee monthly facts instead of using the first OW amount');
+assert.doesNotMatch(multiEmployeeOwAnswer?.text || '', /stated monthly OW base is S\$3,000/i,
+  'the CPF AW helper does not bind employee B to employee A’s lower OW amount');
+const multiMonthOwAnswer = getCpfPayrollKnowledgeEvidence(
+  'Employee A had S$3,000 of Ordinary Wages in March 2026 and S$9,000 of Ordinary Wages in October 2026, plus an annual bonus. What is the OW base for the monthly ceiling in each month?',
+  awCeilingStream, awCeilingIssue
+);
+assert.match(multiMonthOwAnswer?.text || '', /more than one employee or OW amount/i,
+  'different monthly OW amounts remain separate instead of collapsing to one base');
 const rendered = getCpfPayrollKnowledgeEvidence('What are CPF contribution rates in 2026?', stream, issue);
 assert.equal(rendered?.ruleId, 'CPF_2026_CONTRIBUTION_TABLES');
 assert.match(rendered?.text || '', /1 January 2026/);
@@ -521,6 +552,20 @@ assert.match(renderedPrDates?.text || '', /18\/05\/2025[\s\S]*31\/05\/2026[\s\S]
   'The role-bound PR date determines the first, second and third year boundaries in Singapore date format.');
 assert.doesNotMatch(renderedPrDates?.text || '', /\d+%|S\$\s?\d/,
   'PR-year date calculation does not infer historical payroll rates or amounts.');
+const sameOwnerAliasPrDates = getCpfPayrollKnowledgeEvidence(
+  'Employee A obtained PR on 15 March 2026. Staff A remains an employee; Worker B remains a foreigner. When does a’s first CPF contribution year end?',
+  prStream, prIssue
+);
+assert.match(sameOwnerAliasPrDates?.text || '', /15\/03\/2026[\s\S]*31\/03\/2027/,
+  'employee/staff/worker aliases with the same identifier retain the correct employee-owned PR date');
+const crossOwnerAliasPrDates = getCpfPayrollKnowledgeEvidence(
+  'Employee A obtained PR on 15 March 2026. Staff B remains a foreigner. When does B’s first CPF contribution year end?',
+  prStream, prIssue
+);
+assert.match(crossOwnerAliasPrDates?.text || '', /exact PR status date is needed/i,
+  'a PR date for employee A cannot establish staff B’s contribution-year boundary');
+assert.doesNotMatch(crossOwnerAliasPrDates?.text || '', /15\/03\/2026|31\/03\/2027/,
+  'the other employee’s date is withheld from staff B’s answer');
 const missingPrDate = getCpfPayrollKnowledgeEvidence(
   'When does an SPR move into the second year of CPF contributions?', prStream, prIssue
 );

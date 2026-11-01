@@ -15,6 +15,20 @@ import {
 const fallback = { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' };
 const planFor = query => reconcileQuestionUnderstanding(query, classifyQuestion(query), fallback);
 
+const explicitIrasCpfBonusPlan = planFor('Should we report the annual bonus in IR8A, and does CPF apply to this bonus?');
+assert.ok(explicitIrasCpfBonusPlan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')),
+  'an explicit IR8A filing request remains an IRAS issue in a mixed CPF bonus question');
+assert.ok(explicitIrasCpfBonusPlan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'the same mixed question retains its independent CPF issue');
+const employmentIncomeCpfBonusPlan = planFor('Should we report the annual bonus as employment income, and does CPF apply to this bonus?');
+assert.ok(employmentIncomeCpfBonusPlan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')),
+  'explicit employment-income reporting remains an IRAS issue when CPF is also requested');
+assert.ok(employmentIncomeCpfBonusPlan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'the employment-income reporting wording retains its independent CPF issue');
+const incidentalIrasCpfBonusPlan = planFor('Does CPF apply to an annual bonus?');
+assert.equal(incidentalIrasCpfBonusPlan.issuePlan.issues.some(issue => issue.domain.startsWith('IRAS')), false,
+  'an incidental IRAS bonus taxonomy topic remains suppressed for a CPF-only question');
+
 const irasQuery = 'Our GST-registered company needs to know whether input tax can be claimed for staff medical check-up expenses and a commercial delivery van used to deliver goods. What conditions and exceptions apply?';
 const irasPlan = planFor(irasQuery);
 const medicalIssue = irasPlan.issuePlan.issues.find(issue => /staff medical expenses/i.test(issue.subject));

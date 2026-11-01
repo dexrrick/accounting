@@ -91,9 +91,43 @@ function isCurrentAcraAuditCriteriaFact(query: string): boolean {
     && !/\b(?:gst|goods and services tax|cpf|central provident fund|mom|ministry of manpower|iras|income tax|corporate tax|tax relief|mas|monetary authority|accounting|journal|balance sheet|ifrs|sfrs\s*\(?i\)?|annual[- ]returns?|agm|annual general meeting|xbrl|fye|officer|company secretary|extension of time|\beot\b|financial statements?)\b/i.test(query);
 }
 
+function statedPrGrantYear(query: string): string | undefined {
+  const grantDate = new RegExp(String.raw`\b(?:obtained|became|granted|converted)\b[^.!?;]{0,65}\b(?:singapore\s+)?(?:pr|spr|permanent resident)\b[^.!?;]{0,45}\b(${EXPLICIT_DATE_PATTERN})\b`, 'i').exec(query)?.[1];
+  return grantDate?.match(/\b20\d{2}\b/)?.[0];
+}
+
 /** Identifies requests for the legal version governing an earlier period. */
 export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
   return /\b(?:historical(?:ly)?|historic(?:ally)?|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
+}
+
+/** Accept only non-current years stated in their own PR contribution-year boundary clause. */
+export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
+  query: string,
+  grantYear: string,
+  currentYear: string
+): boolean {
+  const separators = [...query.matchAll(/[,.!?;]+|\b(?:and|or)\b/gi)];
+  const clauses: Array<{ start: number; end: number; text: string }> = [];
+  let clauseStart = 0;
+  for (const separator of separators) {
+    clauses.push({ start: clauseStart, end: separator.index!, text: query.slice(clauseStart, separator.index!).trim() });
+    clauseStart = separator.index! + separator[0].length;
+  }
+  clauses.push({ start: clauseStart, end: query.length, text: query.slice(clauseStart).trim() });
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+  return years.every(yearMatch => {
+    const year = yearMatch[0];
+    if (year === currentYear) return true;
+    const offset = Number(year) - Number(grantYear);
+    if (offset < 1 || offset > 2) return false;
+    const clause = clauses.find(candidate => candidate.start <= yearMatch.index! && yearMatch.index! < candidate.end)?.text;
+    if (!clause) return false;
+    const namesContributionYear = /\b(?:first|second|third|1st|2nd|3rd)[- ](?:(?:pr|spr|cpf)\s+)?(?:contribution\s+)?year\b/i.test(clause);
+    const describesBoundary = /\b(?:boundary|anniversary|end|ends|ending|through|until|start|starts|begin|begins)\b/i.test(clause);
+    const describesPayrollOrLaw = /\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|salary|bonus|payroll|payable|due|rate table|rates?|rules?|law|legal|tax)\b/i.test(clause);
+    return namesContributionYear && describesBoundary && !describesPayrollOrLaw;
+  });
 }
 
 /** Treat a current payable-year bonus fact as current even when its performance year is earlier. */
@@ -113,13 +147,20 @@ function isCurrentCpfAwPayableYearFact(query: string, currentDate: string): bool
 function isCurrentCpfPrWageBoundaryFact(query: string, currentDate: string): boolean {
   const currentYear = currentDate.slice(0, 4);
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
-  if (hasHistoricalStatutoryVersionIntent(query) || years.length === 0 || years.some(year => year !== currentYear)
-    || !/\b(?:cpf|central provident fund)\b/i.test(query)
-    || !/\b(?:foreign employee|employee|payroll)\b/i.test(query)
-    || !/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|wages?|salary|bonus)\b/i.test(query)
+  const asksDerivedAnniversaryBoundary = /\b(?:first|second|third|1st|2nd|3rd)[- ]year\b|\b(?:boundary|anniversary|contribution year)\b/i.test(query) &&
+    /\b(?:end|ends|ending|through|until|start|starts|begin|begins|boundary|anniversary)\b/i.test(query);
+  const grantYear = statedPrGrantYear(query);
+  const hasCurrentGrantDate = grantYear === currentYear;
+  const hasOnlyCurrentOrDerivedYears = years.every(year => year === currentYear) ||
+    (hasCurrentGrantDate && hasOnlyDerivedCpfPrAnniversaryBoundaryYears(query, currentYear, currentYear));
+  const inferredPrBoundaryContext = hasCurrentGrantDate && asksDerivedAnniversaryBoundary && hasOnlyCurrentOrDerivedYears;
+  if (hasHistoricalStatutoryVersionIntent(query) || years.length === 0 ||
+    (years.some(year => year !== currentYear) && (!hasOnlyCurrentOrDerivedYears || !asksDerivedAnniversaryBoundary))
+    || (!/\b(?:cpf|central provident fund)\b/i.test(query) && !inferredPrBoundaryContext)
+    || !/\b(?:foreign employee|employee|staff|worker|payroll)\b/i.test(query)
+    || (!/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|wages?|salary|bonus)\b/i.test(query) && !asksDerivedAnniversaryBoundary)
     || /\b(?:tax(?:es)?|iras|mom|acra|mas|accounting|journal|rates?|percentages?|rate table|contribution rate)\b/i.test(query)) return false;
-  const hasExplicitGrantDate = /\b(?:obtained|became|granted|converted)\b[^.!?;]{0,65}\b(?:singapore\s+)?(?:pr|spr|permanent resident)\b[^.!?;]{0,45}\b(?:\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}|20\d{2}-\d{2}-\d{2})\b/i.test(query);
-  return hasExplicitGrantDate && /\b(?:first[- ]year|boundary|anniversary|pro.?rat|due on|payable|status date|grant date)\b/i.test(query);
+  return hasCurrentGrantDate && /\b(?:first[- ]year|boundary|anniversary|contribution year|pro.?rat|due on|payable|status date|grant date)\b/i.test(query);
 }
 
 function section13wDisposalDate(query: string): string | undefined {
@@ -252,8 +293,10 @@ export class TargetDateResolver {
       /\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(query) &&
       /\b(?:when|what date|what day|move into|transition into|begin|start)\b/i.test(query) &&
       dates.length > 0 && everyDateHasRole(/\b(?:obtained|became|conversion|converted|granted|anniversary|contribution year)\b/i);
+    const prYearTimingFitsCurrentGrant = statedPrGrantYear(query) !== currentDate.slice(0, 4) ||
+      hasOnlyDerivedCpfPrAnniversaryBoundaryYears(query, currentDate.slice(0, 4), currentDate.slice(0, 4));
     const irasRecords = hasRetentionWorkflowDates && !/\b(?:gst|cpf|mom|mas|acra|employment act|fund management)\b/i.test(query);
-    return irasRecords || entityChange || cpfRefund || payslip || appointment || prYearTiming;
+    return irasRecords || entityChange || cpfRefund || payslip || appointment || (prYearTiming && prYearTimingFitsCurrentGrant);
   }
 
   /** Resolves dates for statutory evidence separately from accounting transaction dates. */

@@ -110,6 +110,26 @@ const scenarios = [
     id: 'cpf-pr-date-not-borrowed-across-employees',
     query: 'Employee A became a Singapore PR on 15 March 2026. Employee B remains a foreigner. Is CPF due on B’s March Ordinary Wages and what is B’s first-year boundary?',
     expected: ['date stated for one employee cannot establish another employee’s first-year boundary', 'while that employee remains a foreigner', 'employee’s own Entry Permit date is needed']
+  },
+  {
+    id: 'cpf-pr-date-not-borrowed-across-staff-labels',
+    query: 'Employee A became a Singapore PR on 15 March 2026. Staff B remains a foreigner. Is CPF due on B’s March Ordinary Wages and what is B’s first-year boundary?',
+    expected: ['date stated for one employee cannot establish another employee’s first-year boundary', 'while that employee remains a foreigner', 'employee’s own Entry Permit date is needed']
+  },
+  {
+    id: 'cpf-pr-date-not-borrowed-across-worker-labels',
+    query: 'Worker A became a Singapore PR on 15 March 2026. Employee B remains a foreigner. Is CPF due on B’s March Ordinary Wages and what is B’s first-year boundary?',
+    expected: ['date stated for one employee cannot establish another employee’s first-year boundary', 'while that employee remains a foreigner', 'employee’s own Entry Permit date is needed']
+  },
+  {
+    id: 'cpf-pr-2027-boundary-from-2026-grant',
+    query: 'An employee obtained PR on 15 March 2026. Does the first contribution year end on 31 March 2027?',
+    expected: ['first-year rates apply from that date through 31/03/2027', 'second-year rates apply from 01/04/2027']
+  },
+  {
+    id: 'cpf-pr-2028-boundary-from-2026-grant',
+    query: 'An employee obtained PR on 15 March 2026. Does the second contribution year end on 31 March 2028?',
+    expected: ['second-year rates apply from 01/04/2027 through 31/03/2028', 'third-year rates start 01/04/2028']
   }
 ];
 
@@ -170,5 +190,77 @@ assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(
 assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(
   'For a 2025 bonus due and payable in January 2026, which AW ceiling applies and what CPF contribution rate applies?'
 ).dateRole, 'CURRENT_WORKFLOW_FACT', 'a current payable date does not suppress a separate CPF rate question');
+
+const multiEmployeeOwQuery = 'In October 2026, employee A has S$3,000 of Ordinary Wages and an annual bonus. Employee B has S$9,000 of Ordinary Wages and an annual bonus. Which employee hits the CPF OW ceiling?';
+const multiEmployeeOwResponse = await processAccountingQuery(multiEmployeeOwQuery, null, 'IFRS');
+assert.doesNotMatch(multiEmployeeOwResponse.messageText, /stated monthly OW base is S\$3,000/i,
+  'the exact multi-employee application question does not assign employee A’s OW conclusion to employee B');
+assert.match(multiEmployeeOwResponse.messageText, /Evidence is incomplete|Evidence incomplete/i,
+  'the current application leaves this unsupported composite unresolved instead of guessing');
+
+const multiMonthOwQuery = 'Employee A had S$3,000 of Ordinary Wages in March 2026 and S$9,000 of Ordinary Wages in October 2026, plus an annual bonus. What is the OW base for the monthly ceiling in each month?';
+const multiMonthOwResponse = await processAccountingQuery(multiMonthOwQuery, null, 'IFRS');
+assert.doesNotMatch(multiMonthOwResponse.messageText, /stated monthly OW base is S\$3,000/i,
+  'the application does not select one of the same employee’s different monthly bases as a universal answer');
+
+const directNewPrRequest = {
+  authority: 'CPF', topicId: 'cpf-pr-contribution-rates',
+  query: 'An employee obtained Singapore PR on 15 March 2026. Under CPF, does the first contribution year end on 31 March 2027?',
+  subject: 'CPF newly obtained PR status and OW/AW payable-date treatment',
+  sourceText,
+  officialUrl: 'https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status'
+};
+assert.equal(supportCpfPayrollKnowledgeRule(directNewPrRequest), true,
+  'the current official new-PR source directly supports a derived 2027 first-year boundary');
+assert.equal(supportCpfPayrollKnowledgeRule({
+  ...directNewPrRequest,
+  query: 'An employee obtained Singapore PR on 15 March 2026. Under CPF, does the second contribution year end on 31 March 2028?'
+}), true, 'the current official new-PR source directly supports the derived 2028 second-year boundary');
+assert.equal(supportCpfPayrollKnowledgeRule({
+  ...directNewPrRequest,
+  query: 'An employee obtained Singapore PR on 15 March 2026. What contribution rates applied in 2027?'
+}), false, 'a 2026 grant does not make a future payroll-rate request answerable from the retained source');
+const unsupportedLaterBoundary = 'An employee obtained PR on 15 March 2026. Does the third contribution year start on 1 April 2029?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: unsupportedLaterBoundary }), false,
+  'a derived anniversary boundary beyond the second anniversary is rejected');
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(unsupportedLaterBoundary).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'a 2029 boundary is beyond the supported 2026 grant date derivation');
+const mixedFuturePayrollQuestion = 'An employee obtained PR on 15 March 2026. What CPF treatment applies to March 2027 OW and when does the first contribution year end?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: mixedFuturePayrollQuestion }), false,
+  'a derived 2027 anniversary boundary does not admit a separate 2027 payroll-period question');
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(mixedFuturePayrollQuestion).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'future 2027 wages do not become current workflow facts merely because a PR boundary is also requested');
+const reviewerFuturePayrollQuestion = 'An employee obtained PR on 15 March 2026. For March 2027, does the employer have to contribute CPF on the employee’s Ordinary Wages, and when does the first contribution year end?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: reviewerFuturePayrollQuestion }), false,
+  'a future payroll clause cannot borrow boundary language from a later clause');
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(reviewerFuturePayrollQuestion).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'the future OW clause is not treated as a derived anniversary date');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(directNewPrRequest.query).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'the 2027 date derived from a 2026 PR grant remains a current employee fact');
+const currentWageAndDerivedBoundaryQuestion = 'An employee obtained PR on 15 March 2026. Is CPF due on March 2026 OW, and does the first contribution year end on 31 March 2027?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: currentWageAndDerivedBoundaryQuestion }), true,
+  'current 2026 OW questions remain answerable when a derived 2027 anniversary boundary is also requested');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(currentWageAndDerivedBoundaryQuestion).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'the current 2026 OW period stays in scope with a derived 2027 boundary');
+
+const mixedIrasCpfQuery = 'Should we report the annual bonus in IR8A, and does CPF apply to this bonus?';
+let mixedIrasCpfWorkstreams;
+await processAccountingQuery(mixedIrasCpfQuery, null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { mixedIrasCpfWorkstreams = value; }
+});
+const mixedIrasCpfIssues = mixedIrasCpfWorkstreams?.workstreams?.flatMap(workstream => workstream.issues) || [];
+assert.ok(mixedIrasCpfIssues.some(issue => issue.domain.startsWith('IRAS')),
+  'actual application planning retains IRAS reporting alongside CPF for the original IR8A wording');
+assert.ok(mixedIrasCpfIssues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'actual application planning retains the independent CPF workstream for the original IR8A wording');
+let employmentIncomeCpfWorkstreams;
+await processAccountingQuery('Should we report the annual bonus as employment income, and does CPF apply to this bonus?', null, 'IFRS', undefined, undefined, [], undefined, {
+  onAuthorityWorkstreams: value => { employmentIncomeCpfWorkstreams = value; }
+});
+const employmentIncomeCpfIssues = employmentIncomeCpfWorkstreams?.workstreams?.flatMap(workstream => workstream.issues) || [];
+assert.ok(employmentIncomeCpfIssues.some(issue => issue.domain.startsWith('IRAS')),
+  'actual application planning retains employment-income reporting alongside CPF');
+assert.ok(employmentIncomeCpfIssues.some(issue => issue.domain === 'CPF_PAYROLL'),
+  'actual application planning retains CPF for employment-income bonus wording');
 
 console.log(`Statutory CPF expansion: ${results.length} actual app cases and date/source negative controls passed.`);

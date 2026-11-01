@@ -2777,9 +2777,14 @@ function isIncidentalCpfBonusTaxGroup(
   topics: ReturnType<typeof defaultQueryTopicResolver.decomposeQuery>['topics']
 ): boolean {
   const topicIds = topics.map(topic => topic.id);
+  const explicitlyRequestsBonusIncomeReporting =
+    /\b(?:report|include|declare|file|submit|furnish|provide)\w*\b/i.test(query) &&
+    /\b(?:employment income|employee income|employee earnings)\b/i.test(query) &&
+    /\b(?:bonus|aws)\b/i.test(query);
   return /\b(?:cpf|central provident fund|aw ceiling|additional wage)\b/i.test(query) &&
     /\b(?:bonus|annual bonus|aws)\b/i.test(query) &&
-    !/\b(?:tax|taxes|taxable|iras|employment income reporting|auto-inclusion)\b/i.test(query) &&
+    !/\b(?:tax|taxes|taxable|iras|ir8[as]|ais|employment income reporting|auto-inclusion|income reporting|filing obligation|filing requirement)\b/i.test(query) &&
+    !explicitlyRequestsBonusIncomeReporting &&
     topicIds.length > 0 && topicIds.every(topicId =>
       ['iras-ais-employment-income', 'iras-employee-bonus-timing'].includes(topicId));
 }

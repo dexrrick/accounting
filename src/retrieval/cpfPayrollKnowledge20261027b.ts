@@ -5,7 +5,7 @@ import type {
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
-import { defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
+import { defaultTargetDateResolver, hasOnlyDerivedCpfPrAnniversaryBoundaryYears, TargetDateResolver } from './targetDateResolver';
 import { isIrasCpfQualitativeRateFactorRequest } from './irasCpfCoverageRules';
 
 const CPF_RATE_TABLE_URL =
@@ -562,7 +562,14 @@ function currentOrExplicit2026Question(query: string, rule: CpfPayrollKnowledgeR
   }
   if (rule.id === 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES') {
     if (/\b(?:historical|historic|superseded|past rate|previous rate|former rate|law in \d{4}|rules? applied in \d{4})\b/i.test(query)) return false;
-    return years.length > 0 ? years.every(year => year === '2026') : currentYear === '2026';
+    if (years.length === 0) return currentYear === '2026';
+    if (years.every(year => year === '2026')) return true;
+    const conversionDate = statedPrConversionDate(query);
+    const grantYear = conversionDate?.slice(0, 4);
+    const onlyDerivedAnniversaryYears = grantYear === currentYear &&
+      hasOnlyDerivedCpfPrAnniversaryBoundaryYears(query, grantYear, currentYear) &&
+      !/\b(?:rates?|percentages?|rate table|contribution rate|which table)\b/i.test(query);
+    return onlyDerivedAnniversaryYears;
   }
   if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING' &&
       /\b(?:historical|historic|past rate|previous rate|former rate|superseded|rules? applied in 20\d{2}|law in 20\d{2})\b/i.test(query)) return false;
@@ -860,8 +867,8 @@ function exactPrConversionDate(dateText: string): string | undefined {
 }
 
 function hasUnboundNamedPrGrantDate(query: string): boolean {
-  const employees = [...query.matchAll(/\bemployee\s+([A-Z0-9]+)\b/gi)];
-  const employeeIds = [...new Set(employees.map(match => match[1]))];
+  const employees = [...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)];
+  const employeeIds = [...new Set(employees.map(match => match[1].toUpperCase()))];
   if (employeeIds.length < 2) return false;
   const datePattern = new RegExp(String.raw`\b(?:obtained|became|was\s+granted|granted|converted\s+(?:to|into))\b[^.!?;]{0,100}\b(?:singapore\s+)?(?:permanent\s+resident|pr|spr)\b[^.!?;]{0,50}\b${EXPLICIT_PR_DATE}\b`, 'i');
   if (!datePattern.test(query)) return false;
@@ -870,10 +877,12 @@ function hasUnboundNamedPrGrantDate(query: string): boolean {
     const start = mention.index!;
     const end = employees[index + 1]?.index ?? query.length;
     return datePattern.test(query.slice(start, end));
-  }).map(match => match[1]);
+  }).map(match => match[1].toUpperCase());
   const clauses = query.split(/[.!?;]/).map(clause => clause.trim()).filter(Boolean);
-  const finalQuestion = clauses.at(-1) || '';
-  const questionOwners = employeeIds.filter(id => new RegExp(String.raw`\b${id}(?:['’]s)?\b`).test(finalQuestion));
+  const finalQuestion = clauses.slice().reverse().find(clause =>
+    /^(?:what|when|who|where|how|which|is|are|do|does|can|could|should|will|would|did|was|were)\b/i.test(clause)
+  ) || clauses.at(-1) || '';
+  const questionOwners = employeeIds.filter(id => new RegExp(String.raw`\b${id}(?:['’]s)?\b`, 'i').test(finalQuestion));
   return statusOwners.length !== 1 || questionOwners.length !== 1 || statusOwners[0] !== questionOwners[0];
 }
 
@@ -933,20 +942,40 @@ function statedBonusPerformanceYear(query: string): string | undefined {
   return unique.length === 1 ? unique[0] : undefined;
 }
 
-function statedOrdinaryWageAmount(query: string): number | undefined {
+function statedOrdinaryWageAmounts(query: string): number[] {
   const amount = String.raw`(?:s\$|sgd|\$)\s*([\d,]+(?:\.\d{1,2})?)`;
   const patterns = [
-    new RegExp(String.raw`\b${amount}\s+(?:of\s+)?(?:monthly\s+)?(?:ordinary wages?|ow)\b`, 'i'),
-    new RegExp(String.raw`\b(?:ordinary wages?|ow)\b[^.!?;]{0,25}(?:\b(?:of|is|are|amounts? to|at)\s*|=\s*)?${amount}`, 'i')
+    new RegExp(String.raw`\b${amount}\s+(?:of\s+)?(?:monthly\s+)?(?:ordinary wages?|ow)\b`, 'gi'),
+    new RegExp(String.raw`\b(?:ordinary wages?|ow)\b[^.!?;]{0,25}(?:\b(?:of|is|are|amounts? to|at)\s*|=\s*)?${amount}`, 'gi')
   ];
-  const values = patterns.map(pattern => pattern.exec(query)?.[1]).filter((value): value is string => Boolean(value));
-  const unique = [...new Set(values.map(value => Number(value.replaceAll(',', ''))))];
+  const matches = patterns.flatMap(pattern => [...query.matchAll(pattern)]);
+  return matches.map(match => Number(match[1].replaceAll(',', ''))).filter(Number.isFinite);
+}
+
+function statedOrdinaryWageAmount(query: string): number | undefined {
+  const values = statedOrdinaryWageAmounts(query);
+  const unique = [...new Set(values)];
+  const people = [...new Set([...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)]
+    .map(match => match[1].toUpperCase()))];
+  const months = [...new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]
+    .map(match => match[0].toLowerCase()))];
+  if (people.length > 1 || unique.length > 1 || (values.length > 1 && months.length > 1)) return undefined;
   return unique.length === 1 && Number.isFinite(unique[0]) ? unique[0] : undefined;
 }
 
 function additionalWageCeilingAnswer(query: string): string {
   const payableIn2026 = /\b(?:due and payable|payable|due)\b[^.!?;]{0,70}\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+2026\b/i.test(query);
   const ordinaryWages = statedOrdinaryWageAmount(query);
+  const namedPeople = new Set([...query.matchAll(/\b(?:employee|staff|worker)\s+([A-Z0-9]+)\b/gi)]
+    .map(match => match[1].toUpperCase()));
+  const owAmounts = statedOrdinaryWageAmounts(query);
+  const hasDifferentOwAmounts = new Set(owAmounts).size > 1;
+  const namedMonths = new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]
+    .map(match => match[0].toLowerCase()));
+  const hasSeveralMonthAmounts = owAmounts.length > 1 && namedMonths.size > 1;
+  if ((namedPeople.size > 1 || hasDifferentOwAmounts || hasSeveralMonthAmounts) && /\b2026\b/.test(query)) {
+    return 'The 2026 OW ceiling is S$8,000 per employee per calendar month. This question includes more than one employee or OW amount, so a single employee’s monthly CPF OW base cannot be assigned safely. Check each employee and contribution month separately; the separate bonus is AW and uses its own annual ceiling.';
+  }
   if (ordinaryWages !== undefined && /\b2026\b/.test(query)) {
     const ordinaryWageBase = ordinaryWages > 8_000
       ? `S$${ordinaryWages.toLocaleString('en-SG')} of OW is capped at S$8,000 for the monthly CPF OW base.`

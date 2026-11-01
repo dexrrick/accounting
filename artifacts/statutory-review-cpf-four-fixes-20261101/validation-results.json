@@ -1,0 +1,44 @@
+[
+  {
+    "check": "root-lint",
+    "exitCode": 1,
+    "startedUTC": "2026-11-01T09:42:15.6998739Z",
+    "completedUTC": "2026-11-01T09:42:16.2614463Z"
+  },
+  {
+    "check": "maintained-lint",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:42:16.2801159Z",
+    "completedUTC": "2026-11-01T09:42:16.4133739Z"
+  },
+  {
+    "check": "typecheck",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:42:16.4157372Z",
+    "completedUTC": "2026-11-01T09:42:22.0076954Z"
+  },
+  {
+    "check": "vite-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:42:22.0117121Z",
+    "completedUTC": "2026-11-01T09:42:28.8483022Z"
+  },
+  {
+    "check": "worker-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:42:28.8496949Z",
+    "completedUTC": "2026-11-01T09:42:29.6976789Z"
+  },
+  {
+    "check": "smoke",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:42:29.6991768Z",
+    "completedUTC": "2026-11-01T09:46:24.8848597Z"
+  },
+  {
+    "check": "full",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T09:46:24.8860077Z",
+    "completedUTC": "2026-11-01T09:50:37.0332750Z"
+  }
+]
