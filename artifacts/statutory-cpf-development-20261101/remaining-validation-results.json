@@ -1,0 +1,32 @@
+[
+  {
+    "check": "resume-preflight",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:21:48.3839897Z",
+    "completedUTC": "2026-11-01T08:21:48.4532577Z"
+  },
+  {
+    "check": "vite-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:21:48.4577883Z",
+    "completedUTC": "2026-11-01T08:21:51.2252225Z"
+  },
+  {
+    "check": "worker-build",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:21:51.2283755Z",
+    "completedUTC": "2026-11-01T08:21:52.0170694Z"
+  },
+  {
+    "check": "smoke",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:21:52.0183247Z",
+    "completedUTC": "2026-11-01T08:25:51.8114529Z"
+  },
+  {
+    "check": "full",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:25:51.8127647Z",
+    "completedUTC": "2026-11-01T08:30:40.7209720Z"
+  }
+]

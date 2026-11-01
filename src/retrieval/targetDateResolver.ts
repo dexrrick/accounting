@@ -96,6 +96,32 @@ export function hasHistoricalStatutoryVersionIntent(query: string): boolean {
   return /\b(?:historical(?:ly)?|historic(?:ally)?|back then|at that time|at that date|at the time|previous law|prior law|former rule|superseded|in force|governed|effective as of|effective during|as of|as at|which law|what law|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|law applicable in|rules? applicable in|requirements? applicable in|rules? applied|requirements? applied|used to|what deadline did we have|which rules? did[\s\S]{0,60}\bapply|did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what did (?:the )?(?:law|rules?|regulations?|requirements?) (?:require|apply|prescribe|say)|what (?:was|were)[^.!?;]{0,50}\b(?:law|rules?|requirements?)\b|(?:requirements?|rules?|law) (?:in|for|applicable in|applied in) (?:19|20)\d{2})\b/i.test(query);
 }
 
+/** Treat a current payable-year bonus fact as current even when its performance year is earlier. */
+function isCurrentCpfAwPayableYearFact(query: string, currentDate: string): boolean {
+  if (hasHistoricalStatutoryVersionIntent(query)
+    || !/\b(?:aw|additional wages?)\b[^.!?;]{0,60}\b(?:ceiling|limit)\b|\b(?:ceiling|limit)\b[^.!?;]{0,60}\b(?:aw|additional wages?)\b/i.test(query)
+    || /\b(?:iras|income tax|tax(?:es)?|mom|acra|mas|accounting|journal|rates?|percentages?|rate table|contribution rate)\b/i.test(query)) return false;
+  const currentYear = currentDate.slice(0, 4);
+  const payableMonthInCurrentYear = new RegExp(
+    String.raw`\b(?:due\s+(?:and\s+)?payable|payable|due)\b[^.!?;]{0,100}\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+${currentYear}\b`,
+    'i'
+  ).test(query);
+  return payableMonthInCurrentYear;
+}
+
+/** Treat an explicit current-year PR grant date as an employee fact, not a request for that year's law. */
+function isCurrentCpfPrWageBoundaryFact(query: string, currentDate: string): boolean {
+  const currentYear = currentDate.slice(0, 4);
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
+  if (hasHistoricalStatutoryVersionIntent(query) || years.length === 0 || years.some(year => year !== currentYear)
+    || !/\b(?:cpf|central provident fund)\b/i.test(query)
+    || !/\b(?:foreign employee|employee|payroll)\b/i.test(query)
+    || !/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|wages?|salary|bonus)\b/i.test(query)
+    || /\b(?:tax(?:es)?|iras|mom|acra|mas|accounting|journal|rates?|percentages?|rate table|contribution rate)\b/i.test(query)) return false;
+  const hasExplicitGrantDate = /\b(?:obtained|became|granted|converted)\b[^.!?;]{0,65}\b(?:singapore\s+)?(?:pr|spr|permanent resident)\b[^.!?;]{0,45}\b(?:\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}|20\d{2}-\d{2}-\d{2})\b/i.test(query);
+  return hasExplicitGrantDate && /\b(?:first[- ]year|boundary|anniversary|pro.?rat|due on|payable|status date|grant date)\b/i.test(query);
+}
+
 function section13wDisposalDate(query: string): string | undefined {
   const candidates: Array<{ date: string; distance: number }> = [];
   for (const action of query.matchAll(/\b(?:dispos\w*|sold|sale)\b/gi)) {
@@ -158,6 +184,8 @@ export class TargetDateResolver {
     query: string,
     currentDate: string = TargetDateResolver.CURRENT_SYSTEM_DATE
   ): boolean {
+    if (isCurrentCpfAwPayableYearFact(query, currentDate)) return true;
+    if (isCurrentCpfPrWageBoundaryFact(query, currentDate)) return true;
     if (hasHistoricalStatutoryVersionIntent(query)) return false;
     // These distinct requests must retain their date scope even without an authority acronym.
     if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;

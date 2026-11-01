@@ -843,6 +843,8 @@ export async function processAccountingQuery(
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
   const materialClarification = deterministicScenario.missingFields?.[0];
+  const hasExplicitUnresolvedSaleJournal = journalRequested &&
+    deterministicScenario.missingFields?.some(field => field.fieldKey === 'independentSaleJournal');
   // A complete deterministic journal wins. Otherwise permit the existing AI
   // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
@@ -868,7 +870,8 @@ export async function processAccountingQuery(
         clarifications: [clarification]
       };
     }
-    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+        !hasExplicitUnresolvedSaleJournal) {
       return attachAmendmentProvenance({
         messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\n'),
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
@@ -878,6 +881,7 @@ export async function processAccountingQuery(
   }
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
+      !hasExplicitUnresolvedSaleJournal &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);

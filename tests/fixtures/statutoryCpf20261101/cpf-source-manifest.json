@@ -1,0 +1,21 @@
+{
+  "sources": [
+    {
+      "authority": "CPF",
+      "title": "Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?",
+      "url": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+      "fixture": "cpf-new-pr-visible.txt",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "sha256": "c1e5efe0988a154b24172cb103ba10f5fb5c29cf0c86017a356d65a305210875",
+      "captureDateSingapore": "2026-11-01",
+      "captureMethod": "OFFICIAL_WEB_READ_VISIBLE_TEXT_EXCERPT; raw HTML not retained",
+      "topicIds": [
+        "cpf-pr-contribution-rates",
+        "cpf-employee-coverage",
+        "cpf-ordinary-wages",
+        "cpf-additional-wages",
+        "cpf-bonus-backpay"
+      ]
+    }
+  ]
+}

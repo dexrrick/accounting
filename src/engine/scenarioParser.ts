@@ -17,6 +17,7 @@ import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
 import { matchBasicTransaction, resolveBasicOwnerDrawingsFollowUp } from './basicTransactions';
+import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -572,6 +573,45 @@ export async function parseAccountingQuery(
   // SCENARIO -1.5: SINGAPORE PAYROLL, PRORATED SALARY & CPF CALCULATION (MOM EA §22 & CPF ACT §7)
   // e.g. "a staff is earning sgd3200 a month, he is a singaporean, 32 years old, his last day is 16/9/2026, calculate his september salary and employer employee cpf"
   // =========================================================================
+  const hasCommercialSaleTopic = /\b(?:sold|sell|sale)\b/i.test(query);
+  const hasFinalPayTopic = /\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query);
+  const hasMixedFinalPayTopic = hasCommercialSaleTopic && hasFinalPayTopic;
+  const hasCurrencyAmount = /(?:s\$|sgd|\$)\s*\d[\d,]*(?:\.\d{1,2})?/i.test(query);
+  const namedEmployees = [
+    ...[...query.matchAll(/\b(?:[Ee]mployee|[Ww]orker)\s+(?:named\s+)?([A-Z][a-z]*)\b/g)].map(match => match[1].toLowerCase()),
+    ...[...query.matchAll(/\b[Ss]taff\s+[Mm]ember\s+(?:named\s+)?([A-Z][a-z]*)\b/g)].map(match => match[1].toLowerCase())
+  ];
+  const hasAmbiguousPayrollEmployeeOwnership =
+    new Set(namedEmployees).size > 1 ||
+    /\b(?:another|second|different)\s+(?:employee|worker|staff\s+member)\b|\b(?:two|both|multiple|several)\s+(?:employees|workers|staff\s+members)\b/i.test(query);
+  const payrollSalaryAmountPatterns = [
+    /\b(?:monthly\s+(?:basic\s+)?salary|basic\s+salary(?:\s+rate)?|salary(?:\s+rate)?|wages?)\s*(?:of|is|at|:)?\s*(?:s\$|sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\b/gi,
+    /\b(?:employee|worker|staff\s+member)\s+(?:[A-Z][a-z]*\s+)?(?:earning|earns|earned)\s+(?:s\$|sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\b/gi,
+    /(?:s\$|sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:(?:per|a)\s+month|\/month|monthly)\s+(?:basic\s+)?(?:salary|wages?|pay)(?:\s+rate)?\b/gi,
+    /\b([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:(?:per|a)\s+month|\/month|monthly)\s+(?:basic\s+)?(?:salary|wages?|pay)(?:\s+rate)?\b/gi
+  ];
+  const payrollSalaryAmountMatch = payrollSalaryAmountPatterns.flatMap(pattern => [...query.matchAll(pattern)])
+    .sort((left, right) => (left.index ?? 0) - (right.index ?? 0))[0];
+  const hasUnownedCurrencyFinalPayRequest = hasFinalPayTopic && hasCurrencyAmount && !payrollSalaryAmountMatch;
+  const negatesIndependentFinalSalaryCalculation = (hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) &&
+    /\b(?:do\s+not|don't|dont|never)\s+(?:(?:need|want)\s+to\s+)?(?:calculate|compute|estimate|work\s+out|quantify)\b[^.!?;]{0,80}\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query);
+  const requestsIndependentFinalSalary = !negatesIndependentFinalSalaryCalculation &&
+    isFinalSalaryAmountRequest(query) && (hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest);
+  const independentSaleMissingField: MissingFieldInfo = {
+    fieldKey: 'independentSaleJournal',
+    fieldName: 'Independent goods-sale journal',
+    prompt: 'The goods-sale journal still needs to be handled separately from the employee’s final salary and payroll.',
+    whyNeeded: 'The sale proceeds do not establish salary, CPF contributions, or the sale’s cost and tax treatment.'
+  };
+  const independentTransactionMissingField: MissingFieldInfo = {
+    fieldKey: 'independentTransactionFacts',
+    fieldName: 'Separate transaction facts',
+    prompt: 'Keep the transaction amount and any related journal separate from the employee’s final salary and payroll.',
+    whyNeeded: 'A transaction amount is not a payroll amount unless it is explicitly tied to the employee’s salary.'
+  };
+  const separateTransactionMissingField = hasCommercialSaleTopic
+    ? independentSaleMissingField
+    : independentTransactionMissingField;
   const hasSalaryFigure =
     /(?:earning|earns|salary|wages?|pay)\s*(?:of|is|:)?\s*(?:sgd|\$)?\s*\d+/i.test(q) ||
     /(?:sgd|\$)\s*\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i.test(q) ||
@@ -589,23 +629,54 @@ export async function parseAccountingQuery(
     (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
 
   const isPayrollSalaryQuery =
-    (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-    (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
-    // A correction such as "I mean 10,000 a month" inherits the payroll
-    // context rather than being routed to the statutory-advisory fallback.
-    (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-      hasSalaryFigure &&
-      /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
-    (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-      /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query));
+    requestsIndependentFinalSalary ||
+    (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
+      (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+      (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+      // A correction such as "I mean 10,000 a month" inherits the payroll
+      // context rather than being routed to the statutory-advisory fallback.
+      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        hasSalaryFigure &&
+        /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
+      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
+    ));
 
   if (isPayrollSalaryQuery) {
+    if (requestsIndependentFinalSalary && (!payrollSalaryAmountMatch || hasAmbiguousPayrollEmployeeOwnership)) {
+      return {
+        scenarioType: 'PAYROLL_CPF_SALARY',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'CPF_BOARD',
+        rawQuery: query,
+        transactionTitle: hasCommercialSaleTopic
+          ? 'Final Salary and Goods Sale Require Separate Facts'
+          : 'Final Salary and Transaction Amount Require Separate Facts',
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        projectedGroups: [],
+        committedDirectGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'salaryRate',
+          fieldName: 'Employee salary rate and pay period',
+          prompt: 'What was this departing employee’s contractual salary rate and pay period?',
+          whyNeeded: hasAmbiguousPayrollEmployeeOwnership
+            ? 'The query mentions multiple or ambiguously identified employees, so the stated salary cannot be assigned to the departing employee.'
+            : hasCommercialSaleTopic
+              ? 'The transaction proceeds are not a payroll amount; a final-salary calculation needs this employee’s salary basis.'
+              : 'The currency amount is not explicitly tied to this employee’s salary; a final-salary calculation needs the employee’s salary basis.'
+        }, separateTransactionMissingField]
+      };
+    }
     const priorBasicSalary = currentScenario?.keyParameters
       ?.find(p => p.label === 'Basic Monthly Salary')?.value.match(/[\d,]+(?:\.\d+)?/);
     let baseSalary = priorBasicSalary?.[0]
       ? Number(priorBasicSalary[0].replace(/,/g, ''))
       : (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? (currentScenario.amount || 3200) : 3200);
-    const salaryMatch =
+    const salaryMatch = requestsIndependentFinalSalary ? payrollSalaryAmountMatch :
       query.match(/(?:earning|earns|salary\s*(?:of|is|:)?|wages?\s*(?:of|is|:)?|pay\s*(?:of|is|:)?)\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i) ||
       query.match(/(?:sgd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
       query.match(/([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i);
@@ -615,6 +686,32 @@ export async function parseAccountingQuery(
       if (magnitude === 'k' || magnitude === 'thousand') parsedSalary *= 1000;
       if (magnitude === 'm' || magnitude === 'million') parsedSalary *= 1000000;
       if (parsedSalary > 0) baseSalary = parsedSalary;
+    }
+
+    if (requestsIndependentFinalSalary) {
+      return {
+        scenarioType: 'PAYROLL_CPF_SALARY',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'CPF_BOARD',
+        rawQuery: query,
+        transactionTitle: hasCommercialSaleTopic
+          ? 'Final Salary and Goods Sale Require Separate Facts'
+          : 'Final Salary and Transaction Amount Require Separate Facts',
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        amount: baseSalary,
+        directGroups: [],
+        projectedGroups: [],
+        committedDirectGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'finalSalaryCalculationFacts',
+          fieldName: 'Final-salary calculation facts',
+          prompt: 'Confirm the applicable pay period, last day of employment, and employee details needed to determine final pay and any payroll liabilities.',
+          whyNeeded: 'A salary rate alone does not establish the final-pay amount or payroll liabilities, and this mixed sale/payroll request is not calculated as one transaction.'
+        }, separateTransactionMissingField]
+      };
     }
 
     let employeeAge = 32;

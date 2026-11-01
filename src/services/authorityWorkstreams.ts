@@ -1539,7 +1539,8 @@ function practicalRuleIssueTextSupport(
       : topicAuthority === 'IRAS' || topicAuthority === 'ACRA' || topicAuthority === 'MAS' ? 'COMPANY'
         : undefined;
     const cpfEmployeeRuleProof = topicAuthority === 'CPF' && topic.domainId === 'CPF_CONTRIBUTIONS' &&
-      supportStatutoryKnowledgeRule(coverageRequest) === true;
+      (supportStatutoryKnowledgeRule(coverageRequest) === true ||
+        ['cpf-ordinary-wages', 'cpf-additional-wages', 'cpf-bonus-backpay'].includes(topic.id) && expansionSupport === true);
     const allowedOperations = expansionSupport === true || topicAuthority === 'ACRA' || topicAuthority === 'MAS'
       ? ['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT',
           ...(topicAuthority === 'CPF' && supportStatutoryKnowledgeRule(coverageRequest) === true ? ['CALCULATE'] : [])]

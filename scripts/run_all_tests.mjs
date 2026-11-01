@@ -54,6 +54,8 @@ const testSuites = [
   { name: 'Five-family Statutory Workflow Source Proof', file: 'test_statutory_workflows_20261029.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Expanded Statutory Workflow Source Proof', file: 'test_statutory_workflow_expansions_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Statutory Multipart Request and Source Isolation', file: 'test_statutory_multipart_issue_refinements_20261030.mjs', layer: 'input-understanding', tier: 'smoke' },
+  { name: 'Mixed Goods Sale and MOM Journal Safety', file: 'test_mixed_sales_mom_journal_safety_20261101.mjs', layer: 'accounting-invariants', tier: 'smoke' },
+  { name: 'CPF New PR and OW/AW Answerability', file: 'test_statutory_cpf_expansion_20261101.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Practical Statutory Router Refinements', file: 'test_statutory_practical_router_refinements_20261030.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Declared Commencement Source Scope Full Applications', file: 'test_statutory_commencement_scope_20261030.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Statutory Actual Answer Routing Repairs', file: 'test_statutory_review_application_answer_repairs_20261029.mjs', layer: 'input-understanding', tier: 'smoke' },

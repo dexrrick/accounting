@@ -1,0 +1,2268 @@
+{
+  "method": "Unchanged complete answers inherit independently established prior grades after SHA-256 comparison; every changed answer uses the fresh independent review. Evidence verification status is not answer quality.",
+  "corpora": {
+    "final75": {
+      "beforeCounts": {
+        "CORRECT": 30,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 37
+      },
+      "afterCounts": {
+        "CORRECT": 32,
+        "PARTIAL": 9,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 34
+      },
+      "sourceConfiguration": "final75",
+      "grades": [
+        {
+          "id": "iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "1eeff7d5cc124d1e6d0af052f53ab8bf03b995afaa2a32a9ec76f515e5b22e71",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-02",
+          "grade": "PARTIAL",
+          "answerSha256": "b135f5a22563daef6458a6a7f906e3df83ed714592aaeb05fbc5f43249026f0c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "f57562263ccc87098a562535349c308a06ed640e72dd30276a0b1778adffa6d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-04",
+          "grade": "CORRECT",
+          "answerSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-05",
+          "grade": "CORRECT",
+          "answerSha256": "615c74c7961f932af3bf59fc9e519ca6c203325846315a3daa93a85f4426d084",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-06",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "06ee40e7b5d607982b852bef9b0f05ff3f3039b920f116aeb04bcbac8b97ac01",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-07",
+          "grade": "CORRECT",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-08",
+          "grade": "PARTIAL",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-09",
+          "grade": "CORRECT",
+          "answerSha256": "39da1ba72ee59cb1562e11ea204987c544a0dae82c771af2a800c1b2877808ae",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-10",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "ee1ef650fe09fc28e9ba0fa6b83121c74e9d0f3e06bf74c99a7f51360d6d5439",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-11",
+          "grade": "PARTIAL",
+          "answerSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-12",
+          "grade": "PARTIAL",
+          "answerSha256": "b7a619c63f3c2cff2146294aa4fd0ee61c5452abae18b451bc4aa9583bf452bd",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-13",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "4129aa2dc5c0b4210dec2f3df922bd638fee6a68057801cf4fbd4d5645e5cdf1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-14",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "703788ee303e17551cd0ca6eedb12becfdf3d0c5f0be5c58c7cc264dddb03808",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-15",
+          "grade": "CORRECT",
+          "answerSha256": "fae74982095108686b2995cd736ad68af4d17a9d4f6600472836d68a733ea50e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-03",
+          "grade": "CORRECT",
+          "answerSha256": "6a2b53617e45b06ae12736ef938f16fe305b3c8b5cf1347463985ee1ae53c3a5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-04",
+          "grade": "CORRECT",
+          "answerSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "cpf-05",
+          "grade": "CORRECT",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-06",
+          "grade": "PARTIAL",
+          "answerSha256": "3e04a54dadc2254141afba0e0e823a5aa54ddad3ead3fda7e2dcab65ca004c7d",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "cpf-07",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6d93b9811e3b864d64d24d6fbb999b915338e3ca40e491773fc1f625bed8fde9",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "cpf-08",
+          "grade": "CORRECT",
+          "answerSha256": "c023fceb8c325812938bdc9e4282998346cabbcd3781ea835a95b449d458a164",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-09",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "84a631ab51e6da175912ccb9afee1b15f10889939690139814b027b50cb83c98",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-10",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-11",
+          "grade": "CORRECT",
+          "answerSha256": "077d17a14e60023e6b589909f03dd993b71109f2c74bf7057a4e84f6cb430bae",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-12",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-13",
+          "grade": "CORRECT",
+          "answerSha256": "2314ae2953134824822c73e2f9ddfdaa3eb8344d0dbbd8c9abaf7efe7470ab82",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-14",
+          "grade": "CORRECT",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-15",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "37e7e7e40e4c8364160f0717c0c31236306e785b8181fa1f61c8ef69cb65cad2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "01e731d4f17a8bce7a526c4a7aa6c530578fce277c3c42e0f7d5dbbc230e7c98",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-03",
+          "grade": "CORRECT",
+          "answerSha256": "5a9ffd3108284847d6a5a701cb415b2dd793db4a301eb6d09502d1b1f0b5fd8c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-04",
+          "grade": "CORRECT",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-05",
+          "grade": "CORRECT",
+          "answerSha256": "373a0425a4bdd1a4a8432bc38f6c71f4e52de9634f8593e6e324f2af260a1c17",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-06",
+          "grade": "CORRECT",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-07",
+          "grade": "CORRECT",
+          "answerSha256": "78117a46dd554001dc6aabd7e483652e0d71ed49c91c4e49e5dd79bff014d64c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-08",
+          "grade": "PARTIAL",
+          "answerSha256": "b07d9149dc7ad43a64435b1abb53934b7820ad851ee4a394c44e8cbf5c06ace8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-09",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "8518fd96cd231ed3c41644dada3cf517d216e14db5dfd0d7403621ad0c5c3100",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-10",
+          "grade": "CORRECT",
+          "answerSha256": "cf0390ccc9e5fbcd36a201c9c15c1053059f718ef4a01633820dc388d4cb7c74",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-11",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-12",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "630e08eaffdc2b72d9eac689d3471de26af97c681a78516774769029db9ffd8d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-13",
+          "grade": "CORRECT",
+          "answerSha256": "eebc31ffc0abaa60954c6af315edbeceef3df75a87184b74a66754b820eb0c61",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-14",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6d9766eb01cf0093a772253f986ccc426ba2a57c3240c0c8bc5e83b5d0e5741b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-15",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "728c587154997ff38001f3bc4ecd66c4eede7b4b5845dd1a4df6fba7d5929a1f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "0f3b90c8d660d2d8f37af8d04e4ec9d7c9820b24f34efeffcd78e805c6f6eec0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "2c692333086f4aab02be1dc82f8d500fc711eb70626cc9fe4aef680acf29609b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-04",
+          "grade": "CORRECT",
+          "answerSha256": "521719313997405484e17658fdfccf7adbbb90b3d1fbcc7edd2fde07446a6729",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-05",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-06",
+          "grade": "CORRECT",
+          "answerSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-07",
+          "grade": "PARTIAL",
+          "answerSha256": "683b2d0d436a61cacad170a058e8285652d0661d968c487fa01fdc3bcc7a4645",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-08",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "91b36ce2d5557c8b889e240bcf2b488dfce91f8b2e0d55aef7dda6fc03e8e092",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-09",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1cb770e5444e39904cf69fca015479ab4ac07a48cef90db31cc2de9badf35d00",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-10",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "f79653140ab4837ce6d5d566230753a8c5b8367c912b33614748b9ee616531bd",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-11",
+          "grade": "PARTIAL",
+          "answerSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-12",
+          "grade": "PARTIAL",
+          "answerSha256": "1e190ad84ea94ab4bc592a618e663163aeda096a3a124b449d9834e92e21b460",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-13",
+          "grade": "CORRECT",
+          "answerSha256": "6459698ed9d769a44750c96b1e915cf726d12baf6fec4e29ab60ac95c8a33649",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-14",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e35341de27304c6bbb19891e4c9f1547398b20c20f241847e5928b2e53acdb45",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-15",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "4fc549c751196c3e613431e04dc0f8ba25604a0c848a61343bf5aeb9eece917e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-03",
+          "grade": "CORRECT",
+          "answerSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6010b3ea9eee707581963a5a1c40796a67ecf691d3271c428ae5ac54ce58c99e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-05",
+          "grade": "CORRECT",
+          "answerSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-06",
+          "grade": "CORRECT",
+          "answerSha256": "550cf7cbf6a9b191d6c57c85321ad01ee5996903e45f6c25517dd602c31e793b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-07",
+          "grade": "CORRECT",
+          "answerSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-08",
+          "grade": "CORRECT",
+          "answerSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-09",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-10",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-11",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "f98208dba0c4ef013150ac15044d04ebffbfa4d413b22f6f0da7c655ddd1a66a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-12",
+          "grade": "CORRECT",
+          "answerSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-13",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-14",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-15",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "assessment": "UNCHANGED_INHERITED"
+        }
+      ]
+    },
+    "final60": {
+      "beforeCounts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "afterCounts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "sourceConfiguration": "final60",
+      "grades": [
+        {
+          "id": "hold-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "7e85a09aefd48825842f4b073736cc8c12ad68391cdc729ad1be891135aa8785",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "6495156457ce5652bb164ef4e3346605decf7ec95847c94d77e7c322f21d6408",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-acra-03",
+          "grade": "CORRECT",
+          "answerSha256": "750314e9bafaea0380cacf366e400c569fa69f9a88698679956b790b58dd8d0d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-acra-04",
+          "grade": "CORRECT",
+          "answerSha256": "2c190c3676d61e2d611931d6cca8c0e00a98c72e3fab7d9ed6b177591d9b2a39",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "bf9d4064d4c64b2dbd23fe76f628602d99a79f268af48232ee92c9612ae8f687",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-iras-03",
+          "grade": "CORRECT",
+          "answerSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-iras-04",
+          "grade": "CORRECT",
+          "answerSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "7c248c48a04b591d5577362c7e33034d585c01eeb1e6dc2a0de86ad88e8596d7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-cpf-03",
+          "grade": "CORRECT",
+          "answerSha256": "1c830d8e4005377419e8ced8b7cec85eb994353bf07fdb1c5f5ef031f48827a8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-cpf-04",
+          "grade": "CORRECT",
+          "answerSha256": "0985f0c252cc1339c3158a38ae875858ebd9b772b3f9466020667a590045f8f8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mom-03",
+          "grade": "CORRECT",
+          "answerSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mom-04",
+          "grade": "CORRECT",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mas-03",
+          "grade": "CORRECT",
+          "answerSha256": "0f8a697ffaf85b01f6fd43d9a3d51879ba2e5022abecf4aa3054c173c593650e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "hold-mas-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1cec4d2e26a00e64ffb5df2234b261db770cd63bcad786d3fb331e041cd4a846",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "4d5f9c4ee4ad2a3e87890e7a54cc0a45f052c0967984da9f8d7e0f63ba509fab",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "3c2e93ee75a3043b13d0b4bd9f07043f53a6a2e522db32583f84668f634a6e89",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "8e10276200991a65d7af1585882d96c7ff74780e48f8d70d65cbd6ed7e3ba78d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "b2d19700fab248854af61b096522dc75178e0f8f7a14ebac0cb3a93198f90bb2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "c17336892d43e6b89b66bae9ebbd0daa13ff64a7528f28c2200d55aa599b9947",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "59482f1ac5fd1a8271ffc4b4a032f036ba9f52e5b75b0fb69acd00369efd0cf1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "817c01ae9ef1c2d2147c49780590d59fe3c656d3c57bdaef7818b883f3bd37f1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "750314e9bafaea0380cacf366e400c569fa69f9a88698679956b790b58dd8d0d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "6aa5f2b31d7bcea26ecb575e52ce731f84a567948d7b8c9b8b2ecb64c2420fff",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "561a66b13684536c01d79258d847ff0598bea6f0bbc837df2dded8d84265b873",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "3f5d5c177f5ee290095ed59285fdcffa8dff96cba71e314d16b3200ce2483d21",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "reviewfresh-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "1181d8833599361ebead98720452572846892e0bfbb7ebbc511d6be5717a3835",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "abe6fe7cc375ee2e218d667a9d394e80fa38101af9d1d88788258c6066320ba6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "703d3a0ce04847df45b09a6a1dc38188fb3983196687bf01096289b67c1a734e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "8b8a3732717f0260b855fcf791a421be9f54440d1c24c75aab956406485bd199",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "d989e00ebf3bc3bae2ea6eff9e44cc282a561a8c2069fb6beb929ca224331fbf",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "508f1e3f9dbc26e3f1295d4264c556c6639a531d94114c20d5c9b51224dc7fd6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "5b3a7d41ebc319073701911632dce8e1f34dba4d8ef1860535fc3820349b2b22",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "5b3a7d41ebc319073701911632dce8e1f34dba4d8ef1860535fc3820349b2b22",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "5f8046a4b3aa07fddd15382cd5b102e410713e51192565a9d2dcb0f35b5a0e22",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh29-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "f890663e346ded12da74c93abcc32d14d53e5b3772a464e0665eda90503593a6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "7bbb94bbd9732d8d82250541c9137de82bc355c673845865a767d5de36ec89ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "cb12496f2cb2efadd6e105b15df020e515122b0463a00129a7bd07b2bf12983f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "73e8b4c8388a76add26e4bb0d72120effe983f9e4164ce5b022255f3f465dada",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "73e8b4c8388a76add26e4bb0d72120effe983f9e4164ce5b022255f3f465dada",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "17d37fa674e50a62a36b16d3857b126f854133531db63bbdba91748e1cb23fb7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "59482f1ac5fd1a8271ffc4b4a032f036ba9f52e5b75b0fb69acd00369efd0cf1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "5e81b90e35459294c2ee73ab4458be3d2269df312b758d3574c15a58d3c8f07b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "novel-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "assessment": "UNCHANGED_INHERITED"
+        }
+      ]
+    },
+    "fresh15": {
+      "beforeCounts": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 11
+      },
+      "afterCounts": {
+        "CORRECT": 6,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 9
+      },
+      "sourceConfiguration": "fresh15",
+      "grades": [
+        {
+          "id": "fresh31-acra-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "04bce4652f0042a0f4cc4f119e39636b95dcf1163eda0acde621d26084430e12",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-acra-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "af03e76baefab23e4acf38d4bc418db31ce03994f7e6dcaf3bc1919dd971b50f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-acra-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-acra-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "236111c2222e49a3edb3657206f2d56a2d076f664d1baf7c842c2a18480f6970",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-acra-05",
+          "grade": "CORRECT",
+          "answerSha256": "3c2e93ee75a3043b13d0b4bd9f07043f53a6a2e522db32583f84668f634a6e89",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "1df9c0abf5a08e29964966de967536bd7d1fa76a237c328231d41eafd9f3ee9f",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "fresh31-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "aa3122519e8ff4ac2f12cc9fa57014d7502919ae931bbb48d5fc6693ea0efb43",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "fresh31-cpf-03",
+          "grade": "CORRECT",
+          "answerSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "fresh31-mom-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a73ee6746e71d43f80e7f29ef761ef5387c02c1d4307be524fab1794238a6b70",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-iras-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "8c78ffdae232c84c688f23d7ccb404dfdadeea5bb4d29abab564d1bbc191b029",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-iras-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-iras-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "ea54fdcc10c930e27d4130e9a7fe08b5f3262c8c96e9e6ff7a3ebf8fd3e1e1cc",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "e71d2ac14fc78551531c4bcfff459afc39f90e9d7d66eb3cdd42637b27570e82",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "fresh31-mas-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "assessment": "UNCHANGED_INHERITED"
+        }
+      ]
+    },
+    "fixed100-original": {
+      "beforeCounts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "afterCounts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "sourceConfiguration": "fixed100-original",
+      "grades": [
+        {
+          "id": "iras-input-tax-01",
+          "grade": "PARTIAL",
+          "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-02",
+          "grade": "PARTIAL",
+          "answerSha256": "b2445dfdb3a0c31897438a3b2486b0ee0df6fcecd3fc92ff047b031df719223b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-03",
+          "grade": "PARTIAL",
+          "answerSha256": "1ccc2771aedf908d98a6cf17ae89c825f995e66af370d8cdc1a98211d6613f85",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-04",
+          "grade": "PARTIAL",
+          "answerSha256": "9883c8e7601be42faf2da57df4fcb540325a9e709b63985c49a790fbeff03d90",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-05",
+          "grade": "PARTIAL",
+          "answerSha256": "96ab147172ce0a476654167bd6567bba8ea05423eff8645d08aa02d167e5442f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-01",
+          "grade": "CORRECT",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-02",
+          "grade": "CORRECT",
+          "answerSha256": "a8dfece8d3b8be3323b93fbad0ca85d94605263bfa53d84b4345cb1253cc9c68",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-03",
+          "grade": "CORRECT",
+          "answerSha256": "5b653d0f08b02b39f7595f29660feee4d8e6a79de4a5390041bd7e66fe704012",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-04",
+          "grade": "CORRECT",
+          "answerSha256": "abb419f7d6ba3014484bec08b094d297042d35bdfe3b0e4ac073158578d96466",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-05",
+          "grade": "CORRECT",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "d566f8d823b72665f564914426d38a8bfc47da6e44261af03a39b4475aa64b70",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "af181039ba72e8828dbfc73adc58d3860bc42e5cf11327742dd448a3b6ad87ad",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-05",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "dcf5103581006be9d7d018d8a18a4fdca149f1f5241189febc3e78ed930ddbb0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-01",
+          "grade": "CORRECT",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-02",
+          "grade": "CORRECT",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-03",
+          "grade": "CORRECT",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-04",
+          "grade": "PARTIAL",
+          "answerSha256": "158dc279e0bcbbb7799b816d3d3af04507d0975ccae86cc3677a63c6f678c692",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-05",
+          "grade": "CORRECT",
+          "answerSha256": "b9a801ba035d81fc21066a0b4f8cc17e6e38eec84e4e416c28d39d99db8f89ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-01",
+          "grade": "CORRECT",
+          "answerSha256": "40668992ca56b0c7db2e5ce61cf3522a15b080ae2c5fbe7aeeeb10cb2ecfe06d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-02",
+          "grade": "PARTIAL",
+          "answerSha256": "16312d07d34344a61483e77833bc5897171399fb114633cf8fb053d3b985c0a9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-03",
+          "grade": "CORRECT",
+          "answerSha256": "cd65160074af3fd9c7143b5fffff4cae5c823ded47606a728fb715a9540d1ff0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-04",
+          "grade": "CORRECT",
+          "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-01",
+          "grade": "CORRECT",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-02",
+          "grade": "CORRECT",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-03",
+          "grade": "PARTIAL",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-04",
+          "grade": "CORRECT",
+          "answerSha256": "6515d6f54a4c3f2f24952ebc182e3c9f01f9e92c0c467b939256b711c858bc22",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-01",
+          "grade": "CORRECT",
+          "answerSha256": "8f8284a7b817cc231f47070684f676eaf0718f644e467d8c6cc0e0ceb5cde12e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-02",
+          "grade": "CORRECT",
+          "answerSha256": "89eaaa7b441464ccdc1f06faf75beb27b579fafb1de47f23eb58552d01083cb2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-03",
+          "grade": "CORRECT",
+          "answerSha256": "8f8284a7b817cc231f47070684f676eaf0718f644e467d8c6cc0e0ceb5cde12e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "c67c2d0ffc9224458cac20d05e8a522b4a8a74875c637f0d4f5c1eb1f6212f1e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-01",
+          "grade": "CORRECT",
+          "answerSha256": "39bb92611472173535368369a4e3d57422c06cccc64d1f52d2d9a1b4eb0476b9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-02",
+          "grade": "CORRECT",
+          "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-03",
+          "grade": "CORRECT",
+          "answerSha256": "0eeef37861b13b40d10bfb85926c11723f6c59a25d95db8d13edfe4d412d1b52",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-04",
+          "grade": "CORRECT",
+          "answerSha256": "39bb92611472173535368369a4e3d57422c06cccc64d1f52d2d9a1b4eb0476b9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "95c9761acfe0b3704e727f3f568a6d70687307789175a4c702bd07caaf64c39a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "30b1b9d313253530ac68a1b29e0331e0f3bfd612764c87ebfeead96b42e469b2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "2ea2cea856ac8703362cdc39fe283195eb284812e9e6d2c2809d5390af5f4b01",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "5d50002a142d5856e5433a9abbf8ed720b37f7eaf1edc1cdc0f82027ff2c1ed8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "d7f4e6172a2c82358ba88cd7e705b1ab7398f00b82ec1d2ba55ec7f7a3eb6bc8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "c44f1ee845557015dd21724e858bc0211b2ba9608c67bfc1f834dcade1182bf7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-03",
+          "grade": "CORRECT",
+          "answerSha256": "376c341b112b6dcea4dc20bfc6eef582eb9fff21d02fef329f1e6a7e434e0f94",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "02ff126ebfb2c4d185c738c45623739be03a99562d1632fa4fd9477608b0400b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-01",
+          "grade": "CORRECT",
+          "answerSha256": "c04fbeea25f70f0483defe0b9c676bf0fe96cbf22f4fd7e50063d2aba4020bee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-02",
+          "grade": "CORRECT",
+          "answerSha256": "ce8a2f130906bec84b9923c42d92073391d2e4a0470c7cfbd0e54e4d3fff2540",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-03",
+          "grade": "CORRECT",
+          "answerSha256": "f6ec6fe507f983beb82e97aebcbc209b94eda542616f48dabe6ef5029372a99e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-04",
+          "grade": "CORRECT",
+          "answerSha256": "d52d062bef542aa13e21832bff2c59323d392a0b69ca28ca34cf8c3c0104b67c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-01",
+          "grade": "CORRECT",
+          "answerSha256": "6ce04550008cf70acfb8064866f47b8130cb0f1989cd4d43f32a832695fb89f4",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-02",
+          "grade": "CORRECT",
+          "answerSha256": "5a37399458289a51e3af95d24920912cb65388f87b6e65f7e10a25051c3fcbd5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-03",
+          "grade": "CORRECT",
+          "answerSha256": "f714402d85458f04f56a0e620048ce5a0b423e16ff4a752c31a33c45b89405ad",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-04",
+          "grade": "PARTIAL",
+          "answerSha256": "de38c41e07f06cf4e13cad3a5b5b52a5b38503f1a6d1473107cb3e5723bfdcae",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-01",
+          "grade": "CORRECT",
+          "answerSha256": "3d92e8da30943b519e670751086a25468ba8fed42c83aa902a9c716711ab5216",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-02",
+          "grade": "PARTIAL",
+          "answerSha256": "27a70cebf055b37afdd5ab1b149df202ed555814b538579bf5838f8c723c946c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-03",
+          "grade": "CORRECT",
+          "answerSha256": "8bccd1241cacf57b0ccb26934f9f81d0b77fd5ef9c9c1855ec5c4deef1da8cb5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-04",
+          "grade": "CORRECT",
+          "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "912215da2d85a8d69e9c8efe06ab011fce4a90c1842e67d95b59638aa7c825d8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "21a809d91ca46649a8e769af1b496a16b8aa0b376739516c9b022ab20697cc2f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "71e3ae440d9a7df6198040fea6be828a71f48b1d55c7612d8ba120290e2d6f3b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "5700356b1ee2c1fc86797d6138b7d06d40980a1a0d88fb5b2b39f3d5fab74a8c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "170fb912c635da3d2d25b556a6c931a5ef58f7799805384367f12dca825908dc",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1419e869d21fda8946b64d90de23362512278e690e57508d4c72d2a76e84e17f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "5535fcf3ec227ee790073ddcd21ea7cb4eb5166c902bda68fad3df076c344802",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "50d66b154964bdf78f379d471563cc82f58a4f60e1692f7237fe7a2baa1ceaee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "8c3bdd3d0548273c2d26177a4cf1e9a8f75ea517a57a75310bd3ff6fd5b80ce0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-02",
+          "grade": "CORRECT",
+          "answerSha256": "286f47f781944b66c5661ac1005ffcbdf9db1204d2802231b567cd3813e57a00",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-03",
+          "grade": "CORRECT",
+          "answerSha256": "e111dd07147f13bb31d8d93faba9822e4bd45b2837e08c64d140789c10e42f9a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "4b7d518450c546b2f454ef84fe89774f6a25e5b2accb3b5231ea549cf2d64a34",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-01",
+          "grade": "CORRECT",
+          "answerSha256": "7f614f64197481ef509c2a3f05dd9edd22072b200b03a87b09d17dc10c04d7a0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-02",
+          "grade": "CORRECT",
+          "answerSha256": "3fe8b2ce3cc3eb06e6981a0f73b4917a0368f7c535f9a303e5c5ddfb769a80fc",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-03",
+          "grade": "CORRECT",
+          "answerSha256": "f5f5f0a6189e779af94c383eddefd4782a4053cd7590bf6cd441f077fc1bc471",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-04",
+          "grade": "CORRECT",
+          "answerSha256": "baa719c7d0f4907b676eaff2b3124fad3387d259f10d26e0eaf7673cb7c0e260",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "ca2a2f5468d9c8978f5bbf6755c6c35149c5704381403d5d51cfcb8e5b524760",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "bd92dc73c871c6c3cdccb8ea8ecc7f5afe2cb43a9bda4e3c6ba1f591f533fe29",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e63582f03d6c02de0bcf5a3454c5ad1ba21a656216f699d8de0e2c55a381a005",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-03",
+          "grade": "CORRECT",
+          "answerSha256": "ec8c0c32817ec8e8f0b369ad9330885022a124e29db0b4f1e71d1c2a9f413306",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "bdad90d8477a3b3bf4b5e22d3f05b93aa157e8aee803673944a5c371e40ead8a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-01",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-02",
+          "grade": "CORRECT",
+          "answerSha256": "5bc82909a4eb7d1b24f9be70928b15ec3d3e744302f2d795680c1f84277237e1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-03",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-04",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-01",
+          "grade": "CORRECT",
+          "answerSha256": "e0baaeb804028cec1994032629de387863797b8bf6c0fbd326a74ab11f591c49",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-02",
+          "grade": "CORRECT",
+          "answerSha256": "a0720090e9ebafeda5786a848bd3743728a466a62b33447bc8faf392b39a6242",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-03",
+          "grade": "PARTIAL",
+          "answerSha256": "31fafc368b0d5d249e8d8aba9efb2f1716ef711715740a62d75cf8b7f9ffc047",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-04",
+          "grade": "PARTIAL",
+          "answerSha256": "aadf09e6ae4d41af3349e6a0be6a7e892a94ff8b87e2842cee90a28ae005aaa7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-01",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-02",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-03",
+          "grade": "CORRECT",
+          "answerSha256": "bd4ca8bbf4fa6205a1117443dcc32b8570f2ed124a8f9e63a43c84db6a8ea67c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-04",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "7476f54f439f21004f5c129a3fe5be8d6b26816be766ef789e2acdb80fd670c4",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1daead0381ff80994222896bcdd86bf9f3cb1822760e817ad13ae5125f172086",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        }
+      ]
+    },
+    "fixed100-enriched": {
+      "beforeCounts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "afterCounts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "sourceConfiguration": "fixed100-enriched",
+      "grades": [
+        {
+          "id": "iras-input-tax-01",
+          "grade": "CORRECT",
+          "answerSha256": "1b645f965a90a640dec71d7bfaff6cabfbcb43dfcbb048f902fc37d3fc225d70",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-02",
+          "grade": "CORRECT",
+          "answerSha256": "889ea7c0e21a68ae8714252edbf256e6c28b256f2fd338637063cff7635b7e02",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-03",
+          "grade": "CORRECT",
+          "answerSha256": "4f1e08c24d502e1a48bb1908c6e7085df233653e95cd84af4ba46e37ff8874d7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-04",
+          "grade": "CORRECT",
+          "answerSha256": "5b85c5ebd340d518f918308a222481f5b49a6eff4a2372cc9de58f581bf5bc83",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-input-tax-05",
+          "grade": "CORRECT",
+          "answerSha256": "1b645f965a90a640dec71d7bfaff6cabfbcb43dfcbb048f902fc37d3fc225d70",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-01",
+          "grade": "CORRECT",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-02",
+          "grade": "CORRECT",
+          "answerSha256": "a8dfece8d3b8be3323b93fbad0ca85d94605263bfa53d84b4345cb1253cc9c68",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-03",
+          "grade": "CORRECT",
+          "answerSha256": "5b653d0f08b02b39f7595f29660feee4d8e6a79de4a5390041bd7e66fe704012",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-04",
+          "grade": "CORRECT",
+          "answerSha256": "abb419f7d6ba3014484bec08b094d297042d35bdfe3b0e4ac073158578d96466",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-gst-filing-05",
+          "grade": "CORRECT",
+          "answerSha256": "2619e42f672c98203e22c0d07fc19257b17d30bc1b5c155d0df7f095911fa7ea",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-01",
+          "grade": "CORRECT",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-02",
+          "grade": "CORRECT",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-03",
+          "grade": "CORRECT",
+          "answerSha256": "0de88bfb520941c447e0424a440ef2571dfadb8cffef9564af4d79555cb35e2e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-04",
+          "grade": "CORRECT",
+          "answerSha256": "539cb51673a53aedba95b77d5772ab873d20305d573a8dc3676d9dcc981061ee",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-eci-05",
+          "grade": "CORRECT",
+          "answerSha256": "712c605ab2578bcfbe51b62dd3e8f503f923fadc325419fedbbf15d8a6fe8619",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "09cc28799c24142e5b46198c1b6da372d6aef9488aeeb25779af3ea736cdca60",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-02",
+          "grade": "PARTIAL",
+          "answerSha256": "a53eb9bb9e1ddd325ea3f364de5a9fe025bd89bb865ab1b09e825199684b7ed8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-03",
+          "grade": "PARTIAL",
+          "answerSha256": "968e57fb310f1e79d641fb02b5bb7adc371287b0e388da01bd80a46b68e47c82",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "e3f8f34cba91f95ebfdd875786c116c4b990d1f2ad63e21ad7cf256f85fb05f1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "iras-withholding-tax-05",
+          "grade": "PARTIAL",
+          "answerSha256": "2e80335012b15b71e86b4aa6d09b25acf3132a3f73bc15784810a08e161403cf",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-01",
+          "grade": "CORRECT",
+          "answerSha256": "40668992ca56b0c7db2e5ce61cf3522a15b080ae2c5fbe7aeeeb10cb2ecfe06d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "d6e130fe92eb4aa2ab4232c349cdeab5821de9c21f010979df15b11d247fe543",
+          "assessment": "FRESH_INDEPENDENT_REVIEW"
+        },
+        {
+          "id": "cpf-additional-wages-definition-03",
+          "grade": "CORRECT",
+          "answerSha256": "cd65160074af3fd9c7143b5fffff4cae5c823ded47606a728fb715a9540d1ff0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-additional-wages-definition-04",
+          "grade": "CORRECT",
+          "answerSha256": "e059a6bacc2e4c7b062a5b69ec629e5c69752e058f0af2200f62583cb677afb8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-01",
+          "grade": "CORRECT",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-02",
+          "grade": "CORRECT",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-03",
+          "grade": "PARTIAL",
+          "answerSha256": "cc87ad1b116d143d1322fd59ff77e6dfa5c98d582de2ea0c51a9228bb6c2ef8e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-due-date-04",
+          "grade": "CORRECT",
+          "answerSha256": "6515d6f54a4c3f2f24952ebc182e3c9f01f9e92c0c467b939256b711c858bc22",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-01",
+          "grade": "CORRECT",
+          "answerSha256": "66430ee827a299296dfe7e32eae3692e47c74f297a6e1d9a4e5c3c31619b285d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-02",
+          "grade": "CORRECT",
+          "answerSha256": "89eaaa7b441464ccdc1f06faf75beb27b579fafb1de47f23eb58552d01083cb2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-03",
+          "grade": "CORRECT",
+          "answerSha256": "66430ee827a299296dfe7e32eae3692e47c74f297a6e1d9a4e5c3c31619b285d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-rate-factors-04",
+          "grade": "CORRECT",
+          "answerSha256": "f7b88b5ef59ded32455424c3be80ed33b8a10472d08a1aadf3fdbcb7dfca039c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-01",
+          "grade": "CORRECT",
+          "answerSha256": "2fa679a809b326d7067f1efc18f7172b7b79c94d1c068ef0a42ca784ab6b81b9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-02",
+          "grade": "CORRECT",
+          "answerSha256": "a56126a41991510390420ed775ac4ac1c163315b563527b803b41634ead339ef",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-03",
+          "grade": "CORRECT",
+          "answerSha256": "a56126a41991510390420ed775ac4ac1c163315b563527b803b41634ead339ef",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-aw-ceiling-04",
+          "grade": "CORRECT",
+          "answerSha256": "2fa679a809b326d7067f1efc18f7172b7b79c94d1c068ef0a42ca784ab6b81b9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "95c9761acfe0b3704e727f3f568a6d70687307789175a4c702bd07caaf64c39a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "30b1b9d313253530ac68a1b29e0331e0f3bfd612764c87ebfeead96b42e469b2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "2ea2cea856ac8703362cdc39fe283195eb284812e9e6d2c2809d5390af5f4b01",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "cpf-cpf-bonus-classification-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "5d50002a142d5856e5433a9abbf8ed720b37f7eaf1edc1cdc0f82027ff2c1ed8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "d7f4e6172a2c82358ba88cd7e705b1ab7398f00b82ec1d2ba55ec7f7a3eb6bc8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-02",
+          "grade": "CORRECT",
+          "answerSha256": "04a06b611881867bc31a57cf4729a5395c9eb67eab29d072c72d1388564d64e0",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-03",
+          "grade": "CORRECT",
+          "answerSha256": "b5291d86c0fa4277f2e8dfabad820dff62216db0844122385d89c3908b4e3781",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-timing-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "02ff126ebfb2c4d185c738c45623739be03a99562d1632fa4fd9477608b0400b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-01",
+          "grade": "CORRECT",
+          "answerSha256": "fd865713bd68ec3b0ab8a71d43345bb3a120531cf7b00fe5efbbe43bcf3cbd08",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-02",
+          "grade": "CORRECT",
+          "answerSha256": "5a5c30428bfb8bc9eea6bc8086fc97ea2f20b8437c02b5e3771b2b3fd496cfbe",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-03",
+          "grade": "CORRECT",
+          "answerSha256": "c691eaea696ffca85cbc22e0111a7295046472855d76b77c9deb2e0aadf5d428",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-final-salary-04",
+          "grade": "CORRECT",
+          "answerSha256": "77b25540bc2a6456d9b12af1074a3d19d840fad8cb12a05de2e42c9ae358efc6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-01",
+          "grade": "CORRECT",
+          "answerSha256": "77102ef09700de636edb62996f487c69769da00d10a75a459ab4068d30dfa2f6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-02",
+          "grade": "CORRECT",
+          "answerSha256": "ef20019c4e4af1b657237549168e96311a50e04bf7e0fb8f11b80965291fcba6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-03",
+          "grade": "CORRECT",
+          "answerSha256": "ed7c9c1df5910850301ab6ab860e5a5ea6805d76376f77c12312161475369623",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-annual-leave-04",
+          "grade": "PARTIAL",
+          "answerSha256": "66d88486709b7e760262715296d857cfee6da9799ada8012fae5515a657a17f6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-01",
+          "grade": "CORRECT",
+          "answerSha256": "3d92e8da30943b519e670751086a25468ba8fed42c83aa902a9c716711ab5216",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-02",
+          "grade": "PARTIAL",
+          "answerSha256": "27a70cebf055b37afdd5ab1b149df202ed555814b538579bf5838f8c723c946c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-03",
+          "grade": "CORRECT",
+          "answerSha256": "8bccd1241cacf57b0ccb26934f9f81d0b77fd5ef9c9c1855ec5c4deef1da8cb5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-salary-deductions-04",
+          "grade": "CORRECT",
+          "answerSha256": "cf313b2e262e18bf17addaf950287a7ba537e853bb852d20e57260a144a0098b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "912215da2d85a8d69e9c8efe06ab011fce4a90c1842e67d95b59638aa7c825d8",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "21a809d91ca46649a8e769af1b496a16b8aa0b376739516c9b022ab20697cc2f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "71e3ae440d9a7df6198040fea6be828a71f48b1d55c7612d8ba120290e2d6f3b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mom-overtime-eligibility-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "5700356b1ee2c1fc86797d6138b7d06d40980a1a0d88fb5b2b39f3d5fab74a8c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-01",
+          "grade": "CORRECT",
+          "answerSha256": "a0e47e49f05ce9325535679224a51173930d836d1328786d0b3d96cec6c7b62e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-02",
+          "grade": "CORRECT",
+          "answerSha256": "50f6dad5e5ece11abdc6678e42c146f8094a94fcdf8917bead9e72c4545d4ba5",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-03",
+          "grade": "CORRECT",
+          "answerSha256": "f4fa01448bada21780eb4428bb9a765b3a8004b3e969efae743f9aa7aff2243f",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-agm-deadlines-04",
+          "grade": "CORRECT",
+          "answerSha256": "ea301a7581da2b384d75da4c3e74ee3e012f25deb5e144cfefe2b93a2d09f35d",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-01",
+          "grade": "CORRECT",
+          "answerSha256": "c0d83d94c55af1378ea8aa5a42c42ea78e7e6bdbd0979f0a0c60b59eab4cfeaf",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-02",
+          "grade": "CORRECT",
+          "answerSha256": "a064145cd0d76996655d3ab259bf9846cb647a3235c9be2b69142710ff81f80b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-03",
+          "grade": "CORRECT",
+          "answerSha256": "b2916d798f19afe161f749cbb4165df4c963bc28fce18c46605ac6f3419882c7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-returns-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "4b7d518450c546b2f454ef84fe89774f6a25e5b2accb3b5231ea549cf2d64a34",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-01",
+          "grade": "CORRECT",
+          "answerSha256": "4ccaf14834cd428a538285e87027a6bdfeb49a35609a13084a3b52dbc74c2cd4",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-02",
+          "grade": "CORRECT",
+          "answerSha256": "7fcc0eefa05e8042a43f11a2c5cdfa28e27a60fe08b21208d82944ae36423246",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-03",
+          "grade": "CORRECT",
+          "answerSha256": "4c03e7839bfa5ee7a16b4494202c94c7d41243c3776510312bc9ae90a374588b",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-audit-exemption-04",
+          "grade": "CORRECT",
+          "answerSha256": "acb4e20e2d52b4bde1a03073fd032015a08708a107ad89add4e42079636adeb2",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-01",
+          "grade": "CORRECT",
+          "answerSha256": "08f54fd2ddab77ca0daa317c76dda655c60fdd2a8135da2f5e61f7aea7c88c54",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "ca2a2f5468d9c8978f5bbf6755c6c35149c5704381403d5d51cfcb8e5b524760",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-annual-return-officer-particulars-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "b22f5bb17a63755c44d230a3ce0eafc4b21d7b009980db0e48653784382013db",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-01",
+          "grade": "CORRECT",
+          "answerSha256": "c870c570fecf8e72cccacbe094adfa88ed6749cece55736064614dc886d210f6",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-02",
+          "grade": "CORRECT",
+          "answerSha256": "92607eea5f73fd76adff5e98d90a9a54f783265d67104cda533390dc1e9622bb",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-03",
+          "grade": "CORRECT",
+          "answerSha256": "44f88569920ff4d39741ad3aa7a71e46ce9229be34217e28b1390e3245c71c5e",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "acra-secretary-appointment-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "bdad90d8477a3b3bf4b5e22d3f05b93aa157e8aee803673944a5c371e40ead8a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-01",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-02",
+          "grade": "CORRECT",
+          "answerSha256": "5bc82909a4eb7d1b24f9be70928b15ec3d3e744302f2d795680c1f84277237e1",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-03",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-fund-management-licence-04",
+          "grade": "CORRECT",
+          "answerSha256": "a23e87fde8b6ec0a9117b19a0b64654b45f29f3bac30cc0ef650ccb2ed61617c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-01",
+          "grade": "CORRECT",
+          "answerSha256": "e0baaeb804028cec1994032629de387863797b8bf6c0fbd326a74ab11f591c49",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-02",
+          "grade": "CORRECT",
+          "answerSha256": "a0720090e9ebafeda5786a848bd3743728a466a62b33447bc8faf392b39a6242",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-03",
+          "grade": "PARTIAL",
+          "answerSha256": "31fafc368b0d5d249e8d8aba9efb2f1716ef711715740a62d75cf8b7f9ffc047",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-vcfm-04",
+          "grade": "PARTIAL",
+          "answerSha256": "aadf09e6ae4d41af3349e6a0be6a7e892a94ff8b87e2842cee90a28ae005aaa7",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-01",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-02",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-03",
+          "grade": "CORRECT",
+          "answerSha256": "bd4ca8bbf4fa6205a1117443dcc32b8570f2ed124a8f9e63a43c84db6a8ea67c",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-class-exemptions-04",
+          "grade": "CORRECT",
+          "answerSha256": "9a86f50e9b19449447aa310185bbf5941fa6baedaaf5e83b466fa6cfde0235ed",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "924266115d38245fdaf0df458725ca3a40ed37f63e29f8b4b12fef747efe095a",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "7476f54f439f21004f5c129a3fe5be8d6b26816be766ef789e2acdb80fd670c4",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-qdc-reporting-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1daead0381ff80994222896bcdd86bf9f3cb1822760e817ad13ae5125f172086",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        },
+        {
+          "id": "mas-regulatory-notifications-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6c85f19254ca80f24646a1ca1232a35d753814d1d58226f1f4e689d1573f50c9",
+          "assessment": "UNCHANGED_INHERITED"
+        }
+      ]
+    }
+  },
+  "expandedCpf": [
+    {
+      "id": "cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42"
+    },
+    {
+      "id": "cpf-04",
+      "grade": "CORRECT",
+      "answerSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954"
+    },
+    {
+      "id": "cpf-06",
+      "grade": "CORRECT",
+      "answerSha256": "bcd025e7d691cfabc7ab34cb7a3c74b3c7d344534372667876cfa3da81e1f1e1"
+    },
+    {
+      "id": "cpf-07",
+      "grade": "CORRECT",
+      "answerSha256": "691b1a9dcad01ad595d795b526f3bd78e2fc88605457b8318b7ef03688e1dc90"
+    },
+    {
+      "id": "fresh31-cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "1df9c0abf5a08e29964966de967536bd7d1fa76a237c328231d41eafd9f3ee9f"
+    },
+    {
+      "id": "fresh31-cpf-02",
+      "grade": "CORRECT",
+      "answerSha256": "aa3122519e8ff4ac2f12cc9fa57014d7502919ae931bbb48d5fc6693ea0efb43"
+    }
+  ],
+  "preservation": {
+    "cases": 350,
+    "unchanged": 342,
+    "changed": 8,
+    "priorCorrect": 209,
+    "preservedCorrect": 209,
+    "frozenInputDrift": []
+  },
+  "targetedCpfComparison": [
+    {
+      "id": "cpf-01",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "CORRECT",
+      "afterExpandedSources": "CORRECT"
+    },
+    {
+      "id": "cpf-04",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "CORRECT",
+      "afterExpandedSources": "CORRECT"
+    },
+    {
+      "id": "cpf-06",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "PARTIAL",
+      "afterExpandedSources": "CORRECT"
+    },
+    {
+      "id": "cpf-07",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "UNSUPPORTED",
+      "afterExpandedSources": "CORRECT"
+    },
+    {
+      "id": "fresh31-cpf-01",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "CORRECT",
+      "afterExpandedSources": "CORRECT"
+    },
+    {
+      "id": "fresh31-cpf-02",
+      "before": "UNSUPPORTED",
+      "afterFrozenSources": "CORRECT",
+      "afterExpandedSources": "CORRECT"
+    }
+  ]
+}

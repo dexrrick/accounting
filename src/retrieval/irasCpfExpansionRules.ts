@@ -57,6 +57,16 @@ function visibleText(value: string): string {
     .trim();
 }
 
+function isCpfWagePaymentDateFact(query: string): boolean {
+  return !/\b(?:19|20)\d{2}\b|\b(?:historical|historic|previous|prior|former|old|superseded|ex-employee|former employee|left employment|after resignation|after termination)\b/i.test(query)
+    && /\b(?:cpf|central provident fund)\b/i.test(query)
+    && /\b(?:employee|worker|staff|payroll|salary|wages?)\b/i.test(query)
+    && /\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(query)
+    && /\b(?:contractually payable|payable|payment date|earned in|employment month)\b/i.test(query)
+    && new RegExp(String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MONTH_PATTERN}\b`, 'i').test(query)
+    && !/\b(?:rates?|percentages?|rate table|calculate|compute|how much)\b/i.test(query);
+}
+
 function isOutOfCurrentDateScope(query: string): boolean {
   if (/\b(?:historical|historic|previous|prior|former|old|superseded|future|upcoming|thereafter|hereafter)\b/i.test(query)) return true;
   if (/\b(?:last|previous|prior|past|next|coming|following)\s+(?:\d+\s+)?(?:days?|weeks?|months?|quarters?|years?|financial years?|reporting periods?|tax years?)\b/i.test(query)) return true;
@@ -64,6 +74,7 @@ function isOutOfCurrentDateScope(query: string): boolean {
   const currentDate = TargetDateResolver.CURRENT_SYSTEM_DATE;
   const currentYear = currentDate.slice(0, 4);
   if ([...query.matchAll(/\b(?:19|20)\d{2}\b/g)].some(match => match[0] !== currentYear)) return true;
+  if (isCpfWagePaymentDateFact(query)) return false;
   const dateComparison = /\b(?:before|prior to|after|following|until|through)\s+(?:the year\s+)?(?:(?:[0-3]?\d\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+)?((?:19|20)\d{2})\b/gi;
   if ([...query.matchAll(dateComparison)].some(match => match[1] === currentYear)) return true;
 
@@ -374,14 +385,87 @@ function expectedDomain(rule: ExpansionRule): string {
     : rule === 'IRAS_INPUT_TAX' ? 'IRAS_GST' : 'IRAS_CORPORATE_TAX';
 }
 
-function answerText(rule: ExpansionRule): string {
+const MONTH_NAMES = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'] as const;
+const MONTH_PATTERN = '(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)';
+
+function monthNumber(value: string): number | undefined {
+  const prefix = value.toLowerCase().slice(0, 3);
+  const index = MONTH_NAMES.findIndex(month => month.startsWith(prefix));
+  return index >= 0 ? index + 1 : undefined;
+}
+
+function monthLabel(value: string): string {
+  return value[0].toUpperCase() + value.slice(1).toLowerCase();
+}
+
+function payFactsForSegment(segment: string): { employmentMonth: string; payableDay: number; payableMonth: string } | undefined {
+  const monthBeforePay = new RegExp(String.raw`\b(${MONTH_PATTERN})\b[^.!?;\n]{0,35}\b(?:pay|salary|wages?)\b`, 'i').exec(segment);
+  const monthFromEmployment = /\b(?:earned|employment|work)\s+in\s+([a-z]+)\b/i.exec(segment);
+  const employmentMonth = monthBeforePay?.[1] || monthFromEmployment?.[1];
+  const payable = new RegExp(String.raw`\bpayable\s+(?:on|by)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(${MONTH_PATTERN})\b`, 'i').exec(segment);
+  if (!employmentMonth || !payable) return undefined;
+  const payableDay = Number(payable[1]);
+  if (!Number.isInteger(payableDay) || payableDay < 1 || payableDay > 31) return undefined;
+  return { employmentMonth, payableDay, payableMonth: payable[2] };
+}
+
+function isOnTimeForOrdinaryWages(facts: { employmentMonth: string; payableDay: number; payableMonth: string }): boolean | undefined {
+  const employmentMonthNumber = monthNumber(facts.employmentMonth);
+  const payableMonthNumber = monthNumber(facts.payableMonth);
+  if (!employmentMonthNumber || !payableMonthNumber) return undefined;
+  const followingMonth = employmentMonthNumber === 12 ? 1 : employmentMonthNumber + 1;
+  if (payableMonthNumber === employmentMonthNumber) return true;
+  if (payableMonthNumber === followingMonth) return facts.payableDay <= 14;
+  const monthOffset = (payableMonthNumber - employmentMonthNumber + 12) % 12;
+  return monthOffset >= 2 && monthOffset <= 6 ? false : undefined;
+}
+
+function cpfWageClassificationAnswer(query: string): string {
+  const employeeMentions = [...query.matchAll(/\b(?:employee|worker|staff member)\s+([A-Z0-9]+)\b/gi)];
+  if (employeeMentions.length > 1) {
+    const individualResults = employeeMentions.map((mention, index) => {
+      const start = mention.index!;
+      const end = employeeMentions[index + 1]?.index ?? query.length;
+      const segment = query.slice(start, end);
+      const facts = payFactsForSegment(segment);
+      if (!facts) return undefined;
+      const classification = isOnTimeForOrdinaryWages(facts);
+      if (classification === undefined) return undefined;
+      const label = mention[1];
+      const month = monthLabel(facts.employmentMonth);
+      const payableMonth = monthLabel(facts.payableMonth);
+      return classification
+        ? `Employee ${label}'s ${month} pay, payable on ${facts.payableDay} ${payableMonth}, meets the payment-date condition for ${month} OW.`
+        : `Employee ${label}'s ${month} pay, payable on ${facts.payableDay} ${payableMonth}, is not ${month} OW; it is AW for that month because it is not payable by the 14th of the following month.`;
+    });
+    if (individualResults.every((result): result is string => Boolean(result))) {
+      return `${individualResults.join(' ')} Classify each employee using that employee's own employment month and payable date. OW requires both that the wages are for employment in the month and that they are payable by the 14th of the following month. AW may still attract CPF, subject to its applicable ceiling and contribution rate.`;
+    }
+    return 'Classify each employee separately. OW requires wages for employment in that month and a contractual payable date no later than the 14th of the following month. Where one employee’s employment month or payable date is missing or ambiguous, confirm those facts for that employee; do not borrow another employee’s date. Wages that fail the OW test are AW and may still attract CPF subject to the applicable AW ceiling and contribution rate.';
+  }
+
+  const facts = payFactsForSegment(query);
+  if (facts) {
+    const classification = isOnTimeForOrdinaryWages(facts);
+    if (classification !== undefined) {
+      const month = monthLabel(facts.employmentMonth);
+      const payableMonth = monthLabel(facts.payableMonth);
+      return classification
+        ? `The stated wages are for employment in ${month} and are payable on ${facts.payableDay} ${payableMonth}, within the 14th of the following month. They meet both conditions for ${month} OW. Any separate AW is assessed under its annual ceiling; OW and AW may both attract CPF at the applicable rates.`
+        : `The stated salary is for employment in ${month}, but is payable on ${facts.payableDay} ${payableMonth}, after the 14th of the following month. It therefore is not ${month} OW and is classified as AW for that month. AW may still attract CPF, subject to its applicable annual ceiling and contribution rate; the pay-period label alone does not make it OW.`;
+    }
+  }
+  return 'CPF wage treatment has two steps. First decide whether a payment is wages: CPF Board lists salary, overtime pay, bonuses, meal and transport allowances, commissions and cash incentives as examples of wages; a qualifying reimbursement for official employer expenses is excluded when it does not exceed the expense, as are specified termination benefits and non-cash benefits. Then classify wages as Ordinary Wages (OW) only when they are for employment in that month and payable by the 14th of the following month. Wages that do not meet the OW definition are Additional Wages (AW); an annual performance bonus is an example. OW and AW are both part of total wages and may attract CPF subject to their applicable ceilings and rates. Classifying a particular payment depends on what it was for, the employment month, payment timing, and, for a claimed reimbursement, the official expense and amount.';
+}
+
+function answerText(rule: ExpansionRule, query: string): string {
   if (rule === 'IRAS_INPUT_TAX') {
     return 'IRAS allows an input tax claim only when all applicable conditions are met: the claimant is GST-registered; the goods or services are supplied to or imported by it and are used for its business; local purchases have valid tax invoices and imports have the required import permits and supporting documents; the input tax is attributable to qualifying taxable or specified out-of-scope supplies; the claim is not disallowed under Regulations 26 or 27; and the claimant has taken reasonable steps to conclude that the goods or services are not part of a Missing Trader Fraud arrangement, on a conclusion a reasonable person would make. This gives the general rule only. A conclusion about a particular purchase also requires the GST-registration status, what was acquired and its business use, the related supplies, supporting documents, any applicable blocked-input-tax exception, and the Missing Trader Fraud assessment.';
   }
   if (rule === 'IRAS_ECI_FILING') {
     return 'A company generally files ECI within three months after its financial year end unless it is specifically not required to file or qualifies for the waiver. For each Year of Assessment, the waiver requires both annual revenue of S$5 million or less for the financial year and nil ECI before deducting the partial tax exemption or new start-up tax exemption. A company’s accounting profit or book loss alone does not establish nil ECI: ECI is an estimated chargeable-income amount, so the tax computation and relevant adjustments still matter. Revenue generally means income from the company’s main activity, with separate-source income excluded where it does not arise from that activity; an investment holding company’s revenue is its investment income. The company self-assesses whether it qualifies. IRAS also lists categories separately exempt from filing. To identify a particular due date, the company’s financial year end is needed; to assess a waiver, the applicable year of assessment, annual revenue and pre-exemption ECI must be known.';
   }
-  return 'CPF wage treatment has two steps. First decide whether a payment is wages: CPF Board lists salary, overtime pay, bonuses, meal and transport allowances, commissions and cash incentives as examples of wages; a qualifying reimbursement for official employer expenses is excluded when it does not exceed the expense, as are specified termination benefits and non-cash benefits. Then classify wages as Ordinary Wages (OW) only when they are for employment in that month and payable by the 14th of the following month. Wages that do not meet the OW definition are Additional Wages (AW); an annual performance bonus is an example. OW and AW are both part of total wages and are subject to their applicable ceilings. Classifying a particular payment depends on what it was for, the employment month, payment timing, and, for a claimed reimbursement, the official expense and amount. A contribution calculation also requires the employee’s applicable status, age and wage facts for the relevant contribution period.';
+  return cpfWageClassificationAnswer(query);
 }
 
 /** Renders general rule explanations only from complete exact claims bound to this issue and page revision. */
@@ -406,7 +490,7 @@ export function getIrasCpfExpansionEvidence(
     const completeBoundRule = groupExactIssueClaimsByDocument(source, issue.id)
       .some(group => prove(rule, group.map(claim => claim.text).join('\n\n')));
     if (!completeBoundRule) continue;
-    return { authority, text: answerText(rule), title: source.title, officialUrl: source.officialUrl! };
+    return { authority, text: answerText(rule, query), title: source.title, officialUrl: source.officialUrl! };
   }
   return undefined;
 }

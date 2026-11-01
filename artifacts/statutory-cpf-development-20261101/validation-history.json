@@ -1,0 +1,41 @@
+{
+  "initialTypeScript": "TS2678 unreachable duplicate AW switch case; removed before checkpoint, proper tsc -b passed and source hashes stayed unchanged.",
+  "rootLint": {
+    "exitCode": 1,
+    "errors": 34,
+    "note": "Pre-existing untracked archived prepare.mjs; maintained-code lint passed separately."
+  },
+  "initialSmoke": {
+    "passed": 157,
+    "failed": 4,
+    "exitCode": 1,
+    "failure": "CPF Sitemap Discovery test expected robots fallback, but the new valid direct CPF pointer made the test mock return the page before discovery.",
+    "correction": "Only test setup changed: mapped page unavailable until chosen discovery stage. Direct mapped-source positive control and all source/provenance/security negatives retained. No production logic changed."
+  },
+  "resumedBuilds": "Vite and Worker passed; final static lint and TypeScript passed.",
+  "finalSuites": {
+    "smoke": {
+      "passed": 161,
+      "failed": 0
+    },
+    "full": {
+      "passed": 184,
+      "failed": 0
+    }
+  },
+  "secondSmoke": {
+    "passed": 158,
+    "failed": 3,
+    "exitCode": 1,
+    "failures": [
+      "MOM mixed routing chose the same bundled issue twice despite separate salary/payslip issues.",
+      "Generic AW prose no longer retained the established precise actual-CPF-subject-OW explanation.",
+      "MAS isolated decoder could not start under restricted process/profile access."
+    ],
+    "reproduced": "All three reproduced focused. MAS focused test passes with normal Windows process access; no MAS production code changed.",
+    "remediation": "Narrow MOM distinct-pair correction and reuse of existing source-backed generic AW explanation; final validation will use normal Windows process access and the offline guard."
+  },
+  "finalRepairs": "Narrow MOM predicate searches any distinct valid issue pair, with bundled-first and bundled-only controls. Default AW prose restored verbatim from previously reviewed head; specialized new branches retained. Five focused suites and independent review passed.",
+  "finalEnvironment": "Canonical Node 22.23.3, normal Windows process access, retained userInfo shim and offline external-fetch guard. The isolated MAS decoder intentionally strips environment preloads; normal process access resolves its profile initialization issue without code changes.",
+  "finalChecks": "All required final checks passed apart from the separately reported pre-existing root archive lint exception."
+}

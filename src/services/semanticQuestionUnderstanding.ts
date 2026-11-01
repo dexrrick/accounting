@@ -2772,6 +2772,18 @@ function issueFromTaxonomyGroup(topics: ReturnType<typeof defaultQueryTopicResol
   };
 }
 
+function isIncidentalCpfBonusTaxGroup(
+  query: string,
+  topics: ReturnType<typeof defaultQueryTopicResolver.decomposeQuery>['topics']
+): boolean {
+  const topicIds = topics.map(topic => topic.id);
+  return /\b(?:cpf|central provident fund|aw ceiling|additional wage)\b/i.test(query) &&
+    /\b(?:bonus|annual bonus|aws)\b/i.test(query) &&
+    !/\b(?:tax|taxes|taxable|iras|employment income reporting|auto-inclusion)\b/i.test(query) &&
+    topicIds.length > 0 && topicIds.every(topicId =>
+      ['iras-ais-employment-income', 'iras-employee-bonus-timing'].includes(topicId));
+}
+
 function hasIndependentSemanticClause(query: string): boolean {
   return /\b(?:and|or|also|plus|additionally)\b|\bas well as\b/i.test(query) ||
     /;\s*\S/.test(query) || (query.match(/\?/g) || []).length > 1 || /\?\s+\S/.test(query) || /\.\s+\S/.test(query);
@@ -2944,6 +2956,70 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'CPF_PAYROLL') {
+    const queryAsksPrWageApplication = /\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b|wages?|salary|bonus|payable|payment|earned|prorat\w*)\b/i.test(query);
+    const asksNewPrWageBoundary = /\b(?:singapore permanent resident|singapore pr|permanent resident|spr|pr status|pr employee)\b/i.test(text) &&
+      queryAsksPrWageApplication &&
+      /\b(?:first[- ]year boundary|contribution year|obtained|became|grant date|proration|prorated|pro-rated|payable|before|after)\b/i.test(text) &&
+      !/\b(?:rate table|rates?|percentages?|contribution rate|calculate|compute|how much)\b/i.test(text) &&
+      !/\b(?:ex-employee|former employee|left employment|after resignation|after termination)\b/i.test(text);
+    if (asksNewPrWageBoundary) {
+      const requestedTopics = [
+        'cpf-pr-contribution-rates', 'cpf-employee-coverage',
+        ...(/\b(?:ordinary wages?|\bow\b|salary|wage month)\b/i.test(text) ? ['cpf-ordinary-wages'] : []),
+        ...(/\b(?:bonus|additional wages?|\baw\b)\b/i.test(text) ? ['cpf-additional-wages'] : [])
+      ];
+      const population: SemanticPopulation = /\b(?:our employee|our payroll|employer|payroll terms)\b/i.test(text)
+        ? 'EMPLOYER' : 'EMPLOYEE';
+      return {
+        ...makeRuleIssue('CPF newly obtained PR status and OW/AW payable-date treatment', population),
+        mappedTopicIds: [...new Set([
+          ...issue.mappedTopicIds.filter(topicId => !['cpf_contribution_rates', 'cpf-contribution-computation', 'cpf-bonus-backpay'].includes(topicId)),
+          ...requestedTopics
+        ])]
+      };
+    }
+    const asksCombinedCpfWageCeilings = /\b(?:cpf|central provident fund)\b/i.test(query) &&
+      /\b(?:ordinary wages?|\bow\b)\b/i.test(text) &&
+      /\b(?:annual bonus|bonus|additional wages?|\baw\b)\b/i.test(text) &&
+      /\b(?:ceiling|cap(?:ping)?|cpf-able base|subject to cpf)\b/i.test(text) &&
+      /\b2026\b/.test(text);
+    if (asksCombinedCpfWageCeilings) {
+      return {
+        ...makeRuleIssue('CPF monthly OW and annual AW ceilings', 'EMPLOYER'),
+        mappedTopicIds: [...new Set([...issue.mappedTopicIds, 'cpf-ordinary-wages',
+          'cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-bonus-backpay'])]
+      };
+    }
+    const asksDuePayableYearForAw = /\b(?:bonus|additional wages?|\baw\b)\b/i.test(text) &&
+      /\b(?:which|what)\s+(?:calendar\s+)?year(?:'s)?\b/i.test(query) &&
+      /\b(?:due and payable|payable)\b/i.test(text);
+    if (asksDuePayableYearForAw) {
+      return {
+        ...makeRuleIssue('CPF additional wage ceiling based on the contractual due-and-payable year', 'EMPLOYER'),
+        mappedTopicIds: [...new Set([
+          ...issue.mappedTopicIds.filter(topicId => ['cpf-additional-wages', 'cpf-additional-wage-ceiling'].includes(topicId)),
+          'cpf-additional-wages', 'cpf-additional-wage-ceiling'
+        ])]
+      };
+    }
+    const asksCpfOwAwClassification = /\b(?:cpf|central provident fund)\b/i.test(query) &&
+      /\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(text) &&
+      /\b(?:payable|payment date|due date|earned in|salary|bonus|commission|allowance|arrears?)\b/i.test(text) &&
+      !/\b(?:ceiling|rate table|percentage|calculate|compute|how much)\b/i.test(text);
+    if (asksCpfOwAwClassification) {
+      const population: SemanticPopulation = /\b(?:our employee|our payroll|employer|payroll terms)\b/i.test(text)
+        ? 'EMPLOYER' : 'EMPLOYEE';
+      const topics = [
+        ...(/\b(?:ordinary wages?|\bow\b)\b/i.test(text) ? ['cpf-ordinary-wages'] : []),
+        ...(/\b(?:additional wages?|\baw\b|bonus|commission|allowance|arrears?)\b/i.test(text)
+          ? ['cpf-additional-wages', 'cpf-bonus-backpay'] : [])
+      ];
+      return {
+        ...makeRuleIssue('CPF Ordinary Wage versus Additional Wage classification by employment month and payable date', population),
+        mappedTopicIds: [...new Set([...issue.mappedTopicIds.filter(topicId =>
+          ['cpf-ordinary-wages', 'cpf-additional-wages', 'cpf-bonus-backpay'].includes(topicId)), ...topics])]
+      };
+    }
     const asksCpfContributionDueDateAndEnforcement = topicIds.has('cpf-contribution-due-dates') &&
       [...topicIds].every(topicId => ['cpf-contribution-due-dates', 'cpf_contribution_rates'].includes(topicId)) &&
       /\bcpf\b/i.test(query) && /\bcontributions?\b/i.test(query) &&
@@ -3704,7 +3780,7 @@ function reconcileSemanticIssuePlan(
 
   const groups = new Map<SingaporeKnowledgeDomain, typeof inventory.topics>();
   for (const topic of inventory.topics) groups.set(topic.domainId, [...(groups.get(topic.domainId) || []), topic]);
-  const issueGroups = [...groups.values()];
+  const issueGroups = [...groups.values()].filter(group => !isIncidentalCpfBonusTaxGroup(query, group));
   const isSingleLfmcToolkitScopeQuestion = isLfmcToolkitFundScopeQuestion(query) &&
     !hasIndependentSemanticClause(query) && !hasSeparateMasLfmcLicensingAsk(query);
   const hasMasReportingTopic = issueGroups.some(group => group.some(topic => topic.id === 'mas-regulatory-reporting'));
@@ -3874,7 +3950,7 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
 
   const momSalaryIssueIndex = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
     issue.mappedTopicIds.includes('mom-salary-payment'));
-  const momFinalSalaryAndPayslip = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+  let momFinalSalaryAndPayslip = issues.findIndex(issue => issue.domain === 'MOM_EMPLOYMENT' &&
     issue.mappedTopicIds.includes('mom-itemised-payslips'));
   const asksFinalSalaryAmount = asksFinalSalaryAmountRequest(query);
   const asksSalaryDeductionOutcome = /\b(?:deduct\w*|deduction\w*)\b/i.test(query) &&
@@ -3884,6 +3960,14 @@ function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {
     /\b(?:payslips?|pay slips?)\b/i.test(query) ||
     /\b(?:how|must|should|can|do|does|what|where)\b[^.!?;]{0,100}\b(?:issue|deliver|give|provide|send)\w*\b[^.!?;]{0,100}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b/i.test(query) ||
     /\b(?:explain|describe|outline)\b[^.!?;]{0,80}\b(?:itemi[sz]ed\s+)?(?:payslips?|pay slips?)\b[^.!?;]{0,40}\b(?:delivery|issue)\b/i.test(query);
+  if (momFinalSalaryAndPayslip < 0 && momSalaryIssueIndex >= 0 && asksPayslipIssueDeliveryOrTiming &&
+      /\b(?:employee|staff|worker|resign\w*|terminat\w*|dismiss\w*|departure)\b/i.test(query) &&
+      /\b(?:payslips?|pay slips?)\b/i.test(query) && hasIndependentSemanticClause(query)) {
+    const template = issues[momSalaryIssueIndex];
+    issues.push(cloneAsRequestedIssue(template,
+      'MOM itemised payslip issue and delivery requirements', ['mom-itemised-payslips'], 'EMPLOYER', 'EXPLAIN_RULE'));
+    momFinalSalaryAndPayslip = issues.length - 1;
+  }
   const asksTerminationFinalPayAndPayslip = momFinalSalaryAndPayslip >= 0 &&
     /\b(?:resign\w*|notice|dismiss\w*|terminat\w*|end of employment)\b/i.test(query) &&
     /\b(?:final|last)\s+(?:salary|pay|wages?)\b/i.test(query) &&
@@ -4130,13 +4214,66 @@ export function reconcileQuestionUnderstanding(
   const currentRequestCompletenessContext = ensureRequestCompletenessContext(query, requestCompletenessContext, understanding);
   const reconciled = reconcileLegacyQuestionUnderstanding(query, classification, understanding);
   const issuePlan = reconcileSemanticIssuePlan(query, classification, understanding, currentRequestCompletenessContext);
+  const queryClauses = query.split(/[.!?;]+|,?\s+\b(?:and|but|also)\b\s+(?=(?:how much|calculate|compute|work out|what (?:amount|tax|gst)|prepare|record|show|explain|when|an employee|the employee|after (?:an?\s+)?employee))/i)
+    .map(clause => clause.trim()).filter(Boolean);
+  const explicitJournalRequest = /\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies))\b/i
+    .test(removeNegatedJournalDirectives(query)) ||
+    /\b(?:record|post|book)\b[^.!?;]{0,70}\b(?:the\s+)?(?:sale|sales transaction)\s+of\s+(?:goods|products|inventory|stock)\b/i.test(query);
+  const pricedSaleClause = queryClauses.findIndex(clause =>
+    /\b(?:sold|sell|sale)\b/i.test(clause) &&
+    /\b(?:s\$|sgd|\$)\s*\d[\d,]*(?:\.\d{1,2})?\b/i.test(clause));
+  const finalPayClause = queryClauses.findIndex(clause =>
+    /\b(?:final\s+(?:salary|pay|wages?)|payslips?|pay\s+slips?)\b/i.test(clause));
+  if (explicitJournalRequest && pricedSaleClause >= 0 && finalPayClause >= 0) {
+    const salaryIssueIndex = issuePlan.issues.findIndex(issue => issue.status === 'MAPPED' &&
+      issue.domain === 'MOM_EMPLOYMENT' && issue.mappedTopicIds.includes('mom-salary-payment'));
+    const salaryIssue = issuePlan.issues[salaryIssueIndex];
+    if (salaryIssueIndex >= 0 && salaryIssue.population === 'UNKNOWN') {
+      const employerSalaryIssue = { ...salaryIssue, population: 'EMPLOYER' as const };
+      issuePlan.issues[salaryIssueIndex] = {
+        ...employerSalaryIssue,
+        id: stableIssueId(employerSalaryIssue)
+      };
+    }
+  }
+  const hasSeparatePricedSaleAndFinalPayRequest = pricedSaleClause >= 0 && finalPayClause >= 0 &&
+    pricedSaleClause !== finalPayClause &&
+    issuePlan.issues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+      issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
+      issue.mappedTopicIds.includes('mom-salary-payment')) &&
+    issuePlan.issues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+      issue.population === 'EMPLOYER' && issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM' &&
+      issue.mappedTopicIds.includes('mom-itemised-payslips'));
+  const explicitTaxAdvisoryRequest = classification.taxAnalysisRequired ||
+    /\bwhat\s+(?:tax|gst)\b|\b(?:tax|gst)\s+appl(?:y|ies)\b|\b(?:tax|gst)\s+(?:treatment|due|payable)\b|\b(?:taxable|deductible)\b/i.test(query);
   const independentTransactionAction = /\b(?:sold|sale|bought|purchased|purchase|acquired|disposed of)\b/i.test(query);
-  const explicitJournalRequest = /\b(?:journal|double[ -]+entr(?:y|ies)|accounting[ -]+entr(?:y|ies))\b/i.test(query);
   if (issuePlan.source === 'TAXONOMY_FALLBACK' && classification.journalEntryRequired &&
-      isFinalSalaryAmountRequest(query) && independentTransactionAction &&
+      !explicitTaxAdvisoryRequest && isFinalSalaryAmountRequest(query) && independentTransactionAction &&
       !explicitJournalRequest && !issuePlan.issues.some(issue => issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')) {
     const accountingIssue: SemanticQuestionIssue = {
       subject: 'Accounting journal for the independent transaction; clarify settlement and measurement facts',
+      population: 'COMPANY',
+      domain: 'ACCOUNTING',
+      governingAuthorities: ['ACCOUNTING_STANDARDS'],
+      contextualAuthorities: [],
+      operation: 'PREPARE_JOURNAL',
+      mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+      confidence: 1
+    };
+    issuePlan.issues.push({
+      ...accountingIssue,
+      id: stableIssueId(accountingIssue),
+      status: 'UNRESOLVED',
+      unresolvedReason: 'NO_COVERAGE_TOPIC'
+    });
+    issuePlan.coverageEstablished = false;
+    issuePlan.hasUnmappedResidual = true;
+  }
+  if (explicitJournalRequest && hasSeparatePricedSaleAndFinalPayRequest &&
+      !issuePlan.issues.some(issue => issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')) {
+    const accountingIssue: SemanticQuestionIssue = {
+      subject: 'Accounting journal for the independent commercial sale; clarify settlement and measurement facts',
       population: 'COMPANY',
       domain: 'ACCOUNTING',
       governingAuthorities: ['ACCOUNTING_STANDARDS'],

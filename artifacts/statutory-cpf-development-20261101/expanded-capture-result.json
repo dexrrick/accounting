@@ -1,0 +1,35 @@
+{
+  "exitCode": 0,
+  "sourceProfile": "Original natural-corpus source profile plus explicitly added PR visible-text evidence.",
+  "originalConfigurationsModified": false,
+  "manifests": [
+    {
+      "file": "new-cpf-source-manifest.json",
+      "sha256": "b592a2fbc08603daf92ca931c44bcc05c82c51c8f791c6f944dc0bacf7d3733b"
+    },
+    {
+      "file": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "sha256": "5b813475fb3c10dfcf2aa62c70a04e5c5d2b0ad9b64cbb404c4dca3a287fecfc"
+    },
+    {
+      "file": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "sha256": "c8eefdbdede99d5580f95473b20722e8248cbc9e2667bf2f96fa280d6f0016a7"
+    },
+    {
+      "file": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "sha256": "84573a7b2ec07f6255524bdf5d0c1c7275f9fb7d2dd3c3039a6ab37c05e5b030"
+    },
+    {
+      "file": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "sha256": "38dd16e5bbcaf1ca1c48b892b8b6c7ebcc9bbf135d193b92fd4a6296e1579ea5"
+    },
+    {
+      "file": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "sha256": "48c29f62305d4e4031c721d4058be7779f8a0fb8169c37a05de2da5aa08999a4"
+    },
+    {
+      "file": "zz-next31-source-manifest.json",
+      "sha256": "ccc8d65be14c7f4748dab6c89b3f75bf34abdb5f933b62831a8d7c65f8ea090a"
+    }
+  ]
+}

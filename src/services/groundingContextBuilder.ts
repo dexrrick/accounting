@@ -98,12 +98,13 @@ const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly strin
   'IRAS:iras-wht-filing-payment-due-date': ['file and pay WHT', '15th of the second month'],
   'IRAS:iras-wht-deemed-payment-date': ['The date of payment is defined as the earliest'],
   'IRAS:iras-gst-motor-vehicles': ['Regulation 27', 'purchase and running expenses of motor cars'],
-  'CPF:cpf-bonus-backpay': ['wages are defined as remuneration in money'],
-  'CPF:cpf-additional-wages': ['wages are defined as remuneration in money'],
-  'CPF:cpf-employee-coverage': ['person who is employed in Singapore', 'Singapore Permanent Residents earning total wages'],
+  'CPF:cpf-bonus-backpay': ['wages are defined as remuneration in money', 'cpf contribution is not required on the aw if it is payable while the employee was a foreigner'],
+  'CPF:cpf-additional-wages': ['wages are defined as remuneration in money', 'for additional wages (aw), cpf contributions are required depending on when the aw is payable to your employee'],
+  'CPF:cpf-employee-coverage': ['person who is employed in Singapore', 'Singapore Permanent Residents earning total wages', 'cpf contributions are payable once your foreign employee obtains his singapore permanent resident'],
   'CPF:cpf-contribution-computation': ['CPF contribution rates vary based on', 'pay the employer', 'round off the Total CPF contributions'],
-  'CPF:cpf-pr-contribution-rates': ['Your CPF contribution rates as an SPR depend', 'Second-year rate: Applies from the month following'],
-  'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money', 'maximum amount of OW that attracts CPF contributions'],
+  'CPF:cpf-pr-contribution-rates': ['Your CPF contribution rates as an SPR depend', 'Second-year rate: Applies from the month following', 'first-year rate: applies from the day your employee obtains his spr status', 'second-year rate: applies from the month following his first anniversary'],
+  'CPF:cpf-ordinary-wages': ['wages are defined as remuneration in money', 'maximum amount of OW that attracts CPF contributions', 'for ordinary wages (ow), you will need to pay cpf contributions on the pro-rated ow'],
+  'CPF:cpf-additional-wage-ceiling': ['the aw ceiling is computed on a per employer, per year basis', '$102,000 - total ordinary wages (ow) subject to cpf for the year', 'the applicable aw ceiling depends on the due and payable date of the aw'],
   'CPF:cpf_wage_ceiling': ['maximum amount of OW that attracts CPF contributions'],
   'MAS:mas-regulatory-reporting': ['To submit quarterly financial returns', 'To submit audited annual financial returns', 'To notify MAS of a change of name', 'CMS licence', 'misconduct', 'representatives'],
   'MAS:mas-fund-management-exemptions': ['existing class exemption']
@@ -835,15 +836,16 @@ function getTopicStandardIdentifiers(topic: MappedCoverageTopic, pointer?: Sourc
 // These aliases rank discovery metadata and identify page titles; fetched text must still contain
 // the original topic's specific content terms before it can become evidence.
 const CPF_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
-  'cpf-ordinary-wages': ['What constitutes wages for CPF contributions'],
-  'cpf-additional-wages': ['What constitutes wages for CPF contributions'],
-  'cpf-bonus-backpay': ['What constitutes wages for CPF contributions'],
+  'cpf-ordinary-wages': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-additional-wages': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-bonus-backpay': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-employee-coverage': ['Who should receive CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
   'cpf-notice-pay-leave-encashment': ['What constitutes wages for CPF contributions'],
   'cpf-allowances': ['What constitutes wages for CPF contributions'],
   'cpf_wage_ceiling': ['How much CPF contributions to pay'],
   'cpf_contribution_rates': ['How much CPF contributions to pay'],
-  'cpf-pr-contribution-rates': ['How much CPF contributions to pay'],
-  'cpf-additional-wage-ceiling': ['How much CPF contributions to pay'],
+  'cpf-pr-contribution-rates': ['How much CPF contributions to pay', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
+  'cpf-additional-wage-ceiling': ['How much CPF contributions to pay', 'Examples for computation of Additional Wage (AW) Ceiling'],
   'cpf-contribution-due-dates': ['Enforcement and penalties for non-compliance'],
   'cpf-cash-top-up-tax-relief': ['Top up to enjoy higher retirement payouts', 'Top up your MediSave savings']
 };

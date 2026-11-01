@@ -1,0 +1,153 @@
+{
+  "status": "NO_REMAINING_MATERIAL_FINDING_IN_REVIEWED_SCOPE",
+  "method": "Independent read-only reviewer; exact actual application reproductions and official CPF sources.",
+  "correctionsRechecked": [
+    "ACRA filing-purpose/multipart and unrelated owners",
+    "Sale word orders, unowned salary amounts and prior journal leakage",
+    "Same-month OW timing",
+    "Missing per-employee payable dates",
+    "No invented bonus performance year",
+    "Bonus and OW amount binding",
+    "Generic conversion-month proration",
+    "Cross-employee PR date ownership",
+    "Prior-correct 2025 PR-year timing"
+  ],
+  "expandedCpfGrades": [
+    {
+      "id": "cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42"
+    },
+    {
+      "id": "cpf-04",
+      "grade": "CORRECT",
+      "answerSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954"
+    },
+    {
+      "id": "cpf-06",
+      "grade": "CORRECT",
+      "answerSha256": "bcd025e7d691cfabc7ab34cb7a3c74b3c7d344534372667876cfa3da81e1f1e1"
+    },
+    {
+      "id": "cpf-07",
+      "grade": "CORRECT",
+      "answerSha256": "691b1a9dcad01ad595d795b526f3bd78e2fc88605457b8318b7ef03688e1dc90"
+    },
+    {
+      "id": "fresh31-cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "1df9c0abf5a08e29964966de967536bd7d1fa76a237c328231d41eafd9f3ee9f"
+    },
+    {
+      "id": "fresh31-cpf-02",
+      "grade": "CORRECT",
+      "answerSha256": "aa3122519e8ff4ac2f12cc9fa57014d7502919ae931bbb48d5fc6693ea0efb43"
+    }
+  ],
+  "changedFrozenGrades": [
+    {
+      "corpus": "final75",
+      "id": "cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-04",
+      "grade": "CORRECT",
+      "answerSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-06",
+      "grade": "PARTIAL",
+      "answerSha256": "3e04a54dadc2254141afba0e0e823a5aa54ddad3ead3fda7e2dcab65ca004c7d"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-07",
+      "grade": "UNSUPPORTED",
+      "answerSha256": "6d93b9811e3b864d64d24d6fbb999b915338e3ca40e491773fc1f625bed8fde9"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-cpf-01",
+      "grade": "CORRECT",
+      "answerSha256": "1df9c0abf5a08e29964966de967536bd7d1fa76a237c328231d41eafd9f3ee9f"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-cpf-02",
+      "grade": "CORRECT",
+      "answerSha256": "aa3122519e8ff4ac2f12cc9fa57014d7502919ae931bbb48d5fc6693ea0efb43"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-cpf-03",
+      "grade": "CORRECT",
+      "answerSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-additional-wages-definition-02",
+      "grade": "UNSUPPORTED",
+      "answerSha256": "d6e130fe92eb4aa2ab4232c349cdeab5821de9c21f010979df15b11d247fe543"
+    }
+  ],
+  "gradeRationale": {
+    "cpf-06": "Original frozen profile supplies PR-year method but lacks the new OW-proration premise; PARTIAL. Expanded profile is CORRECT.",
+    "cpf-07": "Original frozen profile does not establish before/after-grant AW timing; UNSUPPORTED. Expanded profile is CORRECT.",
+    "cpf-additional-wages-definition-02": "Ceiling excerpts alone do not establish OW definition conditions; remains UNSUPPORTED."
+  },
+  "limits": [
+    "Offline application evidence; no CI, live-model/browser acceptance or production verification.",
+    "Tax-only mixed wording discloses other authority requirements remain unverified; do not claim complete mixed guidance.",
+    "Reviewer did not run broad validation. Supervisor removed an unreachable duplicate legacy AW switch case and passed proper tsc -b; reviewer confirmed the final payroll hash."
+  ],
+  "reviewedFiles": {
+    "scripts/run_all_tests.mjs": "e1ea69167b5346b5e3810fd7286c97a94d94ad6d5e58afcd371361b8ff97bf91",
+    "src/retrieval/companyFyeDate.ts": "1fa789864397ebaf8d7083c738eca9139a10bdec3c2a3fb63f7cf3e88b09783c",
+    "src/engine/acraAnnualReturnApplication.ts": "d94f9f1afc6f3607b1f982b53b46007da0d7b168c02244aaf8674eca24b5298b",
+    "src/retrieval/acraMomKnowledge20261027b.ts": "ca68a918cdb269f5e8b7ed30ce017a3ad26a8ac3a27c0e5f1101982780285587",
+    "src/engine/scenarioParser.ts": "8dca5f4eb2226c987b989140e7f919a3b77e87e3fa64b76cc9aeab73fbba8ba6",
+    "src/retrieval/cpfPayrollKnowledge20261027b.ts": "3dea76fa92da33b8a1697cabbd1ad04627555815b321e0eddb7771b5e3d3f472",
+    "src/retrieval/irasCpfExpansionRules.ts": "5cecfe3f3e2ddc784d7f5c3ccbdc2d30d950f39756b8a4b2b125c1af6c79d8d0",
+    "src/retrieval/practicalStatutoryExpansion.ts": "57391b68f541781c3bfc84b9448307a298fdd341ba7e07a0355ee35cd0437c5c",
+    "src/retrieval/targetDateResolver.ts": "d6436c5bd47c0e86b78143c339c2e9aabac9c607b06142dc3fcc7db78e181a8b",
+    "src/services/groundingContextBuilder.ts": "8973c8636944470f0bd3c3315f1444d8e24c138e0f20b8d5c5c62ddeb70ffe31",
+    "src/services/semanticQuestionUnderstanding.ts": "ed25d813c89573fbae79e63a08f63064568fbe022b854370783f289d210f03af",
+    "src/services/authorityWorkstreams.ts": "47af3995e8a9a8fbe4cd953650eda2299be1a72742c17de5429a754e80c031ae",
+    "src/services/geminiService.ts": "7f6982749e8c0d21cce0b27cbc36388b0a4507e54d7bf88d3e5c12727c01e203",
+    "src/utils/authorityEvidenceRouting.ts": "685fc544612f2533ea1852fab9ed58ab40951f565ac883ffe874001819bf3ff0",
+    "tests/regression/test_statutory_cpf_expansion_20261101.mjs": "f6b5f5e7fe6f8f26569942a9432f1c6cb23a8b2433a839e6871809df2ba5c34c",
+    "tests/regression/test_mixed_sales_mom_journal_safety_20261101.mjs": "f57e72b13167dc8546346a1b95403a3a4aac25b71e92e292f20641d2fd86c220",
+    "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs": "e0d7c83fb19d0d14b16638a41965cc8b04571fe4b8bf93af9c233d889da81331",
+    "tests/regression/test_acra_mom_knowledge_20261027b.mjs": "aab7aa6d1dcbe82934744febc349d7701a00eda647fdbc1fb95a40287e923f77",
+    "tests/fixtures/statutoryCpf20261101/cpf-new-pr-visible.txt": "c1e5efe0988a154b24172cb103ba10f5fb5c29cf0c86017a356d65a305210875",
+    "tests/fixtures/statutoryCpf20261101/cpf-source-manifest.json": "9b19f652bdfbbf4990c7f37a26648e0a65dba2861b44cbb933b1eb82e6d3f10a",
+    "tests/regression/test_cpf_sitemap_discovery.mjs": "46aa5112fa5fc8036ee836b5c4d7737e609c04062667ee988afdbe77c09067ed",
+    ".gitattributes": "02b112b5b151edcf8b7787e7657dcfd2dc5f972cae9ab4f352ccd2037a7f5503"
+  },
+  "resumptionReview": {
+    "baseHead": "0fb04a6d31530d938ca111746cb8c87814421a1b",
+    "result": "NO_MATERIAL_FINDINGS",
+    "scope": [
+      "Discovery fixture stage gating and mapped-source positive control",
+      "Exact-byte Git attributes for hashed PR fixtures"
+    ],
+    "limits": "Read-only reviewer inspected diff and focused log; supervisor runs complete smoke/full validation separately."
+  },
+  "finalValidationRepairReview": {
+    "result": "NO_MATERIAL_FINDINGS",
+    "scope": "Distinct valid MOM issue-pair selection and restoration of verbatim prior generic AW explanation; new specialized branches preserved.",
+    "focusedSuites": [
+      "multipart refinement",
+      "mixed sales/MOM journal safety",
+      "actual answer repairs",
+      "CPF expansion",
+      "CPF payroll knowledge"
+    ],
+    "limits": "Reviewer inspected code and focused logs; supervisor separately runs complete validation."
+  },
+  "finalFrozenAssessment": "Eight final answers differ from baseline. Restoring the verbatim prior AW explanation made five previously changed correct answers byte-identical again. All eight remaining differences retain their independently reviewed complete-answer hashes; all 209 prior correct answers remain correct."
+}

@@ -41,7 +41,12 @@ export function hasPracticalExpansionContradiction(request: PracticalExpansionRe
 // every selected premise must pass the existing admission/verification path.
 const CURRENT_POINTERS = [...IRAS_CPF_MAS_PRACTICAL_RULES_20261027.map(rule => ({
   authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title
-})), ...STATUTORY_KNOWLEDGE_POINTERS_20261027B];
+})), {
+  authority: 'CPF' as const,
+  topicIds: ['cpf-ordinary-wages', 'cpf-additional-wages', 'cpf-bonus-backpay'],
+  url: 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions',
+  title: 'What constitutes wages for CPF contributions'
+}, ...STATUTORY_KNOWLEDGE_POINTERS_20261027B];
 const STATUTORY_KNOWLEDGE_POINTER_SET = new Set<(typeof CURRENT_POINTERS)[number]>(STATUTORY_KNOWLEDGE_POINTERS_20261027B);
 
 export function practicalExpansionPointers(request: PracticalExpansionRequest): typeof CURRENT_POINTERS {

@@ -27,10 +27,12 @@ const incompleteDueEnforcementArticle = article('Enforcement and penalties for n
 
 async function run(topic, query, mode = 'sitemap', body = wageArticle, dueBody = dueEnforcementArticle) {
   const calls = [];
+  let mappedPageAvailable = mode === 'mapped';
   const fetch = async url => {
     calls.push(url);
     if (url === 'https://www.cpf.gov.sg/employer/sitemap' || url === 'https://www.cpf.gov.sg/member/sitemap') {
       if (mode !== 'sitemap' && mode !== 'member-unrelated') return new Response('Unavailable', { status: 404 });
+      mappedPageAvailable = true;
       return response(`<html><body><main><h1>CPF Sitemap</h1><p>SITEMAP_METADATA_ONLY</p>
         <a href="${pageUrl}">What constitutes wages for CPF contributions</a>
         <a href="${dueUrl}">Enforcement and penalties for non-compliance</a>
@@ -43,12 +45,18 @@ async function run(topic, query, mode = 'sitemap', body = wageArticle, dueBody =
     if (url.endsWith('/robots.txt')) return mode === 'robots'
       ? new Response('Sitemap: https://unapproved.example/sitemap.xml\nSitemap: https://www.cpf.gov.sg/cpf-sitemap.xml', { status: 200 })
       : new Response('Unavailable', { status: 404 });
-    if (url === 'https://www.cpf.gov.sg/cpf-sitemap.xml') return response(`<urlset><url><loc>${pageUrl}</loc></url><url><loc>https://unapproved.example/ordinary-wages</loc></url></urlset>`);
+    if (url === 'https://www.cpf.gov.sg/cpf-sitemap.xml') {
+      if (mode === 'robots') mappedPageAvailable = true;
+      return response(`<urlset><url><loc>${pageUrl}</loc></url><url><loc>https://unapproved.example/ordinary-wages</loc></url></urlset>`);
+    }
     if (url.startsWith('https://html.duckduckgo.com/html/?')) {
       assert.match(new URL(url).searchParams.get('q'), /^site:cpf\.gov\.sg /);
+      if (mode === 'search') mappedPageAvailable = true;
       return response(`<html><body><p>SEARCH_METADATA_ONLY</p><a href="${pageUrl}">Ordinary wages</a><a href="https://unapproved.example/ordinary-wages">Ordinary wages</a></body></html>`);
     }
-    if (url === pageUrl) return response(body);
+    if (url === pageUrl) return mappedPageAvailable
+      ? response(body)
+      : new Response('Unavailable until the configured discovery stage is reached', { status: 404 });
     if (url === dueUrl) return response(dueBody);
     if (url === memberUrl) return response(mode === 'member-unrelated' ? article('Top up to enjoy higher retirement payouts', 'CPF retirement savings help members plan for their future. This page describes general benefits and account options for retirement planning, with no details about the requested payment action.') : memberArticle);
     throw new Error(`Unexpected fetch: ${url}`);
@@ -74,6 +82,17 @@ assert.ok(!sitemap.records[0].sourceText.includes('SITEMAP_METADATA_ONLY'));
 assert.ok(!sitemap.calls.some(url => url.includes('unapproved.example') || url.startsWith('http:')));
 assert.ok(!sitemap.calls.includes('https://www.cpf.gov.sg/member/sitemap'), 'Employer scope fetches only its selected index.');
 assert.ok(!sitemap.calls.some(url => url.includes('duckduckgo')), 'Adequate sitemap evidence stops before search.');
+assert.ok(sitemap.trace.attempts.some(attempt => attempt.discoveryStage === 'MAPPED_SOURCE' && attempt.candidateUrl === pageUrl && attempt.fetchStatus !== 'SUCCESS'),
+  'The mapped-page attempt fails until discovery reaches its selected sitemap index.');
+assert.ok(sitemap.calls.lastIndexOf(pageUrl) > sitemap.calls.indexOf('https://www.cpf.gov.sg/employer/sitemap'),
+  'The mapped wages page remains unavailable until the selected sitemap index is fetched.');
+
+const mapped = await run('cpf-ordinary-wages', 'How are ordinary wages treated for CPF?', 'mapped');
+assert.equal(mapped.records.length, 1, JSON.stringify(mapped.trace));
+assert.ok(mapped.trace.attempts.some(attempt => attempt.discoveryStage === 'MAPPED_SOURCE' && attempt.candidateUrl === pageUrl),
+  'A valid mapped page remains available through the mapped-source stage.');
+assert.ok(!mapped.calls.some(url => url.includes('/sitemap') || url.endsWith('/robots.txt') || url.includes('duckduckgo')),
+  'Adequate mapped evidence still stops before discovery.');
 
 // Discovery and the exact-query safeguards coexist without promoting a fetched
 // candidate to reviewed evidence or allowing CPF evidence to answer an IRAS ask.
@@ -152,11 +171,19 @@ assert.equal(robots.records.length, 1, JSON.stringify(robots.trace));
 assert.ok(robots.calls.includes('https://www.cpf.gov.sg/robots.txt'));
 assert.ok(robots.calls.includes('https://www.cpf.gov.sg/cpf-sitemap.xml'));
 assert.ok(!robots.calls.some(url => url.includes('unapproved.example')));
+assert.ok(robots.trace.attempts.some(attempt => attempt.discoveryStage === 'MAPPED_SOURCE' && attempt.candidateUrl === pageUrl && attempt.fetchStatus !== 'SUCCESS'),
+  'The mapped-page attempt fails before the robots sitemap XML discovery route.');
+assert.ok(robots.calls.lastIndexOf(pageUrl) > robots.calls.indexOf('https://www.cpf.gov.sg/cpf-sitemap.xml'),
+  'The mapped wages page remains unavailable until the robots sitemap XML is fetched.');
 
 const search = await run('cpf-ordinary-wages', 'How are ordinary wages treated for CPF?', 'search');
 assert.equal(search.records.length, 1, JSON.stringify(search.trace));
 assert.ok(search.trace.attempts.some(attempt => attempt.discoveryStage === 'OFFICIAL_DOMAIN_SEARCH' && attempt.finalUrl === pageUrl));
 assert.ok(!search.records[0].sourceText.includes('SEARCH_METADATA_ONLY'));
+assert.ok(search.trace.attempts.some(attempt => attempt.discoveryStage === 'MAPPED_SOURCE' && attempt.candidateUrl === pageUrl && attempt.fetchStatus !== 'SUCCESS'),
+  'The mapped-page attempt fails before official-domain search discovers it.');
+assert.ok(search.calls.lastIndexOf(pageUrl) > search.calls.findIndex(url => url.startsWith('https://html.duckduckgo.com/html/?')),
+  'The mapped wages page remains unavailable until official-domain search returns it.');
 
 const unrelated = await run('cpf-ordinary-wages', 'How are ordinary wages treated for CPF?', 'sitemap', '<html><head><title>CPF Board | Ordinary wages</title></head><body><main><h1>Healthcare options</h1><p>CPF retirement savings help members plan for their future. This article describes healthcare options and different retirement accounts available to members. It contains no guidance about the requested payroll payment classification.</p></main></body></html>');
 assert.equal(unrelated.records.length, 0, 'Relevant sitemap labels cannot substitute for relevant fetched body text.');

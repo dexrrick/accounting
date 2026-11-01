@@ -286,10 +286,59 @@ assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.i
 assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.issuePlan,
   classification: saleAndFinalSalary.classification, explicitIrasEvidenceRequest: false, hasImages: true }), false,
   'The mixed accounting gap cannot admit an image request to the bounded MOM route.');
+for (const query of [
+  'Prepare the journal entries for our cash sale of goods for S$10,000. Also calculate an employee’s final salary after resignation and explain when the payslip is due.',
+  'We sold goods for S$10,000 cash. The goods cost S$6,000. What journal entry and tax apply? After an employee resigns, when is final salary due and when must we issue the payslip?',
+  'We sold goods for S$10,000 cash and need journal entries, and how much final salary do we owe the employee who resigned and when must we issue the payslip?',
+  'Record the sale of goods for S$10,000 cash. The goods cost S$6,000. Also calculate the final salary after an employee resigns and explain the payslip deadline.'
+]) {
+  const mixedSale = planFor(query);
+  const unresolvedSaleJournal = mixedSale.issuePlan.issues.find(issue =>
+    issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL');
+  assert.ok(unresolvedSaleJournal,
+    'An explicit journal request for a separately stated goods sale remains an independent accounting issue beside MOM rules.');
+  assert.equal(unresolvedSaleJournal.status, 'UNRESOLVED');
+  assert.equal(unresolvedSaleJournal.unresolvedReason, 'NO_COVERAGE_TOPIC');
+  assert.deepEqual(unresolvedSaleJournal.mappedTopicIds, []);
+  assert.ok(mixedSale.issuePlan.issues.some(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+    issue.mappedTopicIds.includes('mom-salary-payment')));
+  assert.ok(mixedSale.issuePlan.issues.some(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+    issue.mappedTopicIds.includes('mom-itemised-payslips')));
+  assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: mixedSale.issuePlan,
+    classification: mixedSale.classification, explicitIrasEvidenceRequest: false, hasImages: false }), true,
+  `The explicit mixed plan resolves source-backed MOM rules while keeping its unknown sale journal unresolved: ${query}`);
+}
+const bundledFirstMixedSale = planFor(
+  'We sold goods for S$10,000 cash. The goods cost S$6,000. What journal entry and tax apply? After an employee resigns, when is final salary due and when must we issue the payslip?');
+const bundledFirstMomIssues = bundledFirstMixedSale.issuePlan.issues.filter(issue =>
+  issue.domain === 'MOM_EMPLOYMENT');
+const firstBundledMomIssue = bundledFirstMomIssues[0];
+assert.ok(firstBundledMomIssue && firstBundledMomIssue.operation === 'OTHER' &&
+  firstBundledMomIssue.mappedTopicIds.includes('mom-salary-payment') &&
+  firstBundledMomIssue.mappedTopicIds.includes('mom-itemised-payslips'),
+'The mixed journal/tax query starts with a bundled MOM issue covering both salary and payslip topics.');
+assert.ok(bundledFirstMomIssues.some(issue => issue.id !== firstBundledMomIssue.id &&
+  issue.operation === 'FILING_REQUIREMENT' && issue.mappedTopicIds.includes('mom-salary-payment')));
+assert.ok(bundledFirstMomIssues.some(issue => issue.id !== firstBundledMomIssue.id &&
+  issue.operation === 'EXPLAIN_RULE' && issue.mappedTopicIds.includes('mom-itemised-payslips')));
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: bundledFirstMixedSale.issuePlan,
+  classification: bundledFirstMixedSale.classification, explicitIrasEvidenceRequest: true, hasImages: false }), true,
+  'The route finds the later distinct salary and payslip issues even when the bundled issue comes first.');
+const singleBundledMomPlan = structuredClone(bundledFirstMixedSale.issuePlan);
+singleBundledMomPlan.issues = singleBundledMomPlan.issues.filter(issue =>
+  issue.domain !== 'MOM_EMPLOYMENT' || issue.id === firstBundledMomIssue.id);
+assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: singleBundledMomPlan,
+  classification: bundledFirstMixedSale.classification, explicitIrasEvidenceRequest: true, hasImages: false }), false,
+  'One bundled MOM issue cannot stand in for distinct independently answerable salary and payslip issues.');
+const taxAdviceWithoutJournal = planFor(
+  'We sold goods for S$10,000 to our GST-registered customer. What GST treatment applies to the sale?');
+assert.ok(!taxAdviceWithoutJournal.issuePlan.issues.some(issue =>
+  issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL'),
+'A tax-treatment question without an explicit journal request does not gain an unsolicited journal obligation.');
 assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: saleAndFinalSalary.issuePlan,
   classification: { ...saleAndFinalSalary.classification, taxAnalysisRequired: true },
-  explicitIrasEvidenceRequest: true, hasImages: false }), false,
-  'An actual tax-analysis obligation cannot be bypassed by the mixed MOM route.');
+  explicitIrasEvidenceRequest: true, hasImages: false }), true,
+  'An actual tax-analysis request can keep the sale journal unresolved while presenting independent MOM guidance.');
 const salePlanWithoutJournal = structuredClone(saleAndFinalSalary.issuePlan);
 salePlanWithoutJournal.issues = salePlanWithoutJournal.issues.filter(issue => issue.id !== saleJournalIssue.id);
 assert.equal(shouldUseAuthorityEvidenceRuntime({ issuePlan: salePlanWithoutJournal,

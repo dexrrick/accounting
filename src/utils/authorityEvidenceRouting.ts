@@ -159,9 +159,7 @@ export function hasMomRulesAndUnresolvedAccountingJournal(
   issuePlan: SemanticIssueReconciliation,
   classification: QuestionClassificationResult
 ): boolean {
-  if (issuePlan.source !== 'TAXONOMY_FALLBACK' || !classification.journalEntryRequired ||
-      !classification.calculationRequired || classification.taxAnalysisRequired ||
-      !classification.authorities.includes('MOM') ||
+  if (!classification.authorities.includes('MOM') ||
       !classification.domains.includes('MOM_EMPLOYMENT')) return false;
   const accounting = issuePlan.issues.filter(issue => issue.domain === 'ACCOUNTING');
   if (accounting.length !== 1) return false;
@@ -170,7 +168,17 @@ export function hasMomRulesAndUnresolvedAccountingJournal(
       journal.unresolvedReason !== 'NO_COVERAGE_TOPIC' || journal.mappedTopicIds.length !== 0 ||
       journal.governingAuthorities.length !== 1 ||
       journal.governingAuthorities[0] !== 'ACCOUNTING_STANDARDS') return false;
-  return hasBoundedMomFinalSalaryAndPayslipPlan(issuePlan.issues.filter(issue => issue.id !== journal.id));
+  const momIssues = issuePlan.issues.filter(issue => issue.id !== journal.id && issue.status === 'MAPPED' &&
+    issue.domain === 'MOM_EMPLOYMENT' && issue.population === 'EMPLOYER' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'MOM');
+  const validSalaryIssues = momIssues.filter(issue =>
+    issue.mappedTopicIds.includes('mom-salary-payment') &&
+    ['CALCULATE', 'EXPLAIN_RULE', 'FILING_REQUIREMENT', 'OTHER'].includes(issue.operation));
+  const validPayslipIssues = momIssues.filter(issue =>
+    issue.mappedTopicIds.includes('mom-itemised-payslips') &&
+    ['EXPLAIN_RULE', 'OTHER'].includes(issue.operation));
+  return validSalaryIssues.some(salary =>
+    validPayslipIssues.some(payslip => salary.id !== payslip.id));
 }
 
 /** Guards the additive runtime so classifier fallback metadata alone cannot reroute ordinary journals. */

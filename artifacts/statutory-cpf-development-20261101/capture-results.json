@@ -1,0 +1,32 @@
+[
+  {
+    "check": "final75",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:21:46.0226546Z",
+    "completedUTC": "2026-11-01T08:22:01.9919854Z"
+  },
+  {
+    "check": "final60",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:22:02.0075395Z",
+    "completedUTC": "2026-11-01T08:22:16.9361490Z"
+  },
+  {
+    "check": "fresh15",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:22:16.9382382Z",
+    "completedUTC": "2026-11-01T08:22:21.9449594Z"
+  },
+  {
+    "check": "fixed100-original",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:22:21.9464708Z",
+    "completedUTC": "2026-11-01T08:22:26.1411264Z"
+  },
+  {
+    "check": "fixed100-enriched",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T08:22:26.1424639Z",
+    "completedUTC": "2026-11-01T08:22:41.3201812Z"
+  }
+]
