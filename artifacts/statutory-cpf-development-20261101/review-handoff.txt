@@ -1,0 +1,72 @@
+Review handoff — ACRA corrections, mixed journal safeguards and CPF wage reasoning
+
+Goal and status
+Requested development is implemented, independently reviewed and locally validated. The implementation and evidence are published to the existing development branch. This is not CI, live-model/browser, source-activation or production acceptance. No PR, merge or deployment was performed.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-knowledge-expansion-20261030
+Base reviewed head: f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8
+Separate ACRA correction/evidence commit: 0fb04a6d31530d938ca111746cb8c87814421a1b
+CPF/mixed implementation and final evidence commit: 69c1b322a2a75716aabf6db696002a358d7a68d0
+Code review target: 69c1b322a2a75716aabf6db696002a358d7a68d0 against f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8.
+This handoff is in a documentation-only successor; its final pushed head is reported in the chat. The code target above is exact and immutable.
+
+Behavior and main files
+ACRA: companyFyeDate.ts now distinguishes filing purpose and other filings from another owner, including their combined multipart wording. acraAnnualReturnApplication.ts reuses owned private-company type facts while retaining conflicts and uncertainty. acraMomKnowledge20261027b.ts withholds unconditional individual dates when application evidence remains unresolved. Competitor, supplier, client, subsidiary, named-company, multiple-FYE, historical and ambiguous-owner controls remain. The explicit FYE 2025/no-branch source-applicability hold is retained.
+Mixed requests: scenarioParser.ts does not turn unowned transaction money, default salary or another payroll context into final salary. Semantic reconciliation, authorityEvidenceRouting.ts and geminiService.ts retain explicit independent journal gaps and separately supported MOM guidance. Unsupported mixed composites have zero direct, projected and committed journal groups. Both clause orders, tax variants, common sale word orders and prior journal context are covered. No general sales engine or final-pay calculator was added. Standalone supplies and payroll journals remain correct and balanced.
+CPF: cpfPayrollKnowledge20261027b.ts, irasCpfExpansionRules.ts, targetDateResolver.ts, practicalStatutoryExpansion.ts, groundingContextBuilder.ts, authorityWorkstreams.ts and semanticQuestionUnderstanding.ts reuse existing OW/AW, ceiling and PR-year premises, interpret contractual payable dates and employee-owned facts, and obtain the missing PR wage-boundary premise from an official CPF Board page. Current workflow facts remain distinct from historical legal/rate requests. Bonuses cannot be borrowed as OW, A's dates cannot establish B's status, and unknown dates/rates/amounts remain unresolved. The new fixture is a hashed visible-text excerpt, not retained native HTML; .gitattributes preserves its bytes across checkouts.
+Regression suites are registered in scripts/run_all_tests.mjs. The CPF discovery fixture now explicitly forces the intended fallback stages and separately tests successful direct mapped retrieval; body, provenance, authority and security negatives were preserved.
+
+Confirmed findings and independent review
+Both reported ACRA P2 findings reproduced through processAccountingQuery and were corrected. Independent review additionally caught combined purpose/multipart wording, which was corrected and re-reviewed.
+Mixed wording reproduced a P1 fabricated payroll journal from S$10,000 sale proceeds: salary expense Dr 10,000; employer CPF Dr 1,360; CPF payable Cr 2,960; net salary payable Cr 8,400; SDL Dr/Cr 11.25. Corrected requests return no invented journals and retain unresolved obligations. Actual standalone controls preserve supplies Dr Expense/Cr Cash S$200 and payroll salary S$5,000 with employer CPF S$850, CPF payable S$1,850 and SDL S$11.25.
+Independent CPF review caught same-month OW timing, missing per-employee dates, invented performance year, bonus/OW amount binding, generic proration and cross-employee PR ownership. All confirmed material findings were corrected and exact reproductions re-reviewed. A prior-correct 2025 PR-anniversary answer was restored. Final scoped review reports no remaining material findings. Final validation repairs also received independent review.
+
+Before/after responses and CPF grading
+Full affected application messages and actual journal data are linked below. Before, all six targeted CPF cases were UNSUPPORTED. The separately expanded source profile answers all six CORRECT; original frozen profiles remain separate:
+cpf-01: UNSUPPORTED -> CORRECT with original sources; CORRECT with expanded sources.
+cpf-04: UNSUPPORTED -> CORRECT with original sources; CORRECT with expanded sources.
+cpf-06: UNSUPPORTED -> PARTIAL with original sources; CORRECT with expanded sources.
+cpf-07: UNSUPPORTED -> UNSUPPORTED with original sources; CORRECT with expanded sources.
+fresh31-cpf-01: UNSUPPORTED -> CORRECT with original sources; CORRECT with expanded sources.
+fresh31-cpf-02: UNSUPPORTED -> CORRECT with original sources; CORRECT with expanded sources.
+The improvement comes from actual factual answers, not topic or citation counts. Missing contribution facts do not become amounts or journals. Deterministic full-request coverage can remain unconfirmed despite independently correct listed answers.
+
+Frozen preservation
+All 350 configuration answers were replayed with original questions and original source profiles. 342 are byte-identical; 8 differ and have independent grades. All 209 prior correct answers are preserved: 208 byte-identical and one independently regraded correct. Restoring the original generic AW explanation removed five unnecessary answer differences. No frozen input hash changed. Fixed100 original and enriched are distinct configurations; original ECI evidence remains insufficient.
+Final counts in CORRECT/PARTIAL/INCORRECT/UNSUPPORTED order:
+Frozen75: 32/9/0/34
+Earlier60: 59/0/0/1
+Fresh15: 6/0/0/9
+Fixed100 original: 50/12/0/38
+Fixed100 enriched: 66/8/0/26
+The original-profile cpf-06 remains PARTIAL and cpf-07 UNSUPPORTED because those source sets lack the added PR premise. The Fixed100 additional-wages-definition-02 remains UNSUPPORTED. The expanded six-case result is separate from those unchanged configurations.
+
+Verification
+Canonical Node 22.23.3. Focused application/negative-control suites passed. Maintained src/scripts/tests lint and TypeScript project build (tsc -b) passed. Vite and Worker builds passed. Complete smoke: 161/161; complete full regression: 184/184. Commands used the canonical Node executable and repository runner, equivalent to the required npm scripts, with preflight performed separately.
+Root lint retains the known 34 parsing errors in pre-existing untracked archived prepare.mjs; maintained-code lint is independently green. Initial smoke attempts and resolved TypeScript/test-fixture failures are recorded in validation-history.json, not represented as final passing runs. The isolated MAS decoder required normal Windows process access to initialize its profile; its environment-preload isolation was preserved and no MAS production code was changed. The retained compatibility shim and offline external-fetch guard were used. Corpus captures made zero external/model requests.
+No live integration suite, browser/model acceptance, CI dispatch, source activation, merge or deployment was performed. Local tests and independent answer quality do not establish CI or production acceptance.
+
+Evidence pinned to the implementation commit
+Local verification results, recorded before push: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/completion-summary.json
+Independent review and working-file SHA-256 hashes: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/independent-review.json
+All grades and target comparison: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/quality-report.json
+All 350 preservation comparisons: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/preservation-comparison.json
+All changed frozen responses: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/changed-answer-review.json
+CPF before/after, original and expanded profiles: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/cpf-application-before-after.json
+Mixed before/after with all returned journal groups: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/mixed-application-before-after.json
+Official premises and applicability: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/source-review.json
+Findings, diagnoses and limitations: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/findings-and-limitations.json
+Validation history: https://github.com/dexrrick/accounting/blob/69c1b322a2a75716aabf6db696002a358d7a68d0/artifacts/statutory-cpf-development-20261101/validation-history.json
+ACRA before/after: https://github.com/dexrrick/accounting/blob/0fb04a6d31530d938ca111746cb8c87814421a1b/artifacts/statutory-cpf-development-20261101/acra-before-after.json
+Raw captures, complete console logs, temporary replay helpers and the historical reserve checkpoint remain local under D:\Accounting\artifacts\statutory-cpf-development-20261101 and are unavailable through GitHub. Published reports include bounded complete affected answers, journal data, hashes, grades and check results. Working-file hashes cover reviewed local bytes; Git may normalize code line endings. No maintained implementation or new regression/fixture work remains uncommitted or unpushed after final remote verification; unrelated pre-existing archives and local evidence remain untracked.
+
+Additional publication evidence
+The implementation remote SHA is verified in publication.json in this documentation commit. remaining-coverage-gaps.json lists every remaining PARTIAL/UNSUPPORTED configuration outcome with its question. GitHub reported zero PR-triggered workflow runs for the implementation SHA (the connector is PR-only); no CI was manually dispatched.
+
+Remaining limitations and priorities
+Missing company/employee/status/settlement facts and unsupported composites remain unresolved. Source-date holds were not weakened. Coverage is not universal payroll or statutory coverage. Next priorities remain IRAS withholding-tax application, MOM salary deductions, ACRA remaining filing requirements/date applicability and MAS reporting forms/periods. Wider CPF component and historical scenarios require their own facts and applicable evidence.
+
+Ready-to-copy review prompt
+Independently review the changes in https://github.com/dexrrick/accounting on codex/statutory-knowledge-expansion-20261030, implementation commit 69c1b322a2a75716aabf6db696002a358d7a68d0 against base f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8, including the separate ACRA commit 0fb04a6d31530d938ca111746cb8c87814421a1b, using your GitHub access. Confirm the exact commit inspected. Use this handoff as context and verify its claims against the code, diff, tests and available CI evidence. Focus on fact/date ownership, OW/AW timing and ceilings, source applicability, actual journal outputs, negative controls and preservation. Report actionable findings with severity, file and line references, impact and suggested fixes. State access or verification limitations. Keep the review read-only.

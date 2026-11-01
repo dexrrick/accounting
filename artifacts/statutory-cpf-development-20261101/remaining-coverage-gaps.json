@@ -1,0 +1,828 @@
+{
+  "scope": "Remaining PARTIAL/UNSUPPORTED configuration outcomes across the five original source profiles; duplicate questions across profiles are intentional.",
+  "expandedCpfTargets": "Six CORRECT under separately expanded PR source profile.",
+  "cases": [
+    {
+      "corpus": "final75",
+      "id": "iras-02",
+      "question": "A non-resident consultant has no contract with us. The IRAS invoice is dated 26 March 2026, says 30-day payment terms, was received on 30 April and paid on 19 May; no amount was credited earlier to a recipient-designated account. If WHT applies, what is the filing deadline, and does treaty exemption remove filing?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-03",
+      "question": "A GST-registered employer paid an employee's annual health screening bill. The examination was not legally required and was not linked to a work-related health risk. Can we claim the input tax?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-06",
+      "question": "Royalty under our contract accrued on 30 June 2026 and was paid on 15 July. The recipient may qualify for treaty relief. What is the WHT filing deadline, and is filing still needed if the rate is zero?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-08",
+      "question": "We received a Notice of Assessment although our revenue was below S$5 million and taxable ECI was nil. Can we ignore it?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-10",
+      "question": "We imported a laptop for our Singapore office, but the import permit names another group company. Can we claim the import GST?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-11",
+      "question": "The ECI deadline passed last week and no Notice of Assessment has arrived. Is late filing still possible?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-12",
+      "question": "We paid a non-resident company for remote software support carried out wholly overseas. Does Singapore WHT apply?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-13",
+      "question": "We claimed GST on staff medical treatment required by written law for a work-related health risk. The bill is dated 30 September 2021. Does the post-October 2021 exception apply?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "iras-14",
+      "question": "Our company sold its delivery lorry and bought a replacement van. Is input GST on both vehicle purchases blocked as it is for cars?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-06",
+      "question": "A foreign employee became a Singapore PR on 15 March 2026. What is the first-year boundary, and is CPF due on March OW earned from the grant date?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-07",
+      "question": "The same new PR employee received an annual bonus payable on 10 March, before obtaining PR, and another bonus payable on 20 March, after obtaining PR. Which bonus can attract CPF?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-09",
+      "question": "Our employee earns S$400 in the month. Is there an employee CPF share?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-10",
+      "question": "An employee received basic pay, overtime, a performance bonus and a reimbursed S$60 stationery purchase supported by a receipt. Which items are generally wages for CPF?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-12",
+      "question": "Our staff member is 59 and became a PR in 2025. Can I use the standard third-year PR rate table for the employer contribution in July 2026?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "cpf-15",
+      "question": "We declared S$6,000 OW but later confirmed actual OW was S$5,500 and an S$800 bonus was paid. How should payroll correct the wage record?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-01",
+      "question": "We paid May salary on 10 June and overtime wages on 10 June. Were both paid within the usual Employment Act deadlines?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-02",
+      "question": "An employee resigned with notice and their last day is 30 June. When should final salary be paid?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-08",
+      "question": "Can we deduct an employee's salary for a S$400 uniform, recruitment costs and a foreign worker levy?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-09",
+      "question": "A Work Permit holder agrees in writing to a new deduction for accommodation. Can we start deducting next month without telling MOM?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-11",
+      "question": "Our new employee is a foreign national and starts work next Monday; their work pass application is pending. May they begin work while we wait?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-12",
+      "question": "A covered staff member started on 1 February 2026 and took three months of approved unpaid leave. How much of a 14-day annual leave entitlement remains on 31 October if they have already taken two days?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-14",
+      "question": "We have current employees and one former employee who left on 30 June 2026. For Employment Act-covered employees, how long must we keep the itemised payslip records, and may we keep them electronically?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mom-15",
+      "question": "Our employee gave notice on 1 October, is a foreign employee, and will leave on 31 October. Must we withhold salary for tax clearance, and is the period always 30 days?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-01",
+      "question": "We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-03",
+      "question": "A dormant relevant company has no transactions and its total assets are below the substantial assets threshold. Can it stop preparing accounts without checking other criteria?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-05",
+      "question": "We are a small, non-publicly accountable private company that must file statements. Which financial-statement format does ACRA generally require?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-07",
+      "question": "Our Singapore-incorporated company must file its statements and fits the category requiring a full set of financial statements in XBRL under the current ACRA taxonomy. We have two directors. Must we attach a PDF, and how many directors sign the directors statement?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-08",
+      "question": "Our private company dispensed with its AGM. What date and details must we still declare when filing the annual return?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-09",
+      "question": "Our FYE is 31 December and the AGM deadline has passed. Can we change FYE now to gain time before annual return is filed?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-10",
+      "question": "Our director's residential address changed. Can we leave the old address in Bizfile until next year's annual return?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-11",
+      "question": "A company secretary resigned on 1 October and a replacement was appointed on 12 October. What should the company check and update?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-12",
+      "question": "We need up to two more months to file our annual return. Is an extension available and does applying remove the need for the AGM?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-14",
+      "question": "Since 20 October 2026, what must an annual-return filer confirm about company officers, and is CEO information now specifically requested?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "acra-15",
+      "question": "Our listed public company FYE was 31 December 2025. Can it file its annual return seven months later like a private company?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-01",
+      "question": "Our VCFM financial year ended 30 September 2026. What does the current toolkit require in Form 25A, and what period does it use for the deadline?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-02",
+      "question": "For our VCFM upcoming nil-misconduct declaration, assume no representative Misconduct Report is submitted for calendar year 2026. Under the currently published toolkit, when is it due, and is it the same as Form 25A?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-04",
+      "question": "Our LFMC needs to file its quarterly financial returns for the quarter ending 30 September. Which forms and usual deadline apply under the current LFMC toolkit?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-09",
+      "question": "Our VCFM discovered a serious representative misconduct issue today. Can it wait until its annual Form 25A filing?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-10",
+      "question": "Our VCFM opened a branch overseas. Does it need prior approval and what form is specified?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-11",
+      "question": "Our fund's NAV is under S$500 million. Does that alone prove there is no MAS QDC return to submit?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-13",
+      "question": "Our VCFM's base capital may fall below the prescribed amount tomorrow. Can it notify MAS at year end?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-14",
+      "question": "Our VCFM's financial condition may make it insolvent. What does the toolkit require?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final75",
+      "id": "mas-15",
+      "question": "A VCFM plans to acquire 20% of a corporation that is not incorporated to arrange a closed-end fund or CIS. Is prior approval implicated?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "final60",
+      "id": "hold-mas-04",
+      "question": "Is the precise QDC form for our venture-capital fund established by the generic LFMC quarterly financial return table?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-acra-01",
+      "question": "Using current ACRA guidance, please handle these separately. Alpha Pte Ltd was incorporated on 12 August 2026 and has only one director: when must it appoint a secretary, and can that director do both jobs? Beta Pte Ltd's secretary resigned on 2 October 2026 and its replacement was appointed on 20 October: what changes must Beta report, and does its short vacancy remove the reporting requirement?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-acra-02",
+      "question": "Our established private subsidiary meets the small-company revenue and assets limits in 2025 and 2026, but we have not checked 2024. Our overseas parent owns several much larger subsidiaries. Does that prove our 2026 accounts need no audit, and would audit exemption also remove financial-statement filing?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-acra-03",
+      "question": "Our dormant, unlisted Singapore company is still live in Bizfile. It had assets of S$620,000 halfway through the financial year but only S$200,000 at year end. Can it use the dormant relevant company exemption from preparing statements, and can it stop filing annual returns?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-acra-04",
+      "question": "Our non-listed Singapore private company's year ended on 30 September 2026. It has no overseas branch register, has not dispensed with its AGM and has no AGM exemption. Under the presently published rules, what are its usual AGM and annual-return deadlines? Is the September FYE a request to apply September's historical law?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-mom-01",
+      "question": "Two Employment Act-covered employees leave on 30 October 2026. A resigned and served the full notice; B resigned without serving the required notice. May we pay both final salaries seven days later just because their last day is the same?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-iras-01",
+      "question": "Company A's FYE was 31 July 2026, revenue S$4 million and tax-adjusted ECI S$10,000. Separately, company B's FYE was 31 August 2026, revenue S$4 million and ECI nil before exemptions. Under current general IRAS guidance, can either omit ECI, and what filing deadline applies where filing is needed?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-iras-02",
+      "question": "Assume a non-director service payment requires WHT filing. There is no contract; the invoice is dated 8 August 2026, arrived on 2 September, offers 60-day credit and was paid on 10 October. Nothing was credited earlier to a recipient-designated account. Which date starts the filing timetable, and what is the deadline?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-iras-03",
+      "question": "Please assess two staff medical expenses separately for GST. Both relate to a work-related health risk and are required by Singapore written law; neither falls under WICA or a collective agreement. Expense A was incurred on 30 September 2021 and expense B on 2 October 2021. Does the same post-2021 exception apply to both?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fresh15",
+      "id": "fresh31-mas-02",
+      "question": "A VCFM may soon be unable to meet its obligations and is considering suspending payments. Its FYE is still several months away. May it leave this for the annual Form 25A, and does the current toolkit specify a prescribed notification form for the material financial deterioration?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-input-tax-01",
+      "question": "When can a Singapore business recover input GST on purchases?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-input-tax-02",
+      "question": "What conditions must a GST-registered business satisfy before claiming GST input tax?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-input-tax-03",
+      "question": "Can a GST-registered company claim input tax on business purchases, and what records are needed?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-input-tax-04",
+      "question": "Explain when a business may recover GST input tax on purchases used to make taxable supplies.",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-input-tax-05",
+      "question": "What checks should accounts perform before posting an input GST claim?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-eci-01",
+      "question": "When should a company file its Estimated Chargeable Income?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-eci-02",
+      "question": "What is the ECI filing deadline after financial year end?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-eci-03",
+      "question": "Is there a general waiver from filing ECI and what conditions apply?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-eci-04",
+      "question": "Our company had no accounting profit this year. Can it skip ECI, or what facts determine whether the filing waiver applies?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-eci-05",
+      "question": "By when must a Singapore company submit its ECI?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "iras-withholding-tax-04",
+      "question": "How do tax treaties affect withholding tax on payments to non-residents?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-additional-wages-definition-02",
+      "question": "How can payroll distinguish AW from Ordinary Wages?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-due-date-03",
+      "question": "We paid salary in September; when are the CPF contributions due?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-rate-factors-04",
+      "question": "Our employee earns S$4,000 a month. Can you calculate the CPF contributions, and what other payroll facts do you need?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-bonus-classification-01",
+      "question": "Does an annual bonus attract CPF contributions?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-bonus-classification-02",
+      "question": "How should payroll classify a performance bonus under CPF?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-bonus-classification-03",
+      "question": "Is an annual wage supplement ordinary or additional wages?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "cpf-cpf-bonus-classification-04",
+      "question": "Does a bonus count as AW for CPF ceiling purposes?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-salary-timing-01",
+      "question": "How often must an employer pay salary under the Employment Act?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-salary-timing-02",
+      "question": "What is the usual deadline for monthly salary after the salary period?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-salary-timing-04",
+      "question": "Our payroll pays monthly; what is the statutory salary payment timing?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-annual-leave-04",
+      "question": "For an eligible employee in the 2018 leave year, what statutory annual leave rule applied?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-salary-deductions-02",
+      "question": "What kinds of salary deductions are permitted by MOM?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-overtime-eligibility-01",
+      "question": "Which employees are covered by Part IV overtime rules?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-overtime-eligibility-02",
+      "question": "Does every employee in Singapore have a statutory overtime entitlement?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-overtime-eligibility-03",
+      "question": "How does MOM decide whether a worker qualifies for overtime pay?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mom-overtime-eligibility-04",
+      "question": "Are managers and executives covered by Part IV hours and overtime limits?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-agm-deadlines-01",
+      "question": "How long after FYE must a company hold its AGM?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-agm-deadlines-02",
+      "question": "What is the AGM deadline for listed and non-listed Singapore companies?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-agm-deadlines-03",
+      "question": "When should directors schedule the annual general meeting?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-agm-deadlines-04",
+      "question": "What information do you need to work out our company’s next AGM deadline?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-returns-01",
+      "question": "How does a Singapore private company file its annual return with ACRA?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-returns-04",
+      "question": "Does the annual return deadline differ for a listed and non-listed Singapore company?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-return-officer-particulars-01",
+      "question": "From 20 October 2026, what officer particulars must a local company confirm when it files its annual return?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-return-officer-particulars-02",
+      "question": "Does the 20 October 2026 change require a local company to check officer details when filing its annual return?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-return-officer-particulars-03",
+      "question": "Which officers’ latest particulars must a local company confirm when it files its annual return from October 2026?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-annual-return-officer-particulars-04",
+      "question": "What officer information should be checked when a local company files its annual return under the October 2026 change?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-secretary-appointment-01",
+      "question": "By when must a new local company appoint its company secretary?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-secretary-appointment-02",
+      "question": "What are the basic company secretary appointment requirements?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "acra-secretary-appointment-04",
+      "question": "Must the company secretary ordinarily reside in Singapore?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-vcfm-03",
+      "question": "How does an MAS venture capital fund manager differ from an LFMC?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-vcfm-04",
+      "question": "What facts determine whether a manager can use the VCFM regime?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-qdc-reporting-01",
+      "question": "What QDC return does our fund need to submit to MAS?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-qdc-reporting-02",
+      "question": "How often is a quarterly fund data collection return due?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-qdc-reporting-03",
+      "question": "Are all MAS regulated fund managers included in QDC reporting?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-qdc-reporting-04",
+      "question": "Which QDC return should a VCFM submit through MAS-Tx?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-regulatory-notifications-01",
+      "question": "Which regulatory returns must our MAS fund manager file?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-regulatory-notifications-02",
+      "question": "When should a licensed fund manager notify MAS about a material change?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-regulatory-notifications-03",
+      "question": "What filings are due for an LFMC each year?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-original",
+      "id": "mas-regulatory-notifications-04",
+      "question": "Does an MAS reporting requirement depend on the licence and fund type?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "iras-withholding-tax-01",
+      "question": "Does Singapore withholding tax apply to a payment made overseas?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "iras-withholding-tax-02",
+      "question": "We are paying a foreign consultant; how do we determine whether WHT is due?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "iras-withholding-tax-03",
+      "question": "What facts decide if a payment to a non-resident attracts withholding tax?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "iras-withholding-tax-04",
+      "question": "How do tax treaties affect withholding tax on payments to non-residents?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "iras-withholding-tax-05",
+      "question": "What WHT checks should finance make before paying a non-resident company for services?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-additional-wages-definition-02",
+      "question": "How can payroll distinguish AW from Ordinary Wages?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-cpf-due-date-03",
+      "question": "We paid salary in September; when are the CPF contributions due?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-cpf-bonus-classification-01",
+      "question": "Does an annual bonus attract CPF contributions?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-cpf-bonus-classification-02",
+      "question": "How should payroll classify a performance bonus under CPF?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-cpf-bonus-classification-03",
+      "question": "Is an annual wage supplement ordinary or additional wages?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "cpf-cpf-bonus-classification-04",
+      "question": "Does a bonus count as AW for CPF ceiling purposes?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-salary-timing-01",
+      "question": "How often must an employer pay salary under the Employment Act?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-salary-timing-04",
+      "question": "Our payroll pays monthly; what is the statutory salary payment timing?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-annual-leave-04",
+      "question": "For an eligible employee in the 2018 leave year, what statutory annual leave rule applied?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-salary-deductions-02",
+      "question": "What kinds of salary deductions are permitted by MOM?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-overtime-eligibility-01",
+      "question": "Which employees are covered by Part IV overtime rules?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-overtime-eligibility-02",
+      "question": "Does every employee in Singapore have a statutory overtime entitlement?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-overtime-eligibility-03",
+      "question": "How does MOM decide whether a worker qualifies for overtime pay?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mom-overtime-eligibility-04",
+      "question": "Are managers and executives covered by Part IV hours and overtime limits?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "acra-annual-returns-04",
+      "question": "Does the annual return deadline differ for a listed and non-listed Singapore company?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "acra-annual-return-officer-particulars-02",
+      "question": "Does the 20 October 2026 change require a local company to check officer details when filing its annual return?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "acra-annual-return-officer-particulars-03",
+      "question": "Which officers’ latest particulars must a local company confirm when it files its annual return from October 2026?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "acra-annual-return-officer-particulars-04",
+      "question": "What officer information should be checked when a local company files its annual return under the October 2026 change?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "acra-secretary-appointment-04",
+      "question": "Must the company secretary ordinarily reside in Singapore?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-vcfm-03",
+      "question": "How does an MAS venture capital fund manager differ from an LFMC?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-vcfm-04",
+      "question": "What facts determine whether a manager can use the VCFM regime?",
+      "grade": "PARTIAL"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-qdc-reporting-01",
+      "question": "What QDC return does our fund need to submit to MAS?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-qdc-reporting-02",
+      "question": "How often is a quarterly fund data collection return due?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-qdc-reporting-03",
+      "question": "Are all MAS regulated fund managers included in QDC reporting?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-qdc-reporting-04",
+      "question": "Which QDC return should a VCFM submit through MAS-Tx?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-regulatory-notifications-01",
+      "question": "Which regulatory returns must our MAS fund manager file?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-regulatory-notifications-02",
+      "question": "When should a licensed fund manager notify MAS about a material change?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-regulatory-notifications-03",
+      "question": "What filings are due for an LFMC each year?",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "corpus": "fixed100-enriched",
+      "id": "mas-regulatory-notifications-04",
+      "question": "Does an MAS reporting requirement depend on the licence and fund type?",
+      "grade": "UNSUPPORTED"
+    }
+  ]
+}

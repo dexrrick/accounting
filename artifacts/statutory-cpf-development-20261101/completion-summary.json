@@ -1,5 +1,5 @@
 {
-  "status": "LOCAL_COMPLETE_USER_AUTHORIZED_PUBLICATION_PENDING",
+  "status": "PUBLISHED_IMPLEMENTATION_LOCAL_VALIDATION_COMPLETE",
   "repository": "https://github.com/dexrrick/accounting",
   "branch": "codex/statutory-knowledge-expansion-20261030",
   "baseCommit": "f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8",
@@ -157,11 +157,12 @@
   ],
   "environment": "Canonical Node 22.23.3; normal Windows process access, retained userInfo compatibility shim and offline external-fetch guard.",
   "publication": {
-    "published": false,
-    "authorization": "Direct user approval to commit/push the 35-file package, existing local ACRA commit and final handoff to the named development branch.",
-    "localAcraCommit": "0fb04a6d31530d938ca111746cb8c87814421a1b",
-    "lastVerifiedRemoteHead": "f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8",
-    "merge": false,
-    "deployment": false
+    "repository": "https://github.com/dexrrick/accounting",
+    "branch": "codex/statutory-knowledge-expansion-20261030",
+    "acraCommit": "0fb04a6d31530d938ca111746cb8c87814421a1b",
+    "implementationCommit": "69c1b322a2a75716aabf6db696002a358d7a68d0",
+    "verifiedRemoteImplementationHead": "69c1b322a2a75716aabf6db696002a358d7a68d0",
+    "verification": "git ls-remote matched after push",
+    "ci": "No CI manually dispatched; no live acceptance, source activation, merge or deployment."
   }
 }
