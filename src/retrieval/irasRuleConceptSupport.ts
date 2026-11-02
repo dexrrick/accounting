@@ -13,6 +13,8 @@ export type GeneralIrasRuleSupport = true | false | undefined;
 
 export interface GeneralIrasRuleSupportInput {
   sourceText: string;
+  /** Original request, when the caller has it, so a generic concept cannot erase specific scope. */
+  query?: string;
   /** Canonical source-map/coverage topic domain, such as IRAS_CORPORATE_TAX. */
   domainId: string;
   /** Canonical coverage-topic associations for this request/concept. */
@@ -612,7 +614,15 @@ function hasRoyaltyWithholdingRule(sourceText: string, requiresNonResident: bool
  */
 export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput): GeneralIrasRuleSupport {
   const concepts = input.concepts || [];
-  if ((input.population === undefined || input.population === 'COMPANY') &&
+  const isWhtTreatyEffectSubject = input.domainId === 'IRAS_CORPORATE_TAX' &&
+    (input.population === undefined || input.population === 'COMPANY') &&
+    input.topicIds.some(topicId => WHT_TREATY_EFFECT_TOPIC_IDS.has(topicId)) &&
+    isGeneralIrasWhtTreatyEffectQuestion(input.subject);
+  if (isWhtTreatyEffectSubject && input.query && hasSpecificIrasWhtTreatyScope(input.query)) return false;
+  // Treaty-effect requests need their own scope checks below before any generic
+  // IRAS source-family adapter can accept the same concept label.
+  if (!concepts.some(concept => concept.id.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID)) &&
+      (input.population === undefined || input.population === 'COMPANY') &&
       ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(input.domainId)) {
     for (const topicId of input.topicIds) {
       const request = { authority: 'IRAS', topicId, query: input.subject, subject: input.subject,
@@ -628,13 +638,14 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   }
   const treatyEffectConcepts = concepts.filter(concept => concept.id.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID));
   if (treatyEffectConcepts.length > 0) {
-    const conceptScopeText = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])].join('\n');
+    const conceptScopeText = [input.query, input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])]
+      .filter((value): value is string => Boolean(value)).join('\n');
     if (treatyEffectConcepts.length !== concepts.length || concepts.length !== 1 ||
         concepts[0].id !== WHT_TREATY_EFFECT_CONCEPT_ID || input.domainId !== 'IRAS_CORPORATE_TAX' ||
         input.population !== undefined && input.population !== 'COMPANY' ||
         !input.topicIds.some(topicId => WHT_TREATY_EFFECT_TOPIC_IDS.has(topicId)) ||
         hasSpecificIrasWhtTreatyScope(conceptScopeText) ||
-        !isGeneralIrasWhtTreatyEffectQuestion(`How do tax treaties affect withholding tax on payments to non-residents?\n${conceptScopeText}`)) return false;
+        !isGeneralIrasWhtTreatyEffectQuestion(conceptScopeText)) return false;
     // The concept binding is deliberately tied to the complete retained IRAS
     // treaty/service/interest passages. The answer stays conditional because
     // this source does not determine a treaty outcome for an unspecified
@@ -642,7 +653,7 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
     return supportIrasMasKnowledgeRule({
       authority: 'IRAS',
       topicId: 'iras-wht-treaty-relief',
-      query: 'How do tax treaties affect withholding tax on payments to non-residents?',
+      query: conceptScopeText,
       subject: input.subject,
       sourceText: input.sourceText
     }) === true;

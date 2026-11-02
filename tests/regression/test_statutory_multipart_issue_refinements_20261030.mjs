@@ -106,6 +106,28 @@ const nonAdvisoryIrasPlan = structuredClone(irasPlan.issuePlan);
 nonAdvisoryIrasPlan.issues.find(issue => /delivery van/i.test(issue.subject)).operation = 'CALCULATE';
 assert.equal(explicitIrasRoute(nonAdvisoryIrasPlan), false,
   'the multipart evidence route rejects calculation issues instead of broadening its advisory guard');
+const specificWhtTreatyQuestion = 'How do tax treaties compare in their effect on withholding tax on payments to non-residents?';
+const specificWhtTreaty = planFor(specificWhtTreatyQuestion);
+assert.equal(specificWhtTreaty.issuePlan.coverageEstablished, false);
+assert.equal(specificWhtTreaty.issuePlan.hasUnmappedResidual, true);
+assert.equal(specificWhtTreaty.issuePlan.issues.length, 1);
+assert.equal(specificWhtTreaty.issuePlan.issues[0].status, 'UNRESOLVED');
+assert.equal(specificWhtTreaty.issuePlan.issues[0].unresolvedReason, 'NO_COVERAGE_TOPIC');
+assert.equal(specificWhtTreaty.issuePlan.issues[0].subject, specificWhtTreatyQuestion);
+const specificWhtRuntime = input => shouldUseAuthorityEvidenceRuntime({
+  issuePlan: input, classification: specificWhtTreaty.classification,
+  explicitIrasEvidenceRequest: true, hasImages: false
+});
+assert.equal(specificWhtRuntime(specificWhtTreaty.issuePlan), true,
+  'a sole unresolved, specific WHT treaty request reaches the gap renderer');
+const alteredWhtScope = structuredClone(specificWhtTreaty.issuePlan);
+alteredWhtScope.issues[0].subject = 'Effect of a tax treaty on withholding-tax applicability';
+assert.equal(specificWhtRuntime(alteredWhtScope), false,
+  'the scoped unresolved route does not admit a generic treaty issue');
+const extraWhtIssue = structuredClone(specificWhtTreaty.issuePlan);
+extraWhtIssue.issues.push({ ...extraWhtIssue.issues[0], id: 'extra-wht-issue' });
+assert.equal(specificWhtRuntime(extraWhtIssue), false,
+  'the scoped unresolved route does not bypass additional unresolved request scope');
 
 const irasSourceManifest = JSON.parse(readFileSync(fileURLToPath(new URL('../fixtures/statutoryKnowledge20261027b/iras-mas-source-manifest.json', import.meta.url)), 'utf8'));
 const irasSourceRecord = irasSourceManifest.sources.find(source => source.fixture === 'iras-mas-input-tax-native.html');

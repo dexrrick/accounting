@@ -119,7 +119,6 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
   const hasRelativeFutureDateReference = (text: string) =>
     /\b(?:(?:the\s+)?(?:following|next)\s+(?:(?:business|working)\s+)?(?:day|week|month)s?|(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:(?:business|working)\s+)?(?:day|week|month)s?\s+(?:later|after\s+that|afterwards|after\s+(?=[^.!?;]{1,100}\b(?:end|ends|ending|boundary|anniversary|expire\w*|conclude\w*|finish\w*)\b))|(?:the\s+)?(?:business\s+|working\s+)?day\s+after)\b/i.test(text);
-  const sentenceIndexAt = (index: number) => (query.slice(0, index).match(/[.!?;]/g) || []).length;
   const sentenceTextAt = (index: number) => {
     const boundaries = ['.', '!', '?', ';'];
     const sentenceStart = Math.max(...boundaries.map(boundary => query.lastIndexOf(boundary, index - 1))) + 1;
@@ -158,13 +157,10 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
     const nextClauseHasOwnYear = Boolean(nextClause && /\b(?:19|20)\d{2}\b/.test(nextClause.text));
     const sharesBoundaryDate = Boolean(nextClause && nextClauseHasPayroll && !nextClauseHasOwnYear &&
       (/\b(?:then|on that date|at that time|on the same date|at the same time)\b/i.test(nextClause.text) || sameSentence));
-    const boundarySentenceIndex = sentenceIndexAt(yearMatch.index!);
     const calendarDatePattern = /\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+20\d{2})?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+20\d{2})?|\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2})\b/i;
     const relativeFuturePayrollAttachedToBoundary = nonEmptyClauses.some(relativeClause => {
       if (!hasRelativeFutureDateReference(relativeClause.text)) return false;
-      const relativeSentenceIndex = sentenceIndexAt(relativeClause.start);
-      if (relativeSentenceIndex <= boundarySentenceIndex
-        || !/\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(sentenceTextAt(relativeClause.start))) return false;
+      if (!/\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(sentenceTextAt(relativeClause.start))) return false;
 
       // An explicit reference to the contribution-year end wins over a nearer
       // payroll date mentioned as a separate fact.

@@ -7,6 +7,7 @@ import {
 } from '../services/semanticQuestionUnderstanding';
 import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import { hasSpecificIrasWhtTreatyScope } from '../retrieval/irasMasKnowledge20261027b';
 
 const NON_IRAS_STATUTORY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS']);
 
@@ -98,6 +99,17 @@ function hasMappedGeneralIrasRuleIssue(
       [topic.domainId, issue.domain, ...topic.legacyDomains].some(domain => classifiedDomains.has(domain))
     );
   });
+}
+
+function hasUnresolvedSpecificIrasWhtTreatyIssue(issuePlan: SemanticIssueReconciliation): boolean {
+  if (issuePlan.coverageEstablished || !issuePlan.hasUnmappedResidual || issuePlan.issues.length !== 1) return false;
+  const issue = issuePlan.issues[0];
+  return issue.status === 'UNRESOLVED' && issue.unresolvedReason === 'NO_COVERAGE_TOPIC' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'IRAS' &&
+    issue.mappedTopicIds.includes('iras-wht-treaty-relief') &&
+    issue.mappedTopicIds.includes('iras-withholding-tax') &&
+    hasSpecificIrasWhtTreatyScope(issue.subject);
 }
 
 function hasBoundedCpfCalculationAndRefundIssues(
@@ -211,7 +223,8 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
       classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&
       classification.authorities.includes('IRAS') && !classification.accountingAnalysisRequired &&
       !classification.journalEntryRequired && !classification.calculationRequired &&
-      hasMappedGeneralIrasRuleIssue(issuePlan, classification)) {
+      (hasMappedGeneralIrasRuleIssue(issuePlan, classification) ||
+        hasUnresolvedSpecificIrasWhtTreatyIssue(issuePlan))) {
     return true;
   }
 

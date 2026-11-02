@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import { extractOfficialDocumentFromRetrieved } from '../../src/retrieval/officialDocumentExtractor.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
 import {
+  hasSpecificIrasWhtTreatyScope,
+  isGeneralIrasWhtTreatyEffectQuestion,
   IRAS_MAS_KNOWLEDGE_RULES_20261027B,
   IRAS_MAS_KNOWLEDGE_SOURCE_CATALOG_20261027B,
   getIrasMasKnowledgeEvidence,
@@ -347,6 +349,46 @@ assert.equal(treatyEffectQuotes.length, 4, 'the treaty-effect rule requires all 
 assert.ok(treatyEffectQuotes.some(quote => /the provisions under the DTA apply/i.test(quote)));
 assert.ok(treatyEffectQuotes.some(quote => /separate Article on Technical Services/i.test(quote)));
 assert.ok(treatyEffectQuotes.some(quote => /may be reduced if relief is available under an applicable tax treaty/i.test(quote)));
+assert.equal(isGeneralIrasWhtTreatyEffectQuestion(generalWhtTreatyEffect.query), true,
+  'the exact general treaty-effect question remains in scope');
+assert.equal(isGeneralIrasWhtTreatyEffectQuestion(
+  'What effect do tax treaties have on withholding tax on payments to non-residents?'), true,
+'a general effect paraphrase remains in scope');
+assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect,
+  query: 'What effect do tax treaties have on withholding tax on payments to non-residents?'
+}), true, 'the four source passages support a general effect paraphrase');
+for (const query of [
+  'What effect do tax treaties have on withholding tax for our company payment to a non-resident?',
+  'Can I rely on a tax treaty for a particular payment to a non-resident?',
+  'How do tax treaties affect withholding tax when the recipient resides in Australia?',
+  'How do tax treaties affect withholding tax on payments to recipients in Australia?'
+]) {
+  assert.equal(hasSpecificIrasWhtTreatyScope(query), true, `case-specific facts are recognized: ${query}`);
+  assert.equal(isGeneralIrasWhtTreatyEffectQuestion(query), false,
+    `case-specific applicability does not enter the generic rule: ${query}`);
+  assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect, query }), undefined,
+    `the generic passages cannot decide a case-specific request: ${query}`);
+}
+for (const query of [
+  'How do tax treaties affect withholding tax on payments to non-residents under Article 12?',
+  'How does the Singapore-Australia DTA affect withholding tax on payments to non-residents?',
+  'How does the Singapore and Australia Double Tax Agreement affect withholding tax on payments to non-residents?',
+  'How does the Double Taxation Agreement between Singapore and Australia affect withholding tax on payments to non-residents?',
+  'How does the Singapore–Australia DTA affect withholding tax on payments to non-residents?',
+  'How does the Singapore—Australia DTA affect withholding tax on payments to non-residents?',
+  'Which tax treaties affect withholding tax on payments to non-residents?',
+  'How do tax treaties compare in their effect on withholding tax on payments to non-residents?',
+  'How do tax treaties differ in their effect on withholding tax on payments to non-residents?',
+  'How does Australia’s tax treaty affect withholding tax on payments to non-residents?',
+  "How does Australia's tax treaty affect withholding tax on payments to non-residents?",
+  'How does the Singapore/Australia DTA affect withholding tax on payments to non-residents?'
+]) {
+  assert.equal(hasSpecificIrasWhtTreatyScope(query), true, `the specific treaty scope is recognized: ${query}`);
+  assert.equal(isGeneralIrasWhtTreatyEffectQuestion(query), false,
+    `a treaty-specific request cannot enter the generic explanation: ${query}`);
+  assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect, query }), undefined,
+    `the four general passages do not establish the requested specific scope: ${query}`);
+}
 assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect,
   topicId: 'iras-wht-treaty-relief',
   sourceText: generalWhtTreatyEffect.sourceText.replaceAll(/If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply\./gi, '')
@@ -380,6 +422,29 @@ const generalWhtTreatyConceptSupport = {
 };
 assert.equal(supportGeneralIrasRuleConcept(generalWhtTreatyConceptSupport), true,
   'the exact general WHT treaty concept is supported by the complete retained passages');
+for (const query of [
+  'How do tax treaties affect withholding tax on payments to non-residents under Article 12?',
+  'How does the Singapore–Australia DTA affect withholding tax on payments to non-residents?',
+  'Which tax treaties affect withholding tax on payments to non-residents?'
+]) {
+  assert.equal(supportGeneralIrasRuleConcept({ ...generalWhtTreatyConceptSupport, query }), false,
+    `the original request scope cannot be erased by generic concepts: ${query}`);
+}
+assert.equal(supportGeneralIrasRuleConcept({
+  sourceText: generalWhtTreatyEffect.sourceText,
+  query: 'How do tax treaties affect withholding tax on payments to non-residents under Article 12?',
+  domainId: 'IRAS_CORPORATE_TAX',
+  topicIds: ['iras-withholding-tax', 'iras-wht-treaty-relief'],
+  subject: 'Effect of a tax treaty on withholding-tax applicability',
+  population: 'COMPANY'
+}), false, 'a generic WHT treaty subject without concepts cannot erase Article 12 scope');
+assert.equal(supportGeneralIrasRuleConcept({
+  sourceText: generalWhtTreatyEffect.sourceText,
+  domainId: 'IRAS_CORPORATE_TAX',
+  topicIds: ['iras-withholding-tax', 'iras-wht-treaty-relief'],
+  subject: 'Effect of a tax treaty on withholding-tax applicability',
+  population: 'COMPANY'
+}), true, 'the generic treaty-effect subject retains support when no request-specific query is supplied');
 const specificWhtTreatyConcept = {
   ...generalWhtTreatyConcept,
   label: 'Effect of a tax treaty on withholding-tax applicability to royalties under the Singapore-Australia DTA at a zero rate',

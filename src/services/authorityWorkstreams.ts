@@ -1467,7 +1467,8 @@ function generalIrasRuleConceptSupport(
   text: string,
   issue: ReconciledSemanticQuestionIssue,
   topics: SingaporeCoverageTopic[],
-  concepts: RequestedQuestionConcept[] = []
+  concepts: RequestedQuestionConcept[] = [],
+  query = ''
 ): boolean | undefined {
   if (!issue.governingAuthorities.includes('IRAS')) return undefined;
   const individualCpfCashTopUpScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'INDIVIDUAL' &&
@@ -1484,6 +1485,7 @@ function generalIrasRuleConceptSupport(
     const associatedTopicIds = [...new Set([...issue.mappedTopicIds, topic.id, ...concepts.flatMap(concept => concept.topicIds)])];
     const support = supportGeneralIrasRuleConcept({
       sourceText: text,
+      query,
       domainId: topic.domainId,
       topicIds: associatedTopicIds,
       subject: issue.subject,
@@ -1616,7 +1618,7 @@ function supportsIssueSubject(
       masCmsDefinitionSupport(text, issue, [topic], originalQuery) === true) return true;
   const masRuleSupport = masCmsGeneralRuleSupport(text, issue, [topic], originalQuery);
   if (masRuleSupport !== undefined) return masRuleSupport;
-  const generalRuleSupport = generalIrasRuleConceptSupport(text, issue, [topic], concepts);
+  const generalRuleSupport = generalIrasRuleConceptSupport(text, issue, [topic], concepts, originalQuery);
   if (generalRuleSupport !== undefined) return generalRuleSupport;
   const companyTaxResidencyScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
     topic.id === 'iras-corporate-tax-residency' && topic.domainId === 'IRAS_CORPORATE_TAX';

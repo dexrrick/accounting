@@ -315,6 +315,7 @@ assert.match(futureBonusResponse.messageText, /Applicability limitation:[^\n]*20
   'the application keeps the future-period applicability limitation');
 
 const relativeFutureBonusPayableQueries = [
+  'A foreign employee became a Singapore PR on 15 March 2026. The first contribution year ends on 31 March 2027, which marks that anniversary, and his bonus becomes payable two days later. Does the bonus attract CPF?',
   'A foreign employee became a Singapore PR on 15 March 2026. The first contribution year ends on 31 March 2027. His bonus becomes payable the following day. Does the bonus attract CPF?',
   'A foreign employee became a Singapore PR on 15 March 2026. The first contribution year ends on 31 March 2027. His bonus becomes payable one day later. Does the bonus attract CPF?',
   'A foreign employee became a Singapore PR on 15 March 2026. The first contribution year ends on 31 March 2027. His bonus becomes payable the following month. Does the bonus attract CPF?',
@@ -345,6 +346,12 @@ for (const query of relativeFutureBonusPayableQueries) {
   assert.match(response.messageText, /Applicability limitation:[^\n]*2027/i,
     `${query}: the application keeps the future-period limitation`);
 }
+
+const sameSentenceCurrentPayrollAndBoundary = 'A foreign employee became a Singapore PR on 15 March 2026. His March wages were due and payable on 20 March this year, and payroll was processed the following day. The first contribution year ends on 31 March 2027. When does the first contribution year end?';
+assert.equal(supportCpfPayrollKnowledgeRule({ ...directNewPrRequest, query: sameSentenceCurrentPayrollAndBoundary }), true,
+  'an independently anchored current-payroll date does not invalidate a later derived boundary in the same sentence');
+assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(sameSentenceCurrentPayrollAndBoundary).dateRole,
+  'CURRENT_WORKFLOW_FACT', 'same-sentence current payroll remains distinct from the derived boundary');
 
 const ownerMismatchQueries = [
   'Employee A became a Singapore PR on 15 March 2026. Employee B remains a foreigner. Is CPF due on a foreigner’s March Ordinary Wages and what is the first-year boundary?',
@@ -547,7 +554,12 @@ for (const [query, expectIras, description] of [
   ['Should the annual bonus that in principle could be reported as employment income attract CPF?', false, 'a relative passive predicate preceded by an adverbial phrase'],
   ['Should the annual bonus that was earned last year and therefore could be reported as employment income attract CPF?', false, 'a relative passive predicate after an explanatory subordinate clause'],
   ['Should the annual bonus that was earned last year and therefore could be reported as employment income be subject to CPF?', false, 'a relative passive predicate before an outer subject-to-CPF predicate'],
-  ['Should the annual bonus that may be included in employment income be reported as employment income, and does CPF apply?', true, 'a main reporting predicate after a descriptive relative clause']
+  ['Should the annual bonus that may be included in employment income and therefore be reported as employment income attract CPF?', false, 'a second relative passive predicate coordinated under the shared modal'],
+  ['Should the annual bonus that may be included in employment income and also be reported as employment income be subject to CPF?', false, 'a second relative passive predicate coordinated with also under the shared modal'],
+  ['Should the annual bonus that may be included in employment income or alternatively be reported as employment income attract CPF?', false, 'a second relative passive predicate coordinated with alternatively under the shared modal'],
+  ['Should the annual bonus that may be included in employment income be reported as employment income, and does CPF apply?', true, 'a main reporting predicate after a descriptive relative clause'],
+  ['Should the annual bonus that may be included in employment income be reported as employment income and attract CPF?', true, 'a main reporting predicate before a coordinated CPF predicate'],
+  ['Should the annual bonus that may be included in employment income be reported as employment income and be subject to CPF?', true, 'a main reporting predicate before a coordinated subject-to-CPF predicate']
 ]) {
   let workstreams;
   await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined, {

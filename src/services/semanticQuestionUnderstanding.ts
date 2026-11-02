@@ -4,7 +4,7 @@ import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from '../retrieval/statutoryCommencementScope';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
-import { isGeneralIrasWhtTreatyEffectQuestion } from '../retrieval/irasMasKnowledge20261027b';
+import { hasSpecificIrasWhtTreatyScope, isGeneralIrasWhtTreatyEffectQuestion } from '../retrieval/irasMasKnowledge20261027b';
 import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
@@ -2803,7 +2803,17 @@ function isIncidentalCpfBonusTaxGroup(
     const afterSelectedPredicate = passiveReportingPredicate
       ? afterRelativeClause.slice(passiveReportingPredicate.index + passiveReportingPredicate[0].length)
       : '';
-    const outerCpfPredicateFollowsRelativePredicate = startsWithModalBonusQuestion &&
+    const selectedReportingPredicateSharesRelativeModal = Boolean(passiveReportingPredicate && passiveReportingPredicates.some(predicate => {
+      if (predicate.index >= passiveReportingPredicate.index || !predicate[1]?.trim()) return false;
+      const betweenPredicates = afterRelativeClause.slice(
+        predicate.index + predicate[0].length,
+        passiveReportingPredicate.index
+      );
+      return /\b(?:and|or|nor)\b(?:\s+(?:\w+ly|also|therefore|thus|then|still|yet|otherwise|instead))*\s*$/i.test(betweenPredicates);
+    }));
+    const selectedReportingPredicateIsModal = Boolean(passiveReportingPredicate?.[1]?.trim()) ||
+      selectedReportingPredicateSharesRelativeModal;
+    const outerCpfPredicateFollowsRelativePredicate = startsWithModalBonusQuestion && selectedReportingPredicateIsModal &&
       /\b(?:attract|affect|trigger)\w*\b[^.!?;]{0,45}\b(?:cpf|central provident fund)\b|\b(?:be|become|remain)\s+(?:directly\s+)?subject\s+to\b[^.!?;]{0,45}\b(?:cpf|central provident fund)\b/i.test(afterSelectedPredicate);
     const hasCompletedRelativePredicate = passiveReportingPredicates.some(predicate =>
       predicate.index < (passiveReportingPredicate?.index ?? -1)) ||
@@ -3846,6 +3856,21 @@ function reconcileSemanticIssuePlan(
       group.length === 1 && group[0].id === 'mas-lfmc'))
     .map(issueFromTaxonomyGroup).map(groupIssue => {
     const issue = refineTaxonomyRuleIntent(query, groupIssue);
+    if (issue.domain === 'IRAS_INCOME_TAX' && issue.mappedTopicIds.includes('iras-wht-treaty-relief') &&
+        issue.operation === 'OTHER' && hasSpecificIrasWhtTreatyScope(query)) {
+      const unresolvedSpecificWhtIssue = {
+        ...issue,
+        subject: sanitizeSemanticDiagnosticLabel(query.trim()),
+        operation: 'EXPLAIN_RULE' as const,
+        evidenceRequirement: 'AUTHORITATIVE_SOURCE' as const
+      };
+      return {
+        ...unresolvedSpecificWhtIssue,
+        id: addId(unresolvedSpecificWhtIssue),
+        status: 'UNRESOLVED' as const,
+        unresolvedReason: 'NO_COVERAGE_TOPIC' as const
+      };
+    }
     if (isBoundedAcraAnnualReturnMissingFactsQuestion(query) && issue.domain === 'ACRA_CORPORATE' &&
         issue.mappedTopicIds.length === 1 && issue.mappedTopicIds[0] === 'acra_annual-returns') {
       const boundedFallbackIssue = {

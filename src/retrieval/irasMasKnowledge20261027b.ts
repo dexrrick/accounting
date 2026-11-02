@@ -247,10 +247,22 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
 
 export function hasSpecificIrasWhtTreatyScope(text: string): boolean {
   const namesSpecificPayment = /\b(?:royalt(?:y|ies)|interest|dividends?|rent(?:al)?|director(?:'s)? fees?|directors? remuneration|service(?:s)?|management|consultancy|professional|technical|commission|guarantee fees?)\b/i.test(text);
-  const treatyName = '(?:DTA|(?:double\\s+)?tax treaty|agreement)';
-  const namesSpecificTreaty = new RegExp(`\\b[A-Z][\\p{L}]+-[A-Z][\\p{L}]+[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
-    new RegExp(`\\b[A-Z][\\p{L}]+[ \\t]+(?:and|&)[ \\t]+[A-Z][\\p{L}]+[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
-    new RegExp(`\\b${treatyName}\\b[^.!?;\\r\\n]{0,60}\\b(?:between|with|for)[ \\t]+(?:the[ \\t]+)?[A-Z][\\p{L}]+(?:[ \\t]+(?:and|&)[ \\t]+[A-Z][\\p{L}]+)?`, 'iu').test(text);
+  const treatyName = '(?:DTA|(?:double[ \\t]+tax(?:ation)?[ \\t]+(?:treaty|agreement))|tax treaty|agreement)';
+  const country = '[\\p{L}]+(?:[ \\t]+[\\p{L}]+){0,2}';
+  const countrySeparator = '[-/\\u2010-\\u2015\\u2212]';
+  const namesSpecificTreaty = new RegExp(`\\b${country}[ \\t]*${countrySeparator}[ \\t]*${country}[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
+    new RegExp(`\\b${country}[ \\t]+(?:and|&)[ \\t]+${country}[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
+    new RegExp(`\\b${country}[’']s[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
+    new RegExp(`\\b${treatyName}\\b[^.!?;\\r\\n]{0,80}\\b(?:between|with|for)[ \\t]+(?:the[ \\t]+)?${country}(?:[ \\t]+(?:and|&)[ \\t]+${country})?`, 'iu').test(text);
+  const namesSpecificArticle = /\b(?:article|art\.?)\s*(?:no\.?\s*)?(?:\d+[a-z]?|[ivxlcdm]+)\b/i.test(text);
+  const identifiesTreaties = /\b(?:list|identify|name|enumerate|compare|comparison|differences?)\b[^.!?;\r\n]{0,120}\b(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b|\b(?:which|what)\s+(?:(?:specific|bilateral|applicable|relevant|singapore)\s+)?(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b/i.test(text);
+  const comparesTreatyEffects = /\b(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b[^.!?;\r\n]{0,100}\b(?:compare|compares|compared|comparing|differ|differs|differed|differentiate|contrast)\b/i.test(text);
+  const asksForCaseSpecificFacts =
+    /\b(?:my|our|this|these|that|specific|particular|individual|named|identified|actual)\s+(?:non[- ]resident\s+)?(?:recipient|payee|company|payment|transaction|invoice|contract)\b/i.test(text) ||
+    /\b(?:recipients?|payees?|companies?)\b[^.!?;\r\n]{0,60}\b(?:resides?|resident|incorporated|domiciled|located|based|registered|lives?|in|from)\b/i.test(text) ||
+    /\b(?:resides?|resident|incorporated|domiciled|located|based|registered)\s+in\s+[\p{Lu}][\p{L}]+(?:[ \\t]+[\p{Lu}][\p{L}]+){0,2}\b/u.test(text) ||
+    /\b(?:recipient|payee)\s+(?:named\s+)?\p{Lu}[\p{L}'’-]*(?:[ \\t]+\p{Lu}[\p{L}'’-]*)?\b/u.test(text) ||
+    /\b(?:S\$|SGD|USD|EUR|GBP)\s?\d[\d,]*(?:\.\d+)?\b/i.test(text);
   const requestsRate = /\bzero[- ]rate\b|(?<!\w)0\s*%|(?<!\w)\d+(?:\.\d+)?\s*%|\b(?:what|which)\b[^.!?;]{0,35}\brate\b|\b(?:reduced|lower(?:ed)?|withholding|treaty)\s+rates?\b|\brate\b[^.!?;]{0,25}\bzero\b/i.test(text);
   const requestsYesNoOutcome = text.split(/\r?\n/).some(line =>
     /^\s*(?:does|do|did|can|could|will|would|should|is|are|whether)\b/i.test(line) &&
@@ -261,12 +273,13 @@ export function hasSpecificIrasWhtTreatyScope(text: string): boolean {
     /\b(?:tax treaty|tax treaties|double tax(?:ation)? agreement|dta|article\s*\d+[a-z]?)\b/i.test(clause) &&
     /\b(?:exempt\w*|reduce\w*|lower\w*|eliminat\w*|waiv\w*|appl(?:y|ies)|subject to|liable to|zero[- ]rate|\d+(?:\.\d+)?\s*%)\b/i.test(clause)
   );
-  return namesSpecificPayment || namesSpecificTreaty || requestsRate || requestsYesNoOutcome || statesTreatyOutcome;
+  return namesSpecificPayment || namesSpecificTreaty || namesSpecificArticle || identifiesTreaties || comparesTreatyEffects || asksForCaseSpecificFacts ||
+    requestsRate || requestsYesNoOutcome || statesTreatyOutcome;
 }
 
 export function isGeneralIrasWhtTreatyEffectQuestion(text: string): boolean {
   const hasWht = /\b(?:wht|withholding[ -]tax)\b/i.test(text);
-  const hasTreaty = /\b(?:tax treaties?|double tax(?:ation)? agreements?|dta)\b/i.test(text);
+  const hasTreaty = /\b(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b/i.test(text);
   const asksForEffect = /\b(?:affect|effect|apply|applicability|reduce|exempt|treatment|rate)\b/i.test(text);
   return hasWht && hasTreaty && asksForEffect && !hasSpecificIrasWhtTreatyScope(text) &&
     !/\b(?:all|every|always|automatically)\b[^.!?;]{0,80}\b(?:exempt|free of tax|no withholding)\b/i.test(text) &&
