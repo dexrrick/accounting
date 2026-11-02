@@ -885,18 +885,59 @@ function hasUnboundNamedPrGrantDate(query: string): boolean {
   const questionOwners = employeeIds.filter(id => {
     const explicitAlias = namedEmployeeReferences(finalQuestion).some(reference => reference.id === id);
     const idParts = id.match(/[A-Z]+|\d+/g) || [];
-    const idPattern = idParts.join('[- ]*');
+    const idPattern = id.includes(' ') || id.includes('-') ? idParts.join('[- ]+') : idParts.join('[- ]*');
     const explicitPossessive = idPattern.length > 0 && new RegExp(String.raw`\b${idPattern}['’]s\b`, 'i').test(finalQuestion);
     return explicitAlias || explicitPossessive;
   });
   return statusOwners.length !== 1 || questionOwners.length !== 1 || statusOwners[0] !== questionOwners[0];
 }
 
-/** Recognize compact explicit employee IDs without treating ordinary lowercase verbs as names. */
+/** Recognize employee IDs and names when capitalization or nearby status context establishes an owner. */
 function namedEmployeeReferences(query: string): Array<{ id: string; index: number }> {
-  return [...query.matchAll(/\b(?:employee|staff|worker)\s+([a-z0-9]+(?:-[a-z0-9]+)?)\b/gi)]
-    .filter(match => /^[a-z]$/i.test(match[1]) || /^\d+$/.test(match[1]) || /^id[- ]?\d+$/i.test(match[1]) || /^[A-Z][A-Z0-9-]*$/.test(match[1]))
-    .map(match => ({ id: match[1].replace(/[-\s]/g, '').toUpperCase(), index: match.index! }));
+  const nonNameWords = new Set([
+    'a', 'an', 'the', 'has', 'have', 'had', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'does', 'do', 'did', 'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+    'remains', 'remain', 'stays', 'stay', 'turns', 'becomes', 'become', 'became', 'obtained', 'granted', 'converted',
+    'foreign', 'foreigner', 'employee', 'staff', 'worker', 'who', 'whom', 'whose', 'which', 'that',
+    'and', 'or', 'but', 'on', 'in', 'at', 'from', 'to', 'for', 'with', 'without', 'of', 'by',
+    'payroll', 'salary', 'wage', 'wages', 'bonus', 'ordinary', 'additional', 'cpf', 'pr', 'spr', 'sgd'
+  ]);
+  const statusPredicate = /^(?:became|becomes|obtained|granted|converted|was|were|is|are|has|have|had|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)\b/i;
+  const employeePattern = /\b(?:employee|staff|worker)\s+([a-z0-9]+(?:[-'][a-z0-9]+)?)(?:\s+([a-z][a-z'-]*))?(?:\s+([a-z][a-z'-]*))?/gi;
+  const references: Array<{ id: string; index: number }> = [];
+
+  for (const match of query.matchAll(employeePattern)) {
+    const tokens = match.slice(1).filter((token): token is string => Boolean(token));
+    const first = tokens[0];
+    const keywordLength = /^(?:employee|staff|worker)\s+/i.exec(match[0])?.[0].length || 0;
+    let selectedId: string | undefined;
+    for (let tokenCount = tokens.length; tokenCount > 0; tokenCount--) {
+      const nameTokens = tokens.slice(0, tokenCount);
+      const rawName = nameTokens.join(' ');
+      const name = rawName.replace(/['’]s$/i, '');
+      if (!/^[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*)*$/.test(name)
+        || nameTokens.some(token => nonNameWords.has(token.replace(/['’]s$/i, '').toLowerCase()))) continue;
+
+      const nameEnd = match.index! + keywordLength + rawName.length;
+      const followingText = query.slice(nameEnd);
+      const hasPossessiveContext = /^['’]s\b/i.test(followingText) || /['’]s$/i.test(rawName);
+      const hasStatusContext = statusPredicate.test(followingText.trimStart());
+      const isConventionallyCapitalized = nameTokens.every(token => /^[A-Z][a-z]/.test(token));
+      if (hasPossessiveContext || hasStatusContext || isConventionallyCapitalized) {
+        selectedId = name.toUpperCase().replace(/\s+/g, ' ').trim();
+        break;
+      }
+    }
+
+    if (selectedId) references.push({ id: selectedId, index: match.index! });
+    else {
+      const compactId = /^[a-z]$/i.test(first) || /^\d+$/.test(first) || /^id[- ]?\d+$/i.test(first)
+        || (/^[A-Z][A-Z0-9-]*$/.test(first) && !nonNameWords.has(first.toLowerCase()));
+      if (compactId) references.push({ id: first.replace(/[-\s]/g, '').toUpperCase(), index: match.index! });
+    }
+  }
+
+  return references;
 }
 
 function statedPrConversionDate(query: string): string | undefined {

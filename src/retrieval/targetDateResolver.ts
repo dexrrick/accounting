@@ -117,6 +117,16 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
   clauses.push({ start: clauseStart, end: query.length, text: query.slice(clauseStart).trim() });
   const nonEmptyClauses = clauses.filter(clause => clause.text.length > 0);
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+  const hasRelativeFutureDateReference = (text: string) =>
+    /\b(?:the\s+)?(?:following|next)\s+(?:day|month)\b|\b(?:one|a)\s+(?:day|month)\s+later\b|\bday\s+after\b/i.test(text);
+  const sentenceIndexAt = (index: number) => (query.slice(0, index).match(/[.!?;]/g) || []).length;
+  const sentenceTextAt = (index: number) => {
+    const boundaries = ['.', '!', '?', ';'];
+    const sentenceStart = Math.max(...boundaries.map(boundary => query.lastIndexOf(boundary, index - 1))) + 1;
+    const sentenceEnds = boundaries.map(boundary => query.indexOf(boundary, index)).filter(end => end >= 0);
+    const sentenceEnd = sentenceEnds.length > 0 ? Math.min(...sentenceEnds) : query.length;
+    return query.slice(sentenceStart, sentenceEnd);
+  };
   return years.every(yearMatch => {
     const year = yearMatch[0];
     if (year === currentYear) return true;
@@ -148,7 +158,26 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
     const nextClauseHasOwnYear = Boolean(nextClause && /\b(?:19|20)\d{2}\b/.test(nextClause.text));
     const sharesBoundaryDate = Boolean(nextClause && nextClauseHasPayroll && !nextClauseHasOwnYear &&
       (/\b(?:then|on that date|at that time|on the same date|at the same time)\b/i.test(nextClause.text) || sameSentence));
-    const attachedPayrollClause = sharesBoundaryDate || previousClauseSharesBoundaryDate;
+    const boundarySentenceIndex = sentenceIndexAt(yearMatch.index!);
+    const nearbyRelativeFuturePayroll = nonEmptyClauses.some(relativeClause => {
+      if (!hasRelativeFutureDateReference(relativeClause.text)) return false;
+      const relativeSentenceIndex = sentenceIndexAt(relativeClause.start);
+      if (Math.abs(relativeSentenceIndex - boundarySentenceIndex) > 1) return false;
+      return nonEmptyClauses.some(payrollClause => {
+        if (!/\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(payrollClause.text)
+          || /\b(?:19|20)\d{2}\b/.test(payrollClause.text)) return false;
+        const payrollSentenceIndex = sentenceIndexAt(payrollClause.start);
+        if (Math.abs(payrollSentenceIndex - relativeSentenceIndex) > 1
+          || Math.abs(payrollSentenceIndex - boundarySentenceIndex) > 1) return false;
+        const adjacentSentences = new Set([relativeSentenceIndex, payrollSentenceIndex]
+          .filter(sentenceIndex => sentenceIndex !== boundarySentenceIndex));
+        return [...adjacentSentences].every(sentenceIndex =>
+          !/\b(?:19|20)\d{2}\b/.test(sentenceTextAt(
+            nonEmptyClauses.find(candidate => sentenceIndexAt(candidate.start) === sentenceIndex)?.start ?? 0
+          )));
+      });
+    });
+    const attachedPayrollClause = sharesBoundaryDate || previousClauseSharesBoundaryDate || nearbyRelativeFuturePayroll;
     return namesContributionYear && describesBoundary && !describesPayrollOrLaw && !attachedPayrollClause;
   });
 }

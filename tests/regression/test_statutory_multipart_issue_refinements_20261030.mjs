@@ -43,6 +43,11 @@ for (const [query, wording] of [
   ['Should we report that annual bonus as employment income, and does CPF apply to the bonus?', 'demonstrative bonus reference'],
   ['Can you confirm that we should report the annual bonus as employment income, and does CPF apply?', 'reporting request in a complement clause'],
   ['Should we report the annual bonus that was paid in March as employment income, and does CPF apply?', 'reporting object after a relative clause'],
+  ['Should the annual bonus that was earned in 2025 be reported as employment income, and does CPF apply to this bonus?', 'reporting predicate after a restrictive relative clause'],
+  ['Should the annual bonus that was earned last year be reported as employment income, and does CPF apply?', 'relative reporting predicate after a year phrase'],
+  ['Should the annual bonus that was paid in March be reported as employment income, and does CPF apply?', 'relative reporting predicate after a month phrase'],
+  ['Should the annual bonus that we paid yesterday be reported as employment income, and does CPF apply?', 'relative reporting predicate after yesterday wording'],
+  ['Should the annual bonus that was paid recently be reported as employment income, and does CPF apply?', 'relative reporting predicate after recent wording'],
   ['Should the annual bonus, which was earned in 2025, be reported as employment income, and does CPF apply to this bonus?', 'passive reporting request with a comma-bounded relative clause']
 ]) {
   const plan = planFor(query);
@@ -53,7 +58,12 @@ for (const [query, wording] of [
 }
 for (const query of [
   'Does CPF apply to the annual bonus that the employment income includes?',
-  'Does CPF apply to the annual bonus which is included in employment income?'
+  'Does CPF apply to the annual bonus which is included in employment income?',
+  'Does CPF apply to the annual bonus, which includes employment income?',
+  'Does CPF apply to the annual bonus that includes employment income?',
+  'Does CPF apply to the annual bonus that should be reported as employment income?',
+  'Does CPF apply to the annual bonus that will be included in employment income?',
+  'Should the annual bonus that is to be reported as employment income attract CPF?'
 ]) {
   const plan = planFor(query);
   assert.ok(plan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'),

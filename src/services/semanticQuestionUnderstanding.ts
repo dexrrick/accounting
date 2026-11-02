@@ -2783,11 +2783,27 @@ function isIncidentalCpfBonusTaxGroup(
     .filter(clause => /^(?:please\s+)?(?:report|include|declare|file|submit|furnish|provide)\b/i.test(clause));
   const explicitlyRequestsBonusIncomeReporting = [...requestClauses, ...imperativeClauses].some(clause => {
     const relativeClauseStart = /\b(?:that|which|who)\b/i.exec(clause);
-    const relativeFollowsBonus = relativeClauseStart &&
-      /\b(?:annual\s+)?(?:bonus|aws)\b[^.!?;]*$/i.test(clause.slice(0, relativeClauseStart.index));
-    const mainPredicate = relativeFollowsBonus
-      ? clause.slice(0, relativeClauseStart.index)
-      : clause;
+    const relativeClauseIndex = relativeClauseStart?.index;
+    const relativeFollowsBonus = relativeClauseIndex !== undefined &&
+      /\b(?:annual\s+)?(?:bonus|aws)\b[^.!?;]*$/i.test(clause.slice(0, relativeClauseIndex));
+    const afterRelativeClause = relativeFollowsBonus
+      ? clause.slice(relativeClauseIndex + (relativeClauseStart?.[0].length || 0))
+      : '';
+    const passiveReportingPredicate = relativeFollowsBonus
+      ? /\b((?:can|could|may|might|shall|should|would|will|must|to)\s+)?be\s+(?:reported|included|declared|filed|submitted|furnished|provided)\b/i.exec(afterRelativeClause)
+      : undefined;
+    const relativeClauseBeforePredicate = passiveReportingPredicate
+      ? afterRelativeClause.slice(0, passiveReportingPredicate.index)
+      : '';
+    const startsWithModalBonusQuestion = /^(?:should|could|would|can|will|must|may)\s+(?:(?:an?|the)\s+)?(?:annual\s+)?(?:bonus|aws)\b/i.test(clause);
+    const relativeEndsWithClauseMarker = /\b(?:and|or|but|nor|yet|so|while|when|where|which|who|that|to|can|could|may|might|shall|should|would|will|must|is|are|was|were|has|have|had|be|being)\s*$/i.test(relativeClauseBeforePredicate.trim());
+    const hasCompletedRestrictiveRelative = startsWithModalBonusQuestion && relativeFollowsBonus && passiveReportingPredicate
+      && !passiveReportingPredicate[1] && relativeClauseBeforePredicate.trim().length > 0 && !relativeEndsWithClauseMarker;
+    const mainPredicate = hasCompletedRestrictiveRelative
+      ? `${clause.slice(0, relativeClauseIndex)} ${afterRelativeClause.slice(passiveReportingPredicate.index)}`
+      : relativeFollowsBonus
+        ? clause.slice(0, relativeClauseIndex)
+        : clause;
     const hasReportingAction = /\b(?:report|include|declare|file|submit|furnish|provide)\w*\b/i.test(mainPredicate);
     const hasBonusObject = /\b(?:annual\s+)?(?:bonus|aws)\b/i.test(mainPredicate);
     const hasEmploymentIncomeObject = /\b(?:employment income|employee income|employee earnings)\b/i.test(mainPredicate);
