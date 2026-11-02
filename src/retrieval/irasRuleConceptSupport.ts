@@ -621,7 +621,7 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
   if (isWhtTreatyEffectSubject && input.query && hasSpecificIrasWhtTreatyScope(input.query)) return false;
   // Treaty-effect requests need their own scope checks below before any generic
   // IRAS source-family adapter can accept the same concept label.
-  if (!concepts.some(concept => concept.id.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID)) &&
+  if (!concepts.some(concept => concept.id?.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID) === true) &&
       (input.population === undefined || input.population === 'COMPANY') &&
       ['IRAS_GST', 'IRAS_CORPORATE_TAX'].includes(input.domainId)) {
     for (const topicId of input.topicIds) {
@@ -636,7 +636,7 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
       if (support === false && hasIrasMasKnowledgeContradiction(request)) return false;
     }
   }
-  const treatyEffectConcepts = concepts.filter(concept => concept.id.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID));
+  const treatyEffectConcepts = concepts.filter(concept => concept.id?.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID) === true);
   if (treatyEffectConcepts.length > 0) {
     const conceptScopeText = [input.query, input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])]
       .filter((value): value is string => Boolean(value)).join('\n');
