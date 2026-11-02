@@ -1,0 +1,52 @@
+Review handoff — employee ownership, reporting intent and relative payroll dates
+
+Goal and status
+Correct the three findings in the user's review: natural employee names bypassing CPF PR-date ownership, an explicit reporting predicate lost after a restrictive relative clause, and a future bonus borrowing the evidence period of a derived PR anniversary boundary. The fixes and local validation are complete. Independent review found further variations during development; these were corrected and re-reviewed with no remaining material findings in the scoped delta. Publication confirmation and the documentation successor's exact branch head are reported in the accompanying chat.
+
+Exact review target
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-knowledge-expansion-20261030
+Implementation and evidence head: ef081e4e1b15b21d88e6f77b747dc5dcb51945f2
+Base: ece1aa9fb98532794055db650d8c861b4b7a22de
+Compare: https://github.com/dexrrick/accounting/compare/ece1aa9fb98532794055db650d8c861b4b7a22de...ef081e4e1b15b21d88e6f77b747dc5dcb51945f2
+PR: none created for this job. Review the exact implementation head above; the successor containing this handoff changes documentation only.
+
+Changes
+1. src/retrieval/cpfPayrollKnowledge20261027b.ts resolves supported natural employee names before compact-ID fallback. It preserves full-name identities and case-insensitive references, uses nearby status/possessive context for lowercase names, excludes ordinary words such as has/is, and retains A/E1/E-1 aliases. Alice's PR grant date must not determine Bob's personal contribution-year dates or March wage proration. Same-owner questions retain their dates, including Alice Lee versus Alice Tan and capitalization variants.
+2. src/services/semanticQuestionUnderstanding.ts restores a main passive reporting predicate after a restrictive relative clause when the question's modal governs the bonus. It does not require a numeric year or time-word allowlist. Explicit reporting retains IRAS and CPF; descriptive relative clauses, including modal/to-infinitive reporting language, remain CPF-only. Comma-delimited and restrictive positives and negatives are covered.
+3. src/retrieval/targetDateResolver.ts prevents relative future payroll dates near a non-current PR anniversary boundary from entering the current-workflow exception. It keeps the relative reference associated with payroll across commas and conjunctions. Controls include the following day, one day later, the following month, due and payable the following day, and The next day, his bonus becomes payable. Existing independent boundary/current-wage controls remain supported.
+4. Regression coverage extends tests/regression/test_statutory_cpf_expansion_20261101.mjs and tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs. No statutory rates, source fixtures, journal measurement or deployment configuration changed.
+
+Verification actually performed
+- Focused CPF payroll, multipart-refinement and CPF full-application expansion suites passed, along with TypeScript and final diff whitespace checks.
+- Maintained src/scripts/tests lint, TypeScript project build, Vite build and Worker build passed.
+- Restricted smoke run: 160/161 suites passed. The sole MAS transport diagnostic failure was traced to the isolated child's Windows user-profile lookup; it passed individually with normal Windows process access. The initial failed result is retained.
+- Final full regression run with normal Windows process access: 184/184 passed, including the MAS diagnostic. No full smoke rerun is claimed.
+- Root lint failed with the same 34 parsing errors in the pre-existing untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs archive. Maintained-code lint passed separately.
+- All 350 answers across five frozen source configurations are byte-identical to the previous completed capture; all 213 previously correct answer instances are preserved. Questions/source profiles show no drift. Prior grades are inherited only after full-answer hash equality, not freshly reassessed from evidence status. Captures recorded zero external/model requests.
+- The exact three reported prompts were executed through processAccountingQuery using frozen fixtures; complete responses and workstream data are published in the evidence below. Independent read-only review also executed targeted helper/plan/application probes and the application suite.
+- Environment: Node 22.23.3, retained userInfo compatibility preload and offline external-fetch guard. No live-source integration suite, browser/model acceptance, source activation, merge or deployment occurred. CI was not dispatched or inspected for this job; local results are not a CI or production result. The checked workflow triggers on main/master pushes and pull requests, not this feature-branch push alone.
+
+Remaining concerns and review focus
+The restrictive reporting prompt now retains both IRAS and CPF issues, but its available fixture evidence remains incomplete. Issue retention does not establish a complete mixed-question answer or legal applicability for its 2025 context. The future bonus correctly remains unverified with a 2027 applicability limitation; this patch does not establish future-period CPF requirements.
+
+Inspect the first failing layer rather than only the final message: name extraction and possessive owner matching; same-name/case/alias collisions; ordinary-word false positives; main reporting predicates versus relative-clause descriptions; and relative-date/payroll association across sentence and clause boundaries. Check adjacent current-wage/independent-boundary controls and exact application assertions. The name and date helpers are bounded deterministic recognizers, not a general natural-language entity/date solver; inspect unsupported or ambiguous wording for unsafe attribution.
+
+Evidence pinned to the implementation head
+- Completion summary: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/completion-summary.json
+- Check results: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/validation-results.json
+- Full test log: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/full.log
+- Original smoke log: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/smoke.log
+- MAS diagnostic recheck: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/mas-diagnostic-host-check.log
+- Independent review: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/independent-review.json
+- Preservation comparison: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/preservation-comparison.json
+- Individual answer hashes: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/answer-preservation-hashes.json
+- Exact application responses: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/exact-application-responses.json
+- Exact-prompt capture helper: https://github.com/dexrrick/accounting/blob/ef081e4e1b15b21d88e6f77b747dc5dcb51945f2/artifacts/statutory-review-three-safeguards-20261102/capture-exact.mjs
+Other selected static-check logs and focused notes are in the same published directory. The completion summary's UNCOMMITTED status and no-publication statement are the pre-publication validation snapshot, not the final publication state.
+
+Local-only/uncommitted material
+Raw corpus captures final75.json, final60.json, fresh15.json, fixed100-original.json and fixed100-enriched.json, replay/finalization/publication helpers and ancillary logs remain local-only under D:/Accounting/artifacts/statutory-review-three-safeguards-20261102/. They are not available through GitHub. The five code/test changes and selected reports, synthetic application responses and test logs are included in the implementation commit. This handoff is included in its documentation successor. No implementation changes are intentionally left uncommitted or unpushed after successful publication; unrelated pre-existing untracked archives remain outside scope. Independent raw-corpus replay through GitHub alone remains limited by the local-only captures/source-profile artifacts.
+
+Ready-to-copy review prompt
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/statutory-knowledge-expansion-20261030, implementation and evidence head ef081e4e1b15b21d88e6f77b747dc5dcb51945f2 against base ece1aa9fb98532794055db650d8c861b4b7a22de using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
