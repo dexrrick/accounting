@@ -118,7 +118,7 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
   const nonEmptyClauses = clauses.filter(clause => clause.text.length > 0);
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
   const hasRelativeFutureDateReference = (text: string) =>
-    /\b(?:the\s+)?(?:following|next)\s+(?:day|month)\b|\b(?:one|a)\s+(?:day|month)\s+later\b|\bday\s+after\b/i.test(text);
+    /\b(?:(?:the\s+)?(?:following|next)\s+(?:(?:business|working)\s+)?(?:day|week|month)s?|(?:a|an|one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+(?:(?:business|working)\s+)?(?:day|week|month)s?\s+(?:later|after\s+that|afterwards|after\s+(?=[^.!?;]{1,100}\b(?:end|ends|ending|boundary|anniversary|expire\w*|conclude\w*|finish\w*)\b))|(?:the\s+)?(?:business\s+|working\s+)?day\s+after)\b/i.test(text);
   const sentenceIndexAt = (index: number) => (query.slice(0, index).match(/[.!?;]/g) || []).length;
   const sentenceTextAt = (index: number) => {
     const boundaries = ['.', '!', '?', ';'];
@@ -159,25 +159,34 @@ export function hasOnlyDerivedCpfPrAnniversaryBoundaryYears(
     const sharesBoundaryDate = Boolean(nextClause && nextClauseHasPayroll && !nextClauseHasOwnYear &&
       (/\b(?:then|on that date|at that time|on the same date|at the same time)\b/i.test(nextClause.text) || sameSentence));
     const boundarySentenceIndex = sentenceIndexAt(yearMatch.index!);
-    const nearbyRelativeFuturePayroll = nonEmptyClauses.some(relativeClause => {
+    const calendarDatePattern = /\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+20\d{2})?|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s+20\d{2})?|\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2})\b/i;
+    const relativeFuturePayrollAttachedToBoundary = nonEmptyClauses.some(relativeClause => {
       if (!hasRelativeFutureDateReference(relativeClause.text)) return false;
       const relativeSentenceIndex = sentenceIndexAt(relativeClause.start);
-      if (Math.abs(relativeSentenceIndex - boundarySentenceIndex) > 1) return false;
-      return nonEmptyClauses.some(payrollClause => {
-        if (!/\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(payrollClause.text)
-          || /\b(?:19|20)\d{2}\b/.test(payrollClause.text)) return false;
-        const payrollSentenceIndex = sentenceIndexAt(payrollClause.start);
-        if (Math.abs(payrollSentenceIndex - relativeSentenceIndex) > 1
-          || Math.abs(payrollSentenceIndex - boundarySentenceIndex) > 1) return false;
-        const adjacentSentences = new Set([relativeSentenceIndex, payrollSentenceIndex]
-          .filter(sentenceIndex => sentenceIndex !== boundarySentenceIndex));
-        return [...adjacentSentences].every(sentenceIndex =>
-          !/\b(?:19|20)\d{2}\b/.test(sentenceTextAt(
-            nonEmptyClauses.find(candidate => sentenceIndexAt(candidate.start) === sentenceIndex)?.start ?? 0
-          )));
-      });
+      if (relativeSentenceIndex <= boundarySentenceIndex
+        || !/\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(sentenceTextAt(relativeClause.start))) return false;
+
+      // An explicit reference to the contribution-year end wins over a nearer
+      // payroll date mentioned as a separate fact.
+      if (/\b(?:after|following)\s+(?:the\s+)?(?:first|second|third|1st|2nd|3rd)[- ](?:(?:pr|spr|cpf)\s+)?(?:contribution\s+)?year\b[^.!?;]{0,80}\b(?:ends?|ending|boundary|anniversary)\b/i.test(relativeClause.text)) return true;
+
+      // Associate the relative payroll date with the nearest preceding calendar
+      // date. Non-temporal prose can intervene; a closer dated payroll fact
+      // (for example, wages payable on 20 March this year) takes precedence.
+      const nearestDateAnchor = nonEmptyClauses
+        .filter(candidate => candidate.start < relativeClause.start && calendarDatePattern.test(candidate.text))
+        .at(-1);
+      if (!nearestDateAnchor) return false;
+      if (nearestDateAnchor.start <= yearMatch.index! && yearMatch.index! < nearestDateAnchor.end) return true;
+      const nearestAnchorHasPayroll = /\b(?:bonus|additional wages?|ordinary wages?|\bow\b|\baw\b|payroll|payable|salary|wages?)\b/i.test(nearestDateAnchor.text);
+      const nearestAnchorIsCurrentPayroll = nearestAnchorHasPayroll &&
+        (new RegExp(String.raw`\b${currentYear}\b`).test(nearestDateAnchor.text) || /\bthis year\b/i.test(nearestDateAnchor.text));
+      // A nearer date with no clear current-payroll ownership is ambiguous.
+      // Keep the future-year safeguard in force rather than treating it as a
+      // reason to detach the payroll date from the anniversary boundary.
+      return !nearestAnchorIsCurrentPayroll && nearestDateAnchor.start > yearMatch.index!;
     });
-    const attachedPayrollClause = sharesBoundaryDate || previousClauseSharesBoundaryDate || nearbyRelativeFuturePayroll;
+    const attachedPayrollClause = sharesBoundaryDate || previousClauseSharesBoundaryDate || relativeFuturePayrollAttachedToBoundary;
     return namesContributionYear && describesBoundary && !describesPayrollOrLaw && !attachedPayrollClause;
   });
 }

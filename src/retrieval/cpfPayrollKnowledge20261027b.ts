@@ -900,17 +900,20 @@ function namedEmployeeReferences(query: string): Array<{ id: string; index: numb
     'remains', 'remain', 'stays', 'stay', 'turns', 'becomes', 'become', 'became', 'obtained', 'granted', 'converted',
     'foreign', 'foreigner', 'employee', 'staff', 'worker', 'who', 'whom', 'whose', 'which', 'that',
     'and', 'or', 'but', 'on', 'in', 'at', 'from', 'to', 'for', 'with', 'without', 'of', 'by',
-    'payroll', 'salary', 'wage', 'wages', 'bonus', 'ordinary', 'additional', 'cpf', 'pr', 'spr', 'sgd'
+    'payroll', 'salary', 'wage', 'wages', 'bonus', 'ordinary', 'additional', 'cpf', 'pr', 'spr', 'sgd',
+    'company', 'singapore', 'employer'
   ]);
   const statusPredicate = /^(?:became|becomes|obtained|granted|converted|was|were|is|are|has|have|had|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)\b/i;
   const employeePattern = /\b(?:employee|staff|worker)\s+([a-z0-9]+(?:[-'][a-z0-9]+)?)(?:\s+([a-z][a-z'-]*))?(?:\s+([a-z][a-z'-]*))?/gi;
   const references: Array<{ id: string; index: number }> = [];
+  const labeledNameRanges: Array<{ start: number; end: number }> = [];
 
   for (const match of query.matchAll(employeePattern)) {
     const tokens = match.slice(1).filter((token): token is string => Boolean(token));
     const first = tokens[0];
     const keywordLength = /^(?:employee|staff|worker)\s+/i.exec(match[0])?.[0].length || 0;
     let selectedId: string | undefined;
+    let selectedNameEnd: number | undefined;
     for (let tokenCount = tokens.length; tokenCount > 0; tokenCount--) {
       const nameTokens = tokens.slice(0, tokenCount);
       const rawName = nameTokens.join(' ');
@@ -925,11 +928,15 @@ function namedEmployeeReferences(query: string): Array<{ id: string; index: numb
       const isConventionallyCapitalized = nameTokens.every(token => /^[A-Z][a-z]/.test(token));
       if (hasPossessiveContext || hasStatusContext || isConventionallyCapitalized) {
         selectedId = name.toUpperCase().replace(/\s+/g, ' ').trim();
+        selectedNameEnd = nameEnd;
         break;
       }
     }
 
-    if (selectedId) references.push({ id: selectedId, index: match.index! });
+    if (selectedId) {
+      references.push({ id: selectedId, index: match.index! });
+      labeledNameRanges.push({ start: match.index! + keywordLength, end: selectedNameEnd! });
+    }
     else {
       const compactId = /^[a-z]$/i.test(first) || /^\d+$/.test(first) || /^id[- ]?\d+$/i.test(first)
         || (/^[A-Z][A-Z0-9-]*$/.test(first) && !nonNameWords.has(first.toLowerCase()));
@@ -937,7 +944,67 @@ function namedEmployeeReferences(query: string): Array<{ id: string; index: numb
     }
   }
 
-  return references;
+  // A later clause may refer to another person by name without repeating the
+  // employee label (for example, "Bob remains a foreigner"). Keep that person
+  // in the ownership set so Alice's PR date cannot be borrowed for Bob's wages.
+  const bareNamedStatusPattern = /\b([A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?(?:\s+[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?){0,2})\s+(?=(?:became|becomes|obtained|was\s+granted|granted|converted|is|are|was|were|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)\b)/g;
+  for (const match of query.matchAll(bareNamedStatusPattern)) {
+    const index = match.index!;
+    const precedingText = query.slice(Math.max(0, index - 24), index);
+    if (/^(?:employee|staff|worker)\s/i.test(match[1]) || /\b(?:employee|staff|worker)\s+$/i.test(precedingText)
+      || labeledNameRanges.some(range => range.start <= index && index < range.end)) continue;
+    const id = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
+    if (!references.some(reference => reference.index === index && reference.id === id)) {
+      references.push({ id, index });
+    }
+  }
+
+  // A bare possessive in the final payroll question also establishes its
+  // owner (for example, "Bob's March Ordinary Wages").
+  const escapedNonNameTokens = [...nonNameWords]
+    .map(token => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  const lowercasePossessiveName = String.raw`(?!(?:${escapedNonNameTokens})\b)[a-z][a-z]+(?:-[a-z]+)?`;
+  const bareNamedPossessivePatterns = [
+    /\b([A-Z][A-Za-z]+(?:[-'][A-Za-z]+)?(?:\s+[A-Z][A-Za-z]+(?:[-'][A-Za-z]+)?){0,2})['’]s\b/g,
+    new RegExp(String.raw`\b(${lowercasePossessiveName}(?:\s+${lowercasePossessiveName}){0,2})['’]s\b`, 'g')
+  ];
+  const barePayrollOwners: Array<{ id: string; index: number }> = [];
+  for (const pattern of bareNamedPossessivePatterns) {
+    for (const match of query.matchAll(pattern)) {
+      const index = match.index!;
+      const precedingText = query.slice(Math.max(0, index - 24), index);
+      const afterPossessive = query.slice(index + match[0].length, index + match[0].length + 60).split(/[.!?;]/, 1)[0];
+      const payrollTarget = /^\s*(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|this\s+(?:month|year)|last\s+(?:month|year)|next\s+(?:month|year)|current\s+(?:month|year)|annual|monthly|quarterly|20\d{2}|\d{1,2}(?:st|nd|rd|th)?)\s+){0,3}(?:ordinary\s+wages?|additional\s+wages?|wages?|ow|aw|salary|bonus|payroll)\b/i.test(afterPossessive);
+      const nameTokens = match[1].split(/\s+/).map(token => token.replace(/[-']/g, '').toLowerCase());
+      if (labeledNameRanges.some(range => range.start <= index && index < range.end)
+        || /\b(?:employee|staff|worker)\s+$/i.test(precedingText)
+        || !payrollTarget
+        || nameTokens.some(token => nonNameWords.has(token))) continue;
+      const id = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
+      if (!references.some(reference => reference.index === index && reference.id === id)) {
+        references.push({ id, index });
+      }
+      barePayrollOwners.push({ id, index });
+    }
+  }
+
+  // Lowercase person names are only admitted from an explicit possessive
+  // payroll target, then their matching status clause is tracked as an owner.
+  const bareStatusPredicate = String.raw`(?:became|becomes|obtained|was\s+granted|granted|converted|is|are|was|were|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)`;
+  for (const owner of barePayrollOwners) {
+    const escapedName = owner.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, String.raw`\s+`);
+    const statusReferencePattern = new RegExp(String.raw`\b${escapedName}\s+(?=${bareStatusPredicate}\b)`, 'gi');
+    for (const match of query.matchAll(statusReferencePattern)) {
+      const index = match.index!;
+      if (labeledNameRanges.some(range => range.start <= index && index < range.end)) continue;
+      if (!references.some(reference => reference.index === index && reference.id === owner.id)) {
+        references.push({ id: owner.id, index });
+      }
+    }
+  }
+
+  return references.sort((left, right) => left.index - right.index);
 }
 
 function statedPrConversionDate(query: string): string | undefined {

@@ -4,6 +4,7 @@ import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from '../retrieval/statutoryCommencementScope';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
+import { isGeneralIrasWhtTreatyEffectQuestion } from '../retrieval/irasMasKnowledge20261027b';
 import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
@@ -2789,16 +2790,28 @@ function isIncidentalCpfBonusTaxGroup(
     const afterRelativeClause = relativeFollowsBonus
       ? clause.slice(relativeClauseIndex + (relativeClauseStart?.[0].length || 0))
       : '';
-    const passiveReportingPredicate = relativeFollowsBonus
-      ? /\b((?:can|could|may|might|shall|should|would|will|must|to)\s+)?be\s+(?:reported|included|declared|filed|submitted|furnished|provided)\b/i.exec(afterRelativeClause)
-      : undefined;
+    const passiveReportingPredicates = relativeFollowsBonus
+      ? [...afterRelativeClause.matchAll(/\b((?:(?:can|could|may|might|shall|should|would|will|must|to)\s+(?:(?:\w+ly|still|also|ever|just|only|merely|almost|really|never|always)\s+)*)?)be\s+(?:reported|included|declared|filed|submitted|furnished|provided)\b/gi)]
+      : [];
+    // The first passive predicate can belong to the descriptive relative
+    // clause. A later passive predicate may be the actual question predicate.
+    const passiveReportingPredicate = passiveReportingPredicates.at(-1);
     const relativeClauseBeforePredicate = passiveReportingPredicate
       ? afterRelativeClause.slice(0, passiveReportingPredicate.index)
       : '';
     const startsWithModalBonusQuestion = /^(?:should|could|would|can|will|must|may)\s+(?:(?:an?|the)\s+)?(?:annual\s+)?(?:bonus|aws)\b/i.test(clause);
+    const afterSelectedPredicate = passiveReportingPredicate
+      ? afterRelativeClause.slice(passiveReportingPredicate.index + passiveReportingPredicate[0].length)
+      : '';
+    const outerCpfPredicateFollowsRelativePredicate = startsWithModalBonusQuestion &&
+      /\b(?:attract|affect|trigger)\w*\b[^.!?;]{0,45}\b(?:cpf|central provident fund)\b|\b(?:be|become|remain)\s+(?:directly\s+)?subject\s+to\b[^.!?;]{0,45}\b(?:cpf|central provident fund)\b/i.test(afterSelectedPredicate);
+    const hasCompletedRelativePredicate = passiveReportingPredicates.some(predicate =>
+      predicate.index < (passiveReportingPredicate?.index ?? -1)) ||
+      /\b(?:was|were|is|are|has|have|had|does|do|did)\s+(?:not\s+)?[a-z]+(?:ed|en|ing)\b/i.test(relativeClauseBeforePredicate) ||
+      /\b(?:include|includes|included|pay|pays|paid|earn|earns|earned|receive|receives|received|contain|contains|contained|cover|covers|covered|qualify|qualifies|qualified|occur|occurs|occurred)\b/i.test(relativeClauseBeforePredicate);
     const relativeEndsWithClauseMarker = /\b(?:and|or|but|nor|yet|so|while|when|where|which|who|that|to|can|could|may|might|shall|should|would|will|must|is|are|was|were|has|have|had|be|being)\s*$/i.test(relativeClauseBeforePredicate.trim());
     const hasCompletedRestrictiveRelative = startsWithModalBonusQuestion && relativeFollowsBonus && passiveReportingPredicate
-      && !passiveReportingPredicate[1] && relativeClauseBeforePredicate.trim().length > 0 && !relativeEndsWithClauseMarker;
+      && hasCompletedRelativePredicate && !relativeEndsWithClauseMarker && !outerCpfPredicateFollowsRelativePredicate;
     const mainPredicate = hasCompletedRestrictiveRelative
       ? `${clause.slice(0, relativeClauseIndex)} ${afterRelativeClause.slice(passiveReportingPredicate.index)}`
       : relativeFollowsBonus
@@ -3525,6 +3538,11 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
+      topicIds.has('iras-wht-treaty-relief') && isGeneralIrasWhtTreatyEffectQuestion(query)) {
+    return makeRuleIssue('Effect of a tax treaty on withholding-tax applicability', 'COMPANY');
+  }
+
+  if (issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
       topicIds.has('iras-withholding-tax') &&
       /\b(?:wht|withholding tax)\b/i.test(text) &&
       /\b(?:deadline|due date|when|file|filing|second month|payment date)\b/i.test(text) &&
@@ -3851,9 +3869,26 @@ function reconcileSemanticIssuePlan(
     issuesWithRequestedStatutoryParts[0].status === 'MAPPED' && issuesWithRequestedStatutoryParts[0].domain === 'ACRA_CORPORATE' && issuesWithRequestedStatutoryParts[0].population === 'COMPANY' &&
     issuesWithRequestedStatutoryParts[0].governingAuthorities.length === 1 && issuesWithRequestedStatutoryParts[0].governingAuthorities[0] === 'ACRA' &&
     issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === 1 && issuesWithRequestedStatutoryParts[0].mappedTopicIds[0] === 'acra_annual-returns';
+  const expectedWhtTreatyTopicIds = ['iras-withholding-tax', 'iras-wht-treaty-relief'];
+  const boundedWhtTreatyEffectQuestion = isGeneralIrasWhtTreatyEffectQuestion(query) &&
+    inventory.unresolvedFragments.length === 0 && inventory.rawTopicIds.length === expectedWhtTreatyTopicIds.length &&
+    expectedWhtTreatyTopicIds.every(topicId => inventory.rawTopicIds.includes(topicId)) &&
+    inventory.topics.length === expectedWhtTreatyTopicIds.length &&
+    expectedWhtTreatyTopicIds.every(topicId => inventory.topics.some(topic => topic.id === topicId)) &&
+    issuesWithRequestedStatutoryParts.length === 1 &&
+    issuesWithRequestedStatutoryParts[0].status === 'MAPPED' &&
+    issuesWithRequestedStatutoryParts[0].subject === 'Effect of a tax treaty on withholding-tax applicability' &&
+    issuesWithRequestedStatutoryParts[0].domain === 'IRAS_INCOME_TAX' &&
+    issuesWithRequestedStatutoryParts[0].population === 'COMPANY' &&
+    issuesWithRequestedStatutoryParts[0].operation === 'EXPLAIN_RULE' &&
+    issuesWithRequestedStatutoryParts[0].governingAuthorities.length === 1 &&
+    issuesWithRequestedStatutoryParts[0].governingAuthorities[0] === 'IRAS' &&
+    issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === expectedWhtTreatyTopicIds.length &&
+    expectedWhtTreatyTopicIds.every(topicId => issuesWithRequestedStatutoryParts[0].mappedTopicIds.includes(topicId));
+  const boundedRuleOnlyQuestion = boundedAcraMissingFactsQuestion || boundedWhtTreatyEffectQuestion;
   return { source: 'TAXONOMY_FALLBACK', issues: issuesWithRequestedStatutoryParts,
-    coverageEstablished: boundedAcraMissingFactsQuestion,
-    hasUnmappedResidual: !boundedAcraMissingFactsQuestion };
+    coverageEstablished: boundedRuleOnlyQuestion,
+    hasUnmappedResidual: !boundedRuleOnlyQuestion };
 }
 
 function appendRequestedStatutoryIssues<TIssue extends SemanticQuestionIssue & {

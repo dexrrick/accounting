@@ -12,6 +12,7 @@ import {
   supportIrasMasKnowledgeRule
 } from '../../src/retrieval/irasMasKnowledge20261027b.ts';
 import { hasConflictingMasNoticeIdentity } from '../../src/retrieval/statutoryCommencementScope.ts';
+import { supportGeneralIrasRuleConcept } from '../../src/retrieval/irasRuleConceptSupport.ts';
 import { TargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
 
 const fixtureRoot = new URL('../fixtures/statutoryKnowledge20261027b/', import.meta.url);
@@ -331,6 +332,82 @@ const treatyZeroWht = {
 assert.equal(supportIrasMasKnowledgeRule(treatyZeroWht), true,
   'treaty-zero filing questions route to the complete WHT filing-duty family without requiring a due-date phrase');
 assert.match(selectIrasMasKnowledgeQuotes(treatyZeroWht).join('\n'), /WHT must be filed even if[\s\S]*Agreement \(DTA\) or Approved Royalties Incentive \(ARI\)/i);
+const treatyEffectRule = IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_WHT_TREATY_EFFECT');
+const generalWhtTreatyEffect = {
+  authority: 'IRAS', topicId: 'iras-withholding-tax',
+  query: 'How do tax treaties affect withholding tax on payments to non-residents?',
+  subject: 'Effect of a tax treaty on withholding-tax applicability',
+  officialUrl: treatyEffectRule.officialUrl,
+  sourceText: textFor('iras-mas-wht-services-native.html')
+};
+assert.equal(supportIrasMasKnowledgeRule(generalWhtTreatyEffect), true,
+  'the general WHT treaty-effect question binds to the captured IRAS treaty evidence');
+const treatyEffectQuotes = selectIrasMasKnowledgeQuotes(generalWhtTreatyEffect);
+assert.equal(treatyEffectQuotes.length, 4, 'the treaty-effect rule requires all four retained official-source passages');
+assert.ok(treatyEffectQuotes.some(quote => /the provisions under the DTA apply/i.test(quote)));
+assert.ok(treatyEffectQuotes.some(quote => /separate Article on Technical Services/i.test(quote)));
+assert.ok(treatyEffectQuotes.some(quote => /may be reduced if relief is available under an applicable tax treaty/i.test(quote)));
+assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect,
+  topicId: 'iras-wht-treaty-relief',
+  sourceText: generalWhtTreatyEffect.sourceText.replaceAll(/If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply\./gi, '')
+}), false, 'missing treaty-effect evidence blocks the bounded WHT treaty answer');
+assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect,
+  query: 'How do tax treaties affect withholding tax on royalty payments to non-residents?'
+}), undefined, 'the service-and-interest excerpts do not prove a treaty outcome for royalties');
+assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect,
+  query: 'Do tax treaties automatically exempt all payments to non-residents from withholding tax?'
+}), undefined, 'the generic treaty-effect rule does not support a blanket exemption conclusion');
+for (const query of [
+  'Does the Singapore-Australia DTA exempt rent payments to non-residents from withholding tax?',
+  'Does the Singapore-Australia DTA exempt director fees paid to non-residents from withholding tax?',
+  'How does the singapore-australia dta affect withholding tax on payments to non-residents?'
+]) {
+  assert.equal(supportIrasMasKnowledgeRule({ ...generalWhtTreatyEffect, query }), undefined,
+    `the general treaty-effect rule does not support this payment-specific treaty outcome: ${query}`);
+}
+const generalWhtTreatyConcept = {
+  id: 'semantic_effect_of_a_tax_treaty_on_withholding_tax_applic',
+  label: 'Effect of a tax treaty on withholding-tax applicability',
+  terms: ['tax treaty effect', 'withholding-tax applicability']
+};
+const generalWhtTreatyConceptSupport = {
+  sourceText: generalWhtTreatyEffect.sourceText,
+  domainId: 'IRAS_CORPORATE_TAX',
+  topicIds: ['iras-withholding-tax', 'iras-wht-treaty-relief'],
+  subject: generalWhtTreatyConcept.label,
+  population: 'COMPANY',
+  concepts: [generalWhtTreatyConcept]
+};
+assert.equal(supportGeneralIrasRuleConcept(generalWhtTreatyConceptSupport), true,
+  'the exact general WHT treaty concept is supported by the complete retained passages');
+const specificWhtTreatyConcept = {
+  ...generalWhtTreatyConcept,
+  label: 'Effect of a tax treaty on withholding-tax applicability to royalties under the Singapore-Australia DTA at a zero rate',
+  terms: ['royalty treaty rate at zero', 'Singapore-Australia DTA']
+};
+assert.equal(supportGeneralIrasRuleConcept({
+  ...generalWhtTreatyConceptSupport,
+  subject: 'Effect of a tax treaty on withholding-tax applicability',
+  concepts: [specificWhtTreatyConcept]
+}), false, 'the generic sources do not prove an appended payment, jurisdiction or rate concept');
+assert.equal(supportGeneralIrasRuleConcept({
+  ...generalWhtTreatyConceptSupport,
+  concepts: [{ ...specificWhtTreatyConcept,
+    id: `${generalWhtTreatyConcept.id}_to_royalties_under_singapore_australia_dta_at_zero_rate` }]
+}), false, 'a suffixed concept ID cannot inherit the general treaty-effect proof');
+assert.equal(supportGeneralIrasRuleConcept({
+  ...generalWhtTreatyConceptSupport,
+  concepts: [{ ...generalWhtTreatyConcept, terms: [...generalWhtTreatyConcept.terms, 'rent payments'] }]
+}), false, 'all concept terms are checked for specific payment requests');
+const articleOutcomeWhtTreatyConcept = {
+  ...generalWhtTreatyConcept,
+  label: 'Effect of a tax treaty on withholding-tax applicability exempts payments under Article 12 of the DTA',
+  terms: ['DTA Article 12 exemption for payments']
+};
+assert.equal(supportGeneralIrasRuleConcept({
+  ...generalWhtTreatyConceptSupport,
+  concepts: [articleOutcomeWhtTreatyConcept]
+}), false, 'a treaty exemption conclusion tied to an article is not established by generic sources');
 const whtFilingRule = IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_WHT_FILING_DATE');
 const whtVisibleExtraction = defaultExternalSourceValidator.validateTopicContent(textFor(whtFilingRule.fixture), {
   standardIdentifiers: ['IRAS'], expectedTitles: [whtFilingRule.title],

@@ -28,6 +28,7 @@ export type IrasMasKnowledgeRuleId =
   | 'IRAS_GST_MOTOR_CAR_INPUT_TAX'
   | 'IRAS_ECI_PRACTICAL_WAIVER'
   | 'IRAS_WHT_SERVICES'
+  | 'IRAS_WHT_TREATY_EFFECT'
   | 'IRAS_WHT_FILING_DATE'
   | 'MAS_SFA_MISCONDUCT_REPORTING_2027'
   | 'MAS_LFMC_TOOLKIT_SCOPE';
@@ -160,6 +161,19 @@ export const IRAS_MAS_KNOWLEDGE_RULES_20261027B: readonly IrasMasKnowledgeRuleMe
     requiredFacts: ['The applicable fund-level rules and other legislation must be identified separately for the relevant activities and fund.'],
     effectiveDateEvidence: 'The retained PDF is the version last revised 29 May 2026; its revision date identifies the document version, not the commencement of every requirement.',
     limitations: ['Do not generalise this LFMC toolkit scope to VCFMs, other licence classes or every MAS regulatory obligation.']
+  },
+  {
+    id: 'IRAS_WHT_TREATY_EFFECT', authority: 'IRAS', topicIds: ['iras-withholding-tax', 'iras-wht-treaty-relief'],
+    officialUrl: IRAS_WHT_SERVICES_URL, title: 'Payments that are subject to withholding tax',
+    fixture: 'iras-mas-wht-services-native.html', fixtureKind: 'IRAS_NATIVE_HTML_PAGE',
+    authorityAndProvisions: ['IRAS guidance on withholding tax for payments to non-residents; the effect depends on the applicable DTA provisions and payment type'],
+    population: 'Singapore payers considering WHT on payments to non-residents where a Singapore DTA may be relevant',
+    rule: 'A DTA can change Singapore WHT treatment for covered income; it does not provide a blanket exemption for every payment to a non-resident. IRAS examples show that the applicable DTA article, income/payment category, recipient residence and permanent-establishment facts can determine whether WHT applies or at what rate. Some DTAs have a separate technical-services article. The retained IRAS page supports examples for non-resident company services and interest, not a treaty-specific conclusion for an unspecified payment.',
+    conditions: ['Identify the recipient’s tax residence for the relevant DTA and the type/source of payment.', 'Apply the provision in the particular DTA that covers that income category.', 'For service income, determine where services were performed and whether the applicable treaty provisions treat the activities as a permanent establishment.'],
+    exceptions: ['A result for one DTA or income category does not establish the result for another treaty or payment.', 'IRAS says some DTAs contain a separate technical-services article; do not assume a general business-profits or no-permanent-establishment rule settles those payments.'],
+    requiredFacts: ['Recipient’s jurisdiction and tax residence.', 'Payment/income category and relevant DTA article.', 'For service payments, service location, any Singapore permanent establishment and relevant treaty article.'],
+    effectiveDateEvidence: 'The retained IRAS page is current general guidance captured on 26 October 2026; its capture date does not establish historical or future treaty applicability.',
+    limitations: ['The source page gives bounded examples and does not provide the complete terms of every Singapore DTA.', 'No treaty-specific rate, exemption or liability conclusion is supported without the relevant treaty, income type, recipient residence and material facts.']
   }
 ]);
 
@@ -231,6 +245,34 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
     || Boolean(subjectFamily && queryFamily && subjectFamily !== queryFamily);
 }
 
+export function hasSpecificIrasWhtTreatyScope(text: string): boolean {
+  const namesSpecificPayment = /\b(?:royalt(?:y|ies)|interest|dividends?|rent(?:al)?|director(?:'s)? fees?|directors? remuneration|service(?:s)?|management|consultancy|professional|technical|commission|guarantee fees?)\b/i.test(text);
+  const treatyName = '(?:DTA|(?:double\\s+)?tax treaty|agreement)';
+  const namesSpecificTreaty = new RegExp(`\\b[A-Z][\\p{L}]+-[A-Z][\\p{L}]+[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
+    new RegExp(`\\b[A-Z][\\p{L}]+[ \\t]+(?:and|&)[ \\t]+[A-Z][\\p{L}]+[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
+    new RegExp(`\\b${treatyName}\\b[^.!?;\\r\\n]{0,60}\\b(?:between|with|for)[ \\t]+(?:the[ \\t]+)?[A-Z][\\p{L}]+(?:[ \\t]+(?:and|&)[ \\t]+[A-Z][\\p{L}]+)?`, 'iu').test(text);
+  const requestsRate = /\bzero[- ]rate\b|(?<!\w)0\s*%|(?<!\w)\d+(?:\.\d+)?\s*%|\b(?:what|which)\b[^.!?;]{0,35}\brate\b|\b(?:reduced|lower(?:ed)?|withholding|treaty)\s+rates?\b|\brate\b[^.!?;]{0,25}\bzero\b/i.test(text);
+  const requestsYesNoOutcome = text.split(/\r?\n/).some(line =>
+    /^\s*(?:does|do|did|can|could|will|would|should|is|are|whether)\b/i.test(line) &&
+    /\b(?:tax treaty|tax treaties|double tax(?:ation)? agreement|dta)\b/i.test(line) &&
+    /\b(?:affect|change|apply|exempt\w*|reduce\w*|lower\w*|eliminat\w*|waiv\w*|cover\w*)\b/i.test(line)
+  );
+  const statesTreatyOutcome = text.split(/[.!?;\r\n]+/).some(clause =>
+    /\b(?:tax treaty|tax treaties|double tax(?:ation)? agreement|dta|article\s*\d+[a-z]?)\b/i.test(clause) &&
+    /\b(?:exempt\w*|reduce\w*|lower\w*|eliminat\w*|waiv\w*|appl(?:y|ies)|subject to|liable to|zero[- ]rate|\d+(?:\.\d+)?\s*%)\b/i.test(clause)
+  );
+  return namesSpecificPayment || namesSpecificTreaty || requestsRate || requestsYesNoOutcome || statesTreatyOutcome;
+}
+
+export function isGeneralIrasWhtTreatyEffectQuestion(text: string): boolean {
+  const hasWht = /\b(?:wht|withholding[ -]tax)\b/i.test(text);
+  const hasTreaty = /\b(?:tax treaties?|double tax(?:ation)? agreements?|dta)\b/i.test(text);
+  const asksForEffect = /\b(?:affect|effect|apply|applicability|reduce|exempt|treatment|rate)\b/i.test(text);
+  return hasWht && hasTreaty && asksForEffect && !hasSpecificIrasWhtTreatyScope(text) &&
+    !/\b(?:all|every|always|automatically)\b[^.!?;]{0,80}\b(?:exempt|free of tax|no withholding)\b/i.test(text) &&
+    !/\b(?:fil\w*|submit\w*|deadline|due date|date of payment)\b/i.test(text);
+}
+
 function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
   const text = queryText(input);
   if (input.authority === 'MAS' && input.topicId === 'mas-lfmc' &&
@@ -262,6 +304,12 @@ function namedRule(input: Pick<IrasMasKnowledgeRequest, 'authority' | 'topicId' 
     return IRAS_MAS_KNOWLEDGE_RULES_20261027B[2];
   }
   const isWhtQuestion = /\b(?:wht|withholding tax)\b/i.test(text);
+  const isGeneralWhtTreatyEffectQuestion = isGeneralIrasWhtTreatyEffectQuestion(text);
+  if (input.authority === 'IRAS' &&
+      ['iras-withholding-tax', 'iras-wht-treaty-relief'].includes(input.topicId) &&
+      isGeneralWhtTreatyEffectQuestion) {
+    return IRAS_MAS_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'IRAS_WHT_TREATY_EFFECT');
+  }
   if (input.authority === 'IRAS' && ['iras-withholding-tax', 'iras-withholding-tax-management-fees'].includes(input.topicId)
       && isWhtQuestion && /\b(?:service|management|consultancy|technical|professional)\b/i.test(text)
       && /\b(?:non[- ]resident|overseas|foreign|Singapore|performed|rendered|where|rate|work)\b/i.test(text)) {
@@ -357,6 +405,12 @@ function passagePatterns(rule: Rule): RegExp[] {
       /If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement \(DTA\)[\s\S]{0,200}?provision of the DTA\./i,
       /if the services are rendered wholly or partly outside Singapore, only the payment attributable to the services rendered in Singapore is subject to withholding tax\./i
     ];
+    case 'IRAS_WHT_TREATY_EFFECT': return [
+      /If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply\./i,
+      /If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement \(DTA\)[\s\S]{0,200}?provision of the DTA\./i,
+      /For DTAs which contain a separate Article on Technical Services[\s\S]{0,800}?Business Profits Article apply instead\./i,
+      /This rate may be reduced if relief is available under an applicable tax treaty\./i
+    ];
     case 'IRAS_WHT_FILING_DATE': return [
       /WHT must be filed even if the payment to a non-resident is exempted under the Avoidance of Double Taxation Agreement \(DTA\) or Approved Royalties Incentive \(ARI\)\./i,
       /As a payer, you must file and pay WHT to IRAS by the 15\s*(?:th)?\s+of the second month from the date of payment to the non-resident\s*\./i,
@@ -392,6 +446,7 @@ function contradicts(rule: Rule, sourceText: string): boolean {
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return /purchase and running expenses of motor cars are not disallowed|motor car expenses? (?:used by you or your employees )?are not disallowed under regulation 27/i.test(text);
     case 'IRAS_ECI_PRACTICAL_WAIVER': return /(?:either|one of) (?:the following )?criteria is (?:met|required)|nil eci alone (?:means|qualifies for) (?:the )?waiver/i.test(text);
     case 'IRAS_WHT_SERVICES': return /services performed in singapore[^.]{0,140}withholding tax is not applicable|only the overseas work[^.]{0,100}subject to withholding tax|services performed in singapore[^.]{0,130}\b(?:10|15|20) percent\b/i.test(text);
+    case 'IRAS_WHT_TREATY_EFFECT': return /\b(?:all|every|any)\s+(?:payment|income|treaty|dta)[^.]{0,100}\b(?:automatically\s+)?(?:exempt|free)\b|\b(?:a|the)\s+(?:treaty|dta)\b[^.]{0,100}\b(?:always|automatically)\s+(?:exempts?|eliminates?)\b/i.test(text);
     case 'IRAS_WHT_FILING_DATE': return /(?:no need|not required) to file wht[^.]{0,120}(?:dta|ari)|wht (?:is )?due by the 15th of the following month/i.test(text);
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return /takes effect from 1 january 2026|no later than 14 calendar days[^.]{0,100}(?:misconduct report|reasonable grounds)|does not apply to former representatives|the CMI must not submit a Misconduct Report/i.test(text);
     case 'MAS_LFMC_TOOLKIT_SCOPE': return /(?:toolkit|checklist) (?:is|remains) exhaustive|covers? all (?:fund.level|non.sfa|outside the sfa) requirements/i.test(text);
@@ -502,6 +557,7 @@ function proofQuery(rule: Rule): string {
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'How does input tax work for a business motor car?';
     case 'IRAS_ECI_PRACTICAL_WAIVER': return 'When does a company qualify for an ECI filing waiver?';
     case 'IRAS_WHT_SERVICES': return 'Does WHT apply to service fees paid to a non-resident company?';
+    case 'IRAS_WHT_TREATY_EFFECT': return 'How do tax treaties affect withholding tax on payments to non-residents?';
     case 'IRAS_WHT_FILING_DATE': return 'What is the WHT filing and payment due date?';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'What does Notice SFA 04-N24 require from 1 January 2027?';
     case 'MAS_LFMC_TOOLKIT_SCOPE': return 'Does the LFMC toolkit cover all requirements including obligations outside the SFA and fund-level duties?';
@@ -514,6 +570,7 @@ function proofSubject(rule: Rule): string {
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'GST input tax on motor cars and vehicle exceptions';
     case 'IRAS_ECI_PRACTICAL_WAIVER': return 'ECI filing waiver eligibility requirements';
     case 'IRAS_WHT_SERVICES': return 'Withholding tax on non-resident service payments';
+    case 'IRAS_WHT_TREATY_EFFECT': return 'Effect of a tax treaty on withholding-tax applicability';
     case 'IRAS_WHT_FILING_DATE': return 'Withholding tax filing and payment deadline';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': return 'SFA 04-N24 reporting of misconduct by representatives from 1 January 2027';
     case 'MAS_LFMC_TOOLKIT_SCOPE': return 'MAS LFMC toolkit scope and fund-level requirements';
@@ -526,6 +583,7 @@ function answerText(rule: Rule, query: string): string {
     case 'IRAS_GST_MOTOR_CAR_INPUT_TAX': return 'IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records.';
     case 'IRAS_ECI_PRACTICAL_WAIVER': return eciAnswerText(query);
     case 'IRAS_WHT_SERVICES': return 'IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates.';
+    case 'IRAS_WHT_TREATY_EFFECT': return 'IRAS guidance shows that a Singapore DTA can change withholding-tax treatment for covered income, but it does not establish a blanket exemption for every payment to a non-resident. The relevant result depends on the recipient’s tax residence, the payment or income category, the applicable treaty article and, for services, where the work is performed and whether the treaty’s permanent-establishment rules are met. IRAS notes that some DTAs contain a separate technical-services article, so a general business-profits rule may not settle that category. The retained source provides examples for non-resident company services and interest; it does not establish a treaty-specific rate or outcome for an unspecified payment. Confirm the recipient, payment type and relevant DTA before concluding.';
     case 'IRAS_WHT_FILING_DATE': return 'IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates.';
     case 'MAS_SFA_MISCONDUCT_REPORTING_2027': {
       const scope = masSfa04N24CommencementScope(query);

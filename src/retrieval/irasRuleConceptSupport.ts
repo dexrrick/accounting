@@ -1,7 +1,12 @@
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
 import { supportIrasCpfExpansionRule } from './irasCpfExpansionRules';
 import { supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
-import { hasIrasMasKnowledgeContradiction, supportIrasMasKnowledgeRule } from './irasMasKnowledge20261027b';
+import {
+  hasSpecificIrasWhtTreatyScope,
+  hasIrasMasKnowledgeContradiction,
+  isGeneralIrasWhtTreatyEffectQuestion,
+  supportIrasMasKnowledgeRule
+} from './irasMasKnowledge20261027b';
 import { supportStatutoryWorkflowRule } from './statutoryWorkflows20261029';
 
 export type GeneralIrasRuleSupport = true | false | undefined;
@@ -17,6 +22,9 @@ export interface GeneralIrasRuleSupportInput {
   population?: string;
   concepts?: readonly Pick<RequestedQuestionConcept, 'id' | 'label' | 'terms'>[];
 }
+
+const WHT_TREATY_EFFECT_CONCEPT_ID = 'semantic_effect_of_a_tax_treaty_on_withholding_tax_applic';
+const WHT_TREATY_EFFECT_TOPIC_IDS = new Set(['iras-withholding-tax', 'iras-wht-treaty-relief']);
 
 type RuleFamily = 'FOREIGN_DIVIDEND' | 'GST_INPUT_TAX' | 'PRIVATE_EXPENSE_DEDUCTIBILITY' |
   'ROYALTY_WITHHOLDING_TAX' | 'COMPANY_TAX_RESIDENCY' | 'CPF_CASH_TOP_UP_RELIEF' | 'GST_MOTOR_CAR_INPUT_TAX';
@@ -617,6 +625,27 @@ export function supportGeneralIrasRuleConcept(input: GeneralIrasRuleSupportInput
       // only an explicit new-family contradiction/scope veto blocks fallback.
       if (support === false && hasIrasMasKnowledgeContradiction(request)) return false;
     }
+  }
+  const treatyEffectConcepts = concepts.filter(concept => concept.id.startsWith(WHT_TREATY_EFFECT_CONCEPT_ID));
+  if (treatyEffectConcepts.length > 0) {
+    const conceptScopeText = [input.subject, ...concepts.flatMap(concept => [concept.label, ...concept.terms])].join('\n');
+    if (treatyEffectConcepts.length !== concepts.length || concepts.length !== 1 ||
+        concepts[0].id !== WHT_TREATY_EFFECT_CONCEPT_ID || input.domainId !== 'IRAS_CORPORATE_TAX' ||
+        input.population !== undefined && input.population !== 'COMPANY' ||
+        !input.topicIds.some(topicId => WHT_TREATY_EFFECT_TOPIC_IDS.has(topicId)) ||
+        hasSpecificIrasWhtTreatyScope(conceptScopeText) ||
+        !isGeneralIrasWhtTreatyEffectQuestion(`How do tax treaties affect withholding tax on payments to non-residents?\n${conceptScopeText}`)) return false;
+    // The concept binding is deliberately tied to the complete retained IRAS
+    // treaty/service/interest passages. The answer stays conditional because
+    // this source does not determine a treaty outcome for an unspecified
+    // recipient or payment.
+    return supportIrasMasKnowledgeRule({
+      authority: 'IRAS',
+      topicId: 'iras-wht-treaty-relief',
+      query: 'How do tax treaties affect withholding tax on payments to non-residents?',
+      subject: input.subject,
+      sourceText: input.sourceText
+    }) === true;
   }
   // Full-family proof is limited to general concepts. A checklist cannot prove
   // a specific blocked-input exception, supply classification, or entity case.
