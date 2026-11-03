@@ -1,0 +1,47 @@
+[
+  {
+    "authority": "IRAS",
+    "identicalAnswer": true,
+    "identicalCitations": true,
+    "beforeCalls": 2,
+    "afterCalls": 1,
+    "beforePromptCharacters": 9705.0,
+    "afterPromptCharacters": 5005.0
+  },
+  {
+    "authority": "CPF",
+    "identicalAnswer": true,
+    "identicalCitations": true,
+    "beforeCalls": 2,
+    "afterCalls": 1,
+    "beforePromptCharacters": 10160.0,
+    "afterPromptCharacters": 5168.0
+  },
+  {
+    "authority": "MOM",
+    "identicalAnswer": true,
+    "identicalCitations": true,
+    "beforeCalls": 2,
+    "afterCalls": 1,
+    "beforePromptCharacters": 9698.0,
+    "afterPromptCharacters": 4992.0
+  },
+  {
+    "authority": "ACRA",
+    "identicalAnswer": true,
+    "identicalCitations": true,
+    "beforeCalls": 2,
+    "afterCalls": 1,
+    "beforePromptCharacters": 10144.0,
+    "afterPromptCharacters": 5158.0
+  },
+  {
+    "authority": "MAS",
+    "identicalAnswer": true,
+    "identicalCitations": true,
+    "beforeCalls": 2,
+    "afterCalls": 1,
+    "beforePromptCharacters": 9770.0,
+    "afterPromptCharacters": 5048.0
+  }
+]

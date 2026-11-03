@@ -83,18 +83,6 @@ function scriptedClaim(text) {
   const call = async (prompt, system) => {
     const packet = JSON.parse(prompt);
     calls.push({ system, packet });
-    if (system.includes('TARGETED_REVISION')) return JSON.stringify({ claims: [] });
-    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) {
-      return JSON.stringify({
-        verdicts: packet.claims.map(item => ({
-          claimId: item.id,
-          verdict: 'SUPPORTED',
-          supportingEvidenceIds: item.supportIds,
-          supportingFactRefs: item.factRefs,
-          reason: 'The cited official passage supports the scoped numeric explanation.'
-        }))
-      });
-    }
     const passage = packet.evidencePassages[0];
     return JSON.stringify({
       claims: [{
@@ -114,9 +102,8 @@ async function accept(record, query, domain, authority, text) {
   const scripted = scriptedClaim(text);
   const result = await tryGenerateGroundedSynthesis(makeInput(record, query, domain, authority), { call: scripted.call });
   assert.ok(result, 'supported numeric paraphrase should be retained: ' + text);
-  assert.equal(result.verification.semanticReview, 'INDEPENDENT_MODEL_ASSESSMENT');
-  assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 1,
-    'the independent semantic review still assesses a numeric paraphrase');
+  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
+  assert.equal(scripted.calls.length, 1, 'a supported numeric paraphrase uses one synthesis generation call');
 }
 
 async function reject(record, query, domain, authority, text, reason) {
@@ -126,8 +113,8 @@ async function reject(record, query, domain, authority, text, reason) {
     /no supportable claims/,
     reason
   );
-  assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 0,
-    'unsupported numeric claims fail the deterministic source-provenance check before positive review');
+  assert.equal(scripted.calls.length, 1,
+    'unsupported numeric claims fail the deterministic source-provenance check after one generation');
 }
 
 await accept(

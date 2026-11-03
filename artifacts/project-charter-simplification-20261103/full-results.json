@@ -1,0 +1,10 @@
+{
+  "name": "full",
+  "exitCode": 0,
+  "startedUTC": "2026-11-03T15:21:13.4982645Z",
+  "elapsedSeconds": 350.64,
+  "arguments": [
+    "scripts/run_all_tests.mjs",
+    "--tier=full"
+  ]
+}

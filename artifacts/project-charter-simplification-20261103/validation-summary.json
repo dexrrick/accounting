@@ -1,0 +1,101 @@
+{
+  "baseCommit": "6cf7c2d68b8396dd8a74c34de6481ca7c1109017",
+  "branch": "codex/project-charter-simplification-20261103",
+  "checks": [
+    {
+      "name": "root-lint",
+      "exitCode": 1,
+      "startedUTC": "2026-11-03T15:07:07.6964896Z",
+      "elapsedSeconds": 0.57,
+      "arguments": [
+        "node_modules/oxlint/bin/oxlint"
+      ]
+    },
+    {
+      "name": "maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-11-03T15:07:08.3152971Z",
+      "elapsedSeconds": 0.14,
+      "arguments": [
+        "node_modules/oxlint/bin/oxlint",
+        "src",
+        "scripts",
+        "tests",
+        "vite.config.ts",
+        "tailwind.config.js",
+        "postcss.config.js"
+      ]
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-11-03T15:07:08.4619092Z",
+      "elapsedSeconds": 5.2,
+      "arguments": [
+        "node_modules/typescript/bin/tsc",
+        "-b"
+      ]
+    },
+    {
+      "name": "vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-03T15:07:13.66523Z",
+      "elapsedSeconds": 3.36,
+      "arguments": [
+        "node_modules/vite/bin/vite.js",
+        "build"
+      ]
+    },
+    {
+      "name": "worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-03T15:07:17.0227069Z",
+      "elapsedSeconds": 0.83,
+      "arguments": [
+        "scripts/build_cloudflare_worker.mjs"
+      ]
+    }
+  ],
+  "finalTypecheckExit": 0,
+  "finalChangedLintExit": 0,
+  "smoke": {
+    "exitCode": 0,
+    "passed": 166,
+    "elapsedSeconds": 308.44
+  },
+  "full": {
+    "exitCode": 0,
+    "passed": 189,
+    "elapsedSeconds": 350.56
+  },
+  "rootLint": {
+    "exitCode": 1,
+    "baselineErrorCount": 34,
+    "finalErrorCount": 34,
+    "unchangedErrors": true,
+    "file": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "status": "Pre-existing untracked artifact errors; maintained-code lint passed"
+  },
+  "review": "Independent read-only review: no material code findings; telemetry documentation corrected",
+  "productionLineCounts": {
+    "added": 23,
+    "removed": 184,
+    "net": -161
+  },
+  "notPerformed": [
+    "Live-model quality evaluation",
+    "Live-source integration",
+    "Browser acceptance",
+    "CI dispatch",
+    "Production verification",
+    "Merge",
+    "Deployment",
+    "Source activation"
+  ],
+  "localOnly": "Verbose validation logs remain untracked; concise records, comparison captures and reproduction scripts are published",
+  "reserve": {
+    "remainingPercentBeforePublication": 9,
+    "resetSingapore": "04/11/2026 02:39:48",
+    "nextSteps": "Commit the explicit task files, push the separate branch, verify remote SHA, deliver review handoff. No further implementation or validation pending."
+  }
+}

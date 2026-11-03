@@ -44,7 +44,7 @@ for (const [index, example] of cases.entries()) {
     verifiedClaims: [{recordId: record.id, quote: record.sourceText, text: record.sourceText,
       supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: record.canonicalSourceUrl}]
   };
-  let reviewCount = 0;
+  let generationCount = 0;
   const result = await tryGenerateGroundedSynthesis({
     query: example.query, standard: 'SFRS_I', history: [],
     provider: {activeProvider:'openai',openai:{apiKey:'mock-practical-acceptance',model:'mock'},gemini:{},azure:{}},
@@ -58,13 +58,7 @@ for (const [index, example] of cases.entries()) {
       evidenceStatus:'VERIFIED',applicationStatus:'VERIFIED',status:'VERIFIED',gaps:[]}
   }, {call: async (prompt, system) => {
     const packet = JSON.parse(prompt);
-    if (system.includes('TARGETED_REVISION')) assert.fail('a supported practical answer needs no repair');
-    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) {
-      reviewCount += 1;
-      return JSON.stringify({verdicts:packet.claims.map(claim => ({claimId:claim.id,verdict:'SUPPORTED',
-        supportingEvidenceIds:claim.supportIds,supportingFactRefs:claim.factRefs,
-        reason:'The practical application follows the supplied issue facts and source.'}))});
-    }
+    generationCount += 1;
     assert.match(system, /State verified conclusions confidently/);
     assert.match(system, /practical next steps/);
     assert.equal(packet.requestedIssues[0].id, issueId);
@@ -73,7 +67,8 @@ for (const [index, example] of cases.entries()) {
   }});
   assert.ok(result, `${example.authority} yields an answer`);
   assert.ok(result.messageText.includes(example.answer), `${example.authority} retains a complete practical application`);
-  assert.equal(reviewCount, 1, 'every practical answer receives independent model assessment');
+  assert.equal(generationCount, 1, 'each practical answer uses one synthesis generation call');
+  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
   assert.equal(result.verification.withheldClaimIds.length, 0);
   assert.doesNotMatch(result.messageText, /remains unresolved|could not be supported|still needed/i,
     'a fully supported answer avoids unnecessary generic warnings');

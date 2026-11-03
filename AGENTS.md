@@ -1,5 +1,22 @@
 # AGENTS.md
 
+## Permanent project charter
+
+Read [docs/PROJECT_CHARTER.md](docs/PROJECT_CHARTER.md) before planning changes. It governs the architecture: AI understands questions and provides advice; Singapore official authorities supply statutory evidence; a separate accounting engine handles double-entry calculations. These objectives may change only with explicit user approval.
+
+For every proposed change:
+
+1. Identify which primary objective it supports.
+2. Check whether existing functionality can solve the problem.
+3. Prefer improving or simplifying existing code over new processing layers.
+4. Keep statutory advisory and double-entry responsibilities separate.
+5. Preserve official-source authenticity, provenance, applicability and citation integrity.
+6. Evaluate answer quality, complexity, latency and API usage.
+7. Avoid unrelated features, speculative safeguards and unnecessary refactoring.
+8. Clearly justify each additional mandatory processing stage; ordinary advisory answers must not require separate AI review and repair calls.
+9. Keep AI responsible for natural-language understanding. Deterministic routing needs a clear, necessary benefit; do not grow regex/template logic to duplicate AI reasoning.
+10. Explicitly flag charter conflicts before implementation. Do not redefine the three objectives silently or impose rigid architecture tests that prevent legitimate improvements.
+
 ## Codex usage reserve
 
 - For substantial work in this project, automatically read the available Codex usage-limit tool at the start or resumption, before delegating substantial work, before broad validation or publication, and at least every 15 minutes during sustained work. The user should not need to request these checks.
@@ -12,7 +29,7 @@
 
 This repository is an IFRS and Singapore SFRS(I) accounting assistant.
 
-Its primary responsibility is to convert natural-language accounting scenarios into:
+Its three primary functions are AI-driven query understanding and advisory, evidence from official Singapore authorities, and independent double-entry accounting. Together these provide:
 - technically correct accounting treatment;
 - balanced double-entry journal entries;
 - appropriate Singapore statutory and accounting-standard references;
@@ -334,10 +351,10 @@ Prefer deterministic code for:
 - present-value calculations;
 - FX arithmetic;
 - GST calculations;
-- classification rules that can be expressed reliably;
-- validation.
+- necessary routing with a demonstrated benefit;
+- essential source, response and accounting validation.
 
-Use AI/model calls primarily where natural-language interpretation or explanation genuinely benefits from them.
+Use AI as the primary mechanism for natural-language understanding, contextual reasoning and advisory explanation. Do not continually extend regex classifications or special cases to duplicate that reasoning. Reuse official retrieval for statutory grounding and keep journal calculations in the existing engine.
 
 Do not rely on the model to perform calculations already implemented by the accounting engine.
 

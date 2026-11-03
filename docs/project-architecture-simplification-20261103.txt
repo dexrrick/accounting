@@ -1,0 +1,104 @@
+Architecture simplification — 03/11/2026
+
+Mission
+AI understands questions. Singapore official authorities supply statutory evidence.
+The independent accounting engine handles double-entry calculations.
+The permanent governing document is docs/PROJECT_CHARTER.md.
+
+Scope and baseline
+Repository: https://github.com/dexrrick/accounting
+Baseline: 6cf7c2d68b8396dd8a74c34de6481ca7c1109017
+Working branch: codex/project-charter-simplification-20261103
+This change simplifies the existing grounded synthesis path. It does not redesign
+the accounting engine, expand statutory coverage, change providers or add dependencies.
+
+Before and after
+Conceptual advisory already used one generation call; that path remains intact.
+Grounded statutory advisory previously used:
+  AI semantic understanding -> existing issue reconciliation and official retrieval
+  -> governed evidence result -> generation -> deterministic packet checks
+  -> model review -> [repair -> packet checks -> model re-review] -> display.
+It now uses:
+  AI semantic understanding -> existing issue reconciliation and official retrieval
+  -> governed evidence result -> generation -> deterministic packet checks -> display.
+
+Grounded synthesis: two model calls for a valid answer, up to four with repair,
+become one generation call. The existing semantic understanding call before source
+retrieval remains: it identifies issues, authority, population and operation so the
+retrieval infrastructure can select evidence before the answer is generated. An
+ordinary source-grounded request therefore still normally has two total logical
+model calls: understanding and generation. Synthesis counters measure logical calls
+and attempts; they do not establish a complete count of network attempts. This is
+not a claim of one total API request for every path.
+
+Independent double entry remains:
+  transaction interpretation -> existing accounting engine -> journal/calculation
+  validation -> accounting result. Advisory synthesis cannot create journal state.
+Journal validation in synthesis only checks existing groups offered as engine
+evidence; a standalone statutory question with no groups does not invoke it.
+
+Removed, retained and why
+- Removed the mandatory second model assessment, repair and re-review, associated
+  prompts, review contract validation, verdict maps, repair bookkeeping and obsolete
+  response fields. They duplicated evidence reasoning and made ordinary answers
+  depend on extra provider calls. Invalid generated claims are now withheld directly.
+  If no usable claim remains, the existing governed response is retained.
+- Retained AI-first conceptual routing and semantic issue understanding. Neither
+  was replaced with new regex routing or a new orchestration framework.
+- Retained official-source retrieval, admission and provenance. Synthesis consumes
+  upstream-admitted passages and canonical URLs, never model-generated citations.
+  It does not add a question-template allowlist. Existing discovery can still supply
+  admitted evidence outside mapped templates; source authentication is unchanged.
+- Retained complete admitted passages, source dates, applicability, issue ownership,
+  populations, multi-authority evidence and scoped gaps. These prevent borrowing
+  one issue's evidence for another and preserve the context needed by the model.
+- Retained numerical/provision checks. A matching digit alone must not transfer a
+  tax rate to another tax, change deadline anchors/units or create a calculation.
+  This is a correctness boundary, not an exact sentence-copy requirement. Existing
+  tests include supported paraphrases and incompatible numbers, fields and dates.
+- Retained conditional-application checks for unresolved material facts. Their
+  purpose is to withhold categorical outcomes unsupported by supplied case facts.
+  These heuristics still have wording limitations; they are not a general semantic
+  verifier. No new conditional patterns were added.
+- Retained journal, accounting-versus-tax, safe-rendering, output-size, context-size
+  and provider-failure boundaries. Gemini, OpenAI and Azure OpenAI share the same
+  generation transport. No model answer may override deterministic journal state.
+- Verification metadata now says DETERMINISTIC_PACKET_CHECKS and ADMITTED rather
+  than claiming an independent semantic assessment or semantic support verdict.
+
+Production-code change: 23 lines added and 184 removed across the two advisory
+service files, a net reduction of 161 lines. Documentation and adapted regression
+tests are counted separately; there is no arbitrary code-size acceptance target.
+
+Identical-question measurements (scripted transport only)
+Authority   Synthesis calls before/after   Total prompt characters before/after
+IRAS        2 / 1                          9,705 / 5,005
+CPF         2 / 1                         10,160 / 5,168
+MOM         2 / 1                          9,698 / 4,992
+ACRA        2 / 1                         10,144 / 5,158
+MAS         2 / 1                          9,770 / 5,048
+
+All five displayed answers and citation lists are identical in these captures.
+Prompt characters include the system and user text across synthesis calls. They
+exclude upstream understanding/retrieval; they are not billed tokens. Reduction is
+48.3% to 49.2%. The harness records local elapsed time, which is dominated by local
+execution and does not measure API/network latency. One or three sequential model
+calls are eliminated depending on the old repair path; no live speed claim is made.
+
+Quality and limits
+The model remains responsible for interpreting and faithfully explaining evidence.
+Deterministic packet checks establish boundaries and references, not arbitrary
+semantic entailment. Removing model review removes its opportunity to detect a
+qualitative contradiction or repair an otherwise unusable answer. Retained checks
+do not prove that every paraphrase is correct. Real-model accuracy, completeness,
+usefulness, live latency and provider cost have not been measured in this task.
+Scripted provider tests and unchanged answers do not establish improved real-model
+quality. Source provenance, offline regressions, CI and production acceptance are
+separate claims. No merge, deployment or source activation is part of this change.
+
+Evidence
+artifacts/project-charter-simplification-20261103/compare-synthesis.mjs
+artifacts/project-charter-simplification-20261103/before.json
+artifacts/project-charter-simplification-20261103/after.json
+artifacts/project-charter-simplification-20261103/validate.ps1
+The review handoff records final verification, code counts and exact commits.

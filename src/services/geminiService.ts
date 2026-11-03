@@ -72,7 +72,7 @@ export interface GeminiResponse {
   claimVerification?: { accepted: unknown[]; rejected: unknown[] };
   calculation?: VerifiedStandardGstCalculation;
   applicationConclusions?: IrasApplicationConclusion[];
-  /** Model assessment of generated prose, separate from deterministic source verification. */
+  /** Source and response checks, separate from journal validation and model reasoning. */
   synthesisVerification?: GroundedSynthesisVerification;
   /** Routing/retrieval trace only; this does not itself establish answer grounding. */
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
@@ -538,8 +538,6 @@ export async function processAccountingQuery(
       displayFullAnswer: true,
       answerPath: 'AI_GROUNDED_SYNTHESIS',
       synthesisVerification: synthesis.verification,
-      ...(synthesis.verification.revisionFailureStatus
-        ? { advisoryFailureStatus: synthesis.verification.revisionFailureStatus } : {}),
       scenarioState: {
         ...response.scenarioState,
         officialAnswerLinks: synthesis.officialAnswerLinks

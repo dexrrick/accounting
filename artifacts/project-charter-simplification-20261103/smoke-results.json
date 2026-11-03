@@ -1,0 +1,21 @@
+[
+  {
+    "name": "preflight",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:15:39.4529478Z",
+    "elapsedSeconds": 0.1,
+    "arguments": [
+      "scripts/preflight.mjs"
+    ]
+  },
+  {
+    "name": "smoke",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:15:39.5753060Z",
+    "elapsedSeconds": 308.5,
+    "arguments": [
+      "scripts/run_all_tests.mjs",
+      "--tier=smoke"
+    ]
+  }
+]

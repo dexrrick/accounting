@@ -26,7 +26,7 @@ const originalFetch = globalThis.fetch;
 const providerStages = [];
 let draftPacket;
 let lastClaims = [];
-let reviewFailure = false;
+let generationFailure = false;
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
 
@@ -36,15 +36,9 @@ globalThis.fetch = async (input, init) => {
     const request = JSON.parse(init.body);
     const system = request.messages[0].content;
     const user = request.messages.at(-1).content;
-    if (system.startsWith('EVIDENCE_GROUNDED_REVIEW')) {
-      providerStages.push('review');
-      if (reviewFailure) return modelReply({ invalid: 'This reviewer response has no verdicts.' });
-      const review = JSON.parse(user);
-      return modelReply({ verdicts: review.claims.map(claim => ({ claimId: claim.id, verdict: 'SUPPORTED',
-        supportingEvidenceIds: claim.supportIds, supportingFactRefs: claim.factRefs, reason: 'The conditional statement preserves the supplied rule and unresolved facts.' })) });
-    }
     if (system.startsWith('EVIDENCE_GROUNDED_SYNTHESIS')) {
       providerStages.push('synthesis');
+      if (generationFailure) return new Response('{"claims":[', { headers: { 'content-type': 'application/json' } });
       const requestPacket = JSON.parse(user);
       draftPacket = requestPacket.packet || requestPacket;
       const passage = draftPacket.evidencePassages.find(item => item.sourceRecordId.startsWith('LIVE_TOPIC_') && /input tax|GST/i.test(item.completeAdmittedPassage));
@@ -86,8 +80,10 @@ try {
   assert.ok(result.scenarioState.officialAnswerLinks.some(link => link.url.includes('iras.gov.sg')), 'citations use admitted IRAS URLs');
   assert.deepEqual(result.scenarioState.directGroups, [], 'AI synthesis creates no journal');
   assert.ok(draftPacket.missingFactsAndEvidenceGaps.length > 0, 'unresolved case facts reach synthesis instead of being silently filled');
-  assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1);
-  assert.equal(providerStages.filter(stage => stage === 'review').length, 1);
+  assert.equal(providerStages.filter(stage => stage === 'existing-pipeline').length, 1,
+    'the full query receives one semantic-understanding call before retrieval and synthesis');
+  assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1,
+    'the full query receives one synthesis-generation call');
 
   const mixedQuery = 'On 03/11/2026, purchased office equipment for SGD 1,250 and paid from the business bank. Can my client claim GST input tax on this office expense, and what is its accounting treatment?';
   const conflictingHistory = [
@@ -113,12 +109,12 @@ try {
     'the prior accounting scenario is not carried into the new mixed query result');
 
   providerStages.length = 0;
-  reviewFailure = true;
+  generationFailure = true;
   const fallback = await processAccountingQuery(query, null, 'SFRS_I', provider, 'unused', []);
-  assert.notEqual(fallback.answerPath, 'AI_GROUNDED_SYNTHESIS', 'malformed semantic review preserves the governed response');
+  assert.notEqual(fallback.answerPath, 'AI_GROUNDED_SYNTHESIS', 'malformed generation preserves the governed response');
   assert.ok(fallback.messageText.length > 0);
   assert.equal(fallback.advisoryFailureStatus, 'INVALID_RESPONSE', 'the synthesis failure retains a safe, specific cause');
-  assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1, 'a review failure does not start another generation');
+  assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1, 'a malformed response does not start a second generation');
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);

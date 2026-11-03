@@ -1,0 +1,31 @@
+[
+  {
+    "name": "baseline-preflight",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:05:22.9125740Z",
+    "elapsedSeconds": 0.1,
+    "arguments": [
+      "scripts/preflight.mjs"
+    ]
+  },
+  {
+    "name": "baseline-root-lint",
+    "exitCode": 1,
+    "startedUTC": "2026-11-03T15:05:23.0477276Z",
+    "elapsedSeconds": 0.72,
+    "arguments": [
+      "node_modules/oxlint/bin/oxlint"
+    ]
+  },
+  {
+    "name": "advisory-preservation",
+    "exitCode": 0,
+    "startedUTC": "2026-11-03T15:05:23.7806583Z",
+    "elapsedSeconds": 2.27,
+    "arguments": [
+      "--import",
+      "tsx",
+      "tests/regression/test_ai_first_advisory_phase1.mjs"
+    ]
+  }
+]
