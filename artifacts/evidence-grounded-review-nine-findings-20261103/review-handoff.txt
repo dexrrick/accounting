@@ -1,0 +1,62 @@
+# Evidence-grounded synthesis safeguards — review handoff, 03/11/2026
+
+## Goal and status
+
+Address the nine external review findings about statutory applicability, journal instructions, numerical provenance, historical retries, evidence integrity, completeness, targeted revision and conversation boundaries. The requested implementation and focused negative regressions are complete. Independent read-only review identified three further bypasses; those and the supervisor's adjacent posting/completeness findings were fixed and re-reviewed without remaining findings in the bounded review.
+
+Local checks passed subject to the root-lint limitation below. Real-model answer quality, browser acceptance, CI and production acceptance remain unverified. No PR creation, merge, deployment or source activation is included in this publication.
+
+## Exact review target
+
+- Repository: https://github.com/dexrrick/accounting
+- Branch: codex/ai-first-advisory-phase1-20261103
+- Exact implementation head: 9ae13400860d069511c032ac5062b0c52ae9dc34
+- Base: 68085aa2aba2c5db4d4c8f210d78dd1f8b3d122e
+- Commit: https://github.com/dexrrick/accounting/commit/9ae13400860d069511c032ac5062b0c52ae9dc34
+- Diff: https://github.com/dexrrick/accounting/compare/68085aa2aba2c5db4d4c8f210d78dd1f8b3d122e...9ae13400860d069511c032ac5062b0c52ae9dc34
+- PR: none created for this request. Existing-PR lookup failed with a connector internal error, so no existing PR URL was verified.
+
+A subsequent documentation-only commit adds this handoff. The accompanying chat reports the full final publication head and remote verification; review the implementation SHA above for the code changes.
+
+## Changes and finding coverage
+
+1. Unresolved applicability and missing facts constrain APPLICATION claims deterministically. Conditional wording is checked by clause, so an earlier modal cannot authorize a later categorical outcome. A positive model-review verdict cannot bypass this check.
+2. Posting-intent checks cover Dr/Cr pairs, account-line forms, posting verbs, arbitrary account names, and standalone debit/credit imperatives. Ordinary credit-note/balance narration has positive controls. Existing engine-backed non-posting accounting narration remains supported.
+3. Numerical claims require complete normalized source wording or narrowly matched affirmative deterministic GST field narration, retaining field identity, currency, percentage and sign. User numbers support only explicitly attributed copied factual limitations. Provision matching retains alphabetic subclauses. Tests reject reused question numbers, adjacent unrelated rates, swapped calculation fields, negation, sign/date relabeling and invented subclauses.
+4. Failed answers can be retried only while their original request is the latest user turn. Both the App handler and ChatPanel enforce this. A regression invokes actual App handlers for A failing, B succeeding and retrying A; B's state/messages remain unchanged and no third service call occurs.
+5. Evidence-gap IDs support LIMITATION claims only. SUPPORTED rule/application verdicts must confirm an admitted passage matching the claim's issue.
+6. Trusted journal evidence requires explicit DETERMINISTIC authority, non-hypothetical status, positive finite totals and existing validateJournalGroups integrity checks. AI_PROPOSED, CONDITIONAL and unmarked groups are excluded.
+7. Planned, contextual and workstream issues are retained. Each requested issue needs an appropriate supported claim or an explicit per-issue limitation. An accounting-domain issue can be satisfied by its supported ACCOUNTING claim; a generic rule alone does not satisfy a case-application request.
+8. Targeted repair reviews only repaired claims. Initially supported text and its original verdict are preserved when the repaired set is combined.
+9. A new accounting scenario prunes history before grounding and informs synthesis through the same boundary callback. A production-entry mixed accounting/IRAS regression excludes earlier conflicting facts.
+
+Main files: src/services/evidenceGroundedSynthesis.ts; src/services/geminiService.ts; src/services/conversationBoundary.ts; src/App.tsx; src/components/ChatPanel.tsx. Tests extend the three existing suites listed below. No accounting rules, statutory rates, source registries, dependencies or deployment settings changed.
+
+## Verification actually performed
+
+- Canonical Node 22.23.3 preflight passed. Windows system-profile access was required to start Node/tsx; no runtime profile shim was retained.
+- Focused suites passed on final code: tests/regression/test_evidence_grounded_synthesis.mjs, test_evidence_grounded_synthesis_pipeline.mjs and test_ai_first_advisory_phase1.mjs, run through the local tsx CLI. They use offline fixtures and mocked provider replies, including permissive SUPPORTED verdicts for negative cases.
+- Initial smoke: 164/164 suites passed in 293.98 seconds, before final review corrections.
+- Full regression: 187/187 suites passed in 309.19 seconds. This run began before the last small posting-guard correction; all three affected suites were subsequently rechecked on final code and passed. A second entire full run was not performed.
+- Final TypeScript, Vite and Cloudflare Worker builds passed after the final guard adjustment. Maintained-code lint passed with unrelated existing warnings; diff checks passed.
+- Root lint failed on 34 pre-existing errors in the local untracked generated artifact artifacts/fresh-acceptance-2026-10-24/prepare.mjs. It was left unchanged and is not published. Its individual error listing is included.
+- All eight code/test files matched their recorded validation hashes immediately before staging. Git may normalize Windows line endings; the hashes describe the original working-file bytes.
+- No before-fix/base-commit red replay was collected. No browser check, live/paid model evaluation, frozen-corpus answer-quality grading, integration-service test, CI dispatch or production verification was performed. No CI pass is claimed. The current CI push filter excludes this branch; existing-PR lookup was unavailable.
+
+## Remaining concerns and review focus
+
+Numeric paraphrase admission is intentionally conservative and may withhold a valid paraphrase until exact supported wording is used. The posting and conditional-language guards should receive adversarial review across wording, punctuation and account names. Semantic support is still assessed by a separate call to the configured provider, not a formal proof. Verify issue/fact ownership, dated-source scope, complete exceptions, and that stronger safeguards preserve useful supported conditional answers and deterministic journals/calculations.
+
+No implementation remains uncommitted or unpushed after successful publication. Unrelated pre-existing untracked directories remain local. Raw validation logs and the original validation.json are also local and unavailable through GitHub; that JSON is a pre-publication snapshot whose committed/pushed=false fields are historical. The published summary and individual full-suite outcomes provide the portable evidence.
+
+## Evidence
+
+- Validation and limitations: https://github.com/dexrrick/accounting/blob/9ae13400860d069511c032ac5062b0c52ae9dc34/artifacts/evidence-grounded-review-nine-findings-20261103/validation-summary.json
+- Individual full-suite results: https://github.com/dexrrick/accounting/blob/9ae13400860d069511c032ac5062b0c52ae9dc34/artifacts/evidence-grounded-review-nine-findings-20261103/full-regression-summary.txt
+- Root-lint errors: https://github.com/dexrrick/accounting/blob/9ae13400860d069511c032ac5062b0c52ae9dc34/artifacts/evidence-grounded-review-nine-findings-20261103/root-lint-errors.txt
+- CI trigger configuration: https://github.com/dexrrick/accounting/blob/9ae13400860d069511c032ac5062b0c52ae9dc34/.github/workflows/ci.yml
+- Local raw evidence only: D:\Accounting\artifacts\evidence-grounded-review-nine-findings-20261103\{final-focused.log,final-build.log,final-maintained-lint.log,smoke.log,full.log,root-lint.log,validation.json}.
+
+## Ready-to-copy review prompt
+
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/ai-first-advisory-phase1-20261103, implementation commit 9ae13400860d069511c032ac5062b0c52ae9dc34 against base 68085aa2aba2c5db4d4c8f210d78dd1f8b3d122e, using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
