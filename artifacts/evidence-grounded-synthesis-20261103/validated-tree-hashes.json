@@ -1,0 +1,46 @@
+[
+  {
+    "Path": "D:\\Accounting\\src\\App.tsx",
+    "Hash": "A57DCD4162CE0E0B5F4364864F3DDDB17928B14FE001996DBF3D2E0A443D4091"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\components\\ChatPanel.tsx",
+    "Hash": "4C4D3592519E14837B91DAF434F55118539B35016CFB315E7E66A71BDA0E34A7"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\services\\aiFirstAdvisory.ts",
+    "Hash": "98F24B7524EC3F9225DB42F9E1056B4E41D5B658ED996C59478BD5560FE734F1"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\services\\conversationBoundary.ts",
+    "Hash": "FA085B12D0542120B99258B5E9E6EBB5BF68CAAFA38A7DECCE25BA1118ECAB1F"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\services\\geminiService.ts",
+    "Hash": "2DEF1B445427D83A5D65B42FA92F01763E3D772799538DCB82C6EE504A77C1DB"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\services\\evidenceGroundedSynthesis.ts",
+    "Hash": "F6A295B58836A49C3AD7FD2E3030119E0E398729246B2F388960870722142B9F"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\types\\accounting.ts",
+    "Hash": "F40AB3B548C812680AF78B6F34F74AE2CEDB686A30FD15F178DCCB4BC568AF7F"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_ai_first_advisory_phase1.mjs",
+    "Hash": "E39FAE65B7D5376005DAE995A1F03B37AE3C61A1CDC99E3D6AAEDC9E00352937"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_evidence_grounded_synthesis.mjs",
+    "Hash": "2AE0AD0F08E919C972B9200B3254795F0E1B4476F0806586CFC40B01A8D046F1"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_evidence_grounded_synthesis_pipeline.mjs",
+    "Hash": "5E3FCD5A8EE040E7403A6941361333A71B4B9BB4FFB2B1A335ABDB9D7968CA8A"
+  },
+  {
+    "Path": "D:\\Accounting\\scripts\\run_all_tests.mjs",
+    "Hash": "A878CFA4F56BB39068675E388FBE9C2586A00D181F3BCF0B57FC4D247B42A561"
+  }
+]

@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import {
   buildAdvisoryConversation,
+  classifyAdvisoryFailure,
   generateAiFirstAdvisory,
   isAiFirstAdvisoryEligible,
   isHighRiskAdvisoryClaim
@@ -9,6 +12,8 @@ import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetriever.ts';
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
+import { ChatPanel } from '../../src/components/ChatPanel.tsx';
+import { buildRetryConversationHistory } from '../../src/services/conversationBoundary.ts';
 
 const cases = [
   {
@@ -48,6 +53,29 @@ for (const question of [
   'Does the company qualify for this tax relief?'
 ]) assert.equal(isAiFirstAdvisoryEligible(question, { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, `case-specific statutory outcome stays evidence-governed: ${question}`);
 assert.equal(isAiFirstAdvisoryEligible('Explain how GST input tax works.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'general input tax concepts remain advisory-eligible');
+for (const question of [
+  'What documents are required to claim GST input tax?',
+  'What paperwork do businesses need when claiming GST?',
+  'What evidence does IRAS ask for to recover input tax?',
+  'Which records must a business retain to claim GST input tax?',
+  'What documents are required by ACRA?',
+  'Which records must an employer keep under the Employment Act?',
+  'Which reports must a fund manager submit to MAS?',
+  'What documents are required by CPF Board?',
+  'Explain whether a client qualifies for GST recovery.',
+  'Explain whether ABC Pte Ltd qualifies for GST recovery.',
+  'Explain whether John qualifies for tax relief.',
+  'What is the GST treatment of a client expense?',
+  'Can our customer claim this tax relief?'
+]) assert.equal(isAiFirstAdvisoryEligible(question, { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, `statutory requirements and third-party applications remain evidence-governed: ${question}`);
+assert.equal(isAiFirstAdvisoryEligible('What documents should I attach to this general explanation?', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'non-statutory document wording does not block a conceptual question');
+assert.equal(isAiFirstAdvisoryEligible('Explain what ACRA does.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'authority concepts remain eligible absent a request for a specific requirement');
+assert.equal(isAiFirstAdvisoryEligible('Explain the difference between input tax and output tax to a client.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'mentioning an audience does not make a conceptual explanation case-specific');
+assert.equal(isAiFirstAdvisoryEligible('Explain the difference between input tax and output tax for a client.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'a client audience phrase does not itself request case-specific application');
+assert.equal(classifyAdvisoryFailure(Object.assign(new Error('This operation was aborted'), { name: 'AbortError' })), 'TIMEOUT', 'native AbortError is reported as a timeout');
+assert.equal(classifyAdvisoryFailure(new Error('Hosted Gemini access token is invalid. Check Settings.')), 'AUTH_OR_PERMISSION', 'invalid hosted credentials are categorized as an authentication failure');
+assert.equal(classifyAdvisoryFailure(new Error('The complete question and relevant context exceed the advisory context budget.')), 'CONTEXT_LIMIT');
+assert.equal(classifyAdvisoryFailure(new Error('Unexpected internal issue.')), 'OTHER');
 assert.equal(isAiFirstAdvisoryEligible('When do we need to file IR21?', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, 'material filing deadlines remain on the evidence-governed route');
 assert.equal(isAiFirstAdvisoryEligible('Employee received a bonus in April for June payroll. When should it be reported?', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, 'case-specific statutory reporting timing remains evidence-governed');
 assert.equal(isAiFirstAdvisoryEligible('What individual tax relief categories are available?', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, 'requests for statutory categories retain the authoritative list workflow');
@@ -57,7 +85,9 @@ for (const safe of [
   'A business may have different input and output tax positions.',
   'Recovery depends on the purchase purpose and applicable restrictions.',
   'The contribution is recorded as an expense in the relevant period.',
-  'A credit can reduce the amount a customer owes.'
+  'A credit can reduce the amount a customer owes.',
+  'Eligibility for input tax recovery depends on the purchase purpose and applicable restrictions.',
+  'The conditions for tax eligibility can vary with the nature of a supply.'
 ]) assert.equal(isHighRiskAdvisoryClaim(safe), false, `qualitative explanation should remain: ${safe}`);
 for (const risky of [
   'The applicable rate is 9 percent.',
@@ -69,6 +99,10 @@ for (const risky of [
   'You can recover GST on your private motor car.',
   'Our business may be able to claim this input tax.'
 ]) assert.equal(isHighRiskAdvisoryClaim(risky), true, `high-risk claim should be withheld: ${risky}`);
+for (const risky of [
+  'A valid tax invoice is mandatory to support an input tax claim.',
+  'ABC Pte Ltd qualifies for GST recovery.'
+]) assert.equal(isHighRiskAdvisoryClaim(risky), true, `specific legal applicability claims should be withheld: ${risky}`);
 for (const risky of ['The applicable rate is ９ percent.', 'The filing deadline is ３１ March ２０２６.']) {
   assert.equal(isHighRiskAdvisoryClaim(risky), true, `compatibility and Unicode digits should not bypass risk checks: ${risky}`);
 }
@@ -214,15 +248,98 @@ await assert.rejects(() => generateAiFirstAdvisory(cases[0].question, null, 'SFR
   call: async () => { throw new Error('provider unavailable'); }
 }), /provider unavailable/);
 
-const failedCalls = [];
-globalThis.fetch = async (input) => {
-  failedCalls.push(String(input));
-  const url = String(input);
-  if (url.includes('generativelanguage.googleapis.com')) return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{malformed JSON' }] } }] }), { status: 200 });
-  throw new Error('Unexpected second provider call after advisory failure.');
-};
-const offlineFallback = await processAccountingQuery(cases[0].question, null, 'SFRS_I', adapters[0].settings, 'unused', []);
-assert.equal(failedCalls.length, 1, 'a failed advisory request does not trigger additional provider calls in legacy processing');
-assert.ok(offlineFallback.messageText, 'the existing offline response remains available after provider failure');
+const offlineQuestion = 'Explain how settlement works.';
+const preRequestScenario = { ...activeScenario, rawQuery: offlineQuestion, transactionTitle: 'Supplier payable before retry' };
+const retryUserMessage = { id: 'retry-user', sender: 'user', timestamp: '', text: offlineQuestion };
+const failedAnswerText = 'Earlier offline answer from failed request must not enter the retry context.';
+const laterTransactionText = 'Later unrelated transaction: the company bought a new machine for SGD 250,000.';
+const completeRetryHistory = [
+  { id: 'retry-prior-user', sender: 'user', timestamp: '', text: 'What was the prior supplier invoice context?' },
+  { id: 'retry-prior-answer', sender: 'assistant', timestamp: '', text: 'Short preview', fullText: 'The prior supplier invoice context was an accrual payable that remains unpaid.' },
+  retryUserMessage,
+  { id: 'retry-failed-answer', sender: 'assistant', timestamp: '', text: failedAnswerText },
+  { id: 'later-user', sender: 'user', timestamp: '', text: laterTransactionText }
+];
+const retryHistory = buildRetryConversationHistory(completeRetryHistory, retryUserMessage.id);
+assert.deepEqual(retryHistory.map(message => message.id), ['retry-prior-user', 'retry-prior-answer', 'retry-user'], 'retry history ends at the original user turn');
+try {
+  for (const adapter of adapters) {
+    for (const [status, expectedFailure] of [[401, 'AUTH_OR_PERMISSION'], [429, 'RATE_LIMIT']]) {
+      const failedCalls = [];
+      globalThis.fetch = async input => {
+        failedCalls.push(String(input));
+        return new Response(JSON.stringify({ error: { message: 'provider secret body must stay hidden', credential: 'private-key-value' } }), { status });
+      };
+      const response = await processAccountingQuery(offlineQuestion, preRequestScenario, 'SFRS_I', adapter.settings, 'unused', retryHistory);
+      assert.equal(failedCalls.length, 1, `${adapter.name} advisory failure does not trigger another provider call`);
+      assert.equal(response.advisoryFailureStatus, expectedFailure, `${adapter.name} HTTP ${status} is categorized safely`);
+      assert.ok(response.messageText, `${adapter.name} failure retains the offline response`);
+      assert.doesNotMatch(response.messageText, /provider secret body|private-key-value/, `${adapter.name} response body and credentials are not shown`);
+    }
 
-console.log('AI-first advisory Phase 1 regression passed: advisory routing, full question/history, all three providers, source ID/URL binding, high-risk claim withholding, full chat response and failure handling.');
+    const malformedCalls = [];
+    globalThis.fetch = async input => {
+      malformedCalls.push(String(input));
+      return new Response('{}', { status: 200 });
+    };
+    const malformedResponse = await processAccountingQuery(offlineQuestion, preRequestScenario, 'SFRS_I', adapter.settings, 'unused', retryHistory);
+    assert.equal(malformedCalls.length, 1, `${adapter.name} malformed result does not retry automatically`);
+    assert.equal(malformedResponse.advisoryFailureStatus, 'INVALID_RESPONSE', `${adapter.name} malformed result gets a safe status`);
+    assert.doesNotMatch(malformedResponse.messageText, /private-key-value|provider secret body/);
+  }
+
+  for (const [error, expectedFailure] of [
+    [new Error('The Gemini request timed out.'), 'TIMEOUT'],
+    [new TypeError('Failed to fetch'), 'NETWORK']
+  ]) {
+    globalThis.fetch = async () => { throw error; };
+    const response = await processAccountingQuery(offlineQuestion, preRequestScenario, 'SFRS_I', adapters[0].settings, 'unused', retryHistory);
+    assert.equal(response.advisoryFailureStatus, expectedFailure, 'timeout and network errors receive a safe status');
+    assert.ok(response.messageText, 'timeout and network errors preserve the offline answer');
+  }
+
+  const noProviderCalls = [];
+  globalThis.fetch = async input => { noProviderCalls.push(String(input)); throw new Error('No provider call expected.'); };
+  const noProviderResponse = await processAccountingQuery(offlineQuestion, preRequestScenario, 'SFRS_I', undefined, 'unused', retryHistory);
+  assert.equal(noProviderCalls.length, 0, 'no-provider behavior remains fully offline');
+  assert.equal(noProviderResponse.advisoryFailureStatus, undefined, 'no-provider behavior does not report an advisory generation failure');
+
+  let retryPrompt = '';
+  globalThis.fetch = async (_input, init) => {
+    const request = JSON.parse(init.body);
+    retryPrompt = String(request.messages?.at(-1)?.content || '');
+    const responseText = JSON.stringify({ directAnswer: 'Settlement clears a payable when payment is made.', explanation: ['This safe explanation remains available.'], accountingTreatment: [], conditions: [], sourceIds: [] });
+    return new Response(JSON.stringify({ choices: [{ message: { content: responseText } }] }), { status: 200 });
+  };
+  const retryResponse = await processAccountingQuery(offlineQuestion, preRequestScenario, 'SFRS_I', adapters[2].settings, 'unused', retryHistory);
+  assert.equal(retryResponse.advisoryFailureStatus, undefined, 'a successful explicit retry clears the failure state');
+  assert.equal(retryResponse.displayFullAnswer, true, 'an explicit retry returns the full advisory answer');
+  assert.equal(retryResponse.scenarioState.transactionTitle, preRequestScenario.transactionTitle, 'retry preserves the scenario from before the failed attempt');
+  assert.ok(retryPrompt.includes(offlineQuestion), 'retry resubmits the original question');
+  assert.ok(retryPrompt.includes('accrual payable that remains unpaid'), 'retry retains the context that preceded the failed request');
+  assert.doesNotMatch(retryPrompt, new RegExp(failedAnswerText), 'retry omits the failed response');
+  assert.doesNotMatch(retryPrompt, new RegExp(laterTransactionText), 'retry omits later unrelated transactions');
+  assert.equal(retryPrompt.split(offlineQuestion).length - 1, 1, 'retry includes the original question once');
+
+  globalThis.localStorage = { getItem: () => null, setItem: () => undefined };
+  const failureMarkup = renderToStaticMarkup(React.createElement(ChatPanel, {
+    messages: [{
+      id: 'offline-fallback', sender: 'assistant', timestamp: '', text: 'Offline guidance retained.',
+      advisoryFailureStatus: 'AUTH_OR_PERMISSION',
+      advisoryRetryPayload: { text: offlineQuestion, scenarioSnapshot: preRequestScenario, originalUserMessageId: retryUserMessage.id }
+    }],
+    onSendMessage: () => undefined, onRetryMessage: () => undefined, onRetryAiAnswer: () => undefined,
+    onSelectSuggestion: () => undefined, onResolveRelation: () => undefined,
+    isLoading: false, isAwaitingRelation: false,
+    outputPreference: { journal: false, statutory: false }, onOutputPreferenceChange: () => undefined
+  }));
+  assert.match(failureMarkup, /provider rejected authentication or permission/i, 'the UI exposes a safe, specific failure reason');
+  assert.match(failureMarkup, /Retry AI answer/, 'the UI offers an explicit AI retry separately from image retry');
+  assert.match(failureMarkup, /Offline guidance retained/, 'the offline response remains visible with the failure status');
+  assert.doesNotMatch(failureMarkup, /private-key-value|provider secret body/);
+} finally {
+  globalThis.fetch = originalFetch;
+  delete globalThis.localStorage;
+}
+
+console.log('AI-first advisory regression passed: statutory routing, provider-safe failures, offline fallback, explicit retry and chat status.');

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
+import type { AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
 import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
@@ -7,10 +7,24 @@ import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
 import { ImageAttachmentPreview } from './ImageAttachmentPreview';
 import { SafeChatAnswer } from './SafeChatAnswer';
 
+function advisoryFailureMessage(status: AdvisoryFailureStatus): string {
+  const messages: Record<AdvisoryFailureStatus, string> = {
+    AUTH_OR_PERMISSION: 'The configured provider rejected authentication or permission for this request. Check its settings and retry.',
+    RATE_LIMIT: 'The configured provider reported a rate limit or quota issue. Check its availability and retry.',
+    TIMEOUT: 'The configured provider took too long to respond. You can retry the AI answer.',
+    NETWORK: 'The app could not reach the configured provider. Check the connection and retry.',
+    INVALID_RESPONSE: 'The provider returned a response the app could not validate. You can retry the AI answer.',
+    CONTEXT_LIMIT: 'The question and supporting context exceed the AI answer limit. Shorten the question and retry.',
+    OTHER: 'The provider or response failed for an unclassified reason. Check its settings and retry.'
+  };
+  return messages[status];
+}
+
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, images?: ChatImageAttachment[]) => void;
   onRetryMessage: (text: string, images: ChatImageAttachment[]) => void;
+  onRetryAiAnswer: (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
@@ -23,6 +37,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   messages,
   onSendMessage,
   onRetryMessage,
+  onRetryAiAnswer,
   onSelectSuggestion,
   onResolveRelation,
   isLoading,
@@ -164,9 +179,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : 'bg-workspace-raised dark:bg-workspace-raised text-slate-800 dark:text-workspace-secondary rounded-bl-none border border-workspace-border dark:border-workspace-border shadow-xs'
               }`}
             >
+              {msg.advisoryFailureStatus && (
+                <div role="status" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                  <span className="font-semibold">AI answer could not be completed.</span> {advisoryFailureMessage(msg.advisoryFailureStatus)} The available response is shown below.
+                </div>
+              )}
               {msg.displayFullAnswer
                 ? <div className="font-normal"><SafeChatAnswer text={msg.fullText || msg.text} trustedLinks={msg.scenarioSnapshot?.officialAnswerLinks || []} /></div>
                 : <div className="whitespace-pre-line font-normal">{msg.text}</div>}
+              {msg.advisoryRetryPayload && msg.advisoryFailureStatus !== 'CONTEXT_LIMIT' && (
+                <button type="button" onClick={() => onRetryAiAnswer(msg.advisoryRetryPayload!.text, msg.advisoryRetryPayload!.scenarioSnapshot, msg.advisoryRetryPayload!.originalUserMessageId)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
+                  Retry AI answer
+                </button>
+              )}
               {msg.retryPayload && (
                 <button type="button" onClick={() => onRetryMessage(msg.retryPayload!.text, msg.retryPayload!.images)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
                   Retry image analysis

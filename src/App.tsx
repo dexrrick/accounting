@@ -21,7 +21,7 @@ import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresenta
 import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { assessConversationRelation } from './services/conversationBoundary';
+import { assessConversationRelation, buildRetryConversationHistory } from './services/conversationBoundary';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -90,7 +90,7 @@ export const App: React.FC = () => {
     }
   ]);
 
-  const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage) => {
+  const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage, retryHistory?: ChatMessage[]) => {
     setIsLoading(true);
     setAppliedOutputPreference(outputPreference);
     try {
@@ -100,7 +100,9 @@ export const App: React.FC = () => {
         standard,
         providerSettings,
         providerSettings.gemini.model,
-        [...messages, userMsg],
+        retryHistory || (messages.some(message => message.id === userMsg.id)
+          ? [...messages.filter(message => message.id !== userMsg.id), userMsg]
+          : [...messages, userMsg]),
         outputPreference
       );
 
@@ -125,6 +127,10 @@ export const App: React.FC = () => {
         text: response.displayFullAnswer ? response.messageText : createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
         scenarioSnapshot: answerState, clarificationPrompt: response.clarifications,
         displayFullAnswer: response.displayFullAnswer,
+        advisoryFailureStatus: response.advisoryFailureStatus,
+        advisoryRetryPayload: response.advisoryFailureStatus
+          ? { text, scenarioSnapshot: activeScenario, originalUserMessageId: userMsg.id }
+          : undefined,
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {
@@ -132,6 +138,15 @@ export const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetryAiAnswer = (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => {
+    if (isLoading) return;
+    const retryHistory = buildRetryConversationHistory(messages, originalUserMessageId);
+    const originalUserMessage = retryHistory.at(-1);
+    if (!originalUserMessage) return;
+    // Restore the scenario and conversation prefix captured before the failed turn.
+    void processMessage(text, scenarioSnapshot, originalUserMessage, retryHistory);
   };
 
   const handleSendMessage = async (text: string, images: ChatImageAttachment[] = []) => {
@@ -211,6 +226,7 @@ export const App: React.FC = () => {
               messages={messages}
               onSendMessage={handleSendMessage}
               onRetryMessage={handleSendMessage}
+              onRetryAiAnswer={handleRetryAiAnswer}
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
               isLoading={isLoading}

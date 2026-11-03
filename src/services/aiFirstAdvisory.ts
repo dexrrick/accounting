@@ -1,4 +1,4 @@
-import type { AccountingScenarioState, AccountingStandard, ChatMessage, QueryDomain } from '../types/accounting';
+import type { AccountingScenarioState, AccountingStandard, AdvisoryFailureStatus, ChatMessage, QueryDomain } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
@@ -39,11 +39,24 @@ const HISTORY_TOKEN_BUDGET = 3_000;
 const SOURCE_TOKEN_BUDGET = 3_000;
 const MAX_SOURCES = 6;
 
+/** Reduce provider and response errors to a small, non-sensitive UI status. */
+export function classifyAdvisoryFailure(error: unknown): AdvisoryFailureStatus {
+  const message = error instanceof Error ? error.message : '';
+  const errorName = error instanceof Error ? error.name : '';
+  if (/complete question and relevant context exceed the advisory context budget/i.test(message)) return 'CONTEXT_LIMIT';
+  if (/response contract|malformed json|invalid json|empty response/i.test(message) || errorName === 'SyntaxError') return 'INVALID_RESPONSE';
+  if (/\b(?:401|403)\b|unauthori[sz]ed|authentication|permission denied|api key is not configured|endpoint or api key|hosted gemini access token is invalid/i.test(message)) return 'AUTH_OR_PERMISSION';
+  if (/\b429\b|rate limit|quota exceeded|resource exhausted/i.test(message)) return 'RATE_LIMIT';
+  if (/timeout|timed out|time budget|aborterror/i.test(message) || /aborterror/i.test(errorName)) return 'TIMEOUT';
+  if (/network|failed to fetch|fetch failed/i.test(message)) return 'NETWORK';
+  return 'OTHER';
+}
+
 export function estimateAdvisoryTokens(text: string): number {
   return Math.ceil(new TextEncoder().encode(text).length / 4);
 }
 
-function hasConfiguredProvider(provider?: ProviderSettings | string): boolean {
+export function hasConfiguredProvider(provider?: ProviderSettings | string): boolean {
   if (typeof provider === 'string') return provider.trim().length > 10;
   if (!provider) return false;
   if (provider.activeProvider === 'gemini') return (provider.gemini?.apiKey.trim().length || 0) > 10;
@@ -64,7 +77,7 @@ function toQueryDomain(domain: string, isMultiAuthority: boolean): QueryDomain {
   return 'GENERAL';
 }
 
-function normalizeAdvisoryText(text: string): string {
+export function normalizeAdvisoryText(text: string): string {
   const digitRanges = [0x0660, 0x06f0, 0x07c0, 0x0966, 0x09e6, 0x0a66, 0x0ae6, 0x0b66, 0x0be6,
     0x0c66, 0x0ce6, 0x0d66, 0x0de6, 0x0e50, 0x0ed0, 0x0f20, 0x1040, 0x1090, 0x17e0, 0x1810,
     0x1946, 0x19d0, 0x1a80, 0x1a90, 0x1b50, 0x1bb0, 0x1c40, 0x1c50, 0xa620, 0xa8d0,
@@ -81,18 +94,29 @@ function normalizeAdvisoryText(text: string): string {
 
 function isDefinitiveApplicabilityQuestion(query: string): boolean {
   const normalized = normalizeAdvisoryText(query);
-  const requestsConclusion = /^\s*(?:can|could|may|is|are|do|does|will|would)\b/i.test(normalized) ||
-    /\b(?:whether|if)\s+(?:i|we|my|our|this|the company|a company|the business|a business)\b/i.test(normalized);
-  const legalStatus = /\b(?:recover(?:able|y)?|claim(?:able)?|deduct(?:ible|ion)?|exempt(?:ion)?|liable|eligib(?:le|ility)|taxable|allowable|relief|audit\s+exempt(?:ion)?|subject\s+to\s+(?:gst|tax))\b/i.test(normalized);
+  const requestsConclusion = /^\s*(?:can|could|may|is|are|do|does|will|would|should)\b/i.test(normalized) ||
+    /\b(?:whether|if)\b/i.test(normalized) ||
+    /\b(?:qualif\w*|eligib\w*)\b/i.test(normalized);
+  const legalStatus = /\b(?:recover(?:able|y)?|claim(?:able)?|deduct(?:ible|ion)?|exempt(?:ion)?|liable|eligib\w*|qualif\w*|taxable|allowable|relief|audit\s+exempt(?:ion)?|subject\s+to\s+(?:gst|tax))\b/i.test(normalized);
   return requestsConclusion && legalStatus;
 }
 
 function isCaseSpecificStatutoryOutcomeQuestion(query: string): boolean {
   const normalized = normalizeAdvisoryText(query);
-  const refersToCaseFacts = /\b(?:i|we|my|our|the company|the business|my business|our company|our business)\b/i.test(normalized) ||
+  const firstPartyOrDeicticFacts = /\b(?:i|we|my|our|the company|the business|my business|our company|our business|they|their)\b/i.test(normalized) ||
     /\b(?:this|that|these|those)\s+(?:(?:is|are|was|were|can|may|could|would)\b|(?:purchase|car|transaction|expense|supply|business|company|asset|input|output|claim|deduction|relief)\b)|\b(?:for|of|on|about|with)\s+(?:this|that|these|those)\b/i.test(normalized);
+  const thirdPartyContext = /\b(?:for|about|regarding|on behalf of)\s+(?:(?:my|our|the|a|an)\s+)?(?:client|customer|supplier|taxpayer|employee|employer|third[ -]party)\b/i.test(normalized) ||
+    /\b(?:client|customer|supplier|taxpayer|employee|employer|third[ -]party)(?:'s|s')?\s+(?:\w+\s+){0,2}(?:purchase|transaction|expense|supply|asset|input\s+tax|output\s+tax|claim|deduction|relief|payment|invoice|salary|bonus)\b/i.test(normalized);
   const asksStatutoryOutcome = /\b(?:gst|goods\s+and\s+services\s+tax|tax(?:ation|able|ability)?|treatment|recover\w*|claim\w*|deduct\w*|exempt\w*|eligib\w*|qualif\w*|liable|allowable|subject\s+to\s+(?:gst|tax))\b/i.test(normalized);
-  return refersToCaseFacts && asksStatutoryOutcome;
+  const asksSpecificApplication = /\b(?:treatment|recover\w*|claim\w*|deduct\w*|exempt\w*|eligib\w*|qualif\w*|liable|allowable|applic\w*|subject\s+to\s+(?:gst|tax))\b/i.test(normalized);
+  return asksStatutoryOutcome && (firstPartyOrDeicticFacts || (thirdPartyContext && asksSpecificApplication));
+}
+
+function isStatutoryObligationQuestion(query: string): boolean {
+  const normalized = normalizeAdvisoryText(query);
+  const asksForRequirement = /\b(?:require(?:s|d|ment|ments)?|must|need(?:s|ed)?|necessary|obligation|obligations|document(?:s|ation)?|paperwork|evidence|substantiat\w*|supporting(?:\s+(?:document|record|evidence))?|record(?:s)?|register|registration|file|filing|submit|retain|keep|issue|report(?:s|ing)?|notify|lodge|ask\s+for)\b/i.test(normalized);
+  const statutorySubject = /\b(?:gst|goods\s+and\s+services\s+tax|tax(?:ation|able|ability)?|statutory|regulatory|input\s+tax|output\s+tax|claim\w*|filing|contribut\w*|acra|iras|cpf(?:\s+board)?|mom|mas|employment\s+act|companies\s+act|income\s+tax\s+act|statute|statutory\s+law)\b/i.test(normalized);
+  return asksForRequirement && statutorySubject;
 }
 
 function isMaterialDeadlineQuestion(query: string): boolean {
@@ -122,6 +146,7 @@ export function isAiFirstAdvisoryEligible(
   if (classification.journalEntryRequired || classification.calculationRequired) return false;
   if (isDefinitiveApplicabilityQuestion(normalizedQuery)) return false;
   if (isCaseSpecificStatutoryOutcomeQuestion(normalizedQuery)) return false;
+  if (isStatutoryObligationQuestion(normalizedQuery)) return false;
   if (isMaterialDeadlineQuestion(normalizedQuery)) return false;
   if (isStatutoryCategoryListQuestion(normalizedQuery)) return false;
   const explanatoryIntent = /\b(?:explain|describe|compare|difference|why|how does|how do|how should|what is|what are|can .* claim|is .* taxable|should .* be treated|what happens if|does .* qualify)\b/i.test(normalizedQuery) ||
@@ -293,6 +318,8 @@ function containsHighRiskClaim(text: string): boolean {
     /\b(?:is|are|was|were|will\s+be|can\s+be|cannot\s+be|is\s+not|are\s+not)\s+(?:fully\s+|automatically\s+)?(?:recoverable|deductible|exempt(?:\s+from\s+[\w-]+){0,3}|liable|eligible|taxable|claimable|allowable)\b/i.test(normalizedText) ||
     /\b(?:the\s+)?(?:company|business|employer|taxpayer|private\s+(?:motor\s+)?car|this\s+(?:purchase|payment|transaction|expense)|input\s+tax|output\s+tax)\b[^.!?;]{0,65}\b(?:is|are|was|were|will\s+be|can|cannot|must|always|never)\b[^.!?;]{0,45}\b(?:recover(?:able|y|ed)?|claim(?:able)?|deduct(?:ible|ion|ed)?|exempt(?:ion)?|liable|eligib(?:le|ility)|taxable|allowable|audit\s+exempt(?:ion)?|subject\s+to\s+(?:gst|tax))\b/i.test(normalizedText) ||
     /\b(?:you|your|i|my|we|our|this|that|the company|the business)\b[^.!?;]{0,100}\b(?:can|may|might|could|will|would|is|are|be|being)\b[^.!?;]{0,60}\b(?:recover\w*|claim\w*|deduct\w*|exempt\w*|eligib\w*|qualif\w*|liable|taxable|allowable|entitled)\b/i.test(normalizedText);
+  const definitiveStatutoryOutcome = /\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b[^.!?;]{0,75}\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b|\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b[^.!?;]{0,75}\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b/i.test(normalizedText);
+  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
   const writtenNumber = '(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|first|second|third)';
   const materialDeadline = /\b(?:deadline|due\s+(?:date|by|on)|file\s+(?:by|within)|filing\s+deadline|submit\s+by|must\s+be\s+filed\s+by)\b/i.test(normalizedText);
   const explicitDate = /\d|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\d{1,2})(?:st|nd|rd|th)?\b/i.test(normalizedText);
@@ -305,7 +332,7 @@ function containsHighRiskClaim(text: string): boolean {
     new RegExp(`\\b${writtenNumber}\\s+(?:dollars?|euros?|pounds?|days?|months?|years?|percent|per cent)\\b`, 'i').test(normalizedText);
   const spelledDeadline = (materialDeadline && new RegExp(`\\b${writtenNumber}\\b`, 'i').test(normalizedText)) ||
     new RegExp(`\\b(?:within|by|before|after)\\s+(?:${writtenNumber}|\\d+)\\s+(?:business\\s+)?(?:days?|months?|years?)\\b`, 'i').test(normalizedText);
-  return categoricalApplicability || materialDeadline || explicitDate || exactRate || specificProvision || numericalCalculation || effectiveDateClaim || journalInstruction || exactQuantity || spelledDeadline;
+  return categoricalApplicability || definitiveStatutoryOutcome || statutoryRequirement || materialDeadline || explicitDate || exactRate || specificProvision || numericalCalculation || effectiveDateClaim || journalInstruction || exactQuantity || spelledDeadline;
 }
 
 function cleanModelText(value: unknown): string {

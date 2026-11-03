@@ -1,4 +1,4 @@
-import type { AccountingEventSequence, AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingEventSequence, AccountingStandard, AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
@@ -50,13 +50,19 @@ import {
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
-import { generateAiFirstAdvisory, isAiFirstAdvisoryEligible } from './aiFirstAdvisory';
+import { classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible } from './aiFirstAdvisory';
+import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
+import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
+import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
+import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
   /** The advisory response is already structured and safe to show in full in chat. */
   displayFullAnswer?: boolean;
+  /** Sanitized explanation category when AI-first generation falls back offline. */
+  advisoryFailureStatus?: AdvisoryFailureStatus;
   clarifications?: MissingFieldInfo[];
   imageAnalysisFailed?: boolean;
   /** Provider completion is separate from the independent IRAS evidence gate. */
@@ -64,6 +70,10 @@ export interface GeminiResponse {
   answerPath?: string;
   evidenceQuality?: GroundedReasoningContext['evidenceQuality'];
   claimVerification?: { accepted: unknown[]; rejected: unknown[] };
+  calculation?: VerifiedStandardGstCalculation;
+  applicationConclusions?: IrasApplicationConclusion[];
+  /** Model assessment of generated prose, separate from deterministic source verification. */
+  synthesisVerification?: GroundedSynthesisVerification;
   /** Routing/retrieval trace only; this does not itself establish answer grounding. */
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }
@@ -463,6 +473,96 @@ export async function processAccountingQuery(
   outputPreference?: OutputPreference,
   diagnostics?: AccountingQueryDiagnostics
 ): Promise<GeminiResponse> {
+  let groundedContext: GroundedReasoningContext | undefined;
+  let authorityWorkstreams: AuthorityWorkstreamsResult | undefined;
+  let synthesisHistory = chatHistory;
+  const response = await processAccountingQueryCore(
+    userInput, currentScenario, standard, providerOrApiKey, modelName, chatHistory, outputPreference,
+    {
+      onGroundedContext: context => {
+        groundedContext = context;
+        diagnostics?.onGroundedContext?.(context);
+      },
+      onAuthorityWorkstreams: result => {
+        authorityWorkstreams = result;
+        diagnostics?.onAuthorityWorkstreams?.(result);
+      }
+    },
+    history => { synthesisHistory = history; }
+  );
+  // Reuse the governed result and its evidence; never restart a failed provider
+  // request or let synthesis produce accounting state or image-derived facts.
+  if (response.displayFullAnswer || response.advisoryFailureStatus || response.providerStatus === 'FAILED' ||
+      getCurrentImageAttachments(chatHistory).length > 0) return response;
+  if (response.calculation && isStandaloneOutputGstCalculationRequest(userInput)) return response;
+  try {
+    // An unmapped issue is an answer-completeness gap, not proof that the
+    // existing retrieval policy cannot establish any useful source passages.
+    // Reuse that policy for the original question while retaining every issue
+    // gap for synthesis; this does not admit a source or establish application.
+    if (hasConfiguredProvider(providerOrApiKey) && authorityWorkstreams && !groundedContext &&
+        authorityWorkstreams.workstreams.some(stream => stream.authority === 'IRAS' &&
+          stream.issues.some(issue => issue.verifiedClaims.length === 0)) &&
+        usesIrasEvidencePolicy(classifyQuestion(userInput), userInput)) {
+      const evidenceWorkstreams = authorityWorkstreams;
+      const irasIssue = evidenceWorkstreams.issuePlan.issues.find(issue =>
+        issue.governingAuthorities.includes('IRAS') && issue.domain.startsWith('IRAS_') &&
+        evidenceWorkstreams.workstreams.some(stream => stream.issues.some(candidate =>
+          candidate.issueId === issue.id && candidate.verifiedClaims.length === 0)));
+      const retrievalTopicIds = irasIssue ? defaultQueryTopicResolver.decomposeQuery(irasIssue.subject).topics
+        .filter(topic => topic.authorities.includes('IRAS')).map(topic => topic.id) : [];
+      const requestedConcepts = irasIssue ? [{ id: `synthesis-rule-${irasIssue.id}`, topicIds: retrievalTopicIds,
+        label: irasIssue.subject, terms: [irasIssue.subject] }] : [];
+      groundedContext = await buildGroundedReasoningContext(userInput, null, undefined, undefined, {
+        questionUnderstanding: { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' },
+        requestCompletenessContext: response.scenarioState.requestCompletenessContext,
+        ...(irasIssue ? {
+          evidenceScope: {
+            authority: 'IRAS' as const, domain: irasIssue.domain, topicIds: retrievalTopicIds, requestedConcepts,
+            context: { domainId: irasIssue.domain, population: irasIssue.population,
+              primarySubject: irasIssue.subject, concepts: [irasIssue.subject], requestedOperation: irasIssue.operation }
+          },
+          authorityIssue: { authority: 'IRAS' as const, issue: irasIssue, requestedConcepts }
+        } : {})
+      });
+      diagnostics?.onGroundedContext?.(groundedContext);
+    }
+    const synthesis = await tryGenerateGroundedSynthesis({
+      query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
+      response, context: groundedContext, workstreams: authorityWorkstreams
+    });
+    if (!synthesis) return response;
+    return {
+      ...response,
+      messageText: synthesis.messageText,
+      displayFullAnswer: true,
+      answerPath: 'AI_GROUNDED_SYNTHESIS',
+      synthesisVerification: synthesis.verification,
+      ...(synthesis.verification.revisionFailureStatus
+        ? { advisoryFailureStatus: synthesis.verification.revisionFailureStatus } : {}),
+      scenarioState: {
+        ...response.scenarioState,
+        officialAnswerLinks: synthesis.officialAnswerLinks
+      }
+    };
+  } catch (error) {
+    const advisoryFailureStatus = classifyAdvisoryFailure(error);
+    console.warn('[Evidence-grounded synthesis] Retaining the governed response.', advisoryFailureStatus);
+    return { ...response, advisoryFailureStatus };
+  }
+}
+
+async function processAccountingQueryCore(
+  userInput: string,
+  currentScenario: AccountingScenarioState | null,
+  standard: AccountingStandard,
+  providerOrApiKey?: ProviderSettings | string,
+  modelName: string = 'gemini-3.5-flash-lite',
+  chatHistory: ChatMessage[] = [],
+  outputPreference?: OutputPreference,
+  diagnostics?: AccountingQueryDiagnostics,
+  onConversationScope?: (history: ChatMessage[]) => void
+): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
@@ -484,8 +584,12 @@ export async function processAccountingQuery(
   let authorityEvidenceMessage: string | undefined;
   let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
   let requestCompletenessContext: RequestCompletenessContext | undefined;
+  let advisoryFailureStatus: AdvisoryFailureStatus | undefined;
+  const attachAdvisoryFailureStatus = (response: GeminiResponse): GeminiResponse => advisoryFailureStatus
+    ? { ...response, advisoryFailureStatus }
+    : response;
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
-    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return response;
+    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return attachAdvisoryFailureStatus(response);
     const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
       group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
     ));
@@ -515,7 +619,8 @@ export async function processAccountingQuery(
           ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
         ]
-      } : scenarioWithCompleteness
+      } : scenarioWithCompleteness,
+      ...(advisoryFailureStatus ? { advisoryFailureStatus } : {})
     };
   };
 
@@ -583,8 +688,9 @@ export async function processAccountingQuery(
         scenarioState: advisory.scenarioState,
         displayFullAnswer: true
       });
-    } catch {
-      console.warn('[AI-first advisory] Generation failed; retaining the existing offline response path.');
+    } catch (error) {
+      advisoryFailureStatus = classifyAdvisoryFailure(error);
+      console.warn('[AI-first advisory] Generation failed; using the existing offline response path.', advisoryFailureStatus);
       profiler.recordFallback();
       providerOrApiKey = undefined;
     }
@@ -724,6 +830,7 @@ export async function processAccountingQuery(
       const currentUserTurn = [...chatHistory].reverse().find(message =>
         message.sender === 'user' && message.text.trim() === userInput.trim());
       relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+      onConversationScope?.(relevantChatHistory);
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
@@ -760,6 +867,7 @@ export async function processAccountingQuery(
     const currentUserTurn = [...chatHistory].reverse().find(message =>
       message.sender === 'user' && message.text.trim() === userInput.trim());
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    onConversationScope?.(relevantChatHistory);
     imageAttachments = currentUserTurn?.images || [];
     hasImages = imageAttachments.length > 0;
   }
@@ -890,7 +998,8 @@ export async function processAccountingQuery(
       return {
         messageText: '### Clarification Required for Double Entry\n\n' + clarification.prompt,
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
-        clarifications: [clarification]
+        clarifications: [clarification],
+        ...(advisoryFailureStatus ? { advisoryFailureStatus } : {})
       };
     }
     if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&

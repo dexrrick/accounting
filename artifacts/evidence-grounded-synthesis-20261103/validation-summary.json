@@ -1,0 +1,69 @@
+{
+  "fullRegression": {
+    "passed": 187,
+    "failed": 0,
+    "exitCode": 0,
+    "smokeSuitesIncluded": 164
+  },
+  "maintainedChecks": [
+    {
+      "name": "maintained-lint",
+      "exitCode": 0,
+      "elapsedSeconds": 0.12,
+      "arguments": [
+        "node_modules/oxlint/bin/oxlint",
+        "src",
+        "scripts",
+        "tests",
+        "vite.config.ts",
+        "tailwind.config.js",
+        "postcss.config.js"
+      ]
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "elapsedSeconds": 4.33,
+      "arguments": [
+        "node_modules/typescript/bin/tsc",
+        "-b"
+      ]
+    },
+    {
+      "name": "vite-build",
+      "exitCode": 0,
+      "elapsedSeconds": 2.52,
+      "arguments": [
+        "node_modules/vite/bin/vite.js",
+        "build"
+      ]
+    },
+    {
+      "name": "worker-build",
+      "exitCode": 0,
+      "elapsedSeconds": 0.71,
+      "arguments": [
+        "scripts/build_cloudflare_worker.mjs"
+      ]
+    }
+  ],
+  "rootLint": {
+    "exitCode": 1,
+    "preExistingArchiveErrors": 34
+  },
+  "initialSmoke": {
+    "passed": 162,
+    "failed": 2,
+    "resolvedBy": [
+      "Existing history scope reused by synthesis",
+      "Complete local GST calculator skips synthesis"
+    ],
+    "finalFullIncludesBothRepairedSuites": true
+  },
+  "sourceRegistryOrPolicyChanges": false,
+  "liveModelAcceptanceRun": false,
+  "browserAcceptanceRun": false,
+  "committed": false,
+  "pushed": false,
+  "deployed": false
+}

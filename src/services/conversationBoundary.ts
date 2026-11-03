@@ -1,7 +1,14 @@
 import type { AccountingScenarioState } from '../types/accounting';
+import type { ChatMessage } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
 
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
+
+/** Rebuilds the history that existed when a failed user turn was first sent. */
+export function buildRetryConversationHistory(history: ChatMessage[], originalUserMessageId: string): ChatMessage[] {
+  const originalTurnIndex = history.findIndex(message => message.id === originalUserMessageId && message.sender === 'user');
+  return originalTurnIndex < 0 ? [] : history.slice(0, originalTurnIndex + 1);
+}
 
 /** A self-contained income-tax accounting question must not inherit a PPE journal. */
 export function isDeferredTaxInquiry(query: string): boolean {
