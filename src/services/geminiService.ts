@@ -567,6 +567,14 @@ async function processAccountingQueryCore(
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
+  const isNewAccountingScenario = startsNewAccountingScenario(userInput, currentScenario);
+  if (isNewAccountingScenario) {
+    const currentUserTurn = [...chatHistory].reverse().find(message => message.sender === 'user' && message.text === userInput);
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    onConversationScope?.(relevantChatHistory);
+  }
   if (outputPreference?.shareStructure) {
     const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
     if (shareAnswer) return shareAnswer;
@@ -576,9 +584,7 @@ async function processAccountingQueryCore(
   // The parser has the same boundary as a defence in depth measure; applying
   // it here also prevents grounding and provider prompts from seeing stale
   // balances on a complete new transaction.
-  let activeScenario = startsNewAccountingScenario(userInput, currentScenario)
-    ? null
-    : currentScenario;
+  let activeScenario = isNewAccountingScenario ? null : currentScenario;
   let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let authorityEvidenceMessage: string | undefined;

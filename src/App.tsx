@@ -21,7 +21,7 @@ import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresenta
 import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { assessConversationRelation, buildRetryConversationHistory } from './services/conversationBoundary';
+import { assessConversationRelation, buildRetryConversationHistory, canRetryFailedAnswer } from './services/conversationBoundary';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -141,7 +141,7 @@ export const App: React.FC = () => {
   };
 
   const handleRetryAiAnswer = (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => {
-    if (isLoading) return;
+    if (isLoading || !canRetryFailedAnswer(messages, originalUserMessageId)) return;
     const retryHistory = buildRetryConversationHistory(messages, originalUserMessageId);
     const originalUserMessage = retryHistory.at(-1);
     if (!originalUserMessage) return;

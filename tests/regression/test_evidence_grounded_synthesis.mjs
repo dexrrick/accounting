@@ -112,7 +112,7 @@ function packetFrom(prompt) {
   return JSON.parse(prompt);
 }
 
-const supportedRule = 'Regulations 26 and 27 generally disallow input tax on specified expenses, subject to applicable limits and exceptions.';
+const supportedRule = quote;
 {
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
@@ -228,10 +228,51 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
   assert.match(result.messageText, /may be able to recover[\s\S]*if the expense is not disallowed/);
   assert.equal(result.verification.revisionAttempts, 1);
   assert.equal(result.verification.providerCalls, 4);
-  assert.equal(result.verification.reviewedClaimCount, 4);
+  assert.equal(result.verification.reviewedClaimCount, 2,
+    'the initial supported rule and newly repaired application are each reviewed once');
   assert.equal(result.verification.claims.find(item => item.claimId === 'rule-supported')?.outcome, 'SUPPORTED');
   assert.ok(!result.messageText.includes('This client qualifies to recover'));
   assert.ok(result.messageText.includes('The purchase purpose was not provided.'));
+  const revisedReview = scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).at(-1);
+  assert.deepEqual(packetFrom(revisedReview.prompt).claims.map(item => item.id), ['application-needs-facts'],
+    'the second review evaluates only repaired claims and does not reopen an initially supported claim');
+}
+
+{
+  const definitiveApplications = [
+    claim('application-definitive-before-caveat',
+      'This client qualifies to recover the input tax, subject to the usual conditions. The purchase purpose still needs to be confirmed.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-contradictory-caveat',
+      'The client qualifies for recovery, although the required eligibility facts cannot be confirmed.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-unrelated-condition',
+      'If the office is open, the client qualifies for GST recovery.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-categorical-after-condition',
+      'The relevant facts remain unresolved. The client may recover GST if the applicable conditions hold; the client qualifies for recovery.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-categorical-after-conjunction',
+      'The relevant facts remain unresolved. The client may recover GST if the applicable conditions hold, and the client qualifies for recovery.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' })
+  ];
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    return { claims: [claim('rule-kept', supportedRule), ...definitiveApplications] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
+  for (const unsafe of definitiveApplications) {
+    assert.ok(!result.messageText.includes(unsafe.text),
+      'a caveat later in the sentence or an unrelated condition cannot make a categorical application conditional');
+  }
+  const reviewedClaims = scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW'))
+    .flatMap(call => packetFrom(call.prompt).claims.map(item => item.id));
+  assert.ok(definitiveApplications.every(item => !reviewedClaims.includes(item.id)),
+    'deterministic validation removes the categorical application before the approving reviewer sees it');
 }
 
 {
@@ -259,8 +300,10 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
   assert.ok(result);
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
   assert.ok(!result.messageText.includes('A repaired claim cannot cite'));
-  assert.deepEqual(packetFrom(scripted.calls[3].prompt).claims.map(item => item.id), ['rule-kept'],
-    'deterministically invalid repaired claims never reach the reviewer');
+  const reviewedRepairIds = scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW'))
+    .flatMap(call => packetFrom(call.prompt).claims.map(item => item.text));
+  assert.ok(!reviewedRepairIds.includes(deterministicallyInvalidRepair.text),
+    'deterministically invalid repaired claims never reach another semantic review');
   assert.ok(result.verification.withheldClaimIds.includes('application-rejected'));
 }
 
@@ -298,7 +341,8 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
   });
   await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call }), error =>
     classifyAdvisoryFailure(error) === 'RATE_LIMIT' && !/raw provider body|secret token/.test(error.message));
-  assert.equal(scripted.calls.length, 3);
+  assert.equal(scripted.calls.length, 2,
+    'deterministic unresolved-application validation withholds the categorical claim before semantic review');
 }
 
 {
@@ -317,6 +361,55 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
   assert.match(result.messageText, /Applicability remains unresolved for GST registration evidence\./i);
   assert.match(scripted.calls[0].prompt, /"issueId":"issue-uncovered"/);
   assert.match(scripted.calls[0].prompt, /UNRESOLVED/);
+}
+
+{
+  const input = makeInput();
+  input.workstreams.issuePlan = {
+    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false,
+    issues: [
+      { id: 'issue-gst', subject: 'input tax recovery eligibility', operation: 'CHECK_ELIGIBILITY', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' },
+      { id: 'planned-registration', subject: 'GST registration filing duty', operation: 'FILING_REQUIREMENT', evidenceRequirement: 'AUTHORITATIVE_SOURCE' }
+    ]
+  };
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [claim('rule-only', supportedRule, ['passage-1'], { issueId: 'issue-gst' })] };
+  });
+  const result = await tryGenerateGroundedSynthesis(input, { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /Whether input tax recovery eligibility applies to your circumstances remains unresolved/,
+    'a supported rule alone cannot answer a planned eligibility issue');
+  assert.match(result.messageText, /Whether GST registration filing duty applies to your circumstances remains unresolved/,
+    'an uncovered planned issue receives an explicit per-issue limitation');
+  assert.match(scripted.calls[0].prompt, /planned-registration/,
+    'planned issues without admitted passages remain visible to generation');
+}
+
+{
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    const gap = packet.trustedDeterministicOutputs.find(output => output.kind === 'EVIDENCE_GAP');
+    return { claims: [
+      claim('gap-as-rule', 'Regulations 26 and 27 generally disallow input tax recovery.', [gap.id], { issueId: 'issue-gst' }),
+      claim('gap-limitation', 'The purchase facts still do not establish whether the recovery conditions are met.', [gap.id], {
+        kind: 'LIMITATION', issueId: 'issue-gst'
+      }),
+      claim('source-backed-rule', supportedRule, ['passage-1'], { issueId: 'issue-gst' })
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(!result.messageText.includes('gap-as-rule'));
+  assert.match(result.messageText, /purchase facts still do not establish/,
+    'an admitted evidence-gap marker can support a scoped limitation');
+  const firstReview = scripted.calls.find(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW'));
+  assert.ok(!packetFrom(firstReview.prompt).claims.some(item => item.id === 'gap-as-rule'),
+    'a positive reviewer cannot admit a rule supported only by an evidence-gap marker');
 }
 
 {
@@ -377,6 +470,49 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
   assert.deepEqual(directGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
     ['Office Equipment', 1250, 0], ['Cash at Bank', 0, 1250]
   ]);
+
+  const accountingIssueInput = makeInput({ scenarioState });
+  accountingIssueInput.workstreams.issuePlan = {
+    source: 'SEMANTIC_ISSUES', coverageEstablished: true, hasUnmappedResidual: false,
+    issues: [{ id: 'issue-accounting', subject: 'financial accounting treatment', domain: 'ACCOUNTING',
+      operation: 'DETERMINE_TREATMENT', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' }]
+  };
+  const accountingIssueCall = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    const journalOutput = packet.trustedDeterministicOutputs.find(output => output.kind === 'VALIDATED_JOURNAL');
+    return { claims: [claim('accounting-issue-covered', accountingNarrative, [journalOutput.id], {
+      kind: 'ACCOUNTING', issueId: 'issue-accounting'
+    })] };
+  });
+  const accountingIssueResult = await tryGenerateGroundedSynthesis(accountingIssueInput, { call: accountingIssueCall.call });
+  assert.ok(accountingIssueResult.messageText.includes(accountingNarrative));
+  assert.doesNotMatch(accountingIssueResult.messageText, /financial accounting treatment.*remains unresolved/i,
+    'a supported issue-scoped accounting conclusion satisfies an accounting treatment request');
+
+  const untrustedJournalVariants = [
+    ['AI_PROPOSED', {}], ['CONDITIONAL', {}], [undefined, {}],
+    ['DETERMINISTIC', { isHypothetical: true }],
+    ['DETERMINISTIC', { totalDebit: 0 }],
+    ['DETERMINISTIC', { totalDebit: 1250.01 }],
+    ['DETERMINISTIC', { lines: [] }]
+  ];
+  for (const [authorityStatus, overrides] of untrustedJournalVariants) {
+    let packetOutputs = [];
+    const candidateGroup = { ...directGroups[0], ...overrides, authorityStatus };
+    const scriptedCandidate = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      if (system.includes('TARGETED_REVISION')) return { claims: [] };
+      if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+      packetOutputs = packet.trustedDeterministicOutputs;
+      return { claims: [claim('source-rule', supportedRule)] };
+    });
+    await tryGenerateGroundedSynthesis(makeInput({ scenarioState: { ...scenarioState, directGroups: [candidateGroup] } }), {
+      call: scriptedCandidate.call
+    });
+    assert.ok(!packetOutputs.some(output => output.kind === 'VALIDATED_JOURNAL'),
+      `journal with authority ${String(authorityStatus)} and integrity overrides ${JSON.stringify(overrides)} is not trusted`);
+  }
 }
 
 {
@@ -402,7 +538,7 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
       `${id} cannot bypass the numeric source guard`);
   }
 
-  const factualLimitation = 'The invoice date supplied is 30/10/2026, but the supporting tax invoice is missing, so the recovery conditions cannot yet be checked.';
+  const factualLimitation = 'As stated in your question, the supplier invoice dated 30/10/2026 has no tax invoice attached. The recovery conditions cannot yet be checked.';
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
     if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
@@ -418,11 +554,194 @@ const supportedRule = 'Regulations 26 and 27 generally disallow input tax on spe
 }
 
 {
-  const scripted = scriptedCall(({ system }) => system.includes('TARGETED_REVISION')
-    ? { claims: [] }
-    : { claims: [claim('journal', 'Debit expense and credit cash for the purchase.')] });
+  const queryWithRate = 'Is 26% the GST input tax rate for this expense?';
+  const issue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [
+      claim('number-reused-as-rate', 'The GST input tax rate for this expense is 26%.', ['passage-1'], {
+        kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+      }),
+      claim('number-source-control', supportedRule)
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({ query: queryWithRate, issues: [issue] }), { call: scripted.call });
+  assert.ok(result);
+  assert.doesNotMatch(result.messageText, /input tax rate for this expense is 26%/,
+    'a provision number and the same number in the question do not establish a statutory rate');
+  assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW'))
+    .some(call => packetFrom(call.prompt).claims.some(item => item.id === 'number-reused-as-rate')), false,
+  'the mismatched number meaning is rejected before a positive semantic review can admit it');
+}
+
+{
+  const corporateRateRecord = UNIFIED_SOURCE_REGISTRY.ITA_SUTE_PTE_TAX_EXEMPTION;
+  assert.ok(corporateRateRecord, 'a separately scoped corporate tax rate source is registered');
+  const corporateRateQuote = corporateRateRecord.sourceText.match(/[^.!?]+[.!?]/)?.[0]?.trim() || corporateRateRecord.sourceText.trim();
+  const issue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  issue.sources = [record, corporateRateRecord];
+  issue.verifiedClaims = [sourceClaim, {
+    recordId: corporateRateRecord.id, quote: corporateRateQuote, text: corporateRateQuote,
+    supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: corporateRateRecord.canonicalSourceUrl
+  }];
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [
+      claim('neighboring-tax-rate', 'The GST input tax rate is 17%.', ['passage-1', 'passage-2'], {
+        kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+      }),
+      claim('number-source-control', supportedRule)
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'Does the GST input tax rate equal 17% for this expense?', issues: [issue]
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.doesNotMatch(result.messageText, /GST input tax rate is 17%/,
+    'a 17% corporate income tax rate in a neighbouring source sentence cannot establish a GST rate');
+}
+
+{
+  const calculation = { netAmount: 1000, rate: 0.09, outputTax: 90, invoiceTotal: 1090, currency: 'SGD', sourceRecordId: record.id, effectiveDate: '2026-11-03' };
+  const issue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'GST_CALCULATION');
+    return { claims: [
+      claim('wrong-field-amount', 'The invoice total is SGD 90.00.', ['passage-1', output.id], { issueId: 'issue-gst' }),
+      claim('number-source-control', supportedRule)
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({ calculation, issues: [issue] }), { call: scripted.call });
+  assert.ok(result);
+  assert.doesNotMatch(result.messageText, /invoice total is SGD 90/,
+    'an amount in a deterministic calculation cannot support a different amount field');
+}
+
+{
+  const calculation = { netAmount: 1000, rate: 0.09, outputTax: 90, invoiceTotal: 1090, currency: 'SGD', sourceRecordId: record.id, effectiveDate: '2026-11-03' };
+  for (const text of [
+    'The output tax shows the invoice total is SGD 90.',
+    'The output tax is not SGD 90.'
+  ]) {
+    const scripted = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      if (system.includes('TARGETED_REVISION')) return { claims: [] };
+      if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+      const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'GST_CALCULATION');
+      return { claims: [claim(`ambiguous-output-${text.length}`, text, ['passage-1', output.id])] };
+    });
+    await assert.rejects(tryGenerateGroundedSynthesis(makeInput({ calculation }), { call: scripted.call }), /no supportable claims/);
+    assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 0,
+      'mixed-field or negated deterministic output narration is rejected before a positive review');
+  }
+}
+
+{
+  const issue = makeIssue('issue-gst');
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [claim('provision-with-unrelated-number', 'Regulation 26 establishes a GST rate of 17%.')] };
+  });
+  await assert.rejects(tryGenerateGroundedSynthesis(makeInput({ issues: [issue] }), { call: scripted.call }), /no supportable claims/);
+  assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 0,
+    'a known legal provision reference cannot cause an unrelated rate to be stripped from numeric validation');
+}
+
+{
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('TARGETED_REVISION')) return { claims: [] };
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [claim('invented-subclauses', 'Regulations 26(a) and 27(z) permit unconditional recovery.')] };
+  });
   await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call }), /no supportable claims/);
-  assert.equal(scripted.calls.length, 2, 'journal instructions are blocked before they can become a response');
+  assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 0,
+    'provision alphabetic subclauses must match exactly; known section numbers do not authorize invented references');
+}
+
+{
+  const calculation = { netAmount: 1000, rate: 0.09, outputTax: 90, invoiceTotal: 1090, currency: 'SGD', sourceRecordId: record.id, effectiveDate: '2026-11-03' };
+  const issue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  for (const text of ['The output tax is SGD -90.', 'As stated in your question, the payroll date is 30/10/2026.']) {
+    const scripted = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      if (system.includes('TARGETED_REVISION')) return { claims: [] };
+      if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+      const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'GST_CALCULATION');
+      return { claims: [
+        claim(`mismatched-number-${text.length}`, text, ['passage-1', output.id], {
+          kind: 'LIMITATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+        }),
+        claim('number-source-control', supportedRule)
+      ] };
+    });
+    const result = await tryGenerateGroundedSynthesis(makeInput({
+      calculation, issues: [issue], query: 'The supplier invoice dated 30/10/2026 has no tax invoice attached.'
+    }), { call: scripted.call });
+    assert.ok(result);
+    assert.ok(!result.messageText.includes(text), 'a changed sign or relabelled date cannot reuse a matching numeric value');
+  }
+}
+
+{
+  const calculation = { netAmount: 1000, rate: 0.09, outputTax: 90, invoiceTotal: 1090, currency: 'SGD', sourceRecordId: record.id, effectiveDate: '2026-11-03' };
+  const issue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'GST_CALCULATION');
+    return { claims: [claim('matching-output-field', 'The output tax is SGD 90.', ['passage-1', output.id], {
+      kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+    })] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    calculation, issues: [issue], evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /output tax is SGD 90/i,
+    'an amount stated with its matching deterministic field and currency remains usable');
+}
+
+{
+  for (const text of [
+    'Debit expense and credit cash for the purchase.',
+    'Dr Expense; Cr Bank.',
+    'Debiting expense and crediting bank posts the purchase.',
+    'Dr Expense 100; Cr Bank 100.',
+    'Record this by debiting inventory and crediting trade payables.',
+    'The posting is Dr Inventory, Cr Trade Payables.',
+    'Debit inventory.',
+    'Credit trade payables.',
+    'Post Dr Inventory.'
+  ]) {
+    const scripted = scriptedCall(({ system }) => system.includes('TARGETED_REVISION')
+      ? { claims: [] }
+      : { claims: [claim('journal', text)] });
+    await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call }), /no supportable claims/);
+    assert.equal(scripted.calls.length, 2, 'journal instructions are blocked before they can become a response');
+    assert.equal(scripted.calls.filter(call => call.system.includes('EVIDENCE_GROUNDED_REVIEW')).length, 0,
+      `journal instruction is deterministically rejected before review: ${text}`);
+  }
+
+  for (const text of ['The supplier issued a tax credit note.', 'The trial balance includes a credit balance.']) {
+    const scripted = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      return system.includes('EVIDENCE_GROUNDED_REVIEW')
+        ? reviewFor(packet.claims)
+        : { claims: [claim('credit-narrative', text)] };
+    });
+    const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
+    assert.ok(result.messageText.includes(text), `journal guard does not block a credit-note or credit-balance explanation: ${text}`);
+  }
 }
 
 {

@@ -1,0 +1,83 @@
+{
+  "status": "Implemented; focused negative regressions and independent read-only re-review complete",
+  "branch": "codex/ai-first-advisory-phase1-20261103",
+  "baseHead": "68085aa2aba2c5db4d4c8f210d78dd1f8b3d122e",
+  "snapshot": "Local pre-publication validation; publication target is recorded in review-handoff.txt",
+  "findings": "1-9",
+  "files": [
+    "src/App.tsx",
+    "src/components/ChatPanel.tsx",
+    "src/services/conversationBoundary.ts",
+    "src/services/evidenceGroundedSynthesis.ts",
+    "src/services/geminiService.ts",
+    "tests/regression/test_ai_first_advisory_phase1.mjs",
+    "tests/regression/test_evidence_grounded_synthesis.mjs",
+    "tests/regression/test_evidence_grounded_synthesis_pipeline.mjs"
+  ],
+  "verification": {
+    "preflight": "PASS canonical Node22.23.3 (profile-access escalation required)",
+    "finalFocused": "PASS all 3 affected existing regression suites on final code",
+    "smoke": {
+      "result": "PASS",
+      "suites": 164,
+      "durationSeconds": 293.98,
+      "note": "Initial combined implementation before final review corrections; full includes smoke and final focused suites rechecked afterward"
+    },
+    "full": {
+      "result": "PASS",
+      "suites": 187,
+      "durationSeconds": 309.19,
+      "note": "Run began before last small posting-guard correction; final affected suites and build/lint rerun after that correction all passed"
+    },
+    "finalBuild": "PASS TypeScript, Vite and Cloudflare worker build",
+    "finalMaintainedLint": "PASS (existing unrelated warnings)",
+    "rootLint": {
+      "result": "FAIL",
+      "errors": 34,
+      "file": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+      "scope": "Pre-existing untracked generated artifact, left unchanged"
+    },
+    "diffCheck": "PASS",
+    "independentReview": "Initial independent review found 3 bypasses; fixed with negative tests. Bounded re-reviews including final imperative-posting guard found no remaining findings",
+    "baselineRedReplay": "Not run",
+    "liveModelBrowserCIProduction": "Not run"
+  },
+  "limitations": [
+    "Numeric paraphrases are intentionally withheld unless complete source wording or narrowly matched labeled deterministic fields preserve provenance and meaning.",
+    "No accounting rules or statutory rates were changed."
+  ],
+  "hashes": [
+    {
+      "path": "src/App.tsx",
+      "sha256": "BC7B89714EFD5195B2B756C26D9A36765BA9C820736CA7E38FCF99F06D2F26BD"
+    },
+    {
+      "path": "src/components/ChatPanel.tsx",
+      "sha256": "8BDF6564C3E2FD876C0606AED86AB8BBB648261E0D558A20691F2E7C0DC20AF7"
+    },
+    {
+      "path": "src/services/conversationBoundary.ts",
+      "sha256": "2E29E432789A9D16D285F4F679F28C4527874A2499805B677FDD7CFAC9365764"
+    },
+    {
+      "path": "src/services/evidenceGroundedSynthesis.ts",
+      "sha256": "A24072E492092C37CA4F901536243E0E2E07D3DA797F9CF8C8A075F469E4E970"
+    },
+    {
+      "path": "src/services/geminiService.ts",
+      "sha256": "8EEE8C34628789F4BF979A9CF512D0F51472D99BEBD0D8A7405DA6DB15CAC7DF"
+    },
+    {
+      "path": "tests/regression/test_ai_first_advisory_phase1.mjs",
+      "sha256": "1E963A5510334DBCB6E9FB564B84CE4E5AA52CEE09BFE00761C9D6312615CD92"
+    },
+    {
+      "path": "tests/regression/test_evidence_grounded_synthesis.mjs",
+      "sha256": "4BD6AF47AD92F609BC269657892E5690E7DF9EA07640C6CAD926C6B5C89FAACF"
+    },
+    {
+      "path": "tests/regression/test_evidence_grounded_synthesis_pipeline.mjs",
+      "sha256": "FFCB4B9D6E40C29E43AA5FAD17EE0E0A36A9E36F504FD88EE1233E2EB2A478FE"
+    }
+  ]
+}

@@ -6,6 +6,7 @@ import type { OutputPreference } from '../services/geminiService';
 import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
 import { ImageAttachmentPreview } from './ImageAttachmentPreview';
 import { SafeChatAnswer } from './SafeChatAnswer';
+import { canRetryFailedAnswer } from '../services/conversationBoundary';
 
 function advisoryFailureMessage(status: AdvisoryFailureStatus): string {
   const messages: Record<AdvisoryFailureStatus, string> = {
@@ -187,7 +188,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               {msg.displayFullAnswer
                 ? <div className="font-normal"><SafeChatAnswer text={msg.fullText || msg.text} trustedLinks={msg.scenarioSnapshot?.officialAnswerLinks || []} /></div>
                 : <div className="whitespace-pre-line font-normal">{msg.text}</div>}
-              {msg.advisoryRetryPayload && msg.advisoryFailureStatus !== 'CONTEXT_LIMIT' && (
+              {msg.advisoryRetryPayload && msg.advisoryFailureStatus !== 'CONTEXT_LIMIT' &&
+                canRetryFailedAnswer(messages, msg.advisoryRetryPayload.originalUserMessageId) && (
                 <button type="button" onClick={() => onRetryAiAnswer(msg.advisoryRetryPayload!.text, msg.advisoryRetryPayload!.scenarioSnapshot, msg.advisoryRetryPayload!.originalUserMessageId)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
                   Retry AI answer
                 </button>

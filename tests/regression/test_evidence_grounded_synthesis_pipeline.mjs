@@ -89,6 +89,29 @@ try {
   assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1);
   assert.equal(providerStages.filter(stage => stage === 'review').length, 1);
 
+  const mixedQuery = 'On 03/11/2026, purchased office equipment for SGD 1,250 and paid from the business bank. Can my client claim GST input tax on this office expense, and what is its accounting treatment?';
+  const conflictingHistory = [
+    { id: 'prior-user', sender: 'user', timestamp: '', text: 'For the previous share issue, the purchase was private and GST input tax was blocked.' },
+    { id: 'prior-assistant', sender: 'assistant', timestamp: '', text: 'The old share transaction used a private-use assumption and no equipment journal.' },
+    { id: 'current-user', sender: 'user', timestamp: '', text: mixedQuery }
+  ];
+  const oldShareScenario = {
+    scenarioType: 'SHARE_ISSUANCE', rawQuery: 'Issued shares to an investor.', transactionTitle: 'Share issue',
+    functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true,
+    semanticUnderstanding: { transactionType: 'share_capital_issuance' }
+  };
+  providerStages.length = 0;
+  const mixedResult = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory);
+  assert.equal(mixedResult.answerPath, 'AI_GROUNDED_SYNTHESIS', 'a new mixed accounting/statutory question uses the production synthesis path');
+  const historyContext = JSON.stringify(draftPacket.historyContext);
+  assert.doesNotMatch(historyContext, /previous share issue|old share transaction|private-use assumption/i,
+    'starting a new accounting scenario removes conflicting prior accounting and statutory turns before grounding');
+  assert.equal(draftPacket.query, mixedQuery, 'the current user turn remains the production synthesis query');
+  assert.equal(draftPacket.historyContext.turns.length, 0,
+    'the current query is supplied separately and no earlier turn remains after the scenario boundary');
+  assert.notEqual(mixedResult.scenarioState.scenarioType, oldShareScenario.scenarioType,
+    'the prior accounting scenario is not carried into the new mixed query result');
+
   providerStages.length = 0;
   reviewFailure = true;
   const fallback = await processAccountingQuery(query, null, 'SFRS_I', provider, 'unused', []);

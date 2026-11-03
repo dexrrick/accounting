@@ -10,6 +10,12 @@ export function buildRetryConversationHistory(history: ChatMessage[], originalUs
   return originalTurnIndex < 0 ? [] : history.slice(0, originalTurnIndex + 1);
 }
 
+/** A failed turn can only be retried while it is still the latest user request. */
+export function canRetryFailedAnswer(history: ChatMessage[], originalUserMessageId: string): boolean {
+  const originalTurnIndex = history.findIndex(message => message.id === originalUserMessageId && message.sender === 'user');
+  return originalTurnIndex >= 0 && !history.slice(originalTurnIndex + 1).some(message => message.sender === 'user');
+}
+
 /** A self-contained income-tax accounting question must not inherit a PPE journal. */
 export function isDeferredTaxInquiry(query: string): boolean {
   return /\bdeferred\s+tax\s+(?:liabilit(?:y|ies)|assets?|accounting)\b/i.test(query) &&

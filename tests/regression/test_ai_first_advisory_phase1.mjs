@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import React from 'react';
+import { readFile } from 'node:fs/promises';
+import vm from 'node:vm';
+import ts from 'typescript';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
   buildAdvisoryConversation,
@@ -13,7 +16,7 @@ import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.
 import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetriever.ts';
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
 import { ChatPanel } from '../../src/components/ChatPanel.tsx';
-import { buildRetryConversationHistory } from '../../src/services/conversationBoundary.ts';
+import { buildRetryConversationHistory, canRetryFailedAnswer } from '../../src/services/conversationBoundary.ts';
 
 const cases = [
   {
@@ -262,6 +265,10 @@ const completeRetryHistory = [
 ];
 const retryHistory = buildRetryConversationHistory(completeRetryHistory, retryUserMessage.id);
 assert.deepEqual(retryHistory.map(message => message.id), ['retry-prior-user', 'retry-prior-answer', 'retry-user'], 'retry history ends at the original user turn');
+assert.equal(canRetryFailedAnswer(completeRetryHistory, retryUserMessage.id), false,
+  'a failed turn cannot be retried once any later user request has changed the active scenario');
+assert.equal(canRetryFailedAnswer(retryHistory, retryUserMessage.id), true,
+  'an unanswered failed turn remains retryable while it is still the latest user request');
 try {
   for (const adapter of adapters) {
     for (const [status, expectedFailure] of [[401, 'AUTH_OR_PERMISSION'], [429, 'RATE_LIMIT']]) {
@@ -323,7 +330,7 @@ try {
 
   globalThis.localStorage = { getItem: () => null, setItem: () => undefined };
   const failureMarkup = renderToStaticMarkup(React.createElement(ChatPanel, {
-    messages: [{
+    messages: [retryUserMessage, {
       id: 'offline-fallback', sender: 'assistant', timestamp: '', text: 'Offline guidance retained.',
       advisoryFailureStatus: 'AUTH_OR_PERMISSION',
       advisoryRetryPayload: { text: offlineQuestion, scenarioSnapshot: preRequestScenario, originalUserMessageId: retryUserMessage.id }
@@ -337,6 +344,113 @@ try {
   assert.match(failureMarkup, /Retry AI answer/, 'the UI offers an explicit AI retry separately from image retry');
   assert.match(failureMarkup, /Offline guidance retained/, 'the offline response remains visible with the failure status');
   assert.doesNotMatch(failureMarkup, /private-key-value|provider secret body/);
+  const historicalFailureMarkup = renderToStaticMarkup(React.createElement(ChatPanel, {
+    messages: [
+      retryUserMessage,
+      {
+        id: 'offline-fallback', sender: 'assistant', timestamp: '', text: 'Offline guidance retained.',
+        advisoryFailureStatus: 'AUTH_OR_PERMISSION',
+        advisoryRetryPayload: { text: offlineQuestion, scenarioSnapshot: preRequestScenario, originalUserMessageId: retryUserMessage.id }
+      },
+      { id: 'later-user', sender: 'user', timestamp: '', text: laterTransactionText }
+    ],
+    onSendMessage: () => undefined, onRetryMessage: () => undefined, onRetryAiAnswer: () => undefined,
+    onSelectSuggestion: () => undefined, onResolveRelation: () => undefined,
+    isLoading: false, isAwaitingRelation: false,
+    outputPreference: { journal: false, statutory: false }, onOutputPreferenceChange: () => undefined
+  }));
+  assert.doesNotMatch(historicalFailureMarkup, /Retry AI answer/,
+    'the UI hides the retry action after a later transaction is sent');
+
+  const appSource = await readFile(new URL('../../src/App.tsx', import.meta.url), 'utf8');
+  const appJavaScript = ts.transpileModule(appSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true }
+  }).outputText;
+  const stateSlots = [];
+  let stateCursor = 0;
+  let nextTimestamp = 1;
+  let chatProps;
+  let inputProps;
+  const nextUserMessageIdTime = class extends Date { static now() { return nextTimestamp++; } };
+  const chatPanelComponent = function ChatPanelStub() {};
+  const inputPanelComponent = function InputHandlerPanelStub() {};
+  const components = new Map([
+    ['./components/ChatPanel', { ChatPanel: chatPanelComponent }],
+    ['./components/InputHandlerPanel', { InputHandlerPanel: inputPanelComponent }]
+  ]);
+  const fakeReact = {
+    createElement(type, props, ...children) {
+      if (type === chatPanelComponent) chatProps = props;
+      if (type === inputPanelComponent) inputProps = props;
+      return { type, props, children };
+    },
+    useState(initial) {
+      const index = stateCursor++;
+      if (!(index in stateSlots)) stateSlots[index] = typeof initial === 'function' ? initial() : initial;
+      return [stateSlots[index], value => {
+        stateSlots[index] = typeof value === 'function' ? value(stateSlots[index]) : value;
+      }];
+    },
+    useEffect() {}
+  };
+  const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useEffect: fakeReact.useEffect };
+  const appCalls = [];
+  const scenarioA = { scenarioType: 'EXPENSE', rawQuery: offlineQuestion, transactionTitle: 'Transaction A', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
+  const scenarioB = { ...scenarioA, rawQuery: laterTransactionText, transactionTitle: 'Transaction B' };
+  const serviceStub = {
+    processAccountingQuery: async (...args) => {
+      appCalls.push(args);
+      return appCalls.length === 1
+        ? { messageText: 'Offline answer for transaction A.', scenarioState: scenarioA, advisoryFailureStatus: 'NETWORK' }
+        : { messageText: 'Completed answer for transaction B.', scenarioState: scenarioB };
+    }
+  };
+  const boundarySource = await readFile(new URL('../../src/services/conversationBoundary.ts', import.meta.url), 'utf8');
+  const boundaryModule = { exports: {} };
+  const boundaryRequire = id => ({})[id];
+  vm.runInNewContext(ts.transpileModule(boundarySource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText, { module: boundaryModule, exports: boundaryModule.exports, require: boundaryRequire });
+  const componentStub = new Proxy({}, { get: (_, name) => function ComponentStub() { void name; } });
+  const moduleStubs = {
+    react: reactExports,
+    './services/geminiService': serviceStub,
+    './services/conversationBoundary': boundaryModule.exports,
+    './types/provider': { loadProviderSettings: () => ({ activeProvider: 'openai', openai: {}, azure: {}, gemini: { model: 'test' } }), saveProviderSettings() {} },
+    './engine/accountingEngine': { calculateDoubleEntries: () => ({ groups: [] }) },
+    './utils/dateUtils': { getSingaporeTimestamp: () => '' },
+    './utils/chatPresentation': { createChatPreview: text => text, extractOfficialAnswerLinks: () => [] },
+    './utils/irasEvidencePresentation': { hasCurrentIrasEvidencePresentation: () => false },
+    './utils/authorityEvidencePresentation': { hasCurrentAuthorityEvidencePresentation: () => false },
+    './retrieval/regulatoryUpdateScheduler': { runDueRegulatoryChecks() {} },
+    './components/ChatPanel': components.get('./components/ChatPanel'),
+    './components/InputHandlerPanel': components.get('./components/InputHandlerPanel'),
+    'lucide-react': componentStub
+  };
+  const appRequire = id => moduleStubs[id] || componentStub;
+  const appModule = { exports: {} };
+  const appContext = {
+    module: appModule, exports: appModule.exports, require: appRequire,
+    localStorage: { getItem: () => null, setItem() {} }, Date: nextUserMessageIdTime,
+    setInterval() { return 0; }, clearInterval() {}, console
+  };
+  vm.runInNewContext(appJavaScript, appContext);
+  const renderApp = () => { stateCursor = 0; appModule.exports.App(); return { chatProps, inputProps }; };
+  let appUi = renderApp();
+  await appUi.chatProps.onSendMessage(offlineQuestion);
+  appUi = renderApp();
+  const failedTurn = appUi.chatProps.messages.find(message => message.advisoryRetryPayload)?.advisoryRetryPayload;
+  assert.ok(failedTurn, 'App retains a retry action for transaction A while it is current');
+  await appUi.chatProps.onSendMessage(`New question: ${laterTransactionText}`);
+  appUi = renderApp();
+  const messagesBeforeHistoricalRetry = appUi.chatProps.messages;
+  const activeScenarioBeforeHistoricalRetry = appUi.inputProps.scenario;
+  appUi.chatProps.onRetryAiAnswer(failedTurn.text, failedTurn.scenarioSnapshot, failedTurn.originalUserMessageId);
+  appUi = renderApp();
+  assert.equal(appCalls.length, 2, 'App refuses the historical retry before it can call the accounting service');
+  assert.equal(appUi.inputProps.scenario.transactionTitle, 'Transaction B', 'the latest transaction remains the active accounting scenario');
+  assert.strictEqual(appUi.inputProps.scenario, activeScenarioBeforeHistoricalRetry, 'the retry does not replace current scenario state');
+  assert.strictEqual(appUi.chatProps.messages, messagesBeforeHistoricalRetry, 'the retry does not append a stale assistant answer');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;

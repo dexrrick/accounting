@@ -1,0 +1,194 @@
+================================================================
+📊 REGRESSION SUITE EXECUTION SUMMARY
+================================================================
+✅ PASS | provider-resilience    | AI-first Advisory Foundation               |  1.95s
+✅ PASS | retrieval-evidence     | Evidence-Grounded Synthesis Claim Review   |  0.56s
+✅ PASS | retrieval-evidence     | Evidence-Grounded Synthesis Production Pipeline |  1.02s
+✅ PASS | accounting-invariants  | Basic Bookkeeping Journal Templates        |  2.40s
+✅ PASS | input-understanding    | Development Live Routing Regressions       |  1.01s
+✅ PASS | provider-resilience    | Malformed Tax Response Safety              |  0.59s
+✅ PASS | accounting-invariants  | Double-Entry Reliability & Journal Integrity |  0.63s
+✅ PASS | input-understanding    | AI Semantic Extraction & Schema Validation Gate |  0.82s
+✅ PASS | input-understanding    | Semantic Question Understanding & Guarded Routing |  2.41s
+✅ PASS | input-understanding    | Statutory Review Topic Routing             |  0.48s
+✅ PASS | input-understanding    | Statutory Review Application Routing       |  1.09s
+✅ PASS | retrieval-evidence     | Statutory Review Date Roles                |  0.34s
+✅ PASS | input-understanding    | Statutory Review Fallback Intent           |  0.55s
+✅ PASS | ux-resilience          | Authority Evidence General Rule Status     |  0.33s
+✅ PASS | input-understanding    | Per-Issue Semantic Operation Contracts     |  2.10s
+✅ PASS | input-understanding    | Semantic Operation Intent Boundaries       |  0.66s
+✅ PASS | evaluation-safety      | Semantic Intent Follow-Up Runner           |  0.78s
+✅ PASS | evaluation-safety      | Semantic Authority & Relief Evaluation Safety |  0.77s
+✅ PASS | evaluation-safety      | IRAS-First Release Gate                    |  0.17s
+✅ PASS | evaluation-safety      | IRAS-First Runner Safety                   |  1.25s
+✅ PASS | input-understanding    | Semantic Authority & Relief Contract       |  0.61s
+✅ PASS | input-understanding    | IRAS-First Semantic Contract               |  0.55s
+✅ PASS | input-understanding    | CPF Relief Context and Private Expense Enumeration |  0.53s
+✅ PASS | input-understanding    | Routing Clause Topic Ownership             |  0.77s
+✅ PASS | input-understanding    | Application-Derived Semantic Specificity   |  0.53s
+✅ PASS | retrieval-evidence     | IRAS Natural-Language Topic Resolution     |  0.79s
+✅ PASS | input-understanding    | Factual Conjunction Residual Safety        |  0.51s
+✅ PASS | input-understanding    | Shared Whole-Question Residual Safety      |  0.42s
+✅ PASS | evaluation-safety      | IRAS V2 Measurement and Timeout Safety     |  0.67s
+✅ PASS | input-understanding    | Versioned Semantic Question Wire Contract  |  0.41s
+✅ PASS | provider-resilience    | Semantic Provider JSON Schema & Wire Contract |  0.32s
+✅ PASS | evaluation-safety      | Semantic Wire-Format Evaluation Profile Safety |  0.68s
+✅ PASS | evaluation-safety      | Semantic Contract Follow-Up Runner         |  0.72s
+✅ PASS | input-understanding    | Material Issue Decomposition & Authority Ownership |  0.56s
+✅ PASS | retrieval-evidence     | Authority Workstream Evidence Isolation & Coverage |  4.29s
+✅ PASS | retrieval-evidence     | Authority Semantic Concept Ownership       |  0.61s
+✅ PASS | retrieval-evidence     | Bounded Statutory Advisory Support         |  0.46s
+✅ PASS | retrieval-evidence     | IRAS and ACRA Practical Rule Explanations  |  0.72s
+✅ PASS | retrieval-evidence     | CPF and MAS Practical Rule Explanations    |  0.74s
+✅ PASS | retrieval-evidence     | IRAS GST Filing and CPF Contribution Practical Coverage |  0.35s
+✅ PASS | retrieval-evidence     | MOM Salary, ACRA Audit, and MAS VCFM Practical Coverage |  0.34s
+✅ PASS | retrieval-evidence     | IRAS and CPF Statutory Rule Expansion      |  0.34s
+✅ PASS | retrieval-evidence     | Statutory General-Rule Answerability       |  0.32s
+✅ PASS | retrieval-evidence     | ACRA and MOM Practical Rule Development    |  0.36s
+✅ PASS | retrieval-evidence     | IRAS CPF and MAS Practical Rule Development |  0.79s
+✅ PASS | retrieval-evidence     | Statutory Knowledge Production Path        |  3.91s
+✅ PASS | retrieval-evidence     | ACRA and MOM Source-backed Knowledge       |  5.90s
+✅ PASS | retrieval-evidence     | Five-family Statutory Workflow Source Proof |  5.30s
+✅ PASS | retrieval-evidence     | Expanded Statutory Workflow Source Proof   |  5.66s
+✅ PASS | input-understanding    | Statutory Multipart Request and Source Isolation |  1.21s
+✅ PASS | accounting-invariants  | Mixed Goods Sale and MOM Journal Safety    |  4.08s
+✅ PASS | retrieval-evidence     | CPF New PR and OW/AW Answerability         | 20.27s
+✅ PASS | input-understanding    | Practical Statutory Router Refinements     |  2.16s
+✅ PASS | retrieval-evidence     | Declared Commencement Source Scope Full Applications |  2.35s
+✅ PASS | input-understanding    | Statutory Actual Answer Routing Repairs    |  1.84s
+✅ PASS | input-understanding    | Statutory Existing Rule Actual Application Mappings |  2.22s
+✅ PASS | retrieval-evidence     | Statutory Practical Source Expansion Full Applications |  2.20s
+✅ PASS | retrieval-evidence     | IRAS and MAS Source-backed Knowledge       |  2.09s
+✅ PASS | retrieval-evidence     | IRAS Native WHT Filing and Treaty Production Proof |  6.63s
+✅ PASS | retrieval-evidence     | IRAS General Rule Actual Application Path  |  1.55s
+✅ PASS | retrieval-evidence     | CPF Native Tables and Payroll Calculations |  1.44s
+✅ PASS | retrieval-evidence     | Statutory Knowledge Native Production Path |  4.80s
+✅ PASS | retrieval-evidence     | MOM, ACRA and MAS Statutory Rule Expansion |  1.29s
+✅ PASS | retrieval-evidence     | Statutory Expansion Production Path        |  2.39s
+✅ PASS | retrieval-evidence     | Statutory Practical Rule Issue Binding     |  0.52s
+✅ PASS | coverage-governance    | Five-authority Statutory Coverage Benchmark |  1.78s
+✅ PASS | coverage-governance    | Five-authority Statutory Coverage Fixture Replay |  1.67s
+✅ PASS | retrieval-evidence     | MOM Part IV Coverage Concept Support       |  0.66s
+✅ PASS | retrieval-evidence     | Fetched Statutory Qualification Retention  |  0.48s
+✅ PASS | retrieval-evidence     | Unmapped Accounting Rule Gap Fallback      |  0.82s
+✅ PASS | input-understanding    | Exact-Query Request Completeness Diagnostics |  0.59s
+✅ PASS | evaluation-safety      | Prospective Current Scope V2 Compatibility (Archived V4/V5/V8/V9 Controls) | 23.51s
+✅ PASS | evaluation-safety      | Semantic Residency Subject Diagnostic V4   |  0.47s
+✅ PASS | evaluation-safety      | IRAS Mapped Evidence Diagnostic V4         |  7.50s
+✅ PASS | evaluation-safety      | IRAS Public GST Selection V3               |  3.53s
+✅ PASS | evaluation-safety      | IRAS Public GST Selection V4               | 13.86s
+✅ PASS | retrieval-evidence     | IRAS Source Term Compatibility             |  0.67s
+✅ PASS | retrieval-evidence     | IRAS General Rule Concept Support          |  0.89s
+✅ PASS | retrieval-evidence     | Private Expense Scoped Local-to-Mapped Fallback |  0.62s
+✅ PASS | retrieval-evidence     | IRAS Public Rule Forms                     |  0.30s
+✅ PASS | retrieval-evidence     | IRAS Defined Foreign-income Rule           |  0.71s
+✅ PASS | retrieval-evidence     | IRAS GST Opening Locator                   |  1.57s
+✅ PASS | retrieval-evidence     | IRAS Supported Rule Quote Priority         |  0.85s
+✅ PASS | retrieval-evidence     | IRAS WHT Overview Topic Binding            |  0.72s
+✅ PASS | retrieval-evidence     | IRAS WHT Topicless Concept Ownership       |  0.64s
+✅ PASS | retrieval-evidence     | IRAS Scoped Concept Coverage               |  0.35s
+✅ PASS | retrieval-evidence     | IRAS Requested Concept Fallback            |  0.83s
+✅ PASS | retrieval-evidence     | IRAS Individual CPF Cash Top-up Workstream |  0.71s
+✅ PASS | retrieval-evidence     | IRAS Shared Page Claim Bindings            |  0.60s
+✅ PASS | input-understanding    | Multi-authority Issue Scoring              |  0.15s
+✅ PASS | input-understanding    | Prospective Multi-authority Issue Scoring V2 |  0.16s
+✅ PASS | evaluation-safety      | Multi-authority Evaluation Runner Output Safety |  3.68s
+✅ PASS | evaluation-safety      | Semantic Reliability Experiment Harness    |  1.36s
+✅ PASS | evaluation-safety      | Semantic Residency Diagnostic V3 Safety    |  0.96s
+✅ PASS | evaluation-safety      | Semantic Contract Diagnostics & Capture Runner Safety |  0.36s
+✅ PASS | evaluation-safety      | Verification Receipt Export Durability & Integrity |  2.92s
+✅ PASS | evaluation-safety      | Cloudflare R2 Verification Receipt Sink Durability & Recovery |  0.83s
+✅ PASS | evaluation-safety      | Reviewed Legacy R2 Harness Preparation Safety |  2.82s
+✅ PASS | retrieval-evidence     | Resolver Coverage Contract & Compound Issue Isolation |  0.63s
+✅ PASS | ux-resilience          | Whole-Question Authority Evidence Presentation |  1.81s
+✅ PASS | input-understanding    | Semantic Understanding & Routing           |  0.60s
+✅ PASS | conversation-state     | Multi-Turn Accounting State & Follow-Ups   |  1.13s
+✅ PASS | retrieval-evidence     | Phase 5 Integration & Semantics            |  0.50s
+✅ PASS | retrieval-evidence     | Topic Resolver Semantics & Provenance Separation |  0.28s
+✅ PASS | accounting-invariants  | Projection Builder No-Fabrication Invariants |  0.16s
+✅ PASS | conversation-state     | Payroll Amount Correction & CPF Journal    |  0.33s
+✅ PASS | ux-resilience          | Conversational Payroll and Chat Presentation |  0.93s
+✅ PASS | conversation-state     | Generic Fact Amendment Resolution          |  0.17s
+✅ PASS | accounting-invariants  | Own-Equity versus Payroll Routing          |  0.32s
+✅ PASS | input-understanding    | Semantic Routing Priority                  |  0.35s
+✅ PASS | input-understanding    | MAS / IRAS Multi-authority Fund Incentive Routing |  0.38s
+✅ PASS | conversation-state     | Share Capital Consideration & Settlement   |  0.63s
+✅ PASS | retrieval-evidence     | Phase 5 Advanced Hybrid Retrieval & Vector Index |  0.86s
+✅ PASS | retrieval-evidence     | Authority and Domain Conjunctive Retrieval |  0.34s
+✅ PASS | retrieval-evidence     | Labelled Retrieval Quality Evaluation      |  0.67s
+✅ PASS | provider-resilience    | Provider Boundary Safety                   |  0.18s
+✅ PASS | provider-resilience    | Gemini Provider Diagnostics Safety         |  4.82s
+✅ PASS | provider-resilience    | Gemini Failure Chain Attribution           |  0.15s
+✅ PASS | evaluation-safety      | Latest Gemini Retained Offline Diagnostic  |  1.15s
+✅ PASS | evaluation-safety      | Gemini Downstream V4 Semantic and Ownership Boundaries |  1.52s
+✅ PASS | evaluation-safety      | Latest Nine-response Gemini Downstream Offline Replay | 11.24s
+✅ PASS | retrieval-evidence     | IRAS Scoped Fallback Evidence Reuse        |  0.93s
+✅ PASS | ux-resilience          | Feedback Build Metadata                    |  0.16s
+✅ PASS | ux-resilience          | iOS Small-Screen Input Focus Zoom          |  0.20s
+✅ PASS | provider-resilience    | Official Source Failure Safety             |  0.31s
+✅ PASS | provider-resilience    | Official Source Same-Origin Proxy & Feedback Diagnostics |  0.54s
+✅ PASS | retrieval-evidence     | Shared Official Document Extraction        |  1.05s
+✅ PASS | retrieval-evidence     | Controlled Official Document Capture       |  0.34s
+✅ PASS | regulatory-updates     | MAS Transport Investigation Diagnostic     |  0.93s
+✅ PASS | retrieval-evidence     | Tagged PDF Paragraph Geometry              |  0.84s
+✅ PASS | retrieval-evidence     | Explicitly Bounded PDF Subsections and Linked Notes |  1.10s
+✅ PASS | regulatory-updates     | MAS Bounded Subsection Preview Lifecycle   |  9.05s
+✅ PASS | regulatory-updates     | MAS Byte-backed Regulatory Update Lifecycle |  1.15s
+✅ PASS | regulatory-updates     | Reviewed MAS Source Response Captures      |  0.38s
+✅ PASS | regulatory-updates     | Targeted MAS Exact-byte Acceptance Recheck |  0.54s
+✅ PASS | regulatory-updates     | Genuine MAS IID 04/2025 PDF Acceptance Checkpoint |  1.07s
+✅ PASS | regulatory-updates     | Genuine MAS HTTP Provenance and Controlled Lifecycle Acceptance |  1.65s
+✅ PASS | retrieval-evidence     | Shared Approved Document Admission & Citations |  0.52s
+✅ PASS | regulatory-updates     | ACRA B2 Captured Source Admission and Deadline Replay |  1.09s
+✅ PASS | retrieval-evidence     | ACRA Annual Return Filing Duty Evidence Scope |  0.80s
+✅ PASS | coverage-governance    | Phase 7 Coverage Registry                  |  0.23s
+✅ PASS | coverage-governance    | Singapore Knowledge Routing Benchmark      |  0.93s
+✅ PASS | coverage-governance    | Singapore Knowledge Foundation Registry and Routing |  0.58s
+✅ PASS | coverage-governance    | Singapore Consolidation Source Map and Local Routing |  3.21s
+✅ PASS | retrieval-evidence     | Verified Official Citation and Source-Map Fallback |  0.58s
+✅ PASS | accounting-invariants  | SFRS(I) 9 Reviewed Knowledge Pack          |  0.86s
+✅ PASS | corporate-tax          | Corporate Tax Treatment Pack               |  0.15s
+✅ PASS | coverage-governance    | Phase 7 Remaining Topic Packs              |  0.32s
+✅ PASS | regulatory-updates     | Regulatory Update Scheduler                |  0.30s
+✅ PASS | conversation-state     | Personal Fine Conversation Boundary        |  0.15s
+✅ PASS | conversation-state     | Personal Fine Clarification & Journal Follow-Ups |  0.50s
+✅ PASS | conversation-state     | Conversation Relation Failsafe             |  0.15s
+✅ PASS | conversation-state     | GST Registration Measurement-Basis Follow-Up |  0.32s
+✅ PASS | conversation-state     | Deferred Tax Standards Boundary            |  0.66s
+✅ PASS | retrieval-evidence     | Official Tax Source Links                  |  0.23s
+✅ PASS | input-understanding    | IRAS Missing Fact Guards                   |  0.50s
+✅ PASS | retrieval-evidence     | IRAS Verified Source Map and Fallback      |  0.92s
+✅ PASS | retrieval-evidence     | IRAS Mapped Source Diagnostic V3 Safety    |  1.40s
+✅ PASS | retrieval-evidence     | CPF Sitemap Discovery                      |  0.52s
+✅ PASS | retrieval-evidence     | ACRA Sitemap Discovery                     |  0.75s
+✅ PASS | retrieval-evidence     | MOM and MAS Official Sitemap Discovery     |  1.03s
+✅ PASS | retrieval-evidence     | MAS CMS General Rule Evidence Support      |  0.51s
+✅ PASS | retrieval-evidence     | IRAS Authority-level Discovery Progression |  0.70s
+✅ PASS | retrieval-evidence     | IRAS End-to-End Routing and Retrieval      |  5.31s
+✅ PASS | retrieval-evidence     | IRAS Evidence Quality Gate and Ranking     |  0.42s
+✅ PASS | retrieval-evidence     | IRAS Claim-to-Evidence Verification        |  0.48s
+✅ PASS | retrieval-evidence     | IRAS HTML Evidence Boundaries              |  0.42s
+✅ PASS | retrieval-evidence     | IRAS Evidence Policy Pipeline              |  1.60s
+✅ PASS | evaluation-safety      | IRAS V4 Retained-response Offline Regression |  1.46s
+✅ PASS | corporate-tax          | IRAS Deterministic Applications            |  0.41s
+✅ PASS | accounting-invariants  | Verified Source-Driven GST Calculation     |  0.22s
+✅ PASS | retrieval-evidence     | IRAS Provisional Answer Pipeline           |  1.21s
+✅ PASS | accounting-invariants  | Business Equipment Acquisition             |  0.49s
+✅ PASS | accounting-invariants  | Inventory Event Sequence                   |  1.88s
+✅ PASS | accounting-invariants  | Sale and Leaseback Event Sequence          |  0.82s
+✅ PASS | accounting-invariants  | Mixed-Domain Event Sequence                |  0.82s
+✅ PASS | accounting-invariants  | Investment Event Sequence                  |  1.15s
+✅ PASS | accounting-invariants  | Dated Investment Event Sequence            |  1.12s
+✅ PASS | regulatory-updates     | Phase 4 Live Retrieval & Source Versioning |  0.64s
+✅ PASS | retrieval-evidence     | Coverage & Temporal Invariants             |  0.70s
+✅ PASS | accounting-invariants  | Sidequest Correction Pass                  |  3.37s
+✅ PASS | retrieval-evidence     | Fast-Path Grounding                        |  0.83s
+✅ PASS | ux-resilience          | Performance Architecture & Telemetry       | 19.17s
+✅ PASS | retrieval-evidence     | Grounded Reasoning & Citations             |  2.33s
+✅ PASS | retrieval-evidence     | Source-Backed Foundation                   |  0.67s
+✅ PASS | accounting-invariants  | Singapore Statutory Engine                 |  2.46s
+✅ PASS | accounting-invariants  | Universal Accounting Engine & FX           |  1.25s
+----------------------------------------------------------------
+Total Duration: 309.19s
+Final Status: ALL SUITES PASSED (100% GREEN) 🎉
+================================================================
