@@ -1527,6 +1527,8 @@ function practicalRuleIssueTextSupport(
   };
   if (hasPracticalExpansionContradiction(coverageRequest)) return false;
   const expansionSupport = supportPracticalExpansionRule(coverageRequest);
+  // This narrow topic has no legacy rule that can substitute for the toolkit row.
+  if (topic.id === 'mas-vcfm-branch-approval' && expansionSupport !== true) return false;
   // Incomplete evidence may still establish an older, narrower rule. Only a
   // complete expansion proof supplements scope support; contradiction vetoes it.
   const coverageSupport = (expansionSupport === true ? true : undefined) ?? supportIrasCpfCoverageRule(coverageRequest) ??

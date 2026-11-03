@@ -7,7 +7,7 @@ import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePrese
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
 import { getAcraAnnualReturnDeadlineTablePassage } from './acraAnnualReturnFilingRule';
 import { acraOfficerCommencementScope } from './statutoryCommencementScope';
-import { defaultTargetDateResolver } from './targetDateResolver';
+import { TargetDateResolver, defaultTargetDateResolver } from './targetDateResolver';
 import { parseCompanyFyeCompanyType, parseCompanyFyeDate } from './companyFyeDate';
 import { selectAcraSmallCompanyAuditFactsQuotes, supportsAcraSmallCompanyAuditFacts } from './momAcraMasCoverageRules';
 
@@ -23,11 +23,22 @@ export interface AcraMomKnowledgeRuleRequest {
 export type AcraAuditExemptionContextRequest = Pick<AcraMomKnowledgeRuleRequest,
   'authority' | 'topicId' | 'query' | 'subject' | 'officialUrl'>;
 
+/** Identifies ordinary salary-period deadline questions without creating a Part IV or final-salary issue. */
+export function isMomSalaryPeriodPaymentQuestion(query: string): boolean {
+  return /\b(?:ordinary salary|(?:regular|monthly|basic) salary|salary and overtime|overtime and salary)\b/i.test(query)
+    && /\b(?:ordinary salary|salary)\b/i.test(query)
+    && /\bovertime\b/i.test(query)
+    && /\b(?:deadline|due|paid|payment|pay|within|on time|when|how soon|usual)\b/i.test(query)
+    && !/\b(?:final|last salary|resign\w*|dismiss\w*|terminat\w*|misconduct|commission|eligib\w*|part iv|working hours|overtime rates?|percentage|how much)\b/i.test(query)
+    && !/\b(?:historical(?:ly)?|historic(?:ally)?|prior law|previous law|former rule|superseded|what (?:law|rules?|requirements?) applied|which (?:law|rules?|requirements?) applied|rules? applied|requirements? applied|effective as of|effective during|as of|as at|in force)\b/i.test(query)
+    && !/\b(?:acra|iras|income tax|cpf|central provident fund|mas|monetary authority|gst|ifrs|sfrs|accounting|journal|balance sheet)\b/i.test(query);
+}
+
 type RuleId = 'ACRA_AR_OFFICER_PARTICULARS_20261020' | 'ACRA_ANNUAL_RETURN_FILING_PROCESS'
   | 'ACRA_XBRL_FINANCIAL_STATEMENT_TEMPLATES' | 'ACRA_AGM_DEADLINES' | 'ACRA_AR_DEADLINES'
   | 'ACRA_AUDIT_EXEMPTION' | 'ACRA_FYE_CHANGE' | 'ACRA_OFFICER_UPDATE' | 'ACRA_AR_EXTENSION' | 'ACRA_SECRETARY_APPOINTMENT'
   | 'MOM_ANNUAL_LEAVE_ENTITLEMENT'
-  | 'MOM_SICK_LEAVE_ENTITLEMENT' | 'MOM_PUBLIC_HOLIDAY_PAY' | 'MOM_FINAL_SALARY_DEADLINES';
+  | 'MOM_SICK_LEAVE_ENTITLEMENT' | 'MOM_PUBLIC_HOLIDAY_PAY' | 'MOM_SALARY_PERIOD_DEADLINES' | 'MOM_FINAL_SALARY_DEADLINES';
 
 export interface AcraMomKnowledgeRuleMetadata {
   id: RuleId;
@@ -280,6 +291,22 @@ const RULES: readonly Rule[] = [
     subjectPattern: /\bpublic[- ]holida(?:y|ys)\b/i
   },
   {
+    id: 'MOM_SALARY_PERIOD_DEADLINES', authority: 'MOM', topicIds: ['mom-salary-payment'], officialUrl: MOM_FINAL_SALARY_URL,
+    title: 'Paying salary: ordinary salary and overtime deadlines', fixtureFile: 'mom-final-salary.txt',
+    population: 'Employees covered by the Employment Act and their employers',
+    provisions: ['MOM salary-payment guidance; the cited page does not specify the relevant Employment Act section numbers.'],
+    rule: 'For an employee covered by the Employment Act, salary must be paid at least once a month and within 7 days after the end of the salary period. Overtime pay is due within 14 days after the end of that same salary period.',
+    conditions: ['The Employment Act must cover the employee.', 'The ordinary-salary and overtime deadlines are separate and are both measured from the end of the salary period.'],
+    exceptions: ['Final salary after resignation, dismissal or termination follows separate MOM deadlines and is not determined by this ordinary salary-period rule.', 'The source does not determine whether particular work qualifies as overtime or the amount payable.'],
+    requiredFacts: ['The salary-period end date, expressly tied to the employee in question.', 'If checking timeliness, the date ordinary salary and overtime were actually paid and clearly attributable to the employee being assessed.'],
+    effectiveDateEvidence: 'The current MOM page states these payment timelines but does not give their commencement date; this rule does not establish historical applicability.',
+    limitations: ['Does not calculate salary or overtime amounts, decide Employment Act or Part IV coverage, or apply final-salary exceptions.', 'Calendar-date application is limited to an unnamed, single-employee scenario. If the query names employees or a payment owner, it receives the general deadlines without applied dates or timeliness until ownership is unambiguous.', 'No calendar deadlines or timeliness conclusion can be calculated without the salary-period end date; actual timeliness also requires the payment date for each wage type.'],
+    requiredSourceTerms: ['if you are covered by the employment act, your employer must pay your salary at least once a month', 'within 7 days after the end of the salary period', 'for overtime work, within 14 days after the end of the salary period'],
+    quoteMatchers: [/If you are covered by the Employment Act[^.]*salary at least once a month[^.]*\./i, /Within 7 days after the end of the salary period\.?/i, /For overtime work, within 14 days after the end of the salary period\.?/i],
+    queryPattern: /^(?![\s\S]*\b(?:final|last salary|resign\w*|dismiss\w*|terminat\w*|misconduct|eligib\w*|overtime rates?)\b)(?:[\s\S]*\b(?:salary period|ordinary salary|salary and overtime|overtime and salary)\b[\s\S]{0,180}\b(?:deadline|due|paid|pay|when|within|period ends?)\b|[\s\S]*\b(?:deadline|due|paid|pay|when|within)\b[\s\S]{0,180}\b(?:salary period|ordinary salary|salary and overtime|overtime and salary)\b)/i,
+    subjectPattern: /\b(?:salary period|ordinary salary|salary payment deadline|salary and overtime|overtime and salary)\b/i
+  },
+  {
     id: 'MOM_FINAL_SALARY_DEADLINES', authority: 'MOM', topicIds: ['mom-salary-payment'], officialUrl: MOM_FINAL_SALARY_URL,
     title: 'Paying salary: final salary deadlines', fixtureFile: 'mom-final-salary.txt', population: 'Employees covered by the Employment Act and their employers',
     provisions: ['Employment Act salary-payment guidance; cited page does not specify relevant section numbers for the four termination deadlines.'],
@@ -327,6 +354,16 @@ function exactOfficialUrl(actual: string | undefined, expected: string): boolean
 }
 
 function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
+  if (rule.id === 'MOM_SALARY_PERIOD_DEADLINES') {
+    const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
+    const explicitDates = [...query.matchAll(/\b(?:\d{1,2}\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:,)?\s+\d{4}\b|\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b|\b\d{4}-\d{2}-\d{2}\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/gi)];
+    if (/\b(?:historical|historic|previous|prior|past|former|before|last year)\b/i.test(query)
+        || years.some(year => year !== TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4))) return true;
+    if (explicitDates.length === 0) return false;
+    const application = momSalaryPeriodApplicationDates(query);
+    return !application || application.dates.length !== explicitDates.length
+      || application.dates.some(date => date.match(/\b20\d{2}\b/)?.[0] !== TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4));
+  }
   if (rule.id === 'ACRA_AR_OFFICER_PARTICULARS_20261020' && acraOfficerCommencementScope(query)) return false;
   const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
   const fyeDateText = parseCompanyFyeDate(query);
@@ -347,7 +384,7 @@ function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
   if (rule.id === 'ACRA_AUDIT_EXEMPTION' && auditStartDate && auditStartDate.getTime() >= Date.UTC(2015, 6, 1)
       && !historicalRuleIntent) return false;
   if (rule.id === 'ACRA_SECRETARY_APPOINTMENT' && years.length === 1 && years[0] === '2026' && !historicalRuleIntent) {
-    const registrationDate = parseAcraDate(query, new RegExp(String.raw`\b(?:incorporated|registered|registration)\b[\s\S]{0,90}?\b(?:on\s+)?(${ACRA_DATE_CAPTURE})\b`, 'i'));
+    const registrationDate = acraSecretaryRegistrationDate(query);
     if (registrationDate && registrationDate.getTime() <= Date.UTC(2026, 11, 31)) return false;
   }
   if (rule.id === 'ACRA_OFFICER_UPDATE' && years.length === 0 &&
@@ -375,6 +412,7 @@ function queryHasUnsupportedDate(query: string, rule: Rule): boolean {
 
 function recognizeRule(input: Pick<AcraMomKnowledgeRuleRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
   return RULES.find(rule => input.authority === rule.authority && rule.topicIds.includes(input.topicId)
+    && (rule.id !== 'MOM_SALARY_PERIOD_DEADLINES' || isMomSalaryPeriodPaymentQuestion(input.query))
     && rule.queryPattern.test(input.query) && rule.subjectPattern.test(input.subject));
 }
 
@@ -480,6 +518,7 @@ function sourceHasContradiction(rule: Rule, text: string): boolean {
     MOM_ANNUAL_LEAVE_ENTITLEMENT: /\b1st \| (?!7\b)\d+\b|\bannual leave[^.]{0,100}\b(?:first year|1st year)[^.]{0,30}\b(?:6|8|10|14) days\b|number of completed months of service ÷\s*(?!12\b)\d+\s+months|fraction of a day is less than one-half[^.]{0,50}\bround(?:ed)? (?:it )?up\b|if it is half or more[^.]{0,50}\bround(?:ed)? (?:it )?down\b/i,
     MOM_SICK_LEAVE_ENTITLEMENT: /\b3 \| 13 may \| (?!5 \| 15)\d+ \| \d+\b|\b(?:14|60) days[^.]{0,100}\b(?:in addition to|separate from|excludes?)\b|\bwithin (?:24|72) hours\b|\b3 completed months[^.]{0,80}\b(?:14|60) days\b/i,
     MOM_PUBLIC_HOLIDAY_PAY: /\b(?:10|12) paid public holidays\b|\brest day[^.]{0,100}\b(?:same day|no replacement|not entitled to another day)\b|\badditional day[^.]{0,80}\bgross rate\b|you were absent on the working day immediately before or after a holiday with consent and a reasonable excuse/i,
+    MOM_SALARY_PERIOD_DEADLINES: /(?<!overtime work, )\bwithin\s+(?!7 days\b)\d+ days\b[^.\n]{0,80}\bafter the end of the salary period\b|\bovertime work\b[^.\n]{0,80}\bwithin\s+(?!14 days\b)\d+ days\b[^.\n]{0,80}\bafter the end of the salary period\b|\b(?:must not|does not have to|is not required to)\s+(?:be\s+)?paid\s+within\s+(?:7|14) days\b[^.\n]{0,80}\bafter the end of the salary period\b/i,
     MOM_FINAL_SALARY_DEADLINES: /\bemployee resigns and serves the required notice period[^\n|]{0,20}\|\s*within \d+ days\b|\bemployee resigns and does not serve the notice period[^\n|]{0,20}\|\s*within (?!7 days)\d+ days\b|\bdismissal on grounds of misconduct[^\n]{0,120}\bwithin (?!3 working days)\d+ working days\b|\bemployer terminates the contract[^\n]{0,120}\bwithin (?!3 working days)\d+ working days\b|\bdismissal on grounds of misconduct[^\n]{0,120}\bwithin (?:7|14) days\b|\bemployer terminates the contract[^\n]{0,120}\bwithin (?:7|14) days\b/i
   };
   return checks[rule.id].test(text);
@@ -571,7 +610,9 @@ export function acraMomKnowledgePointers(input: Pick<AcraMomKnowledgeRuleRequest
 }
 
 function ruleForPresentedIssue(query: string, authority: string, subject: string): Rule | undefined {
-  return RULES.find(rule => rule.authority === authority && rule.queryPattern.test(query) && rule.subjectPattern.test(subject));
+  return RULES.find(rule => rule.authority === authority &&
+    (rule.id !== 'MOM_SALARY_PERIOD_DEADLINES' || isMomSalaryPeriodPaymentQuestion(query)) &&
+    rule.queryPattern.test(query) && rule.subjectPattern.test(subject));
 }
 
 function issueSubjectMatches(rule: Rule, subject: string): boolean {
@@ -596,9 +637,35 @@ function answerText(rule: Rule, query: string): string {
       : '';
   let application = '';
   if (rule.id === 'ACRA_SECRETARY_APPOINTMENT') {
-    const registrationDate = parseAcraDate(query, new RegExp(String.raw`\b(?:incorporated|registered|registration)\b[\s\S]{0,90}?\b(?:on\s+)?(${ACRA_DATE_CAPTURE})\b`, 'i'));
+    const registrationDate = acraSecretaryRegistrationDate(query);
     const deadline = registrationDate ? addMonths(registrationDate, 6) : undefined;
     if (deadline) application = ` The stated registration date reaches its six-month appointment deadline on ${formatAcraDate(deadline)}.`;
+  }
+  if (rule.id === 'MOM_SALARY_PERIOD_DEADLINES') {
+    const dates = momSalaryPeriodApplicationDates(query);
+    if (dates?.applicationEligible) {
+      const ordinaryDue = addCalendarDays(dates.periodEnd, 7);
+      const overtimeDue = addCalendarDays(dates.periodEnd, 14);
+      if (ordinaryDue && overtimeDue) {
+        const ordinaryPaid = dates.ordinaryPaid;
+        const overtimePaid = dates.overtimePaid;
+        const base = `For the salary period ending ${formatAcraDate(dates.periodEnd)}, ordinary salary was due by ${formatAcraDate(ordinaryDue)}, and overtime pay was due by ${formatAcraDate(overtimeDue)}.`;
+        const ordinaryStatus = ordinaryPaid
+          ? ` Ordinary salary was paid on ${formatAcraDate(ordinaryPaid)} and was ${ordinaryPaid.getTime() <= ordinaryDue.getTime() ? 'within its deadline' : 'late, after its deadline'}.`
+          : '';
+        const overtimeStatus = overtimePaid
+          ? ` Overtime pay was paid on ${formatAcraDate(overtimePaid)} and was ${overtimePaid.getTime() <= overtimeDue.getTime() ? 'within its deadline' : 'late, after its deadline'}.`
+          : '';
+        const missingPaymentDates = !ordinaryPaid && !overtimePaid
+          ? dates.paymentDateMentioned && (!dates.paymentOwnershipEstablished || !dates.completedPaymentsEstablished)
+            ? ' The question does not establish completed payment dates for the employee being assessed, so timeliness cannot be determined.'
+            : ' The question does not state either payment date, so timeliness cannot be determined.'
+          : !ordinaryPaid || !overtimePaid
+            ? ` The question does not state the ${ordinaryPaid ? 'overtime' : 'ordinary salary'} payment date, so its timeliness cannot be determined.`
+            : '';
+        application = ` ${base}${ordinaryStatus}${overtimeStatus}${missingPaymentDates}`;
+      }
+    }
   }
   if ([ 'ACRA_AGM_DEADLINES', 'ACRA_AR_DEADLINES' ].includes(rule.id)) {
     const fyeDateText = parseCompanyFyeDate(query);
@@ -624,6 +691,143 @@ function answerText(rule: Rule, query: string): string {
 }
 
 const ACRA_DATE_CAPTURE = String.raw`(?:\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}|\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2})`;
+
+interface MomSalaryPeriodApplicationDates {
+  periodEnd: Date;
+  ordinaryPaid?: Date;
+  overtimePaid?: Date;
+  applicationEligible: boolean;
+  paymentOwnershipEstablished: boolean;
+  completedPaymentsEstablished: boolean;
+  paymentDateMentioned: boolean;
+  /** One item per date mention in the query, used to reject unrelated date scope. */
+  dates: string[];
+}
+
+function acraSecretaryRegistrationDate(query: string): Date | undefined {
+  const date = `(${ACRA_DATE_CAPTURE})`;
+  const ownedRegistrationPatterns = [
+    new RegExp(String.raw`\bwe\s+(?:have\s+)?incorporated\s+(?:(?:a|an|our|the)\s+)?(?:(?:singapore\s+)?(?:private|public|listed|non[- ]listed)\s+)?(?:company|business)\s+on\s+${date}`, 'i'),
+    new RegExp(String.raw`\b(?:our|this)\s+(?:(?:singapore\s+)?(?:private|public|listed|non[- ]listed)\s+)?(?:company|business)\s+(?:was\s+)?(?:registered|incorporated)\s+on\s+${date}`, 'i')
+  ];
+  const explicitDates = [...query.matchAll(new RegExp(ACRA_DATE_CAPTURE, 'gi'))];
+  const companyEntityMentions = [...query.matchAll(/\bcompany\b(?!\s+secretary)|\bbusiness\b/gi)];
+  if (explicitDates.length !== 1 || companyEntityMentions.length !== 1) return undefined;
+  const matchingPatterns = ownedRegistrationPatterns.filter(pattern => pattern.test(query));
+  if (matchingPatterns.length !== 1) return undefined;
+  const registrationDate = parseAcraDate(query, matchingPatterns[0]);
+  if (!registrationDate) return undefined;
+  const dateIndex = query.search(new RegExp(ACRA_DATE_CAPTURE, 'i'));
+  const sentenceStart = Math.max(query.lastIndexOf('.', dateIndex), query.lastIndexOf('?', dateIndex),
+    query.lastIndexOf('!', dateIndex), query.lastIndexOf(';', dateIndex)) + 1;
+  const eventContext = query.slice(sentenceStart, dateIndex);
+  if (/\b(?:not|never|yet|planned|will|shall|intend|expect)\b/i.test(eventContext)) return undefined;
+  return registrationDate;
+}
+
+function momSalaryPeriodEndPattern(): RegExp {
+  return new RegExp(String.raw`\bsalary period\s+(?:ended|ends|end)\s+(?:on\s+)?(${ACRA_DATE_CAPTURE})`, 'i');
+}
+
+function momSalaryPaymentDatePattern(kind: 'ordinary' | 'overtime'): RegExp {
+  const date = `(${ACRA_DATE_CAPTURE})`;
+  if (kind === 'ordinary') {
+    return new RegExp(String.raw`\b(?:ordinary\s+salary|salary)\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+${date}`, 'i');
+  }
+  return new RegExp(String.raw`\b(?:overtime\s+(?:wages?|pay))\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+${date}`, 'i');
+}
+
+function hasExplicitNamedSalaryPaymentOwner(query: string): boolean {
+  const genericOwnerTokens = new Set([
+    'a', 'an', 'the', 'our', 'ours', 'my', 'mine', 'your', 'yours', 'their', 'theirs', 'his', 'hers', 'its', 'this', 'that',
+    'these', 'those', 'we', 'us', 'i', 'me', 'you', 'he', 'she', 'they', 'it', 'one', 'both', 'each', 'employee', 'employees',
+    'worker', 'workers', 'staff', 'member', 'employer', 'employers', 'company', 'business', 'payroll', 'ordinary', 'salary',
+    'overtime', 'wage', 'wages', 'pay', 'paid', 'paying', 'payment', 'payments', 'have', 'has', 'had', 'will', 'would', 'shall',
+    'should', 'not', 'never', 'yet', 'no', 'for', 'as', 'to', 'from', 'in', 'on', 'at', 'by', 'and', 'or', 'nor', 'covered',
+    'being', 'concerned', 'assessed', 'eligible', 'specific', 'relevant', 'question', 'involved', 'under', 'subject', 'who',
+    'whose', 'which', 'responsible'
+  ]);
+  const isContextualOwnerToken = (token: string): boolean => /^[A-Z]$/.test(token)
+    || token.length > 1 && /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*$/.test(token)
+      && !genericOwnerTokens.has(token.toLowerCase());
+  const rolePrefixedName = [...query.matchAll(/\b(?:employee|worker|staff member)\s+([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)\b/gi)]
+    .some(match => isContextualOwnerToken(match[1]));
+  const namedPayment = String.raw`(?:ordinary\s+salary|salary|overtime\s+(?:wages?|pay))`;
+  const possessivePattern = new RegExp(String.raw`\b([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)[’']s\s+${namedPayment}\b`, 'gi');
+  const possessiveName = [...query.matchAll(possessivePattern)].some(match => isContextualOwnerToken(match[1]));
+  const bareNamePaymentPattern = new RegExp(String.raw`\b([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)\s+${namedPayment}\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+${ACRA_DATE_CAPTURE}\b`, 'gi');
+  const bareNamePayment = [...query.matchAll(bareNamePaymentPattern)]
+    .some(match => isContextualOwnerToken(match[1]));
+  return rolePrefixedName || possessiveName || bareNamePayment;
+}
+
+function isAffirmativeCompletedPayment(query: string, matchIndex: number | undefined): boolean {
+  if (matchIndex === undefined) return false;
+  const sentenceStart = Math.max(query.lastIndexOf('.', matchIndex), query.lastIndexOf('?', matchIndex),
+    query.lastIndexOf('!', matchIndex), query.lastIndexOf(';', matchIndex)) + 1;
+  const sentenceEnds = ['.', '?', '!', ';'].map(boundary => query.indexOf(boundary, matchIndex)).filter(index => index >= 0);
+  const sentenceEnd = sentenceEnds.length > 0 ? Math.min(...sentenceEnds) : query.length;
+  const sentence = query.slice(sentenceStart, sentenceEnd);
+  const paymentActionIndex = matchIndex - sentenceStart;
+  const paymentDate = new RegExp(String.raw`\bon\s+${ACRA_DATE_CAPTURE}\b`, 'i')
+    .exec(sentence.slice(paymentActionIndex));
+  const paymentDateIndex = paymentDate ? paymentActionIndex + paymentDate.index : -1;
+  const paymentAction = paymentDateIndex >= 0 ? sentence.slice(0, paymentDateIndex) : sentence;
+  return !/\b(?:never|not|no longer|not yet|[a-z]+n['’]t|did not|has not|have not|had not|will|shall|would|should|plan(?:s|ned)? to|intend(?:s|ed)? to|expect(?:s|ed)? to|going to|scheduled to|due to)\b/i.test(paymentAction);
+}
+
+function momSalaryPeriodApplicationDates(query: string): MomSalaryPeriodApplicationDates | undefined {
+  const periodPattern = momSalaryPeriodEndPattern();
+  const periodMatches = [...query.matchAll(new RegExp(periodPattern.source, 'gi'))];
+  if (periodMatches.length !== 1) return undefined;
+  const periodMatch = periodMatches[0];
+  const periodStart = periodMatch.index ?? 0;
+  const ownerContext = query.slice(Math.max(0, periodStart - 100), periodStart);
+  if (/\b(?:supplier|vendor|customer|competitor|another|other|different|second|affiliate|subsidiary)\b/i.test(ownerContext)) return undefined;
+  const periodEnd = parseAcraDate(query, periodPattern);
+  if (!periodEnd) return undefined;
+
+  const combinedPaymentPattern = new RegExp(
+    String.raw`\b(?:paid|pay)\s+(?:ordinary\s+salary\s+and\s+overtime\s+(?:wages?|pay)|salary\s+and\s+overtime\s+(?:wages?|pay))\s+on\s+(${ACRA_DATE_CAPTURE})`,
+    'gi'
+  );
+  const combinedPayments = [...query.matchAll(combinedPaymentPattern)];
+  if (combinedPayments.length > 1) return undefined;
+  if (combinedPayments.length === 1) {
+    const combinedPayment = combinedPayments[0];
+    const combinedPattern = new RegExp(combinedPaymentPattern.source, 'i');
+    const combinedDate = parseAcraDate(query, combinedPattern);
+    if (!combinedDate || !combinedPayment[1]) return undefined;
+    const applicationEligible = !hasExplicitNamedSalaryPaymentOwner(query);
+    const paymentOwnershipEstablished = applicationEligible;
+    const completedPaymentsEstablished = isAffirmativeCompletedPayment(query, combinedPayment.index);
+    const paymentIsAttributable = applicationEligible && completedPaymentsEstablished;
+    return { periodEnd, ordinaryPaid: paymentIsAttributable ? combinedDate : undefined,
+      overtimePaid: paymentIsAttributable ? combinedDate : undefined, applicationEligible, paymentOwnershipEstablished,
+      completedPaymentsEstablished, paymentDateMentioned: true, dates: [periodMatch[1], combinedPayment[1]] };
+  }
+
+  const ordinaryPattern = momSalaryPaymentDatePattern('ordinary');
+  const overtimePattern = momSalaryPaymentDatePattern('overtime');
+  const ordinaryMatches = [...query.matchAll(new RegExp(ordinaryPattern.source, 'gi'))];
+  const overtimeMatches = [...query.matchAll(new RegExp(overtimePattern.source, 'gi'))];
+  if (ordinaryMatches.length > 1 || overtimeMatches.length > 1) return undefined;
+  const ordinaryCandidate = ordinaryMatches.length === 1 ? parseAcraDate(query, ordinaryPattern) : undefined;
+  const overtimeCandidate = overtimeMatches.length === 1 ? parseAcraDate(query, overtimePattern) : undefined;
+  if (ordinaryMatches.length === 1 && !ordinaryCandidate || overtimeMatches.length === 1 && !overtimeCandidate) return undefined;
+  const applicationEligible = !hasExplicitNamedSalaryPaymentOwner(query);
+  const paymentOwnershipEstablished = applicationEligible;
+  const ordinaryIsCompleted = ordinaryMatches.length === 1 && isAffirmativeCompletedPayment(query, ordinaryMatches[0].index);
+  const overtimeIsCompleted = overtimeMatches.length === 1 && isAffirmativeCompletedPayment(query, overtimeMatches[0].index);
+  const ordinaryPaid = applicationEligible && ordinaryIsCompleted ? ordinaryCandidate : undefined;
+  const overtimePaid = applicationEligible && overtimeIsCompleted ? overtimeCandidate : undefined;
+  const dates = [periodMatch[1]];
+  if (ordinaryMatches[0]?.[1]) dates.push(ordinaryMatches[0][1]);
+  if (overtimeMatches[0]?.[1]) dates.push(overtimeMatches[0][1]);
+  return { periodEnd, ordinaryPaid, overtimePaid, applicationEligible, paymentOwnershipEstablished,
+    completedPaymentsEstablished: ordinaryIsCompleted || overtimeIsCompleted,
+    paymentDateMentioned: ordinaryMatches.length > 0 || overtimeMatches.length > 0, dates };
+}
 
 function acraAnnualReturnBranchRegisterStatus(query: string): 'APPLIES' | 'EXCLUDED' | 'UNKNOWN' {
   const sentences = query.split(/[.!?;\n]+/).map(sentence => sentence.trim()).filter(Boolean);
@@ -689,6 +893,10 @@ function addMonths(date: Date, count: number): Date {
   const targetMonth = date.getUTCMonth() + count;
   const lastDay = new Date(Date.UTC(date.getUTCFullYear(), targetMonth + 1, 0)).getUTCDate();
   return new Date(Date.UTC(date.getUTCFullYear(), targetMonth, Math.min(date.getUTCDate(), lastDay)));
+}
+
+function addCalendarDays(date: Date, count: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + count));
 }
 
 function formatAcraDate(date: Date): string {

@@ -32,13 +32,14 @@ export const STATUTORY_KNOWLEDGE_POINTERS_20261027B = [...STATUTORY_KNOWLEDGE_RU
   authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title,
   expectedTitles: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['NOTICE ON REPORTING']
     : rule.id === 'MAS_LFMC_KEY_APPOINTMENTS' ? [rule.title, 'Licensed Fund Management Companies']
-      : rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS' || rule.id === 'MAS_VCFM_BUSINESS_CESSATION'
+      : rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS' || rule.id === 'MAS_VCFM_BUSINESS_CESSATION' || rule.id === 'MAS_VCFM_BRANCH_APPROVAL'
         ? [rule.title, 'Venture Capital Fund Managers']
       : rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? [rule.title, 'COMPLIANCE TOOLKIT FOR LICENSED FUND MANAGEMENT COMPANIES', 'Licensed Fund Management Companies'] : [rule.title],
   standardIdentifiers: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['SFA 04-N24'] : [rule.authority],
   contentTerms: rule.id === 'MAS_SFA_MISCONDUCT_REPORTING_2027' ? ['CMS licence', 'representatives', 'misconduct']
     : rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS' ? ['Form 23A', 'particulars']
       : rule.id === 'MAS_VCFM_BUSINESS_CESSATION' ? ['Form 7', 'cessation', 'commenced']
+        : rule.id === 'MAS_VCFM_BRANCH_APPROVAL' ? ['establish any branch', 'No prescribed form', 'Prior to']
     : rule.id === 'MAS_LFMC_TOOLKIT_SCOPE' ? ['not exhaustive', 'outside the SFA', 'fund-level requirements'] : undefined,
   documentKind: /\.pdf$/i.test(new URL(rule.officialUrl).pathname) || rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING'
     ? 'PDF' as const : 'HTML' as const

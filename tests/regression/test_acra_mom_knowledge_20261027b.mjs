@@ -158,7 +158,19 @@ const cases = [
     operation: 'EXPLAIN_RULE', expected: ['11 paid public holidays', 'gross rate', 'basic rate', 'rest day', 'non-working day', 'without consent', 'approved unpaid leave', 'Part IV']
   },
   {
-    id: 'mom-final-salary', authority: 'MOM', topicId: 'mom-salary-payment',
+    id: 'mom-salary-period-deadlines', ruleId: 'MOM_SALARY_PERIOD_DEADLINES', authority: 'MOM', topicId: 'mom-salary-payment',
+    query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026. We paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+    subject: 'Ordinary salary and overtime deadlines for a salary period', source: 'mom-final-salary.txt',
+    operation: 'EXPLAIN_RULE', expected: ['within 7 days after the end of the salary period', 'within 14 days after the end of that same salary period', 'final salary after resignation']
+  },
+  {
+    id: 'mom-salary-period-deadlines-next', ruleId: 'MOM_SALARY_PERIOD_DEADLINES', authority: 'MOM', topicId: 'mom-salary-payment',
+    query: "Under the current Employment Act rules, our employee's salary period ends on 31 October 2026. When must ordinary salary and overtime pay each be paid?",
+    subject: 'Ordinary salary and overtime deadlines for a salary period', source: 'mom-final-salary.txt',
+    operation: 'EXPLAIN_RULE', expected: ['within 7 days after the end of the salary period', 'within 14 days after the end of that same salary period', 'separate']
+  },
+  {
+    id: 'mom-final-salary', ruleId: 'MOM_FINAL_SALARY_DEADLINES', authority: 'MOM', topicId: 'mom-salary-payment',
     query: 'When must employers pay final salary when employees resign, are dismissed, or their employment is terminated?',
     subject: 'Final salary deadlines for resignation, dismissal and employer termination', source: 'mom-final-salary.txt',
     operation: 'EXPLAIN_RULE', expected: ['last day of employment', 'within 7 days', '3 working days', 'tax clearance']
@@ -219,6 +231,9 @@ const acra31Cases = [
     subject: 'ACRA annual return extension of time requirements', fixture: 'acra-annual-return-extension-native.html' },
   { id: 'secretary-appointment', authority: 'ACRA', topicId: 'acra_company-secretary',
     query: 'We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?',
+    subject: 'ACRA company secretary appointment and sole-director requirements', fixture: 'acra-officers-native.html' },
+  { id: 'secretary-appointment-registered-october', authority: 'ACRA', topicId: 'acra_company-secretary',
+    query: 'Our Singapore private company was registered on 10 October 2026 with a sole director. What is the six-month deadline to appoint a company secretary, and can that sole director also be secretary?',
     subject: 'ACRA company secretary appointment and sole-director requirements', fixture: 'acra-officers-native.html' },
   { id: 'xbrl-current', authority: 'ACRA', topicId: 'acra_xbrl',
     query: 'Our Singapore-incorporated company files a full set of financial statements in XBRL under the current ACRA taxonomy. Must we attach a PDF?',
@@ -577,6 +592,31 @@ const secretaryDateAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 
 assert.ok(secretaryDateAnswer, 'A current owned incorporation date supports the secretary appointment calculation.');
 assert.match(secretaryDateAnswer.text, /six-month appointment deadline on 15\/09\/2026/,
   'The secretary deadline is calculated from the stated valid incorporation date.');
+const secretaryRegisteredOctoberQuestion = acra31Cases.find(row => row.id === 'secretary-appointment-registered-october').query;
+const secretaryRegisteredOctoberAnswer = renderAcra31Rule(
+  acra31Cases.find(row => row.id === 'secretary-appointment-registered-october'), secretaryRegisteredOctoberQuestion);
+assert.ok(secretaryRegisteredOctoberAnswer, 'The second company-owned registration date is supported by the same official ACRA officers page.');
+assert.match(secretaryRegisteredOctoberAnswer.text, /six-month appointment deadline on 10\/04\/2027/,
+  'The second six-month deadline is calculated from the registration date in the question.');
+assert.match(secretaryRegisteredOctoberAnswer.text, /sole director cannot also act as the company secretary/i,
+  'The official sole-director restriction remains part of the existing secretary rule.');
+for (const query of [secretaryDateQuestion, secretaryRegisteredOctoberQuestion]) {
+  assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, '2026-11-03').dateRole,
+    'CURRENT_WORKFLOW_FACT', `An owned current-year registration date remains a fact for current secretary guidance: ${query}`);
+}
+for (const query of [
+  'What secretary appointment rule applied to a company registered on 15 March 2025?',
+  'Our company is not registered yet; a supplier was registered on 10 October 2026. When must our secretary be appointed?',
+  'Our company was registered on 31 February 2026. When must we appoint a company secretary?'
+]) {
+  assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, '2026-11-03').dateRole,
+    'CURRENT_WORKFLOW_FACT', `Historical, borrowed, or invalid registration dates do not become current workflow facts: ${query}`);
+}
+const crossCompanySecretaryQuery = 'Alpha company was registered on 15 March 2026. We operate Beta company and have a sole director. By when must we appoint a company secretary?';
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(crossCompanySecretaryQuery, '2026-11-03').dateRole,
+  'CURRENT_WORKFLOW_FACT', 'A registration date belonging to Alpha is not a current workflow fact for Beta.');
+assert.equal(renderAcra31Rule(acra31Cases.find(row => row.id === 'secretary-appointment'), crossCompanySecretaryQuery), undefined,
+  'A different company registration date cannot support Beta\'s secretary appointment calculation, even with official source evidence.');
 for (const invalidDate of ['31 February 2026', '29 February 2026']) {
   const invalidQuestion = `We incorporated a Singapore private company on ${invalidDate}. By when must we appoint a company secretary?`;
   assert.equal(renderAcra31Rule(acra31Cases.find(row => row.id === 'secretary-appointment'), invalidQuestion), undefined,
@@ -585,6 +625,35 @@ for (const invalidDate of ['31 February 2026', '29 February 2026']) {
 const disownedSecretaryDate = 'We have not incorporated our company; another company was registered on 15 March 2026. By when must we appoint our company secretary?';
 assert.equal(renderAcra31Rule(acra31Cases.find(row => row.id === 'secretary-appointment'), disownedSecretaryDate), undefined,
   'An unrelated company registration date is not borrowed for the queried company.');
+const historicalSecretaryQuery = 'What secretary appointment rule applied to a company registered on 15 March 2025?';
+const acraOfficerPageSource = acra31Manifest.sources.find(item => item.fixture === 'acra-officers-native.html');
+const secretaryNativeText = readFileSync(new URL('acra-officers-native.html', acra31SourceRoot), 'utf8');
+assert.equal(supportAcraMomKnowledgeRule({ ...acra31Cases.find(row => row.id === 'secretary-appointment'),
+  query: historicalSecretaryQuery, sourceText: secretaryNativeText, officialUrl: acraOfficerPageSource.url }), false,
+  'Current secretary guidance does not establish the rule for a 2025 registration.');
+const contradictorySecretarySource = secretaryNativeText
+  .replace('Not be the same person as the sole director', 'May be the same person as the sole director');
+assert.equal(supportAcraMomKnowledgeRule({ ...acra31Cases.find(row => row.id === 'secretary-appointment'),
+  sourceText: contradictorySecretarySource, officialUrl: acraOfficerPageSource.url }), false,
+  'A source that reverses the sole-director restriction cannot prove the secretary rule.');
+
+const ordinaryAndOvertimeDeadlineQuery = 'For an Employment Act-covered employee, the salary period ended on 31 May 2026. We paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?';
+const genericEmployeePossessiveSalaryPaymentQuery = "For an Employment Act-covered employee, our employee's salary period ended on 31 May 2026. Our employee's ordinary salary was paid on 5 June 2026 and our employee's overtime pay was paid on 10 June 2026. Were both paid within the usual deadlines?";
+const nextSalaryPeriodDeadlineQuery = "Under the current Employment Act rules, our employee's salary period ends on 31 October 2026. When must ordinary salary and overtime pay each be paid?";
+for (const query of [ordinaryAndOvertimeDeadlineQuery, genericEmployeePossessiveSalaryPaymentQuery, nextSalaryPeriodDeadlineQuery]) {
+  assert.equal(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, '2026-11-03').dateRole,
+    'CURRENT_WORKFLOW_FACT', `Current salary period and overtime payment dates are workflow facts: ${query}`);
+}
+for (const query of [
+  "A supplier's salary period ended on 31 May 2026. For our employee, when are ordinary salary and overtime due?",
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. After resignation without notice, when is final salary due?'
+]) {
+  assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, '2026-11-03').dateRole,
+    'CURRENT_WORKFLOW_FACT', `A borrowed salary-period date or final-salary exception does not become the ordinary payment workflow: ${query}`);
+}
+assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(
+  'For an Employment Act-covered employee, the salary period ended on 31 February 2026. When are ordinary salary and overtime due?', '2026-11-03'
+).dateRole, 'CURRENT_WORKFLOW_FACT', 'An invalid salary-period date is not admitted as a current workflow fact.');
 
 const currentArDeadlineQuestion = 'Our company FYE is 31/12/2025. When is the annual return due for a non-listed company?';
 const currentArDeadlineAnswer = renderAcra31Rule(acra31Cases.find(row => row.id === 'annual-return-deadlines'), currentArDeadlineQuestion);
@@ -787,7 +856,8 @@ for (const row of cases) {
   assert.ok(ACRA_MOM_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === row.id.toUpperCase().replaceAll('-', '_'))
     || ACRA_MOM_KNOWLEDGE_RULES_20261027B.some(rule => rule.topicIds.includes(row.topicId)),
   `${row.id}: the question is exposed through topic metadata`);
-  const answer = ACRA_MOM_KNOWLEDGE_RULES_20261027B.find(rule => rule.topicIds.includes(row.topicId));
+  const answer = ACRA_MOM_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === row.ruleId)
+    ?? ACRA_MOM_KNOWLEDGE_RULES_20261027B.find(rule => rule.topicIds.includes(row.topicId));
   for (const expected of row.expected) assert.match(answer.rule + ' ' + answer.conditions.join(' ') + ' ' + answer.exceptions.join(' '),
     new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), `${row.id}: rendered rule covers ${expected}`);
 }
@@ -811,6 +881,8 @@ assert.match(secretarySource.url, /appointing-company-directors-other-key-office
 
 assert.equal(supportAcraMomKnowledgeRule({ ...cases[0], sourceText: fixtures[cases[0].source], officialUrl: undefined }), true,
   'Source validation may be used before canonical-URL metadata is attached; rendering separately requires the canonical URL.');
+const momSalaryPeriodCases = cases.filter(row => row.ruleId === 'MOM_SALARY_PERIOD_DEADLINES');
+const momFinalSalaryCase = cases.find(row => row.ruleId === 'MOM_FINAL_SALARY_DEADLINES');
 for (const [row, oldQuery] of [
   [cases[0], 'What annual return officer particulars applied before 20 October 2026?'],
   [cases[1], 'How did a company file its annual return in 2025?'],
@@ -819,7 +891,8 @@ for (const [row, oldQuery] of [
   [cases[4], 'What was the statutory annual leave entitlement in 2025?'],
   [cases[5], 'What sick leave entitlement applied in 2025?'],
   [cases[6], 'What public holiday pay rules applied in 2025?'],
-  [cases[7], 'When must final salary be paid in 2025?']
+  ...momSalaryPeriodCases.map(row => [row, 'What deadline applied in 2025 for ordinary salary and overtime after a salary period?']),
+  [momFinalSalaryCase, 'When must final salary be paid in 2025?']
 ]) {
   const sourceText = fixtures[row.source];
   const source = manifest.sources.find(item => item.fixture === row.source);
@@ -853,10 +926,10 @@ const wrongFacts = [
   [cases[5], '6 and thereafter | 13 August | 14 | 60', '6 and thereafter | 13 August | 140 | 60'],
   [cases[6], '11 paid public holidays', '12 paid public holidays'],
   [cases[6], 'were not absent on the working day immediately before or after a holiday without consent or a reasonable excuse.', 'were absent on the working day immediately before or after a holiday with consent and a reasonable excuse.'],
-  [cases[7], 'Employee resigns and serves the required notice period | On the last day of employment.', 'Employee resigns and serves the required notice period | Within 7 days of the last day of employment.'],
-  [cases[7], 'Employee resigns and does not serve the notice period | Within 7 days of the last day of employment.', 'Employee resigns and does not serve the notice period | Within 5 days of the last day of employment.'],
-  [cases[7], 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 3 working days from date of dismissal.', 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 5 working days from date of dismissal.'],
-  [cases[7], 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 3 working days from date of termination.', 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 5 working days from date of termination.']
+  [momFinalSalaryCase, 'Employee resigns and serves the required notice period | On the last day of employment.', 'Employee resigns and serves the required notice period | Within 7 days of the last day of employment.'],
+  [momFinalSalaryCase, 'Employee resigns and does not serve the notice period | Within 7 days of the last day of employment.', 'Employee resigns and does not serve the notice period | Within 5 days of the last day of employment.'],
+  [momFinalSalaryCase, 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 3 working days from date of dismissal.', 'Dismissal on grounds of misconduct | On the last day of employment. If this is not possible, then within 5 working days from date of dismissal.'],
+  [momFinalSalaryCase, 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 3 working days from date of termination.', 'Employer terminates the contract | On the last day of employment. If this is not possible, then within 5 working days from date of termination.']
 ];
 for (const [row, expected, incorrect] of wrongFacts) {
   const sourceText = fixtures[row.source].replaceAll(expected, incorrect);
@@ -1023,6 +1096,119 @@ assert.equal(supportAcraMomKnowledgeRule({ ...legacySalaryRequest, sourceText: c
 assert.equal(hasAcraMomKnowledgeContradiction({ ...legacySalaryRequest, sourceText: changedLegacyDismissal }), true,
   'An altered deadline in the HTML table still vetoes fallback support.');
 assert.deepEqual(selectAcraMomKnowledgeQuotes({ ...legacySalaryRequest, sourceText: changedLegacyDismissal }), []);
+
+const salaryPeriodRuleRow = cases.find(row => row.ruleId === 'MOM_SALARY_PERIOD_DEADLINES');
+const salaryPeriodSource = manifest.sources.find(source => source.fixture === salaryPeriodRuleRow.source);
+const salaryPeriodRequest = {
+  authority: salaryPeriodRuleRow.authority, topicId: salaryPeriodRuleRow.topicId,
+  query: ordinaryAndOvertimeDeadlineQuery, subject: salaryPeriodRuleRow.subject,
+  sourceText: legacySalaryHtml, officialUrl: salaryPeriodSource.url
+};
+assert.equal(supportAcraMomKnowledgeRule(salaryPeriodRequest), true,
+  'The current MOM paying-salary source supports ordinary salary and overtime deadlines independently of final salary.');
+const salaryPeriodQuotes = selectAcraMomKnowledgeQuotes(salaryPeriodRequest);
+assert.ok(salaryPeriodQuotes.some(quote => /Within\s+7 days after the end of the salary period/i.test(quote)));
+assert.ok(salaryPeriodQuotes.some(quote => /For overtime work, within\s+14 days after the end of the salary period/i.test(quote)));
+for (const changedDeadlineSource of [
+  legacySalaryHtml.replace('Within <strong>7 days</strong> after the end of the salary period',
+    'Within <strong>8 days</strong> after the end of the salary period'),
+  legacySalaryHtml.replace('within <strong>14 days</strong> after the end of the salary period',
+    'within <strong>7 days</strong> after the end of the salary period')
+]) {
+  assert.equal(supportAcraMomKnowledgeRule({ ...salaryPeriodRequest, sourceText: changedDeadlineSource }), false,
+    'A source that changes either salary-period deadline fails the exact MOM proof.');
+  assert.deepEqual(selectAcraMomKnowledgeQuotes({ ...salaryPeriodRequest, sourceText: changedDeadlineSource }), [],
+    'A changed ordinary or overtime deadline yields no MOM salary-period quotation.');
+}
+assert.equal(supportAcraMomKnowledgeRule({ ...salaryPeriodRequest,
+  query: 'What deadline applied in 2025 for ordinary salary and overtime after a salary period?' }), false,
+  'The current salary source does not establish a past-year deadline.');
+assert.equal(supportAcraMomKnowledgeRule({ ...salaryPeriodRequest,
+  query: "A supplier's salary period ended on 31 May 2026. For our employee, when are ordinary salary and overtime due?" }), false,
+  'A supplier-owned salary-period date does not support a deadline for our employee.');
+
+function renderSalaryPeriodEvidence(query) {
+  const issueId = 'mom-salary-period-test';
+  const issue = { id: issueId, subject: salaryPeriodRuleRow.subject, population: 'Employee', operation: 'EXPLAIN_RULE',
+    evidenceStatus: 'VERIFIED', applicationStatus: 'UNRESOLVED', claims: [], gaps: [] };
+  const sourceRecord = { key: 'mom-salary-period', title: salaryPeriodSource.pageTitle, publisher: 'MOM',
+    documentTitle: salaryPeriodSource.pageTitle, officialUrl: salaryPeriodSource.url, provenance: 'LIVE_EXTERNAL', validTo: undefined,
+    claims: [{ text: legacySalaryHtml, issueIds: [issueId], supportKind: 'EXACT_SOURCE_QUOTE', provenance: 'LIVE_EXTERNAL',
+      fetchedSourceBinding: { recordId: 'record-mom-salary-period',
+        documentHash: createHash('sha256').update(legacySalaryHtml).digest('hex'),
+        canonicalUrl: salaryPeriodSource.url, retrievedAt: '2026-10-27T00:00:00Z' } }] };
+  return getAcraMomKnowledgeEvidence(query,
+    { authority: 'MOM', domain: 'MOM_EMPLOYMENT', issues: [issue], sources: [sourceRecord] }, issue);
+}
+const ordinaryAndOvertimeAnswer = renderSalaryPeriodEvidence(ordinaryAndOvertimeDeadlineQuery);
+assert.ok(ordinaryAndOvertimeAnswer);
+assert.match(ordinaryAndOvertimeAnswer.text, /ordinary salary was due by 07\/06\/2026/i);
+assert.match(ordinaryAndOvertimeAnswer.text, /overtime pay was due by 14\/06\/2026/i);
+assert.match(ordinaryAndOvertimeAnswer.text, /ordinary salary was paid on 10\/06\/2026 and was late/i);
+assert.match(ordinaryAndOvertimeAnswer.text, /overtime pay was paid on 10\/06\/2026 and was within its deadline/i);
+const genericEmployeePossessiveAnswer = renderSalaryPeriodEvidence(genericEmployeePossessiveSalaryPaymentQuery);
+assert.ok(genericEmployeePossessiveAnswer);
+assert.match(genericEmployeePossessiveAnswer.text, /ordinary salary was paid on 05\/06\/2026 and was within its deadline/i,
+  'Generic possessive employee references retain an attributable ordinary salary payment.');
+assert.match(genericEmployeePossessiveAnswer.text, /overtime pay was paid on 10\/06\/2026 and was within its deadline/i,
+  'Generic possessive employee references retain an attributable overtime payment.');
+const crossEmployeeSalaryPaymentQuery = 'For Employment Act-covered employee Alice, the salary period ended on 31 May 2026. Employee Bob ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for Alice?';
+const upperCaseEmployeeSalaryPaymentQuery = 'For Employment Act-covered EMPLOYEE ALICE, salary period ended on 31 May 2026. EMPLOYEE BOB ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for ALICE?';
+const shadowedPossessiveSalaryPaymentQuery = "For an Employment Act-covered employee, our employee's salary period ended on 31 May 2026. Bob's ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for our employee?";
+const namedSalaryPaymentOwnerQueries = [
+  crossEmployeeSalaryPaymentQuery,
+  upperCaseEmployeeSalaryPaymentQuery,
+  'For Employment Act-covered employee A, the salary period ended on 31 May 2026. Employee B ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for A?',
+  'For Employment Act-covered employee E1, the salary period ended on 31 May 2026. Employee E2 ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for E1?',
+  'For Employment Act-covered employee E-1, the salary period ended on 31 May 2026. Employee E-2 ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for E-1?',
+  'For Employment Act-covered employee alice, the salary period ended on 31 May 2026. Employee bob ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for alice?',
+  'For Employment Act-covered eMpLoYeE aLiCe, the salary period ended on 31 May 2026. eMpLoYeE bOb ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines for aLiCe?',
+  'For Employment Act-covered employee Alice, the salary period ended on 31 May 2026. We have never paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. Bob’s ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. Bob ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. bob’s ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. bOb’s ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. bob ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. bOb ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. ALICE’S ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  'For an Employment Act-covered employee, the salary period ended on 31 May 2026. BOB ordinary salary was paid on 10 June 2026. Were ordinary salary and overtime paid within the usual deadlines?',
+  shadowedPossessiveSalaryPaymentQuery
+];
+for (const query of namedSalaryPaymentOwnerQueries) {
+  assert.notEqual(defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, '2026-11-03').dateRole,
+    'CURRENT_WORKFLOW_FACT', `Explicit named-owner salary facts are not accepted as current workflow dates: ${query}`);
+  const answer = renderSalaryPeriodEvidence(query);
+  assert.ok(answer, 'The current official source can still support the conditional salary-period deadline rule.');
+  assert.match(answer.text, /within 7 days after the end of the salary period/i);
+  assert.match(answer.text, /within 14 days after the end of that same salary period/i);
+  assert.doesNotMatch(answer.text, /\b\d{2}\/\d{2}\/2026\b/,
+    'Named employee or payment-owner cases receive general MOM guidance without applied calendar dates.');
+  assert.doesNotMatch(answer.text, /ordinary salary was paid on 10\/06\/2026|overtime pay was paid on 10\/06\/2026/i,
+    'A mismatched employee or negated payment is not reported as a completed payment.');
+}
+for (const verbPhrase of ['have not paid', 'will pay']) {
+  const query = `For an Employment Act-covered employee, the salary period ended on 31 May 2026. We ${verbPhrase} ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?`;
+  const answer = renderSalaryPeriodEvidence(query);
+  assert.ok(answer, 'A stated salary-period end still supports conditional deadlines.');
+  assert.match(answer.text, /ordinary salary was due by 07\/06\/2026/i);
+  assert.match(answer.text, /overtime pay was due by 14\/06\/2026/i);
+  assert.doesNotMatch(answer.text, /ordinary salary was paid on 10\/06\/2026|overtime pay was paid on 10\/06\/2026/i,
+    'A not-paid or planned payment is not reported as an actual payment.');
+}
+const nextSalaryPeriodAnswer = renderSalaryPeriodEvidence(nextSalaryPeriodDeadlineQuery);
+assert.ok(nextSalaryPeriodAnswer);
+assert.match(nextSalaryPeriodAnswer.text, /ordinary salary was due by 07\/11\/2026/i);
+assert.match(nextSalaryPeriodAnswer.text, /overtime pay was due by 14\/11\/2026/i);
+assert.match(nextSalaryPeriodAnswer.text, /does not state either payment date, so timeliness cannot be determined/i);
+const missingSalaryPeriodEndAnswer = renderSalaryPeriodEvidence(
+  'For an Employment Act-covered employee, ordinary salary and overtime are paid under the usual deadlines. When are they due?');
+assert.ok(missingSalaryPeriodEndAnswer);
+assert.match(missingSalaryPeriodEndAnswer.text, /salary-period end date/i);
+assert.doesNotMatch(missingSalaryPeriodEndAnswer.text, /\b\d{2}\/\d{2}\/20\d{2}\b/,
+  'No specific calendar deadline is inferred when the salary-period end date is absent.');
+assert.equal(renderSalaryPeriodEvidence(
+  "A supplier's salary period ended on 31 May 2026. For our employee, when are ordinary salary and overtime due?"), undefined,
+  'A salary-period date owned by another entity cannot be borrowed for the queried employee.');
 
 const finalSalaryPointerRequest = {
   authority: 'MOM', topicId: 'mom-salary-payment',
@@ -1224,6 +1410,124 @@ try {
     assert.doesNotMatch(mismatchedTargetResponse.messageText, /\b(?:31\/(?:05|07|08)|30\/(?:04|06))\/2026\b/,
       `An unrelated or ambiguous filing target cannot use our FYE to calculate a deadline: ${query}`);
   }
+  const secretaryApplicationCases = [
+    {
+      query: 'We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?',
+      deadline: '15/09/2026'
+    },
+    {
+      query: 'Our Singapore private company was registered on 10 October 2026 with a sole director. What is the six-month deadline to appoint a company secretary, and can that sole director also be secretary?',
+      deadline: '10/04/2027'
+    }
+  ];
+  for (const sample of secretaryApplicationCases) {
+    let workstreams;
+    const response = await processAccountingQuery(sample.query, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.ok(workstreams, `The secretary question reaches the complete statutory application path: ${sample.query}`);
+    assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY');
+    assert.match(response.messageText, new RegExp(`six-month appointment deadline on ${sample.deadline}`));
+    assert.match(response.messageText, /sole director cannot also act as the company secretary/i);
+    assert.doesNotMatch(response.messageText, /auditor.{0,80}three months/i,
+      'The secretary answer does not add the independent auditor appointment obligation.');
+    assert.doesNotMatch(response.messageText, /### Journal Entries|\| Account \| Debit \| Credit \|/i,
+      'A secretary appointment question does not produce accounting or payroll journals.');
+  }
+  const disownedSecretaryApplication = await processAccountingQuery(
+    'Our company is not registered yet; a supplier was registered on 15 March 2026. By when must we appoint our company secretary?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(disownedSecretaryApplication.messageText, /six-month appointment deadline on 15\/09\/2026/i,
+    'A supplier-owned registration date cannot be used as our company’s secretary deadline.');
+  const crossCompanySecretaryApplication = await processAccountingQuery(crossCompanySecretaryQuery,
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(crossCompanySecretaryApplication.messageText, /six-month appointment deadline on 15\/09\/2026/i,
+    'The full application answer does not borrow Alpha’s registration date for Beta.');
+
+  const salaryPeriodApplicationCases = [
+    {
+      query: genericEmployeePossessiveSalaryPaymentQuery,
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /ordinary salary was paid on 05\/06\/2026 and was within its deadline/i,
+        /overtime pay was paid on 10\/06\/2026 and was within its deadline/i]
+    },
+    {
+      query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026. We paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /ordinary salary was paid on 10\/06\/2026 and was late/i,
+        /overtime pay was paid on 10\/06\/2026 and was within its deadline/i]
+    },
+    {
+      query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026 and we paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /ordinary salary was paid on 10\/06\/2026 and was late/i,
+        /overtime pay was paid on 10\/06\/2026 and was within its deadline/i]
+    },
+    {
+      query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026 and we will pay ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /does not establish completed payment dates for the employee being assessed, so timeliness cannot be determined/i],
+      notChecks: [/ordinary salary was paid on 10\/06\/2026/i, /overtime pay was paid on 10\/06\/2026/i]
+    },
+    {
+      query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026 and we have not paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /does not establish completed payment dates for the employee being assessed, so timeliness cannot be determined/i],
+      notChecks: [/ordinary salary was paid on 10\/06\/2026/i, /overtime pay was paid on 10\/06\/2026/i]
+    },
+    {
+      query: 'For an Employment Act-covered employee, the salary period ended on 31 May 2026 and we haven’t paid ordinary salary and overtime wages on 10 June 2026. Were both paid within the usual deadlines?',
+      checks: [/ordinary salary was due by 07\/06\/2026/i, /overtime pay was due by 14\/06\/2026/i,
+        /does not establish completed payment dates for the employee being assessed, so timeliness cannot be determined/i],
+      notChecks: [/ordinary salary was paid on 10\/06\/2026/i, /overtime pay was paid on 10\/06\/2026/i]
+    },
+    {
+      query: "Under the current Employment Act rules, our employee's salary period ends on 31 October 2026. When must ordinary salary and overtime pay each be paid?",
+      checks: [/ordinary salary was due by 07\/11\/2026/i, /overtime pay was due by 14\/11\/2026/i,
+        /does not state either payment date, so timeliness cannot be determined/i]
+    }
+  ];
+  for (const sample of salaryPeriodApplicationCases) {
+    let workstreams;
+    const response = await processAccountingQuery(sample.query, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.ok(workstreams, `The ordinary salary/overtime question reaches the statutory application path: ${sample.query}`);
+    assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY');
+    const salaryIssue = workstreams.issuePlan.issues.find(issue => issue.subject === 'MOM ordinary salary and overtime payment deadlines');
+    assert.ok(salaryIssue, 'The issue plan keeps ordinary salary and overtime payment deadlines together.');
+    assert.deepEqual(salaryIssue.mappedTopicIds, ['mom-salary-payment']);
+    assert.ok(['EMPLOYEE', 'EMPLOYER'].includes(salaryIssue.population));
+    for (const check of sample.checks) assert.match(response.messageText, check);
+    for (const check of sample.notChecks || []) assert.doesNotMatch(response.messageText, check);
+    assert.doesNotMatch(response.messageText, /### Journal Entries|\| Account \| Debit \| Credit \|/i,
+      'Ordinary salary and overtime due-date guidance does not create payroll journals.');
+  }
+  for (const query of namedSalaryPaymentOwnerQueries) {
+    let workstreams;
+    const response = await processAccountingQuery(query, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.ok(workstreams, `The salary deadline question reaches the statutory application path: ${query}`);
+    assert.doesNotMatch(response.messageText, /ordinary salary was paid on 10\/06\/2026|overtime pay was paid on 10\/06\/2026/i,
+      'The full answer does not apply a named owner’s or negated payment as an actual payment.');
+    assert.doesNotMatch(response.messageText,
+      /ordinary salary was paid on .* and was (?:within its deadline|late)|overtime pay was paid on .* and was within its deadline/i,
+      'A named-owner payment does not receive a timeliness conclusion.');
+    assert.doesNotMatch(response.messageText, /### Journal Entries|\| Account \| Debit \| Credit \|/i);
+    assert.match(response.messageText, /Evidence incomplete/i,
+      'Named employee/payment-owner dates remain unresolved in the full application.');
+    assert.doesNotMatch(response.messageText, /\b\d{2}\/\d{2}\/2026\b/,
+      'The full application does not assert dates from a named-owner salary scenario.');
+  }
+  const missingSalaryPeriodEndApplication = await processAccountingQuery(
+    'Under current Employment Act rules, when must ordinary salary and overtime be paid?',
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(missingSalaryPeriodEndApplication.messageText, /ordinary salary was due by \d{2}\/\d{2}\/20\d{4}/i,
+    'A salary-period end date is not inferred when the question omits it.');
+  const borrowedSalaryPeriodApplication = await processAccountingQuery(
+    "A supplier's salary period ended on 31 May 2026. For our employee, when are ordinary salary and overtime due?",
+    null, 'IFRS', undefined, undefined, [], undefined, {});
+  assert.doesNotMatch(borrowedSalaryPeriodApplication.messageText, /(?:07\/06|14\/06)\/2026/i,
+    'A supplier-owned salary-period date does not generate our employee’s deadlines.');
+
   let finalSalaryWorkstreams;
   const finalSalaryQuery = 'After an employee resigns, how much final salary do we owe, and when must we issue the itemised payslip?';
   const finalSalaryResponse = await processAccountingQuery(finalSalaryQuery, null, 'IFRS', undefined, undefined, [], undefined,

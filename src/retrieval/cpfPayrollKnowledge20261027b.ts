@@ -682,6 +682,7 @@ function requiredSourceFacts(rule: CpfPayrollKnowledgeRule, rawText: string, que
     }
     case 'CPF_CONTRIBUTION_METHOD':
       return [/cpf contribution rates vary based on your employee[’']s citizenship status, age group, and total wages/,
+        /as an employer, you are required to pay cpf contributions for your employees who are singapore citizens or singapore permanent residents and who are earning total wages of more than \$50 per month/,
         /first year begins on the day of spr conversion/,
         /second year begins on the first day of the month after the first anniversary of spr conversion/,
         /third year begins on the first day of the month after the second anniversary of spr conversion/,
@@ -689,6 +690,7 @@ function requiredSourceFacts(rule: CpfPayrollKnowledgeRule, rawText: string, que
         /total wages are made up of an employee[’']s ordinary wages and additional wages/,
         /different ceilings apply to ordinary wages and additional wages/,
         /above \$50 but not more than \$500 per month, there is no employee[’']s share/,
+        /you will still need to pay the employer[’']s share/,
         /round off the total cpf contributions to the nearest dollar/,
         /cents should always be dropped for the employee[’']s share/,
         /increase to the cpf contribution rates from 1 jan 2027/].every(fact => fact.test(text));
@@ -810,16 +812,79 @@ function querySubjectMatches(rule: CpfPayrollKnowledgeRule, query: string, subje
   return /\b(?:contribut\w*|rate table|rates?|percentages?|birthday|payroll|rounding|calculate|calculation|wage ceiling|\bow\b|\baw\b)\b/i.test(text);
 }
 
+function isLowWageShareIntent(query: string, subject: string): boolean {
+  const queryRequestsShares =
+    /\b(?:employee(?:[’']s)?[^.!?;]{0,45}\b(?:share|deduct\w*|deduction|contribut\w*|withhold\w*)|(?:deduct\w*|withhold\w*|share|contribut\w*)[^.!?;]{0,45}\bemployee(?:[’']s)?|employer(?:[’']s)?[^.!?;]{0,45}\b(?:share|contribut\w*|pay|owe)|(?:share|contribut\w*|pay)[^.!?;]{0,45}\bemployer(?:[’']s)?)\b/i.test(query);
+  const contextualIntent = /\blow[- ]wage\b/i.test(`${query}\n${subject}`);
+  return queryRequestsShares && contextualIntent;
+}
+
+function statedMonthlyTotalWages(query: string): number[] {
+  if (!/\b(?:monthly|per month|in (?:the )?month|each month)\b/i.test(query)) return [];
+  const pattern = /\b(?:total(?:\s+monthly)?\s+wages?|monthly\s+total\s+wages?)\b[^.!?;]{0,50}?\b(?:of|is|are|amounts?\s+to|=)\s*(?:sgd\s*\$?|s\$|\$)\s*(\d[\d,]*(?:\.\d{1,2})?)/gi;
+  return [...query.matchAll(pattern)].map(match => Number(match[1].replaceAll(',', '')));
+}
+
+function explicitlyStatesLowWageBand(query: string): boolean {
+  return /\b(?:above|over|more than)\s+(?:sgd\s*\$?|s\$|\$)?50(?:\.00)?\b[^.!?;]{0,55}\b(?:up to|at most|no more than|not more than)\s+(?:sgd\s*\$?|s\$|\$)?500(?:\.00)?\b/i.test(query);
+}
+
+function isCpfEligiblePopulation(query: string): boolean {
+  const citizen = /\b(?:singaporean|singapore citizen)\b/i.test(query) &&
+    !/\b(?:not|neither|non[- ]?)\s+(?:a\s+)?(?:singaporean|singapore citizen)\b/i.test(query);
+  const permanentResident = /\b(?:singapore permanent resident|permanent resident|singapore pr|spr)\b/i.test(query) &&
+    !/\b(?:not|nor|non[- ]?)\s+(?:a\s+)?(?:singapore permanent resident|permanent resident|singapore pr|spr)\b/i.test(query);
+  return citizen || permanentResident;
+}
+
+function explicitlyOutsideCpfPopulation(query: string): boolean {
+  const excludesBoth = /\b(?:neither (?:a )?(?:singapore )?citizen nor (?:a )?(?:singapore )?(?:permanent resident|pr|spr)|not (?:a )?(?:singapore )?citizen[^.!?;]{0,25}\b(?:or|nor)\b[^.!?;]{0,20}(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query);
+  if (excludesBoth) return true;
+  const excludesCitizen = /\b(?:non[- ]?citizen|not (?:a )?(?:singaporean|singapore citizen))\b/i.test(query);
+  const excludesPermanentResident = /\b(?:non[- ]?(?:pr|spr)|not (?:a )?(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query);
+  if (excludesCitizen && excludesPermanentResident) return true;
+  if (isCpfEligiblePopulation(query)) return false;
+  return /\b(?:foreigner|foreign employee|foreign worker|work permit holder|employment pass holder|s pass holder|not eligible for cpf|neither a singapore citizen nor (?:a )?(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query) ||
+    excludesCitizen || excludesPermanentResident;
+}
+
+function isNumericalContributionRequest(query: string): boolean {
+  return /\b(?:calculat\w*|comput\w*|work out|estimate\b|estimating\b|how much|how many (?:singapore )?(?:dollars?|cents?)|what amount|amount due|exact contribution|contribution amount|dollar amount|rate table|rates?|percentages?)\b/i.test(query) ||
+    /\b(?:employer|employee)?\s*cpf contribution\b[^.!?;\n]{0,40}\b(?:is|are)\s+(?:payable|due|owed)\b/i.test(query) ||
+    /\b(?:cpf|contribution) amount\b/i.test(query) ||
+    /\bamount\s+(?:due|owed|payable)\b/i.test(query) ||
+    /\b(?:owe|owing|owed)\b[^.!?;\n]{0,60}\b(?:cpf|contribution)\b/i.test(query);
+}
+
+export function isCpfLowWageShareQuestion(query: string): boolean {
+  if (!/\b(?:cpf|central provident fund)\b/i.test(query) ||
+      !isLowWageShareIntent(query, 'CPF low-wage employer and employee contribution shares') ||
+      explicitlyOutsideCpfPopulation(query) || isNumericalContributionRequest(query) ||
+      new Set(namedEmployeeReferences(query).map(reference => reference.id)).size > 1) return false;
+
+  const monthlyTotalWages = statedMonthlyTotalWages(query);
+  if (monthlyTotalWages.length > 1) return false;
+  if (monthlyTotalWages.length === 1) {
+    const [amount] = monthlyTotalWages;
+    return isCpfEligiblePopulation(query) && amount > 50 && amount <= 500;
+  }
+
+  return explicitlyStatesLowWageBand(query);
+}
+
+function identifyLowWageShareRule(query: string): CpfPayrollKnowledgeRule | undefined {
+  if (!isCpfLowWageShareQuestion(query)) return undefined;
+  return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_CONTRIBUTION_METHOD');
+}
+
 function identifyEvidenceRule(query: string, subject: string): CpfPayrollKnowledgeRule | undefined {
   if (/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(query) &&
       /\b(?:payable|payment date|due date|earned in|employment month)\b/i.test(query) &&
       !/\b(?:permanent resident|singapore pr|spr|pr status)\b/i.test(query) &&
       !/\b(?:ceiling|rate table|percentage|calculate|compute|how much)\b/i.test(query)) return undefined;
   const text = `${query}\n${subject}`;
-  if (/\b(?:employee cpf deduction|employee deduction|employee share|employer contribution|employer share)\b/i.test(text) &&
-      /\b(?:low[- ]wage|(?:s\$|sgd|\$)\s*(?:50|[5-9]\d|[1-4]\d\d|500)\b|earning\s+(?:s\$|sgd|\$)?\s*(?:50|[5-9]\d|[1-4]\d\d|500)\b)/i.test(text)) {
-    return undefined;
-  }
+  const lowWageShareRule = identifyLowWageShareRule(query);
+  if (isLowWageShareIntent(query, subject)) return lowWageShareRule;
   if (/\b(?:aw|additional wages?|bonus)\b/i.test(text) &&
       /\b(?:annual|yearly|year-end)\b.{0,45}\b(?:ceiling|limit|estimate|recalculat\w*)\b/i.test(text) &&
       /\b(?:actual\s+(?:ordinary wages?|ow)|ordinary wages?|\bow\b)\b/i.test(text) &&

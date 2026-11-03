@@ -155,6 +155,23 @@ for (const scenario of cases) {
 }
 
 const med = cases[0];
+for (const [query, subject] of [
+  ['A GST-registered employer paid an employee annual health screening bill. Can it claim input tax?',
+    'GST input tax on employee health screening'],
+  ['Our GST-registered company paid input GST for voluntary health check-ups for employees. Is it recoverable?',
+    'GST input tax on employee health check-ups']
+]) {
+  assert.equal(supportIrasMasKnowledgeRule({ ...med, query, subject, sourceText: textFor(med.file) }), true,
+    'employee health screening and check-up wording uses the existing staff-medical evidence rule');
+}
+assert.equal(supportIrasMasKnowledgeRule({ ...med,
+  query: 'A GST-registered clinic paid input GST for routine health screening. Can it claim the tax?',
+  subject: 'GST input tax on routine health screening', sourceText: textFor(med.file) }), undefined,
+'health screening without an employee context does not claim the staff-medical rule');
+assert.equal(supportIrasMasKnowledgeRule({ ...med,
+  query: 'A GST-registered clinic paid input GST for a health check-up. Can it claim the tax?',
+  subject: 'GST input tax on a health check-up', sourceText: textFor(med.file) }), undefined,
+'a health check-up without an employee context does not claim the staff-medical rule');
 assert.equal(supportIrasMasKnowledgeRule({ ...med, sourceText: textFor(med.file).replace(/Input tax claims are disallowed under Regulation 26/g, 'Input tax claims are allowed under Regulation 26') }), false,
   'reversed blocked-claim polarity is rejected');
 assert.equal(hasIrasMasKnowledgeContradiction({ ...med, sourceText: 'Staff medical expenses are always claimable; input tax claims are not disallowed under Regulation 26.' }), true,

@@ -15,6 +15,12 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const temporary = mkdtempSync(path.join(tmpdir(), 'iras-wht-filing-production-'));
 try {
   const generalTreatyQuestion = 'How do tax treaties affect withholding tax on payments to non-residents?';
+  const generalTreatyQuestions = [
+    ['general treaty effect', generalTreatyQuestion],
+    ['general scope qualifier', 'In general, how does a tax treaty affect withholding tax for non-resident payments?'],
+    ['general purpose without jurisdiction', 'How do tax treaties for non-resident payments affect withholding tax?'],
+    ['general non-resident company', 'How do tax treaties with a non-resident company affect withholding tax?']
+  ];
   const genericTreatySubject = 'Effect of a tax treaty on withholding-tax applicability';
   const specificTreatyQuestions = [
     ['specific Article 12', 'How do tax treaties affect withholding tax on payments to non-residents under Article 12?'],
@@ -24,20 +30,50 @@ try {
     ['differentiate treaty effects', 'How do tax treaties differ in their effect on withholding tax on payments to non-residents?'],
     ['curly possessive treaty name', 'How does Australia’s tax treaty affect withholding tax on payments to non-residents?'],
     ['ASCII possessive treaty name', "How does Australia's tax treaty affect withholding tax on payments to non-residents?"],
-    ['slash separated treaty name', 'How does the Singapore/Australia DTA affect withholding tax on payments to non-residents?']
+    ['slash separated treaty name', 'How does the Singapore/Australia DTA affect withholding tax on payments to non-residents?'],
+    ['plural tax treaties with country', 'How do tax treaties with Australia affect withholding tax on payments to non-residents?'],
+    ['Hong Kong treaty scope', 'How do tax treaties with Hong Kong companies affect withholding tax on payments to non-residents?'],
+    ['Australian company treaty scope', 'How do tax treaties with Australian companies affect withholding tax on payments to non-residents?'],
+    ['singular Australian company treaty scope', 'How do tax treaties with an Australian company affect withholding tax on payments to non-residents?'],
+    ['lowercase Australian company treaty scope', 'How do tax treaties with australian companies affect withholding tax on payments to non-residents?'],
+    ['plural tax treaties between countries', 'How do tax treaties between the United Kingdom and Australia affect withholding tax on payments to non-residents?'],
+    ['plural tax treaties for country', 'How do tax treaties for Australia affect withholding tax on payments to non-residents?'],
+    ['lowercase treaty jurisdiction', 'How do tax treaties with australia affect withholding tax on payments to non-residents?'],
+    ['accented treaty jurisdiction', 'How do tax treaties with Côte d’Ivoire affect withholding tax on payments to non-residents?']
   ];
   const rulesOnlyIssuePlan = question => reconcileQuestionUnderstanding(question, classifyQuestion(question), {
     mode: 'DETERMINISTIC_FALLBACK'
   }).issuePlan;
-  const genericFallbackPlan = rulesOnlyIssuePlan(generalTreatyQuestion);
-  assert.equal(genericFallbackPlan.coverageEstablished, true,
-    'the exact general treaty-effect question is reconciled as a complete bounded rule issue');
-  assert.equal(genericFallbackPlan.hasUnmappedResidual, false);
-  assert.equal(genericFallbackPlan.issues.length, 1);
-  assert.equal(genericFallbackPlan.issues[0].subject, genericTreatySubject);
+  for (const [id, question] of generalTreatyQuestions) {
+    assert.equal(hasSpecificIrasWhtTreatyScope(question), false, `${id} does not name a jurisdiction or other specific scope`);
+    assert.equal(isGeneralIrasWhtTreatyEffectQuestion(question), true, `${id} remains a general treaty-effect question`);
+    const plan = rulesOnlyIssuePlan(question);
+    assert.equal(plan.coverageEstablished, true, `${id} is reconciled as a complete bounded rule issue`);
+    assert.equal(plan.hasUnmappedResidual, false, `${id} does not leave an unresolved residual`);
+    assert.equal(plan.issues.length, 1);
+    assert.equal(plan.issues[0].subject, genericTreatySubject);
+  }
   assert.equal(isGeneralIrasWhtTreatyEffectQuestion(
     'What effect do tax treaties have on withholding tax on payments to non-residents?'), true,
   'a general effect paraphrase remains in scope');
+  for (const [id, question] of [
+    ['double taxation treaty phrase', 'How do double taxation treaties with Australia affect withholding tax?'],
+    ['double tax treaty phrase', 'How do double tax treaties with Australia affect withholding tax?'],
+    ['plural DTA with country', 'How do DTAs for Australia affect withholding tax?'],
+    ['plural double tax agreement with country', 'How do double taxation agreements with Australia affect withholding tax?'],
+    ['Hong Kong alias', 'How do tax treaties with Hong Kong affect withholding tax?'],
+    ['Turkey alias', 'How do tax treaties with Turkey affect withholding tax?'],
+    ['Czech Republic alias', 'How do tax treaties with the Czech Republic affect withholding tax?'],
+    ['Macao alias', 'How do tax treaties with Macao affect withholding tax?'],
+    ['Macau alias', 'How do tax treaties with Macau affect withholding tax?'],
+    ['Australian recipient qualifier', 'How do tax treaties with Australian companies affect withholding tax?'],
+    ['singular Australian company qualifier', 'How do tax treaties with an Australian company affect withholding tax?'],
+    ['lowercase Australian recipient qualifier', 'How do tax treaties with australian companies affect withholding tax?']
+  ]) {
+    assert.equal(hasSpecificIrasWhtTreatyScope(question), true, `${id} has constrained treaty scope detection`);
+    assert.equal(isGeneralIrasWhtTreatyEffectQuestion(question), false,
+      `${id} is not misclassified as a fully covered general treaty question`);
+  }
   for (const [id, question] of specificTreatyQuestions) {
     assert.equal(hasSpecificIrasWhtTreatyScope(question), true, `${id} retains its specific request scope`);
     assert.equal(isGeneralIrasWhtTreatyEffectQuestion(question), false,
@@ -62,6 +98,12 @@ try {
     assert.equal(plan.coverageEstablished, false,
       `${id} cannot inherit complete-question coverage from the general fallback`);
   }
+  const independentFilingQuestion = 'In general, how does a tax treaty affect withholding tax for non-resident payments, and when is the WHT filing due?';
+  const independentFilingPlan = rulesOnlyIssuePlan(independentFilingQuestion);
+  assert.equal(independentFilingPlan.coverageEstablished, false,
+    'general treaty coverage does not establish completeness for an added filing obligation');
+  assert.equal(independentFilingPlan.hasUnmappedResidual, true,
+    'the additional filing question remains an unresolved request residual');
 
   const corpusPath = path.join(temporary, 'cases.json');
   const outputPath = path.join(temporary, 'answers.json');
@@ -190,7 +232,9 @@ try {
   const applicationCorpusPath = path.join(temporary, 'application-cases.json');
   const applicationOutputPath = path.join(temporary, 'application-answers.json');
   writeFileSync(applicationCorpusPath, JSON.stringify({ cases: [
-    { id: 'wht-general-treaty-effect-process-accounting-query', question: generalTreatyQuestion },
+    ...generalTreatyQuestions.map(([id, question]) => ({
+      id: `wht-${id.replaceAll(' ', '-')}-process-accounting-query`, question
+    })),
     ...specificTreatyQuestions.map(([id, question]) => ({ id: `wht-${id}-process-accounting-query`, question }))
   ] }, null, 2));
   execFileSync(process.execPath, [
@@ -208,22 +252,25 @@ try {
   assert.equal(applicationReport.networkRequests, 0);
   assert.equal(applicationReport.modelRequests, 0);
   assert.deepEqual(applicationReport.blockedModelEndpoints, []);
-  assert.equal(applicationReport.outcomes.length, 1 + specificTreatyQuestions.length);
+  assert.equal(applicationReport.outcomes.length, generalTreatyQuestions.length + specificTreatyQuestions.length);
   const byApplicationId = id => applicationReport.outcomes.find(row => row.id === id);
-  const applicationOutcome = byApplicationId('wht-general-treaty-effect-process-accounting-query');
-  assert.equal(applicationOutcome.entryRoute, 'processAccountingQuery');
-  const applicationIrasStatus = applicationOutcome.evidenceStatuses.find(stream => stream.authority === 'IRAS');
-  assert.ok(applicationIrasStatus, `the normal application path presents the IRAS workstream: ${JSON.stringify(applicationOutcome)}`);
-  assert.equal(applicationIrasStatus.evidenceStatus, 'VERIFIED', JSON.stringify({
-    presentation: applicationOutcome.authorityEvidencePresentation,
-    issuePlan: applicationOutcome.authorityWorkstreams?.issuePlan,
-    workstreams: applicationOutcome.authorityWorkstreams?.workstreams?.map(stream => ({
-      id: stream.id, evidenceStatus: stream.evidenceStatus, gaps: stream.gaps,
-      issues: stream.issues.map(issue => ({ subject: issue.subject, gaps: issue.gaps }))
-    }))
-  }));
-  assert.match(applicationOutcome.answer, /DTA can change withholding-tax treatment for covered income[\s\S]*does not establish a blanket exemption/i);
-  assert.match(applicationOutcome.answer, /does not establish a treaty-specific rate or outcome for an unspecified payment/i);
+  for (const [id, question] of generalTreatyQuestions) {
+    const applicationOutcome = byApplicationId(`wht-${id.replaceAll(' ', '-')}-process-accounting-query`);
+    assert.equal(applicationOutcome.question, question, `${id} reaches the normal application entry with its original wording`);
+    assert.equal(applicationOutcome.entryRoute, 'processAccountingQuery');
+    const applicationIrasStatus = applicationOutcome.evidenceStatuses.find(stream => stream.authority === 'IRAS');
+    assert.ok(applicationIrasStatus, `the normal application path presents the IRAS workstream: ${JSON.stringify(applicationOutcome)}`);
+    assert.equal(applicationIrasStatus.evidenceStatus, 'VERIFIED', JSON.stringify({
+      presentation: applicationOutcome.authorityEvidencePresentation,
+      issuePlan: applicationOutcome.authorityWorkstreams?.issuePlan,
+      workstreams: applicationOutcome.authorityWorkstreams?.workstreams?.map(stream => ({
+        id: stream.id, evidenceStatus: stream.evidenceStatus, gaps: stream.gaps,
+        issues: stream.issues.map(issue => ({ subject: issue.subject, gaps: issue.gaps }))
+      }))
+    }));
+    assert.match(applicationOutcome.answer, /DTA can change withholding-tax treatment for covered income[\s\S]*does not establish a blanket exemption/i);
+    assert.match(applicationOutcome.answer, /does not establish a treaty-specific rate or outcome for an unspecified payment/i);
+  }
 
   for (const [id, question] of specificTreatyQuestions) {
     const outcome = byApplicationId(`wht-${id}-process-accounting-query`);

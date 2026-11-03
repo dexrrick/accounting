@@ -26,6 +26,7 @@ export type StatutoryWorkflowRuleId =
   | 'MOM_ITEMISED_PAYSLIP_REQUIREMENTS'
   | 'MAS_LFMC_KEY_APPOINTMENTS'
   | 'MAS_VCFM_CHANGE_NOTIFICATIONS'
+  | 'MAS_VCFM_BRANCH_APPROVAL'
   | 'MAS_VCFM_BUSINESS_CESSATION';
 
 export interface StatutoryWorkflowRule {
@@ -393,6 +394,38 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
     subjectPattern: /\b(?:VCFM|venture capital fund manager|Form\s*23A|change in particulars)\b/i
   },
   {
+    id: 'MAS_VCFM_BRANCH_APPROVAL', authority: 'MAS', topicIds: ['mas-vcfm-branch-approval'],
+    officialUrl: MAS_VCFM_TOOLKIT_URL, title: 'Compliance Toolkit for Venture Capital Fund Managers',
+    fixtureFile: 'mas-vcfm-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
+    population: 'Venture Capital Fund Managers (VCFMs)',
+    provisions: ['MAS VCFM Compliance Toolkit row 2, identified as a licence or registration condition. This row does not cite a separate statutory section.'],
+    rule: 'A VCFM must obtain MAS approval before establishing any branch in Singapore or elsewhere. Row 2 specifies no prescribed form and lists the matter under the MAS-Tx Entity Activities & Particulars category. This branch rule does not determine the row’s separate approval condition for acquiring or holding a 20% or greater interest in a corporation.',
+    conditions: ['Confirm that the manager is a VCFM and the proposed or completed activity is establishment of a branch.', 'The approval is required before establishing the branch whether it is in Singapore or elsewhere.', 'The toolkit row specifies no prescribed form; it identifies the MAS-Tx Entity Activities & Particulars category.'],
+    exceptions: ['The toolkit row does not establish the same branch-approval condition for an LFMC or another licence class.', 'The branch approval rule does not answer the separate corporation-interest limb in row 2.', 'The row requires prior approval but does not describe a retrospective approval or late-notification process.'],
+    requiredFacts: ['Confirm that the manager is a VCFM.', 'Whether a branch is proposed or has already been established and its location.', 'For a proposed branch, the expected establishment date; no date calculation is needed to state the prior-approval requirement.'],
+    effectiveDateEvidence: 'The captured PDF identifies row 2 as a licence or registration condition but does not state when that condition commenced. The PDF revision date is not used as a historical effective date.',
+    limitations: ['This rule is limited to the branch-establishment limb of row 2 and does not determine the separate 20% corporation-interest condition.', 'The toolkit is not a complete statement of every VCFM obligation; this row does not describe an application package or post-establishment cure.'],
+    requiredSourceTerms: [
+      '2 To seek MAS’ approval to acquire or hold', 'establish any branch', '(whether in Singapore or elsewhere)',
+      'No prescribed form', 'Prior to the acquisition', 'the establishment of any',
+      'Licence condition', 'registration condition', 'MAS-Tx', 'Entity Activities &', 'Particulars',
+      'Establish/Acquire/', 'Hold Major Stake in', 'a Corporation)', '20% or more of the share capital of any',
+      'this condition, "corporation" has the same', 'meaning as in section 2 of the SFA, but',
+      'excludes a corporation which is', 'incorporated for the purpose of arranging a',
+      'closed-end fund or a collective investment', 'scheme'
+    ],
+    quoteMatchers: [
+      /(?=[\s\S]{0,1800}\bPrior to\b[\s\S]{0,700}\bthe establishment of any\b[\s\S]{0,180}\bbranch\b)\b2\s*\|?\s*To seek MAS[’'] approval to acquire or hold,[\s\S]{0,5000}?(?=\b3\s*\|?\s*To seek MAS[’'] approval to reduce\b)/i
+    ],
+    contradictionPatterns: [
+      /approval[^.!?\n]{0,140}\b(?:not required|unnecessary|not needed)\b[^.!?\n]{0,140}\bbranch\b/i,
+      /(?:approval|notification)[^.!?\n]{0,160}\b(?:after|following|post.?hoc)\b[^.!?\n]{0,140}\b(?:suffic\w*|enough|adequate|complete)\b/i,
+      /\bpost.?hoc\b[^.!?\n]{0,160}\b(?:approval|notification)\b[^.!?\n]{0,120}\b(?:suffic\w*|enough|adequate|complete)\b/i
+    ],
+    queryPattern: /\b(?:VCFM|venture capital fund manager)\b[\s\S]{0,220}\bbranch(?:es)?\b[\s\S]{0,220}\b(?:prior approval|approval|authori[sz]\w*|permission|form|establish\w*|opened?)\b|\b(?:prior approval|approval|authori[sz]\w*|permission|form|establish\w*|opened?)\b[\s\S]{0,220}\bbranch(?:es)?\b[\s\S]{0,220}\b(?:VCFM|venture capital fund manager)\b/i,
+    subjectPattern: /^(?=.*\b(?:VCFM|venture capital fund manager)\b)(?=.*\bbranch(?:es)?\b)(?=.*\b(?:approval|form)\b)/i
+  },
+  {
     id: 'MAS_VCFM_BUSINESS_CESSATION', authority: 'MAS', topicIds: ['mas-vcfm-business-cessation'],
     officialUrl: MAS_VCFM_TOOLKIT_URL, title: 'Compliance Toolkit for Venture Capital Fund Managers',
     fixtureFile: 'mas-vcfm-toolkit.pdf', fixtureKind: 'RETAINED_NATIVE_OFFICIAL_PDF',
@@ -428,9 +461,27 @@ export const STATUTORY_WORKFLOW_RULES_20261029: readonly Rule[] = Object.freeze(
 
 export const STATUTORY_WORKFLOW_RULES_METADATA_20261029: readonly StatutoryWorkflowRule[] = STATUTORY_WORKFLOW_RULES_20261029;
 
+/** Identifies a standalone VCFM branch-approval question for topic refinement. */
+export function isVcfmBranchApprovalQuestion(query: string): boolean {
+  if (query.length > 800) return false;
+  const text = query;
+  const hasVcfm = /\b(?:VCFM|venture capital fund manager)\b/i.test(text);
+  const hasBranch = /\bbranch(?:es)?\b/i.test(text);
+  const asksApprovalOrForm = /\b(?:approval|authori[sz]\w*|permission|prescribed form|what form|which form|Form\s*\d+)\b/i.test(text);
+  const mentionsOtherLicenceClass = /\b(?:LFMC|licensed fund management compan(?:y|ies)|fund management compan(?:y|ies)|other (?:CMS )?licen[cs]e class|another (?:CMS )?licen[cs]e class)\b/i.test(text);
+  const asksIndependentObligation = mentionsOtherLicenceClass
+    || /\b(?:CMS licence|capital markets services licence|fund management licence|licen[cs](?:e|ing) application|acquir\w*|20\s*(?:%|percent)|share capital|corporation|major stake|Form\s*(?:7|23A|25A)|cessation|misconduct|annual declaration|financial return|director appointment|change in particulars)\b/i.test(text)
+    || /\b(?:other|separate|separately|also)\b[^.!?\n]{0,100}\b(?:obligation|requirement|notification|approval|filing|duty|return)\b/i.test(text);
+  return hasVcfm && hasBranch && asksApprovalOrForm && !asksIndependentObligation;
+}
+
 function recognizeRule(input: Pick<StatutoryWorkflowRequest, 'authority' | 'topicId' | 'query' | 'subject'>): Rule | undefined {
   return STATUTORY_WORKFLOW_RULES_20261029.find(rule => rule.authority === input.authority
-    && rule.topicIds.includes(input.topicId) && rule.queryPattern.test(input.query) && rule.subjectPattern.test(input.subject));
+    && rule.topicIds.includes(input.topicId)
+    && (rule.id === 'MAS_VCFM_BRANCH_APPROVAL'
+      ? isVcfmBranchApprovalQuestion(input.query)
+      : rule.queryPattern.test(input.query))
+    && rule.subjectPattern.test(input.subject));
 }
 
 function cleanedSource(sourceText: string): string {
@@ -463,16 +514,31 @@ function sourceProves(rule: Rule, sourceText: string): boolean {
 
 function hasAllRequiredTerms(rule: Rule, sourceText: string): boolean {
   const source = cleanedSource(sourceText);
+  if (isCompleteSelectedVcfmBranchRow(rule, source)) return true;
   // PDF cells are interleaved by line. Require every premise inside the
   // numbered row, so another row cannot supply a missing form or deadline.
-  const rowScoped = rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS' || rule.id === 'MAS_VCFM_BUSINESS_CESSATION';
+  const rowScoped = rule.id === 'MAS_VCFM_CHANGE_NOTIFICATIONS'
+    || rule.id === 'MAS_VCFM_BRANCH_APPROVAL' || rule.id === 'MAS_VCFM_BUSINESS_CESSATION';
   const clean = normalizedSourceTerms(rowScoped ? rule.quoteMatchers[0].exec(source)?.[0] || '' : source);
   return rule.requiredSourceTerms.every(term => clean.includes(normalizedSourceTerms(term)));
 }
 
 function hasAllRequiredQuotes(rule: Rule, sourceText: string): boolean {
   const clean = cleanedSource(sourceText);
+  if (isCompleteSelectedVcfmBranchRow(rule, clean)) return true;
   return rule.quoteMatchers.every(pattern => pattern.test(clean));
+}
+
+function isCompleteSelectedVcfmBranchRow(rule: Rule, sourceText: string): boolean {
+  if (rule.id !== 'MAS_VCFM_BRANCH_APPROVAL') return false;
+  const clean = sourceText.trim();
+  if (!/^2\s*\|\s*To seek MAS[’'] approval to acquire or hold,/i.test(clean) ||
+      !/\|\s*No prescribed form\s*\|\s*Prior to the acquisition\b/i.test(clean) ||
+      !/\|\s*Licence condition or registration condition\s*\|\s*MAS-Tx\s*\|\s*Entity Activities & Particulars/i.test(clean) ||
+      !/a Corporation\)\s*$/i.test(clean) ||
+      /\b3\s*\|\s*To seek MAS[’'] approval to reduce\b/i.test(clean)) return false;
+  const normalized = normalizedSourceTerms(clean);
+  return rule.requiredSourceTerms.every(term => normalized.includes(normalizedSourceTerms(term)));
 }
 
 function scopeAllowsCurrentRule(query: string): boolean {
@@ -500,7 +566,9 @@ export function selectStatutoryWorkflowQuotes(request: StatutoryWorkflowRequest)
   if (!rule || request.officialUrl !== rule.officialUrl || supportStatutoryWorkflowRule(request) !== true) return [];
   const clean = cleanedSource(request.sourceText);
   const statements = sourceStatements(request.sourceText);
-  const quotes = rule.quoteMatchers.map(pattern => pattern.exec(clean)?.[0]).filter((value): value is string => Boolean(value));
+  const selectedRow = isCompleteSelectedVcfmBranchRow(rule, clean);
+  const quotes = selectedRow ? [clean]
+    : rule.quoteMatchers.map(pattern => pattern.exec(clean)?.[0]).filter((value): value is string => Boolean(value));
   const selected = [...quotes];
   for (const term of rule.requiredSourceTerms) {
     if (normalizedSourceTerms(selected.join(' ')).includes(normalizedSourceTerms(term))) continue;

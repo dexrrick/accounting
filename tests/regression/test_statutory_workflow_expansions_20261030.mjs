@@ -6,6 +6,8 @@ import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import {
   STATUTORY_WORKFLOW_RULES_20261029,
   getStatutoryWorkflowEvidence,
+  hasStatutoryWorkflowContradiction,
+  isVcfmBranchApprovalQuestion,
   selectStatutoryWorkflowQuotes,
   supportStatutoryWorkflowRule
 } from '../../src/retrieval/statutoryWorkflows20261029.ts';
@@ -41,8 +43,10 @@ for (let pageNumber = 1; pageNumber <= masPdf.numPages; pageNumber += 1) {
 }
 const cessationText = masPages.find(page => /6\s+To notify MAS where a VCFM:/i.test(page));
 const particularsText = masPages.find(page => /11\s+To notify MAS of any change in:/i.test(page));
+const branchApprovalText = masPages.find(page => /\b2\s+To seek MAS[’'] approval to acquire or hold,/i.test(page));
 assert.ok(cessationText, 'the exact Form 7 row is extracted from the retained MAS PDF');
 assert.ok(particularsText, 'the exact Form 23A row is extracted from the retained MAS PDF');
+assert.ok(branchApprovalText, 'the exact branch-approval row is extracted from the retained MAS PDF');
 
 async function htmlText(fixture) {
   const source = htmlSources.get(fixture);
@@ -226,6 +230,79 @@ assert.equal(supportStatutoryWorkflowRule({ ...donationRuleInput, officialUrl: '
 'the separate IRAS donations page cannot substitute for the captured A-F source contract');
 
 const structuredVcfm = await extractPdfDocumentText(new Uint8Array(masBytes));
+const branchApprovalRule = STATUTORY_WORKFLOW_RULES_20261029.find(rule => rule.id === 'MAS_VCFM_BRANCH_APPROVAL');
+assert.ok(branchApprovalRule, 'the VCFM branch-approval workflow is registered');
+assert.deepEqual(branchApprovalRule.topicIds, ['mas-vcfm-branch-approval']);
+assert.equal(branchApprovalRule.fixtureFile, masSource.fixture);
+assert.equal(branchApprovalRule.officialUrl, masSource.officialUrl);
+const branchApprovalRequest = {
+  authority: 'MAS', topicId: 'mas-vcfm-branch-approval',
+  query: 'Our VCFM opened a branch overseas. Does it need prior approval and what form is specified in the current toolkit?',
+  subject: 'MAS VCFM branch establishment prior approval and form',
+  officialUrl: branchApprovalRule.officialUrl, sourceText: structuredVcfm.text
+};
+assert.equal(isVcfmBranchApprovalQuestion(branchApprovalRequest.query), true,
+  'a VCFM branch question about approval and form can refine to its bounded topic');
+assert.equal(isVcfmBranchApprovalQuestion('Before our VCFM establishes a branch in Singapore, what approval and prescribed form apply?'), true,
+  'the standalone Singapore-branch wording can refine to its bounded topic');
+assert.equal(isVcfmBranchApprovalQuestion('Our LFMC opened an overseas branch. Does it need MAS prior approval?'), false,
+  'the branch topic does not claim LFMC questions');
+assert.equal(isVcfmBranchApprovalQuestion('Our VCFM and LFMC opened an overseas branch. Does it need MAS prior approval?'), false,
+  'a mixed VCFM and LFMC query does not refine to the VCFM-only branch topic');
+assert.equal(isVcfmBranchApprovalQuestion('Our VCFM wants to acquire 20% of a corporation and establish a branch. What prior approval applies?'), false,
+  'the branch topic does not drop a separate 20% acquisition question');
+assert.equal(isVcfmBranchApprovalQuestion('Our VCFM wants to open a branch and file its annual declaration. What is due?'), false,
+  'a branch question with a separate filing obligation does not refine by itself');
+const longBranchQuestion = `${'Our VCFM opened a branch overseas. Does it need prior approval and what form is specified?'.padEnd(820, ' ')}Separately, what is the annual declaration deadline?`;
+assert.equal(longBranchQuestion.length > 800, true, 'the long-query control places its separate obligation beyond the cutoff');
+assert.equal(isVcfmBranchApprovalQuestion(longBranchQuestion), false,
+  'an overlong query with a later independent obligation does not refine by its earlier branch clause');
+assert.equal(supportStatutoryWorkflowRule(branchApprovalRequest), true,
+  'the retained exact VCFM row supports prior branch approval');
+const branchApprovalQuotes = selectStatutoryWorkflowQuotes(branchApprovalRequest);
+assert.equal(branchApprovalQuotes.length, 1, 'the answer selects the complete row 2 passage only');
+assert.match(branchApprovalQuotes[0], /establish any branch/i);
+assert.match(branchApprovalQuotes[0], /\(whether in Singapore or elsewhere\)/i);
+assert.match(branchApprovalQuotes[0], /No prescribed form/i);
+assert.match(branchApprovalQuotes[0], /Prior to/i);
+assert.match(branchApprovalQuotes[0], /the establishment of any/i);
+assert.match(branchApprovalQuotes[0], /Licence condition/i);
+assert.match(branchApprovalQuotes[0], /registration condition/i);
+assert.match(branchApprovalQuotes[0], /MAS-Tx/i);
+assert.match(branchApprovalQuotes[0], /Entity Activities &/i);
+assert.match(branchApprovalQuotes[0], /Particulars/i);
+assert.doesNotMatch(branchApprovalQuotes[0], /\b3\s*\|\s*To seek MAS[’'] approval to reduce/i,
+  'the row quote ends before the adjacent row 3');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest, officialUrl: 'https://example.com/wrong-vcfm-source' }), false,
+  'a different document URL cannot prove the VCFM branch row');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  sourceText: branchApprovalQuotes[0].replace(/No prescribed form/i, 'Form 10 is required') }), false,
+'a mutated form cell cannot prove the row');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  sourceText: branchApprovalQuotes[0].replace(/No prescribed form/i, '') }), false,
+'a hidden deletion of the row’s form cell cannot prove the row');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  sourceText: branchApprovalQuotes[0].replace(/the establishment of any/i, 'the commencement of any') }), false,
+'a hidden deletion of the branch timing premise cannot prove prior approval');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  sourceText: branchApprovalQuotes[0].replace(/Licence condition/i, 'LFMC-only condition') }), false,
+'a changed condition-class cell cannot prove the VCFM row');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  sourceText: `${branchApprovalQuotes[0]} Approval or notification after the branch is established is sufficient.` }), false,
+'post-establishment approval or notification cannot override the row’s prior-approval condition');
+assert.equal(hasStatutoryWorkflowContradiction({ ...branchApprovalRequest,
+  sourceText: `${branchApprovalQuotes[0]} Approval or notification after the branch is established is sufficient.` }), true,
+'a contradictory post-establishment source statement is exposed to legacy fallback guards');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  query: 'Our LFMC opened an overseas branch. Does it need MAS prior approval?',
+  subject: 'MAS LFMC branch prior approval and form' }), undefined,
+'the VCFM branch rule does not transfer to an LFMC');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest,
+  query: 'Our VCFM wants to acquire 20% of a corporation and establish a branch. What prior approval applies?',
+  subject: 'MAS VCFM branch establishment prior approval and form' }), undefined,
+'the branch-only rule does not answer the separate 20% corporation-interest limb');
+assert.equal(supportStatutoryWorkflowRule({ ...branchApprovalRequest, sourceText: '' }), false,
+  'a missing row fails closed');
 for (const sample of cases.filter(sample => sample.authority === 'MAS')) {
   const rule = STATUTORY_WORKFLOW_RULES_20261029.find(rule => rule.id === sample.ruleId);
   const request = { authority: 'MAS', topicId: sample.topic, query: sample.query, subject: sample.subject,
@@ -282,6 +359,36 @@ try {
     assert.ok(presentation.workstreams.some(stream => stream.authority === sample.authority && stream.sources.some(source =>
       source.claims.some(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE' && claim.fetchedSourceBinding?.documentHash))),
     `${sample.id}: exact fetched-revision evidence is present`);
+  }
+  const balancedMasCases = [
+    { id: 'balanced-mas-1', question: 'Our VCFM opened a branch overseas. Does it need prior approval and what form is specified in the current MAS toolkit?' },
+    { id: 'balanced-mas-2', question: 'Before our VCFM establishes a new branch in Singapore, what approval and prescribed form does the current MAS compliance toolkit require?' }
+  ];
+  for (const sample of balancedMasCases) {
+    let workstreams;
+    const response = await processAccountingQuery(sample.question, null, 'IFRS', undefined, undefined, [], undefined,
+      { onAuthorityWorkstreams: value => { workstreams = value; } });
+    assert.match(response.messageText, /prior to[\s\S]{0,180}(?:establish|establishment)[\s\S]{0,80}branch/i,
+      `${sample.id}: the answer explains approval must precede branch establishment`);
+    assert.match(response.messageText, /no prescribed form/i,
+      `${sample.id}: the answer does not invent a prescribed application form`);
+    assert.doesNotMatch(response.messageText, /Form\s*10\b/i,
+      `${sample.id}: the answer does not invent Form 10`);
+    const presentation = createAuthorityEvidencePresentation(workstreams);
+    const branchSource = presentation.workstreams.find(stream => stream.authority === 'MAS')?.sources.find(source =>
+      source.officialUrl === masSource.officialUrl && source.claims.some(claim =>
+        claim.supportKind === 'EXACT_SOURCE_QUOTE' && claim.fetchedSourceBinding?.documentHash));
+    assert.ok(branchSource, `${sample.id}: the exact fetched PDF revision is retained as branch evidence`);
+    const completeRowClaim = branchSource.claims.find(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE' &&
+      /establish any branch/i.test(claim.text) && /whether in Singapore or elsewhere/i.test(claim.text) &&
+      /No prescribed form/i.test(claim.text) && /Prior to/i.test(claim.text) &&
+      /the establishment of any/i.test(claim.text) && /Licence condition/i.test(claim.text) &&
+      /registration condition/i.test(claim.text) && /MAS-Tx/i.test(claim.text) &&
+      /Entity Activities &/i.test(claim.text) && /Particulars/i.test(claim.text) &&
+      !/\b3\s*\|\s*To seek MAS[’'] approval to reduce/i.test(claim.text));
+    assert.ok(completeRowClaim, `${sample.id}: one exact evidence claim carries complete row 2 and excludes row 3`);
+    assert.equal(completeRowClaim.fetchedSourceBinding.documentHash, masSource.documentSha256,
+      `${sample.id}: the claim remains bound to the retained raw PDF hash`);
   }
   const combined = 'Our venture capital fund manager has not confirmed its financial year-end. Can we use the calendar-year nil-misconduct return deadline for Form 25A and assume that filing Form 25A also completes every reporting obligation of the funds we manage?';
   for (const combinedQuestion of [combined, 'Our VCFM has not confirmed its financial year-end. Can we use the nil-misconduct date to set Form 25A and treat it as satisfying all fund returns?']) {

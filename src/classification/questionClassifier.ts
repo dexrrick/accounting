@@ -3,6 +3,8 @@ import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 import { hasUnresolvedSection14NBasisPeriod } from '../retrieval/statutoryDateScope';
 import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
+import { normalizeTaxJurisdictionName, TAX_JURISDICTION_NAMES } from '../utils/taxJurisdictionNames';
+import { isCpfLowWageShareQuestion } from '../retrieval/cpfPayrollKnowledge20261027b';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -34,35 +36,8 @@ export interface QuestionClassificationResult {
   reasoning: string;
 }
 
-function normalizeJurisdictionName(value: string): string {
-  return value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-const TAX_JURISDICTION_NAMES: ReadonlySet<string> = (() => {
-  const names = new Set<string>();
-  if (typeof Intl.DisplayNames === 'function') {
-    const displayNames = new Intl.DisplayNames(['en'], { type: 'region' });
-    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    for (const first of alphabet) {
-      for (const second of alphabet) {
-        const code = `${first}${second}`;
-        const name = displayNames.of(code);
-        // Invalid two-letter codes fall back to themselves. Keep only actual
-        // region names and compare complete one-to-five-word complements.
-        if (name && name.toUpperCase() !== code) names.add(normalizeJurisdictionName(name));
-      }
-    }
-  }
-  for (const alias of [
-    'US', 'U.S.', 'USA', 'U.S.A.', 'UK', 'U.K.', 'Britain', 'Great Britain',
-    'UAE', 'Republic of Korea', 'South Korea', 'North Korea', 'Republic of China'
-  ]) names.add(normalizeJurisdictionName(alias));
-  return names;
-})();
-
 function hasForeignJurisdictionTarget(complement: string): boolean {
-  const words = normalizeJurisdictionName(complement).split(' ').filter(Boolean);
+  const words = normalizeTaxJurisdictionName(complement).split(' ').filter(Boolean);
   while (words.length && ['a', 'an', 'the'].includes(words[0])) words.shift();
   if (words.length === 0) return false;
 
@@ -376,6 +351,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     /\b(?:what if|what will|what would|calculat\w*|comput\w*|estimat\w*)\b[\s\S]{0,140}\b(?:pro[- ]?rat\w*)\b[\s\S]{0,80}\b(?:payroll|salary|wages?)\b/i.test(entryIntentQuery) &&
     /\b(?:resign\w*|last day|termination|ceas\w*)\b/i.test(entryIntentQuery);
   const hasPayrollCalculation = asksFinalSalaryAmount ||
+    (explicitlyCalculatesCpfContribution || !isCpfLowWageShareQuestion(entryIntentQuery)) &&
     (entryIntentQuery.includes('salary') || entryIntentQuery.includes('earning') || entryIntentQuery.includes('earns') || entryIntentQuery.includes('payroll') || entryIntentQuery.includes('wages') || entryIntentQuery.includes('wage')) &&
     (entryIntentQuery.includes('cpf') || entryIntentQuery.includes('last day') || entryIntentQuery.includes('resignation') || entryIntentQuery.includes('prorat') || entryIntentQuery.includes('staff') || entryIntentQuery.includes('employee')) &&
     (entryIntentQuery.includes('calculat') || entryIntentQuery.includes('compute') || entryIntentQuery.includes('how much') ||

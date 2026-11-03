@@ -16,7 +16,7 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
-import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
+import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -49,8 +49,10 @@ import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPr
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate,
   supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
 import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../retrieval/momAcraMasExpansionRules';
-import { STATUTORY_WORKFLOW_RULES_20261029 } from '../retrieval/statutoryWorkflows20261029';
+import { isVcfmBranchApprovalQuestion, selectStatutoryWorkflowQuotes,
+  STATUTORY_WORKFLOW_RULES_20261029, supportStatutoryWorkflowRule } from '../retrieval/statutoryWorkflows20261029';
 import { extractOfficialDocumentFromRetrieved } from '../retrieval/officialDocumentExtractor';
+import { extractPdfDocumentText } from '../retrieval/pdfDocumentTextExtractor';
 import {
   completeIrasCpfCashTopUpEligibilityQuote,
   completeIrasCpfCashTopUpLimitQuotes,
@@ -91,6 +93,114 @@ import {
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
 const IRAS_GST_BASICS_EXEMPT_RULE = IRAS_CPF_MAS_PRACTICAL_RULES_20261027.find(rule => rule.id === 'IRAS_GST_EXEMPT');
+
+async function selectNativeVcfmBranchApprovalQuote(
+  document: ControlledFetchResult,
+  documentHash: string,
+  query: string,
+  subject: string,
+  officialUrl: string
+): Promise<{ quote: string; pageNumber: number; pageCount: number; tableStructure: 'PRESERVED' | 'AMBIGUOUS' | 'NONE' } | undefined> {
+  if (document.status !== 'SUCCESS' || !document.contentBytes || !document.contentHash ||
+      document.contentHash !== documentHash || document.finalUrl !== officialUrl ||
+      officialUrl !== MAS_VCFM_TOOLKIT_URL ||
+      document.contentType?.split(';', 1)[0]?.trim().toLowerCase() !== 'application/pdf' ||
+      !isVcfmBranchApprovalQuestion(query)) return undefined;
+
+  try {
+    const extracted = await extractPdfDocumentText(new Uint8Array(document.contentBytes));
+    if (extracted.pageCount < 1 || extracted.pageCount > 150 || !extracted.text.trim()) return undefined;
+    const rowStartPattern = /^\s*2\s*\|\s*To seek MAS[’'] approval to acquire or hold,/i;
+    const rowEndPattern = /^\s*3\s*\|\s*To seek MAS[’'] approval to reduce\b/i;
+    const rowStarts = extracted.lines.filter(line => rowStartPattern.test(line.text));
+    const rowEnds = extracted.lines.filter(line => rowEndPattern.test(line.text));
+    if (rowStarts.length !== 1 || rowEnds.length !== 1 ||
+        rowStarts[0].pageNumber !== rowEnds[0].pageNumber) {
+      console.log('VCFM row boundary failed', { starts: rowStarts.length, ends: rowEnds.length });
+      return undefined;
+    }
+    const pageLines = extracted.lines.filter(line => line.pageNumber === rowStarts[0].pageNumber);
+    const startIndex = pageLines.indexOf(rowStarts[0]);
+    const endIndex = pageLines.indexOf(rowEnds[0]);
+    if (startIndex < 0 || endIndex <= startIndex) return undefined;
+    const rowLines = pageLines.slice(startIndex, endIndex);
+    const rowNumber = rowStarts[0].cells.length === rowStarts[0].cellStarts.length
+      ? rowStarts[0].cells[0]?.trim() : undefined;
+    if (rowNumber !== '2' || rowLines.some(line => line.cells.length !== line.cellStarts.length)) return undefined;
+    const columnStarts = [...new Set(rowLines.flatMap((line, lineIndex) => line.cellStarts.filter((_, cellIndex) =>
+      !(lineIndex === 0 && cellIndex === 0))))].sort((left, right) => left - right);
+    if (columnStarts.length !== 3) {
+      console.log('VCFM column starts failed', columnStarts);
+      return undefined;
+    }
+    const [activityStart, timingStart, categoryStart] = columnStarts;
+    const columns = { activity: [] as string[], form: [] as string[], timing: [] as string[],
+      condition: [] as string[], route: [] as string[], category: [] as string[] };
+    const foundAnchors = new Set<string>();
+    const markers = [
+      { name: 'activity', column: 'activity' as const, pattern: /To seek MAS[’'] approval to acquire or hold,/i },
+      { name: 'form', column: 'form' as const, pattern: /No prescribed form/i },
+      { name: 'timing', column: 'timing' as const, pattern: /Prior to the acquisition/i },
+      { name: 'condition', column: 'condition' as const, pattern: /Licence condition or/i },
+      { name: 'route', column: 'route' as const, pattern: /MAS-Tx/i },
+      { name: 'category', column: 'category' as const, pattern: /Entity Activities &/i }
+    ];
+    for (const line of rowLines) {
+      for (const [cellIndex, rawCell] of line.cells.entries()) {
+        const cell = rawCell.trim();
+        if (!cell) continue;
+        const x = line.cellStarts[cellIndex];
+        if (line === rowStarts[0] && cellIndex === 0) continue;
+        const anchorMatches = markers.flatMap(marker => {
+          const match = marker.pattern.exec(cell);
+          return match ? [{ ...marker, start: match.index, end: match.index + match[0].length }] : [];
+        }).sort((left, right) => left.start - right.start);
+        if (anchorMatches.length) {
+          if (cell.slice(0, anchorMatches[0].start).trim() ||
+              anchorMatches.some((match, index) => index > 0 && match.start < anchorMatches[index - 1].end)) return undefined;
+          for (const [index, match] of anchorMatches.entries()) {
+            if (foundAnchors.has(match.name)) return undefined;
+            foundAnchors.add(match.name);
+            const text = cell.slice(match.start, anchorMatches[index + 1]?.start ?? cell.length).trim();
+            columns[match.column].push(text);
+          }
+          continue;
+        }
+        if (Math.abs(x - activityStart) < 1) {
+          columns.activity.push(cell);
+        } else if (Math.abs(x - timingStart) < 1) {
+          const condition = /\bregistration condition\b/i.exec(cell);
+          if (condition) {
+            columns.timing.push(cell.slice(0, condition.index).trim());
+            columns.condition.push(cell.slice(condition.index).trim());
+          } else columns.timing.push(cell);
+        } else if (Math.abs(x - categoryStart) < 1) {
+          columns.category.push(cell);
+        } else return undefined;
+      }
+    }
+    if (['activity', 'form', 'timing', 'condition', 'route', 'category'].some(anchor => !foundAnchors.has(anchor)) ||
+        columns.activity.length === 0 || columns.form.length === 0 || columns.timing.length === 0 ||
+        columns.condition.length === 0 || columns.route.length === 0 || columns.category.length === 0) return undefined;
+    const columnBoundedRow = [
+      rowNumber,
+      ...Object.values(columns).map(values => values.join(' ').replace(/\s+/g, ' ').trim())
+    ].join(' | ');
+    const boundedRowAndBoundary = `${columnBoundedRow}\n${rowEnds[0].text}`;
+    if (boundedRowAndBoundary.length > 5_000) return undefined;
+    const request = { authority: 'MAS', topicId: 'mas-vcfm-branch-approval', query, subject,
+      sourceText: boundedRowAndBoundary, officialUrl };
+    const supported = supportStatutoryWorkflowRule(request);
+    const quotes = selectStatutoryWorkflowQuotes(request);
+    if (supported !== true || quotes.length !== 1 ||
+        supportStatutoryWorkflowRule({ ...request, sourceText: quotes[0] }) !== true) return undefined;
+    return { quote: quotes[0], pageNumber: rowStarts[0].pageNumber,
+      pageCount: extracted.pageCount, tableStructure: extracted.tableStructure };
+  } catch {
+    return undefined;
+  }
+}
+
 const PRACTICAL_COVERAGE_CONTENT_ANCHORS: Readonly<Record<string, readonly string[]>> = {
   'MAS:mas-lfmc': ['not exhaustive', 'outside the SFA', 'fund-level requirements'],
   'IRAS:iras-gst-filing-deadlines': ['Your GST return and payment are due'],
@@ -1718,16 +1828,50 @@ export async function resolveMappedOfficialSourceFallback(
             }
           }, document);
           if (extraction.status === 'SUCCESS') {
-            extractedDocuments.set(candidateUrl, extraction.record);
-            expectation.expectedTitles.push(extraction.record.documentTitle);
-            const escapeDocumentText = (value: string): string => value
-              .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            // Carry the title verified by the native extractor into the existing
-            // visible-text validator without interpreting PDF text as markup.
-            const validatedDocumentHtml = `<html><head><title>${escapeDocumentText(extraction.record.documentTitle)}</title></head><body><main><h1>${escapeDocumentText(extraction.record.documentTitle)}</h1><p>${escapeDocumentText(extraction.record.sourceText).replace(/\n/g, '<br>')}</p></main></body></html>`;
-            result = { ...document, content: validatedDocumentHtml,
-              contentHash: extraction.record.documentHash, pageTitle: extraction.record.documentTitle,
-              topicMatched: true, titleMatched: true, contentMatched: true };
+            const vcfmBranchApprovalTopic = topic.id === 'mas-vcfm-branch-approval' && candidateUrl === MAS_VCFM_TOOLKIT_URL;
+            const vcfmBranchApprovalQuote = vcfmBranchApprovalTopic && scopedCoverageSubject && extraction.record.documentHash
+              ? await selectNativeVcfmBranchApprovalQuote(document, extraction.record.documentHash,
+                query, scopedCoverageSubject, candidateUrl)
+              : undefined;
+            if (vcfmBranchApprovalTopic && !vcfmBranchApprovalQuote) {
+              result = { ...document, status: 'TOPIC_MISMATCH', topicMatched: false, titleMatched: false,
+                contentMatched: false, error: 'The retained VCFM PDF did not yield complete, exact row 2 branch-approval evidence.' };
+            } else {
+              expectation.expectedTitles.push(extraction.record.documentTitle);
+              const escapeDocumentText = (value: string): string => value
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              // Keep the verified document title and use the exact complete
+              // row only for the VCFM branch topic; its source hash remains
+              // the hash of the fetched PDF bytes.
+              const validatedSourceText = vcfmBranchApprovalQuote?.quote || extraction.record.sourceText;
+              const validatedDocumentHtml = `<html><head><title>${escapeDocumentText(extraction.record.documentTitle)}</title></head><body><main><h1>${escapeDocumentText(extraction.record.documentTitle)}</h1><p>${escapeDocumentText(validatedSourceText).replace(/\n/g, '<br>')}</p></main></body></html>`;
+              const checked = vcfmBranchApprovalTopic
+                ? defaultExternalSourceValidator.validateTopicContent(validatedDocumentHtml, expectation)
+                : undefined;
+              if (checked && !checked.isValid) {
+                result = { ...document, status: 'TOPIC_MISMATCH', topicMatched: false, titleMatched: false,
+                  contentMatched: false, error: checked.reason };
+              } else {
+                const sourceLocator = vcfmBranchApprovalQuote ? {
+                  sourceType: 'PDF' as const,
+                  mediaType: 'application/pdf',
+                  pageNumber: vcfmBranchApprovalQuote.pageNumber,
+                  pageCount: vcfmBranchApprovalQuote.pageCount,
+                  documentHash: extraction.record.documentHash,
+                  tableStructure: vcfmBranchApprovalQuote.tableStructure,
+                  canonicalLocator: `PDF page ${vcfmBranchApprovalQuote.pageNumber}, row 2`
+                } : extraction.record.sourceLocator;
+                extractedDocuments.set(candidateUrl, { ...extraction.record, sourceLocator });
+                result = { ...document, content: validatedDocumentHtml,
+                  contentHash: extraction.record.documentHash,
+                  pageTitle: checked?.pageTitle || extraction.record.documentTitle,
+                  status: checked ? 'SUCCESS' : document.status,
+                  topicMatched: checked ? checked.isValid : true,
+                  titleMatched: checked ? checked.isValid : true,
+                  contentMatched: checked ? checked.isValid : true,
+                  error: checked?.isValid ? undefined : checked?.reason };
+              }
+            }
           } else {
             result = { ...document, status: 'INVALID_CONTENT', error: extraction.reason };
           }

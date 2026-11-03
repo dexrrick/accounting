@@ -82,6 +82,110 @@ function currentCompanyAcraFyeWorkflowDate(
   const currentYear = Number(currentDate.slice(0, 4));
   return year >= currentYear - 1 && year <= currentYear ? fyeDate : undefined;
 }
+
+function strictExplicitDateIso(value: string): string | undefined {
+  let year: number, month: number, day: number;
+  let match = /^(\d{1,2})[/-](\d{1,2})[/-](20\d{2})$/.exec(value);
+  if (match) [, day, month, year] = match.map(Number);
+  else if ((match = /^(20\d{2})-(\d{2})-(\d{2})$/.exec(value))) {
+    [, year, month, day] = match.map(Number);
+  } else if ((match = /^(\d{1,2})\s+([a-z]+)\s+(20\d{2})$/i.exec(value))) {
+    const monthNumber = MONTH_MAP[match[2].toLowerCase()];
+    if (!monthNumber) return undefined;
+    month = Number(monthNumber);
+    day = Number(match[1]);
+    year = Number(match[3]);
+  } else return undefined;
+  if (![year, month, day].every(Number.isInteger)) return undefined;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function hasOnlyCurrentYearEventDates(query: string, dates: string[], currentDate: string): boolean {
+  if (dates.length === 0) return false;
+  const explicitDates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)];
+  if (explicitDates.length !== dates.length || years.length !== explicitDates.length) return false;
+  const currentYear = currentDate.slice(0, 4);
+  return dates.every(value => strictExplicitDateIso(value)?.slice(0, 4) === currentYear)
+    && years.every(year => year[0] === currentYear && explicitDates.some(date =>
+      year.index! >= date.index! && year.index! < date.index! + date[0].length));
+}
+
+/** Treat a current owned registration date as a workflow fact for secretary guidance retrieval. */
+function isCurrentAcraSecretaryAppointmentWorkflowFact(query: string, currentDate: string): boolean {
+  if (hasHistoricalStatutoryVersionIntent(query)
+    || !/\bcompany secretary\b/i.test(query)
+    || !/\b(?:appoint\w*|appointment|deadline|by when|within six months|six-month)\b/i.test(query)
+    || /\b(?:mom|ministry of manpower|iras|income tax|cpf|central provident fund|mas|monetary authority|gst|ifrs|sfrs|accounting|journal)\b/i.test(query)
+    || /\b(?:supplier|vendor|customer|competitor|another|other|different|second|affiliate|subsidiary)\b/i.test(query)) return false;
+  const dates = [...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))];
+  if (dates.length !== 1) return false;
+  const date = dates[0];
+  const sentenceStart = Math.max(query.lastIndexOf('.', date.index!), query.lastIndexOf('?', date.index!),
+    query.lastIndexOf('!', date.index!), query.lastIndexOf(';', date.index!)) + 1;
+  const sentence = query.slice(sentenceStart, date.index! + date[0].length);
+  const companyEntityMentions = [...query.matchAll(/\bcompany\b(?!\s+secretary)|\bbusiness\b/gi)];
+  if (companyEntityMentions.length !== 1) return false;
+  const datePattern = String.raw`(?:${EXPLICIT_DATE_PATTERN})`;
+  const ownedRegistration = new RegExp(String.raw`\bwe\s+(?:have\s+)?incorporated\s+(?:(?:a|an|our|the)\s+)?(?:(?:singapore\s+)?(?:private|public|listed|non[- ]listed)\s+)?(?:company|business)\s+on\s+${datePattern}`, 'i').test(sentence)
+    || new RegExp(String.raw`\b(?:our|this)\s+(?:(?:singapore\s+)?(?:private|public|listed|non[- ]listed)\s+)?(?:company|business)\s+(?:was\s+)?(?:registered|incorporated)\s+on\s+${datePattern}`, 'i').test(sentence);
+  return ownedRegistration && hasOnlyCurrentYearEventDates(query, [date[0]], currentDate);
+}
+
+/** Recognize only a current owned salary-period deadline question, not overtime eligibility or rates. */
+function isCurrentMomSalaryPeriodPaymentWorkflowFact(query: string, currentDate: string): boolean {
+  if (hasHistoricalStatutoryVersionIntent(query)
+    || !/\b(?:salary period|ordinary salary)\b/i.test(query)
+    || !/\bovertime\b/i.test(query)
+    || !/\b(?:deadline|due|paid|timeliness|within|when must|whether|on time|usual)\b/i.test(query)
+    || /\b(?:final|last salary|resign\w*|dismiss\w*|terminat\w*|misconduct|commission|rate|percentage|eligib\w*|part iv|working hours|how much)\b/i.test(query)
+    || /\b(?:acra|iras|income tax|cpf|central provident fund|mas|monetary authority|gst|ifrs|sfrs|accounting|journal|balance sheet)\b/i.test(query)
+    || /\b(?:supplier|vendor|customer|competitor|another|other|different|second|affiliate|subsidiary)\b/i.test(query)) return false;
+  const namedPayment = String.raw`(?:ordinary\s+salary|salary|overtime\s+(?:wages?|pay))`;
+  const genericOwnerTokens = new Set([
+    'a', 'an', 'the', 'our', 'ours', 'my', 'mine', 'your', 'yours', 'their', 'theirs', 'his', 'hers', 'its', 'this', 'that',
+    'these', 'those', 'we', 'us', 'i', 'me', 'you', 'he', 'she', 'they', 'it', 'one', 'both', 'each', 'employee', 'employees',
+    'worker', 'workers', 'staff', 'member', 'employer', 'employers', 'company', 'business', 'payroll', 'ordinary', 'salary',
+    'overtime', 'wage', 'wages', 'pay', 'paid', 'paying', 'payment', 'payments', 'have', 'has', 'had', 'will', 'would', 'shall',
+    'should', 'not', 'never', 'yet', 'no', 'for', 'as', 'to', 'from', 'in', 'on', 'at', 'by', 'and', 'or', 'nor', 'covered',
+    'being', 'concerned', 'assessed', 'eligible', 'specific', 'relevant', 'question', 'involved', 'under', 'subject', 'who',
+    'whose', 'which', 'responsible'
+  ]);
+  const isContextualOwnerToken = (token: string): boolean => /^[A-Z]$/.test(token)
+    || token.length > 1 && /^[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*$/.test(token)
+      && !genericOwnerTokens.has(token.toLowerCase());
+  const rolePrefixedName = [...query.matchAll(/\b(?:employee|worker|staff member)\s+([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)\b/gi)]
+    .some(match => isContextualOwnerToken(match[1]));
+  const possessivePattern = new RegExp(String.raw`\b([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)[’']s\s+${namedPayment}\b`, 'gi');
+  const possessiveName = [...query.matchAll(possessivePattern)].some(match => isContextualOwnerToken(match[1]));
+  const bareNamePattern = new RegExp(String.raw`\b([A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*)\s+${namedPayment}\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+${EXPLICIT_DATE_PATTERN}\b`, 'gi');
+  const bareName = [...query.matchAll(bareNamePattern)].some(match => isContextualOwnerToken(match[1]));
+  const hasExplicitNamedPaymentOwner = rolePrefixedName || possessiveName || bareName;
+  if (hasExplicitNamedPaymentOwner) return false;
+  const periodMatches = [...query.matchAll(new RegExp(String.raw`\bsalary period\s+(?:ended|ends|end)\s+(?:on\s+)?(${EXPLICIT_DATE_PATTERN})`, 'gi'))];
+  if (periodMatches.length !== 1) return false;
+  const sharedPayments = [...query.matchAll(new RegExp(
+    String.raw`\b(?:paid|pay)\s+(?:ordinary\s+salary\s+and\s+overtime\s+(?:wages?|pay)|salary\s+and\s+overtime\s+(?:wages?|pay))\s+on\s+(${EXPLICIT_DATE_PATTERN})`, 'gi'))];
+  const ordinaryPayments = [...query.matchAll(new RegExp(
+    String.raw`\bordinary\s+salary\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+(${EXPLICIT_DATE_PATTERN})`, 'gi'))];
+  const overtimePayments = [...query.matchAll(new RegExp(
+    String.raw`\bovertime\s+(?:wages?|pay)\s+(?:(?:was|were|is|are|will\s+be|would\s+be|shall\s+be|has\s+been|have\s+been|had\s+been|will|shall|would|should)\s+)?(?:(?:not|never|yet)\s+)?(?:paid|pay)\s+on\s+(${EXPLICIT_DATE_PATTERN})`, 'gi'))];
+  if (sharedPayments.length > 1 || ordinaryPayments.length > 1 || overtimePayments.length > 1
+      || sharedPayments.length > 0 && (ordinaryPayments.length > 0 || overtimePayments.length > 0)) return false;
+  const paymentMatches = sharedPayments.length > 0 ? sharedPayments : [...ordinaryPayments, ...overtimePayments];
+  const dates = [periodMatches[0][1], ...paymentMatches.map(match => match[1])];
+  if ([...query.matchAll(new RegExp(EXPLICIT_DATE_PATTERN, 'gi'))].length !== dates.length
+      || !hasOnlyCurrentYearEventDates(query, dates, currentDate)) return false;
+  const periodMatch = periodMatches[0];
+  const sentenceStart = Math.max(query.lastIndexOf('.', periodMatch.index!), query.lastIndexOf('?', periodMatch.index!),
+    query.lastIndexOf('!', periodMatch.index!), query.lastIndexOf(';', periodMatch.index!)) + 1;
+  const periodOwnerContext = query.slice(sentenceStart, periodMatch.index!);
+  if (/\b(?:supplier|vendor|customer|competitor|another|other|different|second|affiliate|subsidiary)\b/i.test(periodOwnerContext)) return false;
+  return /\b(?:ordinary salary|salary and overtime|overtime and salary|both|each)\b/i.test(query);
+}
+
 function isCurrentAcraAuditCriteriaFact(query: string): boolean {
   return /\b(?:small[- ]company|small company|private company)\b/i.test(query)
     && /\baudit exemption\b/i.test(query)
@@ -285,6 +389,8 @@ export class TargetDateResolver {
     if (isCurrentCpfAwPayableYearFact(query, currentDate)) return true;
     if (isCurrentCpfPrWageBoundaryFact(query, currentDate)) return true;
     if (hasHistoricalStatutoryVersionIntent(query)) return false;
+    if (isCurrentAcraSecretaryAppointmentWorkflowFact(query, currentDate)) return true;
+    if (isCurrentMomSalaryPeriodPaymentWorkflowFact(query, currentDate)) return true;
     // These distinct requests must retain their date scope even without an authority acronym.
     if (/\b(?:gst|goods and services tax|withholding tax|wht|public[- ]holidays?|holiday pay|overtime|sick leave|annual leave|rates?|percentages?|journal|bookkeeping|ifrs|sfrs)\b/i.test(query)) return false;
     if (isCurrentAcraAuditCriteriaFact(query)) return true;

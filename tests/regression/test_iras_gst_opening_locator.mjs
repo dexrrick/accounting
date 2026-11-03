@@ -48,11 +48,17 @@ assert.ok(previousInputTaxKeywords.every(keyword => topic.keywords.includes(keyw
 assert.ok(topic.keywords.includes('input tax recovery conditions'));
 assert.ok(topic.keywords.includes('recover gst on business purchases'));
 assert.deepEqual(topic.queryPatterns, [
+  String.raw`(?=[\s\S]*\b(?:gst|input tax|input gst)\b)(?=[\s\S]*\b(?:employees?|staff|employer|workers?)\b)(?=[\s\S]*\b(?:health[ -]screening|health[ -]check[ -]?ups?)\b)`,
   String.raw`(?=[\s\S]*\b(?:gst|input tax)\b)(?=[\s\S]*\b(?:recover\w*|claim\w*)\b)(?=[\s\S]*\b(?:purchases?|eligibility|business)\b)`,
   String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?)\b`,
   String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`,
   String.raw`(?=[\s\S]*\b(?:gst|goods and services tax)\b)(?=[\s\S]*\binput[ -]?tax\b)(?=[\s\S]*\b(?:claim\w*|recover\w*|recovery)\b)(?=[\s\S]*\b(?:business|purchase|company)\b)`
 ]);
+const healthScreeningPattern = new RegExp(topic.queryPatterns[0], 'i');
+assert.equal(healthScreeningPattern.test('Can our company claim GST input tax on health screening for employees?'), true,
+  'Employee health-screening queries retain the registered input-tax query pattern.');
+assert.equal(healthScreeningPattern.test('Can our company claim GST input tax on health screening?'), false,
+  'The health-screening pattern requires employee context.');
 const expectedTopicMaps = [
   ['IRAS_GST_INPUT_TAX_SOURCE_MAP', 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'],
   ['IRAS_GST_INVOICING_SOURCE_MAP', 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers']

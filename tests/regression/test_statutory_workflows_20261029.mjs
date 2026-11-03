@@ -104,7 +104,7 @@ for (const question of [
     'Historical wording or a separate unnamed employment request must retain its date scope.');
 }
 
-assert.equal(STATUTORY_WORKFLOW_RULES_20261029.length, 10, 'The five existing workflows and five approved expansions are registered.');
+assert.equal(STATUTORY_WORKFLOW_RULES_20261029.length, 11, 'The five existing workflows and six approved expansions are registered.');
 
 const cases = [
   {

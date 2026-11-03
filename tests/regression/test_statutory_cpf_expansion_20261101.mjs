@@ -3,7 +3,8 @@ import { readFile } from 'node:fs/promises';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { loadStatutoryKnowledgeSources } from '../../scripts/load_statutory_knowledge_sources.mjs';
 import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officialSitemapDiscovery.ts';
-import { supportCpfPayrollKnowledgeRule } from '../../src/retrieval/cpfPayrollKnowledge20261027b.ts';
+import { isCpfLowWageShareQuestion, selectCpfPayrollKnowledgeQuotes, supportCpfPayrollKnowledgeRule } from '../../src/retrieval/cpfPayrollKnowledge20261027b.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { defaultTargetDateResolver } from '../../src/retrieval/targetDateResolver.ts';
 
 const sources = new Map();
@@ -41,6 +42,16 @@ globalThis.fetch = async input => {
 };
 
 const scenarios = [
+  {
+    id: 'balanced-cpf-1',
+    query: 'Our Singapore citizen employee earns total wages of S$400 in the month. Is there an employee CPF share, and must the employer still contribute?',
+    expected: ['employee share is nil', 'employer share remains due']
+  },
+  {
+    id: 'balanced-cpf-2',
+    query: 'For a Singapore citizen worker whose total monthly wages are S$250, does CPF require a deduction from the employee’s wages as well as an employer contribution?',
+    expected: ['employee share is nil', 'employer share remains due']
+  },
   {
     id: 'cpf01',
     query: 'A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?',
@@ -145,12 +156,83 @@ for (const scenario of scenarios) {
   for (const phrase of scenario.expected) assert.ok(response.messageText.includes(phrase), `${scenario.id}: answer includes ${phrase}`);
   assert.equal(response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY', `${scenario.id}: no accounting journal is produced`);
   assert.equal(response.scenarioState.directGroups?.length || 0, 0, `${scenario.id}: no fabricated journal groups`);
+  if (scenario.id.startsWith('balanced-cpf-')) {
+    assert.doesNotMatch(response.messageText,
+      /(?:employer|employee)(?:[’']s)? CPF (?:share|contribution)\s*(?:is|of|:)?\s*(?:S\$|SGD\s*\$?\s*|\$)\s*\d/i,
+      `${scenario.id}: do not invent a numerical share without age and payroll facts`);
+  }
   results.push({ scenario, issue, response });
 }
 
 const newPrSource = sources.get('https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status');
 assert.ok(newPrSource, 'retained official new-PR excerpt is available');
 const sourceText = newPrSource.body.toString();
+const cpfComputationUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+const cpfComputationSource = sources.get(cpfComputationUrl);
+assert.ok(cpfComputationSource, 'retained official CPF computation excerpt is available');
+const cpfComputationText = cpfComputationSource.body.toString();
+const lowWageSubject = 'CPF low-wage employer and employee contribution shares';
+const lowWageRequest = (query, retainedSource = cpfComputationText) => ({
+  authority: 'CPF',
+  topicId: 'cpf-contribution-computation',
+  query,
+  subject: lowWageSubject,
+  sourceText: retainedSource,
+  officialUrl: cpfComputationUrl
+});
+const lowWageShareQueries = [
+  'Our Singapore citizen employee earns total wages of S$400 in the month. Is there an employee CPF share, and must the employer still contribute?',
+  'For a Singapore citizen worker whose total monthly wages are S$250, does CPF require a deduction from the employee’s wages as well as an employer contribution?',
+  'A Singapore citizen employee earns total monthly wages of S$500. Is an employee CPF share due, and must the employer contribute?'
+];
+for (const query of lowWageShareQueries) {
+  const request = lowWageRequest(query);
+  assert.equal(isCpfLowWageShareQuestion(query), true,
+    `qualitative low-wage shares with stated eligible total wages are in scope: ${query}`);
+  assert.equal(supportCpfPayrollKnowledgeRule(request), true,
+    `official CPF computation guidance supports the qualitative low-wage share answer: ${query}`);
+  const quote = selectCpfPayrollKnowledgeQuotes(request).join('\n');
+  assert.match(quote, /above \$50 but not more than \$500 per month, there is no employee[’']s share/i,
+    'the source quote proves the lower-wage employee-share treatment');
+  assert.match(quote, /you will still need to pay the employer[’']s share/i,
+    'the same source quote proves the employer-share obligation');
+}
+const lowWageBandQuery = 'For monthly wages above S$50 but not more than S$500, is the employee CPF share nil while the employer share remains payable?';
+assert.equal(isCpfLowWageShareQuestion(lowWageBandQuery), true,
+  'an explicit qualifying wage band can be explained without an individual payroll calculation');
+assert.equal(supportCpfPayrollKnowledgeRule(lowWageRequest(lowWageBandQuery)), true,
+  'the retained CPF computation source supports the explicit low-wage band question');
+for (const [query, description] of [
+  ['A Singapore citizen employee earns total monthly wages of S$501. Is an employee CPF share due, and must the employer contribute?', 'the $500 band boundary'],
+  ['A non-citizen, non-PR employee earns total monthly wages of S$400. Is an employee CPF share due, and must the employer contribute?', 'a non-citizen/non-PR employee'],
+  ['Our supplier invoices S$400 monthly. Does this create an employee CPF share, and must the employer still contribute?', 'an unrelated supplier invoice'],
+  ['Employee A, a Singapore citizen, earns total monthly wages of S$400 while employee B, a PR, earns S$250. Is there an employee share, and must the employer contribute?', 'wages and status spanning multiple employees'],
+  ['Calculate the exact employer and employee CPF contribution amounts for a Singapore citizen whose total monthly wages are S$400.', 'a numerical contribution request'],
+  ['Our Singapore citizen employee earns total monthly wages of S$400. Is the employee CPF share nil and must the employer contribute? Also work out the employer contribution.', 'an explicit work-out request'],
+  ['Our Singapore citizen employee earns total monthly wages of S$400. Is the employee CPF share nil and must the employer contribute? How many dollars must we remit for CPF?', 'an explicit dollar-amount request']
+]) {
+  assert.equal(isCpfLowWageShareQuestion(query), false,
+    `the qualitative low-wage helper excludes ${description}`);
+  assert.notEqual(supportCpfPayrollKnowledgeRule(lowWageRequest(query)), true,
+    `the low-wage share source scope rejects ${description}`);
+}
+for (const [query, description] of [
+  ['Our Singapore citizen employee earns total monthly wages of S$400. Is the employee CPF share nil and must the employer contribute? Also work out the employer contribution.', 'work out the employer contribution'],
+  ['Our Singapore citizen employee earns total monthly wages of S$400. Is the employee CPF share nil and must the employer contribute? How many dollars must we remit for CPF?', 'how many dollars must be remitted']
+]) {
+  assert.equal(classifyQuestion(query).calculationRequired, true,
+    `explicit calculation wording keeps ${description} on the calculation path`);
+}
+const reversedEmployerShareSource = cpfComputationText.replace(
+  /You will still need to pay the employer[’']s share\./i,
+  'You will not need to pay the employer’s share.'
+);
+assert.equal(supportCpfPayrollKnowledgeRule(lowWageRequest(lowWageShareQueries[0], reversedEmployerShareSource)), false,
+  'a source excerpt that reverses the employer-share obligation cannot verify');
+assert.notEqual(supportCpfPayrollKnowledgeRule({
+  ...lowWageRequest(lowWageShareQueries[0]),
+  officialUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/not-the-computation-page'
+}), true, 'a different CPF page cannot prove the low-wage share rule');
 const statelessPrAnswer = results.find(result => result.scenario.id === 'cpf07').response.messageText;
 assert.match(statelessPrAnswer, /status-grant date/i, 'without a grant date, explain the boundary conditionally');
 assert.doesNotMatch(statelessPrAnswer, /\b(?:31\/03\/20\d{2}|01\/04\/20\d{2})\b/, 'do not invent an anniversary date for the stateless new-PR case');

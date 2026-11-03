@@ -5,6 +5,9 @@ import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestio
 import { acraOfficerCommencementScope, masSfa04N24CommencementScope } from '../retrieval/statutoryCommencementScope';
 import { isAcraAnnualReturnDeadlineQuestion } from '../retrieval/acraAnnualReturnFilingRule';
 import { hasSpecificIrasWhtTreatyScope, isGeneralIrasWhtTreatyEffectQuestion } from '../retrieval/irasMasKnowledge20261027b';
+import { isCpfLowWageShareQuestion } from '../retrieval/cpfPayrollKnowledge20261027b';
+import { isVcfmBranchApprovalQuestion } from '../retrieval/statutoryWorkflows20261029';
+import { isMomSalaryPeriodPaymentQuestion } from '../retrieval/acraMomKnowledge20261027b';
 import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
@@ -3159,7 +3162,7 @@ function refineTaxonomyRuleIntent(
       /\b(?:employer(?:'s)?\s+(?:cpf\s+)?share|employer contribution)\b/i.test(text) &&
       /\b(?:nil|not payable|remains? payable|still pays?)\b/i.test(text) &&
       !/\b(?:rate table|rates?|percentages?)\b/i.test(text);
-    if (asksLowWageShares) {
+    if (asksLowWageShares || topicIds.has('cpf-contribution-computation') && isCpfLowWageShareQuestion(query)) {
       return makeRuleIssue('CPF low-wage employer and employee contribution shares', 'EMPLOYER', ['cpf_contribution_rates']);
     }
 
@@ -3198,6 +3201,15 @@ function refineTaxonomyRuleIntent(
   }
 
   if (issue.domain === 'MOM_EMPLOYMENT') {
+    if (topicIds.has('mom-salary-payment') &&
+        [...topicIds].every(id => ['mom-salary-payment', 'mom_overtime', 'mom-part-iv-overtime'].includes(id)) &&
+        isMomSalaryPeriodPaymentQuestion(query)) {
+      return {
+        ...makeRuleIssue('MOM ordinary salary and overtime payment deadlines', 'EMPLOYER'),
+        mappedTopicIds: ['mom-salary-payment'],
+        contextualTopicIds: [...topicIds].filter(id => id !== 'mom-salary-payment')
+      };
+    }
     const asksEmployerSalaryDeductionRule = topicIds.has('mom-salary-payment') &&
       /\b(?:salary|wages?)\b/i.test(text) &&
       /\b(?:deduct\w*|deduction\w*)\b/i.test(text) &&
@@ -3433,6 +3445,16 @@ function refineTaxonomyRuleIntent(
     }
   }
 
+  if (issue.domain === 'MAS_FUNDS' && topicIds.has('mas-vcfm-branch-approval') &&
+      [...topicIds].every(id => ['mas-vcfm', 'mas-vcfm-branch-approval'].includes(id)) &&
+      isVcfmBranchApprovalQuestion(query)) {
+    return {
+      ...makeRuleIssue('MAS VCFM branch establishment prior approval and form', 'COMPANY'),
+      mappedTopicIds: ['mas-vcfm-branch-approval'],
+      ...(topicIds.has('mas-vcfm') ? { contextualTopicIds: ['mas-vcfm'] } : {})
+    };
+  }
+
   if (issue.domain === 'MAS_FUNDS') {
     const describesLfmcDirectorRoleTransition = /\bdirector\b/i.test(text) &&
       /\bexecutive\b/i.test(text) && /\bnon[- ]executive\b/i.test(text) &&
@@ -3522,7 +3544,7 @@ function refineTaxonomyRuleIntent(
 
   if (issue.domain === 'IRAS_GST' && issue.population === 'UNKNOWN' &&
       topicIds.has('iras-gst-blocked-input-tax') &&
-      /\b(?:medical|examinations?|work permit renew\w*|employee health)\b/i.test(text) &&
+      /\b(?:medical|examinations?|work permit renew\w*|employee health|health screening|health check[ -]?ups?)\b/i.test(text) &&
       /\b(?:gst|input tax|deduct\w*|recover\w*|claim\w*|blocked)\b/i.test(text)) {
     const entityScope = /\b(?:business|company|employer|our gst|we paid|gst.registered)\b/i.test(text);
     if (entityScope) return makeRuleIssue('GST input tax on staff medical expenses', 'COMPANY');
@@ -3549,7 +3571,7 @@ function refineTaxonomyRuleIntent(
 
   if (issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
       topicIds.has('iras-wht-treaty-relief') && isGeneralIrasWhtTreatyEffectQuestion(query)) {
-    return makeRuleIssue('Effect of a tax treaty on withholding-tax applicability', 'COMPANY');
+    return makeRuleIssue('Effect of a tax treaty on withholding-tax applicability', 'COMPANY', ['iras-double-tax-agreements']);
   }
 
   if (issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
@@ -3895,11 +3917,25 @@ function reconcileSemanticIssuePlan(
     issuesWithRequestedStatutoryParts[0].governingAuthorities.length === 1 && issuesWithRequestedStatutoryParts[0].governingAuthorities[0] === 'ACRA' &&
     issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === 1 && issuesWithRequestedStatutoryParts[0].mappedTopicIds[0] === 'acra_annual-returns';
   const expectedWhtTreatyTopicIds = ['iras-withholding-tax', 'iras-wht-treaty-relief'];
+  const allowedWhtTreatyTopicIds = new Set([...expectedWhtTreatyTopicIds, 'iras-double-tax-agreements']);
+  const rawWhtTreatyTopicIds = new Set(inventory.rawTopicIds);
+  const inventoryWhtTreatyTopicIds = new Set(inventory.topics.map(topic => topic.id));
+  const mappedWhtTreatyTopicIds = new Set(issuesWithRequestedStatutoryParts[0]?.mappedTopicIds || []);
+  const contextualWhtTreatyTopicIds = new Set(issuesWithRequestedStatutoryParts[0]?.contextualTopicIds || []);
+  const extraWhtTreatyTopicIds = new Set([...rawWhtTreatyTopicIds]
+    .filter(topicId => !expectedWhtTreatyTopicIds.includes(topicId)));
+  const whtTreatyTopicSetsMatch = (left: Set<string>, right: Set<string>) =>
+    left.size === right.size && [...left].every(topicId => right.has(topicId));
   const boundedWhtTreatyEffectQuestion = isGeneralIrasWhtTreatyEffectQuestion(query) &&
-    inventory.unresolvedFragments.length === 0 && inventory.rawTopicIds.length === expectedWhtTreatyTopicIds.length &&
-    expectedWhtTreatyTopicIds.every(topicId => inventory.rawTopicIds.includes(topicId)) &&
-    inventory.topics.length === expectedWhtTreatyTopicIds.length &&
-    expectedWhtTreatyTopicIds.every(topicId => inventory.topics.some(topic => topic.id === topicId)) &&
+    inventory.unresolvedFragments.length === 0 && inventory.rawTopicIds.length === rawWhtTreatyTopicIds.size &&
+    inventory.topics.length === inventoryWhtTreatyTopicIds.size &&
+    inventory.rawTopicIds.every(topicId => allowedWhtTreatyTopicIds.has(topicId)) &&
+    expectedWhtTreatyTopicIds.every(topicId => rawWhtTreatyTopicIds.has(topicId)) &&
+    whtTreatyTopicSetsMatch(rawWhtTreatyTopicIds, inventoryWhtTreatyTopicIds) &&
+    [...mappedWhtTreatyTopicIds].every(topicId => expectedWhtTreatyTopicIds.includes(topicId)) &&
+    whtTreatyTopicSetsMatch(mappedWhtTreatyTopicIds, new Set(expectedWhtTreatyTopicIds)) &&
+    [...contextualWhtTreatyTopicIds].every(topicId => topicId === 'iras-double-tax-agreements') &&
+    whtTreatyTopicSetsMatch(contextualWhtTreatyTopicIds, extraWhtTreatyTopicIds) &&
     issuesWithRequestedStatutoryParts.length === 1 &&
     issuesWithRequestedStatutoryParts[0].status === 'MAPPED' &&
     issuesWithRequestedStatutoryParts[0].subject === 'Effect of a tax treaty on withholding-tax applicability' &&
@@ -3908,8 +3944,7 @@ function reconcileSemanticIssuePlan(
     issuesWithRequestedStatutoryParts[0].operation === 'EXPLAIN_RULE' &&
     issuesWithRequestedStatutoryParts[0].governingAuthorities.length === 1 &&
     issuesWithRequestedStatutoryParts[0].governingAuthorities[0] === 'IRAS' &&
-    issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === expectedWhtTreatyTopicIds.length &&
-    expectedWhtTreatyTopicIds.every(topicId => issuesWithRequestedStatutoryParts[0].mappedTopicIds.includes(topicId));
+    issuesWithRequestedStatutoryParts[0].mappedTopicIds.length === mappedWhtTreatyTopicIds.size;
   const boundedRuleOnlyQuestion = boundedAcraMissingFactsQuestion || boundedWhtTreatyEffectQuestion;
   return { source: 'TAXONOMY_FALLBACK', issues: issuesWithRequestedStatutoryParts,
     coverageEstablished: boundedRuleOnlyQuestion,

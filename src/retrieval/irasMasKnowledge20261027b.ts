@@ -4,6 +4,7 @@ import type {
   AuthorityPresentedWorkstream
 } from '../utils/authorityEvidencePresentation';
 import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+import { TAX_JURISDICTION_NAME_PATTERN } from '../utils/taxJurisdictionNames';
 import { currentCompanyEciFyeWorkflowDate, defaultTargetDateResolver, TargetDateResolver } from './targetDateResolver';
 import { hasConflictingMasNoticeIdentity, masSfa04N24CommencementScope } from './statutoryCommencementScope';
 
@@ -225,8 +226,11 @@ function gstInputFamily(text: string, topicId: string): GstInputFamily {
   if (!hasGstClaim) return undefined;
   const medicalAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax'].includes(topicId);
   const motorAllowed = ['iras-gst-input-tax', 'iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'].includes(topicId);
-  const medical = medicalAllowed && ( /\b(?:medical|health screening|primary care plan|pcp|work injury compensation|check[- ]?ups?)\b/i.test(normalizedText)
-    || isMedicalInsurancePremiumPremise({ query: normalizedText, subject: '' }));
+  const employeeContext = /\b(?:employee|employees|staff|workforce|personnel)\b/i.test(normalizedText);
+  const employeeHealthScreening = employeeContext
+    && /\bhealth[ -]?(?:screening|check[ -]?ups?)\b/i.test(normalizedText);
+  const medical = medicalAllowed && ( /\b(?:medical|primary care plan|pcp|work injury compensation)\b/i.test(normalizedText)
+    || employeeHealthScreening || isMedicalInsurancePremiumPremise({ query: normalizedText, subject: '' }));
   const commercialVehicle = motorAllowed && /\b(?:delivery|commercial|goods)\s+van\b/i.test(normalizedText);
   const motor = motorAllowed && /\b(?:motor car|motor vehicle|private hire car|company car|vehicle expense|car expense|expenses? (?:for|of|on) (?:a\s+)?subsidiary(?:'s|’s)?\s+car)\b/i.test(normalizedText);
   if (medical && (motor || commercialVehicle)) return 'compound';
@@ -247,13 +251,23 @@ function hasGstInputScopeConflict(input: Pick<IrasMasKnowledgeRequest, 'authorit
 
 export function hasSpecificIrasWhtTreatyScope(text: string): boolean {
   const namesSpecificPayment = /\b(?:royalt(?:y|ies)|interest|dividends?|rent(?:al)?|director(?:'s)? fees?|directors? remuneration|service(?:s)?|management|consultancy|professional|technical|commission|guarantee fees?)\b/i.test(text);
-  const treatyName = '(?:DTA|(?:double[ \\t]+tax(?:ation)?[ \\t]+(?:treaty|agreement))|tax treaty|agreement)';
-  const country = '[\\p{L}]+(?:[ \\t]+[\\p{L}]+){0,2}';
+  const treatyName = '(?:DTAs?|double[ \\t]+tax(?:ation)?[ \\t]+(?:treat(?:y|ies)|agreements?)|tax[ \\t]+treat(?:y|ies)|agreements?)';
+  const country = TAX_JURISDICTION_NAME_PATTERN;
   const countrySeparator = '[-/\\u2010-\\u2015\\u2212]';
-  const namesSpecificTreaty = new RegExp(`\\b${country}[ \\t]*${countrySeparator}[ \\t]*${country}[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
-    new RegExp(`\\b${country}[ \\t]+(?:and|&)[ \\t]+${country}[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
-    new RegExp(`\\b${country}[’']s[ \\t]+${treatyName}\\b`, 'iu').test(text) ||
-    new RegExp(`\\b${treatyName}\\b[^.!?;\\r\\n]{0,80}\\b(?:between|with|for)[ \\t]+(?:the[ \\t]+)?${country}(?:[ \\t]+(?:and|&)[ \\t]+${country})?`, 'iu').test(text);
+  const treatyScopeText = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+  const namesSpecificTreaty = new RegExp(`\\b${country}[ \\t]*${countrySeparator}[ \\t]*${country}[ \\t]+${treatyName}\\b`, 'iu').test(treatyScopeText) ||
+    new RegExp(`\\b${country}[ \\t]+(?:and|&)[ \\t]+${country}[ \\t]+${treatyName}\\b`, 'iu').test(treatyScopeText) ||
+    new RegExp(`\\b${country}[’']s[ \\t]+${treatyName}\\b`, 'iu').test(treatyScopeText) ||
+    new RegExp(`\\b${treatyName}\\b[^.!?;\\r\\n]{0,80}\\b(?:between|with|for)[ \\t]+(?:the[ \\t]+)?${country}(?:[ \\t]+(?:and|&)[ \\t]+${country})?`, 'iu').test(treatyScopeText);
+  const specificRecipientQualifier = new RegExp(
+    `\\b${treatyName}\\b[^.!?;\\r\\n]{0,80}\\b(?:between|with|for)[ \\t]+(?:a|an|the)[ \\t]+(?<qualifier>[\\p{L}]+(?:[- \\t]+[\\p{L}]+)?)[ \\t]+(?:compan(?:y|ies)|business(?:es)?|recipients?|payees?|residents?)\\b|` +
+    `\\b${treatyName}\\b[^.!?;\\r\\n]{0,80}\\b(?:between|with|for)[ \\t]+(?<directQualifier>[\\p{L}]+(?:-[\\p{L}]+)?)[ \\t]+(?:compan(?:y|ies)|business(?:es)?|recipients?|payees?|residents?)\\b`, 'iu'
+  ).exec(treatyScopeText);
+  const genericRecipientQualifiers = new Set(['a', 'an', 'the', 'non resident', 'nonresident', 'foreign', 'overseas', 'corporate', 'resident']);
+  const recipientQualifier = (specificRecipientQualifier?.groups?.qualifier || specificRecipientQualifier?.groups?.directQualifier || '')
+    .replace(/-/g, ' ').trim().toLowerCase().replace(/\s+/g, ' ');
+  const specificRecipientQualifierApplies = Boolean(specificRecipientQualifier &&
+    !genericRecipientQualifiers.has(recipientQualifier));
   const namesSpecificArticle = /\b(?:article|art\.?)\s*(?:no\.?\s*)?(?:\d+[a-z]?|[ivxlcdm]+)\b/i.test(text);
   const identifiesTreaties = /\b(?:list|identify|name|enumerate|compare|comparison|differences?)\b[^.!?;\r\n]{0,120}\b(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b|\b(?:which|what)\s+(?:(?:specific|bilateral|applicable|relevant|singapore)\s+)?(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b/i.test(text);
   const comparesTreatyEffects = /\b(?:tax treat(?:y|ies)|double tax(?:ation)? agreements?|dtas?)\b[^.!?;\r\n]{0,100}\b(?:compare|compares|compared|comparing|differ|differs|differed|differentiate|contrast)\b/i.test(text);
@@ -273,7 +287,7 @@ export function hasSpecificIrasWhtTreatyScope(text: string): boolean {
     /\b(?:tax treaty|tax treaties|double tax(?:ation)? agreement|dta|article\s*\d+[a-z]?)\b/i.test(clause) &&
     /\b(?:exempt\w*|reduce\w*|lower\w*|eliminat\w*|waiv\w*|appl(?:y|ies)|subject to|liable to|zero[- ]rate|\d+(?:\.\d+)?\s*%)\b/i.test(clause)
   );
-  return namesSpecificPayment || namesSpecificTreaty || namesSpecificArticle || identifiesTreaties || comparesTreatyEffects || asksForCaseSpecificFacts ||
+  return namesSpecificPayment || namesSpecificTreaty || specificRecipientQualifierApplies || namesSpecificArticle || identifiesTreaties || comparesTreatyEffects || asksForCaseSpecificFacts ||
     requestsRate || requestsYesNoOutcome || statesTreatyOutcome;
 }
 
