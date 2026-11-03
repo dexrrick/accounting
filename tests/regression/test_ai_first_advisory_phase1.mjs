@@ -190,6 +190,62 @@ for (const call of calls) {
   assert.ok(call.prompt.includes('SELECTED SOURCE RECORDS'), 'retrieval context has a separate prompt section');
 }
 
+{
+  const boundaryCalls = [];
+  const boundaryFetch = globalThis.fetch;
+  const priorTransaction = 'The previous supplier invoice was SGD 7,500 and remains unpaid.';
+  const priorAnswer = 'Prior complete answer: the expense is accrued and the payable remains until settlement.';
+  const independentQuestion = 'Explain how accounting applies to the new machine the company purchased for SGD 100,000.';
+  const followUpQuestion = 'How does that apply to the invoice?';
+  const previousHistory = [
+    { id: 'boundary-prior-user', sender: 'user', timestamp: '', text: priorTransaction },
+    { id: 'boundary-prior-answer', sender: 'assistant', timestamp: '', text: 'Short preview', fullText: priorAnswer }
+  ];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const request = JSON.parse(init.body);
+    const prompt = url.includes('generativelanguage.googleapis.com')
+      ? request.contents.flatMap(item => item.parts).map(part => part.text || '').join('\n')
+      : request.messages.at(-1).content;
+    boundaryCalls.push({ url, prompt });
+    const responseText = JSON.stringify({
+      directAnswer: 'Accrual accounting recognizes activity as it occurs.',
+      explanation: ['The treatment follows the facts of the current question.'],
+      accountingTreatment: [], conditions: [], sourceIds: []
+    });
+    return new Response(JSON.stringify({ choices: [{ message: { content: responseText } }] }), {
+      status: 200, headers: { 'Content-Type': 'application/json' }
+    });
+  };
+  try {
+    const independentHistory = [
+      ...previousHistory,
+      { id: 'boundary-independent-user', sender: 'user', timestamp: '', text: independentQuestion }
+    ];
+    const independent = await processAccountingQuery(
+      independentQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', independentHistory
+    );
+    assert.equal(independent.displayFullAnswer, true, 'the independent advisory request reaches the AI-first path');
+    assert.equal(boundaryCalls.length, 1);
+    assert.ok(!boundaryCalls[0].prompt.includes(priorTransaction) && !boundaryCalls[0].prompt.includes(priorAnswer),
+      'a new independent accounting scenario excludes unrelated transaction history from the advisory call');
+
+    const followUpHistory = [
+      ...previousHistory,
+      { id: 'boundary-follow-up-user', sender: 'user', timestamp: '', text: followUpQuestion }
+    ];
+    const followUp = await processAccountingQuery(
+      followUpQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', followUpHistory
+    );
+    assert.equal(followUp.displayFullAnswer, true, 'a contextual follow-up still reaches the AI-first path');
+    assert.equal(boundaryCalls.length, 2);
+    assert.ok(boundaryCalls[1].prompt.includes(priorTransaction) && boundaryCalls[1].prompt.includes(priorAnswer),
+      'a genuine follow-up retains the relevant transaction context');
+  } finally {
+    globalThis.fetch = boundaryFetch;
+  }
+}
+
 const applicabilityFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = String(input);

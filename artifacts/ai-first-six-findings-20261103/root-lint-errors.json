@@ -1,0 +1,513 @@
+[
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 41,
+          "length": 1,
+          "line": 1,
+          "column": 42
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 96,
+          "length": 1,
+          "line": 1,
+          "column": 97
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 153,
+          "length": 1,
+          "line": 1,
+          "column": 154
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 205,
+          "length": 1,
+          "line": 1,
+          "column": 206
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 236,
+          "length": 1,
+          "line": 1,
+          "column": 237
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 279,
+          "length": 1,
+          "line": 1,
+          "column": 280
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 306,
+          "length": 1,
+          "line": 1,
+          "column": 307
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 308,
+          "length": 1,
+          "line": 1,
+          "column": 309
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 375,
+          "length": 1,
+          "line": 1,
+          "column": 376
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 452,
+          "length": 1,
+          "line": 1,
+          "column": 453
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 525,
+          "length": 1,
+          "line": 1,
+          "column": 526
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 636,
+          "length": 1,
+          "line": 1,
+          "column": 637
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 730,
+          "length": 1,
+          "line": 1,
+          "column": 731
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 805,
+          "length": 1,
+          "line": 1,
+          "column": 806
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 905,
+          "length": 1,
+          "line": 1,
+          "column": 906
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 907,
+          "length": 1,
+          "line": 1,
+          "column": 908
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 989,
+          "length": 1,
+          "line": 1,
+          "column": 990
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 1066,
+          "length": 1,
+          "line": 1,
+          "column": 1067
+        }
+      }
+    ]
+  },
+  {
+    "message": "Invalid Unicode escape sequence",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 1168,
+          "length": 1,
+          "line": 1,
+          "column": 1169
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 40,
+          "length": 8,
+          "line": 1,
+          "column": 41
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 95,
+          "length": 8,
+          "line": 1,
+          "column": 96
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 152,
+          "length": 8,
+          "line": 1,
+          "column": 153
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 204,
+          "length": 8,
+          "line": 1,
+          "column": 205
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 235,
+          "length": 8,
+          "line": 1,
+          "column": 236
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 278,
+          "length": 8,
+          "line": 1,
+          "column": 279
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 305,
+          "length": 9,
+          "line": 1,
+          "column": 306
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 374,
+          "length": 7,
+          "line": 1,
+          "column": 375
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 451,
+          "length": 7,
+          "line": 1,
+          "column": 452
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 524,
+          "length": 7,
+          "line": 1,
+          "column": 525
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 635,
+          "length": 7,
+          "line": 1,
+          "column": 636
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 729,
+          "length": 7,
+          "line": 1,
+          "column": 730
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 804,
+          "length": 7,
+          "line": 1,
+          "column": 805
+        }
+      }
+    ]
+  },
+  {
+    "message": "Keywords cannot contain escape characters",
+    "severity": "error",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 1065,
+          "length": 7,
+          "line": 1,
+          "column": 1066
+        }
+      }
+    ]
+  },
+  {
+    "message": "Expected a semicolon or an implicit semicolon after a statement, but found none",
+    "severity": "error",
+    "help": "Try inserting a semicolon here",
+    "filename": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "labels": [
+      {
+        "span": {
+          "offset": 1167,
+          "length": 0,
+          "line": 1,
+          "column": 1168
+        }
+      }
+    ]
+  }
+]

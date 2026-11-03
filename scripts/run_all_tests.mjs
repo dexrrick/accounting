@@ -10,6 +10,7 @@ const testSuites = [
   { name: 'AI-first Advisory Foundation', file: 'test_ai_first_advisory_phase1.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Claim Review', file: 'test_evidence_grounded_synthesis.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Production Pipeline', file: 'test_evidence_grounded_synthesis_pipeline.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
+  { name: 'Synthesis Numeric Provenance', file: 'test_synthesis_numeric_provenance.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Basic Bookkeeping Journal Templates', file: 'test_basic_bookkeeping.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Development Live Routing Regressions', file: 'test_development_live_routing.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Malformed Tax Response Safety', file: 'test_malformed_tax_response.mjs', layer: 'provider-resilience', tier: 'smoke' },
@@ -193,7 +194,8 @@ const testSuites = [
   { name: 'Grounded Reasoning & Citations', file: 'test_grounded_reasoning.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Source-Backed Foundation', file: 'test_source_backed_architecture.mjs', layer: 'retrieval-evidence', tier: 'full' },
   { name: 'Singapore Statutory Engine', file: 'test_statutory_engine.mjs', layer: 'accounting-invariants', tier: 'full' },
-  { name: 'Universal Accounting Engine & FX', file: 'test_universal.mjs', layer: 'accounting-invariants', tier: 'full' }
+  { name: 'Universal Accounting Engine & FX', file: 'test_universal.mjs', layer: 'accounting-invariants', tier: 'full' },
+  { name: 'Practical Statutory Synthesis Acceptance', file: 'test_synthesis_practical_answers.mjs', layer: 'retrieval-evidence', tier: 'smoke' }
 ];
 
 function runCommand(cmd, args, cwd) {

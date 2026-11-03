@@ -683,7 +683,7 @@ async function processAccountingQueryCore(
   if (isAiFirstAdvisoryEligible(userInput, providerOrApiKey, hasImages, activeScenario, outputPreference)) {
     try {
       const advisory = await generateAiFirstAdvisory(
-        userInput, activeScenario, standard, providerOrApiKey, chatHistory,
+        userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,
         { onGroundedContext: context => diagnostics?.onGroundedContext?.(context) }
       );
       profiler.setQueryMode('AI_FIRST_ADVISORY');

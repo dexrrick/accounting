@@ -71,7 +71,7 @@ function makeInput(options = {}) {
       issuePlan: {},
       requestCompletenessContext: {},
       workstreams: issues.map((issue, index) => ({
-        id: `workstream-${index + 1}`, authority: 'IRAS', domain: 'IRAS_GST', sourceSections: [],
+        id: `workstream-${index + 1}`, authority: issue.governingAuthority, domain: issue.domain, sourceSections: [],
         populations: [issue.population], issues: [issue], evidenceStatus: issue.evidenceStatus,
         applicationStatus: issue.applicationStatus, verifiedClaims: issue.verifiedClaims, sources: issue.sources, gaps: issue.gaps
       })),
@@ -150,7 +150,14 @@ const supportedRule = quote;
   const context = {
     evidenceQuality: quality, classification, userFacts: [], missingFacts: [], assumptions: [],
     primaryEvidence: [record], officialGuidance: [], curatedSummaries: [], applicationRules: [],
-    currentInformationRequired: false
+    currentInformationRequired: false,
+    authorityIssue: {
+      authority: 'IRAS', requestedConcepts: [], issue: {
+        id: 'issue-gst', subject: 'input tax recovery', population: 'BUSINESS', domain: 'IRAS_GST',
+        governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'RECOVER',
+        mappedTopicIds: [], evidenceRequirement: 'APPLICATION', confidence: 1, status: 'MAPPED'
+      }
+    }
   };
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
@@ -164,8 +171,64 @@ const supportedRule = quote;
   const passages = packetFrom(scripted.calls[0].prompt).evidencePassages;
   assert.ok(passages.length >= 2, 'workstream evidence and locally selected IRAS context evidence are both retained');
   assert.equal(new Set(passages.map(passage => passage.id)).size, passages.length, 'merged passage IDs stay unique');
+  assert.deepEqual(new Set(passages.map(passage => passage.issueId)), new Set(['issue-gst']),
+    'fallback IRAS passages retain the original requested issue ID and cannot become a synthetic whole-query scope');
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
   assert.match(result.messageText, /Business purpose alone does not make a blocked claim recoverable/);
+  {
+    const { authorityIssue: _authorityIssue, ...contextWithoutIssueOwner } = context;
+    const unownedFallback = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+      return { claims: [claim('rule-unowned-fallback', supportedRule)] };
+    });
+    const unownedResult = await tryGenerateGroundedSynthesis(
+      makeInput({ query: contextQuery, context: contextWithoutIssueOwner }), { call: unownedFallback.call }
+    );
+    assert.ok(unownedResult);
+    const unownedPassages = packetFrom(unownedFallback.calls[0].prompt).evidencePassages;
+    assert.equal(unownedPassages.length, 1, 'fallback evidence is not guessed into a requested issue without an explicit validated owner');
+    assert.equal(unownedPassages[0].issueId, 'issue-gst', 'the sole passage is the directly admitted workstream issue passage');
+  }
+  for (const mismatchedIssue of [
+    { ...context.authorityIssue.issue, population: 'COMPANY' },
+    { ...context.authorityIssue.issue, governingAuthorities: ['CPF'] }
+  ]) {
+    const mismatchedContext = {
+      ...context,
+      authorityIssue: { ...context.authorityIssue, issue: mismatchedIssue }
+    };
+    const mismatchCall = scriptedCall(({ system, prompt }) => {
+      const packet = packetFrom(prompt);
+      if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+      return { claims: [claim('mismatched-owner-rule', supportedRule, ['passage-1'], { issueId: 'issue-gst' })] };
+    });
+    const mismatchResult = await tryGenerateGroundedSynthesis(
+      makeInput({ query: contextQuery, context: mismatchedContext }), { call: mismatchCall.call }
+    );
+    assert.ok(mismatchResult);
+    const mismatchPassages = packetFrom(mismatchCall.calls[0].prompt).evidencePassages;
+    assert.equal(mismatchPassages.length, 1, 'fallback evidence cannot cross the planned population or governing authority');
+    assert.equal(mismatchPassages[0].issueId, 'issue-gst');
+  }
+}
+
+{
+  const sentences = record.sourceText.match(/[^.!?]+[.!?]/g)?.map(sentence => sentence.trim()) || [];
+  const secondQuote = sentences.find(sentence => sentence !== quote && record.sourceText.includes(sentence));
+  assert.ok(secondQuote, 'the admitted source includes more than one complete passage');
+  const issue = makeIssue('issue-multipassage', { applicationStatus: 'VERIFIED' });
+  issue.verifiedClaims = [sourceClaim, { ...sourceClaim, quote: secondQuote, text: secondQuote }];
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [claim('multi-passage-rule', supportedRule, ['passage-1'], { issueId: 'issue-multipassage' })] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({ issues: [issue] }), { call: scripted.call });
+  assert.ok(result);
+  const passages = packetFrom(scripted.calls[0].prompt).evidencePassages;
+  assert.equal(passages.filter(passage => passage.issueId === 'issue-multipassage').length, 2,
+    'multiple admitted passages remain available inside one issue scope');
 }
 
 {
@@ -249,6 +312,33 @@ const supportedRule = quote;
     claim('application-unrelated-condition',
       'If the office is open, the client qualifies for GST recovery.',
       ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-yet',
+      'The purchase purpose has not been established. The client may recover GST if the conditions are met, yet the client qualifies today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-although',
+      'Although the purchase purpose has not been established, the client qualifies for GST recovery.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-comma-caveat',
+      'The purchase purpose has not been established, the client is eligible today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-despite-caveat',
+      'The client qualifies despite the purchase purpose remaining unresolved.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-and-pronoun',
+      'The relevant facts remain unresolved. The client may recover GST if the conditions are met, and it qualifies today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-and-inherited-subject',
+      'The client may recover GST if the conditions are met, and is eligible today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-so',
+      'The client may recover GST if the conditions are met, so the client qualifies today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-so-copular',
+      'The client may recover GST if the conditions are met, so the client is eligible today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
+    claim('application-definitive-after-so-modal',
+      'The client may recover GST if the conditions are met, so the client can recover GST today.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
     claim('application-categorical-after-condition',
       'The relevant facts remain unresolved. The client may recover GST if the applicable conditions hold; the client qualifies for recovery.',
       ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' }),
@@ -256,15 +346,36 @@ const supportedRule = quote;
       'The relevant facts remain unresolved. The client may recover GST if the applicable conditions hold, and the client qualifies for recovery.',
       ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' })
   ];
+  const positiveConditional = claim('application-condition-first-modal',
+    'If the purchase is for taxable business use and the documentary conditions are met, the client may recover the input tax.',
+    ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' });
+  const positiveEpistemicConditional = claim('application-epistemic-condition-first-modal',
+    'Eligibility cannot be confirmed. If the purchase is for taxable business use and documentary conditions are met, the client may recover input tax.',
+    ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' });
+  const positiveCanConditional = claim('application-condition-first-can',
+    'If the purchase is for taxable business use and documentary conditions are met, the client can recover the input tax.',
+    ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' });
+  const positiveNegativeUnless = claim('application-negative-unless',
+    'The client is not eligible unless the missing business purpose is confirmed.',
+    ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' });
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
     if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
     if (system.includes('TARGETED_REVISION')) return { claims: [] };
-    return { claims: [claim('rule-kept', supportedRule), ...definitiveApplications] };
+    return { claims: [claim('rule-kept', supportedRule), positiveConditional, positiveEpistemicConditional,
+      positiveCanConditional, positiveNegativeUnless, ...definitiveApplications] };
   });
   const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
   assert.ok(result);
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
+  assert.match(result.messageText, /If the purchase is for taxable business use and the documentary conditions are met, the client may recover the input tax/,
+    'a relevant condition-first modal outcome remains available without an added unresolved-facts warning');
+  assert.match(result.messageText, /Eligibility cannot be confirmed\. If the purchase is for taxable business use and documentary conditions are met, the client may recover input tax/,
+    'a concise epistemic caveat followed by the relevant conditional outcome remains usable');
+  assert.match(result.messageText, /If the purchase is for taxable business use and documentary conditions are met, the client can recover the input tax/,
+    'ordinary condition-first can wording remains usable');
+  assert.match(result.messageText, /The client is not eligible unless the missing business purpose is confirmed/,
+    'a negative eligibility statement remains conditional when it is explicitly linked to the missing fact');
   for (const unsafe of definitiveApplications) {
     assert.ok(!result.messageText.includes(unsafe.text),
       'a caveat later in the sentence or an unrelated condition cannot make a categorical application conditional');
@@ -386,6 +497,64 @@ const supportedRule = quote;
     'an uncovered planned issue receives an explicit per-issue limitation');
   assert.match(scripted.calls[0].prompt, /planned-registration/,
     'planned issues without admitted passages remain visible to generation');
+}
+
+{
+  const cpfFact = 'The CPF contribution month has not been provided.';
+  const cpfGap = {
+    issueId: 'issue-cpf', authority: 'CPF', domain: 'CPF_PAYROLL', subject: 'CPF contribution reporting month',
+    operation: 'FILING_REQUIREMENT', stage: 'mapped', code: 'MISSING_FACT', reason: cpfFact
+  };
+  const gstIssue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  const cpfIssue = {
+    ...makeIssue('issue-cpf', { withSource: false, subject: 'CPF contribution reporting month', applicationStatus: 'UNRESOLVED', applicationReason: cpfFact }),
+    population: 'EMPLOYER', domain: 'CPF_PAYROLL', operation: 'FILING_REQUIREMENT',
+    evidenceRequirement: 'CASE_FACTS', governingAuthority: 'CPF', gaps: [cpfGap]
+  };
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [claim('supported-gst-application', 'Input tax recovery for the stated blocked motor car expense is not available.', ['passage-1'], {
+      kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+    })] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'Our company incurred GST on a motor car expense that falls within the blocked input tax category. Can it recover the input tax, and which CPF contribution month applies?',
+    issues: [gstIssue, cpfIssue], workstreamGaps: [cpfGap],
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [cpfFact], targetDate: '2026-11-03' },
+    context: { missingFacts: [cpfFact] }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /Input tax recovery for the stated blocked motor car expense is not available/,
+    'a CPF-specific missing fact does not force the verified GST issue to be conditional');
+  assert.match(result.messageText, /CPF contribution reporting month/,
+    'the unsupported CPF issue remains visible separately');
+  assert.match(scripted.calls[0].prompt, /\[Issue issue-cpf\] The CPF contribution month has not been provided\./,
+    'evidence-quality and contextual copies remain attached to their owning workstream issue');
+  assert.doesNotMatch(scripted.calls[0].prompt, /Question-wide unresolved fact.*CPF contribution month/,
+    'a fact already owned by an issue is not duplicated as a question-wide blocker');
+}
+
+{
+  const scripted = scriptedCall(({ system, prompt }) => {
+    const packet = packetFrom(prompt);
+    if (system.includes('EVIDENCE_GROUNDED_REVIEW')) return reviewFor(packet.claims);
+    return { claims: [
+      claim('supported-rule', supportedRule),
+      claim('application-with-global-gap', 'The client qualifies for this expense recovery.', ['passage-1'], {
+        kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+      })
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    issues: [makeIssue('issue-gst', { applicationStatus: 'VERIFIED' })],
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' },
+    context: { missingFacts: ['The purchase purpose remains unclear.'] }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(!result.messageText.includes('The client qualifies for this expense recovery.'),
+    'a material fact without an identifiable owning issue remains a conservative question-wide blocker');
+  assert.match(result.messageText, /purchase purpose remains unclear/);
 }
 
 {
@@ -719,6 +888,8 @@ const supportedRule = quote;
     'Dr Expense 100; Cr Bank 100.',
     'Record this by debiting inventory and crediting trade payables.',
     'The posting is Dr Inventory, Cr Trade Payables.',
+    'The treatment is to Dr Inventory / Cr Trade Payables.',
+    'For the expense, Dr Office Supplies and Cr Bank.',
     'Debit inventory.',
     'Credit trade payables.',
     'Post Dr Inventory.'

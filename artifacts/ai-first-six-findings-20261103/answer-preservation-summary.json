@@ -1,0 +1,723 @@
+{
+  "kind": "OFFLINE_NO_PROVIDER_ANSWER_PRESERVATION",
+  "base": "30ce81747552b57d373bb5ed98941428b63d395b",
+  "limitations": "Byte preservation is not legal-quality grading, source completeness, live AI, browser, CI or production acceptance.",
+  "corpora": {
+    "frozen": {
+      "cases": 75,
+      "unchanged": 75,
+      "changed": [],
+      "corpusSha256": "ce9dd34a89519f60502aaccc8aa56891f22369befcc1222f2134a51426566d23",
+      "beforeArtifactSha256": "780f910dd53120d0dafe35510221c691baeaf42a8f9a687f63e6490b5543713f",
+      "afterArtifactSha256": "fcb304fe9ab9699af72844ece496cd4b7d645311716fd2342a3641f6320c0f83",
+      "results": [
+        {
+          "id": "iras-01",
+          "question": "Our company year ended 30 June 2026. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?",
+          "beforeSha256": "1eeff7d5cc124d1e6d0af052f53ab8bf03b995afaa2a32a9ec76f515e5b22e71",
+          "afterSha256": "1eeff7d5cc124d1e6d0af052f53ab8bf03b995afaa2a32a9ec76f515e5b22e71",
+          "unchanged": true,
+          "characters": 4301
+        },
+        {
+          "id": "iras-02",
+          "question": "A non-resident consultant has no contract with us. The IRAS invoice is dated 26 March 2026, says 30-day payment terms, was received on 30 April and paid on 19 May; no amount was credited earlier to a recipient-designated account. If WHT applies, what is the filing deadline, and does treaty exemption remove filing?",
+          "beforeSha256": "b135f5a22563daef6458a6a7f906e3df83ed714592aaeb05fbc5f43249026f0c",
+          "afterSha256": "b135f5a22563daef6458a6a7f906e3df83ed714592aaeb05fbc5f43249026f0c",
+          "unchanged": true,
+          "characters": 6526
+        },
+        {
+          "id": "iras-03",
+          "question": "A GST-registered employer paid an employee's annual health screening bill. The examination was not legally required and was not linked to a work-related health risk. Can we claim the input tax?",
+          "beforeSha256": "62884d9b9fec40d61457b150a3b194253c3d0d23e5fe61233d9dea49fc7c78ba",
+          "afterSha256": "62884d9b9fec40d61457b150a3b194253c3d0d23e5fe61233d9dea49fc7c78ba",
+          "unchanged": true,
+          "characters": 8975
+        },
+        {
+          "id": "iras-04",
+          "question": "We bought a delivery van for taxable business deliveries and a staff medical check-up in the same GST period. Are both input-tax claims allowed?",
+          "beforeSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "afterSha256": "fba6856da528d165dd4f9a35d859c3bf715c3df0ecb2ae79e3520297c21bb18c",
+          "unchanged": true,
+          "characters": 14142
+        },
+        {
+          "id": "iras-05",
+          "question": "We gave S$2,000 to an approved Singapore IPC in December 2026 and supplied our UEN. What corporate tax deduction is generally available, and until when does the enhanced deduction run under current guidance?",
+          "beforeSha256": "615c74c7961f932af3bf59fc9e519ca6c203325846315a3daa93a85f4426d084",
+          "afterSha256": "615c74c7961f932af3bf59fc9e519ca6c203325846315a3daa93a85f4426d084",
+          "unchanged": true,
+          "characters": 4685
+        },
+        {
+          "id": "iras-06",
+          "question": "Royalty under our contract accrued on 30 June 2026 and was paid on 15 July. The recipient may qualify for treaty relief. What is the WHT filing deadline, and is filing still needed if the rate is zero?",
+          "beforeSha256": "06ee40e7b5d607982b852bef9b0f05ff3f3039b920f116aeb04bcbac8b97ac01",
+          "afterSha256": "06ee40e7b5d607982b852bef9b0f05ff3f3039b920f116aeb04bcbac8b97ac01",
+          "unchanged": true,
+          "characters": 2156
+        },
+        {
+          "id": "iras-07",
+          "question": "Our company incurred a book loss this year but has S$800,000 of revenue. Must we file ECI?",
+          "beforeSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "afterSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "unchanged": true,
+          "characters": 4181
+        },
+        {
+          "id": "iras-08",
+          "question": "We received a Notice of Assessment although our revenue was below S$5 million and taxable ECI was nil. Can we ignore it?",
+          "beforeSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "afterSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "unchanged": true,
+          "characters": 4181
+        },
+        {
+          "id": "iras-09",
+          "question": "For YA 2023, may we shred our company bank statements once we submit the tax return?",
+          "beforeSha256": "39da1ba72ee59cb1562e11ea204987c544a0dae82c771af2a800c1b2877808ae",
+          "afterSha256": "39da1ba72ee59cb1562e11ea204987c544a0dae82c771af2a800c1b2877808ae",
+          "unchanged": true,
+          "characters": 5208
+        },
+        {
+          "id": "iras-10",
+          "question": "We imported a laptop for our Singapore office, but the import permit names another group company. Can we claim the import GST?",
+          "beforeSha256": "ee1ef650fe09fc28e9ba0fa6b83121c74e9d0f3e06bf74c99a7f51360d6d5439",
+          "afterSha256": "ee1ef650fe09fc28e9ba0fa6b83121c74e9d0f3e06bf74c99a7f51360d6d5439",
+          "unchanged": true,
+          "characters": 529
+        },
+        {
+          "id": "iras-11",
+          "question": "The ECI deadline passed last week and no Notice of Assessment has arrived. Is late filing still possible?",
+          "beforeSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "afterSha256": "bb91d1ac7c192f9d3456dfc34896a906576f5509994c30dc28f4a757e46e4f7d",
+          "unchanged": true,
+          "characters": 4181
+        },
+        {
+          "id": "iras-12",
+          "question": "We paid a non-resident company for remote software support carried out wholly overseas. Does Singapore WHT apply?",
+          "beforeSha256": "b7a619c63f3c2cff2146294aa4fd0ee61c5452abae18b451bc4aa9583bf452bd",
+          "afterSha256": "b7a619c63f3c2cff2146294aa4fd0ee61c5452abae18b451bc4aa9583bf452bd",
+          "unchanged": true,
+          "characters": 2322
+        },
+        {
+          "id": "iras-13",
+          "question": "We claimed GST on staff medical treatment required by written law for a work-related health risk. The bill is dated 30 September 2021. Does the post-October 2021 exception apply?",
+          "beforeSha256": "4129aa2dc5c0b4210dec2f3df922bd638fee6a68057801cf4fbd4d5645e5cdf1",
+          "afterSha256": "4129aa2dc5c0b4210dec2f3df922bd638fee6a68057801cf4fbd4d5645e5cdf1",
+          "unchanged": true,
+          "characters": 302
+        },
+        {
+          "id": "iras-14",
+          "question": "Our company sold its delivery lorry and bought a replacement van. Is input GST on both vehicle purchases blocked as it is for cars?",
+          "beforeSha256": "703788ee303e17551cd0ca6eedb12becfdf3d0c5f0be5c58c7cc264dddb03808",
+          "afterSha256": "703788ee303e17551cd0ca6eedb12becfdf3d0c5f0be5c58c7cc264dddb03808",
+          "unchanged": true,
+          "characters": 1317
+        },
+        {
+          "id": "iras-15",
+          "question": "Our investment holding company has only dividend income and nil ECI before exemptions. Is its revenue automatically zero for the ECI waiver test?",
+          "beforeSha256": "fae74982095108686b2995cd736ad68af4d17a9d4f6600472836d68a733ea50e",
+          "afterSha256": "fae74982095108686b2995cd736ad68af4d17a9d4f6600472836d68a733ea50e",
+          "unchanged": true,
+          "characters": 1676
+        },
+        {
+          "id": "cpf-01",
+          "question": "A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?",
+          "beforeSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42",
+          "afterSha256": "db65f208dfb313064fb97b12f8f77a74b0d73181d0e6db7675f53753a7a54a42",
+          "unchanged": true,
+          "characters": 5622
+        },
+        {
+          "id": "cpf-02",
+          "question": "An employee has S$9,200 monthly OW in 2026. What OW base is subject to CPF before applying the employee's rate?",
+          "beforeSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671",
+          "afterSha256": "a03a113a69f2c0515c9caf844f08a71dd8d784a41e6032b98140bf7a05798671",
+          "unchanged": true,
+          "characters": 4785
+        },
+        {
+          "id": "cpf-03",
+          "question": "We paid a S$12,000 bonus in February 2026. How do we determine the CPF-able AW ceiling for this employee?",
+          "beforeSha256": "6a2b53617e45b06ae12736ef938f16fe305b3c8b5cf1347463985ee1ae53c3a5",
+          "afterSha256": "6a2b53617e45b06ae12736ef938f16fe305b3c8b5cf1347463985ee1ae53c3a5",
+          "unchanged": true,
+          "characters": 5060
+        },
+        {
+          "id": "cpf-04",
+          "question": "An annual bonus for 2025 was contractually due and payable in January 2026, though payroll had budgeted it for last year. Which year's AW ceiling applies?",
+          "beforeSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954",
+          "afterSha256": "bd765f474f22e7943e35c982440c105c1f75624b124e12faf1da970a7366d954",
+          "unchanged": true,
+          "characters": 5664
+        },
+        {
+          "id": "cpf-05",
+          "question": "An employee turned 55 in May 2026. From which month do the new age-band CPF rates apply?",
+          "beforeSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "afterSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "unchanged": true,
+          "characters": 13579
+        },
+        {
+          "id": "cpf-06",
+          "question": "A foreign employee became a Singapore PR on 15 March 2026. What is the first-year boundary, and is CPF due on March OW earned from the grant date?",
+          "beforeSha256": "3e04a54dadc2254141afba0e0e823a5aa54ddad3ead3fda7e2dcab65ca004c7d",
+          "afterSha256": "3e04a54dadc2254141afba0e0e823a5aa54ddad3ead3fda7e2dcab65ca004c7d",
+          "unchanged": true,
+          "characters": 5688
+        },
+        {
+          "id": "cpf-07",
+          "question": "The same new PR employee received an annual bonus payable on 10 March, before obtaining PR, and another bonus payable on 20 March, after obtaining PR. Which bonus can attract CPF?",
+          "beforeSha256": "6d93b9811e3b864d64d24d6fbb999b915338e3ca40e491773fc1f625bed8fde9",
+          "afterSha256": "6d93b9811e3b864d64d24d6fbb999b915338e3ca40e491773fc1f625bed8fde9",
+          "unchanged": true,
+          "characters": 8283
+        },
+        {
+          "id": "cpf-08",
+          "question": "Our payroll vendor says CPF contributions for June are due on 14 July. What is the contribution due date and what is the 14th?",
+          "beforeSha256": "c023fceb8c325812938bdc9e4282998346cabbcd3781ea835a95b449d458a164",
+          "afterSha256": "c023fceb8c325812938bdc9e4282998346cabbcd3781ea835a95b449d458a164",
+          "unchanged": true,
+          "characters": 2416
+        },
+        {
+          "id": "cpf-09",
+          "question": "Our employee earns S$400 in the month. Is there an employee CPF share?",
+          "beforeSha256": "84a631ab51e6da175912ccb9afee1b15f10889939690139814b027b50cb83c98",
+          "afterSha256": "84a631ab51e6da175912ccb9afee1b15f10889939690139814b027b50cb83c98",
+          "unchanged": true,
+          "characters": 1892
+        },
+        {
+          "id": "cpf-10",
+          "question": "An employee received basic pay, overtime, a performance bonus and a reimbursed S$60 stationery purchase supported by a receipt. Which items are generally wages for CPF?",
+          "beforeSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "afterSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "unchanged": true,
+          "characters": 1735
+        },
+        {
+          "id": "cpf-11",
+          "question": "The annual AW ceiling calculator says S$1,000 is excess but the employee's total annual CPF is below the CPF Annual Limit. Must the excess be automatically refunded?",
+          "beforeSha256": "077d17a14e60023e6b589909f03dd993b71109f2c74bf7057a4e84f6cb430bae",
+          "afterSha256": "077d17a14e60023e6b589909f03dd993b71109f2c74bf7057a4e84f6cb430bae",
+          "unchanged": true,
+          "characters": 4315
+        },
+        {
+          "id": "cpf-12",
+          "question": "Our staff member is 59 and became a PR in 2025. Can I use the standard third-year PR rate table for the employer contribution in July 2026?",
+          "beforeSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+          "afterSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+          "unchanged": true,
+          "characters": 2715
+        },
+        {
+          "id": "cpf-13",
+          "question": "We paid the CPF contribution on an Additional Wage that is now above the AW ceiling. Should we wait for the year-end automatic refund?",
+          "beforeSha256": "2314ae2953134824822c73e2f9ddfdaa3eb8344d0dbbd8c9abaf7efe7470ab82",
+          "afterSha256": "2314ae2953134824822c73e2f9ddfdaa3eb8344d0dbbd8c9abaf7efe7470ab82",
+          "unchanged": true,
+          "characters": 7880
+        },
+        {
+          "id": "cpf-14",
+          "question": "An employee born 20 June moves to the next CPF age band. Should payroll change the rate in June or July?",
+          "beforeSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "afterSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+          "unchanged": true,
+          "characters": 13579
+        },
+        {
+          "id": "cpf-15",
+          "question": "We declared S$6,000 OW but later confirmed actual OW was S$5,500 and an S$800 bonus was paid. How should payroll correct the wage record?",
+          "beforeSha256": "37e7e7e40e4c8364160f0717c0c31236306e785b8181fa1f61c8ef69cb65cad2",
+          "afterSha256": "37e7e7e40e4c8364160f0717c0c31236306e785b8181fa1f61c8ef69cb65cad2",
+          "unchanged": true,
+          "characters": 2763
+        },
+        {
+          "id": "mom-01",
+          "question": "We paid May salary on 10 June and overtime wages on 10 June. Were both paid within the usual Employment Act deadlines?",
+          "beforeSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "afterSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "unchanged": true,
+          "characters": 1735
+        },
+        {
+          "id": "mom-02",
+          "question": "An employee resigned with notice and their last day is 30 June. When should final salary be paid?",
+          "beforeSha256": "01e731d4f17a8bce7a526c4a7aa6c530578fce277c3c42e0f7d5dbbc230e7c98",
+          "afterSha256": "01e731d4f17a8bce7a526c4a7aa6c530578fce277c3c42e0f7d5dbbc230e7c98",
+          "unchanged": true,
+          "characters": 1908
+        },
+        {
+          "id": "mom-03",
+          "question": "We dismissed an employee for misconduct, but payroll cannot release final salary on that day. How soon must we pay, and when is a payslip due?",
+          "beforeSha256": "5a9ffd3108284847d6a5a701cb415b2dd793db4a301eb6d09502d1b1f0b5fd8c",
+          "afterSha256": "5a9ffd3108284847d6a5a701cb415b2dd793db4a301eb6d09502d1b1f0b5fd8c",
+          "unchanged": true,
+          "characters": 10506
+        },
+        {
+          "id": "mom-04",
+          "question": "A covered employee has four completed months of service and a medical certificate for hospitalisation. How much paid sick leave can they have?",
+          "beforeSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "afterSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+          "unchanged": true,
+          "characters": 4679
+        },
+        {
+          "id": "mom-05",
+          "question": "Our employee is still on probation at five completed months. Can we deny paid annual leave until confirmation?",
+          "beforeSha256": "373a0425a4bdd1a4a8432bc38f6c71f4e52de9634f8593e6e324f2af260a1c17",
+          "afterSha256": "373a0425a4bdd1a4a8432bc38f6c71f4e52de9634f8593e6e324f2af260a1c17",
+          "unchanged": true,
+          "characters": 2427
+        },
+        {
+          "id": "mom-06",
+          "question": "A public holiday falls on Saturday, a non-working day for our five-day-week employee. What should we provide?",
+          "beforeSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "afterSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+          "unchanged": true,
+          "characters": 5090
+        },
+        {
+          "id": "mom-07",
+          "question": "Our employee works on a public holiday that is a normal working day and works past normal hours. What pay elements may be due?",
+          "beforeSha256": "78117a46dd554001dc6aabd7e483652e0d71ed49c91c4e49e5dd79bff014d64c",
+          "afterSha256": "78117a46dd554001dc6aabd7e483652e0d71ed49c91c4e49e5dd79bff014d64c",
+          "unchanged": true,
+          "characters": 4704
+        },
+        {
+          "id": "mom-08",
+          "question": "Can we deduct an employee's salary for a S$400 uniform, recruitment costs and a foreign worker levy?",
+          "beforeSha256": "b07d9149dc7ad43a64435b1abb53934b7820ad851ee4a394c44e8cbf5c06ace8",
+          "afterSha256": "b07d9149dc7ad43a64435b1abb53934b7820ad851ee4a394c44e8cbf5c06ace8",
+          "unchanged": true,
+          "characters": 2784
+        },
+        {
+          "id": "mom-09",
+          "question": "A Work Permit holder agrees in writing to a new deduction for accommodation. Can we start deducting next month without telling MOM?",
+          "beforeSha256": "8518fd96cd231ed3c41644dada3cf517d216e14db5dfd0d7403621ad0c5c3100",
+          "afterSha256": "8518fd96cd231ed3c41644dada3cf517d216e14db5dfd0d7403621ad0c5c3100",
+          "unchanged": true,
+          "characters": 1573
+        },
+        {
+          "id": "mom-10",
+          "question": "We want to pay salary every two months because our shop is seasonal. Is that allowed for an employee covered by the Employment Act?",
+          "beforeSha256": "cf0390ccc9e5fbcd36a201c9c15c1053059f718ef4a01633820dc388d4cb7c74",
+          "afterSha256": "cf0390ccc9e5fbcd36a201c9c15c1053059f718ef4a01633820dc388d4cb7c74",
+          "unchanged": true,
+          "characters": 2326
+        },
+        {
+          "id": "mom-11",
+          "question": "Our new employee is a foreign national and starts work next Monday; their work pass application is pending. May they begin work while we wait?",
+          "beforeSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "afterSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "unchanged": true,
+          "characters": 183
+        },
+        {
+          "id": "mom-12",
+          "question": "A covered staff member started on 1 February 2026 and took three months of approved unpaid leave. How much of a 14-day annual leave entitlement remains on 31 October if they have already taken two days?",
+          "beforeSha256": "630e08eaffdc2b72d9eac689d3471de26af97c681a78516774769029db9ffd8d",
+          "afterSha256": "630e08eaffdc2b72d9eac689d3471de26af97c681a78516774769029db9ffd8d",
+          "unchanged": true,
+          "characters": 1929
+        },
+        {
+          "id": "mom-13",
+          "question": "We gave a soft-copy payslip three days after paying salary. Is electronic format allowed and is the timing acceptable?",
+          "beforeSha256": "eebc31ffc0abaa60954c6af315edbeceef3df75a87184b74a66754b820eb0c61",
+          "afterSha256": "eebc31ffc0abaa60954c6af315edbeceef3df75a87184b74a66754b820eb0c61",
+          "unchanged": true,
+          "characters": 7055
+        },
+        {
+          "id": "mom-14",
+          "question": "We have current employees and one former employee who left on 30 June 2026. For Employment Act-covered employees, how long must we keep the itemised payslip records, and may we keep them electronically?",
+          "beforeSha256": "6d9766eb01cf0093a772253f986ccc426ba2a57c3240c0c8bc5e83b5d0e5741b",
+          "afterSha256": "6d9766eb01cf0093a772253f986ccc426ba2a57c3240c0c8bc5e83b5d0e5741b",
+          "unchanged": true,
+          "characters": 2097
+        },
+        {
+          "id": "mom-15",
+          "question": "Our employee gave notice on 1 October, is a foreign employee, and will leave on 31 October. Must we withhold salary for tax clearance, and is the period always 30 days?",
+          "beforeSha256": "728c587154997ff38001f3bc4ecd66c4eede7b4b5845dd1a4df6fba7d5929a1f",
+          "afterSha256": "728c587154997ff38001f3bc4ecd66c4eede7b4b5845dd1a4df6fba7d5929a1f",
+          "unchanged": true,
+          "characters": 289
+        },
+        {
+          "id": "acra-01",
+          "question": "We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?",
+          "beforeSha256": "88086009d406fc70acbcd158e15c8497021b0776b58ee8a76cd7635d968a6b72",
+          "afterSha256": "88086009d406fc70acbcd158e15c8497021b0776b58ee8a76cd7635d968a6b72",
+          "unchanged": true,
+          "characters": 4662
+        },
+        {
+          "id": "acra-02",
+          "question": "Our local private company FYE is 31 December 2025. What are the usual AGM and annual return deadlines if it is not exempt from AGM?",
+          "beforeSha256": "2c692333086f4aab02be1dc82f8d500fc711eb70626cc9fe4aef680acf29609b",
+          "afterSha256": "2c692333086f4aab02be1dc82f8d500fc711eb70626cc9fe4aef680acf29609b",
+          "unchanged": true,
+          "characters": 8588
+        },
+        {
+          "id": "acra-03",
+          "question": "A dormant relevant company has no transactions and its total assets are below the substantial assets threshold. Can it stop preparing accounts without checking other criteria?",
+          "beforeSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "afterSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "unchanged": true,
+          "characters": 183
+        },
+        {
+          "id": "acra-04",
+          "question": "Our small private company meets two of the three small-company criteria this year and last year. Does it qualify for audit exemption?",
+          "beforeSha256": "521719313997405484e17658fdfccf7adbbb90b3d1fbcc7edd2fde07446a6729",
+          "afterSha256": "521719313997405484e17658fdfccf7adbbb90b3d1fbcc7edd2fde07446a6729",
+          "unchanged": true,
+          "characters": 7941
+        },
+        {
+          "id": "acra-05",
+          "question": "We are a small, non-publicly accountable private company that must file statements. Which financial-statement format does ACRA generally require?",
+          "beforeSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "afterSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "unchanged": true,
+          "characters": 183
+        },
+        {
+          "id": "acra-06",
+          "question": "Our local company changed its registered office on 20 October 2026. Can we wait until the annual return to update ACRA?",
+          "beforeSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "afterSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+          "unchanged": true,
+          "characters": 3059
+        },
+        {
+          "id": "acra-07",
+          "question": "Our Singapore-incorporated company must file its statements and fits the category requiring a full set of financial statements in XBRL under the current ACRA taxonomy. We have two directors. Must we attach a PDF, and how many directors sign the directors statement?",
+          "beforeSha256": "683b2d0d436a61cacad170a058e8285652d0661d968c487fa01fdc3bcc7a4645",
+          "afterSha256": "683b2d0d436a61cacad170a058e8285652d0661d968c487fa01fdc3bcc7a4645",
+          "unchanged": true,
+          "characters": 14987
+        },
+        {
+          "id": "acra-08",
+          "question": "Our private company dispensed with its AGM. What date and details must we still declare when filing the annual return?",
+          "beforeSha256": "91b36ce2d5557c8b889e240bcf2b488dfce91f8b2e0d55aef7dda6fc03e8e092",
+          "afterSha256": "91b36ce2d5557c8b889e240bcf2b488dfce91f8b2e0d55aef7dda6fc03e8e092",
+          "unchanged": true,
+          "characters": 3612
+        },
+        {
+          "id": "acra-09",
+          "question": "Our FYE is 31 December and the AGM deadline has passed. Can we change FYE now to gain time before annual return is filed?",
+          "beforeSha256": "1cb770e5444e39904cf69fca015479ab4ac07a48cef90db31cc2de9badf35d00",
+          "afterSha256": "1cb770e5444e39904cf69fca015479ab4ac07a48cef90db31cc2de9badf35d00",
+          "unchanged": true,
+          "characters": 2091
+        },
+        {
+          "id": "acra-10",
+          "question": "Our director's residential address changed. Can we leave the old address in Bizfile until next year's annual return?",
+          "beforeSha256": "f79653140ab4837ce6d5d566230753a8c5b8367c912b33614748b9ee616531bd",
+          "afterSha256": "f79653140ab4837ce6d5d566230753a8c5b8367c912b33614748b9ee616531bd",
+          "unchanged": true,
+          "characters": 1801
+        },
+        {
+          "id": "acra-11",
+          "question": "A company secretary resigned on 1 October and a replacement was appointed on 12 October. What should the company check and update?",
+          "beforeSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "afterSha256": "152c85c5dfaab9fb9ca47cde3f4eb9d6c70a6cd63fb8a15da5fd31b23856198b",
+          "unchanged": true,
+          "characters": 6303
+        },
+        {
+          "id": "acra-12",
+          "question": "We need up to two more months to file our annual return. Is an extension available and does applying remove the need for the AGM?",
+          "beforeSha256": "1e190ad84ea94ab4bc592a618e663163aeda096a3a124b449d9834e92e21b460",
+          "afterSha256": "1e190ad84ea94ab4bc592a618e663163aeda096a3a124b449d9834e92e21b460",
+          "unchanged": true,
+          "characters": 6073
+        },
+        {
+          "id": "acra-13",
+          "question": "We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?",
+          "beforeSha256": "6459698ed9d769a44750c96b1e915cf726d12baf6fec4e29ab60ac95c8a33649",
+          "afterSha256": "6459698ed9d769a44750c96b1e915cf726d12baf6fec4e29ab60ac95c8a33649",
+          "unchanged": true,
+          "characters": 8796
+        },
+        {
+          "id": "acra-14",
+          "question": "Since 20 October 2026, what must an annual-return filer confirm about company officers, and is CEO information now specifically requested?",
+          "beforeSha256": "e35341de27304c6bbb19891e4c9f1547398b20c20f241847e5928b2e53acdb45",
+          "afterSha256": "e35341de27304c6bbb19891e4c9f1547398b20c20f241847e5928b2e53acdb45",
+          "unchanged": true,
+          "characters": 2067
+        },
+        {
+          "id": "acra-15",
+          "question": "Our listed public company FYE was 31 December 2025. Can it file its annual return seven months later like a private company?",
+          "beforeSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "afterSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "unchanged": true,
+          "characters": 1568
+        },
+        {
+          "id": "mas-01",
+          "question": "Our VCFM financial year ended 30 September 2026. What does the current toolkit require in Form 25A, and what period does it use for the deadline?",
+          "beforeSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "afterSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "unchanged": true,
+          "characters": 3369
+        },
+        {
+          "id": "mas-02",
+          "question": "For our VCFM upcoming nil-misconduct declaration, assume no representative Misconduct Report is submitted for calendar year 2026. Under the currently published toolkit, when is it due, and is it the same as Form 25A?",
+          "beforeSha256": "4fc549c751196c3e613431e04dc0f8ba25604a0c848a61343bf5aeb9eece917e",
+          "afterSha256": "4fc549c751196c3e613431e04dc0f8ba25604a0c848a61343bf5aeb9eece917e",
+          "unchanged": true,
+          "characters": 4538
+        },
+        {
+          "id": "mas-03",
+          "question": "Our VCFM has not confirmed its financial year-end. Can we use the nil-misconduct date to set Form 25A and treat it as satisfying all fund returns?",
+          "beforeSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "afterSha256": "9b1b6eaafc8ab4f8e50e5aa52a56c11a39116b1070075862b34501f4a7e83427",
+          "unchanged": true,
+          "characters": 7162
+        },
+        {
+          "id": "mas-04",
+          "question": "Our LFMC needs to file its quarterly financial returns for the quarter ending 30 September. Which forms and usual deadline apply under the current LFMC toolkit?",
+          "beforeSha256": "6010b3ea9eee707581963a5a1c40796a67ecf691d3271c428ae5ac54ce58c99e",
+          "afterSha256": "6010b3ea9eee707581963a5a1c40796a67ecf691d3271c428ae5ac54ce58c99e",
+          "unchanged": true,
+          "characters": 3377
+        },
+        {
+          "id": "mas-05",
+          "question": "An LFMC's FYE is 31 December. When are audited annual financial returns and auditor's report generally due?",
+          "beforeSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "afterSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+          "unchanged": true,
+          "characters": 6649
+        },
+        {
+          "id": "mas-06",
+          "question": "Our VCFM appointed a director on 4 May 2026. Which notification form and deadline appear in the current VCFM toolkit?",
+          "beforeSha256": "550cf7cbf6a9b191d6c57c85321ad01ee5996903e45f6c25517dd602c31e793b",
+          "afterSha256": "550cf7cbf6a9b191d6c57c85321ad01ee5996903e45f6c25517dd602c31e793b",
+          "unchanged": true,
+          "characters": 3140
+        },
+        {
+          "id": "mas-07",
+          "question": "Our VCFM stopped a regulated activity on 1 June. What does the toolkit say about Form 7 and customer obligations?",
+          "beforeSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "afterSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "unchanged": true,
+          "characters": 3831
+        },
+        {
+          "id": "mas-08",
+          "question": "A VCFM was licensed six months ago but has not commenced one regulated activity. When must it notify MAS?",
+          "beforeSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "afterSha256": "336ff9e0ec5f3a452a57aa4fdc0d5bd260d9db69b3cbd149c814ba12fc06f010",
+          "unchanged": true,
+          "characters": 3831
+        },
+        {
+          "id": "mas-09",
+          "question": "Our VCFM discovered a serious representative misconduct issue today. Can it wait until its annual Form 25A filing?",
+          "beforeSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "afterSha256": "55502a9c240072a2e55ae5a93838b2eb9606047a5b234b5845aaa38ec41ed2f3",
+          "unchanged": true,
+          "characters": 3369
+        },
+        {
+          "id": "mas-10",
+          "question": "Our VCFM opened a branch overseas. Does it need prior approval and what form is specified?",
+          "beforeSha256": "2672430873824a0aba7b8141520ed8e3df9a82daeeea9cae5ba30b56658e28b5",
+          "afterSha256": "2672430873824a0aba7b8141520ed8e3df9a82daeeea9cae5ba30b56658e28b5",
+          "unchanged": true,
+          "characters": 3638
+        },
+        {
+          "id": "mas-11",
+          "question": "Our fund's NAV is under S$500 million. Does that alone prove there is no MAS QDC return to submit?",
+          "beforeSha256": "f98208dba0c4ef013150ac15044d04ebffbfa4d413b22f6f0da7c655ddd1a66a",
+          "afterSha256": "f98208dba0c4ef013150ac15044d04ebffbfa4d413b22f6f0da7c655ddd1a66a",
+          "unchanged": true,
+          "characters": 1773
+        },
+        {
+          "id": "mas-12",
+          "question": "We manage three funds as an LFMC. Does the LFMC SFA toolkit establish all fund-level annual reports and investor filings?",
+          "beforeSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "afterSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+          "unchanged": true,
+          "characters": 2931
+        },
+        {
+          "id": "mas-13",
+          "question": "Our VCFM's base capital may fall below the prescribed amount tomorrow. Can it notify MAS at year end?",
+          "beforeSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "afterSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "unchanged": true,
+          "characters": 1332
+        },
+        {
+          "id": "mas-14",
+          "question": "Our VCFM's financial condition may make it insolvent. What does the toolkit require?",
+          "beforeSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "afterSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "unchanged": true,
+          "characters": 1677
+        },
+        {
+          "id": "mas-15",
+          "question": "A VCFM plans to acquire 20% of a corporation that is not incorporated to arrange a closed-end fund or CIS. Is prior approval implicated?",
+          "beforeSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "afterSha256": "b2929d012c12f229e7d81b55815b1965e867fb4b266602318425fa801be690cd",
+          "unchanged": true,
+          "characters": 1332
+        }
+      ]
+    },
+    "independent": {
+      "cases": 12,
+      "unchanged": 12,
+      "changed": [],
+      "corpusSha256": "dc4ed9e5091a203763c32465182223e29a88711aee387fbe7a20e27bdee773af",
+      "beforeArtifactSha256": "2bdafcf52a67f89c286bd593e1ab60ee29279aa7870f565e8d824af967afb43a",
+      "afterArtifactSha256": "3585978af6acdc17238f06b1aa45e4dfe004bc23ff6e0f00d0a3d4e7efb937e2",
+      "results": [
+        {
+          "id": "fresh-iras-supported",
+          "question": "We are GST registered. The laptop is used entirely to make standard-rated supplies, the invoice is addressed to our company and is valid, and no blocked-expense rule applies. Can we recover its input GST, and what should we keep?",
+          "beforeSha256": "ff2861178665c655d45512ae915ce87ab7b14db1c67268ec0cb9422a1b29505f",
+          "afterSha256": "ff2861178665c655d45512ae915ce87ab7b14db1c67268ec0cb9422a1b29505f",
+          "unchanged": true,
+          "characters": 1298
+        },
+        {
+          "id": "fresh-iras-missing",
+          "question": "My client sent a card slip labelled office purchase, but we have no invoice and do not know whether it was for business. Is input GST recoverable now, and what should I ask the client for?",
+          "beforeSha256": "6582699785dae70544d0e5744d2b301a9cb5542ce0f4f2df45d18f2e9bd16fee",
+          "afterSha256": "6582699785dae70544d0e5744d2b301a9cb5542ce0f4f2df45d18f2e9bd16fee",
+          "unchanged": true,
+          "characters": 1362
+        },
+        {
+          "id": "fresh-cpf-timing",
+          "question": "Our payroll team thinks CPF is only due on the fourteenth next month. Is that the due date or the enforcement timetable, and what if that date is a Sunday?",
+          "beforeSha256": "f1833bf41f706cc062e3161b1b3438898cf9e9ac7fe86a42650f8d02d6e8d82f",
+          "afterSha256": "f1833bf41f706cc062e3161b1b3438898cf9e9ac7fe86a42650f8d02d6e8d82f",
+          "unchanged": true,
+          "characters": 2253
+        },
+        {
+          "id": "fresh-cpf-facts",
+          "question": "We hired someone who recently became a Singapore PR and will pay a bonus next year. Can you confirm the contribution percentage, or tell payroll exactly which employee details and dates you need?",
+          "beforeSha256": "3d70002b6d5e0affb497853e37f10ac0a71e8d9b6ae3c584b0580a601fe57d66",
+          "afterSha256": "3d70002b6d5e0affb497853e37f10ac0a71e8d9b6ae3c584b0580a601fe57d66",
+          "unchanged": true,
+          "characters": 512
+        },
+        {
+          "id": "fresh-mom-final",
+          "question": "Our employee resigned, served all the contractual notice and leaves this Friday. Can we wait until the usual monthly payday to release the final salary?",
+          "beforeSha256": "a73ee6746e71d43f80e7f29ef761ef5387c02c1d4307be524fab1794238a6b70",
+          "afterSha256": "a73ee6746e71d43f80e7f29ef761ef5387c02c1d4307be524fab1794238a6b70",
+          "unchanged": true,
+          "characters": 1789
+        },
+        {
+          "id": "fresh-mom-ordinary",
+          "question": "For a covered employee who is staying with us, does the usual salary deadline also cover overtime, or should payroll track them separately?",
+          "beforeSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "afterSha256": "496bd6106cac2a01bde75514af17d82ac4d07335e813a9f6111c362280be749c",
+          "unchanged": true,
+          "characters": 1735
+        },
+        {
+          "id": "fresh-acra-officer",
+          "question": "Our Singapore company has one director. She wants to save money by also becoming its company secretary. Is that allowed, and what appointment should the company make?",
+          "beforeSha256": "17cdd6a04e217dadd718ab95d44578665f06a13c8b71b5c1a2ce2f6e4ceddadb",
+          "afterSha256": "17cdd6a04e217dadd718ab95d44578665f06a13c8b71b5c1a2ce2f6e4ceddadb",
+          "unchanged": true,
+          "characters": 1811
+        },
+        {
+          "id": "fresh-acra-timing",
+          "question": "We incorporated a Singapore company last week and have not picked a secretary. Can we leave that role vacant indefinitely if the director handles all the paperwork?",
+          "beforeSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "afterSha256": "a6a198635df224ef0d97c39feecb3efc08fa766363931495907e5045747fb2b5",
+          "unchanged": true,
+          "characters": 183
+        },
+        {
+          "id": "fresh-mas-exemption",
+          "question": "We want to manage money for several unrelated clients in Singapore. They are wealthy friends. Does calling this a family office automatically let us operate without a fund management licence?",
+          "beforeSha256": "527e48cb048786be03621910a8642c81f78275164e084af5b4dd9f19f6282a26",
+          "afterSha256": "527e48cb048786be03621910a8642c81f78275164e084af5b4dd9f19f6282a26",
+          "unchanged": true,
+          "characters": 2062
+        },
+        {
+          "id": "fresh-mas-vc",
+          "question": "Our proposed manager will manage only venture capital funds. Does the simplified VCFM route mean no licence is needed, or is it still an application with admission conditions?",
+          "beforeSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "afterSha256": "e35c589a580e2c93ac688b8594960c864576323d71e910c01acd3b96c3b85d15",
+          "unchanged": true,
+          "characters": 1677
+        },
+        {
+          "id": "fresh-mixed",
+          "question": "Our GST-registered company has a valid invoice for office equipment used solely for taxable business supplies, with no blocked category. Can we recover the GST? Separately, we do not know our new employee's age or PR start date: can you confirm her CPF rate?",
+          "beforeSha256": "8a9e1e3d477fbc0571ecc16d1f8ce2172b081536ad579971f9150f0c7e084a8e",
+          "afterSha256": "8a9e1e3d477fbc0571ecc16d1f8ce2172b081536ad579971f9150f0c7e084a8e",
+          "unchanged": true,
+          "characters": 16514
+        },
+        {
+          "id": "fresh-historical",
+          "question": "I am checking a standard-rated Singapore supply made on 15/02/2023, rather than a new sale today. Should the current GST percentage be used simply because we are reviewing it in 2026?",
+          "beforeSha256": "dcc1e2230089c17ff89a894fdaa903d924aa94ba21a31f67a80ccd79d68c51c3",
+          "afterSha256": "dcc1e2230089c17ff89a894fdaa903d924aa94ba21a31f67a80ccd79d68c51c3",
+          "unchanged": true,
+          "characters": 115
+        }
+      ]
+    }
+  }
+}
