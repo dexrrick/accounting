@@ -1,0 +1,64 @@
+# Evidence-grounded AI synthesis and Phase 1 fixes — review handoff, 03/11/2026
+
+## Goal and status
+
+Integrate the existing statutory evidence infrastructure into AI answer generation so practical questions receive coherent, detailed, evidence-backed explanations. Reuse registries, retrieval, grounding, citation provenance, date checks and evidence policies. Also close the two external Phase 1 findings about statutory eligibility routing and concealed provider failures.
+
+The implementation is complete for this integration slice and locally validated. Live answer quality and production acceptance remain unverified. No PR, merge, deployment, source activation or live-model evaluation was performed.
+
+## Exact review target
+
+- Repository: https://github.com/dexrrick/accounting
+- Branch: codex/ai-first-advisory-phase1-20261103
+- Tested implementation head: 0c6e7c272076cd7afc89fcf067c5bcb8d9aed783
+- Base: 0162997f6764324671c2f58d53aad014f71ac841
+- Commit: https://github.com/dexrrick/accounting/commit/0c6e7c272076cd7afc89fcf067c5bcb8d9aed783
+- Diff: https://github.com/dexrrick/accounting/compare/0162997f6764324671c2f58d53aad014f71ac841...0c6e7c272076cd7afc89fcf067c5bcb8d9aed783
+- No PR. A subsequent documentation-only commit adds this handoff and GitHub-check evidence. The implementation SHA above is the exact code-review target; the final publication head is reported in the accompanying chat.
+
+## Changes
+
+evidenceGroundedSynthesis.ts builds answer context from already admitted issue-level quotations, IRAS-policy results, source metadata, case facts, unresolved issues and deterministic outputs. It merges existing workstream and grounding-context evidence rather than replacing either source pipeline. A separate call through the same configured provider assesses each generated claim against its cited passages and facts. One targeted revision is permitted; supported content survives failed revisions. Source admission is recorded separately from model-assessed semantic support.
+
+geminiService.ts runs the existing governed query pipeline first, captures its context/workstreams and conversation scope, then synthesizes eligible evidence-backed answers. An unmapped IRAS issue can reuse the existing scoped retrieval and evidence policy while retaining all original completeness gaps. Complete local output-GST calculators retain their network-free fast path. Scenario and journal state remain owned by the existing engine. Images and Phase 1 full-answer/failure paths retain their established handling.
+
+aiFirstAdvisory.ts strengthens statutory-requirement and third-party applicability routing while preserving conceptual audience and conditional-explanation controls. App.tsx, ChatPanel.tsx, conversationBoundary.ts and accounting.ts expose safe failure causes and retry with the original question, scenario and conversation prefix. Unsupported numeric assertions, including Unicode numerals and mislabelled claims, cannot be authorized by a positive model-review verdict. Failed revisions preserve sanitized error categories whether a partial answer survives or the governed fallback is returned.
+
+Tests: test_ai_first_advisory_phase1.mjs, test_evidence_grounded_synthesis.mjs and test_evidence_grounded_synthesis_pipeline.mjs; the new suites are registered in scripts/run_all_tests.mjs. No source-registry, statutory-content, dependency or deployment-configuration changes.
+
+## Verification
+
+- Node 22 preflight passed. Normal Windows access was needed for Node user-profile initialization; no profile shim was used.
+- Final full regression: 187/187 suites passed, including all 164 smoke suites. Duration approximately 317 seconds.
+- Maintained-code lint, TypeScript, Vite build, Worker build and diff checks passed.
+- Initial smoke: 162/164. Existing unchanged assertions exposed stale-history leakage and an unnecessary AI call in the local GST calculator. Both were fixed, passed individually, and passed in the final full run.
+- Focused mocked tests cover provider handling, claim review, canonical links, conditional case reasoning, scope/gaps, bounded revision, deterministic rejection despite approving review, preserved partial answers, and accounting narration using a real balanced parser/engine journal.
+- Independent read-only reviews identified numerical and failure-cause edges. Targeted fixes, regressions and supervisor integration checks addressed them.
+- All 11 code/test files matched their recorded validation fingerprints before publication. Publication added only evidence and documentation after the tested code was frozen.
+- Root lint failed with 34 pre-existing errors in the unrelated local artifact artifacts/fresh-acceptance-2026-10-24/prepare.mjs. That untracked artifact is unavailable in GitHub; its error listing is included separately. Maintained-code lint passed.
+- GitHub combined-status query returned no statuses for the implementation SHA. The connected workflow lookup returned no PR-triggered runs; it is PR-filtered and not exhaustive. ci.yml excludes this branch from push triggers; Gemini live tests are PR/manual-triggered. No CI was dispatched and no CI pass is claimed.
+- No browser acceptance, paid/live provider evaluation, frozen-corpus answer-quality grading or production verification. Mocked replies establish integration and guard behavior, not real-model accuracy, latency or billed cost.
+
+## Remaining concerns and review focus
+
+Semantic support is assessed by a separate model call using the configured provider; it is not a formal proof or a provider-independent legal opinion. Review whether paraphrases and case applications preserve every material condition, exception, fact owner and effective date. Incomplete accounting or statutory coverage remains explicit rather than being presented as a settled conclusion.
+
+Inspect cross-issue evidence merging, scoped IRAS retrieval for unmapped questions, numeric/date handling, complete reviewer verdicts, bounded revision and deterministic rejection, partial-answer failure reporting, history boundaries, canonical link rendering, and preservation of journal/calculator behavior. Generation and review add model calls; successful flows normally add two and a revision can bring that to four. Diagnostics report these calls separately from legacy core telemetry; live cost remains unmeasured.
+
+All implementation and regression changes are committed and pushed. Unrelated pre-existing untracked artifacts, ignored raw logs, the local exploratory inspect-local-evidence.mjs and the earlier Phase 1 review-fixes artifact directory remain local. No necessary implementation is left uncommitted or unavailable through GitHub. The committed validation-summary.json records the pre-publication snapshot, so its committed/pushed=false fields describe validation time, not current publication status.
+
+## Evidence (paths relative to this directory)
+
+- validation-summary.json — aggregate final results and resolved initial failures.
+- full-regression-summary.txt and full-results.json — individual suite outcomes and runner result.
+- final-checks-results.json — final maintained lint, typecheck and build outcomes.
+- checks-results.json and root-lint-errors.txt — root-lint limitation and initial build checks.
+- validated-tree-hashes.json — raw Windows working-file SHA-256 fingerprints; Git may normalize line endings on publication or checkout.
+- validate.ps1 — exact local validation commands.
+- github-checks.json — GitHub status observations and lookup limitations.
+
+GitHub evidence directory: https://github.com/dexrrick/accounting/tree/codex/ai-first-advisory-phase1-20261103/artifacts/evidence-grounded-synthesis-20261103
+
+## Ready-to-copy review prompt
+
+Independently review the changes identified above in https://github.com/dexrrick/accounting on codex/ai-first-advisory-phase1-20261103, implementation head 0c6e7c272076cd7afc89fcf067c5bcb8d9aed783, against base 0162997f6764324671c2f58d53aad014f71ac841, using your GitHub access. Confirm the exact commit you inspected. Read artifacts/evidence-grounded-synthesis-20261103/review-handoff.txt on the branch for context, then verify its claims against the code, diff, tests and available CI evidence. Prioritize whether verified existing evidence enables complete practical AI answers without weakening source, date, numerical, journal or conversation safeguards. Report actionable findings with severity, file and line references, impact and suggested fixes. State any access or verification limitations. Keep the review read-only.

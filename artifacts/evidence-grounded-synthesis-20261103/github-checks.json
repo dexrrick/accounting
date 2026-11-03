@@ -1,0 +1,11 @@
+{
+  "repository": "dexrrick/accounting",
+  "implementationCommit": "0c6e7c272076cd7afc89fcf067c5bcb8d9aed783",
+  "combinedStatuses": [],
+  "pullRequestFilteredWorkflowRuns": [],
+  "workflowLookupLimitation": "The connected workflow tool filters to pull-request-triggered runs and the first page; this is not an exhaustive workflow audit.",
+  "ciPushBranchExcluded": true,
+  "ciDispatched": false,
+  "pullRequestCreated": false,
+  "deployed": false
+}
