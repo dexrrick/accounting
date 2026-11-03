@@ -1,0 +1,59 @@
+[
+  {
+    "name": "preflight",
+    "exitCode": 0,
+    "elapsedSeconds": 0.05,
+    "arguments": [
+      "scripts/preflight.mjs"
+    ]
+  },
+  {
+    "name": "maintained-lint",
+    "exitCode": 0,
+    "elapsedSeconds": 0.12,
+    "arguments": [
+      "node_modules/oxlint/bin/oxlint",
+      "src",
+      "scripts",
+      "tests",
+      "vite.config.ts",
+      "tailwind.config.js",
+      "postcss.config.js"
+    ]
+  },
+  {
+    "name": "typecheck",
+    "exitCode": 0,
+    "elapsedSeconds": 5.17,
+    "arguments": [
+      "node_modules/typescript/bin/tsc",
+      "-b"
+    ]
+  },
+  {
+    "name": "vite-build",
+    "exitCode": 0,
+    "elapsedSeconds": 2.87,
+    "arguments": [
+      "node_modules/vite/bin/vite.js",
+      "build"
+    ]
+  },
+  {
+    "name": "worker-build",
+    "exitCode": 0,
+    "elapsedSeconds": 0.77,
+    "arguments": [
+      "scripts/build_cloudflare_worker.mjs"
+    ]
+  },
+  {
+    "name": "full-regression",
+    "exitCode": 0,
+    "elapsedSeconds": 311.01,
+    "arguments": [
+      "scripts/run_all_tests.mjs",
+      "--tier=full"
+    ]
+  }
+]

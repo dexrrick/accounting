@@ -106,7 +106,7 @@ export const App: React.FC = () => {
 
       const answerState: AccountingScenarioState = {
         ...response.scenarioState,
-        officialAnswerLinks: extractOfficialAnswerLinks(response.messageText)
+        officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
       setScenario(answerState);
 
@@ -122,8 +122,9 @@ export const App: React.FC = () => {
 
       setMessages((prev) => [...prev, {
         id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
-        text: createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
+        text: response.displayFullAnswer ? response.messageText : createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
         scenarioSnapshot: answerState, clarificationPrompt: response.clarifications,
+        displayFullAnswer: response.displayFullAnswer,
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {

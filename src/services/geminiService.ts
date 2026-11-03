@@ -50,10 +50,13 @@ import {
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
+import { generateAiFirstAdvisory, isAiFirstAdvisoryEligible } from './aiFirstAdvisory';
 
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
+  /** The advisory response is already structured and safe to show in full in chat. */
+  displayFullAnswer?: boolean;
   clarifications?: MissingFieldInfo[];
   imageAnalysisFailed?: boolean;
   /** Provider completion is separate from the independent IRAS evidence gate. */
@@ -566,6 +569,26 @@ export async function processAccountingQuery(
   const journalIntentQuery = removeNegatedJournalDirectives(userInput);
   const outputJournalRequested = Boolean(outputPreference?.journal);
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
+  if (isAiFirstAdvisoryEligible(userInput, providerOrApiKey, hasImages, activeScenario, outputPreference)) {
+    try {
+      const advisory = await generateAiFirstAdvisory(
+        userInput, activeScenario, standard, providerOrApiKey, chatHistory,
+        { onGroundedContext: context => diagnostics?.onGroundedContext?.(context) }
+      );
+      profiler.setQueryMode('AI_FIRST_ADVISORY');
+      profiler.recordFirstVisibleResponse();
+      profiler.logSummary();
+      return attachAmendmentProvenance({
+        messageText: advisory.messageText,
+        scenarioState: advisory.scenarioState,
+        displayFullAnswer: true
+      });
+    } catch {
+      console.warn('[AI-first advisory] Generation failed; retaining the existing offline response path.');
+      profiler.recordFallback();
+      providerOrApiKey = undefined;
+    }
+  }
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {

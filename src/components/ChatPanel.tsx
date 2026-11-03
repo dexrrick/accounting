@@ -5,6 +5,7 @@ import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
 import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
 import { ImageAttachmentPreview } from './ImageAttachmentPreview';
+import { SafeChatAnswer } from './SafeChatAnswer';
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -163,7 +164,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   : 'bg-workspace-raised dark:bg-workspace-raised text-slate-800 dark:text-workspace-secondary rounded-bl-none border border-workspace-border dark:border-workspace-border shadow-xs'
               }`}
             >
-              <div className="whitespace-pre-line font-normal">{msg.text}</div>
+              {msg.displayFullAnswer
+                ? <div className="font-normal"><SafeChatAnswer text={msg.fullText || msg.text} trustedLinks={msg.scenarioSnapshot?.officialAnswerLinks || []} /></div>
+                : <div className="whitespace-pre-line font-normal">{msg.text}</div>}
               {msg.retryPayload && (
                 <button type="button" onClick={() => onRetryMessage(msg.retryPayload!.text, msg.retryPayload!.images)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
                   Retry image analysis

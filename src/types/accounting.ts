@@ -318,6 +318,8 @@ export interface ChatMessage {
   /** Kept in session state only; never persisted with chat preferences or feedback. */
   images?: ChatImageAttachment[];
   fullText?: string;
+  /** Shows a complete structured advisory response instead of a preview. */
+  displayFullAnswer?: boolean;
   clarificationPrompt?: MissingFieldInfo[];
   relationPrompt?: boolean;
   scenarioSnapshot?: AccountingScenarioState;
