@@ -1,0 +1,83 @@
+{
+  "baseHead": "24102c38d1b081f786cf22a643bc16747986eb3d",
+  "uncommitted": true,
+  "frozenUTC": "2026-11-03T05:24:20.5594163Z",
+  "files": [
+    {
+      "path": "src/classification/questionClassifier.ts",
+      "sha256": "43a7e55584a57bf774ab674e3ea7e47da5b232134d65c4528511e0b8c871da1a"
+    },
+    {
+      "path": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "sha256": "55b6efa96ef2ece4abc39113beb90bd34290194bcd016dbce60305bd56fda240"
+    },
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "sha256": "27bda454e086a24e33904f2ac8cb42b5582d4ac568b64753e290e0c2a028e857"
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "sha256": "3938f53a15699645da9fff1a1e4a69ca8ca3859b08d3a39c81c72cbd688018f8"
+    },
+    {
+      "path": "src/retrieval/statutoryKnowledge20261027b.ts",
+      "sha256": "b86edc4551c77216ecef3dda49d1e2946346019eb43af9535ea22fe325607582"
+    },
+    {
+      "path": "src/retrieval/statutoryWorkflows20261029.ts",
+      "sha256": "be6d8e8471cdcc6f9a49b96dbbb1af698c44453fc9bc3c6fb5454b22ec5b0694"
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "sha256": "2eec9959866969c864f0ec92746321528a945137a62d12b66d09aebbc85935d3"
+    },
+    {
+      "path": "src/services/authorityWorkstreams.ts",
+      "sha256": "95cfab0832aa5271ac6e9c7aed7c6b8c6348cf68bee16f4e1df4a58c1055623d"
+    },
+    {
+      "path": "src/services/groundingContextBuilder.ts",
+      "sha256": "129a27b7e7495a57d01e83b642a1d4779e49b55bc93777111a8077bb55395fe8"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "03954f9d3c323bd6ea5908ca4188746ac79c2dbe7440128e605d5c50bdd94307"
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "sha256": "a6e83d53b9e8967c1d7bfbd239b59fe2a1714e61efe0df0535380ff51755a2f0"
+    },
+    {
+      "path": "src/utils/taxJurisdictionNames.ts",
+      "sha256": "a77993fbb2798e6a78be094683cdcfd378f072b6249774d290450bf0c8358df3"
+    },
+    {
+      "path": "tests/regression/test_acra_mom_knowledge_20261027b.mjs",
+      "sha256": "c04e3b2c84173828960ed6f71a45685c3ecdaca49567d2d0d6786b59dda37bb3"
+    },
+    {
+      "path": "tests/regression/test_iras_mas_knowledge_20261027b.mjs",
+      "sha256": "a5ce7b8a36c62e1d0e2324559bec930e268487825ded3c66f7132a802bdf167d"
+    },
+    {
+      "path": "tests/regression/test_iras_wht_filing_treaty_production.mjs",
+      "sha256": "640dd569bc08a605c84d9265734bcfa99d397a631bab34e0c5eb99f53e562b6a"
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "sha256": "e9ab67d24731c38aa6e6751bee3163dea16de617a4cb6a4ed2b5a342a2e1b9f4"
+    },
+    {
+      "path": "tests/regression/test_statutory_workflow_expansions_20261030.mjs",
+      "sha256": "b1075e4ad45bf38390a21256d124271acbfae6211ebe0667bcff63ccc7677855"
+    },
+    {
+      "path": "tests/regression/test_statutory_workflows_20261029.mjs",
+      "sha256": "cf2503126dfd9b0f61132ea2b93ef555fa5d1da0a8b025b952f4f3e7e65d9d0e"
+    },
+    {
+      "path": "tests/regression/test_iras_gst_opening_locator.mjs",
+      "sha256": "23448a411a549e7ef79d4b290cc2debc69295de30356675edcbc18ca4388027a"
+    }
+  ]
+}

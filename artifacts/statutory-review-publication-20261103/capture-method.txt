@@ -1,0 +1,7 @@
+Reproduction notes
+
+The evidence was captured offline through the application entry point processAccountingQuery(question, null, IFRS, undefined) for 150 natural-language cases and through the statutory coverage replay for 200 fixture-plan cases. Both runs recorded zero network and model requests.
+
+The original capture command used local source-manifest directories and an external-fetch guard. Those machine-specific paths and the capture script are not included. The corpus and source-fixture identity hashes are in starting-input-hashes.json; the source fixtures remain in the repository. To reproduce, use the same tracked corpora and source fixtures with the project scripts scripts/evaluate_statutory_natural_20261027.mjs and scripts/replay_statutory_coverage.mjs, then compare answer strings with the five *-answer-strings.json files and preservation.json.
+
+The compact files preserve the exact UTF-8 question and before/after answer strings. They omit the broader per-answer retrieval and evidence trace, which remains available in the original local capture artifacts.

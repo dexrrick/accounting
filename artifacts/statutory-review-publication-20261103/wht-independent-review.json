@@ -1,0 +1,9 @@
+{
+  "status": "NO_REMAINING_MATERIAL_FINDINGS",
+  "scope": "Five changed implementation/test files against 24102c38d1b081f786cf22a643bc16747986eb3d",
+  "initialFinding": "Common jurisdiction aliases and nationality-qualified recipient scope",
+  "resolution": "Aliases and singular/plural recipient guards added; positive general and negative original-scope application replays pass",
+  "readOnly": true,
+  "validationSnapshot": "validated-code-hashes.json",
+  "postReviewChange": "Removed one empty line at end of retrieval file; non-whitespace content equality asserted."
+}

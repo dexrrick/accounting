@@ -1,0 +1,99 @@
+{
+  "status": "COMPLETE_LOCAL_UNCOMMITTED",
+  "baseHead": "24102c38d1b081f786cf22a643bc16747986eb3d",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "files": [
+    {
+      "path": "src/classification/questionClassifier.ts",
+      "sha256": "9c32221bf1d44babf6290fdeeee5c36d5ad1ff654796faf49ba21a101c221c2e"
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "sha256": "6edec661d40940b5025b9dc4fbbd72e22c4a8206127e853387aea42d6247d84e"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "sha256": "e21f5d4a0519be5e4a76350f95fdf9fec5e3d28b6f51f1790d681e706010f011"
+    },
+    {
+      "path": "src/utils/taxJurisdictionNames.ts",
+      "sha256": "a77993fbb2798e6a78be094683cdcfd378f072b6249774d290450bf0c8358df3"
+    },
+    {
+      "path": "tests/regression/test_iras_wht_filing_treaty_production.mjs",
+      "sha256": "640dd569bc08a605c84d9265734bcfa99d397a631bab34e0c5eb99f53e562b6a"
+    }
+  ],
+  "behavior": {
+    "adjacentControls": "Country aliases, lowercase, accent, singular/plural recipients, and independent filing residual",
+    "namedAustralia": "Full original request UNRESOLVED; IRAS INSUFFICIENT; no general treaty answer",
+    "generalNonResident": "General scope retained; IRAS VERIFIED source-backed guidance"
+  },
+  "review": "NO_REMAINING_MATERIAL_FINDINGS",
+  "checks": [
+    {
+      "check": "final-maintained-lint",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T23:57:16.066424Z",
+      "completedUTC": "2026-11-02T23:57:16.248879Z"
+    },
+    {
+      "check": "final-typecheck",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T23:57:16.2675221Z",
+      "completedUTC": "2026-11-02T23:57:20.9196614Z"
+    },
+    {
+      "check": "final-vite-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T23:57:20.923115Z",
+      "completedUTC": "2026-11-02T23:57:23.7978597Z"
+    },
+    {
+      "check": "final-worker-build",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T23:57:23.8006861Z",
+      "completedUTC": "2026-11-02T23:57:24.5553905Z"
+    },
+    {
+      "check": "final-full",
+      "exitCode": 0,
+      "startedUTC": "2026-11-02T23:57:24.557263Z",
+      "completedUTC": "2026-11-03T00:02:02.6015361Z"
+    }
+  ],
+  "fullSuites": 184,
+  "smokeSuites": 161,
+  "preservation": {
+    "answers": 350,
+    "unchanged": 350,
+    "priorCorrect": 213,
+    "priorCorrectUnchanged": 213,
+    "networkRequests": 0,
+    "modelRequests": 0,
+    "drift": []
+  },
+  "historicalBaseline": {
+    "answers": 350,
+    "inputEvidenceDrift": 0,
+    "note": "Same two previously reviewed WHT differences; no new differences",
+    "priorCorrectPreserved": 213,
+    "unchanged": 348
+  },
+  "rootLint": {
+    "file": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "classification": "PRE_EXISTING_UNTRACKED_ARCHIVE",
+    "exitCode": 1,
+    "errors": 34,
+    "maintainedLintExitCode": 0
+  },
+  "postValidationChange": "Removed one empty line at end of retrieval file; non-whitespace content equality asserted.",
+  "diffCheck": "PASS with cr-at-eol for existing tracked CRLF file",
+  "ci": "NOT_RUN",
+  "liveBrowserModelAcceptance": "NOT_RUN",
+  "production": "NOT_RUN",
+  "commitPushMergeDeployment": "NOT_PERFORMED",
+  "resetCreditsUsed": 0,
+  "reportsLocalOnly": true,
+  "completedUTC": "2026-11-03T00:02:38.0838260Z"
+}

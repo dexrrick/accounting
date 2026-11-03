@@ -1,0 +1,1954 @@
+{
+  "scope": "APPLICATION_ENTRY_NATURAL_QUESTIONS_OFFLINE_NO_PROVIDER",
+  "appRoot": "D:\\Accounting",
+  "corpusSha256": "ad28a3e1ec62f1dbc6d76d734e4c04c9c4a894c4b89cb8d5f677a29e05c30f15",
+  "networkRequests": 0,
+  "entryRoute": "processAccountingQuery(question, null, IFRS, undefined)",
+  "modelRequests": 0,
+  "blockedModelEndpoints": [],
+  "addedSourceFixtures": [
+    {
+      "id": "acra-officer-particulars.txt",
+      "sourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+      "title": "Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "eab7036a1ddecf2be02d17f4e59757cf452d2d6dc7d2208e7f437b24111ba49e",
+      "responseSha256": "3d2dee94823ba4ccc63f654936b91c9d2da9db827ed9e2321e2732e4a666201f",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "acra-officer-particulars.txt"
+    },
+    {
+      "id": "acra-annual-return-steps.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+      "title": "Steps to file an annual return",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "ceab11e8fa7f262a6b8ba57a4009c629a20eb3e80d2c34b7414342c577a387a0",
+      "responseSha256": "e5043d7da3a5eeeab53daa7ff5b6485a25b8f5982e68db18f9e4d73cf2f3c129",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "acra-annual-return-steps.txt"
+    },
+    {
+      "id": "acra-xbrl-requirements.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "title": "Financial statements: Filing requirements and exemptions",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "adffff20762e5cddafc22fd0696185f13560ae23cd6a0ea81f83862e145e11c4",
+      "responseSha256": "b9599f1d17b99d0f2d973858787c97df0245b49e7276fb103cb688ae2621b490",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "acra-xbrl-requirements.txt"
+    },
+    {
+      "id": "mom-annual-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+      "title": "Annual leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "3860c323d002a58d0a1eded019ea05be74e3e066635c2768fc483e19be0887dd",
+      "responseSha256": "8fabe393a7727f99ee6320f4b9fc756b4ec42aa3ead3db19e821200fcc6e83f4",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "mom-annual-leave.txt"
+    },
+    {
+      "id": "mom-sick-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+      "title": "Sick leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "acc7a34bd7e233b0fc2055f53b9c1e0225c9c9f4f45399b19c250f37dd3cfefc",
+      "responseSha256": "d4cea1d2d22c25298a8ae9819ab60c43962681a02b521e0857d2c04cc6c5d741",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "mom-sick-leave.txt"
+    },
+    {
+      "id": "mom-public-holidays.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+      "title": "Public holidays: entitlement and pay",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e39d68945cef9536932f8bc76e6defeae59c2aeb15f791e4461a5c9ed6d7961e",
+      "responseSha256": "b6dcef40d4ecdd66d048e29ea59faf93c758d2b742acc2a7a76af6dea12a463c",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "mom-public-holidays.txt"
+    },
+    {
+      "id": "mom-final-salary.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "title": "Paying salary",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "f9f276912ea150290ebdb692a5878492994e42b14b071d24a6ca6412511fe8f2",
+      "responseSha256": "aec006363c1d90c724458b463bdd02f5d31dbb004da4fc018c22f7f8c30ad121",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "mom-final-salary.txt"
+    },
+    {
+      "id": "acra-company-secretary.txt",
+      "sourceUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "title": "Step 4.3: Choosing company directors & other key officers",
+      "authority": "ACRA",
+      "topicIds": [
+        "acra_company-secretary"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "706caa3d601fbea5d4659f987fb719396445c9b55695319c51a18ab644c361aa",
+      "responseSha256": "e0881d7c2ca13329e4d2e16191c6d247a0a278e02612387f019df46eaea7ab5b",
+      "manifest": "acra-mom-source-manifest.json",
+      "filename": "acra-company-secretary.txt"
+    },
+    {
+      "id": "cpf-rates-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "title": "CPF Contribution Rate Table from 1 January 2026",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-pr-contribution-rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "responseSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "manifest": "cpf-source-manifest.json",
+      "filename": "cpf-rates-native-2026.pdf"
+    },
+    {
+      "id": "cpf-computation-guidance-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "title": "How much CPF contributions to pay",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5",
+      "responseSha256": "c2a9aac0472a7093a040a1848fb2564ad5563e044c396f89779b1fc5d5364d5a",
+      "manifest": "cpf-source-manifest.json",
+      "filename": "cpf-computation-guidance-extract.txt"
+    },
+    {
+      "id": "cpf-ow-ceiling-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "title": "What is the Ordinary Wage (OW) ceiling?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-ordinary-wages",
+        "cpf-ordinary-wage-ceiling"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611",
+      "responseSha256": "03614f7a519978c17bb745b06d69d0366988426bd96f09cb688a5b331b593b44",
+      "manifest": "cpf-source-manifest.json",
+      "filename": "cpf-ow-ceiling-extract.txt"
+    },
+    {
+      "id": "cpf-aw-ceiling-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "title": "Examples for computation of Additional Wage (AW) Ceiling",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-additional-wages",
+        "cpf-additional-wage-ceiling"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "responseSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "manifest": "cpf-source-manifest.json",
+      "filename": "cpf-aw-ceiling-native-2026.pdf"
+    },
+    {
+      "id": "cpf-pr-year-status-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "title": "I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-pr-contribution-rates",
+        "cpf_contribution_rates"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359",
+      "responseSha256": "623310671948909cd7bb25f446b35c8e551858b6fa5b96de9b3126205d7bdff5",
+      "manifest": "cpf-source-manifest.json",
+      "filename": "cpf-pr-year-status-extract.txt"
+    },
+    {
+      "id": "iras-mas-input-tax-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "title": "Conditions for Claiming Input Tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "responseSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "manifest": "iras-mas-source-manifest.json",
+      "filename": "iras-mas-input-tax-native.html"
+    },
+    {
+      "id": "iras-mas-eci-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "title": "Estimated Chargeable Income (ECI) Filing",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-eci"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "responseSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "manifest": "iras-mas-source-manifest.json",
+      "filename": "iras-mas-eci-native.html"
+    },
+    {
+      "id": "iras-mas-wht-services-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "title": "Payments that are subject to withholding tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-management-fees"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "responseSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "manifest": "iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-services-native.html"
+    },
+    {
+      "id": "iras-mas-wht-deadline-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+      "title": "Withholding Tax (WHT) filing and payment due date",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-wht-filing-payment-due-date",
+        "iras-wht-deemed-payment-date"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "responseSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "manifest": "iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-deadline-native.html"
+    },
+    {
+      "id": "iras-mas-misconduct-native.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en",
+      "title": "Notice SFA 04-N24 — Reporting of Misconduct of Representatives",
+      "authority": "MAS",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "responseSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "manifest": "iras-mas-source-manifest.json",
+      "filename": "iras-mas-misconduct-native.pdf"
+    }
+  ],
+  "limitation": "The normal processAccountingQuery entry point receives only each question with a null current scenario, IFRS, and no provider. Its default classification, deterministic fallback, retrieval and returned answer are measured. Frozen official source fixtures are served through a strict fetch override; every other URL, including any model endpoint, is blocked with HTTP 404. This is offline application-path evidence, not live semantic-model or browser acceptance. An absent authority evidence presentation and its empty status list remain as returned.",
+  "sources": [
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "title": "Conditions for Claiming Input Tax",
+      "authority": "IRAS",
+      "kind": "IRAS_NATIVE_HTML_PAGE",
+      "sha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+      "title": "GST Filing Due Dates and Requests for Extension",
+      "authority": "IRAS",
+      "kind": "VERIFIED_OFFICIAL_HTML_EXCERPT",
+      "sha256": "e5b1cf19421d191dab5f61a41bd5a377b8841f9f113c54a6bf4d2fe32d00b74a"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "title": "Estimated Chargeable Income (ECI) Filing",
+      "authority": "IRAS",
+      "kind": "IRAS_NATIVE_HTML_PAGE",
+      "sha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "title": "Payments that are subject to withholding tax",
+      "authority": "IRAS",
+      "kind": "IRAS_NATIVE_HTML_PAGE",
+      "sha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+      "title": "What constitutes wages for CPF contributions",
+      "authority": "CPF",
+      "kind": "RETAINED_OFFICIAL_SOURCE_WITH_IDENTITY_ENVELOPE",
+      "sha256": "d105d9627e0881d8d5ed9396eb6c7d4b8648d4aa8dc5c7c69e3568451339c6a2"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions",
+      "title": "When Is the Due Date for CPF Contributions?",
+      "authority": "CPF",
+      "kind": "VERIFIED_OFFICIAL_WEB_READ_EXCERPT",
+      "sha256": "814b4feed4bebac2a542e3f225d294f7e32bd8cb6a1d164355ca1391168b3251"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
+      "title": "What Is the Additional Wage Ceiling?",
+      "authority": "CPF",
+      "kind": "PURPOSE_WRITTEN_PARAPHRASE",
+      "sha256": "cfa7e3740510b64b00c7ac301d6b6c51d992af33f015ac32faee940c4c474ad9"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "title": "How much CPF contributions to pay",
+      "authority": "CPF",
+      "kind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "sha256": "c2a9aac0472a7093a040a1848fb2564ad5563e044c396f89779b1fc5d5364d5a"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "title": "Paying salary",
+      "authority": "MOM",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "aec006363c1d90c724458b463bdd02f5d31dbb004da4fc018c22f7f8c30ad121"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/salary/salary-deductions",
+      "title": "Salary Deductions",
+      "authority": "MOM",
+      "kind": "PURPOSE_WRITTEN_PARAPHRASE",
+      "sha256": "0bc828b7cccf5b4ac27c390d61d5ec20b653828f4ec5ecbc021079ffd1d4936b"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+      "title": "Annual leave eligibility and entitlement",
+      "authority": "MOM",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "8fabe393a7727f99ee6320f4b9fc756b4ec42aa3ead3db19e821200fcc6e83f4"
+    },
+    {
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "title": "Step 4.3: Choosing company directors & other key officers",
+      "authority": "ACRA",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "e0881d7c2ca13329e4d2e16191c6d247a0a278e02612387f019df46eaea7ab5b"
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "title": "Due dates & requirements for annual general meetings (AGMs)",
+      "authority": "ACRA",
+      "kind": "Complete source responses were retrieved over HTTPS with validated TLS certificate verification. Fixture text is selected verbatim output from the repository sourceAdapters.cleanHtmlText helper applied to those retained response bytes; no rule wording was paraphrased into the fixtures.",
+      "sha256": "dc5ab0e64053702cabfb38dc69be270b9648c43e9aa24d10a3492db169a8aa2a"
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "title": "Deadline & requirements for annual returns",
+      "authority": "ACRA",
+      "kind": "Complete source responses were retrieved over HTTPS with validated TLS certificate verification. Fixture text is selected verbatim output from the repository sourceAdapters.cleanHtmlText helper applied to those retained response bytes; no rule wording was paraphrased into the fixtures.",
+      "sha256": "1279737a2245bc6143e5d1ffe6e50f7d469b1a4b94a3dca8e1b2ee52ae3b0dd7"
+    },
+    {
+      "url": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+      "title": "Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026",
+      "authority": "ACRA",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "3d2dee94823ba4ccc63f654936b91c9d2da9db827ed9e2321e2732e4a666201f"
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "title": "Audit Exemptions: Small Company Concept",
+      "authority": "ACRA",
+      "kind": "VERIFIED_OFFICIAL_VISIBLE_EXCERPT_LAYOUT_ADAPTED",
+      "sha256": "06228a80f0f7be14a3e7e3467eb157d022164af17ac644b66de41236d03940d2"
+    },
+    {
+      "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "title": "Fund Management Licensing",
+      "authority": "MAS",
+      "kind": "VERIFIED_OFFICIAL_HTML_EXCERPT",
+      "sha256": "e5267ec91e86ee749ed177c24b2cdd1882f4dbfa03950aad3a78eccdb9ce4aef"
+    },
+    {
+      "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf",
+      "title": "Compliance Toolkit for Venture Capital Fund Managers",
+      "authority": "MAS",
+      "kind": "RETAINED_NATIVE_OFFICIAL_RESPONSE",
+      "sha256": "98e89fb58014311bd5840cd76110b82e4c268189fe0d6d53572100e6a425f440"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+      "title": "Hours of work, overtime and rest day",
+      "authority": "MOM",
+      "kind": "Complete source responses were retrieved over HTTPS with validated TLS certificate verification. Fixture text is selected verbatim output from the repository sourceAdapters.cleanHtmlText helper applied to those retained response bytes; no rule wording was paraphrased into the fixtures.",
+      "sha256": "1bd1b1a8b09ceba31830f0df5c3b208e6eef2ac51b7811d5fc93d59f5e5dbb9e"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-goods-and-services-tax-(gst)",
+      "title": "When to charge Goods and Services Tax (GST)",
+      "authority": "IRAS",
+      "kind": "RAW_HTML_CAPTURE",
+      "sha256": "31e626247687ad1b15f5f9978a73d06305703395af93b6c5e808e6fa1933128e"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/completing-gst-returns",
+      "title": "Completing GST Return",
+      "authority": "IRAS",
+      "kind": "WEB_READ_LAYOUT_ADAPTED_VISIBLE_EXCERPT",
+      "sha256": "b036986703702aeabb24a44f71ace97ecc9b93ad90f80887ea0a4dbd687c3b4a"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/goods-and-services-tax-(gst)-what-it-is-and-how-it-works",
+      "title": "Goods and Services Tax (GST): What it is and how it works",
+      "authority": "IRAS",
+      "kind": "RAW_HTML_CAPTURE",
+      "sha256": "ede5e4ff85f9bf69ad51f2803b533962e57b287ba110d99c4de934497a087a78"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies",
+      "title": "Out-of-scope Supplies",
+      "authority": "IRAS",
+      "kind": "WEB_READ_LAYOUT_ADAPTED_VISIBLE_EXCERPT",
+      "sha256": "2bf6f53e7589b66d3dd6dc19840c7c18c24d796f2c876d094c5a639e2f5e4220"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions",
+      "title": "Who should receive CPF contributions",
+      "authority": "CPF",
+      "kind": "RAW_HTML_CAPTURE",
+      "sha256": "1f84bbc5c18ac5e41070105606c4e997aeeb3ef5b83314002eec675a436dcde0"
+    },
+    {
+      "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "title": "Compliance Toolkit for Licensed Fund Management Companies",
+      "authority": "MAS",
+      "kind": "NATIVE_PDF_EXTRACT",
+      "sha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651"
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+      "title": "Steps to file an annual return",
+      "authority": "ACRA",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "e5043d7da3a5eeeab53daa7ff5b6485a25b8f5982e68db18f9e4d73cf2f3c129"
+    },
+    {
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "title": "Financial statements: Filing requirements and exemptions",
+      "authority": "ACRA",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "b9599f1d17b99d0f2d973858787c97df0245b49e7276fb103cb688ae2621b490"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+      "title": "Sick leave eligibility and entitlement",
+      "authority": "MOM",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "d4cea1d2d22c25298a8ae9819ab60c43962681a02b521e0857d2c04cc6c5d741"
+    },
+    {
+      "url": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+      "title": "Public holidays: entitlement and pay",
+      "authority": "MOM",
+      "kind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "sha256": "b6dcef40d4ecdd66d048e29ea59faf93c758d2b742acc2a7a76af6dea12a463c"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "title": "CPF Contribution Rate Table from 1 January 2026",
+      "authority": "CPF",
+      "kind": "NATIVE_OFFICIAL_PDF",
+      "sha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "title": "What is the Ordinary Wage (OW) ceiling?",
+      "authority": "CPF",
+      "kind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "sha256": "03614f7a519978c17bb745b06d69d0366988426bd96f09cb688a5b331b593b44"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "title": "Examples for computation of Additional Wage (AW) Ceiling",
+      "authority": "CPF",
+      "kind": "NATIVE_OFFICIAL_PDF",
+      "sha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220"
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "title": "I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?",
+      "authority": "CPF",
+      "kind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "sha256": "623310671948909cd7bb25f446b35c8e551858b6fa5b96de9b3126205d7bdff5"
+    },
+    {
+      "url": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+      "title": "Withholding Tax (WHT) filing and payment due date",
+      "authority": "IRAS",
+      "kind": "IRAS_NATIVE_HTML_PAGE",
+      "sha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf"
+    },
+    {
+      "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en",
+      "title": "Notice SFA 04-N24 — Reporting of Misconduct of Representatives",
+      "authority": "MAS",
+      "kind": "MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT",
+      "sha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "plural-australia",
+      "question": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+      "entryRoute": "processAccountingQuery",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence incomplete\n\n**How do tax treaties with Australia affect withholding tax on payments to non-residents?** (party in scope: Company)\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** How do tax treaties with Australia affect withholding tax on payments to non-residents?: The issue has no resolved authority and topic mapping for this workstream.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- How do tax treaties with Australia affect withholding tax on payments to non-residents?: The issue has no resolved authority and topic mapping for this workstream.\n- How do tax treaties with Australia affect withholding tax on payments to non-residents?: No reviewed topic was resolved for this issue",
+      "evidenceStatuses": [
+        {
+          "authority": "IRAS",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ],
+      "authorityWorkstreams": {
+        "query": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "issues": [
+            {
+              "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [
+                "iras-withholding-tax",
+                "iras-wht-treaty-relief"
+              ],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 1,
+              "id": "issue_20f681d7",
+              "status": "UNRESOLVED",
+              "unresolvedReason": "NO_COVERAGE_TOPIC"
+            }
+          ],
+          "coverageEstablished": false,
+          "hasUnmappedResidual": true
+        },
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"How do tax treaties with Australia affect withholding tax on payments to non-residents?\"]",
+          "rawQuery": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+          "inputLength": 87,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 87
+                }
+              }
+            ],
+            "inputLength": 87
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "DETERMINISTIC_FALLBACK",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED"
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "OBSERVATION_WRAPPER_FAILED"
+              }
+            ],
+            "matches": [],
+            "issues": []
+          }
+        },
+        "workstreams": [
+          {
+            "id": "IRAS:IRAS_CORPORATE_TAX",
+            "authority": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "sourceSections": [
+              "IRAS_CORPORATE_TAX"
+            ],
+            "populations": [
+              "COMPANY"
+            ],
+            "issues": [
+              {
+                "issueId": "issue_20f681d7",
+                "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+                "population": "COMPANY",
+                "domain": "IRAS_INCOME_TAX",
+                "operation": "EXPLAIN_RULE",
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                "governingAuthority": "IRAS",
+                "sourceSections": [
+                  "IRAS_CORPORATE_TAX"
+                ],
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": false,
+                  "retrievalAttempted": false,
+                  "evidenceFound": false,
+                  "admitted": false,
+                  "verified": false,
+                  "covered": false
+                },
+                "applicationStatus": "NOT_REQUIRED",
+                "evidenceStatus": "INSUFFICIENT",
+                "verifiedClaims": [],
+                "sources": [],
+                "gaps": [
+                  {
+                    "issueId": "issue_20f681d7",
+                    "authority": "IRAS",
+                    "domain": "IRAS_CORPORATE_TAX",
+                    "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+                    "operation": "EXPLAIN_RULE",
+                    "stage": "mapped",
+                    "code": "NO_COVERAGE_TOPIC",
+                    "reason": "The issue has no resolved authority and topic mapping for this workstream."
+                  }
+                ]
+              }
+            ],
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "verifiedClaims": [],
+            "sources": [],
+            "gaps": [
+              {
+                "issueId": "issue_20f681d7",
+                "authority": "IRAS",
+                "domain": "IRAS_CORPORATE_TAX",
+                "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+                "operation": "EXPLAIN_RULE",
+                "stage": "mapped",
+                "code": "NO_COVERAGE_TOPIC",
+                "reason": "The issue has no resolved authority and topic mapping for this workstream."
+              }
+            ]
+          }
+        ],
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "status": "INSUFFICIENT",
+        "gaps": [
+          {
+            "issueId": "issue-plan",
+            "authority": "UNKNOWN",
+            "domain": "UNKNOWN",
+            "subject": "Issue plan",
+            "operation": "OTHER",
+            "stage": "covered",
+            "code": "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+            "reason": "The reconciled issue plan does not establish coverage of the complete question."
+          },
+          {
+            "issueId": "issue_20f681d7",
+            "authority": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+            "operation": "EXPLAIN_RULE",
+            "stage": "mapped",
+            "code": "NO_COVERAGE_TOPIC",
+            "reason": "The issue has no resolved authority and topic mapping for this workstream."
+          }
+        ]
+      },
+      "authorityEvidencePresentation": {
+        "query": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"How do tax treaties with Australia affect withholding tax on payments to non-residents?\"]",
+          "rawQuery": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+          "inputLength": 87,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 87
+                }
+              }
+            ],
+            "inputLength": 87
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "DETERMINISTIC_FALLBACK",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED"
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "OBSERVATION_WRAPPER_FAILED"
+              }
+            ],
+            "matches": [],
+            "issues": []
+          }
+        },
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "workstreams": [
+          {
+            "id": "IRAS:IRAS_CORPORATE_TAX",
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "domainLabel": "Corporate income tax",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "issues": [
+              {
+                "id": "issue_20f681d7",
+                "subject": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+                "population": "Company",
+                "operation": "EXPLAIN_RULE",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "claims": [],
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "How do tax treaties with Australia affect withholding tax on payments to non-residents?: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "How do tax treaties with Australia affect withholding tax on payments to non-residents?: The issue has no resolved authority and topic mapping for this workstream.",
+          "How do tax treaties with Australia affect withholding tax on payments to non-residents?: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "fetches": [],
+      "blockedModelEndpoints": []
+    },
+    {
+      "id": "general-for-non-resident",
+      "question": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+      "entryRoute": "processAccountingQuery",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence verified\n\n**Effect of a tax treaty on withholding-tax applicability** (party in scope: Company)\n- **IRAS rule explanation:** IRAS guidance shows that a Singapore DTA can change withholding-tax treatment for covered income, but it does not establish a blanket exemption for every payment to a non-resident. The relevant result depends on the recipient’s tax residence, the payment or income category, the applicable treaty article and, for services, where the work is performed and whether the treaty’s permanent-establishment rules are met. IRAS notes that some DTAs contain a separate technical-services article, so a general business-profits rule may not settle that category. The retained source provides examples for non-resident company services and interest; it does not establish a treaty-specific rate or outcome for an unspecified payment. Confirm the recipient, payment type and relevant DTA before concluding. [IRAS | Payments that are subject to withholding tax](https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax)\n\n**Source:** IRAS | Payments that are subject to withholding tax (live external)\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): This rate may be reduced if relief is available under an applicable tax treaty.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n- **Verified official source excerpt** (supports Effect of a tax treaty on withholding-tax applicability): This rate may be reduced if relief is available under an applicable tax treaty.\n- Official source: [IRAS | Payments that are subject to withholding tax](https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax)",
+      "evidenceStatuses": [
+        {
+          "authority": "IRAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "Effect of a tax treaty on withholding-tax applicability",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ],
+      "authorityWorkstreams": {
+        "query": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+        "issuePlan": {
+          "source": "TAXONOMY_FALLBACK",
+          "issues": [
+            {
+              "subject": "Effect of a tax treaty on withholding-tax applicability",
+              "population": "COMPANY",
+              "domain": "IRAS_INCOME_TAX",
+              "governingAuthorities": [
+                "IRAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [
+                "iras-withholding-tax",
+                "iras-wht-treaty-relief"
+              ],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 1,
+              "contextualTopicIds": [
+                "iras-double-tax-agreements"
+              ],
+              "id": "issue_d36e1f4e",
+              "status": "MAPPED"
+            }
+          ],
+          "coverageEstablished": true,
+          "hasUnmappedResidual": false
+        },
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"In general, how does a tax treaty affect withholding tax for non-resident payments?\"]",
+          "rawQuery": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+          "inputLength": 83,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 83
+                }
+              }
+            ],
+            "inputLength": 83
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "DETERMINISTIC_FALLBACK",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED"
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "OBSERVATION_WRAPPER_FAILED"
+              }
+            ],
+            "matches": [],
+            "issues": []
+          }
+        },
+        "workstreams": [
+          {
+            "id": "IRAS:IRAS_CORPORATE_TAX",
+            "authority": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "sourceSections": [
+              "IRAS_CORPORATE_TAX"
+            ],
+            "populations": [
+              "COMPANY"
+            ],
+            "issues": [
+              {
+                "issueId": "issue_d36e1f4e",
+                "subject": "Effect of a tax treaty on withholding-tax applicability",
+                "population": "COMPANY",
+                "domain": "IRAS_INCOME_TAX",
+                "operation": "EXPLAIN_RULE",
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                "governingAuthority": "IRAS",
+                "sourceSections": [
+                  "IRAS_CORPORATE_TAX"
+                ],
+                "lifecycle": {
+                  "requested": true,
+                  "mapped": true,
+                  "retrievalAttempted": true,
+                  "evidenceFound": true,
+                  "admitted": true,
+                  "verified": true,
+                  "covered": true
+                },
+                "applicationStatus": "NOT_REQUIRED",
+                "evidenceStatus": "VERIFIED",
+                "verifiedClaims": [
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                    "quote": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                    "quote": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                    "quote": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                    "quote": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                    "quote": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                    "quote": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                    "quote": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                    "quote": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "supportKind": "EXACT_SOURCE_QUOTE"
+                  }
+                ],
+                "sources": [
+                  {
+                    "id": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                    "authority": "IRAS",
+                    "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+                    "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+                    "legalOrStandardInstrument": "IRAS Administrative Guidance",
+                    "documentTitle": "IRAS | Payments that are subject to withholding tax",
+                    "standardOrActCode": "IRAS",
+                    "paragraphOrSection": "Withholding Tax on Payments to Non-residents",
+                    "sourceText": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n\nIf the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n\nFor DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n\nThis rate may be reduced if relief is available under an applicable tax treaty.",
+                    "principleSummary": "IRAS administrative guidance by payment type, including interest, royalties and service or management fees.",
+                    "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "domain": "IRAS_TAX",
+                    "jurisdiction": "Singapore",
+                    "tags": [
+                      "iras-withholding-tax"
+                    ],
+                    "sourceStatus": "NEEDS_REVIEW",
+                    "sourceType": "OFFICIAL_GUIDANCE",
+                    "evidenceTier": "OFFICIAL_GUIDANCE",
+                    "isVerbatimText": false,
+                    "lastVerifiedDate": "2026-11-02",
+                    "provenance": "LIVE_EXTERNAL",
+                    "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "sourceAuthority": "IRAS",
+                    "retrievedAt": "2026-11-02T23:57:40.949Z",
+                    "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                    "extractionStatus": "PARTIAL",
+                    "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                    "contentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                    "lifecycleState": "CANDIDATE",
+                    "recordRole": "DISCOVERED_EVIDENCE",
+                    "groundingEligible": true,
+                    "urlVerificationStatus": "VERIFIED",
+                    "urlVerifiedDate": "2026-11-02",
+                    "sourceLocator": {
+                      "heading": "IRAS | Payments that are subject to withholding tax",
+                      "document": "IRAS | Payments that are subject to withholding tax",
+                      "sourceType": "HTML"
+                    }
+                  },
+                  {
+                    "id": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                    "authority": "IRAS",
+                    "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+                    "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+                    "legalOrStandardInstrument": "IRAS Administrative Guidance",
+                    "documentTitle": "IRAS | Payments that are subject to withholding tax",
+                    "standardOrActCode": "IRAS",
+                    "paragraphOrSection": "Withholding Tax Treaty Relief and Exemption",
+                    "sourceText": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n\nIf the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n\nFor DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n\nThis rate may be reduced if relief is available under an applicable tax treaty.",
+                    "principleSummary": "IRAS guidance on payment categories that may trigger withholding tax for non-resident companies.",
+                    "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "domain": "IRAS_TAX",
+                    "jurisdiction": "Singapore",
+                    "tags": [
+                      "iras-wht-treaty-relief"
+                    ],
+                    "sourceStatus": "NEEDS_REVIEW",
+                    "sourceType": "OFFICIAL_GUIDANCE",
+                    "evidenceTier": "OFFICIAL_GUIDANCE",
+                    "isVerbatimText": false,
+                    "lastVerifiedDate": "2026-11-02",
+                    "provenance": "LIVE_EXTERNAL",
+                    "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                    "sourceAuthority": "IRAS",
+                    "retrievedAt": "2026-11-02T23:57:40.949Z",
+                    "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                    "extractionStatus": "PARTIAL",
+                    "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                    "contentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                    "lifecycleState": "CANDIDATE",
+                    "recordRole": "DISCOVERED_EVIDENCE",
+                    "groundingEligible": true,
+                    "urlVerificationStatus": "VERIFIED",
+                    "urlVerifiedDate": "2026-11-02",
+                    "sourceLocator": {
+                      "heading": "IRAS | Payments that are subject to withholding tax",
+                      "document": "IRAS | Payments that are subject to withholding tax",
+                      "sourceType": "HTML"
+                    }
+                  }
+                ],
+                "gaps": [],
+                "retrievalTrace": {
+                  "stages": [
+                    {
+                      "stage": "LOCAL_VERIFIED",
+                      "status": "EXHAUSTED",
+                      "reason": "The stage was exhausted without sufficient admitted evidence."
+                    },
+                    {
+                      "stage": "MAPPED_SOURCE",
+                      "status": "SUFFICIENT",
+                      "reason": "The stage supplied reviewed evidence candidates."
+                    },
+                    {
+                      "stage": "SITEMAP_DISCOVERY",
+                      "status": "SKIPPED",
+                      "reason": "This retrieval stage was skipped by the configured scope."
+                    },
+                    {
+                      "stage": "OFFICIAL_DOMAIN_SEARCH",
+                      "status": "SKIPPED",
+                      "reason": "This retrieval stage was skipped by the configured scope."
+                    }
+                  ],
+                  "attempts": [
+                    {
+                      "topicId": "iras-withholding-tax",
+                      "fetchStatus": "HTTP_ERROR"
+                    },
+                    {
+                      "topicId": "iras-withholding-tax",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Payments that are subject to withholding tax"
+                    },
+                    {
+                      "topicId": "iras-withholding-tax",
+                      "fetchStatus": "HTTP_ERROR"
+                    },
+                    {
+                      "topicId": "iras-withholding-tax",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Withholding Tax (WHT) filing and payment due date"
+                    },
+                    {
+                      "topicId": "iras-wht-treaty-relief",
+                      "fetchStatus": "SUCCESS",
+                      "pageTitle": "IRAS | Payments that are subject to withholding tax"
+                    },
+                    {
+                      "topicId": "iras-wht-treaty-relief",
+                      "fetchStatus": "TOPIC_MISMATCH",
+                      "pageTitle": "IRAS | Withholding Tax (WHT) filing and payment due date"
+                    }
+                  ]
+                },
+                "admissionDiagnostics": {
+                  "retrievalTraceStatus": "AVAILABLE",
+                  "retrievalTraceOptionalMetadataStatus": "VALID",
+                  "retrievalEvidenceQualityTrace": {
+                    "path": "DISCOVERED_SOURCE",
+                    "sourceMapIds": [
+                      "IRAS_WHT_RATES_SOURCE_MAP",
+                      "IRAS_WHT_SCOPE_SOURCE_MAP",
+                      "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+                      "IRAS_WHT_DUE_DATE_SOURCE_MAP"
+                    ],
+                    "selectedRecordIds": [
+                      "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                      "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                    ],
+                    "finalVerifiedUrls": [
+                      "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date"
+                    ],
+                    "candidateOnly": true,
+                    "attempts": [
+                      {
+                        "topicId": "iras-withholding-tax",
+                        "sourceMapId": "IRAS_WHT_RATES_SOURCE_MAP",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+                        "fetchStatus": "HTTP_ERROR",
+                        "titleMatched": false,
+                        "contentMatched": false,
+                        "discoveryStage": "MAPPED_SOURCE",
+                        "error": "HTTP response error: 404 "
+                      },
+                      {
+                        "topicId": "iras-withholding-tax",
+                        "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                        "fetchStatus": "SUCCESS",
+                        "finalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                        "pageTitle": "IRAS | Payments that are subject to withholding tax",
+                        "titleMatched": true,
+                        "contentMatched": true,
+                        "discoveryStage": "MAPPED_SOURCE"
+                      },
+                      {
+                        "topicId": "iras-withholding-tax",
+                        "sourceMapId": "IRAS_WHT_OVERVIEW_SOURCE_MAP",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+                        "fetchStatus": "HTTP_ERROR",
+                        "titleMatched": false,
+                        "contentMatched": false,
+                        "discoveryStage": "MAPPED_SOURCE",
+                        "error": "HTTP response error: 404 "
+                      },
+                      {
+                        "topicId": "iras-withholding-tax",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+                        "fetchStatus": "SUCCESS",
+                        "finalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+                        "pageTitle": "IRAS | Withholding Tax (WHT) filing and payment due date",
+                        "titleMatched": true,
+                        "contentMatched": true,
+                        "discoveryStage": "MAPPED_SOURCE"
+                      },
+                      {
+                        "topicId": "iras-wht-treaty-relief",
+                        "sourceMapId": "IRAS_WHT_SCOPE_SOURCE_MAP",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                        "fetchStatus": "SUCCESS",
+                        "finalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                        "pageTitle": "IRAS | Payments that are subject to withholding tax",
+                        "titleMatched": true,
+                        "contentMatched": true,
+                        "discoveryStage": "MAPPED_SOURCE"
+                      },
+                      {
+                        "topicId": "iras-wht-treaty-relief",
+                        "sourceMapId": "IRAS_WHT_DUE_DATE_SOURCE_MAP",
+                        "candidateUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+                        "fetchStatus": "TOPIC_MISMATCH",
+                        "finalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+                        "pageTitle": "IRAS | Withholding Tax (WHT) filing and payment due date",
+                        "titleMatched": false,
+                        "contentMatched": false,
+                        "discoveryStage": "MAPPED_SOURCE",
+                        "error": "Fetched page does not contain enough topic-specific terms to support the mapped topic"
+                      }
+                    ],
+                    "discoveryFetchAttempts": [],
+                    "coverageDecisions": [
+                      {
+                        "scope": "REGISTERED",
+                        "targetTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief",
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "REGISTERED",
+                        "targetTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief",
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "TOPIC",
+                        "targetTopicIds": [
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "REGISTERED",
+                        "targetTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief",
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "TOPIC",
+                        "targetTopicIds": [
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "REGISTERED",
+                        "targetTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief",
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "TOPIC",
+                        "targetTopicIds": [
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "REGISTERED",
+                        "targetTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief",
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      },
+                      {
+                        "scope": "TOPIC",
+                        "targetTopicIds": [
+                          "iras-authority-query-in-general-how-does-a-tax-treaty-affect-withhold"
+                        ],
+                        "admissionTopicIds": [
+                          "iras-withholding-tax",
+                          "iras-wht-treaty-relief"
+                        ],
+                        "eligibleRecordIds": [
+                          "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                          "LIVE_TOPIC_iras-withholding-tax_dd21cb5953d1",
+                          "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f"
+                        ],
+                        "rejectedRecords": [],
+                        "uncoveredTopicIds": [],
+                        "uncoveredConcepts": []
+                      }
+                    ],
+                    "stages": [
+                      {
+                        "stage": "LOCAL_VERIFIED",
+                        "status": "EXHAUSTED",
+                        "reason": "Local retrieval was insufficient for at least one routed topic."
+                      },
+                      {
+                        "stage": "MAPPED_SOURCE",
+                        "status": "SUFFICIENT",
+                        "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+                      },
+                      {
+                        "stage": "SITEMAP_DISCOVERY",
+                        "status": "SKIPPED",
+                        "reason": "Sitemap discovery was not attempted for this request."
+                      },
+                      {
+                        "stage": "OFFICIAL_DOMAIN_SEARCH",
+                        "status": "SKIPPED",
+                        "reason": "Official-domain search was not attempted for this request."
+                      }
+                    ]
+                  },
+                  "candidates": [
+                    {
+                      "recordId": "ITA_SEC45_WITHHOLDING_TAX",
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "irasEvidenceQualityGate",
+                          "passed": true,
+                          "result": "ELIGIBLE"
+                        }
+                      ],
+                      "topics": []
+                    },
+                    {
+                      "recordId": "ITA_SEC45A_WITHHOLDING_TAX_ROYALTIES",
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "irasEvidenceQualityGate",
+                          "passed": true,
+                          "result": "ELIGIBLE"
+                        }
+                      ],
+                      "topics": []
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "irasEvidenceQualityGate",
+                          "passed": true,
+                          "result": "ELIGIBLE"
+                        }
+                      ],
+                      "topics": []
+                    },
+                    {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "irasEvidenceQualityGate",
+                          "passed": true,
+                          "result": "ELIGIBLE"
+                        }
+                      ],
+                      "topics": []
+                    }
+                  ]
+                }
+              }
+            ],
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "verifiedClaims": [
+              {
+                "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                "quote": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                "quote": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                "quote": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                "quote": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                "quote": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                "quote": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                "quote": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                "quote": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              }
+            ],
+            "sources": [
+              {
+                "id": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                "authority": "IRAS",
+                "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+                "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+                "legalOrStandardInstrument": "IRAS Administrative Guidance",
+                "documentTitle": "IRAS | Payments that are subject to withholding tax",
+                "standardOrActCode": "IRAS",
+                "paragraphOrSection": "Withholding Tax on Payments to Non-residents",
+                "sourceText": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n\nIf the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n\nFor DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n\nThis rate may be reduced if relief is available under an applicable tax treaty.",
+                "principleSummary": "IRAS administrative guidance by payment type, including interest, royalties and service or management fees.",
+                "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "domain": "IRAS_TAX",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-withholding-tax"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-02",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "sourceAuthority": "IRAS",
+                "retrievedAt": "2026-11-02T23:57:40.949Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                "contentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-02",
+                "sourceLocator": {
+                  "heading": "IRAS | Payments that are subject to withholding tax",
+                  "document": "IRAS | Payments that are subject to withholding tax",
+                  "sourceType": "HTML"
+                }
+              },
+              {
+                "id": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                "authority": "IRAS",
+                "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+                "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+                "legalOrStandardInstrument": "IRAS Administrative Guidance",
+                "documentTitle": "IRAS | Payments that are subject to withholding tax",
+                "standardOrActCode": "IRAS",
+                "paragraphOrSection": "Withholding Tax Treaty Relief and Exemption",
+                "sourceText": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.\n\nIf the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.\n\nFor DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.\n\nThis rate may be reduced if relief is available under an applicable tax treaty.",
+                "principleSummary": "IRAS guidance on payment categories that may trigger withholding tax for non-resident companies.",
+                "officialSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "domain": "IRAS_TAX",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-wht-treaty-relief"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-02",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "sourceAuthority": "IRAS",
+                "retrievedAt": "2026-11-02T23:57:40.949Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                "contentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-02",
+                "sourceLocator": {
+                  "heading": "IRAS | Payments that are subject to withholding tax",
+                  "document": "IRAS | Payments that are subject to withholding tax",
+                  "sourceType": "HTML"
+                }
+              }
+            ],
+            "gaps": []
+          }
+        ],
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "status": "CONDITIONAL",
+        "gaps": []
+      },
+      "authorityEvidencePresentation": {
+        "query": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"In general, how does a tax treaty affect withholding tax for non-resident payments?\"]",
+          "rawQuery": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+          "inputLength": 83,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 83
+                }
+              }
+            ],
+            "inputLength": 83
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "DETERMINISTIC_FALLBACK",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED"
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "OBSERVATION_WRAPPER_FAILED"
+              }
+            ],
+            "matches": [],
+            "issues": []
+          }
+        },
+        "status": "CONDITIONAL",
+        "evidenceStatus": "VERIFIED",
+        "applicationStatus": "NOT_REQUIRED",
+        "workstreams": [
+          {
+            "id": "IRAS:IRAS_CORPORATE_TAX",
+            "authority": "IRAS",
+            "authorityLabel": "IRAS",
+            "domain": "IRAS_CORPORATE_TAX",
+            "domainLabel": "Corporate income tax",
+            "evidenceStatus": "VERIFIED",
+            "applicationStatus": "NOT_REQUIRED",
+            "issues": [
+              {
+                "id": "issue_d36e1f4e",
+                "subject": "Effect of a tax treaty on withholding-tax applicability",
+                "population": "Company",
+                "operation": "EXPLAIN_RULE",
+                "evidenceStatus": "VERIFIED",
+                "applicationStatus": "NOT_REQUIRED",
+                "claims": [
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  }
+                ],
+                "gaps": []
+              }
+            ],
+            "sources": [
+              {
+                "key": "url:https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax|LIVE_EXTERNAL||",
+                "title": "IRAS | Payments that are subject to withholding tax",
+                "publisher": "Inland Revenue Authority of Singapore (IRAS)",
+                "documentTitle": "IRAS | Payments that are subject to withholding tax",
+                "officialUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                "provenance": "LIVE_EXTERNAL",
+                "claims": [
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-withholding-tax_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the non-resident company resides in a jurisdiction that has concluded a DTA with Singapore, the provisions under the DTA apply.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If the company is a resident of a jurisdiction with which Singapore has an Avoidance of Double Tax Agreement (DTA), the DTA may provide for relief from double taxation, depending on the provision of the DTA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For DTAs which contain a separate Article on Technical Services (e.g. the Singapore-Malaysia DTA), the tax to be withheld depends on the tax rate stated in this Article. However, if the non-resident company has a permanent establishment in Singapore, the provisions of the Business Profits Article apply instead.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "This rate may be reduced if relief is available under an applicable tax treaty.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-wht-treaty-relief_b4c249e8e76f",
+                      "documentHash": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+                      "canonicalUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+                      "retrievedAt": "2026-11-02T23:57:40.949Z"
+                    },
+                    "issueIds": [
+                      "issue_d36e1f4e"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  }
+                ]
+              }
+            ],
+            "gaps": []
+          }
+        ],
+        "gaps": []
+      },
+      "fetches": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+        "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-(WHT)",
+        "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date"
+      ],
+      "blockedModelEndpoints": []
+    }
+  ]
+}

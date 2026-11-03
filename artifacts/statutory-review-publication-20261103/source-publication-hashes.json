@@ -1,0 +1,102 @@
+{
+  "codeCommit": "4129caa5f611073aeecf87d3ac95b5d32a79f274",
+  "baseCommit": "24102c38d1b081f786cf22a643bc16747986eb3d",
+  "canonicalization": "SHA-256 after replacing CRLF with LF for both committed blobs and working-tree text.",
+  "files": [
+    {
+      "path": "src/classification/questionClassifier.ts",
+      "validatedWorktreeSha256": "43a7e55584a57bf774ab674e3ea7e47da5b232134d65c4528511e0b8c871da1a",
+      "gitCanonicalLfSha256": "43a7e55584a57bf774ab674e3ea7e47da5b232134d65c4528511e0b8c871da1a"
+    },
+    {
+      "path": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "validatedWorktreeSha256": "55b6efa96ef2ece4abc39113beb90bd34290194bcd016dbce60305bd56fda240",
+      "gitCanonicalLfSha256": "2fcb4e6da3b5094e595893e782187640d121c2d19f675dc531fcbb02e786766a"
+    },
+    {
+      "path": "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+      "validatedWorktreeSha256": "27bda454e086a24e33904f2ac8cb42b5582d4ac568b64753e290e0c2a028e857",
+      "gitCanonicalLfSha256": "bb1b6d089af9d08889709ff5d37fcdb1c7ee1b5b07d7f456d40cad9e07859dd9"
+    },
+    {
+      "path": "src/retrieval/irasMasKnowledge20261027b.ts",
+      "validatedWorktreeSha256": "3938f53a15699645da9fff1a1e4a69ca8ca3859b08d3a39c81c72cbd688018f8",
+      "gitCanonicalLfSha256": "43dc3a2c1af043c605ff9efe956a67557a04b4068e083f48a7748c8a991d0ead"
+    },
+    {
+      "path": "src/retrieval/statutoryKnowledge20261027b.ts",
+      "validatedWorktreeSha256": "b86edc4551c77216ecef3dda49d1e2946346019eb43af9535ea22fe325607582",
+      "gitCanonicalLfSha256": "b86edc4551c77216ecef3dda49d1e2946346019eb43af9535ea22fe325607582"
+    },
+    {
+      "path": "src/retrieval/statutoryWorkflows20261029.ts",
+      "validatedWorktreeSha256": "be6d8e8471cdcc6f9a49b96dbbb1af698c44453fc9bc3c6fb5454b22ec5b0694",
+      "gitCanonicalLfSha256": "be6d8e8471cdcc6f9a49b96dbbb1af698c44453fc9bc3c6fb5454b22ec5b0694"
+    },
+    {
+      "path": "src/retrieval/targetDateResolver.ts",
+      "validatedWorktreeSha256": "2eec9959866969c864f0ec92746321528a945137a62d12b66d09aebbc85935d3",
+      "gitCanonicalLfSha256": "3499080a92581aaa9519e2a4374bc2c7e06bc9fc5a0473a217a12376ed2c4ce3"
+    },
+    {
+      "path": "src/services/authorityWorkstreams.ts",
+      "validatedWorktreeSha256": "95cfab0832aa5271ac6e9c7aed7c6b8c6348cf68bee16f4e1df4a58c1055623d",
+      "gitCanonicalLfSha256": "827d77b8ab41e4e1928bc8a16380c92628a7589c86ca5cbc4659bd1ff6011551"
+    },
+    {
+      "path": "src/services/groundingContextBuilder.ts",
+      "validatedWorktreeSha256": "129a27b7e7495a57d01e83b642a1d4779e49b55bc93777111a8077bb55395fe8",
+      "gitCanonicalLfSha256": "129a27b7e7495a57d01e83b642a1d4779e49b55bc93777111a8077bb55395fe8"
+    },
+    {
+      "path": "src/services/semanticQuestionUnderstanding.ts",
+      "validatedWorktreeSha256": "03954f9d3c323bd6ea5908ca4188746ac79c2dbe7440128e605d5c50bdd94307",
+      "gitCanonicalLfSha256": "814c41d48c4baddb74ef008ce809b4ec36f68cb79079e46fd972669b6157fb86"
+    },
+    {
+      "path": "src/standards/coverageRegistry.ts",
+      "validatedWorktreeSha256": "a6e83d53b9e8967c1d7bfbd239b59fe2a1714e61efe0df0535380ff51755a2f0",
+      "gitCanonicalLfSha256": "3b6bc0e92c5b6e76ffd8d7bb6514411c634b28b15e2440f1914b9f0b7c707cbd"
+    },
+    {
+      "path": "src/utils/taxJurisdictionNames.ts",
+      "validatedWorktreeSha256": "a77993fbb2798e6a78be094683cdcfd378f072b6249774d290450bf0c8358df3",
+      "gitCanonicalLfSha256": "f0a26a572b942452b9797a9b5c20a9ceaa99bd2faeb44746722f0b3f7bba047c"
+    },
+    {
+      "path": "tests/regression/test_acra_mom_knowledge_20261027b.mjs",
+      "validatedWorktreeSha256": "c04e3b2c84173828960ed6f71a45685c3ecdaca49567d2d0d6786b59dda37bb3",
+      "gitCanonicalLfSha256": "5d14ae412fb724d845424d3700f37b47c01b15bf1f141a6e851fc4d99947368c"
+    },
+    {
+      "path": "tests/regression/test_iras_mas_knowledge_20261027b.mjs",
+      "validatedWorktreeSha256": "a5ce7b8a36c62e1d0e2324559bec930e268487825ded3c66f7132a802bdf167d",
+      "gitCanonicalLfSha256": "a5ce7b8a36c62e1d0e2324559bec930e268487825ded3c66f7132a802bdf167d"
+    },
+    {
+      "path": "tests/regression/test_iras_wht_filing_treaty_production.mjs",
+      "validatedWorktreeSha256": "640dd569bc08a605c84d9265734bcfa99d397a631bab34e0c5eb99f53e562b6a",
+      "gitCanonicalLfSha256": "9e0c1bc8463527ee98dee400ed5128331ba1bc0a1bece26aa9377298ae462b86"
+    },
+    {
+      "path": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+      "validatedWorktreeSha256": "e9ab67d24731c38aa6e6751bee3163dea16de617a4cb6a4ed2b5a342a2e1b9f4",
+      "gitCanonicalLfSha256": "e9ab67d24731c38aa6e6751bee3163dea16de617a4cb6a4ed2b5a342a2e1b9f4"
+    },
+    {
+      "path": "tests/regression/test_statutory_workflow_expansions_20261030.mjs",
+      "validatedWorktreeSha256": "b1075e4ad45bf38390a21256d124271acbfae6211ebe0667bcff63ccc7677855",
+      "gitCanonicalLfSha256": "b1075e4ad45bf38390a21256d124271acbfae6211ebe0667bcff63ccc7677855"
+    },
+    {
+      "path": "tests/regression/test_statutory_workflows_20261029.mjs",
+      "validatedWorktreeSha256": "cf2503126dfd9b0f61132ea2b93ef555fa5d1da0a8b025b952f4f3e7e65d9d0e",
+      "gitCanonicalLfSha256": "cf2503126dfd9b0f61132ea2b93ef555fa5d1da0a8b025b952f4f3e7e65d9d0e"
+    },
+    {
+      "path": "tests/regression/test_iras_gst_opening_locator.mjs",
+      "validatedWorktreeSha256": "23448a411a549e7ef79d4b290cc2debc69295de30356675edcbc18ca4388027a",
+      "gitCanonicalLfSha256": "c0d83a13b4c79abde26b5ca016617dee2175512a3d802b60544d48c2b53305cd"
+    }
+  ]
+}

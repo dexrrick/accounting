@@ -1,0 +1,30 @@
+{
+  "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf",
+  "rawPdfSha256": "98e89fb58014311bd5840cd76110b82e4c268189fe0d6d53572100e6a425f440",
+  "locator": {
+    "page": 4,
+    "row": 2,
+    "tableStructure": "AMBIGUOUS"
+  },
+  "columnCells": {
+    "activity": "To seek MAS’ approval to acquire or hold, whether directly or indirectly, an interest of 20% or more of the share capital of any corporation; or establish any branch (whether in Singapore or elsewhere). For this condition, \"corporation\" has the same meaning as in section 2 of the SFA, but excludes a corporation which is incorporated for the purpose of arranging a closed-end fund or a collective investment scheme",
+    "form": "No prescribed form",
+    "timing": "Prior to the acquisition or control of a corporation, or the establishment of any branch",
+    "condition": "Licence condition or registration condition",
+    "route": "MAS-Tx",
+    "category": "Entity Activities & Particulars ( Establish/Acquire/ Hold Major Stake in a Corporation)"
+  },
+  "selectedQuote": "2 | To seek MAS’ approval to acquire or hold, whether directly or indirectly, an interest of 20% or more of the share capital of any corporation; or establish any branch (whether in Singapore or elsewhere). For this condition, \"corporation\" has the same meaning as in section 2 of the SFA, but excludes a corporation which is incorporated for the purpose of arranging a closed-end fund or a collective investment scheme | No prescribed form | Prior to the acquisition or control of a corporation, or the establishment of any branch | Licence condition or registration condition | MAS-Tx | Entity Activities & Particulars ( Establish/Acquire/ Hold Major Stake in a Corporation)",
+  "proof": {
+    "uniqueRow2AndRow3BoundarySamePage": true,
+    "boundedRowProof": true,
+    "finalSelectedQuoteReproof": true,
+    "selectedQuoteLength": 677
+  },
+  "previousAdmissionRejection": {
+    "predicate": "topic:mas-vcfm-branch-approval.issueSubjectSupport",
+    "result": false,
+    "cause": "The final selected row quote no longer included the adjacent row 3 boundary required by the full-document quote matcher."
+  },
+  "currentFocusedApplicationResult": "Both balanced-mas-1 and balanced-mas-2 pass with verified prior-approval and no-prescribed-form guidance, a complete row 2 excerpt, and the retained raw PDF hash."
+}
