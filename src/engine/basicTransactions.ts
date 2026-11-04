@@ -335,8 +335,15 @@ function extractPayrollLiabilitySettlementAmounts(query: string): { salPayableCe
   return { salPayableCents, cpfPayableCents };
 }
 
+function isUnrelatedNonPayrollClause(clause: string): boolean {
+  if (/\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll|cpf|employees?|staff)\b/i.test(clause)) {
+    return false;
+  }
+  return /\b(?:rent|rental|utilities|utility|electricity|water\s+bill|office\s+supplies|stationery|insurance|audit\s+fees?|professional\s+fees?|legal\s+fees?|advertising|marketing|maintenance|repairs?|subscriptions?|suppliers?|vendors?|creditors?|customers?|clients?|trade\s+(?:payables?|receivables?)|accounts?\s+(?:payable|receivable)|inventory|goods|merchandise|equipment|machinery|vehicles?|computers?|laptops?|furniture|software|loans?|interest|dividends?|share\s+capital|drawings|iras|corporate\s+tax|income\s+tax|property\s+tax|gst)\b/i.test(clause);
+}
+
 function hasAffirmativePayrollSettlementVerb(query: string): boolean {
-  const clauses = query.split(/[;.]|\b(?:while|whereas|but|however|although|though)\b/i).map(c => c.trim()).filter(Boolean);
+  const clauses = query.split(/(?:;|(?<!\d)\.(?!\d))|\b(?:while|whereas|but|however|although|though)\b/i).map(c => c.trim()).filter(Boolean);
   const invertedModalQuestion = /^(?:what\s+if\b|(?:how|when|where|why)\s+(?:should|would|could|will|shall|can|must)\b|(?:should|would|could|will|shall|might|must|can)\b|may\s+(?:we|i|the|our|salar(?:y|ies)|wages?|payroll|cpf|settlement|payment)\b)/i;
 
   const verbalRegex = /\b(?:paid|(?<!\b(?:gross|net|basic|base|overtime|leave|holiday|sick|maternity|paternity|notice|severance|variable|fixed|monthly|staff|employee|total|take[- ]home|director(?:'s)?|annual|regular|ordinary)\s+)pay|paying|settle[ds]?|settling|remit(?:ted|ting)?|disburse[ds]?|disbursing|clear(?:ed|ing)?|transferred)\b/gi;
@@ -345,6 +352,7 @@ function hasAffirmativePayrollSettlementVerb(query: string): boolean {
 
   for (const c of clauses) {
     if (invertedModalQuestion.test(c)) continue;
+    if (isUnrelatedNonPayrollClause(c)) continue;
 
     // Part A — Verbal predicates
     verbalRegex.lastIndex = 0;
@@ -402,13 +410,10 @@ function hasAffirmativePayrollSettlementVerb(query: string): boolean {
         }
       }
 
-      const passiveCompletedAfterNominal = /^(?:\s+of\s+[^.;]*?)?\s+(?:was|were|has\s+been|have\s+been|had\s+been|is\s+now|are\s+now)\s+(?:(?:already|duly|fully|actually|promptly)\s+)*(?:made|done|completed|effected|processed|executed|paid|settled|remitted|disbursed|cleared|transferred)\b/i.test(subSuffix);
-
-      const clauseLeadingNominalWithMethod = /^(?:full\s+)?(?:settlement|payment|remittance|disbursement)\s+of\b/i.test(c)
-        && detectPayMethodInText(c) !== 'NONE'
+      const passiveCompletedAfterNominal = /^(?:\s+of\s+(?:[^.;]|\.(?=\d))*?)?\s+(?:was|were|has\s+been|have\s+been|had\s+been|is\s+now|are\s+now)\s+(?:(?:already|duly|fully|actually|promptly)\s+)*(?:made|done|completed|effected|processed|executed|paid|settled|remitted|disbursed|cleared|transferred)\b/i.test(subSuffix)
         && !nonCompletedSuffixCue.test(suffix);
 
-      if (governedByAffirmativeVerb || passiveCompletedAfterNominal || clauseLeadingNominalWithMethod) {
+      if (governedByAffirmativeVerb || passiveCompletedAfterNominal) {
         return true;
       }
     }
@@ -417,15 +422,15 @@ function hasAffirmativePayrollSettlementVerb(query: string): boolean {
 }
 
 function hasPriorPayrollAccrualContext(query: string): boolean {
-  return /\b(?:last\s+(?:month|period|quarter|week|year)(?:'s)?|prior[- ]\s*(?:month|period|quarter|week|year)(?:'s)?|previous\s+(?:month|period|quarter|week|year)(?:'s)?|previously|already|earlier)\b[^.;]*?\b(?:accrue[ds]?|accrual|recogni[sz]ed|recorded|booked)\b/i.test(query)
-    || /\b(?:accrue[ds]?|accrual)\b[^.;]*?\b(?:last\s+(?:month|period|quarter|week|year)|in\s+the\s+(?:prior|previous)\s+(?:month|period|quarter|week|year)|previously|earlier)\b/i.test(query);
+  return /\b(?:last\s+(?:month|period|quarter|week|year)(?:'s)?|prior[- ]\s*(?:month|period|quarter|week|year)(?:'s)?|previous\s+(?:month|period|quarter|week|year)(?:'s)?|previously|already|earlier)\b(?:[^.;]|\.(?=\d))*?\b(?:accrue[ds]?|accrual|recogni[sz]ed|recorded|booked)\b/i.test(query)
+    || /\b(?:accrue[ds]?|accrual)\b(?:[^.;]|\.(?=\d))*?\b(?:last\s+(?:month|period|quarter|week|year)|in\s+the\s+(?:prior|previous)\s+(?:month|period|quarter|week|year)|previously|earlier)\b/i.test(query);
 }
 
 function isPriorPayrollAccrualSettlement(query: string): boolean {
   if (!hasAffirmativePayrollSettlementVerb(query)) return false;
 
   const directSettlementCue = /\b(?:paid|pay(?:ing)?|settle[ds]?|settling|settlement\s+of|remit(?:ted|ting)?|disburse[ds]?|clear(?:ed|ing)?)\s+(?:the\s+|our\s+|both\s+)?(?:previously\s+|prior[- ]month(?:'s)?\s+|last\s+month(?:'s)?\s+)?(?:accrued|payable)\s+(?:monthly\s+|staff\s+)?(?:payroll|salar(?:y|ies)|wages?|cpf)\b/i.test(query)
-    || /\b(?:previously\s+|already\s+)?accrued\s+(?:monthly\s+|staff\s+)?(?:payroll|salar(?:y|ies)|wages?)\b[^.;]*?\b(?:was|were|has\s+been|have\s+been)\s+(?:paid|settled|disbursed|cleared)\b/i.test(query);
+    || /\b(?:previously\s+|already\s+)?accrued\s+(?:monthly\s+|staff\s+)?(?:payroll|salar(?:y|ies)|wages?)\b(?:[^.;]|\.(?=\d))*?\b(?:was|were|has\s+been|have\s+been)\s+(?:paid|settled|disbursed|cleared)\b/i.test(query);
 
   const liabilityAmountsCue = Boolean(extractPayrollLiabilitySettlementAmounts(query));
 
@@ -493,7 +498,7 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
 
   let activeText = query;
   if (isPriorAccrualSettlement) {
-    const sentences = query.split(/(?<=[.;])\s+/).map(s => s.trim()).filter(Boolean);
+    const sentences = query.split(/(?:;|(?<!\d)\.(?!\d))\s+/).map(s => s.trim()).filter(Boolean);
     const nonHistoricalSentences = sentences.filter(s => {
       const hasPriorTemporal = /\b(?:last\s+(?:month|period|quarter|week|year)|prior\s+(?:month|period|quarter|week|year)|previous\s+(?:month|period|quarter|week|year)|previously|already|earlier)\b/i.test(s);
       const hasAccrual = /\b(?:accrue[ds]?|accrual|recogni[sz]ed|recorded|booked)\b/i.test(s);
@@ -514,8 +519,9 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
   const intermediateAux = '(?:(?:not|never|yet|ever|also|both|all|still|later|soon|actually|fully|to|be|been|being|have|has|had)\\s+){0,4}';
   const activeLookbehind = `(?<!\\b${modalNegatorPrefix}\\s+${intermediateAux})(?<!(?<!\\b(?:in|of|for|on|from|during|\\d)\\s+)\\bmay\\s+${intermediateAux})`;
 
-  const majorClauses = activeText.split(/[;.]|\b(?:while|whereas|but|however|although|though)\b/i).map(s => s.trim()).filter(Boolean);
+  const majorClauses = activeText.split(/(?:;|(?<!\d)\.(?!\d))|\b(?:while|whereas|but|however|although|though)\b/i).map(s => s.trim()).filter(s => Boolean(s) && !isUnrelatedNonPayrollClause(s));
   const subClauses = majorClauses.flatMap(mc => mc.split(/,(?!\d)/).map(s => s.trim()).filter(Boolean));
+  const payrollText = majorClauses.join('; ');
 
   const hasClauseConditionalCue = (s: string) => /\b(?:if|unless|whether|assuming|suppose|supposing|provided(?:\s+that)?|in\s+case|subject\s+to|conditional(?:\s+(?:on|upon))?|contingent(?:\s+(?:on|upon))?|upon\s+approval|once\s+approved)\b/i.test(s);
 
@@ -547,12 +553,12 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
 
   // 2. Salary-specific status
   const salLegPrefix = '\\b(?:(?:the|our|monthly|staff|employee|net|gross)\\s+)*(?:salar(?:y|ies)|wages?|net\\s+pay)\\b';
-  const salNoCross = '(?:(?!\\bcpf\\b)(?:[^;.,]|,(?=\\d)))*?';
+  const salNoCross = '(?:(?!\\bcpf\\b)(?:[^;.,]|,(?=\\d)|\\.(?=\\d)))*?';
   const salaryExplicitUnpaid = isPriorAccrualSettlement
-    ? new RegExp(salLegPrefix + salNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-    : (new RegExp(salLegPrefix + salNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-       || new RegExp(salLegPrefix + salNoCross + '\\b(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:still\\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(activeText)
-       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(activeText));
+    ? new RegExp(salLegPrefix + salNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+    : (new RegExp(salLegPrefix + salNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+       || new RegExp(salLegPrefix + salNoCross + '\\b(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:still\\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(payrollText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|staff|employee|net|gross)\s+)*(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(payrollText));
 
   const salaryActivePaidRegex = new RegExp(activeLookbehind + '\\b(?:paid|pay(?:ing)?|disburse[ds]?|settle[ds]?|transfer(?:red)?)\\s+(?:(?:the|our|monthly|staff|employee|net|gross)\\s+)*(?:salar(?:y|ies)|wages?|net\\s+pay)(?:\\s+(?:of\\s+)?(?:\\bSGD\\s*|S\\$\\s*|\\$\\s*)[\\d,.]+)?(?:\\s+payable)?\\b', 'i');
   const salaryPassivePaidRegex = new RegExp('(?:(?:monthly|staff|employee|net|gross)\\s+)*(?:salar(?:y|ies)|wages?|net\\s+pay)(?:\\s+payable)?(?:\\s+(?:of\\s+)?(?:\\bSGD\\s*|S\\$\\s*|\\$\\s*)[\\d,.]+)?(?:\\s+payable)?\\s+(?:(?:is|are|was|were|have\\s+been|has\\s+been|already|also)\\s+)*' + activeLookbehind + '\\b(?:paid|disbursed|settled|transferred)\\b', 'i');
@@ -566,12 +572,12 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
 
   // 3. CPF-specific status
   const cpfLegPrefix = '(?<!\\b(?:employee|employer)(?:\'s|s\')?\\s+)\\bcpf(?:\\s+(?:contributions?|payable))?\\b';
-  const cpfNoCross = '(?:(?!\\b(?:salar(?:y|ies)|wages?|net\\s+pay)\\b)(?:[^;.,]|,(?=\\d)))*?';
+  const cpfNoCross = '(?:(?!\\b(?:salar(?:y|ies)|wages?|net\\s+pay)\\b)(?:[^;.,]|,(?=\\d)|\\.(?=\\d)))*?';
   const cpfExplicitUnpaid = isPriorAccrualSettlement
-    ? new RegExp(cpfLegPrefix + cpfNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-    : (new RegExp(cpfLegPrefix + cpfNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-       || new RegExp(cpfLegPrefix + cpfNoCross + '\\b(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:still\\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(activeText)
-       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|employee\\s+and\\s+employer|combined|total)\\s+)*cpf(?:\s+contributions?)?\b/i.test(activeText));
+    ? new RegExp(cpfLegPrefix + cpfNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+    : (new RegExp(cpfLegPrefix + cpfNoCross + '\\b' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+       || new RegExp(cpfLegPrefix + cpfNoCross + '\\b(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:still\\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(payrollText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:(?:the|our|monthly|employee\\s+and\\s+employer|combined|total)\\s+)*cpf(?:\s+contributions?)?\b/i.test(payrollText));
 
   const cpfActivePaidRegex = new RegExp(activeLookbehind + '\\b(?:paid|pay(?:ing)?|remit(?:ted|ting)?|settle[ds]?|transfer(?:red)?)\\s+(?:(?:the|our|monthly|employee\\s+and\\s+employer|combined|total|both)\\s+)*cpf(?:\\s+(?:contributions?|payable))?(?:\\s+(?:of\\s+)?(?:\\bSGD\\s*|S\\$\\s*|\\$\\s*)[\\d,.]+)?(?:\\s+payable)?\\b', 'i');
   const cpfPassivePaidRegex = new RegExp('(?<!\\b(?:employee|employer)(?:\'s|s\')?\\s+)\\bcpf(?:\\s+(?:contributions?|payable))?(?:\\s+(?:of\\s+)?(?:\\bSGD\\s*|S\\$\\s*|\\$\\s*)[\\d,.]+)?(?:\\s+payable)?\\s+(?:(?:is|are|was|were|have\\s+been|has\\s+been|already|also)\\s+)*' + activeLookbehind + '\\b(?:paid|remitted|settled|transferred)\\b', 'i');
@@ -590,35 +596,48 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
   const genActivePaid = majorClauses.some(mc => genActivePaidRegex.test(mc) && !hasClauseConditionalCue(mc) && !isFuturePresentPassive(mc));
   const genPassivePaid = majorClauses.some(mc => genPassivePaidRegex.test(mc) && !hasClauseConditionalCue(mc) && !isFuturePresentPassive(mc));
   const generalSettlementPaid = majorClauses.some(mc =>
-    /\bsettlement\s+(?:was|were|has\s+been|is\s+now|are\s+now)\s+(?:(?:already|duly|fully|actually|promptly)\s+)*(?:made|done|completed|effected|processed|executed|paid|settled|remitted|disbursed|transferred)\b/i.test(mc)
+    (/\b(?:settlement|payment)\s+(?:was|were|has\s+been|have\s+been|is\s+now|are\s+now)\s+(?:(?:already|duly|fully|actually|promptly)\s+)*(?:made|done|completed|effected|processed|executed|paid|settled|remitted|disbursed|transferred)\b/i.test(mc)
+      || new RegExp(activeLookbehind + '\\b(?:made|completed|effected|processed|executed)\\s+(?:(?:a|an|the|our|full)\\s+){0,3}(?:settlement|payment|remittance|disbursement)\\b', 'i').test(mc))
     && !hasClauseConditionalCue(mc)
     && !isFuturePresentPassive(mc)
   );
 
   const generalPayrollPaid = genActivePaid || genPassivePaid || generalSettlementPaid;
 
-  const generalPayrollUnpaid = /\b(?:accrue[ds]?|accrual|unpaid|outstanding)\s+(?:the\s+|our\s+)?(?:monthly\s+)?payroll\b/i.test(activeText)
-    || /\bpayroll\s+(?:is\s+|was\s+|remains?\s+)?(?:unpaid|outstanding|accrued)\b/i.test(activeText)
-    || new RegExp('\\bpayroll\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText);
+  const generalPayrollUnpaid = /\b(?:accrue[ds]?|accrual|unpaid|outstanding)\s+(?:the\s+|our\s+)?(?:monthly\s+)?payroll\b/i.test(payrollText)
+    || /\bpayroll\s+(?:is\s+|was\s+|remains?\s+)?(?:unpaid|outstanding|accrued)\b/i.test(payrollText)
+    || new RegExp('\\bpayroll\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText);
 
-  const hasGeneralUnpaidPhrase = new RegExp('\\b(?:settlements?|payments?)\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-    || new RegExp('\\b(?:scheduled|planned|slated)\\s+(?:for\\s+(?:payment|settlement|remittance)|to\\s+be\\s+(?:paid|settled))\\b', 'i').test(activeText)
-    || new RegExp('\\bshould\\s+be\\s+(?:paid|settled|remitted)\\b', 'i').test(activeText)
-    || /\b(?:no\s+(?:payment|settlement)|settlement\s+was\s+not\s+made|without\s+(?:any\s+)?(?:payment|settlement))\b/i.test(activeText)
-    || /\b(?:(?:is|are|was|were|remains?)\s+)?(?:subject\s+to|conditional(?:\s+(?:on|upon))?|contingent(?:\s+(?:on|upon))?)\b/i.test(activeText)
-    || /\bif\s+(?:approved|paid|settled)\b/i.test(activeText);
+  const hasGeneralUnpaidPhrase = new RegExp('\\b(?:settlements?|payments?)\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+    || new RegExp('\\b(?:scheduled|planned|slated)\\s+(?:for\\s+(?:payment|settlement|remittance)|to\\s+be\\s+(?:paid|settled))\\b', 'i').test(payrollText)
+    || new RegExp('\\bshould\\s+be\\s+(?:paid|settled|remitted)\\b', 'i').test(payrollText)
+    || /\b(?:no\s+(?:payment|settlement)|settlement\s+was\s+not\s+made|without\s+(?:any\s+)?(?:payment|settlement))\b/i.test(payrollText)
+    || /\b(?:(?:is|are|was|were|remains?)\s+)?(?:subject\s+to|conditional(?:\s+(?:on|upon))?|contingent(?:\s+(?:on|upon))?)\b/i.test(payrollText)
+    || /\bif\s+(?:approved|paid|settled)\b/i.test(payrollText);
 
-  const hasBothLiabilitiesInText = /\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\b/i.test(activeText) && /\bcpf\b/i.test(activeText);
+  const hasBothLiabilitiesInText = /\b(?:salar(?:y|ies)|wages?|net\s+pay|payroll)\b/i.test(payrollText) && /\bcpf\b/i.test(payrollText);
 
   const jointUnpaid = isPriorAccrualSettlement
-    ? (new RegExp(jointSubject + '\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
+    ? (new RegExp(jointSubject + '\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
        || (hasBothLiabilitiesInText && hasGeneralUnpaidPhrase && !salaryExplicitPaid && !cpfExplicitPaid))
-    : (new RegExp(jointSubject + '\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(activeText)
-       || new RegExp(jointSubject + '\\s+(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(activeText)
-       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:both\s+)?(?:salar(?:y|ies)|wages?|payroll)\s+and\s+cpf\b/i.test(activeText)
+    : (new RegExp(jointSubject + '\\s+' + pendingOrFutureOrUnpaidPredicate, 'i').test(payrollText)
+       || new RegExp(jointSubject + '\\s+(?:(?:is|are|was|were|remains?|still|have\\s+been|has\\s+been)\\s+)*(?:unpaid|outstanding|accrued|payable|owing|due)\\b', 'i').test(payrollText)
+       || /\b(?:unpaid|outstanding|accrued|accrue|accruing)\s+(?:both\s+)?(?:salar(?:y|ies)|wages?|payroll)\s+and\s+cpf\b/i.test(payrollText)
        || (hasBothLiabilitiesInText && hasGeneralUnpaidPhrase && !salaryExplicitPaid && !cpfExplicitPaid));
 
   const hasLiabilitySettlementAmounts = Boolean(extractPayrollLiabilitySettlementAmounts(query));
+
+  const unattributedJointPaid = hasLiabilitySettlementAmounts
+    && !salaryExplicitPaid
+    && !cpfExplicitPaid
+    && !salaryExplicitUnpaid
+    && !cpfExplicitUnpaid
+    && majorClauses.some(mc =>
+      !/\b(?:salar(?:y|ies)|wages?|net\s+pay|cpf|payroll)\b/i.test(mc)
+      && hasAffirmativePayrollSettlementVerb(mc)
+      && !hasClauseConditionalCue(mc)
+      && !isFuturePresentPassive(mc)
+    );
 
   const salaryPaid = salaryExplicitUnpaid
     ? false
@@ -628,7 +647,7 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
         ? true
         : jointPaid
           ? true
-          : (isPriorAccrualSettlement && (generalPayrollPaid || (hasLiabilitySettlementAmounts && !cpfExplicitPaid)))
+          : (isPriorAccrualSettlement && (generalPayrollPaid || unattributedJointPaid))
             ? true
             : generalPayrollUnpaid
               ? false
@@ -644,12 +663,12 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
         ? true
         : jointPaid
           ? true
-          : (isPriorAccrualSettlement && (generalPayrollPaid || (hasLiabilitySettlementAmounts && !salaryExplicitPaid)))
+          : (isPriorAccrualSettlement && (generalPayrollPaid || unattributedJointPaid))
             ? true
             : false;
 
   // 5. Clause-aware payment method
-  const rawClauses = activeText.split(/;|\b(?:while|whereas|but)\b|:(?!\d)|\.(?!\d)/i).map(c => c.trim()).filter(Boolean);
+  const rawClauses = activeText.split(/(?:;|:(?!\d)|(?<!\d)\.(?!\d)|\b(?:while|whereas|but)\b)/i).map(c => c.trim()).filter(c => Boolean(c) && !isUnrelatedNonPayrollClause(c));
   const clauses: string[] = [];
   const statusVerbRegex = /\b(?:paid|pay(?:ing)?|disburse[ds]?|remit(?:ted|ting)?|settle[ds]?|settling|(?<!\bbank\s+)transfer(?:red)?|transferred|clear(?:ed|ing)?|(?:is|are|was|were|remains?|still)\s+(?:still\s+)?(?:unpaid|outstanding|accrued|payable|owing|due)|not\s+(?:yet\s+)?(?:paid|settled|remitted))\b/i;
 
@@ -734,7 +753,7 @@ function resolvePayrollSettlementStatus(query: string): PayrollSettlementStatus 
     }
   }
 
-  if (cpfPaid && cpfPaymentMethod === 'NONE' && !salaryPaid && /\bcpf\s+board\b/i.test(activeText)) {
+  if (cpfPaid && cpfPaymentMethod === 'NONE' && !salaryPaid && /\bcpf\s+board\b/i.test(payrollText)) {
     cpfPaymentMethod = 'BANK';
   }
 
@@ -1808,7 +1827,7 @@ const templates: Template[] = [
       const missing: MissingFieldInfo[] = [];
 
       if (isPriorAccrual && !salaryPaid && !cpfPaid) {
-        missing.push(need('payrollSettlementTarget', 'Accrued payroll liability settled', 'Which previously accrued liability was paid (salaries payable, CPF payable, or both)?'));
+        missing.push(need('payrollSettlementTarget', 'Accrued payroll liability settled', 'Has payment actually been completed, and which accrued liability was settled (salaries payable, CPF payable, or both)?'));
       }
 
       if (salaryPaid && (salaryPaymentMethod === 'NONE' || salaryPaymentMethod === 'AMBIGUOUS')) {
@@ -2268,6 +2287,59 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
       ((!/\bdeferred\s+tax\b/i.test(query) && /\bbond\b/i.test(query)) || /\b(?:non[- ]?poci|poci|significant\s+increase\s+in\s+credit\s+risk|sppi|12-month\s+or\s+lifetime)\b/i.test(query))) return undefined;
 
   const hasPayrollOrCpfTerms = /\b(?:CPF|payroll|salar(?:y|ies)|wages?)\b/i.test(query);
+
+  if (hasPayrollOrCpfTerms) {
+    const topClauses = query.split(/(?:;|(?<!\d)\.(?!\d))/).map(c => c.trim()).filter(Boolean);
+    const payrollClauses = topClauses.filter(c => !isUnrelatedNonPayrollClause(c));
+    const unrelatedClauses = topClauses.filter(isUnrelatedNonPayrollClause);
+    if (payrollClauses.length > 0 && unrelatedClauses.length > 0) {
+      const payrollState = matchBasicTransaction(payrollClauses.join('; '));
+      if (payrollState) {
+        const combinedMissing: MissingFieldInfo[] = [...(payrollState.missingFields ?? [])];
+        const unrelatedStates: (AccountingScenarioState | undefined)[] = [];
+        for (const uc of unrelatedClauses) {
+          const subState = matchBasicTransaction(uc);
+          unrelatedStates.push(subState);
+          if (!subState) {
+            if (getAllAmounts(uc).length === 0) {
+              combinedMissing.push(need('separateEventAmount', 'Separate transaction amount', `What is the SGD amount for the separate transaction ("${uc.replace(/[.]+$/, '')}")?`));
+            }
+          } else if (!subState.isComplete || (subState.missingFields && subState.missingFields.length > 0)) {
+            for (const f of subState.missingFields ?? []) {
+              if (f.fieldKey === 'amount') {
+                combinedMissing.push(need('separateEventAmount', 'Separate transaction amount', `What is the SGD amount for the separate transaction ("${uc.replace(/[.]+$/, '')}")?`));
+              } else {
+                combinedMissing.push(f);
+              }
+            }
+          }
+        }
+        if (combinedMissing.length > 0) {
+          return {
+            ...payrollState,
+            rawQuery: query,
+            accountingTreatmentSummary: 'Payroll liabilities and the separate transaction (' + unrelatedClauses.join('; ') + ') are distinct accounting events. Unrelated payments do not settle Salaries Payable or CPF Payable; confirm each event and any missing transaction amount before posting.',
+            directGroups: [],
+            isComplete: false,
+            missingFields: combinedMissing,
+            authorityStatus: 'CONDITIONAL'
+          };
+        } else {
+          const combinedGroups = [
+            ...(payrollState.directGroups ?? []),
+            ...unrelatedStates.flatMap((s, idx) => (s?.directGroups ?? []).map(g => ({ ...g, id: `${g.id}-multi-${idx}` })))
+          ];
+          return {
+            ...payrollState,
+            rawQuery: query,
+            directGroups: combinedGroups,
+            isComplete: combinedGroups.length > 0
+          };
+        }
+      }
+    }
+  }
+
   const PAYROLL_TEMPLATE_IDS = new Set(['PAYROLL_ACCRUAL', 'PAYROLL_NET_PAY_SETTLEMENT', 'CPF_REMITTANCE', 'SALARY_ACCRUAL', 'SALARY_PAYMENT']);
 
   // Customer invoice settlements take priority over a generic "bank transfer".
@@ -3332,6 +3404,42 @@ export function resolveBasicOwnerDrawingsFollowUp(
   query: string,
   currentScenario?: AccountingScenarioState | null
 ): AccountingScenarioState | undefined {
+  if (currentScenario?.scenarioType === 'BASIC_BOOKKEEPING' && (!currentScenario.missingFields || currentScenario.missingFields.length === 0)) {
+    if (currentScenario.directGroups?.length === 1) {
+      const g = currentScenario.directGroups[0];
+      const salLine = g.lines.find(l => l.accountName === 'Salaries Payable' && l.credit > 0);
+      const cpfLine = g.lines.find(l => l.accountName === 'CPF Payable' && l.credit > 0);
+      const hasDebitedPayables = g.lines.some(l => (l.accountName === 'Salaries Payable' || l.accountName === 'CPF Payable') && l.debit > 0);
+      const hasAccruedPayables = (salLine !== undefined || cpfLine !== undefined) && !hasDebitedPayables;
+
+      if (
+        hasAccruedPayables
+        && getAllAmounts(query).length === 0
+        && /\b(?:salar(?:y|ies)|wages?|net\s+pay|cpf|payroll)\b/i.test(query)
+        && /\b(?:paid|pay(?:ing)?|settle[ds]?|settling|remit(?:ted)?|disburse[ds]?|transferred|will|pending|next\s+(?:week|month))\b/i.test(query)
+        && !query.split(/(?:;|(?<!\d)\.(?!\d))/).some(isUnrelatedNonPayrollClause)
+      ) {
+        const liabilityParts: string[] = [];
+        if (salLine?.credit) liabilityParts.push(`Salaries payable of SGD ${salLine.credit.toFixed(2)}`);
+        if (cpfLine?.credit) liabilityParts.push(`CPF payable of SGD ${cpfLine.credit.toFixed(2)}`);
+
+        const ans = query.trim().replace(/[.!?]+$/, '').trim();
+        if (!hasAffirmativePayrollSettlementVerb(ans)) {
+          return {
+            ...currentScenario,
+            rawQuery: query,
+            directGroups: [],
+            isComplete: false,
+            authorityStatus: 'CONDITIONAL',
+            missingFields: [need('payrollSettlementTarget', 'Accrued payroll liability settled', 'Has payment actually been completed, and which accrued liability was settled (salaries payable, CPF payable, or both)?')]
+          };
+        } else {
+          return matchBasicTransaction(`${liabilityParts.join(' and ')}; ${ans}`);
+        }
+      }
+    }
+  }
+
   if (currentScenario?.scenarioType !== 'BASIC_BOOKKEEPING' || !currentScenario.missingFields?.length) {
     return undefined;
   }
@@ -3468,14 +3576,16 @@ export function resolveBasicOwnerDrawingsFollowUp(
 
   // payrollSettlementTarget follow-up
   if (missingKeys.has('payrollSettlementTarget')) {
-    if ((!hasAffirmativePayrollSettlementVerb(answer) && /\b(?:no|none|neither|nor|not|never|without|unpaid|unsettled|pending|awaiting|yet|will|shall|should|would|could|might|must|scheduled|planned|later|next\s+(?:week|month))\b/i.test(answer))
-      || /\b(?:no|none|neither|nor|not|never|without|unpaid|unsettled|pending|awaiting|yet\s+to|to\s+be|will|shall|should|would|could|might|must|scheduled|planned)\b/i.test(answer)
-      || /\b(?:if|unless|whether|assuming|suppose|supposing|provided(?:\s+that)?|subject\s+to|conditional|contingent|upon\s+approval|once\s+approved|tomorrow|in\s+due\s+course|(?:(?<!\b(?:in|of|for|on|from|during|\d)\s+)may))\b/i.test(answer)) {
+    const hasAffirmative = hasAffirmativePayrollSettlementVerb(answer);
+    if (!hasAffirmative && (
+      /\b(?:no|none|neither|nor|not|never|without|unpaid|unsettled|pending|awaiting|yet|to\s+be|will|shall|should|would|could|might|must|scheduled|planned|later|next\s+(?:week|month))\b/i.test(answer)
+      || /\b(?:if|unless|whether|assuming|suppose|supposing|provided(?:\s+that)?|subject\s+to|conditional|contingent|upon\s+approval|once\s+approved|tomorrow|in\s+due\s+course|(?:(?<!\b(?:in|of|for|on|from|during|\d)\s+)may))\b/i.test(answer)
+    )) {
       return { ...currentScenario, directGroups: [], isComplete: false };
     }
 
     // Clean baseQuery before appending confirmed settlement follow-up
-    const rawClauses = baseQuery.split(/(?<=[;.]|\bwhile\b|\bwhereas\b|\bbut\b)\s*/i).map(c => c.trim()).filter(Boolean);
+    const rawClauses = baseQuery.split(/(?<=;|(?<!\d)\.(?!\d)|\bwhile\b|\bwhereas\b|\bbut\b)\s*/i).map(c => c.trim()).filter(c => Boolean(c) && !isUnrelatedNonPayrollClause(c));
     const keptClauses = rawClauses.filter(c => {
       const hasAmt = getAllAmounts(c).length > 0;
       const isAffirmative = hasAffirmativePayrollSettlementVerb(c);
@@ -3483,8 +3593,18 @@ export function resolveBasicOwnerDrawingsFollowUp(
     }).map(c => c.replace(/^[;,.\s]+|[;,.\s]+$/g, ''));
     let cleanedPayrollBase = keptClauses.join('; ');
     cleanedPayrollBase = cleanedPayrollBase.replace(/^(?:full\s+)?(?:settlement|payment|remittance|disbursement)\s+of\s+/i, '');
-    cleanedPayrollBase = cleanedPayrollBase.replace(/(?:;|\.|,)?\s*(?:(?:are|is|were|was|have(?:\s+been)?|has(?:\s+been)?|had(?:\s+been)?|remain|remains)\s+)?(?:not\s+(?:yet\s+)?(?:paid|settled|remitted|made)\b[^.;]*|yet\s+to\s+be\s+(?:paid|settled|remitted|made)\b[^.;]*|(?:pending|awaiting)\s+(?:payment|settlement|remittance|disbursement|bank\s+transfer|approval)\b[^.;]*|(?:by\s+bank(?:\s+transfer)?\s+)?(?:subject\s+to|if|unless|conditional\s+(?:on|upon)|contingent\s+(?:on|upon))\b[^.;]*|scheduled\s+(?:for|to)\b[^.;]*|(?:will|shall|should|would|could|might|must)\s+(?:be\s+)?(?:paid|settled|remitted|made|disbursed|transferred)\b[^.;]*)/gi, '').trim();
+    cleanedPayrollBase = cleanedPayrollBase.replace(/(?:;|\.|,)?\s*(?:(?:are|is|were|was|have(?:\s+been)?|has(?:\s+been)?|had(?:\s+been)?|remain|remains)\s+)?(?:not\s+(?:yet\s+)?(?:paid|settled|remitted|made)\b(?:[^.;]|\.(?=\d))*|yet\s+to\s+be\s+(?:paid|settled|remitted|made)\b(?:[^.;]|\.(?=\d))*|(?:pending|awaiting)\s+(?:payment|settlement|remittance|disbursement|bank\s+transfer|approval)\b(?:[^.;]|\.(?=\d))*|(?:by\s+bank(?:\s+transfer)?\s+)?(?:subject\s+to|if|unless|conditional\s+(?:on|upon)|contingent\s+(?:on|upon))\b(?:[^.;]|\.(?=\d))*|scheduled\s+(?:for|to)\b(?:[^.;]|\.(?=\d))*|(?:will|shall|should|would|could|might|must)\s+(?:be\s+)?(?:paid|settled|remitted|made|disbursed|transferred)\b(?:[^.;]|\.(?=\d))*)/gi, '').trim();
     cleanedPayrollBase = cleanedPayrollBase.replace(/^[;,.\s]+|[;,.\s]+$/g, '');
+
+    if (detectPayMethodInText(answer) !== 'NONE') {
+      cleanedPayrollBase = cleanedPayrollBase
+        .replace(/\s*\b(?:(?:by|via|through)\s+(?:a\s+)?(?:bank(?:\s+transfer|\s+account|\s+payment)?|giro|paynow|cheque|check|wire(?:\s+transfer)?)|(?:in|with|by)\s+(?:physical\s+)?cash|from\s+(?:petty\s+cash|(?:the\s+|our\s+)?bank(?:\s+account)?)|bank\s+transfer)\b/gi, '')
+        .trim();
+    }
+
+    if (hasAffirmative && /\b(?:salar(?:y|ies)|wages?|net\s+pay|cpf)\b/i.test(answer)) {
+      return matchBasicTransaction(`${cleanedPayrollBase}; ${answer}`);
+    }
 
     const hasCpfInBase = /\bcpf\b/i.test(cleanedPayrollBase);
     const hasSalaryInBase = /\b(?:salar(?:y|ies)|wages?|net\s+pay)\b/i.test(cleanedPayrollBase);

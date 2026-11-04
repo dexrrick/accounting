@@ -2898,4 +2898,111 @@ assert.equal(g22_B10_comp2.lines[2].accountName, 'Cash at Bank');
 assert.equal(g22_B10_comp2.lines[2].credit, 5850);
 assert.equal(g22_B10_comp2.isBalanced, true);
 
+// 23. PR #26 Review Findings A, B, C, and D Regression Coverage
+
+// Finding A: Nominal settlement phrase without completed governing verb fails closed
+const q_fa_both = "Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank transfer.";
+const p_fa_both = await parseAccountingQuery(q_fa_both, null);
+assert.equal(p_fa_both.isComplete, false, 'Finding A: Nominal settlement phrase must not complete without finite completion verb');
+assert.equal(p_fa_both.directGroups?.length ?? 0, 0, 'Must produce 0 journal groups');
+assert.ok(p_fa_both.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'), 'Must request payrollSettlementTarget');
+
+const res_fa_both = await processAccountingQuery(q_fa_both, null);
+assert.equal(res_fa_both.scenarioState.isComplete, false, 'processAccountingQuery must return incomplete scenarioState');
+assert.equal(res_fa_both.scenarioState.directGroups?.length ?? 0, 0, 'processAccountingQuery must not post settlement journal');
+assert.ok(res_fa_both.clarifications?.some(f => f.fieldKey === 'payrollSettlementTarget'), 'processAccountingQuery must return clarification prompt');
+
+const q_fa_sal = "Settlement of salaries payable S$4,000 by bank transfer.";
+const p_fa_sal = await parseAccountingQuery(q_fa_sal, null);
+assert.equal(p_fa_sal.isComplete, false);
+assert.equal(p_fa_sal.directGroups?.length ?? 0, 0);
+assert.ok(p_fa_sal.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+const q_fa_cpf = "Settlement of CPF payable S$1,850 by bank transfer.";
+const p_fa_cpf = await parseAccountingQuery(q_fa_cpf, null);
+assert.equal(p_fa_cpf.isComplete, false);
+assert.equal(p_fa_cpf.directGroups?.length ?? 0, 0);
+assert.ok(p_fa_cpf.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'));
+
+// Finding B: Multi-event separation: Unrelated payment must not settle payroll liabilities or invent separate amounts
+const q_fb = "Salaries payable S$4,000 and CPF payable S$1,850; rent was paid by bank transfer.";
+const p_fb = await parseAccountingQuery(q_fb, null);
+assert.equal(p_fb.isComplete, false, 'Finding B: Multi-event query with missing separate amount must fail closed');
+assert.equal(p_fb.directGroups?.length ?? 0, 0, 'Must produce 0 journal groups');
+assert.ok(p_fb.missingFields.some(f => f.fieldKey === 'payrollSettlementTarget'), 'Must request payrollSettlementTarget confirmation');
+assert.ok(p_fb.missingFields.some(f => f.fieldKey === 'separateEventAmount'), 'Must request separateEventAmount for rent');
+assert.ok(p_fb.accountingTreatmentSummary?.includes('distinct accounting events'), 'Must clarify separate events in summary');
+
+// Finding C: Decimal amounts in partial settlement: S$4,000.50 paid, S$1,850.25 future
+const q_fc = "Salaries payable S$4,000.50 paid by bank, CPF payable S$1,850.25 will be paid by bank next week.";
+const p_fc = await parseAccountingQuery(q_fc, null);
+assert.equal(p_fc.isComplete, true, 'Finding C: Settled decimal leg must complete');
+assert.equal(p_fc.directGroups?.length, 1);
+const g_fc = p_fc.directGroups[0];
+assert.equal(g_fc.lines.length, 2, 'Must have exactly 2 lines (Salaries Payable & Bank)');
+assert.ok(g_fc.lines.every(l => l.category !== 'EXPENSE'), 'Must have zero expense lines');
+assert.ok(g_fc.lines.every(l => !/cpf/i.test(l.accountName)), 'Must have zero CPF lines');
+assert.equal(g_fc.lines[0].accountName, 'Salaries Payable');
+assert.equal(g_fc.lines[0].debit, 4000.5);
+assert.equal(g_fc.lines[1].accountName, 'Cash at Bank');
+assert.equal(g_fc.lines[1].credit, 4000.5);
+assert.equal(g_fc.totalDebit, 4000.5);
+assert.equal(g_fc.totalCredit, 4000.5);
+assert.equal(g_fc.isBalanced, true);
+const v_fc = validateJournalGroups([g_fc], { rawQuery: q_fc });
+assert.equal(v_fc.isValid, true);
+
+// Finding D: Asymmetric compound settlement across different Turn 1 states and reversed clause order
+// Turn 1 Variant 1: Pending liability state
+const t1_pending = await parseAccountingQuery("Salaries payable S$4,000 and CPF payable S$1,850.", null);
+assert.equal(t1_pending.isComplete, false);
+
+// Turn 1 Variant 2: Completed accrual state
+const t1_accrual = await parseAccountingQuery("Monthly payroll: gross salaries S$5,000, employee CPF S$1,000, employer CPF S$850, unpaid at month-end.", null);
+assert.equal(t1_accrual.isComplete, true);
+assert.equal(t1_accrual.directGroups?.length, 1);
+
+// Turn 1 Variant 3: Finding A pending nominal state
+const t1_nominal = p_fa_both;
+
+// Turn 2 Variant A: "Salaries were paid by bank, but CPF will be paid next week."
+const fd_answers_bank = [
+  await parseAccountingQuery("Salaries were paid by bank, but CPF will be paid next week.", t1_pending),
+  await parseAccountingQuery("Salaries were paid by bank, but CPF will be paid next week.", t1_accrual),
+  await parseAccountingQuery("Salaries were paid by bank, but CPF will be paid next week.", t1_nominal)
+];
+for (const p of fd_answers_bank) {
+  assert.equal(p.isComplete, true, 'Turn 2 must complete the settled salary leg');
+  assert.equal(p.directGroups?.length, 1);
+  const g = p.directGroups[0];
+  assert.equal(g.lines.length, 2);
+  assert.ok(g.lines.every(l => l.category !== 'EXPENSE'), 'Must have zero expense lines');
+  assert.ok(g.lines.every(l => !/cpf/i.test(l.accountName)), 'CPF payable remains outstanding');
+  assert.equal(g.lines[0].accountName, 'Salaries Payable');
+  assert.equal(g.lines[0].debit, 4000);
+  assert.equal(g.lines[1].accountName, 'Cash at Bank');
+  assert.equal(g.lines[1].credit, 4000);
+  assert.equal(g.isBalanced, true);
+}
+
+// Turn 2 Variant B: Reversed clause order with cash: "CPF will be paid next week, while salaries were paid in cash."
+const fd_answers_cash = [
+  await parseAccountingQuery("CPF will be paid next week, while salaries were paid in cash.", t1_pending),
+  await parseAccountingQuery("CPF will be paid next week, while salaries were paid in cash.", t1_accrual),
+  await parseAccountingQuery("CPF will be paid next week, while salaries were paid in cash.", t1_nominal)
+];
+for (const p of fd_answers_cash) {
+  assert.equal(p.isComplete, true, 'Reversed clause order must complete settled salary leg in cash');
+  assert.equal(p.directGroups?.length, 1);
+  const g = p.directGroups[0];
+  assert.equal(g.lines.length, 2);
+  assert.ok(g.lines.every(l => l.category !== 'EXPENSE'), 'Must have zero expense lines');
+  assert.ok(g.lines.every(l => !/cpf/i.test(l.accountName)), 'CPF payable remains outstanding');
+  assert.equal(g.lines[0].accountName, 'Salaries Payable');
+  assert.equal(g.lines[0].debit, 4000);
+  assert.equal(g.lines[1].accountName, 'Cash');
+  assert.equal(g.lines[1].credit, 4000);
+  assert.equal(g.isBalanced, true);
+}
+
 console.log('PASS | Double-entry reliability, deterministic integrity, and guardrail validation');
