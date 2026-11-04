@@ -614,6 +614,75 @@ const supportedRule = quote;
 }
 
 {
+  const cpfIssue = {
+    ...makeIssue('issue-cpf', { withSource: false, subject: 'CPF contribution month',
+      operation: 'FILING_REQUIREMENT', evidenceRequirement: 'CASE_FACTS', applicationStatus: 'UNRESOLVED' }),
+    domain: 'CPF_PAYROLL', population: 'EMPLOYEE', governingAuthority: 'CPF'
+  };
+  let verificationPacket;
+  const scripted = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const passage = packet.evidencePassages.find(item => item.issueId === 'issue-gst');
+    assert.ok(passage);
+    return { claims: [claim('resolved-gst-issue', 'The admitted rule applies to this stated GST purchase.',
+      [passage.id], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' })] };
+  }, ({ prompt }) => {
+    verificationPacket = packetFrom(prompt);
+    return { verdicts: verificationPacket.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+    })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    issues: [makeIssue('issue-gst', { applicationStatus: 'VERIFIED' }), cpfIssue],
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' },
+    context: { missingFacts: ['The CPF contribution month has not been provided.'] }
+  }), { call: scripted.call });
+  assert.ok(result.messageText.includes('The admitted rule applies to this stated GST purchase.'),
+    'an unowned fact for a second issue does not suppress the resolved GST conclusion');
+  assert.equal(verificationPacket.claims[0].mustRemainConditional, false,
+    'a separate issue gap does not make the resolved issue conditional');
+  assert.deepEqual(verificationPacket.claims[0].questionWideUnresolvedFacts,
+    ['The CPF contribution month has not been provided.'], 'the existing batched verifier sees unowned facts');
+  assert.match(result.messageText, /Whether CPF contribution month applies to your circumstances remains unresolved/,
+    'the separately unresolved CPF issue remains visible');
+}
+
+{
+  const contextualIssue = {
+    id: 'context-gst', subject: 'GST input tax recovery', population: 'COMPANY', domain: 'IRAS_GST',
+    operation: 'CHECK_ELIGIBILITY', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', status: 'MAPPED',
+    governingAuthorities: ['IRAS'], contextualAuthorities: []
+  };
+  const scripted = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const passage = packet.evidencePassages.find(item => item.issueId === 'context-gst');
+    assert.ok(passage, 'the context-only passage retains its validated issue owner');
+    return { claims: [claim('context-only-application', 'The requested context-only outcome is supported.',
+      [passage.id], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'context-gst' })] };
+  }, ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    assert.equal(packet.claims[0].issue.issueId, 'context-gst');
+    assert.equal(packet.claims[0].mustRemainConditional, false,
+      'complete facts and the validated context issue establish the claim scope');
+    return { verdicts: packet.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+    })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    noWorkstreams: true,
+    claimVerification: { accepted: [sourceClaim], rejected: [] },
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' },
+    context: {
+      missingFacts: [],
+      evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03', status: 'SUFFICIENT', uncoveredTopicIds: [] },
+      authorityIssue: { authority: 'IRAS', issue: contextualIssue, requestedConcepts: [] }
+    }
+  }), { call: scripted.call });
+  assert.ok(result.messageText.includes('The requested context-only outcome is supported.'),
+    'a context-only evidence path is scoped by its issue even without a matching workstream issue');
+}
+
+{
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
     return { claims: [
@@ -726,6 +795,69 @@ const supportedRule = quote;
   assert.ok(accountingIssueResult.messageText.includes(accountingNarrative));
   assert.doesNotMatch(accountingIssueResult.messageText, /financial accounting treatment.*remains unresolved/i,
     'a supported issue-scoped accounting conclusion satisfies an accounting treatment request');
+
+  let inspectedJournalSummary;
+  const mixedSummaryCall = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'VALIDATED_JOURNAL');
+    assert.ok(output?.accountingSummary, 'the validated engine journal supplies its bounded accounting summary');
+    assert.doesNotMatch(output.accountingSummary, /Office Equipment|Cash at Bank|Existing balanced journal group/i,
+      'the exempt summary excludes account names, group labels, and free text');
+    inspectedJournalSummary = output.accountingSummary;
+    return { claims: [
+      claim('statutory-paraphrase', 'Input tax cannot be recovered for an expense that falls within the cited blocked categories.', ['passage-1']),
+      claim('exact-journal-summary', output.accountingSummary, [output.id], { kind: 'ACCOUNTING' })
+    ] };
+  }, ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    assert.deepEqual(packet.claims.map(item => item.claimId), ['statutory-paraphrase'],
+      'the faithful deterministic journal summary skips semantic review while the statutory paraphrase is checked');
+    return { verdicts: [{ claimId: 'statutory-paraphrase', support: 'SUPPORTED', claimType: 'RULE' }] };
+  });
+  const mixedSummaryResult = await tryGenerateGroundedSynthesis(makeInput({ scenarioState }), { call: mixedSummaryCall.call });
+  assert.ok(mixedSummaryResult.messageText.includes(inspectedJournalSummary),
+    'the exact validated accounting summary survives the numeric and posting guards');
+  assert.equal(mixedSummaryCall.calls.length, 2, 'only the statutory claim reaches the existing batch verifier');
+
+  const summaryOnlyCall = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'VALIDATED_JOURNAL');
+    return { claims: [claim('summary-only', output.accountingSummary, [output.id], { kind: 'ACCOUNTING' })] };
+  });
+  const summaryOnlyResult = await tryGenerateGroundedSynthesis(makeInput({ scenarioState }), { call: summaryOnlyCall.call });
+  assert.ok(summaryOnlyResult.messageText.includes(inspectedJournalSummary));
+  assert.equal(summaryOnlyCall.calls.length, 1, 'a packet containing only the faithful deterministic summary needs no semantic call');
+
+  const appendedStatutoryCall = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'VALIDATED_JOURNAL');
+    return { claims: [
+      claim('valid-summary', output.accountingSummary, [output.id], { kind: 'ACCOUNTING' }),
+      claim('appended-statutory-assertion', `${output.accountingSummary} The expense also qualifies for GST input tax recovery.`, [output.id], { kind: 'ACCOUNTING' })
+    ] };
+  }, ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    assert.deepEqual(packet.claims.map(item => item.claimId), ['appended-statutory-assertion'],
+      'appending a statutory conclusion removes the claim from the exact-content exemption');
+    return { verdicts: [{ claimId: 'appended-statutory-assertion', support: 'UNSUPPORTED', claimType: 'DEFINITIVE_APPLICATION' }] };
+  });
+  const appendedResult = await tryGenerateGroundedSynthesis(makeInput({ scenarioState }), { call: appendedStatutoryCall.call });
+  assert.ok(appendedResult.messageText.includes(inspectedJournalSummary), 'the exact summary remains independently available');
+  assert.doesNotMatch(appendedResult.messageText, /also qualifies for GST input tax recovery/i,
+    'a statutory assertion appended to the summary is withheld');
+  assert.ok(appendedResult.verification.withheldClaimIds.includes('appended-statutory-assertion'));
+
+  for (const alteredSummary of [
+    inspectedJournalSummary.replace('SGD 1,250', 'SGD 1,251'),
+    inspectedJournalSummary.replace('SGD 1,250', 'USD 1,250')
+  ]) {
+    const mismatchedCall = scriptedCall(({ prompt }) => {
+      const packet = packetFrom(prompt);
+      const output = packet.trustedDeterministicOutputs.find(item => item.kind === 'VALIDATED_JOURNAL');
+      return { claims: [claim('mismatched-journal-summary', alteredSummary, [output.id], { kind: 'ACCOUNTING' })] };
+    });
+    await assert.rejects(tryGenerateGroundedSynthesis(makeInput({ scenarioState }), { call: mismatchedCall.call }), /no supportable claims/);
+  }
 
   const untrustedJournalVariants = [
     ['AI_PROPOSED', {}], ['CONDITIONAL', {}], [undefined, {}],

@@ -1,0 +1,34 @@
+[
+  {
+    "Path": "D:\\Accounting\\src\\services\\geminiService.ts",
+    "Hash": "D67E6C6B2041AC338670404536AB89D0AD26D7353E0E505FBC3DCDE09040ADD9"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\services\\evidenceGroundedSynthesis.ts",
+    "Hash": "B9AFC54E49556711F5D957A036E6FA6851FC392CA81B7C3941F2E7D670F55B65"
+  },
+  {
+    "Path": "D:\\Accounting\\src\\components\\SafeChatAnswer.tsx",
+    "Hash": "FB00A4275F3F933E5EB36CAC62FE8E11C13298D7B5CEA676ADC5FCA8090214CB"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_ai_first_advisory_phase1.mjs",
+    "Hash": "D41C18876BD3E8D5CF9FAB2EF93DE1860D211895790DABE9FDBDCD689C140950"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_evidence_grounded_synthesis.mjs",
+    "Hash": "46BB6623E743958CAD6F0D856DF1E0AA97D542DFFED76370001FFFB3197DAC0B"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_evidence_grounded_synthesis_pipeline.mjs",
+    "Hash": "BE16B28285319FEC05CA0111EC12E30291533C1A5E4D8D1DD0C3D9847B8C3EE2"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_synthesis_numeric_provenance.mjs",
+    "Hash": "E637BFD970A550521FAD695D3A45D78DCD78A02D8AE86458DB4900860EAC2DDA"
+  },
+  {
+    "Path": "D:\\Accounting\\tests\\regression\\test_iras_evidence_pipeline.mjs",
+    "Hash": "B9163DA55072DB5EB824B8DB7E76B8BD363851A95DE567B1B9F28B5D090335E2"
+  }
+]

@@ -1,0 +1,915 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "baselineReplay": false,
+  "scopeRecheck": false,
+  "startedAt": "2026-11-04T23:49:01.186Z",
+  "scope": "Live generation and scoped support checks with retained registry passages and fixture workstream admission; no live retrieval, upstream admission, or browser acceptance.",
+  "cases": [
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 2763,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1167,
+              "candidatesTokenCount": 117,
+              "totalTokenCount": 1284,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1167
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 1231,
+          "response": "{\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"APPLICATION\",\n      \"text\": \"Business use alone does not allow recovery of the GST when a company purchases a private motor car within the blocked input tax category and no exception applies.\",\n      \"supportIds\": [\n        \"passage-1\"\n      ],\n      \"factRefs\": [\n        \"fact-current-question\"\n      ],\n      \"issueId\": \"live-0\"\n    }\n  ]\n}"
+        },
+        {
+          "promptCharacters": 1444,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 561,
+              "candidatesTokenCount": 24,
+              "totalTokenCount": 585,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 561
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 777,
+          "response": "{\"verdicts\":[{\"claimId\":\"c1\",\"support\":\"SUPPORTED\",\"claimType\":\"DEFINITIVE_APPLICATION\"}]}"
+        }
+      ],
+      "messageText": "# Answer\n\nBusiness use alone does not allow recovery of the GST when a company purchases a private motor car within the blocked input tax category and no exception applies. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 2008,
+        "admittedClaimIds": [
+          "c1"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [
+        {
+          "title": "IRAS: GST (General) Regulations",
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 2025
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1358,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 545,
+              "candidatesTokenCount": 22,
+              "totalTokenCount": 567,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 545
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 734,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"RULE\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 738
+    },
+    {
+      "authority": "CPF",
+      "record": "CPFA_SEC7_FIRST_SCHEDULE",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+      "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 2899,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1209,
+              "candidatesTokenCount": 141,
+              "totalTokenCount": 1350,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1209
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 1122,
+          "response": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"Every employer of an employee is required to pay monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule.\",\"supportIds\":[\"passage-1\"],\"issueId\":\"live-1\"},{\"id\":\"c2\",\"kind\":\"APPLICATION\",\"text\":\"Based on the employer being the party responsible for paying monthly contributions to the Fund for each employee under the Central Provident Fund Act 1953, the employer is responsible for paying the monthly CPF contribution for the covered employee in Singapore.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-1\"}]}"
+        },
+        {
+          "promptCharacters": 1378,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 563,
+              "candidatesTokenCount": 21,
+              "totalTokenCount": 584,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 563
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 686,
+          "response": "{\"verdicts\":[{\"claimId\":\"c1\",\"support\":\"SUPPORTED\",\"claimType\":\"RULE\"}]}"
+        }
+      ],
+      "messageText": "# Answer\n\nEvery employer of an employee is required to pay monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule.\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Whether We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 1808,
+        "admittedClaimIds": [
+          "c1"
+        ],
+        "withheldClaimIds": [
+          "c2"
+        ],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "WITHHELD",
+            "admittedPassageIds": []
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1812
+    },
+    {
+      "authority": "CPF",
+      "record": "CPFA_SEC7_FIRST_SCHEDULE",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+      "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1523,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 595,
+              "candidatesTokenCount": 22,
+              "totalTokenCount": 617,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 595
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 1210,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"RULE\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 1211
+    },
+    {
+      "authority": "MOM",
+      "record": "MOM_SEC21_SALARY_TIMELINES",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-",
+      "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 2768,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1179,
+              "candidatesTokenCount": 97,
+              "totalTokenCount": 1276,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1179
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 695,
+          "response": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"Yes, payroll must track ordinary salary and overtime separately because salary earned under a contract of service must be paid before the expiry of the seventh day after the last day of the salary period, whereas payment for overtime work must be made within 14 days after the end of the salary period.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-2\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 697
+    },
+    {
+      "authority": "MOM",
+      "record": "MOM_SEC21_SALARY_TIMELINES",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-",
+      "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1406,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 562,
+              "candidatesTokenCount": 22,
+              "totalTokenCount": 584,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 562
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 632,
+          "response": "{\"verdicts\":[{\"claimId\":\"contradiction\",\"support\":\"UNSUPPORTED\",\"claimType\":\"RULE\"}]}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 633
+    },
+    {
+      "authority": "ACRA",
+      "record": "ACRA_SEC171_COMPANY_SECRETARY",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-",
+      "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 2761,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1207,
+              "candidatesTokenCount": 145,
+              "totalTokenCount": 1352,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1207
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 1527,
+          "response": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"Under Section 171 of the Companies Act 1967, every company must have one or more secretaries who are natural persons with their principal or only place of residence in Singapore, and the sole director of a company shall not also act as the secretary of the company.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[],\"issueId\":\"live-3\"},{\"id\":\"c2\",\"kind\":\"APPLICATION\",\"text\":\"Your company cannot appoint her as the secretary because she is the sole director of the Singapore company.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-3\"}]}"
+        },
+        {
+          "promptCharacters": 1471,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 598,
+              "candidatesTokenCount": 24,
+              "totalTokenCount": 622,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 598
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 794,
+          "response": "{\"verdicts\":[{\"claimId\":\"c2\",\"support\":\"SUPPORTED\",\"claimType\":\"DEFINITIVE_APPLICATION\"}]}"
+        }
+      ],
+      "messageText": "# Answer\n\nYour company cannot appoint her as the secretary because she is the sole director of the Singapore company.\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 2321,
+        "admittedClaimIds": [
+          "c2"
+        ],
+        "withheldClaimIds": [
+          "c1"
+        ],
+        "claims": [
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "WITHHELD",
+            "admittedPassageIds": []
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 2323
+    },
+    {
+      "authority": "ACRA",
+      "record": "ACRA_SEC171_COMPANY_SECRETARY",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-",
+      "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1444,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 594,
+              "candidatesTokenCount": 48,
+              "totalTokenCount": 642,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 594
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 640,
+          "response": "{\n  \"verdicts\": [\n    {\n      \"claimId\": \"contradiction\",\n      \"support\": \"UNSUPPORTED\",\n      \"claimType\": \"RULE\"\n    }\n  ]\n}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 640
+    },
+    {
+      "authority": "MAS",
+      "record": "MAS_FMC_CMS_LICENSING",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+      "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 2666,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1121,
+              "candidatesTokenCount": 133,
+              "totalTokenCount": 1254,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1121
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 1062,
+          "response": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"A person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[],\"issueId\":\"live-4\"},{\"id\":\"c2\",\"kind\":\"APPLICATION\",\"text\":\"Before commencing regulated fund management, your Singapore company must establish whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies to its planned activities.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"live-4\"}]}"
+        },
+        {
+          "promptCharacters": 1410,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 532,
+              "candidatesTokenCount": 24,
+              "totalTokenCount": 556,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 532
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 762,
+          "response": "{\"verdicts\":[{\"claimId\":\"c2\",\"support\":\"SUPPORTED\",\"claimType\":\"DEFINITIVE_APPLICATION\"}]}"
+        }
+      ],
+      "messageText": "# Answer\n\nA person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.\n\nBefore commencing regulated fund management, your Singapore company must establish whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies to its planned activities.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 1824,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1825
+    },
+    {
+      "authority": "MAS",
+      "record": "MAS_FMC_CMS_LICENSING",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+      "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [
+        {
+          "promptCharacters": 1332,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 517,
+              "candidatesTokenCount": 48,
+              "totalTokenCount": 565,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 517
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 611,
+          "response": "{\n  \"verdicts\": [\n    {\n      \"claimId\": \"contradiction\",\n      \"support\": \"UNSUPPORTED\",\n      \"claimType\": \"RULE\"\n    }\n  ]\n}"
+        }
+      ],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 612
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "live-answer",
+      "calls": [
+        {
+          "promptCharacters": 3762,
+          "systemCharacters": 2970,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 1368,
+              "candidatesTokenCount": 226,
+              "totalTokenCount": 1594,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 1368
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "elapsedMs": 1103,
+          "response": "{\n  \"claims\": [\n    {\n      \"id\": \"c1\",\n      \"kind\": \"APPLICATION\",\n      \"text\": \"The client is not currently established as eligible for GST recovery because the nature, purpose, documentation, and potential input tax restrictions of the incurred expense remain unresolved.\",\n      \"supportIds\": [\n        \"passage-1\"\n      ],\n      \"factRefs\": [\n        \"fact-current-question\"\n      ],\n      \"issueId\": \"live-5\"\n    },\n    {\n      \"id\": \"c2\",\n      \"kind\": \"RULE\",\n      \"text\": \"Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable.\",\n      \"supportIds\": [\n        \"passage-1\"\n      ],\n      \"factRefs\": [],\n      \"issueId\": \"live-5\"\n    }\n  ]\n}"
+        },
+        {
+          "promptCharacters": 3001,
+          "systemCharacters": 1335,
+          "providerUsage": {
+            "status": 200,
+            "usage": {
+              "promptTokenCount": 875,
+              "candidatesTokenCount": 84,
+              "totalTokenCount": 959,
+              "promptTokensDetails": [
+                {
+                  "modality": "TEXT",
+                  "tokenCount": 875
+                }
+              ],
+              "serviceTier": "standard"
+            }
+          },
+          "stage": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+          "elapsedMs": 1506,
+          "response": "{\n  \"verdicts\": [\n    {\n      \"claimId\": \"c1\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"CONDITIONAL_APPLICATION\"\n    },\n    {\n      \"claimId\": \"c2\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"RULE\"\n    }\n  ]\n}"
+        }
+      ],
+      "messageText": "# Answer\n\nThe client is not currently established as eligible for GST recovery because the nature, purpose, documentation, and potential input tax restrictions of the incurred expense remain unresolved. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n### Conditions and unresolved points\n\n- Applicability remains unresolved for A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 2609,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c2",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [
+        {
+          "title": "IRAS: GST (General) Regulations",
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 2611
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "injected-contradiction-live-verifier",
+      "calls": [],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 194
+    }
+  ],
+  "providerResponses": [
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1167,
+        "candidatesTokenCount": 117,
+        "totalTokenCount": 1284,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1167
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 561,
+        "candidatesTokenCount": 24,
+        "totalTokenCount": 585,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 561
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 545,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 567,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 545
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1209,
+        "candidatesTokenCount": 141,
+        "totalTokenCount": 1350,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1209
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 563,
+        "candidatesTokenCount": 21,
+        "totalTokenCount": 584,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 563
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 595,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 617,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 595
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1179,
+        "candidatesTokenCount": 97,
+        "totalTokenCount": 1276,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1179
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 562,
+        "candidatesTokenCount": 22,
+        "totalTokenCount": 584,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 562
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1207,
+        "candidatesTokenCount": 145,
+        "totalTokenCount": 1352,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1207
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 598,
+        "candidatesTokenCount": 24,
+        "totalTokenCount": 622,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 598
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 594,
+        "candidatesTokenCount": 48,
+        "totalTokenCount": 642,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 594
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1121,
+        "candidatesTokenCount": 133,
+        "totalTokenCount": 1254,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1121
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 532,
+        "candidatesTokenCount": 24,
+        "totalTokenCount": 556,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 532
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 517,
+        "candidatesTokenCount": 48,
+        "totalTokenCount": 565,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 517
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 1368,
+        "candidatesTokenCount": 226,
+        "totalTokenCount": 1594,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1368
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 200,
+      "usage": {
+        "promptTokenCount": 875,
+        "candidatesTokenCount": 84,
+        "totalTokenCount": 959,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 875
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "status": 429
+    }
+  ],
+  "stoppedReason": "Configured provider unavailable; no further requests attempted."
+}

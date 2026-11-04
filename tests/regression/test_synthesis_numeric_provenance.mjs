@@ -136,6 +136,18 @@ for (const amount of ['S$5 million', 'S$5mn', 'S$5e6', 'SGD 5,000,000', 'SGD 0.0
 await reject(magnitudeRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
   'The annual sample allowance is S$5.',
   'the parser must treat S$5 million as five million dollars rather than the partial amount S$5');
+await accept(magnitudeRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is S$.005 billion.');
+await accept(allowanceFixture('SGD 500,000'), allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is S$.5m.');
+await accept(magnitudeRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is SGD 5 mm.');
+await reject(allowanceFixture('SGD 500'), allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is SGD 500,000.',
+  'a magnitude suffix cannot be dropped when it changes the amount');
+await reject(allowanceFixture('SGD 5'), allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is SGD 5 mmm.',
+  'an unsupported contiguous magnitude-like suffix cannot be dropped as ordinary prose');
 for (const [sourceAmount, malformed] of [
   ['SGD 5', 'S$5mm'], ['SGD 50', 'S$500 crore'], ['SGD 5,000,000', 'S$5,000,000mm'],
   ['SGD 5', 'S$５mm']
@@ -161,6 +173,46 @@ await accept(signedDecimalRecord, 'What annual expense amount is stated?', 'IRAS
 await reject(signedDecimalRecord, 'What annual expense amount is stated?', 'IRAS_INCOME_TAX', 'IRAS',
   'The annual expense amount is SGD 10.50.',
   'a decimal currency claim cannot discard the admitted negative sign');
+
+const parenthesizedAmountRecord = {
+  ...records.formCsLite,
+  sourceText: 'The annual sample expense is SGD (500).'
+};
+await accept(parenthesizedAmountRecord, 'What annual sample expense is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample expense is (SGD 500).');
+await accept(parenthesizedAmountRecord, 'What annual sample expense is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample expense is -SGD 500.');
+await reject(parenthesizedAmountRecord, 'What annual sample expense is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample expense is SGD 500.',
+  'accounting parentheses preserve the negative currency sign');
+for (const text of [
+  'The annual sample expense is -(SGD 500).',
+  'The annual sample expense is -SGD (500).'
+]) {
+  await reject(parenthesizedAmountRecord, 'What annual sample expense is stated?', 'IRAS_INCOME_TAX', 'IRAS', text,
+    'an explicit sign before accounting parentheses is ambiguous and cannot match an admitted negative amount');
+}
+const halfMillionParentheticalRecord = allowanceFixture('SGD (500,000)');
+await accept(halfMillionParentheticalRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is (SGD .5m).');
+await reject(halfMillionParentheticalRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is -(SGD .5m).',
+  'an external sign before a supported magnitude parenthesis is ambiguous');
+const fiveMillionParentheticalRecord = allowanceFixture('SGD (5,000,000)');
+await accept(fiveMillionParentheticalRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is SGD (5 mm).');
+await reject(fiveMillionParentheticalRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is -SGD (5 mm).',
+  'an external sign before a currency parenthesis with supported magnitude is ambiguous');
+await reject(allowanceFixture('SGD 500'), 'What annual sample allowance is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is USD 500.',
+  'a currency code cannot change while the numeric amount stays the same');
+for (const malformed of ['SGD (500', '(SGD 500', '(500 SGD', 'SGD 500)', '500 SGD)',
+  'SGD (-500)', '(SGD -500)', '(-500 SGD)']) {
+  await reject(allowanceFixture('SGD 500'), allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+    `The annual sample allowance is ${malformed}.`,
+    `incomplete accounting parentheses cannot be partially parsed: ${malformed}`);
+}
 
 await accept(
   records.mom,

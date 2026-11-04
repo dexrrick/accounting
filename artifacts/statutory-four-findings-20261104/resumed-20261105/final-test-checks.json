@@ -1,0 +1,12 @@
+[
+  {
+    "name": "smoke",
+    "exitCode": 0,
+    "elapsedSeconds": 277.36
+  },
+  {
+    "name": "full",
+    "exitCode": 0,
+    "elapsedSeconds": 293.82
+  }
+]

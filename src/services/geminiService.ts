@@ -545,9 +545,80 @@ export async function processAccountingQuery(
     };
   } catch (error) {
     const advisoryFailureStatus = classifyAdvisoryFailure(error);
-    console.warn('[Evidence-grounded synthesis] Retaining the governed response.', advisoryFailureStatus);
-    return { ...response, advisoryFailureStatus };
+    console.warn('[Evidence-grounded synthesis] Re-rendering admitted evidence after synthesis failure.', advisoryFailureStatus);
+    return createGroundedSynthesisFailureResponse(
+      response, userInput, standard, authorityWorkstreams, groundedContext, advisoryFailureStatus
+    );
   }
+}
+
+/** Rebuild the visible answer from admitted evidence after synthesis fails. */
+export function createGroundedSynthesisFailureResponse(
+  response: GeminiResponse,
+  userInput: string,
+  standard: AccountingStandard,
+  authorityWorkstreams: AuthorityWorkstreamsResult | undefined,
+  groundedContext: GroundedReasoningContext | undefined,
+  advisoryFailureStatus: AdvisoryFailureStatus
+): GeminiResponse {
+  const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
+    group.authorityStatus === 'DETERMINISTIC' && group.isHypothetical !== true &&
+    response.scenarioState.isHypothetical !== true && group.lines?.length > 0 &&
+    group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
+  ));
+  let messageText: string;
+  let officialAnswerLinks: AccountingScenarioState['officialAnswerLinks'] = [];
+  let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
+  let irasEvidencePresentation: AccountingScenarioState['irasEvidencePresentation'];
+  let statutoryAdvisory: AccountingScenarioState['statutoryAdvisory'] = [];
+  if (authorityWorkstreams?.query === userInput) {
+    const presentation = createAuthorityEvidencePresentation(authorityWorkstreams);
+    authorityEvidencePresentation = presentation;
+    messageText = renderAuthorityEvidenceResponseText(
+      presentation, balancedJournalAvailable
+    );
+    officialAnswerLinks = presentation.workstreams.flatMap(stream => stream.sources.flatMap(source =>
+      source.officialUrl ? [{ title: source.title, url: source.officialUrl }] : []
+    ));
+  } else if (groundedContext?.evidenceQuality) {
+    const fallback = renderIrasEvidenceResponse(
+      {}, groundedContext, userInput, response.scenarioState, standard, 'PROVIDER_FAILURE'
+    );
+    messageText = fallback.messageText;
+    irasEvidencePresentation = fallback.scenarioState.irasEvidencePresentation;
+    statutoryAdvisory = fallback.scenarioState.statutoryAdvisory;
+    officialAnswerLinks = fallback.scenarioState.irasEvidencePresentation?.sourceGroups.flatMap(source =>
+      source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
+    ) || [];
+  } else {
+    messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
+      (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
+  }
+  const clarificationPrompts = [...new Set([
+    ...(response.clarifications || []).map(item => item.prompt),
+    ...(response.scenarioState.missingFields || []).map(item => item.prompt)
+  ].map(prompt => prompt.trim()).filter(Boolean))];
+  if (clarificationPrompts.length) {
+    messageText += `\n\n### Clarification Required\n\n${clarificationPrompts.join('\n')}`;
+  }
+  return {
+    ...response,
+    messageText,
+    displayFullAnswer: true,
+    answerPath: 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    advisoryFailureStatus,
+    scenarioState: {
+      ...response.scenarioState,
+      accountingTreatmentSummary: undefined,
+      singaporeTaxTreatmentSummary: undefined,
+      regulatoryMandatesSummary: undefined,
+      statutoryAdvisory,
+      authorityEvidencePresentation,
+      irasEvidencePresentation,
+      uncertaintyDisclaimer: 'The original advisory response was not retained because its claims did not pass verification.' ,
+      officialAnswerLinks
+    }
+  };
 }
 
 async function processAccountingQueryCore(

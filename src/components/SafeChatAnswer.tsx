@@ -3,19 +3,21 @@ import type { OfficialAnswerLink } from '../utils/chatPresentation';
 
 function inlineContent(text: string, trustedLinks: OfficialAnswerLink[]): ReactNode[] {
   const fragments: ReactNode[] = [];
-  const sourceLink = /\[\*\*([^\]]+)\*\*\]\((https:\/\/[^\s)]+)\)/g;
+  const sourceLink = /\[(?:\*\*([^\]]+)\*\*|([^\]]+))\]\((<https:\/\/[^>\s]+>|https:\/\/(?:[^\s()<>]|\([^()\s]*\))+)\)/g;
   let cursor = 0;
   let match: RegExpExecArray | null;
   while ((match = sourceLink.exec(text)) !== null) {
     if (match.index > cursor) fragments.push(...plainContent(text.slice(cursor, match.index), `${cursor}`));
     let canonicalUrl: string | undefined;
+    const label = match[1] || match[2];
+    const rawUrl = match[3].startsWith('<') ? match[3].slice(1, -1) : match[3];
     try {
-      const parsed = new URL(match[2]);
+      const parsed = new URL(rawUrl);
       if (parsed.protocol === 'https:' && trustedLinks.some(link => link.url === parsed.href)) canonicalUrl = parsed.href;
     } catch { /* malformed provider output remains plain text */ }
     fragments.push(canonicalUrl
-      ? <a key={`source-${match.index}`} href={canonicalUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-200">{match[1]}</a>
-      : <React.Fragment key={`untrusted-${match.index}`}>{match[1]}</React.Fragment>);
+      ? <a key={`source-${match.index}`} href={canonicalUrl} target="_blank" rel="noreferrer" className="text-blue-700 underline decoration-blue-300 underline-offset-2 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-200">{label}</a>
+      : <React.Fragment key={`untrusted-${match.index}`}>{label}</React.Fragment>);
     cursor = match.index + match[0].length;
   }
   if (cursor < text.length) fragments.push(...plainContent(text.slice(cursor), `${cursor}`));
@@ -59,7 +61,7 @@ export const SafeChatAnswer: React.FC<{ text: string; trustedLinks: OfficialAnsw
       blocks.push(<ul key={`list-${index}`} className="ml-5 list-disc space-y-1.5">{items}</ul>);
       continue;
     }
-    blocks.push(<p key={`paragraph-${index}`}>{inlineContent(line.replace(/<[^>]*>/g, ''), trustedLinks)}</p>);
+    blocks.push(<p key={`paragraph-${index}`}>{inlineContent(line, trustedLinks)}</p>);
     index += 1;
   }
   return <div className="space-y-3 whitespace-normal">{blocks}</div>;

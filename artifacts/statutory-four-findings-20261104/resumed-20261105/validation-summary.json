@@ -1,0 +1,196 @@
+{
+  "status": "FOUR_FINDING_FIXES_IMPLEMENTED_AND_LOCALLY_VERIFIED; POSITIVE_LIVE_ACCEPTANCE_LIMITED",
+  "recordedAt": "2026-11-05T07:55:45.8625834+08:00",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/project-charter-simplification-20261103",
+  "changeState": "Validated working-tree snapshot before publication. The final published commit is identified by Git history and the review handoff. No PR, merge or deployment was performed.",
+  "changes": [
+    "Synthesis failures replace original unchecked chat and compliance prose with fresh governed evidence or explicit unresolved response, preserving validated journals/accounting facts.",
+    "Monetary validation handles leading decimals, mm magnitudes and accounting parentheses; incomplete magnitude/sign/parenthesis forms are rejected fully.",
+    "Exact accountingSummary built solely from validated journal totals and sanitized currency bypasses unrelated statutory review; arbitrary/appended/mislabeled legal prose remains checked.",
+    "Claim-scoped unresolved status preserves independently resolved issues and valid context-only evidence paths; unowned facts remain available to batched verification.",
+    "Safe chat rendering supports existing admitted citation formats with exact HTTPS canonical allowlist; adjacent wrapper tests reflect safe fallback behavior without removing substantive source checks."
+  ],
+  "validation": {
+    "preflight": "PASS Node22",
+    "maintainedLint": "PASS; final adjacent-test lint also PASS",
+    "typecheck": "PASS",
+    "viteBuild": "PASS",
+    "workerBuild": "PASS",
+    "smoke": "166/166 PASS",
+    "full": "189/189 PASS",
+    "focused": "Foundation, synthesis, numeric, production pipeline, practical five-authority, and IRAS evidence pipeline PASS",
+    "diffCheck": "PASS",
+    "unchangedValidatedSourceHashes": true,
+    "rootLint": "FAIL: 34 pre-existing errors, all in untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs"
+  },
+  "review": {
+    "independent": "No remaining material findings in bounded final source review.",
+    "supervisor": "Reviewed builder outputs and final integration; independently checked last adjacent IRAS test diff preserves providerStatus, claimVerification, scope and substantive tax assertions.",
+    "limits": "Reviewer did not independently execute broad suites/live/browser/CI; supervisor performed local broad suites and bounded live probe."
+  },
+  "liveEvaluation": {
+    "configuredModel": "gemini-3.5-flash-lite",
+    "scope": "Live synthesis generation/support checks against retained registry passages and fixture workstream admission; no upstream live retrieval, browser, CI or deployed acceptance.",
+    "generatedQuestions": 6,
+    "returnedAnswers": 5,
+    "generatedCaseDetails": [
+      {
+        "authority": "IRAS",
+        "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+        "outcome": "ANSWER_RETURNED",
+        "canonicalLinks": 1,
+        "withheldClaimIds": [],
+        "baselineReplayOutcome": "ANSWER_RETURNED",
+        "baselineReplayWithheldClaimIds": []
+      },
+      {
+        "authority": "CPF",
+        "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+        "outcome": "ANSWER_RETURNED",
+        "canonicalLinks": 0,
+        "withheldClaimIds": [
+          "c2"
+        ],
+        "baselineReplayOutcome": "ANSWER_RETURNED",
+        "baselineReplayWithheldClaimIds": [
+          "c2"
+        ]
+      },
+      {
+        "authority": "MOM",
+        "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+        "outcome": "ERROR_OR_WITHHELD",
+        "canonicalLinks": 0,
+        "withheldClaimIds": null,
+        "baselineReplayOutcome": "ERROR_OR_WITHHELD",
+        "baselineReplayWithheldClaimIds": null
+      },
+      {
+        "authority": "ACRA",
+        "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+        "outcome": "ANSWER_RETURNED",
+        "canonicalLinks": 0,
+        "withheldClaimIds": [
+          "c1"
+        ],
+        "baselineReplayOutcome": "ANSWER_RETURNED",
+        "baselineReplayWithheldClaimIds": [
+          "c1"
+        ]
+      },
+      {
+        "authority": "MAS",
+        "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+        "outcome": "ANSWER_RETURNED",
+        "canonicalLinks": 0,
+        "withheldClaimIds": [],
+        "baselineReplayOutcome": "ANSWER_RETURNED",
+        "baselineReplayWithheldClaimIds": []
+      },
+      {
+        "authority": "IRAS",
+        "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+        "outcome": "ANSWER_RETURNED",
+        "canonicalLinks": 1,
+        "withheldClaimIds": [],
+        "baselineReplayOutcome": "ANSWER_RETURNED",
+        "baselineReplayWithheldClaimIds": []
+      }
+    ],
+    "negativeChecks": [
+      {
+        "authority": "IRAS",
+        "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      },
+      {
+        "authority": "CPF",
+        "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      },
+      {
+        "authority": "MOM",
+        "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      },
+      {
+        "authority": "ACRA",
+        "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      },
+      {
+        "authority": "MAS",
+        "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      },
+      {
+        "authority": "IRAS",
+        "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+        "support": "UNSUPPORTED",
+        "claimType": "RULE",
+        "outcome": "ERROR_OR_WITHHELD"
+      }
+    ],
+    "negativeChecksUnsupported": 6,
+    "successfulHttpResponses": 17,
+    "rateLimitedResponses": 1,
+    "httpResponseCount": 18,
+    "successfulGenerationCalls": 6,
+    "successfulSupportCalls": 11,
+    "providerTokens": {
+      "prompt": 13766.0,
+      "candidates": 1220.0,
+      "total": 14986.0
+    },
+    "supportCallLatencyMs": {
+      "minimum": 611.0,
+      "maximum": 1506.0,
+      "average": 845.73
+    },
+    "cost": "Billing/dollar cost not measured; raw token metadata retained.",
+    "rateLimitHandling": "Initial final contradiction got HTTP429; bulk run stopped. One targeted cooldown retry succeeded with an UNSUPPORTED verdict. No reset credit or purchase used."
+  },
+  "remainingLimits": [
+    "MOM generated response withheld before semantic verification; CPF application and ACRA explanatory rule withheld. Captured-generation replay on exact baseline reproduces those deterministic outcomes; replay used permissive scripted support and is not answer-quality verification.",
+    "Returned answer count is not a complete acceptance pass: CPF is partial and some returned responses contain unresolved/withheld qualifiers.",
+    "CPF/MOM/ACRA/MAS retained registry fixtures lack canonical inline links; no citation-completeness or fresh live-source acceptance claimed.",
+    "Single-model bounded sample; semantic support remains probabilistic.",
+    "Deployment remains on hold. No browser, CI or production verification occurred."
+  ],
+  "evidence": {
+    "checks": "final-checks.json",
+    "finalTests": "final-test-checks.json",
+    "sourceHashes": "validation-source-hashes.json",
+    "independentReview": "independent-review.json",
+    "live": "live-results.json",
+    "lastNegativeRetry": "final-contradiction-recheck.json",
+    "baselineReplay": "baseline-captured-replay.json",
+    "rootLint": "root-lint-final-summary.json"
+  },
+  "stopContext": {
+    "userDeadlineSingapore": "05/11/2026 08:45",
+    "userFiveHourStopRemainingPercent": 5,
+    "lastObservedFiveHourRemainingPercent": 39,
+    "lastObservedWeeklyRemainingPercent": 33,
+    "reason": "Requested bounded code fixes and checks completed; further live-answer quality/source work remains separate and deployment is held."
+  },
+  "validationHistory": [
+    "Earlier smoke attempts exposed obsolete foundation/IRAS wrapper expectations after safe fallback began full display and changed final route; those expectations were corrected while retaining substantive source checks.",
+    "The first full attempt was interrupted after the known obsolete foundation assertion; it did not establish a full-suite result.",
+    "Final smoke166/166 and full189/189 passed after all code/test corrections.",
+    "Source hashes record tested working-file bytes. Git may normalize line endings; these are not Git blob IDs."
+  ],
+  "snapshotPhase": "PRE_PUBLICATION_VALIDATION_RECORD",
+  "validatedBaseCommit": "f0b5d797a39ba0de6cff7cf603f21cf9abfdd14f"
+}

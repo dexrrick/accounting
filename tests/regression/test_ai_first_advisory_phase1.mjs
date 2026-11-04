@@ -258,7 +258,16 @@ globalThis.fetch = async (input, init) => {
 };
 try {
   const applicationResponse = await processAccountingQuery('Can I recover GST on a private motor car?', null, 'SFRS_I', adapters[2].settings, 'unused', []);
-  assert.notEqual(applicationResponse.displayFullAnswer, true, 'case-specific legal applicability stays on the existing governed route');
+  assert.equal(applicationResponse.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    'case-specific legal applicability remains on the governed fallback after invalid synthesis');
+  assert.notEqual(applicationResponse.answerPath, 'AI_FIRST_ADVISORY',
+    'the unchecked AI-first answer is not used for a case-specific eligibility request');
+  assert.equal(applicationResponse.advisoryFailureStatus, 'INVALID_RESPONSE',
+    'the malformed synthesis retains its specific safe failure cause');
+  assert.equal(applicationResponse.displayFullAnswer, true, 'the complete safe evidence fallback is displayed');
+  assert.ok(applicationResponse.messageText.length > 0, 'the governed fallback remains useful and visible');
+  assert.doesNotMatch(applicationResponse.messageText, /The company is exempt from audit\./,
+    'the injected, unsupported original model claim is not shown');
 } finally {
   globalThis.fetch = applicabilityFetch;
 }

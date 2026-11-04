@@ -1,10 +1,27 @@
 import assert from 'node:assert/strict';
-import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { SafeChatAnswer } from '../../src/components/SafeChatAnswer.tsx';
+import { createGroundedSynthesisFailureResponse, processAccountingQuery } from '../../src/services/geminiService.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const query = 'Can my client claim GST input tax on an office expense, and what is the accounting treatment?';
+const verifiedLink = { title: 'IRAS guidance', url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)' };
+for (const format of [
+  `[IRAS guidance](${verifiedLink.url})`,
+  `[**IRAS guidance**](<${verifiedLink.url}>)`
+]) {
+  const markup = renderToStaticMarkup(React.createElement(SafeChatAnswer, { text: format, trustedLinks: [verifiedLink] }));
+  assert.match(markup, /<a\b/, `a verified source link remains clickable in ${format}`);
+  assert.ok(markup.includes(`href="${verifiedLink.url}"`));
+}
+const untrustedMarkup = renderToStaticMarkup(React.createElement(SafeChatAnswer, {
+  text: '[untrusted](https://attacker.example/source) <img src=x onerror=alert(1)>', trustedLinks: [verifiedLink]
+}));
+assert.doesNotMatch(untrustedMarkup, /<a\b/, 'a link outside the admitted source allowlist is not clickable');
+assert.match(untrustedMarkup, /&lt;img/ , 'untrusted HTML remains escaped text');
 const interpretation = {
   schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [],
   domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'GST input tax recovery conditions',
@@ -27,6 +44,8 @@ const providerStages = [];
 let draftPacket;
 let lastClaims = [];
 let generationFailure = false;
+let supportFailure = false;
+let rejectSupport = false;
 let mockFailure;
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
@@ -42,13 +61,14 @@ globalThis.fetch = async (input, init) => {
       providerStages.push('support-check');
       const packet = JSON.parse(user);
       assert.ok(packet.claims.length > 0);
+      if (supportFailure) throw new Error('scripted support-verification failure');
       const expectedTypes = { 'practical-gst': 'CONDITIONAL_APPLICATION', 'accounting-gap': 'RULE' };
       for (const claim of packet.claims) {
         assert.ok(Object.hasOwn(expectedTypes, claim.claimId), 'only the scripted supported claims are checked');
         assert.equal(claim.text, lastClaims.find(item => item.id === claim.claimId).text);
       }
       return modelReply({ verdicts: packet.claims.map(claim => ({
-        claimId: claim.claimId, support: 'SUPPORTED', claimType: expectedTypes[claim.claimId]
+        claimId: claim.claimId, support: rejectSupport ? 'UNSUPPORTED' : 'SUPPORTED', claimType: expectedTypes[claim.claimId]
       })) });
       } catch (error) { mockFailure = error; throw error; }
     }
@@ -121,7 +141,10 @@ try {
     semanticUnderstanding: { transactionType: 'share_capital_issuance' }
   };
   providerStages.length = 0;
-  const mixedResult = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory);
+  let mixedWorkstreams;
+  let mixedContext;
+  const mixedResult = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory,
+    undefined, { onAuthorityWorkstreams: value => { mixedWorkstreams = value; }, onGroundedContext: value => { mixedContext = value; } });
   assert.ifError(mockFailure);
   assert.equal(mixedResult.answerPath, 'AI_GROUNDED_SYNTHESIS', 'a new mixed accounting/statutory question uses the production synthesis path');
   const historyContext = JSON.stringify(draftPacket.historyContext);
@@ -132,6 +155,52 @@ try {
     'the current query is supplied separately and no earlier turn remains after the scenario boundary');
   assert.notEqual(mixedResult.scenarioState.scenarioType, oldShareScenario.scenarioType,
     'the prior accounting scenario is not carried into the new mixed query result');
+  assert.ok(mixedResult.scenarioState.directGroups?.some(group => group.lines?.length),
+    'the mixed production case has a nonempty deterministic journal to preserve');
+
+  const unsafeOriginal = 'UNSAFE_ORIGINAL_ADVISORY: the client definitely qualifies for recovery.';
+  const contaminatedResponse = {
+    ...mixedResult,
+    messageText: unsafeOriginal,
+    scenarioState: {
+      ...mixedResult.scenarioState,
+      accountingTreatmentSummary: unsafeOriginal,
+      singaporeTaxTreatmentSummary: unsafeOriginal,
+      regulatoryMandatesSummary: unsafeOriginal,
+      statutoryAdvisory: [{ summary: unsafeOriginal }],
+      irasEvidencePresentation: { answerText: unsafeOriginal },
+      authorityEvidencePresentation: { query: mixedQuery, summary: unsafeOriginal },
+      officialAnswerLinks: [{ title: 'unverified', url: 'https://attacker.example/unverified' }]
+    }
+  };
+  const unresolvedFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE'
+  );
+  assert.equal(unresolvedFallback.displayFullAnswer, true);
+  assert.doesNotMatch(unresolvedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
+  assert.doesNotMatch(JSON.stringify(unresolvedFallback.scenarioState), /UNSAFE_ORIGINAL_ADVISORY/,
+    'failure fallback clears unchecked summaries and stale statutory presentation fields');
+  assert.deepEqual(unresolvedFallback.scenarioState.directGroups, mixedResult.scenarioState.directGroups,
+    'the fallback preserves the validated engine journal byte-for-byte');
+  assert.equal(unresolvedFallback.scenarioState.amount, mixedResult.scenarioState.amount,
+    'the fallback retains independently calculated accounting facts');
+  assert.deepEqual(unresolvedFallback.scenarioState.officialAnswerLinks, [], 'unresolved fallback clears stale and unchecked links');
+
+  const admittedFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, mixedContext, 'NETWORK'
+  );
+  assert.doesNotMatch(admittedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
+  assert.match(admittedFallback.messageText, /IRAS|input tax|GST/i,
+    'captured admitted IRAS evidence is freshly rendered into the fallback');
+  assert.ok(admittedFallback.scenarioState.irasEvidencePresentation,
+    'the fallback installs its newly built IRAS presentation for the compliance panel');
+  const freshIrasSources = admittedFallback.scenarioState.irasEvidencePresentation.sourceGroups
+    .filter(source => source.passages.length > 0);
+  assert.ok(freshIrasSources.length > 0 && freshIrasSources.some(source => admittedFallback.messageText.includes(source.title)),
+    'the fallback message cites a source from the newly admitted IRAS presentation');
+  assert.doesNotMatch(JSON.stringify(admittedFallback.scenarioState), /UNSAFE_ORIGINAL_ADVISORY/);
+  assert.ok(admittedFallback.scenarioState.officialAnswerLinks?.some(link => link.url.includes('iras.gov.sg')),
+    'fresh fallback citations remain available to the UI');
 
   providerStages.length = 0;
   generationFailure = true;
@@ -140,6 +209,28 @@ try {
   assert.ok(fallback.messageText.length > 0);
   assert.equal(fallback.advisoryFailureStatus, 'INVALID_RESPONSE', 'the synthesis failure retains a safe, specific cause');
   assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1, 'a malformed response does not start a second generation');
+  assert.equal(fallback.displayFullAnswer, true, 'synthesis failure presents the deterministic evidence fallback in full');
+  assert.doesNotMatch(fallback.messageText, /office-expense description alone does not establish/,
+    'unsupported synthesis prose is not returned with the fallback');
+  assert.deepEqual(fallback.scenarioState.officialAnswerLinks, [], 'failed synthesis does not retain unverified answer links');
+
+  generationFailure = false;
+  for (const failure of ['verification-error', 'all-claims-rejected']) {
+    providerStages.length = 0;
+    supportFailure = failure === 'verification-error';
+    rejectSupport = failure === 'all-claims-rejected';
+    const failed = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory);
+    assert.ok(failed.advisoryFailureStatus, `${failure} is reported as an advisory failure`);
+    assert.equal(failed.displayFullAnswer, true, `${failure} exposes the safe fallback in full`);
+    assert.doesNotMatch(failed.messageText, /office-expense description alone does not establish/,
+      `${failure} does not display rejected statutory prose`);
+    assert.deepEqual(failed.scenarioState.directGroups, mixedResult.scenarioState.directGroups,
+      `${failure} preserves the existing deterministic journal state`);
+    assert.ok(!failed.scenarioState.officialAnswerLinks?.some(link => link.url.includes('attacker.example')),
+      `${failure} clears unverified synthesis links`);
+  }
+  supportFailure = false;
+  rejectSupport = false;
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);

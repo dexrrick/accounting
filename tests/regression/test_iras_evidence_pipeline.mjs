@@ -300,7 +300,9 @@ try {
     ir21SourceRecordId = ctx.evidenceQuality.eligibleRecords.find(record => record.provenance === 'LIVE_EXTERNAL').id;
   } });
   assert.equal(ir21Fallback.providerStatus, 'SUCCEEDED');
-  assert.equal(ir21Fallback.answerPath, 'PROVIDER_CLAIMS_REJECTED');
+  assert.equal(ir21Fallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  assert.equal(ir21Fallback.advisoryFailureStatus, 'OTHER');
+  assert.equal(ir21Fallback.displayFullAnswer, true, 'The complete evidence fallback is displayed after rejected synthesis.');
   assert.equal(ir21Fallback.evidenceQuality.status, 'LIMITED', 'Evidence coverage is reported independently from provider failure.');
   assert.ok(ir21Fallback.claimVerification.accepted.some(claim => claim.text === ir21Overview));
   assert.ok(ir21Fallback.claimVerification.rejected.some(claim => claim.text === ir21IncompleteListClaim && claim.reason === 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH'),
@@ -308,7 +310,7 @@ try {
   assert.ok(!ir21Fallback.claimVerification.accepted.some(claim => claim.text === ir21LeadIn));
   assert.ok(!ir21Fallback.claimVerification.accepted.some(claim => [ir21ListItemOne, ir21ListItemTwo, ir21ListItemThree].includes(claim.text)),
     'Neither parent nor nested list items are promoted as standalone rules after a colon-ended lead-in.');
-  assert.match(ir21Fallback.messageText, /provider claims did not pass verification/i);
+  assert.match(ir21Fallback.messageText, /available verified evidence does not cover the full tax question/i);
   assert.match(ir21Fallback.messageText, /at least one month in advance/);
   assert.doesNotMatch(ir21Fallback.messageText, /at least one month before:/i, 'A colon-ended lead-in is not shown without its complete list.');
   assert.doesNotMatch(ir21Fallback.messageText, /The employee ceases to work for you in Singapore|The employee starts an overseas posting|The employee leaves Singapore for any period exceeding three months/i,
@@ -1682,7 +1684,9 @@ try {
     gemini: { apiKey: 'test-placeholder-key', model: 'gemini-3.5-flash-lite' }
   });
   assert.equal(bonusFallback.providerStatus, 'SUCCEEDED');
-  assert.equal(bonusFallback.answerPath, 'PROVIDER_NO_CLAIMS');
+  assert.equal(bonusFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  assert.equal(bonusFallback.advisoryFailureStatus, 'OTHER');
+  assert.equal(bonusFallback.displayFullAnswer, true, 'The complete evidence fallback is displayed when synthesis cannot establish the answer.');
   const acceptedBonusClaims = bonusFallback.claimVerification.accepted.map(claim => claim.text);
   const completeExampleAndAdvance = `${bonusExampleTwoConclusion} ${bonusAdvance}`;
   for (const rule of [bonusContractual, bonusContingent, bonusDiscretionary, bonusNonContractual, ir8aDeadline]) {
@@ -1699,7 +1703,7 @@ try {
   assert.match(bonusFallback.messageText, /non-contractual bonus/i);
   assert.doesNotMatch(bonusFallback.messageText, /paid in advance/i,
     'The advance qualification attached to an example-specific YA outcome is not detached into a general rule.');
-  assert.match(bonusFallback.messageText, /no verifiable tax claims/i);
+  assert.match(bonusFallback.messageText, /available verified evidence does not cover the full tax question/i);
   for (const missingFact of classifyQuestion(bonusQuestion).missingFacts) {
     assert.ok(bonusFallback.scenarioState.missingFacts.includes(missingFact));
   }
