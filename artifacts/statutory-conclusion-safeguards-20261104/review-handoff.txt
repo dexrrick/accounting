@@ -1,0 +1,61 @@
+# Statutory conclusion safeguards — review handoff, 04/11/2026
+
+## Goal and status
+
+Address the three external findings: incorrect statutory meaning could receive a genuine official citation; conditional wording could end with a definitive eligibility conclusion; and currency magnitudes could be parsed as smaller amounts. Implementation, targeted regressions, independent bounded review and local final validation are complete. Deployment acceptance remains open.
+
+One generation call remains. Freeform claims in statutory packets receive at most one batched support check; no repair generation was restored. This is broader than checking only case-specific consequential conclusions: some ordinary explanations also incur the extra call. Exact whole-passage rule quotes and accounting-only packets retain no-review paths. This charter trade-off was explicitly disclosed; review it rather than assuming ordinary statutory paraphrases still use one total call.
+
+## Exact review target
+
+- Repository: https://github.com/dexrrick/accounting
+- Branch: codex/project-charter-simplification-20261103
+- Implementation/evidence head: a6803236915467747c8882ba66ca45b42c967b16
+- Base: a6fa33011e23d475cc9dde0ed6146299c5a50ae7
+- Commit: https://github.com/dexrrick/accounting/commit/a6803236915467747c8882ba66ca45b42c967b16
+- Diff: https://github.com/dexrrick/accounting/compare/a6fa33011e23d475cc9dde0ed6146299c5a50ae7...a6803236915467747c8882ba66ca45b42c967b16
+- PR: none for this branch in the connected open-PR lookup; none created for this request.
+
+This handoff is added by a subsequent documentation-only commit. The accompanying chat gives the full final publication SHA and confirms the remote branch head. Review the pinned implementation/evidence SHA above for the functional change; the final publication commit adds only this handoff.
+
+## Changes
+
+src/services/evidenceGroundedSynthesis.ts adds a scoped, provider-neutral support check against cited passages, facts, scope, dates and deterministic outputs. Generated claim labels cannot exempt false statutory conclusions, including source-free LIMITATION claims and AGC-published CPF fallback evidence. Exact full-source RULE equality is the narrow quotation exemption. Invalid, missing, duplicate or unknown verdicts and verifier failures withhold affected claims while retaining independently supported parts. Structured RULE/CONDITIONAL_APPLICATION/DEFINITIVE_APPLICATION verdicts replace the conditional-wording regex heuristic; unresolved status cannot admit a definitive application even with a SUPPORTED verdict. Metadata distinguishes model support from deterministic admission and counts actual calls.
+
+The existing numeric boundary normalizes currency magnitudes and preserves currency/sign. It rejects incomplete tokens, digit backtracking, unsupported suffixes and Unicode variants before the optional support check. Synthetic allowance passages isolate parser tests; they are not new statutory rules.
+
+Four existing suites changed: tests/regression/test_evidence_grounded_synthesis.mjs, test_evidence_grounded_synthesis_pipeline.mjs, test_synthesis_numeric_provenance.mjs and test_synthesis_practical_answers.mjs. No accounting-engine calculations, statutory rates, source registries, dependencies or deployment settings changed.
+
+## Verification actually performed
+
+- Node 22.23.3 preflight passed with Windows user-profile access. No user-info shim was used.
+- All four focused synthesis suites passed. Their provider behavior is scripted, not proof of real-model legal accuracy.
+- Final maintained-code lint, TypeScript, Vite and Cloudflare Worker builds passed, with existing warnings. Root lint failed on 34 pre-existing errors in the unrelated untracked artifacts/fresh-acceptance-2026-10-24/prepare.mjs; it was not changed or published.
+- Final smoke: 166/166 suites passed in 289.72 seconds. Final full regression: 189/189 passed in 318.49 seconds. Offline runners blocked external fetching. Repository-script equivalents were invoked directly through Node because npm was unavailable on PATH.
+- Independent read-only review reported CLEAR_BOUNDED_REVIEW after reproducing and correcting claim-kind, AGC fallback and incomplete-currency bypasses. Final diff checks passed. The reviewer did not independently run broad suites or live checks.
+- Live synthesis probe used Gemini gemini-3.5-flash-lite with retained registry passages and fixture workstream admission. The initial six generated-answer cases returned four answers; MOM and ACRA answers were withheld by existing numeric guards. Captured-generation replay against the exact base reproduced those two false-withholding cases and admitted all six original injected contradictions.
+- Six injected contradictions plus two final claim-scope negatives were all withheld by the real verifier (8/8). These use scripted generation followed by a real support check, distinct from the real generated-answer cases. A final missing-fact IRAS generated-answer recheck also returned a supported answer. Total: 20 successful provider requests; support calls observed about 0.6–10.8 seconds. Tokens and cost were not measured.
+- No live-source retrieval/admission acceptance, browser acceptance, production verification, merge, deployment or source activation occurred. No CI pass is claimed. The existing push filter excludes this branch; without a matching PR, this push is not expected to trigger the repository workflow. No workflow dispatch was requested.
+
+## Remaining concerns and review focus
+
+Model support checking is probabilistic and uses the same configured model; it is not a proof of legal correctness. The broader check scope adds latency and API usage to ordinary statutory paraphrases and should be assessed against the charter. MOM/ACRA false withholding and incomplete canonical citations in registry fixtures remain acceptance limitations; four returned answers are not four complete end-to-end acceptance passes.
+
+Inspect: (1) scope and kind bypasses, exact-quote exemption and issue/fact ownership; (2) conditional-to-categorical transitions and malformed/provider-failure behavior; (3) numerical magnitude, currency, sign, partial-token and Unicode boundaries; (4) whether the added call scope, latency and conservative withholding are proportionate while journals and official-source controls stay separate.
+
+After successful publication, all five task code/test files and the selected reports are committed and pushed. Unrelated pre-existing untracked directories remain local. Verbose validation logs, the local live-evaluation.mjs/validate.ps1 harnesses, scratch baseline module and initial failure log are untracked and unavailable through GitHub. The published captures, summaries and code/tests are the portable evidence. validation-summary.json is explicitly a pre-publication snapshot: its committed=false/pushed=false and notPerformed publication fields are historical, not the final publication status. Its hashes describe tested working-file bytes; Git may normalize CRLF to LF.
+
+## Evidence
+
+- Validation and limits: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/validation-summary.json
+- Individual full-suite results: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/full-regression-summary.txt
+- Independent review: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/independent-review.txt
+- Live summary: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/live-summary.json
+- Raw live answers/verdicts: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/live-results.json
+- Final scope recheck: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/live-scope-recheck.json
+- Base-commit offline replay: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/baseline-replay.json
+- Root-lint errors: https://github.com/dexrrick/accounting/blob/a6803236915467747c8882ba66ca45b42c967b16/artifacts/statutory-conclusion-safeguards-20261104/root-lint-errors.txt
+
+## Ready-to-copy review prompt
+
+Independently review the changes identified above in https://github.com/dexrrick/accounting, branch codex/project-charter-simplification-20261103, implementation/evidence commit a6803236915467747c8882ba66ca45b42c967b16 against base a6fa33011e23d475cc9dde0ed6146299c5a50ae7, using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.
