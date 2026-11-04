@@ -22,15 +22,25 @@ export function usesIrasEvidencePolicy(classification: QuestionClassificationRes
       /\b(?:contribution|ordinary wages?|additional wages?|payroll)\b/i.test(query));
   if (directCpfContributionQuery) return false;
 
-  const explicitTaxQuestion = Boolean(query?.split(/[.!?\n;]+/).some(clause =>
-    /\b(?:gst|tax|iras|ir21|ir8a|withholding|deduct\w*|claim\w*|capital allowances?|section\s+(?:13w|14n)|zero[ -]rated|out[ -]of[ -]scope)\b/i.test(clause) &&
-    /\b(?:can|whether|what|how|when|which|should|does|do we|is (?:it|this|the)|are (?:we|these)|explain|advise|assess|determine|confirm|calculate|compute|work\s+out|eligib\w*)\b/i.test(clause)
-  ));
+  const explicitTaxQuestion = Boolean(query?.split(/[.!?\n;]+/).some(clause => {
+    const isTaxQuestionClause =
+      /\b(?:gst|tax|iras|ir21|ir8a|withholding|deduct\w*|claim\w*|capital allowances?|section\s+(?:13w|14n)|zero[ -]rated|out[ -]of[ -]scope)\b/i.test(clause) &&
+      /\b(?:can|whether|what|how|when|which|should|does|do we|is (?:it|this|the)|are (?:we|these)|explain|advise|assess|determine|confirm|calculate|compute|work\s+out|eligib\w*)\b/i.test(clause);
+    if (!isTaxQuestionClause) return false;
+
+    const isAccountingOnlyClause =
+      /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?|which accounts?|what accounts?|record|book|post|pass (?:a |the )?(?:journal|entry)|deferred tax|sfrs\(i\)\s*1-12|ias\s*12)\b/i.test(clause) &&
+      !/\b(?:iras|ir21|ir8a|withholding|deduct\w*|claim\w*|capital allowances?|section\s+\d+\w*|zero[ -]rated|out[ -]of[ -]scope|exempt\w*|eligib\w*|taxable|taxability|register(?:ed|ing)?\s+for\s+gst|gst\s+registration|time\s+of\s+supply|form\s+c|basis\s+period|foreign\s+tax\s+credit|relief|output\s+gst\s+and|what\s+(?:is|are)\s+(?:the\s+)?(?:gst\s+rate|output\s+gst|input\s+gst|tax\s+treatment))\b/i.test(clause);
+
+    return !isAccountingOnlyClause;
+  }));
   if (!classification.authorities.includes('IRAS') && !explicitTaxQuestion) return false;
   // A journal using an explicitly stated GST amount is not a request to make
   // a new tax-law determination. Keep ordinary accounting/event paths intact.
+  const pureJournalRequest = Boolean(query && /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(query));
   return explicitTaxQuestion || !query || (classification.taxAnalysisRequired &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
+    !pureJournalRequest &&
     /\?|\b(?:explain|advise|assess|determine|report)\b/i.test(query));
 }
 

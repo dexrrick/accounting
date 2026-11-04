@@ -313,6 +313,11 @@ export function assembleDeterministicResponse(
     !isHypotheticalQuery &&
     !semanticRoutingConflict
   );
+  const hasAuthoritativeDeterministicJournalGroups = Boolean(
+    hasAuthoritativeDeterministicEntries &&
+    deterministicScenario!.scenarioType !== 'SINGAPORE_STATUTORY_ADVISORY' &&
+    deterministicScenario!.directGroups!.some(g => Array.isArray(g.lines) && g.lines.length >= 2 && g.totalDebit > 0)
+  );
 
   const hasMissingFacts = Boolean(
     (groundedContext.missingFacts && groundedContext.missingFacts.length > 0) ||
@@ -431,7 +436,7 @@ export function assembleDeterministicResponse(
     }
   }
 
-  if (hasAuthoritativeDeterministicEntries && !isSettlementFollowUp) {
+  if (hasAuthoritativeDeterministicJournalGroups && !isSettlementFollowUp) {
     // Deterministic engine calculations strictly govern
     directGroups = deterministicScenario!.directGroups!.map(grp => ({
       ...grp,

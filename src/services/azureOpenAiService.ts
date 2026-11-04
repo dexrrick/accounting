@@ -1,4 +1,5 @@
-import type { AccountingStandard, AccountingScenarioState, ChatMessage } from '../types/accounting';
+import type { AccountingStandard, AccountingScenarioState, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { GuardrailViolation } from '../engine/accountingGuardrails';
 import type { AzureConfig, OpenAIConfig } from '../types/provider';
 import type { GeminiResponse } from './geminiService';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
@@ -10,6 +11,28 @@ import {
   type GroundedReasoningContext
 } from './groundingContextBuilder';
 import { RequestProfiler } from './telemetry';
+import { toSafeProviderError } from './aiTransport';
+import { isMeaningfulAIJsonPayload, getDeterministicFallbackGroups } from './geminiService';
+import { isDeterministicFixture } from '../engine/scenarioParser';
+import { defaultAccountingGuardrails } from '../engine/accountingGuardrails';
+import type { TransactionUnderstanding } from './transactionUnderstandingService';
+
+function getGuardrailErrorViolations(
+  groups: JournalEntryGroup[],
+  semanticUnderstanding?: TransactionUnderstanding
+): GuardrailViolation[] {
+  if (!semanticUnderstanding || groups.length === 0) return [];
+  const validation = defaultAccountingGuardrails.validate(semanticUnderstanding, groups);
+  return validation.violations.filter((v) => v.severity === 'ERROR');
+}
+
+function buildGuardrailValidationMessage(violations: GuardrailViolation[]): string {
+  const errors = violations.filter((v) => v.severity === 'ERROR');
+  if (errors.length === 0) return '';
+  const list = errors.map((v) => `- ${v.code}: ${v.message}`).join('\n');
+  const prefix = errors.length === 1 ? 'This entry has been rejected' : 'These entries have been rejected';
+  return `### Accounting Validation Issue${errors.length > 1 ? 's' : ''}\n\nThe proposed journal failed one or more accounting safety checks:\n${list}\n\n${prefix} to prevent an incorrect accounting record.`;
+}
 
 /**
  * Normalizes an Azure OpenAI endpoint input into a valid URL base.
@@ -71,11 +94,14 @@ export function buildAccountingMessages(
   const activeScenarioSummary = currentScenario ? `
 [CURRENT ACTIVE TRANSACTION CONTEXT]
 Transaction Title: ${currentScenario.transactionTitle || 'N/A'}
+Prior User Query: ${currentScenario.rawQuery || 'N/A'}
+Prior Accounting Summary: ${currentScenario.accountingTreatmentSummary || 'N/A'}
 Functional Currency: ${currentScenario.functionalCurrency || 'SGD'}
+Pending Clarifications: ${currentScenario.missingFields?.map(m => `${m.fieldName}: ${m.prompt}`).join(' | ') || 'None'}
 Active Parameters:
 ${JSON.stringify(currentScenario.keyParameters || [], null, 2)}
-Active Double Entry Journal Groups:
-${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
+Committed / Active Double Entry Journal Groups:
+${(currentScenario.committedDirectGroups?.length ? currentScenario.committedDirectGroups : currentScenario.directGroups)?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
 ` : '';
 
   const currentTurnText = `${activeScenarioSummary}\n[USER QUERY / FOLLOW-UP]:\n${userInput}`.trim();
@@ -97,6 +123,10 @@ export function parseAccountingAIResponse(
   }
 
   const parsed = repairAndParseAIJson(rawJsonText);
+  if (!isMeaningfulAIJsonPayload(parsed, rawJsonText)) {
+    throw new Error('AI provider returned malformed JSON.');
+  }
+
   const fallbackContext: GroundedReasoningContext = groundedContext || {
     classification: classifyQuestion(userInput),
     userFacts: [],
@@ -109,7 +139,42 @@ export function parseAccountingAIResponse(
     currentInformationRequired: false
   };
 
-  return postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext, deterministicScenario, standard);
+  const result = postProcessAIResponse(parsed, currentScenario, userInput, fallbackContext, deterministicScenario, standard);
+
+  // Validate AI proposed groups against deterministic accounting guardrails and fail-closed on ERROR violations
+  const aiProposedGroups = result.scenarioState.directGroups;
+  if (aiProposedGroups && aiProposedGroups.length > 0) {
+    const aiErrors = getGuardrailErrorViolations(aiProposedGroups, fallbackContext.semanticUnderstanding);
+    if (aiErrors.length > 0) {
+      const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
+      if (isDeterministicFixture(userInput) && deterministicFallback && deterministicFallback.length > 0) {
+        result.scenarioState.directGroups = deterministicFallback;
+        result.scenarioState.isComplete = true;
+        result.scenarioState.missingFields = result.scenarioState.missingFields?.filter((m) => !m.fieldKey.startsWith('guardrail-')) || [];
+        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal was rejected. The deterministic journal has been restored.` +
+          (result.messageText ? `\n\n---\n\n${result.messageText}` : '');
+      } else {
+        const priorCommitted = currentScenario?.committedDirectGroups ||
+          (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+        result.scenarioState.directGroups = [];
+        result.scenarioState.committedDirectGroups = priorCommitted;
+        result.scenarioState.projectedGroups = [];
+        result.scenarioState.isComplete = false;
+        result.scenarioState.missingFields = [
+          ...(result.scenarioState.missingFields || []),
+          ...aiErrors.map((v) => ({
+            fieldKey: `guardrail-${v.code}`,
+            fieldName: 'Accounting Guardrail Violation',
+            prompt: `${v.code}: ${v.message}`,
+            whyNeeded: 'The AI-proposed journal violates fundamental double-entry or statutory accounting rules.'
+          }))
+        ];
+        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal violates fundamental accounting rules and was not applied. Clarification is required.`;
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function callAzureOpenAI(
@@ -177,17 +242,7 @@ export async function callAzureOpenAI(
   profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
-    const errorText = await res.text();
-    if (res.status === 401) {
-      throw new Error(`Azure Authentication Error (401): Invalid or expired Azure OpenAI API Key. Please verify your key in Settings.`);
-    } else if (res.status === 404) {
-      throw new Error(`Azure Deployment Error (404): Deployment "${deployment}" was not found at ${endpoint}. Check Azure OpenAI Studio > Deployments.`);
-    } else if (res.status === 429) {
-      throw new Error(`Azure Quota Error (429): Rate limit (TPM/RPM) exceeded for deployment "${deployment}". Try again shortly or check Azure quota.`);
-    } else if (res.status === 400) {
-      throw new Error(`Azure Request Error (400): ${errorText}`);
-    }
-    throw new Error(`Azure OpenAI Error (${res.status}): ${errorText}`);
+    throw toSafeProviderError('Azure OpenAI', res.status);
   }
 
   const data = await res.json();
@@ -261,13 +316,7 @@ export async function callStandardOpenAI(
   profiler.recordStage('gemini_request', Date.now() - tReq0);
 
   if (!res.ok) {
-    const errorText = await res.text();
-    if (res.status === 401) {
-      throw new Error(`OpenAI Authentication Error (401): Invalid API Key.`);
-    } else if (res.status === 429) {
-      throw new Error(`OpenAI Rate Limit (429): Quota exceeded.`);
-    }
-    throw new Error(`OpenAI Error (${res.status}): ${errorText}`);
+    throw toSafeProviderError('OpenAI', res.status);
   }
 
   const data = await res.json();

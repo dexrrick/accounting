@@ -24,7 +24,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
-import { startsNewAccountingScenario } from './conversationBoundary';
+import { startsNewAccountingScenario, assessConversationRelation } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -195,7 +195,7 @@ function buildGuardrailValidationMessage(violations: GuardrailViolation[]): stri
   return `### Accounting Validation Issue${errors.length > 1 ? 's' : ''}\n\nThe proposed journal failed one or more accounting safety checks:\n${list}\n\n${prefix} to prevent an incorrect accounting record.`;
 }
 
-function getDeterministicFallbackGroups(
+export function getDeterministicFallbackGroups(
   currentScenario: AccountingScenarioState | null,
   deterministicScenario: AccountingScenarioState | null | undefined
 ): JournalEntryGroup[] | undefined {
@@ -206,6 +206,67 @@ function getDeterministicFallbackGroups(
     return deterministicScenario.directGroups;
   }
   return undefined;
+}
+
+export function hasConfiguredProvider(providerOrApiKey?: ProviderSettings | string | null): boolean {
+  if (!providerOrApiKey) return false;
+  if (typeof providerOrApiKey === 'string') {
+    return providerOrApiKey.trim().length > 10;
+  }
+  const active = providerOrApiKey.activeProvider;
+  if (active === 'gemini') {
+    return Boolean(providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10);
+  }
+  if (active === 'openai') {
+    return Boolean(providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10);
+  }
+  if (active === 'azure') {
+    return Boolean(
+      providerOrApiKey.azure?.apiKey &&
+      providerOrApiKey.azure.apiKey.trim().length >= 10 &&
+      providerOrApiKey.azure?.endpoint &&
+      providerOrApiKey.azure.endpoint.trim().length > 0
+    );
+  }
+  return false;
+}
+
+export function isMeaningfulAIJsonPayload(parsed: any, rawText: string): boolean {
+  if (!rawText || typeof rawText !== 'string') {
+    return false;
+  }
+  const stripped = rawText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const firstBrace = stripped.indexOf('{');
+  const lastBrace = stripped.lastIndexOf('}');
+  if (firstBrace === -1 || lastBrace <= firstBrace) {
+    return false;
+  }
+  if (!parsed || typeof parsed !== 'object') {
+    return false;
+  }
+  if (typeof parsed.messageText === 'string' && parsed.messageText.trim().startsWith('{')) {
+    return false;
+  }
+  if (
+    parsed.responseKind === 'JOURNAL_ENTRY' &&
+    (!Array.isArray(parsed.directGroups) || parsed.directGroups.length === 0) &&
+    (!Array.isArray(parsed.missingFields) || parsed.missingFields.length === 0)
+  ) {
+    return false;
+  }
+  const hasSubstantiveContent = Boolean(
+    parsed.messageText ||
+    (Array.isArray(parsed.directGroups) && parsed.directGroups.length > 0) ||
+    parsed.responseKind ||
+    parsed.treatment ||
+    parsed.accountingTreatmentSummary ||
+    parsed.decision ||
+    parsed.directAnswer ||
+    (Array.isArray(parsed.requiredAccounts) && parsed.requiredAccounts.length > 0) ||
+    (Array.isArray(parsed.missingFields) && parsed.missingFields.length > 0) ||
+    Array.isArray(parsed.taxClaims)
+  );
+  return hasSubstantiveContent;
 }
 
 export async function extractImageEvidenceWithGemini(
@@ -558,29 +619,135 @@ export async function processAccountingQuery(
   // A dated multi-event narrative is complete as a sequence even when it does
   // not look like one of the legacy single-scenario parser fixtures. Resolve it
   // before the generic journal clarification gate can discard the chronology.
-  const journalRequested = Boolean(outputPreference?.journal || /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(userInput) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(userInput));
+  const journalRequested = Boolean(
+    outputPreference?.journal ||
+    /\b(?:double entr(?:y|ies)|journal entr(?:y|ies)|debits? and credits?)\b/i.test(userInput) ||
+    /\b(?:prepare|record|post|pass|show|provide|give)\b[^.?!]{0,120}\bentr(?:y|ies)\b/i.test(userInput) ||
+    /\b(?:prepare|record|book|post|pass|journalize|journalise)\s+(?:the\s+|both\s+|all\s+|an?\s+)?(?:initial\s+|annual\s+|monthly\s+|year-end\s+|period-end\s+)?(?:recognition|intercompany|lease|disposal|settlement|adjusting|amorti[sz]ation|depreciation|recharge|provision|accrual|write-off)\b/i.test(userInput) ||
+    /\b(?:adjusting|recognition|amorti[sz]ation|depreciation|disposal|settlement|closing|opening|reversing)\s+entr(?:y|ies)\b/i.test(userInput) ||
+    /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(userInput) ||
+    /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(userInput)
+  );
+  const liveProviderConfigured = hasConfiguredProvider(providerOrApiKey);
+  const prelimClassification = classifyQuestion(userInput);
+  const isSequenceCandidate = Boolean(!hasImages && journalRequested && (resolveEventSequence(userInput, standard) || /\btransaction\s*2\b/i.test(userInput)));
+  const hasActiveTransactionContext = Boolean(
+    activeScenario &&
+    (activeScenario.queryIntent === 'TRANSACTION' ||
+      (activeScenario.directGroups && activeScenario.directGroups.some(g => g.lines && g.lines.length >= 2)) ||
+      (activeScenario.committedDirectGroups && activeScenario.committedDirectGroups.length > 0) ||
+      (activeScenario.missingFields && activeScenario.missingFields.length > 0)) &&
+    assessConversationRelation(userInput, activeScenario) !== 'NEW'
+  );
+  const isStatutoryComplianceQuestion = /\b(?:deductib\w*|claimab\w*|exempt\w*|taxability|eligib\w*|entitlements?|contribution\s+rates?|ir8a|ir21|form\s+c|withholding\s+tax|audit\s+exemption|annual\s+return|filing\s+deadline|can\s+we\s+(?:claim|capitali[sz]e)|is\s+it\s+(?:tax\s+)?deductible|what\s+(?:is|are)\s+the\s+(?:statutory|cpf|gst|mom|acra|iras|mas))\b/i.test(userInput);
+  const hasStatedMonetaryAmount = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d|\b\d[\d,.]*\s*(?:SGD|USD|dollars?|cents?)\b/i.test(userInput);
+  const hasConcreteSubjectAction = /\b(?:we|our\s+(?:company|firm|business|director|parent|subsidiary)|parent\s+company)\s+(?:paid|bought|purchased|sold|acquired|issued|accrued|settled|transferred|wired|invoiced|recharged|wrote\s+off|leased|entered\s+into)\b/i.test(userInput);
+  const isAccountingTransactionOrFollowUp = Boolean(
+    !outputPreference?.statutory &&
+    !usesIrasEvidencePolicy(prelimClassification, userInput) &&
+    !isStatutoryComplianceQuestion && (
+      journalRequested ||
+      prelimClassification.intent === 'TRANSACTION' ||
+      ((prelimClassification.intent as string) === 'ACCOUNTING_SFRS' || prelimClassification.domains.includes('ACCOUNTING_SFRS')) ||
+      hasActiveTransactionContext ||
+      hasStatedMonetaryAmount ||
+      hasConcreteSubjectAction
+    )
+  );
+  const needsStatutorySemanticRouting = Boolean(
+    outputPreference?.statutory ||
+    isSequenceCandidate ||
+    usesIrasEvidencePolicy(prelimClassification, userInput) ||
+    (!isAccountingTransactionOrFollowUp && (
+      prelimClassification.intent === 'STATUTORY_ADVISORY' ||
+      prelimClassification.multiAuthority ||
+      (prelimClassification.regulatoryAnalysisRequired && !journalRequested && prelimClassification.primaryDomain !== 'PAYROLL')
+    ))
+  );
+
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
     if (hasImages) return response;
+    if (!journalRequested && (
+      isStatutoryComplianceQuestion ||
+      (!isAccountingTransactionOrFollowUp && (
+        prelimClassification.intent === 'STATUTORY_ADVISORY' ||
+        response.scenarioState.queryIntent === 'STATUTORY_ADVISORY' ||
+        response.scenarioState.scenarioType === 'SINGAPORE_STATUTORY_ADVISORY'
+      ))
+    )) {
+      return {
+        ...response,
+        scenarioState: {
+          ...response.scenarioState,
+          directGroups: []
+        }
+      };
+    }
     const groups = response.scenarioState.directGroups || [];
     if (groups.length === 0) return response;
     if (!journalRequested && Boolean(deterministicScenario?.directGroups?.length)) {
       return response;
     }
+
+    const priorContextTexts: string[] = [];
+    if (activeScenario?.rawQuery) priorContextTexts.push(activeScenario.rawQuery);
+    if (activeScenario?.transactionTitle) priorContextTexts.push(activeScenario.transactionTitle);
+    if (activeScenario?.accountingTreatmentSummary) priorContextTexts.push(activeScenario.accountingTreatmentSummary);
+
+    const priorContextAmounts: number[] = [];
+    if (typeof activeScenario?.amount === 'number' && Number.isFinite(activeScenario.amount)) {
+      priorContextAmounts.push(activeScenario.amount);
+    }
+    for (const g of (activeScenario?.committedDirectGroups || activeScenario?.directGroups || [])) {
+      if (typeof g.totalDebit === 'number' && Number.isFinite(g.totalDebit) && g.totalDebit > 0) {
+        priorContextAmounts.push(g.totalDebit);
+      }
+      for (const l of (g.lines || [])) {
+        if (typeof l.debit === 'number' && l.debit > 0) priorContextAmounts.push(l.debit);
+        if (typeof l.credit === 'number' && l.credit > 0) priorContextAmounts.push(l.credit);
+      }
+    }
+
+    const isFollowUp = Boolean(
+      activeScenario &&
+      assessConversationRelation(userInput, activeScenario) !== 'NEW'
+    );
+
     const integrity = validateJournalGroups(groups, {
       rawQuery: userInput,
-      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length)
+      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
+      enforceAmountProvenance: liveProviderConfigured && !isFixture,
+      priorContextTexts,
+      priorContextAmounts,
+      isFollowUp
     });
     if (integrity.isValid) return response;
 
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
+    const duplicateIssue = integrity.issues.find(i => i.code === 'DUPLICATE_RECOGNITION');
+    const unconfirmedIssue = integrity.issues.find(i => i.code === 'UNCONFIRMED_SETTLEMENT');
     const issue: MissingFieldInfo = unstatedIssue
       ? {
           fieldKey: 'amount',
           fieldName: 'Transaction amount',
           prompt: 'What is the transaction amount in SGD?',
           whyNeeded: unstatedIssue.message
+        }
+      : duplicateIssue
+      ? {
+          fieldKey: 'duplicateRecognition',
+          fieldName: 'Duplicate expense recognition',
+          prompt: duplicateIssue.message,
+          whyNeeded: 'Settling an existing liability must debit the liability account rather than recording a duplicate expense.'
+        }
+      : unconfirmedIssue
+      ? {
+          fieldKey: 'unconfirmedSettlement',
+          fieldName: 'Unconfirmed liability settlement',
+          prompt: unconfirmedIssue.message,
+          whyNeeded: 'A bare nominal settlement statement does not confirm that payment has occurred.'
         }
       : {
           fieldKey: 'journalValidation',
@@ -589,12 +756,16 @@ export async function processAccountingQuery(
           whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines, account categories, and totals are valid and balance to the cent.'
         };
 
+    const priorCommitted = activeScenario?.committedDirectGroups ||
+      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+
     return {
       ...response,
       messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
       scenarioState: {
         ...response.scenarioState,
         directGroups: [],
+        committedDirectGroups: priorCommitted,
         projectedGroups: [],
         isComplete: false,
         missingFields: [issue]
@@ -628,7 +799,9 @@ export async function processAccountingQuery(
   }
   const questionUnderstandingStarted = performance.now();
   requestCompletenessContext = createRequestCompletenessContext(userInput);
-  const rawQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+  const rawQuestionUnderstanding = (!liveProviderConfigured || needsStatutorySemanticRouting)
+    ? await interpretSemanticQuestion(userInput, providerOrApiKey)
+    : { mode: 'DETERMINISTIC_FALLBACK' as const, failure: 'NO_PROVIDER' as const };
   if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
     profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
   }
@@ -724,24 +897,26 @@ export async function processAccountingQuery(
       context.evidenceQuality?.eligibleRecords.some(record => record.provenance !== 'LIVE_EXTERNAL') ? 'LOCAL' : 'BLOCKED'
     );
   };
-  if (journalRequested && !hasImages) {
+  if (journalRequested && !hasImages && (!liveProviderConfigured || isSequenceCandidate)) {
     let aiCandidate: AccountingEventSequence | undefined;
     let aiExtractionRequired = false;
     let aiExtractionFailure: string | undefined;
-    try {
-      const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
-      const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
-      aiExtractionRequired = Boolean(!irasEvidenceRequired && outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
-      if (!irasEvidenceRequired && apiKey?.trim() && apiKey.trim().length > 10) {
-        const extractionStarted = performance.now();
-        try {
-          aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
-        } finally {
-          profiler.recordGeminiCall({ durationMs: performance.now() - extractionStarted });
+    if (isSequenceCandidate) {
+      try {
+        const geminiConfig = typeof providerOrApiKey === 'object' && providerOrApiKey.activeProvider === 'gemini' ? providerOrApiKey.gemini : undefined;
+        const apiKey = typeof providerOrApiKey === 'string' ? providerOrApiKey : geminiConfig?.apiKey;
+        aiExtractionRequired = Boolean(!irasEvidenceRequired && outputPreference?.journal && apiKey?.trim() && apiKey.trim().length > 10 && /\btransaction\s*2\b/i.test(userInput));
+        if (!irasEvidenceRequired && apiKey?.trim() && apiKey.trim().length > 10) {
+          const extractionStarted = performance.now();
+          try {
+            aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
+          } finally {
+            profiler.recordGeminiCall({ durationMs: performance.now() - extractionStarted });
+          }
         }
+      } catch (error) {
+        aiExtractionFailure = error instanceof Error ? error.message : 'Gemini event extraction failed.';
       }
-    } catch (error) {
-      aiExtractionFailure = error instanceof Error ? error.message : 'Gemini event extraction failed.';
     }
     if (aiExtractionRequired && !aiCandidate) {
       profiler.setQueryMode('EVENT_SEQUENCE');
@@ -799,95 +974,104 @@ export async function processAccountingQuery(
       return attachAmendmentProvenance(consolidationAnswer);
     }
   }
-  const tDet0 = Date.now();
-  deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
-  profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
-  if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
-  }
+  if (!liveProviderConfigured || isFixture || Boolean(authorityEvidencePresentation)) {
+    const tDet0 = Date.now();
+    deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
+    profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
-  // A recognized but incomplete calculation is a pending conversation, not
-  // permission for a provider to invent a value. This is field-agnostic: new
-  // scenarios can supply their own missingFields without editing this gate.
-  const materialClarification = deterministicScenario.missingFields?.[0];
-  // A complete deterministic journal wins. Otherwise permit the existing AI
-  // pipeline to attempt a proposal, but never invent missing recognized facts.
-  if (journalRequested && !hasImages) {
-    const groups = deterministicScenario.directGroups || [];
-    const grounded = groups.length > 0 && groups.every(g =>
-      g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
-    if (grounded) {
+    if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
-      return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
     }
-    if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
-        !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
-      const clarification: MissingFieldInfo = {
-        fieldKey: 'transactionDetails', fieldName: 'Transaction details',
-        prompt: 'What transaction occurred, for what amount, and which accounts or payment method were involved?',
-        whyNeeded: 'No transaction type or posting basis was provided.'
-      };
-      return {
-        messageText: '### Clarification Required for Double Entry\n\n' + clarification.prompt,
-        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
-        clarifications: [clarification]
-      };
+
+    // A recognized but incomplete calculation is a pending conversation, not
+    // permission for a provider to invent a value. This is field-agnostic: new
+    // scenarios can supply their own missingFields without editing this gate.
+    const materialClarification = deterministicScenario.missingFields?.[0];
+    // A complete deterministic journal wins. Otherwise permit the existing AI
+    // pipeline to attempt a proposal, but never invent missing recognized facts.
+    if (journalRequested && !hasImages) {
+      const groups = deterministicScenario.directGroups || [];
+      const grounded = groups.length > 0 && groups.every(g =>
+        g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
+      if (grounded) {
+        profiler.recordFirstVisibleResponse();
+        profiler.setTokenCounts(0, 0, 0);
+        profiler.logSummary();
+        return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
+      }
+      if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
+          !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
+        const clarification: MissingFieldInfo = {
+          fieldKey: 'transactionDetails', fieldName: 'Transaction details',
+          prompt: 'What transaction occurred, for what amount, and which accounts or payment method were involved?',
+          whyNeeded: 'No transaction type or posting basis was provided.'
+        };
+        return {
+          messageText: '### Clarification Required for Double Entry\n\n' + clarification.prompt,
+          scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
+          clarifications: [clarification]
+        };
+      }
+      if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+        return attachAmendmentProvenance({
+          messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\n'),
+          scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
+          clarifications: deterministicScenario.missingFields
+        });
+      }
     }
-    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+    if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+        !deterministicScenario.isComplete && materialClarification &&
+        (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      if (irasEvidenceRequired) return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
       return attachAmendmentProvenance({
-        messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\n'),
-        scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
-        clarifications: deterministicScenario.missingFields
+        messageText: `### Clarification Required\n\n${materialClarification.prompt}`,
+        scenarioState: deterministicScenario,
+        clarifications: [materialClarification]
       });
     }
-  }
-  if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
-      !deterministicScenario.isComplete && materialClarification &&
-      (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    if (irasEvidenceRequired) return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
-    return attachAmendmentProvenance({
-      messageText: `### Clarification Required\n\n${materialClarification.prompt}`,
-      scenarioState: deterministicScenario,
-      clarifications: [materialClarification]
-    });
-  }
 
-  // A resignation or proration modifies the established payroll facts. The
-  // deterministic payroll calculation takes precedence over a provider's
-  // generic follow-up label (which may otherwise mistake "payroll" for pay).
-  if (activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-      deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
-      deterministicScenario.isComplete &&
-      /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
-  }
+    // A resignation or proration modifies the established payroll facts. The
+    // deterministic payroll calculation takes precedence over a provider's
+    // generic follow-up label (which may otherwise mistake "payroll" for pay).
+    if (activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        deterministicScenario.isComplete &&
+        /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    }
 
-  // Multi-workstream compliance was independently resolved above. Keep the
-  // deterministic accounting state and do not let a provider add statutory
-  // prose that falls outside the admitted per-issue evidence projection.
-  if (authorityEvidencePresentation) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    // Multi-workstream compliance was independently resolved above. Keep the
+    // deterministic accounting state and do not let a provider add statutory
+    // prose that falls outside the admitted per-issue evidence projection.
+    if (authorityEvidencePresentation) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    }
+  } else {
+    deterministicScenario = null;
   }
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, {
-    questionUnderstanding, requestCompletenessContext
+  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, liveProviderConfigured ? undefined : providerOrApiKey, {
+    questionUnderstanding,
+    requestCompletenessContext,
+    ...(liveProviderConfigured && isAccountingTransactionOrFollowUp && !usesIrasEvidencePolicy(prelimClassification, userInput)
+      ? { forceTransactionSchema: true, localOnly: true }
+      : {})
   });
   if (groundedContext.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(groundedContext.sourceMapFallbackTrace);
   diagnostics?.onGroundedContext?.(groundedContext);
@@ -911,7 +1095,7 @@ export async function processAccountingQuery(
   }
 
   // 3. Evaluate Fast-Path Bypass (ONLY for explicit deterministic fixtures)
-  if (isFixture && !groundedContext.evidenceQuality) {
+  if (isFixture && !groundedContext.evidenceQuality && deterministicScenario) {
     const fastPathCheck = evaluateFastPathEligibility(userInput, deterministicScenario, groundedContext);
     if (fastPathCheck.canBypass) {
       profiler.recordFirstVisibleResponse();
@@ -929,7 +1113,18 @@ export async function processAccountingQuery(
       if (hasImages && active !== 'gemini') {
         return {
           messageText: '### Image analysis unavailable\n\nThe selected AI model cannot analyse images. Select a Gemini model in Settings, then retry; your screenshots remain attached to this message.',
-          scenarioState: deterministicScenario
+          scenarioState: deterministicScenario || activeScenario || {
+            scenarioType: 'UNIVERSAL',
+            queryIntent: 'TRANSACTION',
+            primaryDomain: 'ACCOUNTING_SFRS',
+            rawQuery: userInput,
+            transactionTitle: 'Image Analysis Unavailable',
+            functionalCurrency: 'SGD',
+            transactionCurrency: 'SGD',
+            directGroups: [],
+            isComplete: false,
+            missingFields: []
+          }
         };
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
@@ -999,6 +1194,63 @@ export async function processAccountingQuery(
   }
 
   // 5. Fallback structured offline response rendered from deterministic state
+  if (liveProviderConfigured && apiErrorMessage) {
+    profiler.recordFallback();
+    profiler.recordFirstVisibleResponse();
+    if (groundedContext.evidenceQuality) {
+      const response = renderIrasEvidenceResponse(
+        { treatment: deterministicScenario?.accountingTreatmentSummary },
+        groundedContext,
+        userInput,
+        deterministicScenario,
+        standard,
+        'PROVIDER_FAILURE'
+      );
+      profiler.logSummary();
+      return attachAmendmentProvenance(response);
+    }
+
+    const providerFailureField: MissingFieldInfo = {
+      fieldKey: 'providerFailure',
+      fieldName: 'AI Provider Failure',
+      prompt: `The AI provider encountered an error: ${apiErrorMessage}. Please check your connection or provider settings and retry.`,
+      whyNeeded: 'AI provider is required for primary accounting interpretation and journal generation.'
+    };
+
+    const priorCommitted = activeScenario?.committedDirectGroups ||
+      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+
+    const failureState: AccountingScenarioState = {
+      scenarioType: activeScenario?.scenarioType || 'UNIVERSAL',
+      queryIntent: prelimClassification.intent === 'STATUTORY_ADVISORY' ? 'STATUTORY_ADVISORY' : 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: userInput,
+      transactionTitle: activeScenario?.transactionTitle || 'AI Provider Unavailable',
+      functionalCurrency: activeScenario?.functionalCurrency || 'SGD',
+      transactionCurrency: activeScenario?.transactionCurrency || 'SGD',
+      directGroups: [],
+      committedDirectGroups: priorCommitted,
+      isComplete: false,
+      missingFields: [providerFailureField]
+    };
+
+    const failureResponse: GeminiResponse = {
+      messageText: `### AI Provider Unavailable\n\n${providerFailureField.prompt}`,
+      scenarioState: failureState,
+      clarifications: [providerFailureField],
+      imageAnalysisFailed: hasImages
+    };
+
+    profiler.logSummary();
+    return attachAmendmentProvenance(failureResponse);
+  }
+
+  if (!deterministicScenario) {
+    const tDet0 = Date.now();
+    deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
+    profiler.recordStage('deterministic_engine', Date.now() - tDet0);
+  }
+
   profiler.recordFallback();
   profiler.recordFirstVisibleResponse();
   if (groundedContext.evidenceQuality) {
@@ -1309,7 +1561,10 @@ export function renderStructuredOfflineResponse(
 
     return {
       messageText: finalizeMessage(replyText, parsed),
-      scenarioState: parsed
+      scenarioState: {
+        ...parsed,
+        directGroups: []
+      }
     };
   }
 
@@ -1684,11 +1939,14 @@ export async function callGeminiAPI(
   const activeScenarioSummary = currentScenario ? `
 [CURRENT ACTIVE TRANSACTION CONTEXT]
 Transaction Title: ${currentScenario.transactionTitle || 'N/A'}
+Prior User Query: ${currentScenario.rawQuery || 'N/A'}
+Prior Accounting Summary: ${currentScenario.accountingTreatmentSummary || 'N/A'}
 Functional Currency: ${currentScenario.functionalCurrency || 'SGD'}
+Pending Clarifications: ${currentScenario.missingFields?.map(m => `${m.fieldName}: ${m.prompt}`).join(' | ') || 'None'}
 Active Parameters:
 ${JSON.stringify(context.evidenceQuality ? [] : currentScenario.keyParameters || [], null, 2)}
-Active Double Entry Journal Groups:
-${currentScenario.directGroups?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
+Committed / Active Double Entry Journal Groups:
+${(currentScenario.committedDirectGroups?.length ? currentScenario.committedDirectGroups : currentScenario.directGroups)?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
 ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (do not re-examine an image unless the user asks):\n${formatImageEvidenceForAccounting(currentScenario.imageEvidence)}` : ''}
 ` : '';
 
@@ -1710,17 +1968,15 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   // to prevent runaway chain-of-thought tokens on statutory and transactional queries.
   const generationConfig: any = {
     temperature: 0.1,
+    maxOutputTokens: 8192,
     responseMimeType: 'application/json'
   };
 
-  if (modelName.includes('2.5') || modelName.includes('thinking')) {
-    if (context.classification.intent === 'STATUTORY_ADVISORY') {
-      generationConfig.thinkingConfig = { thinkingBudget: 0 };
-    } else if (context.classification.intent === 'TRANSACTION') {
-      generationConfig.thinkingConfig = { thinkingBudget: 512 };
-    } else {
-      generationConfig.thinkingConfig = { thinkingBudget: 1024 };
-    }
+  const isPureStatutoryPrompt = context.classification.intent === 'STATUTORY_ADVISORY' && !context.forceTransactionSchema;
+  if (modelName.includes('3.')) {
+    generationConfig.thinkingConfig = { thinkingLevel: isPureStatutoryPrompt ? 'MINIMAL' : 'MEDIUM' };
+  } else if (modelName.includes('2.5') || modelName.includes('thinking')) {
+    generationConfig.thinkingConfig = { thinkingBudget: isPureStatutoryPrompt ? 0 : 512 };
   }
 
   const requestBody = {
@@ -1731,29 +1987,42 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     generationConfig
   };
 
-  // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
-
   const tReq0 = Date.now();
   let rawJsonText = '';
   let usage: any = null;
 
+  const extractCandidateText = (obj: any): string =>
+    (obj?.candidates?.[0]?.content?.parts || [])
+      .filter((p: any) => !p?.thought && typeof p?.text === 'string')
+      .map((p: any) => p.text)
+      .join('');
+
+  // Dedicated 75-second AbortController timeout for streaming SSE socket
+  const streamController = new AbortController();
+  const streamTimeoutId = setTimeout(() => streamController.abort(), 75000);
+
   try {
-    // Attempt streaming with Server-Sent Events (?alt=sse) to measure genuine Time to First Visible Response (TTFVR)
     const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
     const streamRes = await fetchGemini(streamUrl, apiKey, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(requestBody),
-      signal: controller.signal
+      signal: streamController.signal
     });
 
-    if (streamRes.ok && streamRes.body) {
+    if (!streamRes.ok) {
+      if (streamRes.status !== 503 && streamRes.status !== 501) {
+        throw toSafeProviderError('Gemini API', streamRes.status);
+      }
+      throw new Error(`Streaming response returned ${streamRes.status}`);
+    }
+
+    if (streamRes.body) {
       const reader = streamRes.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let isFirstChunk = true;
+      let streamFinishReason: string | undefined;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1771,8 +2040,11 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
           if (trimmed.startsWith('data: ')) {
             try {
               const chunkJson = JSON.parse(trimmed.slice(6));
-              const partText = chunkJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+              const partText = extractCandidateText(chunkJson);
               if (partText) rawJsonText += partText;
+              if (chunkJson?.candidates?.[0]?.finishReason) {
+                streamFinishReason = chunkJson.candidates[0].finishReason;
+              }
               if (chunkJson?.usageMetadata) usage = chunkJson.usageMetadata;
             } catch {
               // Ignore partial SSE delimiter chunks
@@ -1780,26 +2052,75 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
           }
         }
       }
+
+      buffer += decoder.decode();
+
+      if (buffer.trim().startsWith('data: ')) {
+        try {
+          const chunkJson = JSON.parse(buffer.trim().slice(6));
+          const partText = extractCandidateText(chunkJson);
+          if (partText) rawJsonText += partText;
+          if (chunkJson?.candidates?.[0]?.finishReason) {
+            streamFinishReason = chunkJson.candidates[0].finishReason;
+          }
+          if (chunkJson?.usageMetadata) usage = chunkJson.usageMetadata;
+        } catch {
+          // Ignore
+        }
+      }
+
+      // If the response body was standard JSON rather than SSE
+      if (!rawJsonText.trim()) {
+        try {
+          const asJson = JSON.parse(buffer);
+          rawJsonText = extractCandidateText(asJson);
+          if (asJson?.candidates?.[0]?.finishReason) {
+            streamFinishReason = asJson.candidates[0].finishReason;
+          }
+          if (asJson?.usageMetadata) usage = asJson.usageMetadata;
+        } catch {
+          // Ignore
+        }
+      }
+
+      if (!rawJsonText.trim()) {
+        throw new Error('Streaming response produced no valid JSON parts');
+      }
+
+      const strippedStreamJson = rawJsonText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+      if (streamFinishReason === 'MAX_TOKENS' || !strippedStreamJson.endsWith('}')) {
+        rawJsonText = '';
+        throw new Error('Streaming response truncated before JSON completion');
+      }
     } else {
       throw new Error(`Streaming response returned ${streamRes.status}`);
     }
   } catch (streamErr: any) {
-    if (controller.signal.aborted || streamErr?.name === 'AbortError') {
-      clearTimeout(timeoutId);
+    // Re-throw provider errors (e.g. 400, 401, 403, 404, 429, 500) without falling back to a second call
+    if (streamErr?.message?.includes('Gemini API request failed with HTTP')) {
+      throw streamErr;
+    }
+
+    // If streaming aborted after receiving partial content, treat as stream timeout
+    if ((streamController.signal.aborted || streamErr?.name === 'AbortError') && rawJsonText.trim()) {
       profiler.recordStage('gemini_request', Date.now() - tReq0);
       profiler.recordTimeout();
       profiler.recordFallback();
-      throw new Error(`Gemini request timed out after 45s. Reverting to deterministic accounting engine.`);
+      throw new Error(`Gemini request timed out after 75s. Reverting to deterministic accounting engine.`);
     }
 
-    // Fallback to standard generateContent if streaming is unavailable
+    // Fallback to standard generateContent with a fresh 60-second controller if streaming is unavailable
+    // (503, 501, stalled SSE socket with 0 bytes, or missing stream reader)
+    const stdController = new AbortController();
+    const stdTimeoutId = setTimeout(() => stdController.abort(), 60000);
+
     try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
       const res = await fetchGemini(url, apiKey, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(requestBody),
-        signal: controller.signal
+        signal: stdController.signal
       });
       profiler.recordFirstVisibleResponse();
 
@@ -1809,19 +2130,20 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
 
       const data = await res.json();
       usage = data?.usageMetadata;
-      rawJsonText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      rawJsonText = extractCandidateText(data);
     } catch (stdErr: any) {
-      clearTimeout(timeoutId);
       profiler.recordStage('gemini_request', Date.now() - tReq0);
-      if (stdErr?.name === 'AbortError' || controller.signal.aborted) {
+      if (stdErr?.name === 'AbortError' || stdController.signal.aborted) {
         profiler.recordTimeout();
         profiler.recordFallback();
-        throw new Error(`Gemini request timed out after 45s. Reverting to deterministic accounting engine.`);
+        throw new Error(`Gemini request timed out after 60s. Reverting to deterministic accounting engine.`);
       }
       throw stdErr;
+    } finally {
+      clearTimeout(stdTimeoutId);
     }
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(streamTimeoutId);
   }
 
   profiler.recordStage('gemini_request', Date.now() - tReq0);
@@ -1830,7 +2152,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     profiler.setTokenCounts(
       usage.promptTokenCount || 0,
       usage.candidatesTokenCount || 0,
-      usage.candidatesTokensDetails?.[0]?.thinkingTokenCount || 0
+      usage.thoughtsTokenCount || usage.candidatesTokensDetails?.[0]?.thinkingTokenCount || 0
     );
   }
 
@@ -1840,6 +2162,9 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
 
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
+  if (!isMeaningfulAIJsonPayload(parsed, rawJsonText)) {
+    throw new Error('AI provider returned malformed JSON.');
+  }
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
   if (imageEvidence.length > 0) {
@@ -1904,26 +2229,29 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   if (aiProposedGroups && aiProposedGroups.length > 0) {
     const aiErrors = getGuardrailErrorViolations(aiProposedGroups, context.semanticUnderstanding);
     if (aiErrors.length > 0) {
-      if (deterministicFallback && deterministicFallback.length > 0) {
+      if (isDeterministicFixture(userInput) && deterministicFallback && deterministicFallback.length > 0) {
         result.scenarioState.directGroups = deterministicFallback;
         result.scenarioState.isComplete = true;
         result.scenarioState.missingFields = result.scenarioState.missingFields?.filter((m) => !m.fieldKey.startsWith('guardrail-')) || [];
         result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal was rejected. The deterministic journal has been restored.` +
           (result.messageText ? `\n\n---\n\n${result.messageText}` : '');
       } else {
+        const priorCommitted = currentScenario?.committedDirectGroups ||
+          (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
         result.scenarioState.directGroups = [];
+        result.scenarioState.committedDirectGroups = priorCommitted;
         result.scenarioState.projectedGroups = [];
         result.scenarioState.isComplete = false;
         result.scenarioState.missingFields = [
           ...(result.scenarioState.missingFields || []),
           ...aiErrors.map((v) => ({
             fieldKey: `guardrail-${v.code}`,
-            fieldName: 'Accounting guardrail validation',
+            fieldName: 'Accounting Guardrail Violation',
             prompt: `${v.code}: ${v.message}`,
-            whyNeeded: 'The AI-proposed journal violates an accounting safety check and cannot be posted automatically.'
+            whyNeeded: 'The AI-proposed journal violates fundamental double-entry or statutory accounting rules.'
           }))
         ];
-        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.`;
+        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal violates fundamental accounting rules and was not applied. Clarification is required.`;
       }
     }
   }

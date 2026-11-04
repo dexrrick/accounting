@@ -1,7 +1,9 @@
 import type {
   AccountingStandard,
   AccountingScenarioState,
+  AccountCategory,
   ExplicitAssumption,
+  MissingFieldInfo,
   QueryDomain,
   StatutoryAuthority,
   JournalEntryGroup,
@@ -22,6 +24,7 @@ import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statut
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, hasUnresolvedMealInputTaxEligibility } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
+import { assessConversationRelation } from './conversationBoundary';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import {
   getIrasTaxRouteArea,
@@ -78,6 +81,7 @@ export interface GroundedReasoningContext {
   /** Immutable exact-query representation diagnostics, separate from evidence scope. */
   requestCompletenessContext?: RequestCompletenessContext;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
+  forceTransactionSchema?: boolean;
 }
 
 export interface SourceMapFallbackAttempt {
@@ -250,6 +254,7 @@ export interface MappedFallbackOptions {
   semanticDiscoveryQuery?: string;
   /** Internal per-issue scope. Omitted callers retain the existing full-query behavior. */
   evidenceScope?: AuthorityEvidenceScope;
+  forceTransactionSchema?: boolean;
 }
 
 function topicMatchesEvidenceScope(topic: SingaporeCoverageTopic, scope?: AuthorityEvidenceScope): boolean {
@@ -2139,7 +2144,11 @@ export async function buildGroundedReasoningContext(
     classification.intent === 'HYBRID' ||
     classification.journalEntryRequired;
 
-  if (isTransactionQuery && semanticUnderstanding.factsMissing) {
+  const skipFallbackSemanticNoise = Boolean(
+    retrievalOptions.forceTransactionSchema &&
+    (semanticUnderstanding.extractionSource === 'deterministic_fallback' || semanticUnderstanding.provenance?.isFallback)
+  );
+  if (isTransactionQuery && semanticUnderstanding.factsMissing && !skipFallbackSemanticNoise) {
     for (const mf of semanticUnderstanding.factsMissing) {
       if (!missingFacts.includes(mf)) {
         missingFacts.push(mf);
@@ -2185,7 +2194,8 @@ export async function buildGroundedReasoningContext(
     questionUnderstanding,
     requestCompletenessContext,
     evidenceQuality,
-    sourceMapFallbackTrace: mappedFallback.trace
+    sourceMapFallbackTrace: mappedFallback.trace,
+    ...(retrievalOptions.forceTransactionSchema ? { forceTransactionSchema: true } : {})
   };
 }
 
@@ -2247,7 +2257,10 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
   }
 
   // Section 1.1: Semantic Transaction Facts & Mandatory Guardrails
-  if (context.semanticUnderstanding) {
+  if (
+    context.semanticUnderstanding &&
+    !(context.forceTransactionSchema && (context.semanticUnderstanding.extractionSource === 'deterministic_fallback' || context.semanticUnderstanding.provenance?.isFallback))
+  ) {
     const sem = context.semanticUnderstanding;
     prompt += `\n[1.1 UNDERSTOOD TRANSACTION FACTS & MANDATORY ACCOUNTING GUARDRAILS]\n`;
     prompt += `• Reporting Entity: ${sem.reportingEntity.type.toUpperCase()}${sem.reportingEntity.description ? ` (${sem.reportingEntity.description})` : ''}\n`;
@@ -2360,7 +2373,7 @@ GROUNDED REASONING CONTEXT SUPPLIED TO YOU
   }
 
   // Section 8: Compact Decision Schema Specification
-  if (context.classification.intent === 'STATUTORY_ADVISORY') {
+  if (context.classification.intent === 'STATUTORY_ADVISORY' && !context.forceTransactionSchema) {
     prompt += `
 ================================================================================
 RESPONSE FORMAT SPECIFICATION (COMPACT STATUTORY DECISION SCHEMA)
@@ -2389,30 +2402,46 @@ Return ONLY this concise, compact JSON payload:
 }
 Return pure JSON only.
 `;
-  } else if (context.classification.intent === 'TRANSACTION' || context.classification.journalEntryRequired) {
+  } else if (context.classification.intent === 'TRANSACTION' || context.classification.journalEntryRequired || context.forceTransactionSchema) {
     prompt += `
 ================================================================================
 RESPONSE FORMAT SPECIFICATION (COMPACT TRANSACTION & JOURNAL DECISION SCHEMA)
 ================================================================================
 CRITICAL FOR LATENCY & ACCURACY:
-Do NOT write verbose markdown essays, redundant nested structures, or monetary amounts in JSON.
-The deterministic accounting engine automatically computes debit/credit balancing, monetary amounts, foreign exchange rates, and UI parameters.
-Gemini must NOT calculate amounts, balances, or invent placeholder numbers ($1,000, $50,000, etc.). Focus strictly on accounting classification, applicable standard, required account names, categories, debit/credit orientation, and missing valuation facts.
-Return ONLY this concise, compact JSON payload:
+Do NOT write verbose markdown essays or duplicate boilerplate. Return pure structured JSON.
+You are the primary accounting intelligence responsible for determining the accounting treatment, selecting standard account names and categories, and producing exact balanced double-entry journal entries under ${stdLabel}.
+
+Return ONLY this compact JSON payload:
 {
-  "transactionNature": "Brief title/nature of the transaction",
-  "treatment": "Authoritative financial reporting treatment under ${stdLabel}",
-  "requiredAccounts": [
+  "responseKind": "JOURNAL_ENTRY" | "CLARIFICATION_REQUIRED" | "ACCOUNTING_ADVISORY",
+  "transactionTitle": "Brief title of the transaction",
+  "accountingTreatmentSummary": "Concise technical explanation of recognition and measurement under ${stdLabel}",
+  "singaporeTaxTreatmentSummary": "Optional concise distinction of Singapore tax/CPF/GST rules vs accounting treatment (never invent statutory citations or rates)",
+  "directGroups": [
     {
-      "accountName": "Account Name (e.g. Office Equipment)",
-      "category": "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE",
-      "debitCredit": "DEBIT" | "CREDIT",
-      "rationale": "Why debited/credited"
+      "id": "grp-1",
+      "eventDate": "DD/MM/YYYY",
+      "title": "Descriptive group title",
+      "eventType": "RECOGNITION" | "ACCRUAL" | "SETTLEMENT" | "PREPAYMENT" | "ADJUSTMENT" | "DEPRECIATION_AMORTISATION" | "IMPAIRMENT" | "REVERSAL" | "TAX",
+      "summary": "Specific journal entry summary",
+      "lines": [
+        {
+          "accountCode": "1000",
+          "accountName": "Standard Account Name",
+          "category": "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE" | "OTHER_COMPREHENSIVE_INCOME",
+          "debit": 0.00,
+          "credit": 0.00,
+          "lineExplanation": "Reason for line"
+        }
+      ],
+      "rationalePoints": ["Key technical accounting reasons"]
     }
   ],
-  "bifurcateFx": true | false,
-  "tradeDiscountHandling": "string",
-  "missingFacts": ["Any missing facts required to establish final treatment"],
+  "requiredAccounts": [],
+  "outstandingOrFutureItems": ["Unpaid balances or future-dated/scheduled legs NOT posted today"],
+  "missingFields": [
+    { "fieldKey": "string", "fieldName": "string", "prompt": "Question to user", "whyNeeded": "Why needed" }
+  ],
   "assumptions": [
     { "field": "string", "assumedValue": "string", "basis": "string", "materiality": "HIGH" | "MEDIUM" | "LOW" }
   ],
@@ -2425,6 +2454,29 @@ Return ONLY this concise, compact JSON payload:
     }
   ]
 }
+
+RULES GOVERNING DOUBLE-ENTRY GENERATION:
+1. Exact Fact-Backed Amounts:
+   - Every debit/credit must be a finite number rounded to 2 decimal places (>= 0, single-sided per line, sum(debit) === sum(credit) per group) derived strictly from stated user facts and [CURRENT ACTIVE TRANSACTION CONTEXT].
+   - Preserve exact decimals (e.g. 4000.50, 1850.25). Never invent amounts.
+2. Timing, Accruals & Settlements:
+   - Distinguish ACCRUAL/RECOGNITION from SETTLEMENT:
+     * Settling a payable debits the liability and credits Cash at Bank.
+     * Settling a receivable debits Cash at Bank and credits the receivable.
+     * NEVER re-recognise an expense/revenue or re-credit Share Capital upon settlement.
+   - A bare nominal phrase with a payment method (e.g. "Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank transfer.") without a finite completion verb ("was paid", "has been transferred", "we paid") does NOT establish that payment occurred -> return "responseKind": "CLARIFICATION_REQUIRED", "directGroups": [], and ask in "missingFields" whether payment has been completed or is still pending.
+   - Future or scheduled events ("will be paid next week", "to be paid next month") must NOT clear liabilities or credit Cash/Bank today: post ONLY confirmed completed events in "directGroups", and list future/unpaid obligations in "outstandingOrFutureItems".
+   - In mixed-status follow-ups ("Salaries were paid by bank, but CPF will be paid next week"), post ONLY the confirmed leg (Dr Salaries Payable / Cr Cash at Bank) using the exact amount from active context, and list the remaining unpaid liability (CPF Payable) in "outstandingOrFutureItems".
+3. Multi-Event Separation & Missing Amounts:
+   - Separate distinct transactions into separate directGroups. NEVER settle payroll or another liability using an unrelated payment clause (e.g. "Salaries payable S$4,000 and CPF payable S$1,850; rent was paid by bank transfer").
+   - If ANY material event in the prompt lacks a required monetary amount or material completion status (such as an unstated rent amount alongside unconfirmed payroll liabilities), do NOT invent amounts and do NOT post partial guesses: return "responseKind": "CLARIFICATION_REQUIRED", "directGroups": [], and list each missing item in "missingFields".
+4. IFRS/SFRS(I) & Singapore Rules:
+   - Do NOT apply 9% GST unless GST registration, standard-rated supply, or GST is stated (post the stated amount without GST rather than blocking for clarification solely over unstated GST status).
+   - Singapore Companies Act §68: no par value / no Share Premium for ordinary shares; SFRS(I) 1-32 §33: own equity / treasury shares are EQUITY, never financial assets.
+   - Deduct supplier trade discounts directly from initial cost (never post Trade Discount Expense).
+   - For lease/hire-purchase, intercompany recharges/settlements, bad-debt write-offs/allowances, prepayments/accruals, depreciation/amortisation, corporate tax provisions/payments, and SFRS(I) 1-12 deferred tax, use appropriate IFRS/SFRS(I) accounts (Right-of-Use Asset, Lease Liability, Hire Purchase Liability, Due from/to Related Company, Loss Allowance — Trade Receivables, Current Tax Payable, Deferred Tax Liability / Deferred Tax Asset, etc.).
+   - Contra-asset accounts (Accumulated Depreciation, Accumulated Amortisation, Loss Allowance / Allowance for Doubtful Debts) MUST use category "ASSET"; Gain on Disposal uses category "REVENUE" (CREDITED when proceeds exceed carrying amount) and Loss on Disposal uses category "EXPENSE" (DEBITED when proceeds are less than carrying amount). Always verify sum(debit) === sum(credit) for every group.
+   - If the question is purely conceptual/statutory advisory without requesting a journal or providing transaction amounts, return "responseKind": "ACCOUNTING_ADVISORY" and "directGroups": [].
 Return pure JSON only.
 `;
   } else {
@@ -2434,6 +2486,7 @@ RESPONSE FORMAT SPECIFICATION (COMPACT ACCOUNTING REASONING SCHEMA)
 ================================================================================
 CRITICAL FOR LATENCY & ACCURACY:
 Do NOT write verbose markdown essays or duplicate boilerplate. Focus strictly on professional reasoning and technical treatment.
+If the user describes a concrete numeric transaction requiring double-entry journals, you may alternatively return "responseKind": "JOURNAL_ENTRY" with "directGroups" (or "CLARIFICATION_REQUIRED" with "missingFields").
 Return ONLY this concise, compact JSON payload:
 {
   "decision": "Core conclusion on recognition, measurement, or compliance",
@@ -2461,6 +2514,64 @@ Return pure JSON only.
 }
 
 /**
+ * Pure helper to normalize account category strings returned by AI providers
+ * to canonical IFRS / SFRS(I) AccountCategory elements or preserve unknown strings for validation.
+ */
+export function normalizeAccountCategory(raw: unknown): AccountCategory {
+  if (raw === undefined || raw === null || raw === '') {
+    return 'ASSET';
+  }
+  const str = String(raw).trim();
+  if (!str) {
+    return 'ASSET';
+  }
+  const upper = str.toUpperCase();
+  switch (upper) {
+    case 'ASSET':
+    case 'CONTRA_ASSET':
+    case 'CONTRA-ASSET':
+    case 'CONTRA ASSET':
+      return 'ASSET';
+
+    case 'LIABILITY':
+    case 'CONTRA_LIABILITY':
+    case 'CONTRA-LIABILITY':
+    case 'CONTRA LIABILITY':
+      return 'LIABILITY';
+
+    case 'EQUITY':
+    case 'CONTRA_EQUITY':
+    case 'CONTRA-EQUITY':
+    case 'CONTRA EQUITY':
+      return 'EQUITY';
+
+    case 'REVENUE':
+    case 'INCOME':
+    case 'OTHER_INCOME':
+    case 'OTHER INCOME':
+    case 'GAIN':
+    case 'GAINS':
+      return 'REVENUE';
+
+    case 'EXPENSE':
+    case 'LOSS':
+    case 'LOSSES':
+    case 'OTHER_EXPENSE':
+    case 'OTHER EXPENSE':
+    case 'FINANCE_COST':
+    case 'FINANCE COST':
+      return 'EXPENSE';
+
+    case 'OTHER_COMPREHENSIVE_INCOME':
+    case 'OCI':
+      return 'OTHER_COMPREHENSIVE_INCOME';
+
+    default:
+      return str as AccountCategory;
+  }
+}
+
+/**
  * Post-processes an AI-generated accounting response:
  * 1. Executes post-generation citation verification on all returned citations.
  * 2. Applies deterministic accounting engine guardrails (balancing, FX bifurcation, trade discounts).
@@ -2479,6 +2590,7 @@ export function postProcessAIResponse(
   scenarioState: AccountingScenarioState;
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
   groundingEvidence?: GroundingEvidenceTrace[];
+  clarifications?: MissingFieldInfo[];
 } {
   if (groundedContext.evidenceQuality) {
     const taxClaimsWereOmitted = parsed?.taxClaims === undefined ||
@@ -2487,27 +2599,98 @@ export function postProcessAIResponse(
     return renderIrasEvidenceResponse(parsed, groundedContext, userInput, deterministicScenario || null, standard,
       canShowVerifiedSourceParagraphs ? 'PROVIDER_NO_CLAIMS' : 'PROVIDER');
   }
-  // If parsed is a compact decision (has directAnswer, treatment, decision, requiredAccounts, or lacks directGroups and messageText),
-  // delegate to assembleDeterministicResponse which compiles the complete verified markdown, journal entries, and scenario state.
-  const isCompactPayload = Boolean(
-    parsed &&
-    (parsed.directAnswer !== undefined ||
-     parsed.requiredAccounts !== undefined ||
-     (parsed.treatment !== undefined && (!parsed.directGroups || parsed.directGroups.length === 0)) ||
-     (parsed.decision !== undefined && (!parsed.directGroups || parsed.directGroups.length === 0)) ||
-     (!parsed.messageText && (!parsed.directGroups || parsed.directGroups.length === 0)))
-  );
+  // Handle CLARIFICATION_REQUIRED before compact decision schema
+  const isClarificationRequired =
+    parsed?.responseKind === 'CLARIFICATION_REQUIRED' ||
+    (Array.isArray(parsed?.missingFields) &&
+      parsed.missingFields.length > 0 &&
+      (!Array.isArray(parsed?.directGroups) || parsed.directGroups.length === 0));
 
-  // A settlement is a state transition, not an invitation for the model to
-  // propose a fresh journal.  In particular, an AI payload may use the right
-  // title while supplying unrelated lines (for example an entertainment
-  // expense).  Route *all* settlement payload shapes through the deterministic
-  // assembler, which resolves the target against committed balances first.
+  if (isClarificationRequired) {
+    const rawMissing = Array.isArray(parsed?.missingFields) ? parsed.missingFields : [];
+    const missingFields: MissingFieldInfo[] = rawMissing.map((m: any, idx: number) => ({
+      fieldKey: typeof m === 'string' ? `missing-${idx}` : (m.fieldKey || `missing-${idx}`),
+      fieldName: typeof m === 'string' ? m : (m.fieldName || m.field || `Field ${idx + 1}`),
+      prompt: typeof m === 'string' ? m : (m.prompt || m.whyNeeded || m.fieldName || 'Please provide additional information.'),
+      whyNeeded: typeof m === 'string' ? m : (m.whyNeeded || m.prompt || 'Required to establish accounting entries.')
+    }));
+
+    const priorCommittedGroups = currentScenario?.committedDirectGroups ||
+      (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+
+    let explanation = parsed.accountingTreatmentSummary || parsed.treatment || '';
+    let clarifyMarkdown = `### Clarification Required\n\n`;
+    if (explanation) {
+      clarifyMarkdown += `${explanation}\n\n`;
+    }
+    clarifyMarkdown += `To record the correct double-entry journal, please clarify the following:\n`;
+    for (const mf of missingFields) {
+      clarifyMarkdown += `- **${mf.fieldName}**: ${mf.prompt}\n`;
+    }
+
+    if (Array.isArray(parsed.outstandingOrFutureItems) && parsed.outstandingOrFutureItems.length > 0) {
+      clarifyMarkdown += `\n#### Outstanding / Future Items\n`;
+      for (const item of parsed.outstandingOrFutureItems) {
+        clarifyMarkdown += `- ${item}\n`;
+      }
+    }
+
+    const scenarioState: AccountingScenarioState = {
+      scenarioType: currentScenario?.scenarioType || 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: userInput,
+      transactionTitle: parsed.transactionTitle || currentScenario?.transactionTitle || 'Clarification Required',
+      functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
+      transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
+      accountingTreatmentSummary: explanation || undefined,
+      directGroups: [],
+      committedDirectGroups: priorCommittedGroups,
+      isComplete: false,
+      missingFields,
+      missingFacts: missingFields.map(m => m.prompt)
+    };
+
+    return {
+      messageText: clarifyMarkdown,
+      scenarioState,
+      clarifications: missingFields
+    };
+  }
+
+  const hasDirectGroups = Array.isArray(parsed?.directGroups) && parsed.directGroups.length > 0;
+  const isAiFirstSchema = parsed?.responseKind === 'JOURNAL_ENTRY' || parsed?.responseKind === 'ACCOUNTING_ADVISORY' || parsed?.responseKind === 'CLARIFICATION_REQUIRED';
+
+  const acctCtx = extractAccountingContext(currentScenario);
   const isSettlementFollowUp =
     groundedContext.semanticUnderstanding?.followUpAnalysis?.eventType === 'settlement' ||
     groundedContext.semanticUnderstanding?.followUpAnalysis?.eventType === 'partial_settlement';
 
-  if (isCompactPayload || isSettlementFollowUp) {
+  const anyAiLineCreditsEquity = hasDirectGroups && parsed.directGroups.some((grp: any) =>
+    Array.isArray(grp.lines) && grp.lines.some((l: any) =>
+      l.credit > 0 && (l.category === 'EQUITY' || /share\s*capital|equity/i.test(l.accountName || ''))
+    )
+  );
+
+  const forceDeterministicSettlement = Boolean(
+    isSettlementFollowUp &&
+    (!hasDirectGroups ||
+      currentScenario?.scenarioType === 'SHARE_CAPITAL_UNPAID' ||
+      (acctCtx.outstandingBalances.length === 1 && acctCtx.outstandingBalances[0].counterpartyRole === 'shareholder') ||
+      (acctCtx.recognizedEquityTotal > 0 && anyAiLineCreditsEquity))
+  );
+
+  const isCompactPayload = Boolean(
+    !isAiFirstSchema &&
+    parsed &&
+    (parsed.directAnswer !== undefined ||
+     (Array.isArray(parsed.requiredAccounts) && parsed.requiredAccounts.length > 0) ||
+     (parsed.treatment !== undefined && !hasDirectGroups) ||
+     (parsed.decision !== undefined && !hasDirectGroups) ||
+     (!parsed.messageText && !hasDirectGroups))
+  );
+
+  if (forceDeterministicSettlement || isCompactPayload) {
     return assembleDeterministicResponse(
       parsed,
       userInput,
@@ -2524,22 +2707,109 @@ export function postProcessAIResponse(
     ...groundedContext.curatedSummaries
   ];
 
+  // Handle pure conceptual ACCOUNTING_ADVISORY payloads without direct groups
+  if (parsed?.responseKind === 'ACCOUNTING_ADVISORY' && !hasDirectGroups) {
+    const title = parsed.transactionTitle || 'Accounting Advisory';
+    const treatment = parsed.accountingTreatmentSummary || parsed.treatment || parsed.decision || '';
+    const tax = parsed.singaporeTaxTreatmentSummary || parsed.singaporeTaxImpact || '';
+    const assumptions: ExplicitAssumption[] = (parsed.assumptions || []).map((a: any) => ({
+      field: a.field || 'General',
+      assumedValue: a.assumedValue || '',
+      basisOrRationale: a.basisOrRationale || a.basis || '',
+      materiality: a.materiality || 'MEDIUM'
+    }));
+
+    let advisoryText = `### ${title}\n\n${treatment}`;
+    if (tax) {
+      advisoryText += `\n\n#### Singapore Tax & Statutory Considerations\n${tax}`;
+    }
+    if (assumptions.length > 0) {
+      advisoryText += `\n\n#### Explicit Assumptions\n` + assumptions.map(a => `- **${a.field}**: ${a.assumedValue} (${a.basisOrRationale})`).join('\n');
+    }
+    if (parsed.uncertaintyDisclaimer) {
+      advisoryText += `\n\n> **Note:** ${parsed.uncertaintyDisclaimer}`;
+    }
+
+    const scenarioState: AccountingScenarioState = {
+      scenarioType: currentScenario?.scenarioType || 'UNIVERSAL',
+      queryIntent: 'STATUTORY_ADVISORY',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: userInput,
+      transactionTitle: title,
+      functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
+      transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
+      accountingTreatmentSummary: typeof treatment === 'string'
+        ? guardUnconditionalMealInputTaxClaim(treatment, userInput, groundedContext, groundedContext.missingFacts)
+        : treatment || undefined,
+      singaporeTaxTreatmentSummary: typeof tax === 'string'
+        ? guardUnconditionalMealInputTaxClaim(tax, userInput, groundedContext, groundedContext.missingFacts)
+        : tax || undefined,
+      directGroups: [],
+      assumptions: assumptions.length > 0 ? assumptions : undefined,
+      missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
+      isComplete: groundedContext.missingFacts.length === 0,
+      missingFields: []
+    };
+
+    return {
+      messageText: appendStatutorySourceFooter(
+        guardUnconditionalMealInputTaxClaim(advisoryText, userInput, groundedContext, groundedContext.missingFacts),
+        scenarioState,
+        retrievedEvidenceScope
+      ),
+      scenarioState,
+      sourceMapFallbackTrace: groundedContext.sourceMapFallbackTrace,
+      groundingEvidence: buildGroundingEvidenceTrace(groundedContext)
+    };
+  }
+
+  // Top-level citation verification
+  const topLevelVerifiedCitations: StandardCitation[] = (parsed.citations || []).flatMap((cite: any) => {
+    const verification = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceScope);
+    if (!verification.isValid || !verification.matchedRecord?.officialSourceUrl) return [];
+    const safeUrl = verification.matchedRecord.officialSourceUrl;
+
+    return [{
+      standard: cite.standard || '',
+      paragraph: cite.paragraph || '',
+      title: cite.title || '',
+      text: cite.text || '',
+      authority: verification.matchedRecord.authority,
+      sourcePublisher: verification.matchedRecord.sourcePublisher,
+      officialSourceUrl: safeUrl,
+      verificationStatus: verification.status,
+      isAuthoritativePrimarySource: verification.isAuthoritativePrimarySource,
+      isStructurallyValid: verification.isStructurallyValid,
+      verificationReason: verification.reason,
+      structuralVerificationOnly: true,
+      ...(verification.sourceBinding ? { sourceBinding: verification.sourceBinding } : {})
+    }];
+  });
+
+  // Ensure assumptions are explicit and separated from missing facts
+  const assumptions: ExplicitAssumption[] = [
+    ...(parsed.assumptions || []).map((a: any) => ({
+      field: a.field || 'General',
+      assumedValue: a.assumedValue || '',
+      basisOrRationale: a.basisOrRationale || a.basis || '',
+      materiality: a.materiality || 'MEDIUM'
+    })),
+    ...(deterministicScenario?.assumptions || []),
+    ...groundedContext.assumptions.filter(
+      (ga) => !(parsed.assumptions || []).some((pa: any) => pa.field === ga.field)
+    )
+  ];
+
   // 1. Deterministic Accounting Engine Governance:
-  // If the deterministic accounting engine recognized this transaction and calculated authoritative entries,
-  // the deterministic engine's directGroups and calculations govern the journal output.
-  // Gemini is responsible for accounting interpretation, tax summaries, and narrative advisory.
   const hasAuthoritativeDeterministicEntries =
     deterministicScenario &&
     deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
     deterministicScenario.directGroups &&
     deterministicScenario.directGroups.length > 0;
 
-  // Enforce Phase 2.2 Hardening: Authority status triad
-  // Deterministic engine recognized transaction -> DETERMINISTIC (or CONDITIONAL if missing facts exist)
-  // Unrecognized transaction (AI proposed entries) -> strictly AI_PROPOSED (or CONDITIONAL if missing facts exist)
-  // Missing facts ALWAYS trigger CONDITIONAL status.
+  const hasHighMaterialityAssumption = assumptions.some(a => a.materiality === 'HIGH');
   const hasMissingFacts = Boolean(groundedContext.missingFacts && groundedContext.missingFacts.length > 0);
-  const computedAuthorityStatus: JournalAuthorityStatus = hasMissingFacts
+  const computedAuthorityStatus: JournalAuthorityStatus = (hasMissingFacts || hasHighMaterialityAssumption)
     ? 'CONDITIONAL'
     : (hasAuthoritativeDeterministicEntries
         ? (deterministicScenario.authorityStatus || 'DETERMINISTIC')
@@ -2559,7 +2829,7 @@ export function postProcessAIResponse(
         id: l.id || `line-${gIdx}-${lIdx}`,
         accountCode: l.accountCode || '1000',
         accountName: l.accountName || 'Account',
-        category: l.category || 'ASSET',
+        category: normalizeAccountCategory(l.category),
         debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
         credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
         foreignCurrency: l.foreignCurrency,
@@ -2570,7 +2840,6 @@ export function postProcessAIResponse(
       }));
 
       // Trade discount guardrail: Deducted directly from asset purchase cost (SFRS(I) 1-16 §16(a))
-      // If an expense line was mistakenly generated for a trade discount, remove it
       const tradeDiscountExpenseIdx = lines.findIndex(
         (l: any) => l.accountName.toLowerCase().includes('trade discount') && l.category === 'EXPENSE'
       );
@@ -2583,7 +2852,7 @@ export function postProcessAIResponse(
       const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
       // Post-generation citation verification on all citations in this group
-      const verifiedCitations: StandardCitation[] = (grp.citations || []).flatMap((cite: any) => {
+      let verifiedCitations: StandardCitation[] = (grp.citations || []).flatMap((cite: any) => {
         const verification = defaultCitationVerifier.verifyCitation(cite, cite.authority, retrievedEvidenceScope);
         if (!verification.isValid || !verification.matchedRecord?.officialSourceUrl) return [];
         const safeUrl = verification.matchedRecord.officialSourceUrl;
@@ -2605,6 +2874,10 @@ export function postProcessAIResponse(
         }];
       });
 
+      if (verifiedCitations.length === 0 && gIdx === 0 && topLevelVerifiedCitations.length > 0) {
+        verifiedCitations = topLevelVerifiedCitations;
+      }
+
       return {
         id: grp.id || `grp-${gIdx + 1}`,
         eventDate: formatSingaporeDate(grp.eventDate || new Date()),
@@ -2621,12 +2894,31 @@ export function postProcessAIResponse(
     });
   }
 
-  // Safeguard: If AI response didn't supply directGroups (e.g. conceptual advisory query), preserve current
-  if (directGroups.length === 0 && currentScenario?.directGroups && currentScenario.directGroups.length > 0) {
-    directGroups = currentScenario.directGroups.map((grp) => ({
-      ...grp,
-      authorityStatus: grp.authorityStatus || computedAuthorityStatus
-    }));
+  // Follow-up state handling: preserve prior committed groups
+  const isFollowUpRelation = currentScenario && (
+    groundedContext.semanticUnderstanding?.followUpAnalysis?.isFollowUp ||
+    assessConversationRelation(userInput, currentScenario) !== 'NEW'
+  );
+
+  let committedDirectGroups: JournalEntryGroup[] | undefined;
+
+  if (isFollowUpRelation && currentScenario) {
+    const priorCommitted = currentScenario.committedDirectGroups ||
+      (currentScenario.isComplete ? (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : []);
+
+    if (priorCommitted.length > 0 && directGroups.length > 0) {
+      const alreadyIncludesPrior = directGroups.some(g => g.id === priorCommitted[0].id);
+      if (!alreadyIncludesPrior) {
+        committedDirectGroups = [...priorCommitted, ...directGroups];
+        directGroups = [...priorCommitted, ...directGroups];
+      } else {
+        committedDirectGroups = directGroups;
+      }
+    } else if (directGroups.length > 0) {
+      committedDirectGroups = directGroups;
+    }
+  } else if (directGroups.length > 0) {
+    committedDirectGroups = directGroups;
   }
 
   // If deterministic scenario provided keyParameters, prioritize them
@@ -2698,14 +2990,55 @@ export function postProcessAIResponse(
     groundedContext.missingFacts
   );
 
-  // Ensure assumptions are explicit and separated from missing facts
-  const assumptions: ExplicitAssumption[] = [
-    ...(parsed.assumptions || []),
-    ...(deterministicScenario?.assumptions || []),
-    ...groundedContext.assumptions.filter(
-      (ga) => !(parsed.assumptions || []).some((pa: any) => pa.field === ga.field)
-    )
-  ];
+  let rawMessageText = parsed.messageText || '';
+  if (!rawMessageText && directGroups.length > 0) {
+    const currency = parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD';
+    let md = `### ${finalTitle}\n\n`;
+    if (selectedAccountingTreatmentSummary) {
+      md += `${selectedAccountingTreatmentSummary}\n\n`;
+    }
+    for (const grp of directGroups) {
+      md += `#### ${grp.title} (${grp.eventDate})\n`;
+      if (grp.summary) {
+        md += `${grp.summary}\n\n`;
+      }
+      md += `| Account | Category | Debit (${currency}) | Credit (${currency}) |\n`;
+      md += `| :--- | :--- | :---: | :---: |\n`;
+      for (const l of grp.lines) {
+        const drStr = l.debit > 0 ? l.debit.toFixed(2) : '-';
+        const crStr = l.credit > 0 ? l.credit.toFixed(2) : '-';
+        md += `| ${l.accountName} | ${l.category} | ${drStr} | ${crStr} |\n`;
+      }
+      md += `\n`;
+    }
+
+    if (Array.isArray(parsed.outstandingOrFutureItems) && parsed.outstandingOrFutureItems.length > 0) {
+      md += `#### Outstanding / Future Items (Not Yet Recognised as Settled)\n`;
+      for (const item of parsed.outstandingOrFutureItems) {
+        md += `- ${item}\n`;
+      }
+      md += `\n`;
+    }
+
+    if (selectedSingaporeTaxTreatmentSummary) {
+      md += `#### Singapore Tax & Statutory Considerations\n${selectedSingaporeTaxTreatmentSummary}\n\n`;
+    }
+
+    if (assumptions.length > 0) {
+      md += `#### Explicit Assumptions\n`;
+      for (const a of assumptions) {
+        const basisText = a.basisOrRationale ? ` (${a.basisOrRationale})` : '';
+        md += `- **${a.field}**: ${a.assumedValue}${basisText}\n`;
+      }
+      md += `\n`;
+    }
+
+    if (uncertaintyDisclaimer) {
+      md += `> **Note:** ${uncertaintyDisclaimer}\n\n`;
+    }
+
+    rawMessageText = md.trim();
+  }
 
   const scenarioState: AccountingScenarioState = {
     scenarioType: parsed.scenarioType || deterministicScenario?.scenarioType || currentScenario?.scenarioType || 'UNIVERSAL',
@@ -2729,6 +3062,7 @@ export function postProcessAIResponse(
     authorityStatus: computedAuthorityStatus,
     keyParameters,
     directGroups,
+    committedDirectGroups,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
@@ -2740,7 +3074,7 @@ export function postProcessAIResponse(
 
   return {
     messageText: appendStatutorySourceFooter(
-      guardUnconditionalMealInputTaxClaim(parsed.messageText || '', userInput, groundedContext, groundedContext.missingFacts),
+      guardUnconditionalMealInputTaxClaim(rawMessageText, userInput, groundedContext, groundedContext.missingFacts),
       scenarioState,
       retrievedEvidenceScope
     ),
