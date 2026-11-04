@@ -83,6 +83,11 @@ function scriptedClaim(text) {
   const call = async (prompt, system) => {
     const packet = JSON.parse(prompt);
     calls.push({ system, packet });
+    if (system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')) {
+      return JSON.stringify({ verdicts: packet.claims.map(item => ({
+        claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE'
+      })) });
+    }
     const passage = packet.evidencePassages[0];
     return JSON.stringify({
       claims: [{
@@ -102,8 +107,8 @@ async function accept(record, query, domain, authority, text) {
   const scripted = scriptedClaim(text);
   const result = await tryGenerateGroundedSynthesis(makeInput(record, query, domain, authority), { call: scripted.call });
   assert.ok(result, 'supported numeric paraphrase should be retained: ' + text);
-  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
-  assert.equal(scripted.calls.length, 1, 'a supported numeric paraphrase uses one synthesis generation call');
+  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK');
+  assert.equal(scripted.calls.length, 2, 'a paraphrased statutory rule receives one batched support check');
 }
 
 async function reject(record, query, domain, authority, text, reason) {
@@ -116,6 +121,46 @@ async function reject(record, query, domain, authority, text, reason) {
   assert.equal(scripted.calls.length, 1,
     'unsupported numeric claims fail the deterministic source-provenance check after one generation');
 }
+
+// Synthetic allowance passages isolate amount parsing, not statutory eligibility.
+// The actual Form C-S Lite sourceText below supports SGD 200,000, not SGD 5 million.
+const allowanceFixture = amount => ({ ...records.formCsLite,
+  sourceText: `The annual sample allowance is ${amount}.`
+});
+const allowanceQuery = 'What annual sample allowance is stated in this fixture?';
+const magnitudeRecord = allowanceFixture('SGD 5 million');
+for (const amount of ['S$5 million', 'S$5mn', 'S$5e6', 'SGD 5,000,000', 'SGD 0.005 billion']) {
+  await accept(magnitudeRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+    `The annual sample allowance is ${amount}.`);
+}
+await reject(magnitudeRecord, allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual sample allowance is S$5.',
+  'the parser must treat S$5 million as five million dollars rather than the partial amount S$5');
+for (const [sourceAmount, malformed] of [
+  ['SGD 5', 'S$5mm'], ['SGD 50', 'S$500 crore'], ['SGD 5,000,000', 'S$5,000,000mm'],
+  ['SGD 5', 'S$５mm']
+]) {
+  await reject(allowanceFixture(sourceAmount), allowanceQuery, 'IRAS_INCOME_TAX', 'IRAS',
+    `The annual sample allowance is ${malformed}.`,
+    `an unsupported or incomplete currency magnitude cannot be reduced to a matching partial amount: ${malformed}`);
+}
+
+const decimalSuffixRecord = {
+  ...records.formCsLite,
+  sourceText: 'The annual expense allowance is 1.25 million Singapore dollars.'
+};
+await accept(decimalSuffixRecord, 'What is the annual expense allowance?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual expense allowance is SGD 1,250,000.');
+
+const signedDecimalRecord = {
+  ...records.formCsLite,
+  sourceText: 'The annual expense amount is SGD -10.50.'
+};
+await accept(signedDecimalRecord, 'What annual expense amount is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual expense amount is negative SGD 10.50.');
+await reject(signedDecimalRecord, 'What annual expense amount is stated?', 'IRAS_INCOME_TAX', 'IRAS',
+  'The annual expense amount is SGD 10.50.',
+  'a decimal currency claim cannot discard the admitted negative sign');
 
 await accept(
   records.mom,

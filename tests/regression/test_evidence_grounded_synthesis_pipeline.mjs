@@ -27,6 +27,7 @@ const providerStages = [];
 let draftPacket;
 let lastClaims = [];
 let generationFailure = false;
+let mockFailure;
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
 
@@ -36,13 +37,32 @@ globalThis.fetch = async (input, init) => {
     const request = JSON.parse(init.body);
     const system = request.messages[0].content;
     const user = request.messages.at(-1).content;
+    if (system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')) {
+      try {
+      providerStages.push('support-check');
+      const packet = JSON.parse(user);
+      assert.ok(packet.claims.length > 0);
+      const expectedTypes = { 'practical-gst': 'CONDITIONAL_APPLICATION', 'accounting-gap': 'RULE' };
+      for (const claim of packet.claims) {
+        assert.ok(Object.hasOwn(expectedTypes, claim.claimId), 'only the scripted supported claims are checked');
+        assert.equal(claim.text, lastClaims.find(item => item.id === claim.claimId).text);
+      }
+      return modelReply({ verdicts: packet.claims.map(claim => ({
+        claimId: claim.claimId, support: 'SUPPORTED', claimType: expectedTypes[claim.claimId]
+      })) });
+      } catch (error) { mockFailure = error; throw error; }
+    }
     if (system.startsWith('EVIDENCE_GROUNDED_SYNTHESIS')) {
+      try {
       providerStages.push('synthesis');
       if (generationFailure) return new Response('{"claims":[', { headers: { 'content-type': 'application/json' } });
       const requestPacket = JSON.parse(user);
       draftPacket = requestPacket.packet || requestPacket;
-      const passage = draftPacket.evidencePassages.find(item => item.sourceRecordId.startsWith('LIVE_TOPIC_') && /input tax|GST/i.test(item.completeAdmittedPassage));
-      assert.ok(passage, 'the synthesis receives an admitted GST passage from real retrieval');
+      const passage = draftPacket.evidencePassages.find(item => item.sourceRecordId.startsWith('LIVE_TOPIC_') && /input tax|GST/i.test(item.completeAdmittedPassage)) ||
+        draftPacket.evidencePassages.find(item => item.domain === 'IRAS_GST' && /input tax|GST/i.test(item.completeAdmittedPassage));
+      assert.ok(passage, 'the synthesis receives an admitted GST passage');
+      if (draftPacket.query === query) assert.match(passage.sourceRecordId, /^LIVE_TOPIC_/,
+        'the original advisory request exercises real fixture retrieval and admission');
       lastClaims = [{ id: 'practical-gst', kind: 'APPLICATION',
         text: 'Your client may recover the GST only if the applicable input-tax conditions are met; the office-expense description alone does not establish business use, supporting documentation or the absence of a blocked expense.',
         supportIds: [passage.id], factRefs: ['fact-current-question'], issueId: passage.issueId }];
@@ -52,6 +72,7 @@ globalThis.fetch = async (input, init) => {
         text: 'The accounting treatment is still unresolved: the available evidence does not establish the financial-accounting conclusion for this office expense.',
         supportIds: [accountingGap.id], factRefs: ['fact-current-question'], ...(accountingGap.issueId ? { issueId: accountingGap.issueId } : {}) });
       return modelReply({ claims: lastClaims });
+      } catch (error) { mockFailure = error; throw error; }
     }
     providerStages.push('existing-pipeline');
     return modelReply(interpretation);
@@ -72,6 +93,7 @@ try {
   const result = await processAccountingQuery(query, null, 'SFRS_I', provider, 'unused', [
     { id: 'current-question', sender: 'user', timestamp: '', text: query }
   ], undefined, { onAuthorityWorkstreams: value => { capturedWorkstreams = value; }, onGroundedContext: value => { capturedContext = value; } });
+  assert.ifError(mockFailure);
   assert.ok(capturedWorkstreams?.workstreams.some(stream => stream.verifiedClaims.length > 0) || capturedContext?.evidenceQuality?.eligibleRecords.length > 0, 'the existing authority pipeline admits the fixture evidence');
   assert.equal(result.answerPath, 'AI_GROUNDED_SYNTHESIS', 'the production query result enters evidence-grounded synthesis');
   assert.equal(result.displayFullAnswer, true, 'the coherent answer is displayed in full');
@@ -84,6 +106,8 @@ try {
     'the full query receives one semantic-understanding call before retrieval and synthesis');
   assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 1,
     'the full query receives one synthesis-generation call');
+  assert.equal(providerStages.filter(stage => stage === 'support-check').length, 1,
+    'the full query receives one scoped batch support check and no repair generation');
 
   const mixedQuery = 'On 03/11/2026, purchased office equipment for SGD 1,250 and paid from the business bank. Can my client claim GST input tax on this office expense, and what is its accounting treatment?';
   const conflictingHistory = [
@@ -98,6 +122,7 @@ try {
   };
   providerStages.length = 0;
   const mixedResult = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory);
+  assert.ifError(mockFailure);
   assert.equal(mixedResult.answerPath, 'AI_GROUNDED_SYNTHESIS', 'a new mixed accounting/statutory question uses the production synthesis path');
   const historyContext = JSON.stringify(draftPacket.historyContext);
   assert.doesNotMatch(historyContext, /previous share issue|old share transaction|private-use assumption/i,

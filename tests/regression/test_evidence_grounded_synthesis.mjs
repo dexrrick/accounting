@@ -32,8 +32,8 @@ function makeIssue(issueId = 'issue-gst', options = {}) {
     subject: options.subject || 'input tax recovery',
     population: options.population || 'BUSINESS',
     domain: 'IRAS_GST',
-    operation: 'RECOVER',
-    evidenceRequirement: 'APPLICATION',
+    operation: options.operation || 'RECOVER',
+    evidenceRequirement: options.evidenceRequirement || 'APPLICATION',
     governingAuthority: 'IRAS',
     sourceSections: [],
     lifecycle: {},
@@ -63,10 +63,11 @@ function makeInput(options = {}) {
       evidenceQuality: options.evidenceQuality || {
         eligibleRecords: [record], missingFacts: ['The purchase purpose was not provided.'], targetDate: '2026-11-03'
       },
-      ...(options.calculation ? { calculation: options.calculation } : {})
+      ...(options.calculation ? { calculation: options.calculation } : {}),
+      ...(options.claimVerification ? { claimVerification: options.claimVerification } : {})
     },
     ...(options.context ? { context: options.context } : {}),
-    workstreams: {
+    ...(options.noWorkstreams ? {} : { workstreams: {
       query: queryText,
       issuePlan: {},
       requestCompletenessContext: {},
@@ -78,7 +79,7 @@ function makeInput(options = {}) {
       evidenceStatus: issues.some(issue => issue.evidenceStatus === 'VERIFIED') ? 'VERIFIED' : 'INSUFFICIENT',
       applicationStatus: issues.some(issue => issue.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED' : 'VERIFIED',
       status: 'CONDITIONAL', gaps: options.workstreamGaps || []
-    }
+    } })
   };
 }
 
@@ -86,14 +87,28 @@ function claim(id, text, supportIds = ['passage-1'], overrides = {}) {
   return { id, kind: 'RULE', text, supportIds, factRefs: [], ...overrides };
 }
 
-function scriptedCall(handler) {
+function scriptedCall(handler, verificationHandler) {
   const calls = [];
   const call = async (prompt, system, activeProvider, options) => {
     calls.push({ prompt, system, provider: activeProvider, options });
-    const value = await handler({ prompt, system, provider: activeProvider, index: calls.length });
+    const context = { prompt, system, provider: activeProvider, index: calls.length };
+    const value = system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')
+      ? verificationHandler ? await verificationHandler(context) : defaultVerification(prompt)
+      : await handler(context);
     return typeof value === 'string' ? value : JSON.stringify(value);
   };
   return { call, calls };
+}
+
+function defaultVerification(prompt) {
+  const packet = JSON.parse(prompt);
+  return { verdicts: packet.claims.map(item => {
+    return {
+      claimId: item.claimId,
+      support: 'SUPPORTED',
+      claimType: item.kind === 'APPLICATION' ? 'DEFINITIVE_APPLICATION' : 'RULE'
+    };
+  }) };
 }
 
 function packetFrom(prompt) {
@@ -119,7 +134,7 @@ const supportedRule = quote;
   assert.match(result.messageText, /purchase purpose was not provided/i);
   assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
   assert.equal(result.verification.sourceAdmission, 'EXISTING_PIPELINE_ADMITTED');
-  assert.equal(result.verification.providerCalls, 1);
+  assert.equal(result.verification.providerCalls, 1, 'an exact admitted rule quote stays on the single generation call');
   assert.equal(result.verification.providerAttempts, 1);
   assert.equal(result.verification.admittedClaimIds[0], 'rule-1');
   assert.ok(result.verification.providerElapsedMs >= 0);
@@ -249,6 +264,39 @@ const supportedRule = quote;
 }
 
 {
+  const issue = makeIssue('issue-gst-rule', {
+    subject: 'input GST recovery for blocked motor car purchases',
+    operation: 'EXPLAIN_RULE', evidenceRequirement: 'AUTHORITATIVE_SOURCE', applicationStatus: 'NOT_REQUIRED'
+  });
+  const truthfulRule = claim('rule-blocked-category', supportedRule, ['passage-1'], {
+    issueId: 'issue-gst-rule'
+  });
+  const contradiction = claim('rule-private-motor-car-recoverable',
+    'Input GST on a blocked private motor car purchase is always recoverable.', ['passage-1'], {
+      issueId: 'issue-gst-rule'
+    });
+  const scripted = scriptedCall(() => ({ claims: [truthfulRule, contradiction] }), ({ prompt, system }) => {
+    assert.match(system, /full legal meaning.*every conclusion, exception, qualification, and contradiction/i);
+    const input = JSON.parse(prompt);
+    assert.ok(input.claims.some(item => item.claimId === 'rule-private-motor-car-recoverable'),
+      'a paraphrased RULE is verified even when issue routing says EXPLAIN_RULE and NOT_REQUIRED');
+    return { verdicts: [
+      { claimId: 'rule-private-motor-car-recoverable', support: 'UNSUPPORTED', claimType: 'RULE' }
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'Explain the input GST rule for a blocked private motor car purchase.',
+    issues: [issue], evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(result.messageText.includes(supportedRule), 'the independently supported rule remains available');
+  assert.ok(!result.messageText.includes(contradiction.text), 'a valid IRAS source citation cannot rescue a contradictory conclusion');
+  assert.equal(result.verification.providerCalls, 2);
+  assert.equal(result.verification.semanticVerificationCalls, 1);
+  assert.equal(result.verification.claims.find(item => item.claimId === contradiction.id)?.semanticSupport, 'UNSUPPORTED');
+}
+
+{
   const goodRule = claim('rule-supported', supportedRule);
   const unconditional = claim('application-needs-facts', 'This client qualifies to recover the input tax for this expense.', ['passage-1'], {
     kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
@@ -261,7 +309,7 @@ const supportedRule = quote;
   assert.ok(result);
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
   assert.match(result.messageText, /Some requested conclusions could not be supported/);
-  assert.equal(result.verification.providerCalls, 1);
+  assert.equal(result.verification.providerCalls, 2, 'the application claim receives one batched support check');
   assert.equal(result.verification.claims.find(item => item.claimId === 'rule-supported')?.outcome, 'ADMITTED');
   assert.ok(result.verification.withheldClaimIds.includes('application-needs-facts'));
   assert.ok(!result.messageText.includes('This client qualifies to recover'));
@@ -325,10 +373,19 @@ const supportedRule = quote;
   const positiveNegativeUnless = claim('application-negative-unless',
     'The client is not eligible unless the missing business purpose is confirmed.',
     ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' });
+  const conditionalClaimIds = new Set([
+    positiveConditional.id, positiveEpistemicConditional.id, positiveCanConditional.id, positiveNegativeUnless.id
+  ]);
   const scripted = scriptedCall(({ system, prompt }) => {
     const packet = packetFrom(prompt);
     return { claims: [claim('rule-kept', supportedRule), positiveConditional, positiveEpistemicConditional,
       positiveCanConditional, positiveNegativeUnless, ...definitiveApplications] };
+  }, ({ prompt }) => {
+    const packet = JSON.parse(prompt);
+    return { verdicts: packet.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED',
+      claimType: conditionalClaimIds.has(item.claimId) ? 'CONDITIONAL_APPLICATION' : 'DEFINITIVE_APPLICATION'
+    })) };
   });
   const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
   assert.ok(result);
@@ -347,6 +404,107 @@ const supportedRule = quote;
   }
   assert.ok(result.verification.withheldClaimIds.length >= definitiveApplications.length,
     'the deterministic conditional wording guard withholds categorical applications');
+}
+
+{
+  const claimText = 'The client may recover GST if the conditions are met, and therefore is eligible today.';
+  const exactRule = claim('conditional-bypass-rule', supportedRule);
+  const caseApplication = claim('conditional-bypass-application', claimText, ['passage-1'], {
+    kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+  });
+  const scripted = scriptedCall(() => ({ claims: [exactRule, caseApplication] }), ({ prompt }) => {
+    const verificationPacket = JSON.parse(prompt);
+    assert.equal(verificationPacket.claims.length, 1, 'the exact general rule needs no second semantic check');
+    return { verdicts: [{
+      claimId: caseApplication.id, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+    }] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(!result.messageText.includes(claimText),
+    'a permissive support verdict cannot admit a definitive outcome while issue eligibility remains unresolved');
+  assert.ok(result.messageText.includes(supportedRule));
+  assert.equal(result.verification.claims.find(item => item.claimId === caseApplication.id)?.semanticSupport, 'SUPPORTED',
+    'the semantic reviewer may agree with source meaning while the structured unresolved status still withholds the case outcome');
+  assert.equal(result.verification.claims.find(item => item.claimId === caseApplication.id)?.outcome, 'WITHHELD');
+}
+
+{
+  const cpfRecord = UNIFIED_SOURCE_REGISTRY.CPFA_SEC7_FIRST_SCHEDULE;
+  assert.ok(cpfRecord?.sourceText, 'the test uses the admitted CPF Act First Schedule source');
+  const quote = cpfRecord.sourceText;
+  const issueId = 'issue-cpf-agc';
+  const factOnlyConclusion = claim('fact-only-cpf-limitation',
+    'Your employee is definitively exempt from all CPF contributions.', [], {
+      kind: 'LIMITATION', factRefs: ['fact-current-question'], issueId
+    });
+  const context = {
+    evidenceQuality: { eligibleRecords: [cpfRecord], missingFacts: [], targetDate: '2026-11-03' },
+    authorityIssue: { authority: 'AGC', requestedConcepts: [], issue: {
+      id: issueId, subject: 'CPF contribution eligibility for the employee', population: 'EMPLOYEE', domain: 'CPF_PAYROLL',
+      governingAuthorities: ['AGC'], contextualAuthorities: [], operation: 'CHECK_ELIGIBILITY',
+      mappedTopicIds: [], evidenceRequirement: 'CASE_FACTS', confidence: 1, status: 'MAPPED'
+    } }
+  };
+  const scripted = scriptedCall(({ prompt }) => {
+    const generationPacket = packetFrom(prompt);
+    const passage = generationPacket.evidencePassages[0];
+    return { claims: [claim('cpf-exact-source-rule', passage.completeAdmittedPassage, [passage.id], { issueId }), factOnlyConclusion] };
+  }, ({ prompt }) => {
+    const verificationPacket = JSON.parse(prompt);
+    assert.equal(verificationPacket.claims[0].citedPassages.length, 0,
+      'fact-only LIMITATION text cannot borrow an uncited admitted passage');
+    assert.equal(verificationPacket.claims[0].issue.operation, 'CHECK_ELIGIBILITY');
+    return { verdicts: [{
+      claimId: factOnlyConclusion.id, support: 'UNSUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+    }] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    noWorkstreams: true, context,
+    query: 'Our employee asks whether they are exempt from CPF contributions.',
+    claimVerification: { accepted: [{ recordId: cpfRecord.id, quote, text: quote,
+      supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: cpfRecord.canonicalSourceUrl }] },
+    evidenceQuality: { eligibleRecords: [cpfRecord], missingFacts: [], targetDate: '2026-11-03' }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(result.messageText.includes(cpfRecord.sourceText), 'the bounded verifier retains the admitted source rule');
+  assert.ok(!result.messageText.includes(factOnlyConclusion.text),
+    'a fact-only LIMITATION cannot assert statutory eligibility in an AGC fallback passage path');
+  assert.equal(result.verification.semanticVerificationCalls, 1);
+}
+
+{
+  const exactRule = claim('malformed-review-rule', supportedRule);
+  const deceptiveLimitation = claim('malformed-review-limitation',
+    'Input GST on a blocked private motor car purchase is always recoverable.', ['passage-1'], {
+      kind: 'LIMITATION', issueId: 'issue-gst'
+    });
+  const malformedVerdicts = [
+    {},
+    { verdicts: [] },
+    { verdicts: [{ claimId: 'unknown-claim', support: 'SUPPORTED', claimType: 'RULE' }] },
+    { verdicts: [
+      { claimId: deceptiveLimitation.id, support: 'SUPPORTED', claimType: 'RULE' },
+      { claimId: deceptiveLimitation.id, support: 'SUPPORTED', claimType: 'RULE' }
+    ] },
+    { verdicts: [{ claimId: deceptiveLimitation.id, support: 'SUPPORTED', claimType: 'MAYBE' }] }
+  ];
+  for (const malformed of malformedVerdicts) {
+    const scripted = scriptedCall(() => ({ claims: [exactRule, deceptiveLimitation] }), () => malformed);
+    const result = await tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call });
+    assert.ok(result);
+    assert.ok(!result.messageText.includes(deceptiveLimitation.text),
+      'a missing, duplicate, unknown, or malformed semantic verdict fails closed');
+    assert.ok(result.messageText.includes(supportedRule), 'an exact supported rule remains available after an invalid verdict');
+    assert.ok(result.verification.withheldClaimIds.includes(deceptiveLimitation.id));
+  }
+  const failedReview = scriptedCall(() => ({ claims: [exactRule, deceptiveLimitation] }), () => {
+    throw new Error('support verification unavailable');
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput(), { call: failedReview.call });
+  assert.ok(result);
+  assert.ok(!result.messageText.includes(deceptiveLimitation.text), 'support-check provider failures withhold selected claims');
+  assert.ok(result.messageText.includes(supportedRule));
 }
 
 {
@@ -377,7 +535,7 @@ const supportedRule = quote;
   });
   const scripted = scriptedCall(() => ({ claims: [rejectedClaim] }));
   await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: scripted.call }), /no supportable claims/);
-  assert.equal(scripted.calls.length, 1, 'an answer with no deterministically admissible claims is rejected');
+  assert.equal(scripted.calls.length, 2, 'a case application is semantically checked once before the answer is rejected');
 }
 
 {

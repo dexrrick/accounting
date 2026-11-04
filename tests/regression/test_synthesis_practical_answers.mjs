@@ -45,6 +45,7 @@ for (const [index, example] of cases.entries()) {
       supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: record.canonicalSourceUrl}]
   };
   let generationCount = 0;
+  let supportCheckCount = 0;
   const result = await tryGenerateGroundedSynthesis({
     query: example.query, standard: 'SFRS_I', history: [],
     provider: {activeProvider:'openai',openai:{apiKey:'mock-practical-acceptance',model:'mock'},gemini:{},azure:{}},
@@ -58,6 +59,14 @@ for (const [index, example] of cases.entries()) {
       evidenceStatus:'VERIFIED',applicationStatus:'VERIFIED',status:'VERIFIED',gaps:[]}
   }, {call: async (prompt, system) => {
     const packet = JSON.parse(prompt);
+    if (system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')) {
+      supportCheckCount += 1;
+      assert.equal(packet.claims.length, 1);
+      assert.equal(packet.claims[0].text, example.answer);
+      assert.equal(packet.claims[0].citedPassages.length, 1);
+      assert.equal(packet.claims[0].issue.applicationStatus, 'VERIFIED');
+      return JSON.stringify({verdicts:[{claimId:`answer-${index}`,support:'SUPPORTED',claimType:'DEFINITIVE_APPLICATION'}]});
+    }
     generationCount += 1;
     assert.match(system, /State verified conclusions confidently/);
     assert.match(system, /practical next steps/);
@@ -68,7 +77,10 @@ for (const [index, example] of cases.entries()) {
   assert.ok(result, `${example.authority} yields an answer`);
   assert.ok(result.messageText.includes(example.answer), `${example.authority} retains a complete practical application`);
   assert.equal(generationCount, 1, 'each practical answer uses one synthesis generation call');
-  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
+  assert.equal(supportCheckCount, 1, 'the statutory application receives one batched support check');
+  assert.equal(result.verification.providerCalls, 2);
+  assert.equal(result.verification.semanticVerificationCalls, 1);
+  assert.equal(result.verification.claimValidation, 'DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK');
   assert.equal(result.verification.withheldClaimIds.length, 0);
   assert.doesNotMatch(result.messageText, /remains unresolved|could not be supported|still needed/i,
     'a fully supported answer avoids unnecessary generic warnings');

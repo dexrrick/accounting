@@ -1,0 +1,17 @@
+Independent review outcome: CLEAR_BOUNDED_REVIEW
+
+The reviewer performed read-only diff inspection and targeted mocked reproductions.
+Initial review reproduced three defects in the first implementation: a false legal
+claim labeled LIMITATION could skip verification in general-rule scope; an AGC
+publisher alias could bypass checking on CPF fallback evidence; and incomplete
+currency amounts could match shorter numbers. These were corrected and rechecked.
+
+Final delta review found no remaining actionable findings within its bounded scope.
+Prior mocked bypasses were withheld, malformed amounts failed before verification,
+Unicode normalization preceded incomplete-currency scans, and support-call counts
+used the actual provider-call delta. The final diff check passed.
+
+The reviewer did not independently run the broad suites or verify live-provider,
+browser, CI, or production behavior. The supervisor ran the reported local suites
+and live synthesis probe. Model support checking remains probabilistic and covers
+all freeform claims in statutory packets, including some ordinary explanations.
