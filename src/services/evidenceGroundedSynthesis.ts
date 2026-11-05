@@ -472,9 +472,12 @@ function buildGapEntries(input: GroundedSynthesisInput): PacketGap[] {
     ? contextIssue.id : undefined;
   const ownedScopesForText = (text: string): string[] => {
     const key = normalizeGapKey(text);
-    return issues.filter(issue => (issue.applicationReason && normalizeGapKey(issue.applicationReason) === key) ||
+    return [...new Set([
+      ...issues.filter(issue => (issue.applicationReason && normalizeGapKey(issue.applicationReason) === key) ||
       issue.gaps.some(gap => normalizeGapKey(gap.reason) === key))
-      .map(issue => issue.issueId);
+        .map(issue => issue.issueId),
+      ...(input.workstreams?.gaps || []).filter(gap => normalizeGapKey(gap.reason) === key).map(gap => gap.issueId)
+    ])];
   };
   const addContextualFact = (text: string, preferredIssueId?: string) => {
     const exactOwners = ownedScopesForText(text);
@@ -549,7 +552,7 @@ function requestedIssues(input: GroundedSynthesisInput): RequestedIssue[] {
       : issueNeedsApplicationConclusion({
           id: contextualIssue.id, subject: contextualIssue.subject, operation: contextualIssue.operation,
           evidenceRequirement: contextualIssue.evidenceRequirement
-        }) ? 'VERIFIED' : 'NOT_REQUIRED'
+        }) ? 'UNRESOLVED' : 'NOT_REQUIRED'
   });
   return [...issues.values()];
 }
@@ -717,7 +720,7 @@ function claimHasUnresolvedScope(claim: SynthesisClaim, packet: ReturnType<typeo
   const issue = issueForClaim(claim, packet);
   const requestedIssue = requestedIssueForClaim(claim, packet);
   if (requestedIssue?.scopeConflict) return true;
-  if (packet.requestedIssues.length <= 1 && packet.globalGaps.length > 0) return true;
+  if (packet.globalGaps.length > 0) return true;
   if (issue) {
     return issue.applicationStatus === 'UNRESOLVED' ||
       Boolean(packet.issueGaps[issue.issueId]?.length) || Boolean(issue.gaps.length);
@@ -728,8 +731,8 @@ function claimHasUnresolvedScope(claim: SynthesisClaim, packet: ReturnType<typeo
       (issueNeedsApplicationConclusion(requestedIssue) &&
         requestedIssue.applicationStatus !== 'VERIFIED' && requestedIssue.applicationStatus !== 'NOT_REQUIRED');
   }
-  // An unowned gap cannot be assigned to one of several issues here; the
-  // existing batched verifier receives it and decides whether it is relevant.
+  // A missing fact without validated issue ownership remains a question-wide
+  // blocker; probabilistic support verification cannot establish its scope.
   return packet.requestedIssues.length === 0;
 }
 

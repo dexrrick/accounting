@@ -49,7 +49,7 @@ import {
 } from '../utils/authorityEvidenceRouting';
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
-import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
+import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 import { classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible } from './aiFirstAdvisory';
 import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
@@ -531,7 +531,22 @@ export async function processAccountingQuery(
       query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
       response, context: groundedContext, workstreams: authorityWorkstreams
     });
-    if (!synthesis) return response;
+    if (!synthesis) {
+      const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
+      const statutoryRequest = !accountingOnlyPlan && (
+        Boolean(groundedContext && groundedContext.classification.intent !== 'TRANSACTION') ||
+        response.scenarioState.queryIntent === 'STATUTORY_ADVISORY' ||
+        response.scenarioState.queryIntent === 'HYBRID' ||
+        Boolean(authorityWorkstreams?.workstreams.some(stream =>
+          stream.authority !== 'ACCOUNTING_STANDARDS' && stream.authority !== 'IFRS_FOUNDATION'))
+      );
+      if (hasConfiguredProvider(providerOrApiKey) && statutoryRequest) {
+        return createGroundedSynthesisFailureResponse(
+          response, userInput, standard, authorityWorkstreams, groundedContext, 'OTHER'
+        );
+      }
+      return response;
+    }
     return {
       ...response,
       messageText: synthesis.messageText,
@@ -566,11 +581,44 @@ export function createGroundedSynthesisFailureResponse(
     response.scenarioState.isHypothetical !== true && group.lines?.length > 0 &&
     group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
   ));
+  const sanitizedScenario: AccountingScenarioState = {
+    ...response.scenarioState,
+    assumptions: [],
+    effectiveDateOrTiming: undefined,
+    missingFacts: undefined,
+    missingFields: [],
+    statutoryAdvisory: [],
+    officialAnswerLinks: [],
+    authorityEvidencePresentation: undefined,
+    irasEvidencePresentation: undefined,
+    ...(response.scenarioState.directGroups ? { directGroups: quarantineProposedGroupCitations(response.scenarioState.directGroups) } : {}),
+    ...(response.scenarioState.committedDirectGroups ? { committedDirectGroups: quarantineProposedGroupCitations(response.scenarioState.committedDirectGroups) } : {}),
+    ...(response.scenarioState.projectedGroups ? { projectedGroups: quarantineProposedGroupCitations(response.scenarioState.projectedGroups) } : {})
+  };
   let messageText: string;
   let officialAnswerLinks: AccountingScenarioState['officialAnswerLinks'] = [];
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let irasEvidencePresentation: AccountingScenarioState['irasEvidencePresentation'];
+  let irasPrimaryDomain: AccountingScenarioState['primaryDomain'];
+  let irasQueryIntent: AccountingScenarioState['queryIntent'];
   let statutoryAdvisory: AccountingScenarioState['statutoryAdvisory'] = [];
+  let fallbackMissingFacts: AccountingScenarioState['missingFacts'];
+  const renderAdmittedIrasFallback = (): void => {
+    if (!groundedContext?.evidenceQuality || !contextualIrasIssueMatchesWorkstreams(groundedContext, authorityWorkstreams, userInput)) return;
+    const fallback = renderIrasEvidenceResponse(
+      {}, groundedContext, userInput, sanitizedScenario, standard, 'PROVIDER_FAILURE'
+    );
+    if (!fallback.scenarioState.irasEvidencePresentation?.sourceGroups.some(group => group.passages.length > 0)) return;
+    irasEvidencePresentation = fallback.scenarioState.irasEvidencePresentation;
+    irasPrimaryDomain = fallback.scenarioState.primaryDomain;
+    irasQueryIntent = fallback.scenarioState.queryIntent;
+    statutoryAdvisory = fallback.scenarioState.statutoryAdvisory;
+    fallbackMissingFacts = fallback.scenarioState.missingFacts;
+    officialAnswerLinks = [...(officialAnswerLinks || []), ...(irasEvidencePresentation.sourceGroups.flatMap(source =>
+      source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
+    ))];
+    messageText += `\n\n### Additional admitted IRAS evidence\n\n${fallback.messageText}`;
+  };
   if (authorityWorkstreams?.query === userInput) {
     const presentation = createAuthorityEvidencePresentation(authorityWorkstreams);
     authorityEvidencePresentation = presentation;
@@ -580,26 +628,23 @@ export function createGroundedSynthesisFailureResponse(
     officialAnswerLinks = presentation.workstreams.flatMap(stream => stream.sources.flatMap(source =>
       source.officialUrl ? [{ title: source.title, url: source.officialUrl }] : []
     ));
-  } else if (groundedContext?.evidenceQuality) {
+    renderAdmittedIrasFallback();
+  } else if (groundedContext?.evidenceQuality && contextualIrasIssueMatchesWorkstreams(groundedContext, authorityWorkstreams, userInput)) {
     const fallback = renderIrasEvidenceResponse(
-      {}, groundedContext, userInput, response.scenarioState, standard, 'PROVIDER_FAILURE'
+      {}, groundedContext, userInput, sanitizedScenario, standard, 'PROVIDER_FAILURE'
     );
     messageText = fallback.messageText;
     irasEvidencePresentation = fallback.scenarioState.irasEvidencePresentation;
+    irasPrimaryDomain = fallback.scenarioState.primaryDomain;
+    irasQueryIntent = fallback.scenarioState.queryIntent;
     statutoryAdvisory = fallback.scenarioState.statutoryAdvisory;
-    officialAnswerLinks = fallback.scenarioState.irasEvidencePresentation?.sourceGroups.flatMap(source =>
+    fallbackMissingFacts = fallback.scenarioState.missingFacts;
+    officialAnswerLinks = irasEvidencePresentation?.sourceGroups.flatMap(source =>
       source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
     ) || [];
   } else {
     messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
       (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
-  }
-  const clarificationPrompts = [...new Set([
-    ...(response.clarifications || []).map(item => item.prompt),
-    ...(response.scenarioState.missingFields || []).map(item => item.prompt)
-  ].map(prompt => prompt.trim()).filter(Boolean))];
-  if (clarificationPrompts.length) {
-    messageText += `\n\n### Clarification Required\n\n${clarificationPrompts.join('\n')}`;
   }
   return {
     ...response,
@@ -612,13 +657,55 @@ export function createGroundedSynthesisFailureResponse(
       accountingTreatmentSummary: undefined,
       singaporeTaxTreatmentSummary: undefined,
       regulatoryMandatesSummary: undefined,
+      assumptions: [],
+      effectiveDateOrTiming: undefined,
+      missingFacts: fallbackMissingFacts,
+      missingFields: [],
+      ...(response.scenarioState.directGroups ? { directGroups: quarantineProposedGroupCitations(response.scenarioState.directGroups) } : {}),
+      ...(response.scenarioState.committedDirectGroups ? { committedDirectGroups: quarantineProposedGroupCitations(response.scenarioState.committedDirectGroups) } : {}),
+      ...(response.scenarioState.projectedGroups ? { projectedGroups: quarantineProposedGroupCitations(response.scenarioState.projectedGroups) } : {}),
       statutoryAdvisory,
       authorityEvidencePresentation,
       irasEvidencePresentation,
+      ...(irasEvidencePresentation ? { primaryDomain: irasPrimaryDomain, queryIntent: irasQueryIntent } : {}),
       uncertaintyDisclaimer: 'The original advisory response was not retained because its claims did not pass verification.' ,
-      officialAnswerLinks
-    }
+      officialAnswerLinks: [...new Map(officialAnswerLinks.map(link => [link.url, link])).values()]
+    },
+    clarifications: []
   };
+}
+
+function quarantineProposedGroupCitations(groups: JournalEntryGroup[]): JournalEntryGroup[] {
+  return groups.map(group => group.authorityStatus === 'DETERMINISTIC' ? group : { ...group, citations: [] });
+}
+
+function hasOnlyAccountingAuthorityPlan(workstreams: AuthorityWorkstreamsResult | undefined): boolean {
+  if (!workstreams) return false;
+  const plannedIssues = workstreams.issuePlan.issues;
+  if (plannedIssues.length > 0) return plannedIssues.every(issue => issue.domain === 'ACCOUNTING' &&
+    issue.governingAuthorities.length > 0 && issue.governingAuthorities.every(authority =>
+      authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION'));
+  const evidenceIssues = workstreams.workstreams.flatMap(stream => stream.issues);
+  return evidenceIssues.length > 0 && evidenceIssues.every(issue => issue.domain === 'ACCOUNTING' &&
+    (issue.governingAuthority === 'ACCOUNTING_STANDARDS' || issue.governingAuthority === 'IFRS_FOUNDATION'));
+}
+
+function contextualIrasIssueMatchesWorkstreams(
+  context: GroundedReasoningContext,
+  workstreams: AuthorityWorkstreamsResult | undefined,
+  userInput: string
+): boolean {
+  if (workstreams && workstreams.query !== userInput) return false;
+  if (!context.requestCompletenessContext ||
+      !isCurrentRequestCompletenessContext(context.requestCompletenessContext, userInput)) return false;
+  const contextualIssue = context.authorityIssue?.issue;
+  if (!contextualIssue) return !workstreams && context.classification.authorities.includes('IRAS');
+  if (!workstreams) return true;
+  return workstreams.workstreams.some(stream => stream.authority === 'IRAS' &&
+    stream.issues.some(issue => issue.issueId === contextualIssue.id && issue.subject === contextualIssue.subject &&
+      issue.operation === contextualIssue.operation && issue.domain === contextualIssue.domain &&
+      issue.population === contextualIssue.population && issue.evidenceRequirement === contextualIssue.evidenceRequirement &&
+      contextualIssue.governingAuthorities.includes('IRAS')));
 }
 
 async function processAccountingQueryCore(

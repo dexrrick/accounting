@@ -64,6 +64,7 @@ function makeInput(options = {}) {
         eligibleRecords: [record], missingFacts: ['The purchase purpose was not provided.'], targetDate: '2026-11-03'
       },
       ...(options.calculation ? { calculation: options.calculation } : {}),
+      ...(options.applicationConclusions ? { applicationConclusions: options.applicationConclusions } : {}),
       ...(options.claimVerification ? { claimVerification: options.claimVerification } : {})
     },
     ...(options.context ? { context: options.context } : {}),
@@ -633,16 +634,20 @@ const supportedRule = quote;
     })) };
   });
   const result = await tryGenerateGroundedSynthesis(makeInput({
-    issues: [makeIssue('issue-gst', { applicationStatus: 'VERIFIED' }), cpfIssue],
+    issues: [makeIssue('issue-gst', { applicationStatus: 'VERIFIED' }), cpfIssue], workstreamGaps: [
+      { issueId: 'issue-cpf', authority: 'CPF', domain: 'CPF_PAYROLL', subject: 'CPF contribution month',
+        operation: 'FILING_REQUIREMENT', stage: 'mapped', code: 'MISSING_FACT',
+        reason: 'The CPF contribution month has not been provided.' }
+    ],
     evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' },
     context: { missingFacts: ['The CPF contribution month has not been provided.'] }
   }), { call: scripted.call });
   assert.ok(result.messageText.includes('The admitted rule applies to this stated GST purchase.'),
     'an unowned fact for a second issue does not suppress the resolved GST conclusion');
   assert.equal(verificationPacket.claims[0].mustRemainConditional, false,
-    'a separate issue gap does not make the resolved issue conditional');
+    'a validated CPF ownership link keeps its issue gap from making the GST issue conditional');
   assert.deepEqual(verificationPacket.claims[0].questionWideUnresolvedFacts,
-    ['The CPF contribution month has not been provided.'], 'the existing batched verifier sees unowned facts');
+    [], 'an explicitly issue-owned fact is not also presented as a question-wide unresolved fact');
   assert.match(result.messageText, /Whether CPF contribution month applies to your circumstances remains unresolved/,
     'the separately unresolved CPF issue remains visible');
 }
@@ -657,15 +662,19 @@ const supportedRule = quote;
     const packet = packetFrom(prompt);
     const passage = packet.evidencePassages.find(item => item.issueId === 'context-gst');
     assert.ok(passage, 'the context-only passage retains its validated issue owner');
-    return { claims: [claim('context-only-application', 'The requested context-only outcome is supported.',
-      [passage.id], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'context-gst' })] };
+      return { claims: [
+        claim('context-only-rule', supportedRule, [passage.id], { kind: 'RULE', issueId: 'context-gst' }),
+        claim('context-only-application', 'The client may be eligible if the applicable requirements are met.',
+          [passage.id], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'context-gst' })
+      ] };
   }, ({ prompt }) => {
     const packet = packetFrom(prompt);
     assert.equal(packet.claims[0].issue.issueId, 'context-gst');
-    assert.equal(packet.claims[0].mustRemainConditional, false,
-      'complete facts and the validated context issue establish the claim scope');
+    assert.equal(packet.claims.length, 1, 'the exact admitted source quotation remains on deterministic validation');
+    assert.equal(packet.claims[0].mustRemainConditional, true,
+      'a mapped context-only issue lacks an affirmative application determination');
     return { verdicts: packet.claims.map(item => ({
-      claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'CONDITIONAL_APPLICATION'
     })) };
   });
   const result = await tryGenerateGroundedSynthesis(makeInput({
@@ -678,8 +687,10 @@ const supportedRule = quote;
       authorityIssue: { authority: 'IRAS', issue: contextualIssue, requestedConcepts: [] }
     }
   }), { call: scripted.call });
-  assert.ok(result.messageText.includes('The requested context-only outcome is supported.'),
-    'a context-only evidence path is scoped by its issue even without a matching workstream issue');
+  assert.ok(result.messageText.includes(supportedRule),
+    'a context-only source rule remains usable without a matching workstream issue');
+  assert.ok(result.messageText.includes('The client may be eligible if the applicable requirements are met.'),
+    'a context-only application remains explicitly conditional without an affirmative case determination');
 }
 
 {
@@ -701,6 +712,39 @@ const supportedRule = quote;
   assert.ok(!result.messageText.includes('The client qualifies for this expense recovery.'),
     'a material fact without an identifiable owning issue remains a conservative question-wide blocker');
   assert.match(result.messageText, /purchase purpose remains unclear/);
+}
+
+{
+  const cpfIssue = {
+    ...makeIssue('issue-cpf', { withSource: false, subject: 'CPF contribution reporting month',
+      operation: 'FILING_REQUIREMENT', evidenceRequirement: 'CASE_FACTS', applicationStatus: 'UNRESOLVED' }),
+    domain: 'CPF_PAYROLL', population: 'EMPLOYER', governingAuthority: 'CPF', gaps: []
+  };
+  const scripted = scriptedCall(() => ({ claims: [
+    claim('supported-multi-rule', supportedRule),
+    claim('application-with-unowned-multi-gap', 'The client qualifies for this input tax recovery.', ['passage-1'], {
+      kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+    })
+  ] }), ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    assert.equal(packet.claims.length, 1, 'only the application claim requires semantic verification');
+    assert.equal(packet.claims[0].mustRemainConditional, true,
+      'an unassigned fact blocks definitive application even when the request contains multiple issues');
+    assert.deepEqual(packet.claims[0].questionWideUnresolvedFacts, ['The purchase purpose remains unclear.']);
+    return { verdicts: packet.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION'
+    })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'Can our client recover GST input tax on an office expense, and which CPF contribution month applies?',
+    issues: [makeIssue('issue-gst', { applicationStatus: 'VERIFIED' }), cpfIssue],
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' },
+    context: { missingFacts: ['The purchase purpose remains unclear.'] }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(!result.messageText.includes('The client qualifies for this input tax recovery.'),
+    'an unowned multi-issue gap withholds the otherwise supported definitive application');
+  assert.match(result.messageText, /The purchase purpose remains unclear/);
 }
 
 {
