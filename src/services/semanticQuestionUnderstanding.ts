@@ -2629,6 +2629,12 @@ function reconcileLegacyQuestionUnderstanding(
         missingFacts: requiresCaseSpecificFacts(query, semantic)
           ? ['Employee age band, citizenship or residency status, wage type, and applicable contribution period.']
           : [],
+        ...(requiresCaseSpecificFacts(query, semantic) ? {
+          missingFactDomains: [{
+            fact: 'Employee age band, citizenship or residency status, wage type, and applicable contribution period.',
+            domain: 'CPF_PAYROLL' as const
+          }]
+        } : { missingFactDomains: [] }),
         intent: 'STATUTORY_ADVISORY',
         reasoning: `Semantic interpretation routed this ${semantic.population.toLowerCase()} contribution question to CPF.`
       },
@@ -2719,6 +2725,8 @@ function reconcileLegacyQuestionUnderstanding(
     calculationRequired: retainsAccountingScope ? classification.calculationRequired || semantic.calculationRequested : semantic.calculationRequested,
     journalEntryRequired: retainsAccountingScope ? classification.journalEntryRequired || operation === 'PREPARE_JOURNAL' : operation === 'PREPARE_JOURNAL',
     missingFacts: semanticMissingFacts,
+    missingFactDomains: (retainsAccountingScope ? classification.missingFactDomains || [] : [])
+      .filter(item => semanticMissingFacts.includes(item.fact)),
     intent: retainsAccountingScope ? classification.intent : operation === 'PREPARE_JOURNAL' ? 'HYBRID' : 'STATUTORY_ADVISORY',
     reasoning: `Semantic interpretation routed this ${semantic.population.toLowerCase()} question to IRAS for ${semantic.primarySubject}.`
   };

@@ -5,6 +5,7 @@ import { removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 import { normalizeTaxJurisdictionName, TAX_JURISDICTION_NAMES } from '../utils/taxJurisdictionNames';
 import { isCpfLowWageShareQuestion } from '../retrieval/cpfPayrollKnowledge20261027b';
+import type { SemanticQuestionDomain } from '../services/semanticQuestionUnderstanding';
 
 export type CanonicalDomain =
   | 'ACCOUNTING'
@@ -32,6 +33,8 @@ export interface QuestionClassificationResult {
   calculationRequired: boolean;
   journalEntryRequired: boolean;
   missingFacts: string[];
+  /** Missing facts produced by a classifier branch with a single known semantic domain. */
+  missingFactDomains?: Array<{ fact: string; domain: SemanticQuestionDomain }>;
   intent: 'TRANSACTION' | 'STATUTORY_ADVISORY' | 'HYBRID';
   reasoning: string;
 }
@@ -501,25 +504,30 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
 
   // 6. Missing Facts Identification
   const missingFacts: string[] = [];
+  const missingFactDomains: NonNullable<QuestionClassificationResult['missingFactDomains']> = [];
+  const addCpfMissingFact = (fact: string) => {
+    missingFacts.push(fact);
+    missingFactDomains.push({ fact, domain: 'CPF_PAYROLL' });
+  };
   if (asksFinalSalaryAmount && !hasExplicitSalaryBasis) {
     missingFacts.push('Contractual salary rate for final salary calculation');
   }
   if (hasPayrollCalculation && /\b(?:cpf|central provident fund)\b/.test(entryIntentQuery) &&
       (explicitlyCalculatesCpfContribution || /\b(?:salary|wages?|wage|payroll)\b/.test(entryIntentQuery))) {
     if (!/\b(?:age|aged|age band|years? old|date of birth)\b/i.test(entryIntentQuery)) {
-      missingFacts.push('Employee age on the relevant contribution date or applicable age band');
+      addCpfMissingFact('Employee age on the relevant contribution date or applicable age band');
     }
     if (!/\b(?:singaporean|citizen|citizenship|permanent resident|\bspr\b|\bpr status\b|foreign worker)\b/i.test(entryIntentQuery)) {
-      missingFacts.push('Employee citizenship or permanent-resident status, including PR contribution year if applicable');
+      addCpfMissingFact('Employee citizenship or permanent-resident status, including PR contribution year if applicable');
     } else if (/\b(?:permanent resident|\bspr\b|\bpr status\b)\b/i.test(entryIntentQuery) &&
         !/\b(?:first|second|third|1st|2nd|3rd)\s+(?:pr\s+)?(?:cpf\s+)?contribution year\b/i.test(entryIntentQuery)) {
-      missingFacts.push('Permanent-resident CPF contribution year');
+      addCpfMissingFact('Permanent-resident CPF contribution year');
     }
     if (!/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(entryIntentQuery)) {
-      missingFacts.push('Whether the wages are Ordinary Wages or Additional Wages and their classification');
+      addCpfMissingFact('Whether the wages are Ordinary Wages or Additional Wages and their classification');
     }
     if (!/\b(?:contribution period|wage month|for (?:the )?(?:month|period) of|in (?:the )?month of)\b/i.test(entryIntentQuery)) {
-      missingFacts.push('CPF contribution period or wage month');
+      addCpfMissingFact('CPF contribution period or wage month');
     }
   }
   const isPureConceptualQuery =
@@ -747,6 +755,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
     calculationRequired,
     journalEntryRequired,
     missingFacts,
+    ...(missingFactDomains.length ? { missingFactDomains } : {}),
     intent,
     reasoning
   };

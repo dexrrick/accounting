@@ -3,6 +3,7 @@ import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { evaluateEvidenceQuality } from '../../src/retrieval/evidenceQualityGate.ts';
 import { classifyAdvisoryFailure } from '../../src/services/aiFirstAdvisory.ts';
+import { createRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { tryGenerateGroundedSynthesis } from '../../src/services/evidenceGroundedSynthesis.ts';
@@ -69,8 +70,8 @@ function makeInput(options = {}) {
     },
     ...(options.context ? { context: options.context } : {}),
     ...(options.noWorkstreams ? {} : { workstreams: {
-      query: queryText,
-      issuePlan: {},
+      query: options.workstreamQuery || queryText,
+      issuePlan: { issues: options.issuePlanIssues || [] },
       requestCompletenessContext: {},
       workstreams: issues.map((issue, index) => ({
         id: `workstream-${index + 1}`, authority: issue.governingAuthority, domain: issue.domain, sourceSections: [],
@@ -612,6 +613,92 @@ const supportedRule = quote;
     'evidence-quality and contextual copies remain attached to their owning workstream issue');
   assert.doesNotMatch(scripted.calls[0].prompt, /Question-wide unresolved fact.*CPF contribution month/,
     'a fact already owned by an issue is not duplicated as a question-wide blocker');
+}
+
+{
+  const mixedQuery = 'GST on blocked motor-car input tax expenses: can they be recovered? Also calculate CPF contributions on salary wages.';
+  const classification = classifyQuestion(mixedQuery);
+  const scopedCpfFact = 'CPF contribution period or wage month';
+  assert.ok(classification.missingFacts.includes(scopedCpfFact), 'the real classifier produces the CPF period fact for this request');
+  assert.ok(classification.missingFactDomains?.some(item => item.fact === scopedCpfFact && item.domain === 'CPF_PAYROLL'),
+    'the classifier records the domain at the point the CPF fact is created');
+  const gstIssue = makeIssue('issue-gst', { applicationStatus: 'VERIFIED' });
+  const cpfIssue = {
+    ...makeIssue('issue-cpf', { withSource: false, subject: 'CPF contribution reporting month', applicationStatus: 'UNRESOLVED' }),
+    domain: 'CPF_PAYROLL', population: 'EMPLOYER', governingAuthority: 'CPF', evidenceRequirement: 'CASE_FACTS',
+    gaps: [{ issueId: 'issue-cpf', authority: 'CPF', domain: 'CPF_PAYROLL', subject: 'CPF contribution reporting month',
+      operation: 'FILING_REQUIREMENT', stage: 'retrievalAttempted', code: 'MISSING_FACT',
+      reason: 'CPF payroll details and the applicable reporting period remain unresolved.' }]
+  };
+  const issuePlanIssues = [
+    { id: 'issue-gst', subject: gstIssue.subject, operation: gstIssue.operation, evidenceRequirement: gstIssue.evidenceRequirement,
+      domain: gstIssue.domain, population: gstIssue.population, governingAuthorities: ['IRAS'] },
+    { id: 'issue-cpf', subject: cpfIssue.subject, operation: cpfIssue.operation, evidenceRequirement: cpfIssue.evidenceRequirement,
+      domain: cpfIssue.domain, population: cpfIssue.population, governingAuthorities: ['CPF'] }
+  ];
+  const currentContext = {
+    classification, requestCompletenessContext: createRequestCompletenessContext(mixedQuery),
+    missingFacts: [scopedCpfFact], assumptions: [], userFacts: [], primaryEvidence: [record], officialGuidance: [], curatedSummaries: [],
+    applicationRules: [], currentInformationRequired: false,
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [scopedCpfFact], targetDate: '2026-11-03', status: 'SUFFICIENT', uncoveredTopicIds: [] }
+  };
+  const scripted = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    return { claims: [claim('independent-gst-application', 'GST input tax recovery for the stated blocked motor-car expense is unavailable.',
+      ['passage-1'], { kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst' })] };
+  }, ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    return { verdicts: packet.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION' })) };
+  });
+  const inputOptions = { query: mixedQuery, issues: [gstIssue, cpfIssue], issuePlanIssues,
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [scopedCpfFact], targetDate: '2026-11-03' }, context: currentContext };
+  const currentInput = makeInput(inputOptions);
+  const result = await tryGenerateGroundedSynthesis(currentInput, { call: scripted.call });
+  const generationPacket = packetFrom(scripted.calls[0].prompt);
+  const packet = packetFrom(scripted.calls[1].prompt);
+  assert.ok(result.messageText.includes('GST input tax recovery for the stated blocked motor-car expense is unavailable.'),
+    'a differently worded CPF workstream gap does not suppress the verified GST conclusion');
+  assert.deepEqual(packet.claims[0].questionWideUnresolvedFacts, [], 'the source-tagged CPF fact is issue-owned, not global');
+  assert.ok(generationPacket.missingFactsAndEvidenceGaps.some(gap => gap.startsWith('[Issue issue-cpf]') && gap.includes(scopedCpfFact)),
+    'the generation packet retains the CPF fact under the explicit validated CPF issue ID');
+  assert.equal(packet.claims[0].mustRemainConditional, false, 'the CPF issue gap leaves the independent GST claim definitive');
+
+  const globalControl = async (overrides = {}) => {
+    const controlScript = scriptedCall(({ prompt }) => {
+      packetFrom(prompt);
+      return { claims: [claim('gst-with-control-gap', 'The client qualifies for this expense recovery.', ['passage-1'], {
+        kind: 'APPLICATION', factRefs: ['fact-current-question'], issueId: 'issue-gst'
+      })] };
+    }, ({ prompt }) => {
+      const controlPacket = packetFrom(prompt);
+      return { verdicts: controlPacket.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION' })) };
+    });
+    try {
+      await tryGenerateGroundedSynthesis(makeInput({ ...inputOptions, ...overrides }), { call: controlScript.call });
+    } catch (error) {
+      assert.match(String(error), /produced no supportable claims/,
+        'a conservative global gap withholds the unsupported definitive application');
+    }
+    return packetFrom(controlScript.calls[0].prompt).missingFactsAndEvidenceGaps;
+  };
+  const staleQueryPacket = await globalControl({ workstreamQuery: 'a different query' });
+  assert.ok(staleQueryPacket.some(gap => gap.startsWith('[Question-wide unresolved fact]') && gap.includes(scopedCpfFact)),
+    'a stale workstream query cannot validate an issue owner');
+  const staleContextPacket = await globalControl({ context: { ...currentContext, requestCompletenessContext: createRequestCompletenessContext('different query') } });
+  assert.ok(staleContextPacket.some(gap => gap.startsWith('[Question-wide unresolved fact]') && gap.includes(scopedCpfFact)),
+    'a request-completeness context bound to another query cannot validate ownership');
+  const malformedDomainPacket = await globalControl({ context: { ...currentContext,
+    classification: { ...classification, missingFactDomains: [{ fact: scopedCpfFact, domain: 'UNKNOWN' }] } } });
+  assert.ok(malformedDomainPacket.some(gap => gap.startsWith('[Question-wide unresolved fact]') && gap.includes(scopedCpfFact)),
+    'a classifier ownership tag that does not resolve to an admitted issue remains global');
+  const staleIssueIdPacket = await globalControl({ issuePlanIssues: issuePlanIssues.map(issue =>
+    issue.id === 'issue-cpf' ? { ...issue, id: 'stale-cpf-issue-id' } : issue) });
+  assert.ok(staleIssueIdPacket.some(gap => gap.startsWith('[Question-wide unresolved fact]') && gap.includes(scopedCpfFact)),
+    'an issue ID that does not match the current evidence workstream cannot own a missing fact');
+  const ambiguousPlanPacket = await globalControl({ issuePlanIssues: [...issuePlanIssues,
+    { ...issuePlanIssues[1], id: 'issue-cpf-second', subject: 'CPF contribution month for another employee' }] });
+  assert.ok(ambiguousPlanPacket.some(gap => gap.startsWith('[Question-wide unresolved fact]') && gap.includes(scopedCpfFact)),
+    'multiple matching issue domains remain ambiguous and keep their missing facts question-wide');
 }
 
 {

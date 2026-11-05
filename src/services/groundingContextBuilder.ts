@@ -2805,7 +2805,8 @@ export async function buildGroundedReasoningContext(
       calculationRequired: false,
       journalEntryRequired: false,
       intent: 'STATUTORY_ADVISORY' as const,
-      missingFacts: []
+      missingFacts: [],
+      missingFactDomains: []
     }
     : reconciledQuestion.classification;
   const questionUnderstanding = reconciledQuestion.understanding;
@@ -3484,7 +3485,8 @@ export function postProcessAIResponse(
   const selectedAccountingTreatmentSummary = parsed.accountingTreatmentSummary ||
     deterministicScenario?.accountingTreatmentSummary || currentScenario?.accountingTreatmentSummary;
   const selectedSingaporeTaxTreatmentSummary = parsed.singaporeTaxTreatmentSummary ||
-    deterministicScenario?.singaporeTaxTreatmentSummary || currentScenario?.singaporeTaxTreatmentSummary;
+    (deterministicScenario?.scenarioType === 'UNRECOGNIZED' ? undefined : deterministicScenario?.singaporeTaxTreatmentSummary) ||
+    (currentScenario?.scenarioType === 'UNRECOGNIZED' ? undefined : currentScenario?.singaporeTaxTreatmentSummary);
   const selectedRegulatoryMandatesSummary = parsed.regulatoryMandatesSummary ||
     deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary;
 

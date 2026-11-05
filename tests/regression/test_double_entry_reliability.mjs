@@ -351,6 +351,12 @@ try {
   assert.ok(!endToEndRes.messageText.includes('\\n'), 'Must not contain literal escaped newlines');
   assert.equal(endToEndRes.scenarioState.directGroups?.length, 0, 'directGroups must be emptied');
   assert.equal(endToEndRes.scenarioState.isComplete, false, 'isComplete must be false');
+  assert.equal(endToEndRes.scenarioState.singaporeTaxTreatmentSummary, undefined,
+    'unrecognized parser guidance is not retained as a tax-treatment claim');
+  assert.ok(endToEndRes.scenarioState.missingFields?.some(field => field.fieldKey === 'amount' &&
+    field.prompt === 'What is the transaction amount in SGD?'), 'the safe accounting amount clarification survives fallback');
+  assert.ok(endToEndRes.clarifications?.some(field => field.fieldKey === 'amount' &&
+    field.prompt === 'What is the transaction amount in SGD?'), 'the canonical amount clarification remains available to the chat');
 } finally {
   globalThis.fetch = originalFetch;
 }

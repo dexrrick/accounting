@@ -9,6 +9,7 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import type { AuthorityWorkstreamsResult, AuthorityIssueEvidence } from '../types/authorityEvidence';
 import type { GroundedReasoningContext } from './groundingContextBuilder';
+import { isCurrentRequestCompletenessContext } from './requestCompleteness';
 import type { VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
@@ -449,7 +450,25 @@ function buildGapEntries(input: GroundedSynthesisInput): PacketGap[] {
     entries.push({ text: normalized, ...(issueId ? { issueId } : {}), ...(promptText ? { promptText } : {}) });
   };
   const seen = new Set<string>();
-  const issues = input.workstreams?.workstreams.flatMap(workstream => workstream.issues) || [];
+  const currentWorkstreams = input.workstreams?.query === input.query ? input.workstreams : undefined;
+  const issues = currentWorkstreams?.workstreams.flatMap(workstream => workstream.issues) || [];
+  const classifierFactOwners = new Map<string, string>();
+  const classification = input.context?.classification;
+  const requestIsCurrent = Boolean(input.context?.requestCompletenessContext &&
+    isCurrentRequestCompletenessContext(input.context.requestCompletenessContext, input.query));
+  if (currentWorkstreams && requestIsCurrent && Array.isArray(currentWorkstreams.issuePlan?.issues)) {
+    for (const scope of classification?.missingFactDomains || []) {
+      if (!classification?.missingFacts.includes(scope.fact)) continue;
+      // This classifier branch creates each fact from a CPF payroll operation.
+      // Bind it only when the current validated issue plan has one matching owner.
+      const plannedOwners = currentWorkstreams.issuePlan.issues.filter(issue => issue.domain === scope.domain);
+      if (plannedOwners.length !== 1) continue;
+      const plannedOwner = plannedOwners[0];
+      const evidenceOwners = issues.filter(issue => issue.issueId === plannedOwner.id && issue.domain === scope.domain);
+      if (evidenceOwners.length !== 1) continue;
+      classifierFactOwners.set(normalizeGapKey(scope.fact), plannedOwner.id);
+    }
+  }
   for (const gap of input.workstreams?.gaps || []) {
     add(`Verified evidence is still needed for ${gap.subject}.`, gap.issueId,
       `Evidence remains unresolved for ${gap.subject} under ${gap.authority}.`);
@@ -480,6 +499,11 @@ function buildGapEntries(input: GroundedSynthesisInput): PacketGap[] {
     ])];
   };
   const addContextualFact = (text: string, preferredIssueId?: string) => {
+    const classifierOwner = classifierFactOwners.get(normalizeGapKey(text));
+    if (classifierOwner) {
+      add(text, classifierOwner);
+      return;
+    }
     const exactOwners = ownedScopesForText(text);
     const scopes = exactOwners.length ? exactOwners : preferredIssueId ? [preferredIssueId] : [];
     if (scopes.length) for (const issueId of scopes) add(text, issueId);

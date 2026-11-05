@@ -8,13 +8,15 @@ interface InputHandlerPanelProps {
   scenario: AccountingScenarioState | null;
   onScenarioChange?: (updated: AccountingScenarioState) => void;
   onResetToDefaults: () => void;
+  defaultExpanded?: boolean;
 }
 
 export const InputHandlerPanel: React.FC<InputHandlerPanelProps> = ({
   scenario,
+  defaultExpanded = false,
   onResetToDefaults
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   if (!scenario) {
     return null;
   }

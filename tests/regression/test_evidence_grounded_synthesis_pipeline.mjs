@@ -3,6 +3,8 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { SafeChatAnswer } from '../../src/components/SafeChatAnswer.tsx';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
+import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
+import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { createGroundedSynthesisFailureResponse, processAccountingQuery } from '../../src/services/geminiService.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
@@ -49,6 +51,9 @@ let generationFailure = false;
 let supportFailure = false;
 let rejectSupport = false;
 let noEvidenceMode = false;
+let accountingOnlyMode = false;
+let accountingOnlyStatutoryClaimMode = false;
+let accountingOnlyStatutoryClaimText = '';
 let mockFailure;
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
@@ -108,6 +113,24 @@ globalThis.fetch = async (input, init) => {
           governingAuthorities: [], contextualAuthorities: [], operation: 'FILING_REQUIREMENT', mappedTopicIds: [],
           evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.98 }]
       });
+    }
+    if (accountingOnlyMode && user.includes('Interpret this question:')) {
+      return modelReply({
+        schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [],
+        domain: 'ACCOUNTING', population: 'COMPANY', primarySubject: 'expense accounting treatment',
+        concepts: [{ concept: 'expense accounting treatment', role: 'PRIMARY' }],
+        requestedOperation: 'DETERMINE_TREATMENT', requiresUserSpecificFacts: false,
+        factsExplicitlyProvided: [], confidence: 0.98,
+        issues: [{ subject: 'expense accounting treatment', population: 'COMPANY', domain: 'ACCOUNTING',
+          governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'DETERMINE_TREATMENT',
+          mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.98 }]
+      });
+    }
+    if (accountingOnlyMode) {
+      providerStages.push('core-generation');
+      return modelReply({ directAnswer: accountingOnlyStatutoryClaimMode
+        ? `The expense is recognized when incurred. ${accountingOnlyStatutoryClaimText}`
+        : 'The expense is recognized when incurred and reduces profit for the period.' });
     }
     if (noEvidenceMode) {
       providerStages.push('core-generation');
@@ -192,16 +215,39 @@ try {
   const deterministicJournal = { ...sourceJournal, id: 'validated-deterministic-journal', authorityStatus: 'DETERMINISTIC' };
   const modelProposedGroup = {
     ...sourceJournal, id: 'model-proposed-with-false-citation', authorityStatus: 'AI_PROPOSED',
+    title: 'Fictional filing deadline: 30 June 2025', summary: 'File by 30 June 2025.',
+    eventDate: 'The company must file under fictional Widgets Code',
+    taxSummary: 'The company must file under the fictional Widgets Code.',
+    rationalePoints: ['Fictional Widgets Code filing rule: 30 June 2025.'],
+    lines: sourceJournal.lines.map(line => ({ ...line, accountName: 'Fictional filing deadline liability',
+      foreignCurrency: '30 June 2025', foreignDebit: 'The filing deadline is 30 June 2025',
+      foreignCredit: 'Widgets Code', exchangeRate: '30 June 2025',
+      lineExplanation: 'This line is required before the 30 June 2025 filing deadline.' })),
     citations: [falseModelCitation]
+  };
+  const validFxProposal = {
+    ...modelProposedGroup, id: 'valid-fx-proposal-control', eventDate: '2026-11-05',
+    lines: modelProposedGroup.lines.map(line => ({ ...line, foreignCurrency: 'USD', foreignDebit: 100,
+      foreignCredit: 0, exchangeRate: 1.25 }))
+  };
+  const deterministicClarification = { fieldKey: 'transactionAmount', fieldName: 'Transaction amount',
+    prompt: 'What was the transaction amount?', whyNeeded: 'The amount is needed to calculate the journal.' };
+  const trustedEngineScenario = {
+    scenarioType: 'EXPENSE', rawQuery: mixedQuery, transactionTitle: 'Engine transaction', functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD', amount: 850, isComplete: false, missingFields: [deterministicClarification],
+    missingFacts: ['The transaction amount has not been provided.'], directGroups: [deterministicJournal],
+    committedDirectGroups: [deterministicJournal], projectedGroups: []
   };
   const contaminatedResponse = {
     ...mixedResult,
     messageText: unsafeOriginal,
     scenarioState: {
       ...mixedResult.scenarioState,
-      directGroups: [modelProposedGroup, deterministicJournal, ...(mixedResult.scenarioState.directGroups || [])],
-      committedDirectGroups: [modelProposedGroup, deterministicJournal, ...(mixedResult.scenarioState.committedDirectGroups || [])],
-      projectedGroups: [modelProposedGroup, deterministicJournal, ...(mixedResult.scenarioState.projectedGroups || [])],
+      transactionTitle: 'Fictional filing deadline: 30 June 2025',
+      keyParameters: [{ label: 'Filing deadline', value: '30 June 2025', badge: 'Statutory' }],
+      directGroups: [modelProposedGroup, validFxProposal, deterministicJournal, ...(mixedResult.scenarioState.directGroups || [])],
+      committedDirectGroups: [modelProposedGroup, validFxProposal, deterministicJournal, ...(mixedResult.scenarioState.committedDirectGroups || [])],
+      projectedGroups: [modelProposedGroup, validFxProposal, deterministicJournal, ...(mixedResult.scenarioState.projectedGroups || [])],
       accountingTreatmentSummary: unsafeOriginal,
       singaporeTaxTreatmentSummary: unsafeOriginal,
       regulatoryMandatesSummary: unsafeOriginal,
@@ -237,7 +283,7 @@ try {
   assert.match(contaminatedCompliance, /The company must file by 30 June 2025\./,
     'the registry-supported citation exposes the false deadline in pre-fallback App-equivalent compliance markup');
   const unresolvedFallback = createGroundedSynthesisFailureResponse(
-    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE'
+    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE', trustedEngineScenario
   );
   assert.equal(unresolvedFallback.displayFullAnswer, true);
   assert.doesNotMatch(unresolvedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
@@ -245,19 +291,45 @@ try {
     'failure fallback clears unchecked summaries and stale statutory presentation fields');
   assert.deepEqual(unresolvedFallback.scenarioState.assumptions, [], 'unverified model assumptions are removed');
   assert.equal(unresolvedFallback.scenarioState.effectiveDateOrTiming, undefined, 'unverified timing metadata is removed');
-  assert.deepEqual(unresolvedFallback.scenarioState.missingFields, [], 'unverified clarification prompts are removed');
-  assert.equal(unresolvedFallback.scenarioState.missingFacts, undefined, 'unverified model missing-fact assertions are removed');
-  assert.deepEqual(unresolvedFallback.clarifications, [], 'the response does not retain model clarifications');
+  assert.deepEqual(unresolvedFallback.scenarioState.missingFields, [deterministicClarification],
+    'deterministic accounting missing fields survive statutory synthesis failure');
+  assert.deepEqual(unresolvedFallback.scenarioState.missingFacts, ['The transaction amount has not been provided.'],
+    'deterministic accounting missing facts survive statutory synthesis failure');
+  assert.deepEqual(unresolvedFallback.clarifications, [deterministicClarification],
+    'only the canonical engine clarification survives');
+  assert.equal(unresolvedFallback.scenarioState.isComplete, false, 'the incomplete engine state remains incomplete');
+  assert.equal(unresolvedFallback.scenarioState.transactionTitle, 'Transaction facts',
+    'the provider-generated transaction title is replaced with a neutral label');
+  assert.equal(unresolvedFallback.scenarioState.keyParameters, undefined,
+    'provider-generated labels and values are removed from the scenario state');
+  assert.equal(unresolvedFallback.scenarioState.amount, 850, 'the engine-owned amount remains available');
   assert.doesNotMatch(unresolvedFallback.messageText, /30 June 2025/,
     'a false statutory deadline does not survive in fallback chat text');
-  const safeModelProposedGroup = unresolvedFallback.scenarioState.directGroups[0];
-  assert.deepEqual({ ...safeModelProposedGroup, citations: [falseModelCitation] }, modelProposedGroup,
-    'citation quarantine preserves proposed journal lines, amounts, dates, and currency');
-  assert.deepEqual(unresolvedFallback.scenarioState.directGroups[1], deterministicJournal,
+  const safeModelProposedGroup = unresolvedFallback.scenarioState.directGroups.find(group => group.id === modelProposedGroup.id);
+  assert.equal(safeModelProposedGroup.authorityStatus, 'AI_PROPOSED');
+  assert.equal(safeModelProposedGroup.title, 'Unverified AI-proposed journal');
+  assert.equal(safeModelProposedGroup.summary, '', 'unverified group summaries are removed');
+  assert.equal(safeModelProposedGroup.taxSummary, undefined, 'unverified tax summaries are removed');
+  assert.deepEqual(safeModelProposedGroup.rationalePoints, [], 'unverified rationale is removed');
+  assert.equal(safeModelProposedGroup.lines[0].lineExplanation, '', 'unverified line explanations are removed');
+  assert.equal(safeModelProposedGroup.lines[0].accountName, 'Unverified proposed account',
+    'an unverified account label is not presented as validated');
+  assert.equal(safeModelProposedGroup.eventDate, '', 'non-date model metadata is cleared before the journal renderer');
+  assert.equal(safeModelProposedGroup.lines[0].foreignCurrency, undefined, 'non-currency model metadata is cleared');
+  assert.equal(safeModelProposedGroup.lines[0].foreignDebit, undefined, 'non-numeric FX amounts are cleared');
+  assert.equal(safeModelProposedGroup.lines[0].exchangeRate, undefined, 'non-numeric exchange rates are cleared');
+  assert.equal(safeModelProposedGroup.lines[0].debit, modelProposedGroup.lines[0].debit,
+    'quarantine preserves proposed journal amounts');
+  const validFxControl = unresolvedFallback.scenarioState.directGroups.find(group => group.id === validFxProposal.id);
+  assert.equal(validFxControl.eventDate, '05/11/2026', 'a valid proposal date remains visible');
+  assert.equal(validFxControl.lines[0].foreignCurrency, 'USD', 'a valid ISO currency remains visible');
+  assert.equal(validFxControl.lines[0].foreignDebit, 100, 'a numeric FX amount remains visible');
+  assert.equal(validFxControl.lines[0].exchangeRate, 1.25, 'a numeric exchange rate remains visible');
+  assert.deepEqual(unresolvedFallback.scenarioState.directGroups[0], deterministicJournal,
     'the deterministic journal remains byte-for-byte intact');
   for (const key of ['directGroups', 'committedDirectGroups', 'projectedGroups']) {
-    assert.deepEqual(unresolvedFallback.scenarioState[key]?.[0]?.citations, [],
-      `${key} removes citations attached to a non-deterministic journal`);
+    assert.ok(unresolvedFallback.scenarioState[key]?.filter(group => group.authorityStatus !== 'DETERMINISTIC')
+      .every(group => group.citations.length === 0), `${key} removes citations attached to non-deterministic groups`);
   }
   const appComputedGroups = calculateDoubleEntries(unresolvedFallback.scenarioState, 'SFRS_I').groups;
   const appSelectedCitations = [
@@ -276,12 +348,29 @@ try {
     'a false statutory deadline does not survive in compliance presentation markup');
   assert.doesNotMatch(fallbackCompliance, /Widgets Code|Fictional filing rule|attacker\.example/,
     'App-equivalent citation selection does not expose the model-proposed legal citation');
-  assert.deepEqual(unresolvedFallback.scenarioState.directGroups.slice(2),
-    mixedResult.scenarioState.directGroups.map(group => group.authorityStatus === 'DETERMINISTIC' ? group : { ...group, citations: [] }),
-    'the fallback preserves validated groups and quarantines citations on conditional groups');
-  assert.equal(unresolvedFallback.scenarioState.amount, mixedResult.scenarioState.amount,
+  assert.equal(unresolvedFallback.scenarioState.directGroups[0].id, deterministicJournal.id,
+    'only a group in the independent engine snapshot retains deterministic status');
+  assert.equal(unresolvedFallback.scenarioState.amount, 850,
     'the fallback retains independently calculated accounting facts');
   assert.deepEqual(unresolvedFallback.scenarioState.officialAnswerLinks, [], 'unresolved fallback clears stale and unchecked links');
+
+  const scenarioPanel = renderToStaticMarkup(React.createElement(InputHandlerPanel, {
+    scenario: unresolvedFallback.scenarioState, onResetToDefaults: () => undefined, defaultExpanded: true
+  }));
+  assert.match(scenarioPanel, /Transaction facts/, 'the scenario panel renders a neutral transaction title');
+  assert.match(scenarioPanel, /1 detail needed/, 'the scenario panel keeps the accounting clarification visible');
+  assert.match(scenarioPanel, /Transaction Amount/);
+  assert.match(scenarioPanel, /SGD 850/, 'the rendered scenario panel keeps the engine-owned amount');
+  assert.doesNotMatch(scenarioPanel, /Fictional filing deadline|30 June 2025|Filing deadline/,
+    'unverified statutory prose is absent from the rendered scenario panel');
+  const journalPanel = renderToStaticMarkup(React.createElement(JournalTable, {
+    groups: unresolvedFallback.scenarioState.directGroups, standard: 'SFRS_I', functionalCurrency: 'SGD'
+  }));
+  assert.match(journalPanel, /Unverified AI-proposed journal/, 'the journal panel shows a generic proposal title');
+  assert.match(journalPanel, /AI Proposed/, 'the journal panel retains the proposal status warning');
+  assert.doesNotMatch(journalPanel, /UNSAFE_ORIGINAL_ADVISORY|30 June 2025|Fictional Widgets Code|Fictional filing rule/,
+    'unverified legal prose is absent from the rendered journal panel');
+  assert.match(journalPanel, /FX: USD 100 @ 1\.25/, 'valid FX data remains visible in the rendered journal panel');
 
   const governedMissingFact = 'The purchase business purpose remains unconfirmed.';
   const admittedFallbackContext = {
@@ -290,7 +379,7 @@ try {
     evidenceQuality: { ...mixedContext.evidenceQuality, missingFacts: [governedMissingFact] }
   };
   const admittedFallback = createGroundedSynthesisFailureResponse(
-    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, admittedFallbackContext, 'NETWORK'
+    contaminatedResponse, mixedQuery, 'SFRS_I', undefined, admittedFallbackContext, 'NETWORK', trustedEngineScenario
   );
   assert.doesNotMatch(admittedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
   assert.match(admittedFallback.messageText, /IRAS|input tax|GST/i,
@@ -316,7 +405,7 @@ try {
     authorityIssue: { authority: 'IRAS', issue: mixedIrasIssue, requestedConcepts: [] }
   };
   const combinedFallback = createGroundedSynthesisFailureResponse(
-    contaminatedResponse, mixedQuery, 'SFRS_I', mixedWorkstreams, additionalIrasContext, 'NETWORK'
+    contaminatedResponse, mixedQuery, 'SFRS_I', mixedWorkstreams, additionalIrasContext, 'NETWORK', trustedEngineScenario
   );
   assert.ok(combinedFallback.scenarioState.authorityEvidencePresentation,
     'the fallback retains the original whole-question workstream gaps');
@@ -341,7 +430,7 @@ try {
 
   const staleQueryFallback = createGroundedSynthesisFailureResponse(
     contaminatedResponse, mixedQuery, 'SFRS_I', { ...mixedWorkstreams, query: 'A different user query' },
-    additionalIrasContext, 'NETWORK'
+    additionalIrasContext, 'NETWORK', trustedEngineScenario
   );
   assert.equal(staleQueryFallback.scenarioState.authorityEvidencePresentation, undefined,
     'a workstream presentation from another query is not shown');
@@ -355,7 +444,7 @@ try {
       issue: { ...mixedIrasIssue, id: 'a-different-requested-issue' } }
   };
   const wrongOwnerFallback = createGroundedSynthesisFailureResponse(
-    contaminatedResponse, mixedQuery, 'SFRS_I', mixedWorkstreams, wrongOwnerContext, 'NETWORK'
+    contaminatedResponse, mixedQuery, 'SFRS_I', mixedWorkstreams, wrongOwnerContext, 'NETWORK', trustedEngineScenario
   );
   assert.ok(wrongOwnerFallback.scenarioState.authorityEvidencePresentation,
     'the current whole-question workstream evidence remains available');
@@ -386,9 +475,15 @@ try {
     assert.equal(failed.displayFullAnswer, true, `${failure} exposes the safe fallback in full`);
     assert.doesNotMatch(failed.messageText, /office-expense description alone does not establish/,
       `${failure} does not display rejected statutory prose`);
-    assert.deepEqual(failed.scenarioState.directGroups,
-      mixedResult.scenarioState.directGroups.map(group => group.authorityStatus === 'DETERMINISTIC' ? group : { ...group, citations: [] }),
-      `${failure} preserves accounting entries and removes citations from conditional groups`);
+    assert.deepEqual(failed.scenarioState.directGroups.map(group => ({ id: group.id, totalDebit: group.totalDebit,
+      totalCredit: group.totalCredit, lines: group.lines.map(line => ({ id: line.id, debit: line.debit, credit: line.credit })) })),
+    mixedResult.scenarioState.directGroups.map(group => ({ id: group.id, totalDebit: group.totalDebit,
+      totalCredit: group.totalCredit, lines: group.lines.map(line => ({ id: line.id, debit: line.debit, credit: line.credit })) })),
+    `${failure} preserves the engine-validated journal numbers`);
+    assert.ok(failed.scenarioState.directGroups.filter(group => group.authorityStatus !== 'DETERMINISTIC')
+      .every(group => group.citations.length === 0 && group.summary === '' && group.rationalePoints.length === 0 &&
+        group.lines.every(line => line.lineExplanation === '')),
+      `${failure} removes narrative and citations from non-deterministic journal groups`);
     assert.ok(!failed.scenarioState.officialAnswerLinks?.some(link => link.url.includes('attacker.example')),
       `${failure} clears unverified synthesis links`);
   }
@@ -408,11 +503,41 @@ try {
   assert.ok(providerStages.filter(stage => stage === 'core-generation').length >= 1,
     'the no-evidence regression exercises a provider-generated core statutory answer');
 
-  const accountingOnlyQuery = 'Prepare a journal entry for an unspecified widget expense.';
-  const accountingOnlyResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', []);
-  assert.notEqual(accountingOnlyResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
-    'an accounting-only clarification does not enter the statutory no-evidence fallback');
   noEvidenceMode = false;
+  accountingOnlyMode = true;
+  const accountingOnlyQuery = 'Prepare a journal entry for an unspecified widget expense.';
+  accountingOnlyMode = true;
+  let accountingOnlyClassification;
+  for (const claimText of [
+    'The company can claim GST input tax on it.',
+    'GST recovery is permitted on this expense.',
+    'The company must notify ACRA of the director appointment.'
+  ]) {
+    providerStages.length = 0;
+    accountingOnlyStatutoryClaimMode = true;
+    accountingOnlyStatutoryClaimText = claimText;
+    const accountingOnlyResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', [], undefined, {
+      onGroundedContext: value => { accountingOnlyClassification = value.classification; }
+    });
+    assert.equal(accountingOnlyResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+      `an unsolicited statutory claim is quarantined for an accounting-only request: ${claimText}`);
+    assert.match(accountingOnlyResult.messageText, /Statutory evidence unresolved/);
+    assert.ok(!accountingOnlyResult.messageText.includes(claimText), 'unsupported statutory prose is removed');
+    assert.ok(providerStages.includes('core-generation'), 'the accounting-only request reaches the provider');
+    assert.equal(accountingOnlyClassification?.primaryDomain, 'ACCOUNTING');
+    assert.equal(accountingOnlyClassification?.intent, 'TRANSACTION');
+  }
+  accountingOnlyStatutoryClaimMode = false;
+  accountingOnlyStatutoryClaimText = '';
+  const ordinaryAccountingResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', [], undefined, {
+    onGroundedContext: value => { accountingOnlyClassification = value.classification; }
+  });
+  assert.notEqual(ordinaryAccountingResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    'an ordinary accounting explanation stays independent of the statutory no-evidence fallback');
+  assert.match(ordinaryAccountingResult.messageText, /expense is recognized when incurred/);
+  assert.equal(accountingOnlyClassification?.primaryDomain, 'ACCOUNTING');
+  assert.equal(accountingOnlyClassification?.intent, 'TRANSACTION');
+  accountingOnlyMode = false;
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);
