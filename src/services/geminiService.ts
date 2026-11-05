@@ -50,7 +50,8 @@ import {
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
-import { classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible } from './aiFirstAdvisory';
+import { classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
+  isHighRiskStatutoryClaim } from './aiFirstAdvisory';
 import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
@@ -535,7 +536,7 @@ export async function processAccountingQuery(
     });
     if (!synthesis) {
       const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
-      const responseContainsStatutoryClaim = hasUnverifiedStatutoryClaim(response);
+      const responseContainsStatutoryClaim = hasUnverifiedStatutoryClaim(response, deterministicScenario);
       const journalRejectionOnly = response.answerPath === 'ACCOUNTING_JOURNAL_VALIDATION_REJECTION';
       const statutoryRequest = responseContainsStatutoryClaim || (!journalRejectionOnly && !accountingOnlyPlan && (
         Boolean(groundedContext && groundedContext.classification.intent !== 'TRANSACTION') ||
@@ -775,22 +776,63 @@ function safePositiveNumber(value: unknown): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
 }
 
-function hasUnverifiedStatutoryClaim(response: GeminiResponse): boolean {
+export function hasUnverifiedStatutoryClaim(
+  response: GeminiResponse,
+  deterministicScenario?: AccountingScenarioState
+): boolean {
   const scenario = response.scenarioState;
   if (scenario.singaporeTaxTreatmentSummary?.trim() || scenario.regulatoryMandatesSummary?.trim() ||
       scenario.statutoryAdvisory?.some(advisory => advisory.authority !== 'ASC' && Boolean(advisory.summary?.trim()))) {
     return true;
   }
   const groups = [...(scenario.directGroups || []), ...(scenario.committedDirectGroups || []), ...(scenario.projectedGroups || [])];
-  const narrative = [response.messageText, scenario.transactionTitle, scenario.accountingTreatmentSummary,
+  const deterministicGroups = [
+    ...(deterministicScenario?.directGroups || []),
+    ...(deterministicScenario?.committedDirectGroups || []),
+    ...(deterministicScenario?.projectedGroups || [])
+  ].filter(group => group.authorityStatus === 'DETERMINISTIC' && validateJournalGroups([group]).isValid);
+  const deterministicGroupById = new Map(deterministicGroups.map(group => [group.id, group]));
+  const deterministicScenarioTitle = deterministicGroups.length > 0 && deterministicScenario?.scenarioType !== 'UNRECOGNIZED'
+    ? deterministicScenario?.transactionTitle?.trim()
+    : undefined;
+  const matchesTrustedGroupNarrative = (group: JournalEntryGroup, field: 'title' | 'summary' | 'taxSummary' | 'eventDate', text: string | undefined) => {
+    const trustedGroup = deterministicGroupById.get(group.id);
+    return Boolean(trustedGroup && trustedGroup[field] === text);
+  };
+  const matchesTrustedLineNarrative = (group: JournalEntryGroup, lineId: string, field: 'accountName' | 'lineExplanation', text: string | undefined) => {
+    const trustedGroup = deterministicGroupById.get(group.id);
+    const trustedLine = trustedGroup?.lines.find(candidate => candidate.id === lineId);
+    return Boolean(trustedLine && trustedLine[field] === text);
+  };
+  const candidateNarrative = [
+    response.messageText,
+    ...(scenario.transactionTitle?.trim() === deterministicScenarioTitle ? [] : [scenario.transactionTitle]),
+    scenario.accountingTreatmentSummary,
+    scenario.singaporeTaxTreatmentSummary,
+    scenario.regulatoryMandatesSummary,
+    scenario.effectiveDateOrTiming,
+    scenario.uncertaintyDisclaimer,
     scenario.keyParameters?.map(fact => `${fact.label}: ${fact.value} ${fact.badge || ''}`).join('. '),
     ...(scenario.statutoryAdvisory || []).flatMap(advisory => [advisory.summary, ...(advisory.keyRules || [])]),
-    ...groups.flatMap(group => [group.title, group.summary, group.taxSummary, ...(group.rationalePoints || []),
-      ...(group.lines || []).flatMap(line => [line.accountName, line.lineExplanation])])]
-    .filter((text): text is string => Boolean(text?.trim())).join('\n');
-  return narrative.split(/\n+|(?<=[.!?])\s+/).some(sentence => {
+    ...groups.flatMap(group => [
+      ...(matchesTrustedGroupNarrative(group, 'title', group.title) ? [] : [group.title]),
+      ...(matchesTrustedGroupNarrative(group, 'summary', group.summary) ? [] : [group.summary]),
+      ...(matchesTrustedGroupNarrative(group, 'taxSummary', group.taxSummary) ? [] : [group.taxSummary]),
+      ...(group.rationalePoints || []).filter(point => !deterministicGroupById.get(group.id)?.rationalePoints?.includes(point)),
+      ...(matchesTrustedGroupNarrative(group, 'eventDate', group.eventDate) ? [] : [group.eventDate]),
+      ...(group.lines || []).flatMap(line => [
+        ...(matchesTrustedLineNarrative(group, line.id, 'accountName', line.accountName) ? [] : [line.accountName]),
+        ...(matchesTrustedLineNarrative(group, line.id, 'lineExplanation', line.lineExplanation) ? [] : [line.lineExplanation]),
+        line.foreignCurrency,
+        line.foreignDebit,
+        line.foreignCredit,
+        line.exchangeRate
+      ])
+    ])
+  ].filter((text): text is string => typeof text === 'string' && Boolean(text.trim()));
+  return candidateNarrative.flatMap(text => text.split(/\n+|(?<=[.!?])\s+/)).some(sentence => {
     const classification = classifyQuestion(sentence);
-    return classification.taxAnalysisRequired || classification.regulatoryAnalysisRequired;
+    return classification.taxAnalysisRequired || classification.regulatoryAnalysisRequired || isHighRiskStatutoryClaim(sentence);
   });
 }
 

@@ -5,11 +5,13 @@ import { SafeChatAnswer } from '../../src/components/SafeChatAnswer.tsx';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
-import { createGroundedSynthesisFailureResponse, processAccountingQuery } from '../../src/services/geminiService.ts';
+import { createGroundedSynthesisFailureResponse, hasUnverifiedStatutoryClaim, processAccountingQuery } from '../../src/services/geminiService.ts';
+import { postProcessAIResponse } from '../../src/services/groundingContextBuilder.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
+import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
 
 const query = 'Can my client claim GST input tax on an office expense, and what is the accounting treatment?';
 const verifiedLink = { title: 'IRAS guidance', url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)' };
@@ -54,6 +56,7 @@ let noEvidenceMode = false;
 let accountingOnlyMode = false;
 let accountingOnlyStatutoryClaimMode = false;
 let accountingOnlyStatutoryClaimText = '';
+let accountingOnlyMetadataMode = false;
 let mockFailure;
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
@@ -128,6 +131,11 @@ globalThis.fetch = async (input, init) => {
     }
     if (accountingOnlyMode) {
       providerStages.push('core-generation');
+      if (accountingOnlyMetadataMode) return modelReply({
+        directAnswer: 'The expense is recognized when incurred and reduces profit for the period.',
+        effectiveDateOrTiming: 'Fictional Widgets Code filing deadline: 30 June 2025.',
+        uncertaintyDisclaimer: 'The company must submit the Widgets Code return by 30 June 2025.'
+      });
       return modelReply({ directAnswer: accountingOnlyStatutoryClaimMode
         ? `The expense is recognized when incurred. ${accountingOnlyStatutoryClaimText}`
         : 'The expense is recognized when incurred and reduces profit for the period.' });
@@ -189,6 +197,30 @@ try {
     undefined, { onAuthorityWorkstreams: value => { mixedWorkstreams = value; }, onGroundedContext: value => { mixedContext = value; } });
   assert.ifError(mockFailure);
   assert.equal(mixedResult.answerPath, 'AI_GROUNDED_SYNTHESIS', 'a new mixed accounting/statutory question uses the production synthesis path');
+  const falseAuxiliaryMetadata = {
+    effectiveDateOrTiming: 'Fictional Widgets Code filing deadline: 30 June 2025.',
+    uncertaintyDisclaimer: 'The company must submit the Widgets Code return by 30 June 2025.'
+  };
+  const metadataCurrentScenario = { ...mixedResult.scenarioState, ...falseAuxiliaryMetadata };
+  for (const [kind, parsed] of [
+    ['compact', { directAnswer: 'The equipment expense is recognized when incurred.', ...falseAuxiliaryMetadata }],
+    ['legacy', { messageText: 'The equipment expense is recognized when incurred.', ...falseAuxiliaryMetadata }]
+  ]) {
+    const safePostProcessed = postProcessAIResponse(parsed, metadataCurrentScenario, mixedQuery,
+      { ...mixedContext, evidenceQuality: undefined }, null, 'SFRS_I');
+    const postProcessedCompliance = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+      citations: [], standard: 'SFRS_I', rawQuery: mixedQuery,
+      primaryDomain: safePostProcessed.scenarioState.primaryDomain,
+      queryIntent: safePostProcessed.scenarioState.queryIntent,
+      assumptions: safePostProcessed.scenarioState.assumptions,
+      effectiveDateOrTiming: safePostProcessed.scenarioState.effectiveDateOrTiming,
+      uncertaintyDisclaimer: safePostProcessed.scenarioState.uncertaintyDisclaimer
+    }));
+    assert.doesNotMatch(JSON.stringify(safePostProcessed.scenarioState), /Widgets Code|30 June 2025/,
+      `${kind} post-processing removes model timing and disclaimer fields before scenario assembly`);
+    assert.doesNotMatch(postProcessedCompliance, /Widgets Code|30 June 2025/,
+      `${kind} rendered compliance panel excludes metadata-only false statutory claims`);
+  }
   const historyContext = JSON.stringify(draftPacket.historyContext);
   assert.doesNotMatch(historyContext, /previous share issue|old share transaction|private-use assumption/i,
     'starting a new accounting scenario removes conflicting prior accounting and statutory turns before grounding');
@@ -238,6 +270,72 @@ try {
     missingFacts: ['The transaction amount has not been provided.'], directGroups: [deterministicJournal],
     committedDirectGroups: [deterministicJournal], projectedGroups: []
   };
+  const deterministicLabelGroups = [
+    {
+      id: 'trusted-share-capital-label', title: 'Share Capital Issuance', eventDate: '05/11/2026',
+      summary: 'Recognize share consideration received.', totalDebit: 100, totalCredit: 100, isBalanced: true,
+      authorityStatus: 'DETERMINISTIC', citations: [], rationalePoints: [],
+      lines: [
+        { id: 'share-cash', accountCode: '1010', accountName: 'Cash at Bank (Current Account)', category: 'ASSET', debit: 100, credit: 0, lineExplanation: 'Cash received.' },
+        { id: 'share-capital', accountCode: '3000', accountName: 'Share Capital (Ordinary Shares)', category: 'EQUITY', debit: 0, credit: 100, lineExplanation: 'Ordinary share capital issued.' }
+      ]
+    },
+    {
+      id: 'trusted-gst-receivable-label', title: 'Office Equipment Purchase', eventDate: '05/11/2026',
+      summary: 'Recognize equipment and the related input tax amount.', totalDebit: 100, totalCredit: 100, isBalanced: true,
+      authorityStatus: 'DETERMINISTIC', citations: [], rationalePoints: [],
+      lines: [
+        { id: 'equipment-cost', accountCode: '1500', accountName: 'Property, Plant and Equipment — Equipment', category: 'ASSET', debit: 91.74, credit: 0, lineExplanation: 'Recognize equipment cost.' },
+        { id: 'gst-receivable', accountCode: '1501', accountName: 'GST Input Tax Receivable', category: 'ASSET', debit: 8.26, credit: 0, lineExplanation: 'Recognize the stated input tax amount.' },
+        { id: 'equipment-bank', accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 100, lineExplanation: 'Cash paid to supplier.' }
+      ]
+    }
+  ];
+  const labelMarkup = renderToStaticMarkup(React.createElement(JournalTable, {
+    groups: deterministicLabelGroups, standard: 'SFRS_I', functionalCurrency: 'SGD'
+  }));
+  for (const group of deterministicLabelGroups) {
+    assert.ok(validateJournalGroups([group]).isValid, `${group.id} is a valid balanced journal fixture`);
+    const scenarioState = {
+      scenarioType: 'EXPENSE', rawQuery: 'Explain the accounting journal.', transactionTitle: group.title,
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [group], isComplete: true, missingFields: []
+    };
+    const ordinaryResponse = { messageText: 'The transaction is recorded using the balanced accounting journal.', scenarioState };
+    assert.equal(hasUnverifiedStatutoryClaim(ordinaryResponse, scenarioState), false,
+      `${group.id} excludes only its independently validated deterministic labels from claim scanning`);
+  }
+  const auxiliaryClaimResponse = {
+    messageText: 'The transaction is recorded using the balanced accounting journal.',
+    scenarioState: { scenarioType: 'EXPENSE', rawQuery: 'Explain the accounting journal.', transactionTitle: 'Office Equipment Purchase',
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [deterministicLabelGroups[1]], isComplete: true, missingFields: [],
+      effectiveDateOrTiming: 'Fictional filing deadline: 30 June 2025.',
+      uncertaintyDisclaimer: 'The company must submit its return by 30 June 2025.' }
+  };
+  assert.equal(hasUnverifiedStatutoryClaim(auxiliaryClaimResponse, auxiliaryClaimResponse.scenarioState), true,
+    'the detector checks auxiliary compliance narratives on paths that bypass post-processing');
+  assert.match(labelMarkup, /Share Capital \(Ordinary Shares\)/,
+    'the rendered journal retains the deterministic ordinary-share account label');
+  assert.match(labelMarkup, /GST Input Tax Receivable/,
+    'the rendered journal retains the deterministic GST receivable account label');
+  const gstLabelResponse = {
+    messageText: 'The transaction is recorded using the balanced accounting journal.',
+    scenarioState: { scenarioType: 'EXPENSE', rawQuery: 'Explain the accounting journal.', transactionTitle: 'Office Equipment Purchase',
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [deterministicLabelGroups[1]], isComplete: true, missingFields: [] }
+  };
+  assert.equal(hasUnverifiedStatutoryClaim(gstLabelResponse), true,
+    'a provider-set deterministic status cannot exempt an unowned GST label without a trusted engine snapshot');
+  const invalidTrustedGroup = { ...deterministicLabelGroups[1], totalCredit: 99 };
+  assert.equal(validateJournalGroups([invalidTrustedGroup]).isValid, false,
+    'the invalid-label control fails independent journal validation');
+  assert.equal(hasUnverifiedStatutoryClaim({
+    ...gstLabelResponse,
+    scenarioState: { ...gstLabelResponse.scenarioState, directGroups: [invalidTrustedGroup] }
+  }, { ...gstLabelResponse.scenarioState, directGroups: [invalidTrustedGroup] }), true,
+  'an invalid snapshot group cannot authorize its visible legal-domain label');
+  assert.equal(hasUnverifiedStatutoryClaim({
+    ...gstLabelResponse, messageText: 'The company must file by 30 June 2025.'
+  }, gstLabelResponse.scenarioState), true,
+  'a supported account label cannot suppress an appended unsupported statutory claim');
   const contaminatedResponse = {
     ...mixedResult,
     messageText: unsafeOriginal,
@@ -254,6 +352,7 @@ try {
       assumptions: [{ id: 'false-deadline', field: 'filing deadline', assumedValue: '30 June',
         basisOrRationale: 'False statutory deadline: 30 June 2025', materiality: 'HIGH' }],
       effectiveDateOrTiming: 'Statutory filing deadline: 30 June 2025',
+      uncertaintyDisclaimer: 'The company must submit under fictional Widgets Code by 30 June 2025.',
       missingFacts: ['The filing deadline is 30 June 2025.'],
       missingFields: [{ fieldKey: 'deadline', fieldName: 'deadline', prompt: 'Confirm the 30 June 2025 filing deadline.',
         whyNeeded: 'Confirm the statutory deadline.' }],
@@ -291,6 +390,8 @@ try {
     'failure fallback clears unchecked summaries and stale statutory presentation fields');
   assert.deepEqual(unresolvedFallback.scenarioState.assumptions, [], 'unverified model assumptions are removed');
   assert.equal(unresolvedFallback.scenarioState.effectiveDateOrTiming, undefined, 'unverified timing metadata is removed');
+  assert.equal(unresolvedFallback.scenarioState.uncertaintyDisclaimer, 'The original advisory response was not retained because its claims did not pass verification.',
+    'a model disclaimer is replaced with the deterministic synthesis-failure notice');
   assert.deepEqual(unresolvedFallback.scenarioState.missingFields, [deterministicClarification],
     'deterministic accounting missing fields survive statutory synthesis failure');
   assert.deepEqual(unresolvedFallback.scenarioState.missingFacts, ['The transaction amount has not been provided.'],
@@ -511,7 +612,12 @@ try {
   for (const claimText of [
     'The company can claim GST input tax on it.',
     'GST recovery is permitted on this expense.',
-    'The company must notify ACRA of the director appointment.'
+    'The company must notify ACRA of the director appointment.',
+    'The company must file by 30 June 2025.',
+    'The company is eligible to recover input tax on this purchase.',
+    'The company is eligible for the scheme.',
+    'The company qualifies for the scheme.',
+    'The company must submit its annual return.'
   ]) {
     providerStages.length = 0;
     accountingOnlyStatutoryClaimMode = true;
@@ -537,6 +643,50 @@ try {
   assert.match(ordinaryAccountingResult.messageText, /expense is recognized when incurred/);
   assert.equal(accountingOnlyClassification?.primaryDomain, 'ACCOUNTING');
   assert.equal(accountingOnlyClassification?.intent, 'TRANSACTION');
+  for (const accountingInstruction of [
+    'The company must pay the supplier under the agreed settlement terms.',
+    'You must record the expense when incurred.',
+    'The supplier invoice is due by 30 June 2025 under the agreed payment terms.',
+    'The receivable is recoverable from the customer.',
+    'The company must retain ownership of the equipment under the lease agreement.'
+  ]) {
+    providerStages.length = 0;
+    accountingOnlyStatutoryClaimMode = true;
+    accountingOnlyStatutoryClaimText = accountingInstruction;
+    const accountingInstructionResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', []);
+    assert.notEqual(accountingInstructionResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+      `ordinary accounting instructions do not trigger the statutory fallback: ${accountingInstruction}`);
+    assert.ok(accountingInstructionResult.messageText.includes(accountingInstruction),
+      `ordinary accounting instruction remains in the accounting answer: ${accountingInstruction}`);
+    assert.ok(providerStages.includes('core-generation'), 'the ordinary accounting control reaches the provider');
+  }
+
+  providerStages.length = 0;
+  accountingOnlyStatutoryClaimMode = false;
+  accountingOnlyMetadataMode = true;
+  const metadataOnlyAccountingResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', []);
+  accountingOnlyMetadataMode = false;
+  assert.equal(providerStages.filter(stage => stage === 'synthesis').length, 0,
+    'the metadata-only accounting answer follows the no-synthesis path');
+  assert.equal(metadataOnlyAccountingResult.scenarioState.effectiveDateOrTiming, undefined,
+    'no-synthesis processing removes model-controlled filing timing metadata');
+  assert.doesNotMatch(metadataOnlyAccountingResult.scenarioState.uncertaintyDisclaimer || '', /Widgets Code|30 June 2025/,
+    'no-synthesis processing removes the model uncertainty disclaimer');
+  assert.match(metadataOnlyAccountingResult.scenarioState.uncertaintyDisclaimer || '', /Conclusion is conditional upon establishing/,
+    'no-synthesis processing retains deterministic missing-fact caution');
+  const metadataOnlyCompliance = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: accountingOnlyQuery,
+    primaryDomain: metadataOnlyAccountingResult.scenarioState.primaryDomain,
+    queryIntent: metadataOnlyAccountingResult.scenarioState.queryIntent,
+    assumptions: metadataOnlyAccountingResult.scenarioState.assumptions,
+    effectiveDateOrTiming: metadataOnlyAccountingResult.scenarioState.effectiveDateOrTiming,
+    uncertaintyDisclaimer: metadataOnlyAccountingResult.scenarioState.uncertaintyDisclaimer
+  }));
+  assert.doesNotMatch(metadataOnlyCompliance, /Widgets Code|30 June 2025/,
+    'the rendered compliance panel stays clean on the no-synthesis path for metadata-only false claims');
+
+  accountingOnlyStatutoryClaimMode = false;
+  accountingOnlyStatutoryClaimText = '';
   accountingOnlyMode = false;
 
   providerStages.length = 0;

@@ -3305,6 +3305,12 @@ export function postProcessAIResponse(
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
   groundingEvidence?: GroundingEvidenceTrace[];
 } {
+  if (parsed && typeof parsed === 'object') {
+    parsed = { ...parsed, effectiveDateOrTiming: undefined, uncertaintyDisclaimer: undefined };
+  }
+  if (currentScenario) {
+    currentScenario = { ...currentScenario, effectiveDateOrTiming: undefined, uncertaintyDisclaimer: undefined };
+  }
   if (groundedContext.evidenceQuality) {
     const taxClaimsWereOmitted = parsed?.taxClaims === undefined ||
       (Array.isArray(parsed.taxClaims) && parsed.taxClaims.length === 0);
@@ -3491,7 +3497,7 @@ export function postProcessAIResponse(
     deterministicScenario?.regulatoryMandatesSummary || currentScenario?.regulatoryMandatesSummary;
 
   // Uncertainty handling & conditional conclusions
-  let uncertaintyDisclaimer = parsed.uncertaintyDisclaimer || currentScenario?.uncertaintyDisclaimer || '';
+  let uncertaintyDisclaimer = '';
 
   // 1. Missing material facts produce conditional conclusions
   if (groundedContext.missingFacts && groundedContext.missingFacts.length > 0) {

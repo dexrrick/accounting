@@ -673,12 +673,11 @@ const supportedRule = quote;
       const controlPacket = packetFrom(prompt);
       return { verdicts: controlPacket.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'DEFINITIVE_APPLICATION' })) };
     });
-    try {
-      await tryGenerateGroundedSynthesis(makeInput({ ...inputOptions, ...overrides }), { call: controlScript.call });
-    } catch (error) {
-      assert.match(String(error), /produced no supportable claims/,
-        'a conservative global gap withholds the unsupported definitive application');
-    }
+    await assert.rejects(
+      tryGenerateGroundedSynthesis(makeInput({ ...inputOptions, ...overrides }), { call: controlScript.call }),
+      /produced no supportable claims/,
+      'a conservative global gap must reject the unsupported definitive application'
+    );
     return packetFrom(controlScript.calls[0].prompt).missingFactsAndEvidenceGaps;
   };
   const staleQueryPacket = await globalControl({ workstreamQuery: 'a different query' });

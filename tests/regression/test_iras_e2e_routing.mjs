@@ -584,9 +584,9 @@ assert.ok(unrelatedMissingFactMealResponse.messageText.includes(unconditionalMea
 assert.equal(unrelatedMissingFactMealResponse.scenarioState.statutoryAdvisory?.[0]?.isGstClaimable, true,
   'An unrelated corporate-tax missing fact does not suppress the meal GST claimability badge.');
 
-for (const [disclaimer, shouldRemain] of [
-  ['GST is never claimable for customer meals.', false],
-  ['GST is always claimable if ordinary input-tax conditions are met and a valid tax invoice is held.', true]
+for (const disclaimer of [
+  'GST is never claimable for customer meals.',
+  'GST is always claimable if ordinary input-tax conditions are met and a valid tax invoice is held.'
 ]) {
   const freeformDisclaimerResponse = postProcessAIResponse(
     { messageText: 'Please confirm the supporting facts.', directGroups: [], uncertaintyDisclaimer: disclaimer },
@@ -594,16 +594,20 @@ for (const [disclaimer, shouldRemain] of [
     mealQuery,
     mealGrounding
   );
-  assert.equal(freeformDisclaimerResponse.scenarioState.uncertaintyDisclaimer?.includes(disclaimer) ?? false, shouldRemain,
-    `Freeform uncertainty disclaimer guard result: ${disclaimer}`);
+  assert.equal(freeformDisclaimerResponse.scenarioState.uncertaintyDisclaimer?.includes(disclaimer) ?? false, false,
+    `Freeform response quarantines the model disclaimer: ${disclaimer}`);
+  assert.match(freeformDisclaimerResponse.scenarioState.uncertaintyDisclaimer || '', /conditional upon establishing/i,
+    'Freeform response retains its independently generated missing-fact warning.');
   const compactDisclaimerResponse = postProcessAIResponse(
     { directAnswer: 'Please confirm the supporting facts.', uncertaintyDisclaimer: disclaimer },
     null,
     mealQuery,
     mealGrounding
   );
-  assert.equal(compactDisclaimerResponse.scenarioState.uncertaintyDisclaimer?.includes(disclaimer) ?? false, shouldRemain,
-    `Compact uncertainty disclaimer guard result: ${disclaimer}`);
+  assert.equal(compactDisclaimerResponse.scenarioState.uncertaintyDisclaimer?.includes(disclaimer) ?? false, false,
+    `Compact response quarantines the model disclaimer: ${disclaimer}`);
+  assert.match(compactDisclaimerResponse.scenarioState.uncertaintyDisclaimer || '', /conditional upon establishing/i,
+    'Compact response retains its independently generated missing-fact warning.');
 }
 
 const deterministicSummaryGuard = postProcessAIResponse(

@@ -312,16 +312,35 @@ function selectSourceContext(records: AuthoritativeSourceRecord[], targetDate?: 
   };
 }
 
-function containsHighRiskClaim(text: string): boolean {
-  const normalizedText = normalizeAdvisoryText(text);
+function highRiskAdvisorySignals(normalizedText: string) {
   const categoricalApplicability = /\b(?:always|never|automatically)\b[^.!?;]{0,70}\b(?:recover(?:able|y|ed)?|claim(?:able)?|deduct(?:ible|ion|ed)?|exempt(?:ion)?|liable|eligib(?:le|ility)|taxable|allowable|audit\s+exempt(?:ion)?|subject\s+to\s+(?:gst|tax))\b/i.test(normalizedText) ||
     /\b(?:is|are|was|were|will\s+be|can\s+be|cannot\s+be|is\s+not|are\s+not)\s+(?:fully\s+|automatically\s+)?(?:recoverable|deductible|exempt(?:\s+from\s+[\w-]+){0,3}|liable|eligible|taxable|claimable|allowable)\b/i.test(normalizedText) ||
     /\b(?:the\s+)?(?:company|business|employer|taxpayer|private\s+(?:motor\s+)?car|this\s+(?:purchase|payment|transaction|expense)|input\s+tax|output\s+tax)\b[^.!?;]{0,65}\b(?:is|are|was|were|will\s+be|can|cannot|must|always|never)\b[^.!?;]{0,45}\b(?:recover(?:able|y|ed)?|claim(?:able)?|deduct(?:ible|ion|ed)?|exempt(?:ion)?|liable|eligib(?:le|ility)|taxable|allowable|audit\s+exempt(?:ion)?|subject\s+to\s+(?:gst|tax))\b/i.test(normalizedText) ||
     /\b(?:you|your|i|my|we|our|this|that|the company|the business)\b[^.!?;]{0,100}\b(?:can|may|might|could|will|would|is|are|be|being)\b[^.!?;]{0,60}\b(?:recover\w*|claim\w*|deduct\w*|exempt\w*|eligib\w*|qualif\w*|liable|taxable|allowable|entitled)\b/i.test(normalizedText);
   const definitiveStatutoryOutcome = /\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b[^.!?;]{0,75}\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b|\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b[^.!?;]{0,75}\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b/i.test(normalizedText);
-  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
-  const writtenNumber = '(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|first|second|third)';
   const materialDeadline = /\b(?:deadline|due\s+(?:date|by|on)|file\s+(?:by|within)|filing\s+deadline|submit\s+by|must\s+be\s+filed\s+by)\b/i.test(normalizedText);
+  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
+  return { categoricalApplicability, definitiveStatutoryOutcome, statutoryRequirement, materialDeadline };
+}
+
+export function isHighRiskStatutoryClaim(text: string): boolean {
+  const normalizedText = normalizeAdvisoryText(text);
+  const signals = highRiskAdvisorySignals(normalizedText);
+  const statutoryApplicability = signals.categoricalApplicability &&
+    /\b(?:gst|tax|input\s+tax|output\s+tax|taxable|exempt(?:ion)?|relief|deductible|audit\s+exempt(?:ion)?|statutory|regulatory)\b/i.test(normalizedText);
+  const standaloneEligibility = /\b(?:eligible|entitled|qualif(?:y|ies|ied)|exempt(?:ion)?)\b[^.!?;]{0,40}\b(?:scheme|relief|exemption)\b/i.test(normalizedText);
+  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
+  const complianceDeadline = signals.materialDeadline &&
+    /\b(?:fil(?:e|ing|ed)|submit\w*|lodge\w*|notif\w*|report\w*|return|registration|register\w*|tax|statutory|regulatory|compliance)\b/i.test(normalizedText);
+  const complianceActionObligation = /\b(?:must|shall|is\s+required\s+to|are\s+required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\s+(?:submit|file|lodge|notify|register|report|withhold|declare|furnish)\b/i.test(normalizedText);
+  return statutoryApplicability || standaloneEligibility || signals.definitiveStatutoryOutcome || statutoryRequirement ||
+    complianceDeadline || complianceActionObligation;
+}
+
+function containsHighRiskClaim(text: string): boolean {
+  const normalizedText = normalizeAdvisoryText(text);
+  const { categoricalApplicability, definitiveStatutoryOutcome, statutoryRequirement, materialDeadline } = highRiskAdvisorySignals(normalizedText);
+  const writtenNumber = '(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|first|second|third)';
   const explicitDate = /\d|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+(?:the\s+)?(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth|eleventh|twelfth|\d{1,2})(?:st|nd|rd|th)?\b/i.test(normalizedText);
   const exactRate = new RegExp(`\\b(?:rate|percentage|percent|per cent)\\b[^.!?;]{0,60}\\b(?:\\d+(?:\\.\\d+)?|${writtenNumber})(?:\\s*(?:%|per cent|percent))?\\b|\\b(?:\\d+(?:\\.\\d+)?|${writtenNumber})\\s*(?:%|per cent|percent)\\b`, 'i').test(normalizedText);
   const specificProvision = new RegExp(`\\b(?:section|subsection|paragraph|article|regulation|rule|standard|sfrs\\s*\\(\\s*i\\s*\\)|ias|ifrs)\\s*(?:no\\.?\\s*)?(?:\\d|${writtenNumber})`, 'i').test(normalizedText);
