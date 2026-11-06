@@ -617,7 +617,23 @@ try {
     'The company is eligible to recover input tax on this purchase.',
     'The company is eligible for the scheme.',
     'The company qualifies for the scheme.',
-    'The company must submit its annual return.'
+    'The company must submit its annual return.',
+    'The business must renew its operating licence every year.',
+    'The business needs to renew its operating licence.',
+    'The company has to obtain an operating licence.',
+    'An operating licence is required.',
+    'Regulatory approval is required before commencing operations.',
+    'The business does not need an operating licence.',
+    'The business must renew its operating licences every year.',
+    'Licence renewal is required.',
+    'No licence renewal is necessary.',
+    'The business does not need to renew its licence.',
+    'The business must obtain regulatory approval from MAS.',
+    'No ACRA approval is required.',
+    'The company must appoint a company secretary.',
+    'No statutory auditor appointment is necessary.',
+    'The company must declare taxable income.',
+    'The company must comply with the law.'
   ]) {
     providerStages.length = 0;
     accountingOnlyStatutoryClaimMode = true;
@@ -646,9 +662,19 @@ try {
   for (const accountingInstruction of [
     'The company must pay the supplier under the agreed settlement terms.',
     'You must record the expense when incurred.',
+    'The company must report the impairment loss in profit or loss.',
+    'The company shall report the impairment loss in profit or loss.',
+    'The company must declare dividends to its shareholders.',
+    'The software licence must be amortised over its useful life.',
+    'The company must amortise the software licence over its useful life.',
+    'The company must obtain internal approval for the expense.',
+    'An equipment lease renewal is required before next year.',
     'The supplier invoice is due by 30 June 2025 under the agreed payment terms.',
     'The receivable is recoverable from the customer.',
-    'The company must retain ownership of the equipment under the lease agreement.'
+    'The company must retain ownership of the equipment under the lease agreement.',
+    'The lease renewal takes effect next year.',
+    'Finance approval is required before capitalising the equipment.',
+    'The company appointed an accounting manager for the finance team.'
   ]) {
     providerStages.length = 0;
     accountingOnlyStatutoryClaimMode = true;

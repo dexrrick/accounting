@@ -332,7 +332,26 @@ export function isHighRiskStatutoryClaim(text: string): boolean {
   const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
   const complianceDeadline = signals.materialDeadline &&
     /\b(?:fil(?:e|ing|ed)|submit\w*|lodge\w*|notif\w*|report\w*|return|registration|register\w*|tax|statutory|regulatory|compliance)\b/i.test(normalizedText);
-  const complianceActionObligation = /\b(?:must|shall|is\s+required\s+to|are\s+required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\s+(?:submit|file|lodge|notify|register|report|withhold|declare|furnish)\b/i.test(normalizedText);
+  const complianceContext = /\b(?:legal|law|laws|statutory|regulatory|regulator|compliance|government|authority|acra|iras|cpf|mom|mas|tax|gst|taxable|taxation|income\s+tax|company\s+secretary|resident\s+director|statutory\s+auditor)\b/i.test(normalizedText);
+  const obligationModal = /\b(?:must|shall|is\s+required\s+to|are\s+required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\b/i;
+  const explicitComplianceAction = new RegExp(`${obligationModal.source}\\s+(?:submit|file|lodge|notify|register|withhold|furnish)\\b`, 'i').test(normalizedText);
+  const contextBoundReportingAction = new RegExp(`${obligationModal.source}\\s+(?:report|declare)\\b`, 'i').test(normalizedText) && complianceContext;
+  const regulatedObjectPattern = complianceContext
+    ? String.raw`\b(?:licen[cs]es?|permits?|registrations?|approvals?)\b`
+    : String.raw`\b(?:licen[cs]es?|permits?|registrations?)\b`;
+  const nominalObligationStatus = String.raw`\b(?:required|requires|requirement|necessary|mandatory|needed|need\s+not|not\s+(?:required|necessary|needed|applicable)|does\s+not\s+need|do\s+not\s+need|unnecessary|does\s+not\s+apply|do\s+not\s+apply)\b`;
+  const modalComplianceAction = String.raw`(?:obtain|renew\w*|hold|maintain|seek|apply|secure|be\s+(?:renewed|licensed|licenced|approved|obtained|held|maintained|sought|applied\s+for|secured))`;
+  const regulatedObjectObligation = new RegExp(
+    `(?:${obligationModal.source}\\s+${modalComplianceAction}[^.!?;]{0,45}${regulatedObjectPattern}|${regulatedObjectPattern}[^.!?;]{0,45}${obligationModal.source}\\s+${modalComplianceAction}|${regulatedObjectPattern}[^.!?;]{0,70}${nominalObligationStatus}|${nominalObligationStatus}[^.!?;]{0,70}${regulatedObjectPattern})`,
+    'i'
+  ).test(normalizedText);
+  const regulatedAppointment = /\b(?:appoint\w*|appointment)\b/i.test(normalizedText) &&
+    (complianceContext || /\b(?:director|company\s+secretary|auditor)\b/i.test(normalizedText)) &&
+    (obligationModal.test(normalizedText) || /\b(?:required|requirement|necessary|not\s+required|not\s+necessary|not\s+applicable|does\s+not\s+apply)\b/i.test(normalizedText));
+  const explicitLegalCompliance = complianceContext && /\bcomply\b/i.test(normalizedText) &&
+    /\b(?:law|laws|statute|statutes|regulation|regulations|legal\s+requirements)\b/i.test(normalizedText) && obligationModal.test(normalizedText);
+  const complianceActionObligation = explicitComplianceAction || contextBoundReportingAction ||
+    regulatedObjectObligation || regulatedAppointment || explicitLegalCompliance;
   return statutoryApplicability || standaloneEligibility || signals.definitiveStatutoryOutcome || statutoryRequirement ||
     complianceDeadline || complianceActionObligation;
 }
