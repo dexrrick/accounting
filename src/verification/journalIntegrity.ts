@@ -19,6 +19,7 @@ export interface JournalIntegrityIssue {
     | 'DIRECTION_CONTRADICTION'
     | 'UNSTATED_AMOUNT'
     | 'SETTLEMENT_EXCEEDS_BALANCE'
+    | 'AMBIGUOUS_SETTLEMENT_TARGET'
     | 'DUPLICATE_RECOGNITION'
     | 'UNCONFIRMED_SETTLEMENT';
   message: string;
@@ -32,9 +33,11 @@ export interface JournalIntegrityResult {
 }
 
 export interface OutstandingBalanceContext {
+  balanceKey?: string;
   accountName: string;
   nature: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
   remainingAmount: number;
+  transactionId?: string;
 }
 
 export interface JournalValidationOptions {
@@ -423,26 +426,117 @@ export function validateJournalGroups(
     );
     if (!isHypotheticalGroup && options?.outstandingBalances && options.outstandingBalances.length > 0) {
       const creditsCash = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current\s*account|cheque|check|giro|paynow)\b/i.test(l.accountName));
+      const debitsCash = group.lines.some(l => l.debit > 0 && /\b(?:cash|bank|current\s*account|cheque|check|giro|paynow)\b/i.test(l.accountName));
+
+      const refSources = [group.targetTransactionId, group.summary, group.narration, group.title, options?.rawQuery].filter(Boolean).join(' ').toLowerCase();
+
       if (creditsCash) {
         for (const line of group.lines) {
           if (line.debit > 0 && (line.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(line.accountName))) {
             const lineNameLower = line.accountName.toLowerCase();
-            const payableBalances = options.outstandingBalances.filter(b => b.nature === 'PAYABLE');
-            const matched = payableBalances.find(b =>
+            const payableBalances = options.outstandingBalances.filter(b => b.nature === 'PAYABLE' && b.remainingAmount > 0);
+            let matchedPayables = payableBalances.filter(b =>
               b.accountName.toLowerCase() === lineNameLower ||
               b.accountName.toLowerCase().includes(lineNameLower) ||
               lineNameLower.includes(b.accountName.toLowerCase())
             );
-            const remaining = matched
-              ? matched.remainingAmount
-              : payableBalances.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
-            if (remaining > 0 && line.debit > remaining + 0.01) {
-              issues.push({
-                code: 'SETTLEMENT_EXCEEDS_BALANCE',
-                message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${remaining.toFixed(2)}.`,
-                groupTitle,
-                accountName: line.accountName
-              });
+            if (matchedPayables.length === 0 && payableBalances.length > 0) {
+              matchedPayables = payableBalances;
+            }
+            if (matchedPayables.length === 0) continue;
+
+            const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
+            const referencedPayables = matchedPayables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
+            const aggregateRemaining = Math.round(matchedPayables.reduce((sum, b) => sum + (b.remainingAmount || 0), 0) * 100) / 100;
+
+            // 1. SETTLEMENT_EXCEEDS_BALANCE check
+            if (referencedPayables.length > 0) {
+              const referencedRemaining = Math.round(referencedPayables.reduce((sum, b) => sum + b.remainingAmount, 0) * 100) / 100;
+              if (line.debit > referencedRemaining + 0.01) {
+                issues.push({
+                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                  message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
+            } else {
+              if (aggregateRemaining > 0 && line.debit > aggregateRemaining + 0.01) {
+                issues.push({
+                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                  message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
+            }
+
+            // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
+            if (matchedPayables.length > 1 && referencedPayables.length === 0) {
+              if (Math.abs(line.debit - aggregateRemaining) > 0.01) {
+                issues.push({
+                  code: 'AMBIGUOUS_SETTLEMENT_TARGET',
+                  message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.debit.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
+            }
+          }
+        }
+      }
+
+      if (debitsCash) {
+        for (const line of group.lines) {
+          if (line.credit > 0 && (line.category === 'ASSET' || /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(line.accountName))) {
+            const lineNameLower = line.accountName.toLowerCase();
+            const receivableBalances = options.outstandingBalances.filter(b => b.nature === 'RECEIVABLE' && b.remainingAmount > 0);
+            let matchedReceivables = receivableBalances.filter(b =>
+              b.accountName.toLowerCase() === lineNameLower ||
+              b.accountName.toLowerCase().includes(lineNameLower) ||
+              lineNameLower.includes(b.accountName.toLowerCase())
+            );
+            if (matchedReceivables.length === 0 && receivableBalances.length > 0) {
+              matchedReceivables = receivableBalances;
+            }
+            if (matchedReceivables.length === 0) continue;
+
+            const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
+            const referencedReceivables = matchedReceivables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
+            const aggregateRemaining = Math.round(matchedReceivables.reduce((sum, b) => sum + (b.remainingAmount || 0), 0) * 100) / 100;
+
+            // 1. SETTLEMENT_EXCEEDS_BALANCE check
+            if (referencedReceivables.length > 0) {
+              const referencedRemaining = Math.round(referencedReceivables.reduce((sum, b) => sum + b.remainingAmount, 0) * 100) / 100;
+              if (line.credit > referencedRemaining + 0.01) {
+                issues.push({
+                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                  message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
+            } else {
+              if (aggregateRemaining > 0 && line.credit > aggregateRemaining + 0.01) {
+                issues.push({
+                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                  message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
+            }
+
+            // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
+            if (matchedReceivables.length > 1 && referencedReceivables.length === 0) {
+              if (Math.abs(line.credit - aggregateRemaining) > 0.01) {
+                issues.push({
+                  code: 'AMBIGUOUS_SETTLEMENT_TARGET',
+                  message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.credit.toFixed(2)}.`,
+                  groupTitle,
+                  accountName: line.accountName
+                });
+              }
             }
           }
         }

@@ -16,6 +16,7 @@ import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
   isStandaloneOutputGstCalculationRequest,
+  journalGroupFingerprint,
   postProcessAIResponse,
   type GroundedReasoningContext,
   type SourceMapFallbackTrace
@@ -138,8 +139,8 @@ export function buildJournalGroupsFromImageEvidence(imageEvidence: ExtractedImag
     });
     const totalDebit = Math.round(lines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100;
     const totalCredit = Math.round(lines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100;
-    if (totalDebit <= 0 || totalCredit <= 0 || Math.abs(totalDebit - totalCredit) >= 0.01) return [];
-    return [{ id: `image-journal-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Journal extracted from image ${imageIndex + 1}`, summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.', lines, totalDebit, totalCredit, isBalanced: true, citations: [], rationalePoints: ['Amounts and accounts were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
+    const isBalanced = totalDebit > 0 && totalCredit > 0 && Math.abs(totalDebit - totalCredit) < 0.01;
+    return [{ id: `image-journal-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Journal extracted from image ${imageIndex + 1}`, summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.', lines, totalDebit, totalCredit, isBalanced, citations: [], rationalePoints: ['Amounts and accounts were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
   });
 }
 
@@ -152,14 +153,16 @@ export function buildTransactionGroupsFromImageEvidence(imageEvidence: Extracted
     const remainingPayable = amount('remainingpayable') ?? amount('creditbalance') ?? amount('amountpayable');
     const transactionType = String(values.get('transactiontype') || '').toLowerCase();
     const assetName = typeof values.get('assetname') === 'string' ? values.get('assetname') as string : undefined;
-    if (!totalAmount || !immediatePayment || !remainingPayable || Math.abs(totalAmount - immediatePayment - remainingPayable) >= 0.01 || !/(asset_purchase|equipment_purchase|inventory_purchase)/.test(transactionType)) return [];
+    if (totalAmount === undefined || immediatePayment === undefined || remainingPayable === undefined || !/(asset_purchase|equipment_purchase|inventory_purchase)/.test(transactionType)) return [];
     const accountName = assetName || (transactionType.includes('inventory') ? 'Inventory' : 'Office Equipment');
     const lines = [
       { id: `image-${imageIndex + 1}-asset`, accountCode: 'IMAGE', accountName, category: 'ASSET' as const, debit: totalAmount, credit: 0, lineExplanation: 'Asset cost extracted from the screenshot.' },
       { id: `image-${imageIndex + 1}-bank`, accountCode: 'IMAGE', accountName: 'Cash / Bank', category: 'ASSET' as const, debit: 0, credit: immediatePayment, lineExplanation: 'Immediate payment extracted from the screenshot.' },
       { id: `image-${imageIndex + 1}-payable`, accountCode: 'IMAGE', accountName: 'Accounts Payable', category: 'LIABILITY' as const, debit: 0, credit: remainingPayable, lineExplanation: 'Remaining supplier balance extracted from the screenshot.' }
     ];
-    return [{ id: `image-transaction-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Transaction extracted from image ${imageIndex + 1}`, summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.', lines, totalDebit: totalAmount, totalCredit: immediatePayment + remainingPayable, isBalanced: true, citations: [], rationalePoints: ['Amounts and settlement split were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
+    const totalCredit = Math.round((immediatePayment + remainingPayable) * 100) / 100;
+    const isBalanced = totalAmount > 0 && totalCredit > 0 && Math.abs(totalAmount - totalCredit) < 0.01;
+    return [{ id: `image-transaction-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Transaction extracted from image ${imageIndex + 1}`, summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.', lines, totalDebit: totalAmount, totalCredit, isBalanced, citations: [], rationalePoints: ['Amounts and settlement split were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
   });
 }
 
@@ -188,7 +191,7 @@ function getGuardrailErrorViolations(
   return validation.violations.filter((v) => v.severity === 'ERROR');
 }
 
-function buildGuardrailValidationMessage(violations: GuardrailViolation[]): string {
+function buildGuardrailValidationMessage(violations: Array<{ code: string; message: string; severity?: string }>): string {
   const errors = violations.filter((v) => v.severity === 'ERROR');
   if (errors.length === 0) return '';
   const list = errors.map((v) => `- ${v.code}: ${v.message}`).join('\n');
@@ -648,6 +651,7 @@ export async function processAccountingQuery(
     !usesIrasEvidencePolicy(prelimClassification, userInput) &&
     !isStatutoryComplianceQuestion && (
       journalRequested ||
+      hasImages ||
       prelimClassification.intent === 'TRANSACTION' ||
       ((prelimClassification.intent as string) === 'ACCOUNTING_SFRS' || prelimClassification.domains.includes('ACCOUNTING_SFRS')) ||
       hasActiveTransactionContext ||
@@ -669,8 +673,15 @@ export async function processAccountingQuery(
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
-    if (hasImages) return response;
-    if (!journalRequested && (
+    if (response.scenarioState.missingFields?.some(f =>
+      f.fieldKey === 'revisionTarget' ||
+      f.fieldKey === 'settlementTarget' ||
+      f.fieldKey.startsWith('imageGuardrail-') ||
+      f.fieldKey === 'imageVerification'
+    )) {
+      return response;
+    }
+    if (!hasImages && !journalRequested && (
       isStatutoryComplianceQuestion ||
       (!isAccountingTransactionOrFollowUp && (
         prelimClassification.intent === 'STATUTORY_ADVISORY' ||
@@ -717,38 +728,87 @@ export async function processAccountingQuery(
     const priorCommitted = activeScenario?.committedDirectGroups ||
       (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
 
-    const priorGroupIds = new Set((priorCommitted || []).map(g => g.id));
-    const newGroups = (priorCommitted && priorCommitted.length > 0)
-      ? groups.filter(g => !priorGroupIds.has(g.id))
-      : groups;
+    const priorById = new Map((priorCommitted || []).map(g => [g.id, g]));
+    const priorEditableFingerprints = new Map((priorCommitted || []).map(g => [g.id, journalGroupFingerprint(g)]));
+
+    const unchangedPriorGroups: JournalEntryGroup[] = [];
+    const changedOrNewGroups: JournalEntryGroup[] = [];
+
+    for (const g of groups) {
+      const prior = priorById.get(g.id);
+      const isUnchanged = Boolean(
+        priorCommitted &&
+        priorCommitted.length > 0 &&
+        prior &&
+        journalGroupFingerprint(g) === priorEditableFingerprints.get(g.id) &&
+        g.isBalanced === prior.isBalanced &&
+        g.totalDebit === prior.totalDebit &&
+        g.totalCredit === prior.totalCredit &&
+        g.lines.length === prior.lines.length &&
+        g.lines.every((l, idx) =>
+          l.accountName === prior.lines[idx]?.accountName &&
+          l.category === prior.lines[idx]?.category &&
+          l.debit === prior.lines[idx]?.debit &&
+          l.credit === prior.lines[idx]?.credit
+        )
+      );
+
+      if (isUnchanged) {
+        unchangedPriorGroups.push(g);
+      } else {
+        changedOrNewGroups.push(g);
+      }
+    }
 
     const acctCtx = extractAccountingContext(activeScenario);
 
-    let priorIntegrity = { isValid: true, issues: [] as any[] };
-    if (priorCommitted && priorCommitted.length > 0) {
-      priorIntegrity = validateJournalGroups(priorCommitted);
-    }
+    const unchangedIntegrity = (unchangedPriorGroups.length > 0)
+      ? validateJournalGroups(unchangedPriorGroups)
+      : { isValid: true, issues: [] as any[] };
 
-    const newIntegrity = (newGroups.length > 0)
-      ? validateJournalGroups(newGroups, {
+    const changedOrNewIntegrity = (changedOrNewGroups.length > 0)
+      ? validateJournalGroups(changedOrNewGroups, {
           rawQuery: userInput,
-          hasPriorContextAmount: isFollowUp && Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
-          enforceAmountProvenance: liveProviderConfigured && !isFixture,
+          hasPriorContextAmount: isFollowUp && Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length || hasImages),
+          enforceAmountProvenance: liveProviderConfigured && !isFixture && !hasImages,
           priorContextTexts: isFollowUp ? priorContextTexts : [],
           priorContextAmounts: isFollowUp ? priorContextAmounts : [],
           isFollowUp,
           outstandingBalances: isFollowUp ? acctCtx.outstandingBalances : []
         })
-      : { isValid: true, issues: [] };
+      : { isValid: true, issues: [] as any[] };
+
+    const combinedIntegrity = validateJournalGroups(groups);
+
+    const allIssues = [
+      ...unchangedIntegrity.issues,
+      ...changedOrNewIntegrity.issues,
+      ...combinedIntegrity.issues
+    ];
+    const seenIssueKeys = new Set<string>();
+    const uniqueIssues = allIssues.filter(issue => {
+      const k = `${issue.code}:${issue.message}:${issue.groupTitle || ''}`;
+      if (seenIssueKeys.has(k)) return false;
+      seenIssueKeys.add(k);
+      return true;
+    });
 
     const integrity = {
-      isValid: priorIntegrity.isValid && newIntegrity.isValid,
-      issues: [...priorIntegrity.issues, ...newIntegrity.issues]
+      isValid: unchangedIntegrity.isValid && changedOrNewIntegrity.isValid && combinedIntegrity.isValid,
+      issues: uniqueIssues
     };
     if (integrity.isValid) return response;
 
+    const ambigIssue = integrity.issues.find(i => i.code === 'AMBIGUOUS_SETTLEMENT_TARGET');
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
-    const issue: MissingFieldInfo = unstatedIssue
+    const issue: MissingFieldInfo = ambigIssue
+      ? {
+          fieldKey: 'settlementTarget',
+          fieldName: 'Settlement target',
+          prompt: ambigIssue.message,
+          whyNeeded: 'Multiple outstanding balances exist for this account; specify which transaction or invoice reference is being settled.'
+        }
+      : unstatedIssue
       ? {
           fieldKey: 'amount',
           fieldName: 'Transaction amount',
@@ -764,7 +824,9 @@ export async function processAccountingQuery(
 
     return {
       ...response,
-      messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
+      messageText: ambigIssue
+        ? ('### Clarification Required — Ambiguous Settlement Target\n\n' + issue.prompt)
+        : ('### AI-Proposed Journal Rejected\n\n' + issue.prompt),
       scenarioState: {
         ...response.scenarioState,
         directGroups: isFollowUp ? (priorCommitted || []) : [],
@@ -2252,7 +2314,14 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     const extractedTransactionGroups = buildTransactionGroupsFromImageEvidence(imageEvidence);
     const extractedGroups = extractedJournalGroups.length > 0 ? extractedJournalGroups : extractedTransactionGroups;
     if (extractedGroups.length > 0) {
-      const imageErrors = getGuardrailErrorViolations(extractedGroups, context.semanticUnderstanding);
+      const guardrailErrors = getGuardrailErrorViolations(extractedGroups, context.semanticUnderstanding);
+      const integrityCheck = validateJournalGroups(extractedGroups);
+      const integrityErrors = integrityCheck.issues.map((issue) => ({
+        code: issue.code,
+        message: issue.message,
+        severity: 'ERROR' as const
+      }));
+      const imageErrors = [...guardrailErrors, ...integrityErrors];
       if (imageErrors.length > 0) {
         // Fail-closed: image-derived journals must not override deterministic output or clear committed groups
         result.messageText += `\n\n${buildGuardrailValidationMessage(imageErrors)}\n\nImage-derived journal was not applied because it failed accounting validation.`;

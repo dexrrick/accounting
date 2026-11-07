@@ -2957,6 +2957,7 @@ export function postProcessAIResponse(
       return {
         id: grp.id || `grp-${gIdx + 1}`,
         transactionId: grp.transactionId || grp.id || `grp-${gIdx + 1}`,
+        targetTransactionId: grp.targetTransactionId || undefined,
         eventDate: normalizedEventDate,
         accountingPeriod: accountingPeriod || undefined,
         currency: grp.currency || parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
@@ -2991,10 +2992,11 @@ export function postProcessAIResponse(
       : ((currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0));
 
     if (priorCommitted.length > 0 && directGroups.length > 0) {
+      const cleanInputForAction = userInput.replace(/\n\n\[Correction Notice:[\s\S]*\]$/i, '').trim();
       const isRestatement = directGroups.some(g => g.journalAction === 'restatement') ||
-        /\b(?:show|display|view|see|print|repeat)\b[\s\S]*\b(?:journal|entry|entries)\b[\s\S]*\b(?:again|earlier|previous|above)\b/i.test(userInput);
+        /\b(?:show|display|view|see|print|repeat)\b[\s\S]*\b(?:journal|entry|entries)\b[\s\S]*\b(?:again|earlier|previous|above)\b/i.test(cleanInputForAction);
       const isRevision = directGroups.some(g => g.journalAction === 'revised') ||
-        /\b(?:actually|correction|correct|mistake|amend|amendment|instead of|change to|update to|revised?|it was S?\$|should be S?\$)\b/i.test(userInput);
+        /\b(?:actually|correction|correct|mistake|amend|amendment|instead of|change to|update to|revised?|it was S?\$|should be S?\$)\b/i.test(cleanInputForAction);
 
       if (isRestatement) {
         committedDirectGroups = [...priorCommitted];
@@ -3002,14 +3004,113 @@ export function postProcessAIResponse(
         const newActualGroups = directGroups.filter(g => !g.isHypothetical);
         if (newActualGroups.length > 0) {
           const updated = [...priorCommitted];
+          let unidentifiedRevision = false;
+          const isCashOrBank = (name: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(name || '');
+
           for (const newGrp of newActualGroups) {
-            const matchIdx = updated.findIndex(p => p.id === newGrp.id || (newGrp.transactionId && p.transactionId === newGrp.transactionId));
+            let matchIdx = -1;
+
+            if (priorCommitted.length === 1) {
+              if (newGrp.targetTransactionId &&
+                  newGrp.targetTransactionId !== priorCommitted[0].id &&
+                  newGrp.targetTransactionId !== priorCommitted[0].transactionId) {
+                matchIdx = -1;
+              } else {
+                matchIdx = 0;
+              }
+            } else {
+              // priorCommitted.length > 1
+              // a) Check explicit targetTransactionId
+              if (newGrp.targetTransactionId) {
+                matchIdx = updated.findIndex(p =>
+                  p.id === newGrp.targetTransactionId ||
+                  (p.transactionId && p.transactionId === newGrp.targetTransactionId)
+                );
+              }
+
+              // b) Check id or transactionId
+              if (matchIdx === -1) {
+                const idMatchIdx = updated.findIndex(p =>
+                  p.id === newGrp.id ||
+                  (newGrp.transactionId && p.transactionId === newGrp.transactionId)
+                );
+                if (idMatchIdx !== -1) {
+                  if (newGrp.id !== 'grp-1') {
+                    matchIdx = idMatchIdx;
+                  } else {
+                    const targetGrp = updated[idMatchIdx];
+                    const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
+                    const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
+                    const hasAccountOverlap = newNonCash.some(n => targetNonCash.some(tn => tn.includes(n) || n.includes(tn)));
+                    const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
+                    const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
+                    const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
+                    if (hasAccountOverlap || hasTitleOverlap) {
+                      matchIdx = idMatchIdx;
+                    }
+                  }
+                }
+              }
+
+              // c) Check unique candidate match by non-cash accounts or title
+              if (matchIdx === -1) {
+                const candidates: number[] = [];
+                const userLower = userInput.toLowerCase();
+                const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
+
+                for (let i = 0; i < updated.length; i++) {
+                  const grp = updated[i];
+                  const grpNonCash = (grp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
+                  const grpTitle = (grp.title || '').toLowerCase();
+                  const matchesUserInput = grpNonCash.some(n => n.length > 3 && userLower.includes(n)) ||
+                    (grpTitle.length > 4 && userLower.includes(grpTitle));
+                  const matchesNewGrp = newNonCash.some(n => grpNonCash.some(gn => gn.includes(n) || n.includes(gn)));
+                  if (matchesUserInput || matchesNewGrp) {
+                    candidates.push(i);
+                  }
+                }
+
+                if (candidates.length === 1) {
+                  matchIdx = candidates[0];
+                }
+              }
+            }
+
             if (matchIdx !== -1) {
               updated[matchIdx] = newGrp;
             } else {
-              updated[updated.length - 1] = newGrp;
+              unidentifiedRevision = true;
+              break;
             }
           }
+
+          if (unidentifiedRevision) {
+            const revisionClarification: MissingFieldInfo = {
+              fieldKey: 'revisionTarget',
+              fieldName: 'Transaction to revise',
+              prompt: 'Which earlier transaction would you like to revise? Please specify the transaction or journal entry (for example, by title, account, or transaction reference).',
+              whyNeeded: 'Multiple committed transactions exist in this conversation, and the revision target could not be uniquely identified.'
+            };
+            const scenarioState: AccountingScenarioState = {
+              scenarioType: currentScenario?.scenarioType || 'UNIVERSAL',
+              queryIntent: 'TRANSACTION',
+              primaryDomain: 'ACCOUNTING_SFRS',
+              rawQuery: userInput,
+              transactionTitle: parsed.transactionTitle || currentScenario?.transactionTitle || 'Clarification Required',
+              functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
+              transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
+              directGroups: [...priorCommitted],
+              committedDirectGroups: [...priorCommitted],
+              isComplete: false,
+              missingFields: [revisionClarification]
+            };
+            return {
+              messageText: '### Clarification Required — Ambiguous Revision Target\n\n' + revisionClarification.prompt,
+              scenarioState,
+              clarifications: [revisionClarification]
+            };
+          }
+
           committedDirectGroups = updated;
           directGroups = updated;
         } else {
@@ -3161,11 +3262,38 @@ export function postProcessAIResponse(
   const derivedBalances = postTurnAcctCtx.outstandingBalances
     .filter(b => b.remainingAmount > 0)
     .map(b => ({ accountName: b.accountName, amount: b.remainingAmount, currency: b.currency }));
-  const scenarioRemainingBalances = (Array.isArray(parsed.remainingBalances) && parsed.remainingBalances.length > 0)
-    ? parsed.remainingBalances
-    : (derivedBalances.length > 0 ? derivedBalances : undefined);
+
+  let scenarioRemainingBalances: Array<{ accountName: string; amount: number; currency?: string }> | undefined;
+  if (postTurnAcctCtx.hasAmbiguousSettlement) {
+    scenarioRemainingBalances = undefined;
+  } else if (postTurnAcctCtx.outstandingBalances.length > 0) {
+    scenarioRemainingBalances = derivedBalances.length > 0 ? derivedBalances : undefined;
+  } else {
+    scenarioRemainingBalances = undefined;
+  }
 
   let rawMessageText = parsed.messageText || '';
+  if (rawMessageText) {
+    if (scenarioRemainingBalances && scenarioRemainingBalances.length > 0) {
+      for (const bal of scenarioRemainingBalances) {
+        const amtStr = bal.amount.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const balCurr = bal.currency || 'S$';
+        const authoritativeBalLine = `**Remaining balance (${bal.accountName}): ${balCurr} ${amtStr}**`;
+        const balPattern = new RegExp(`\\*\\*Remaining balance \\(${bal.accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\): [^\\n]+\\*\\*`, 'gi');
+        if (balPattern.test(rawMessageText)) {
+          rawMessageText = rawMessageText.replace(balPattern, authoritativeBalLine);
+        }
+      }
+    }
+    if (postTurnAcctCtx.outstandingBalances.length > 0) {
+      for (const b of postTurnAcctCtx.outstandingBalances) {
+        if (b.remainingAmount <= 0) {
+          const balPattern = new RegExp(`\\*\\*Remaining balance \\(${b.accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\): [^\\n]+\\*\\*\\n*`, 'gi');
+          rawMessageText = rawMessageText.replace(balPattern, '');
+        }
+      }
+    }
+  }
   if (!rawMessageText && directGroups.length > 0) {
     let md = `### ${finalTitle}\n\n`;
     if (selectedAccountingTreatmentSummary) {

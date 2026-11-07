@@ -229,6 +229,7 @@ export interface ConversationAccountingContext {
   recognizedEquityTotal: number;
   priorJournals: JournalEntryGroup[];
   isHypothetical?: boolean;
+  hasAmbiguousSettlement?: boolean;
 }
 
 export interface FollowUpEventAnalysis {

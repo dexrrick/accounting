@@ -52,9 +52,11 @@ export function deriveAccountingStateFromEvents(
 ): {
   outstandingBalances: OutstandingAccountBalance[];
   recognizedEquityTotal: number;
+  hasAmbiguousSettlement?: boolean;
 } {
   const balancesMap = new Map<string, OutstandingAccountBalance>();
   let recognizedEquityTotal = 0;
+  let hasAmbiguousSettlement = false;
 
   const isPayableName = (name: string): boolean => {
     const n = (name || '').toLowerCase();
@@ -78,34 +80,70 @@ export function deriveAccountingStateFromEvents(
     ) && !n.includes('payable') && !n.includes('due to');
   };
 
-  const findOpenPayableBalance = (accountName: string): OutstandingAccountBalance | undefined => {
-    const lower = (accountName || '').toLowerCase();
-    const openPayables = Array.from(balancesMap.values()).filter(
-      b => (b.nature === 'PAYABLE' || b.direction === 'payable') && b.remainingAmount > 0
-    );
-    const exact = openPayables.find(b =>
-      b.accountName.toLowerCase() === lower ||
-      b.accountName.toLowerCase().includes(lower) ||
-      lower.includes(b.accountName.toLowerCase())
-    );
-    if (exact) return exact;
-    if (openPayables.length === 1) return openPayables[0];
-    return undefined;
-  };
+  const applySettlementReduction = (
+    settleAmt: number,
+    matchingOpenBalances: OutstandingAccountBalance[],
+    explicitTargetBal: OutstandingAccountBalance | undefined,
+    refText: string
+  ): void => {
+    // Case A: Explicit single target
+    if (explicitTargetBal) {
+      const delta = Math.min(explicitTargetBal.remainingAmount, settleAmt);
+      explicitTargetBal.settledAmount = roundMoney(explicitTargetBal.settledAmount + delta);
+      explicitTargetBal.remainingAmount = Math.max(0, roundMoney(explicitTargetBal.originalAmount - explicitTargetBal.settledAmount));
+      explicitTargetBal.status = explicitTargetBal.remainingAmount <= 0 ? 'settled' : (explicitTargetBal.settledAmount > 0 ? 'partial' : 'open');
+      return;
+    }
 
-  const findOpenReceivableBalance = (accountName: string): OutstandingAccountBalance | undefined => {
-    const lower = (accountName || '').toLowerCase();
-    const openReceivables = Array.from(balancesMap.values()).filter(
-      b => (b.nature === 'RECEIVABLE' || b.direction === 'receivable') && b.remainingAmount > 0
-    );
-    const exact = openReceivables.find(b =>
-      b.accountName.toLowerCase() === lower ||
-      b.accountName.toLowerCase().includes(lower) ||
-      lower.includes(b.accountName.toLowerCase())
-    );
-    if (exact) return exact;
-    if (openReceivables.length === 1) return openReceivables[0];
-    return undefined;
+    // Case B: Single open balance
+    if (matchingOpenBalances.length === 1) {
+      const b = matchingOpenBalances[0];
+      const delta = Math.min(b.remainingAmount, settleAmt);
+      b.settledAmount = roundMoney(b.settledAmount + delta);
+      b.remainingAmount = Math.max(0, roundMoney(b.originalAmount - b.settledAmount));
+      b.status = b.remainingAmount <= 0 ? 'settled' : (b.settledAmount > 0 ? 'partial' : 'open');
+      return;
+    }
+
+    if (matchingOpenBalances.length > 1) {
+      const totalMatchingRemaining = roundMoney(matchingOpenBalances.reduce((s, b) => s + b.remainingAmount, 0));
+
+      // Case C: Multi-invoice full settlement
+      if (Math.abs(settleAmt - totalMatchingRemaining) < 0.01) {
+        for (const b of matchingOpenBalances) {
+          b.settledAmount = b.originalAmount;
+          b.remainingAmount = 0;
+          b.status = 'settled';
+        }
+        return;
+      }
+
+      // Case D: Explicit multi-invoice or referenced subset
+      const referencedBalances = matchingOpenBalances.filter(
+        b => b.transactionId && refText.includes(b.transactionId.toLowerCase())
+      );
+      if (referencedBalances.length === 1) {
+        const b = referencedBalances[0];
+        const delta = Math.min(b.remainingAmount, settleAmt);
+        b.settledAmount = roundMoney(b.settledAmount + delta);
+        b.remainingAmount = Math.max(0, roundMoney(b.originalAmount - b.settledAmount));
+        b.status = b.remainingAmount <= 0 ? 'settled' : (b.settledAmount > 0 ? 'partial' : 'open');
+        return;
+      } else if (referencedBalances.length > 1) {
+        const refRemaining = roundMoney(referencedBalances.reduce((s, b) => s + b.remainingAmount, 0));
+        if (Math.abs(settleAmt - refRemaining) < 0.01) {
+          for (const b of referencedBalances) {
+            b.settledAmount = b.originalAmount;
+            b.remainingAmount = 0;
+            b.status = 'settled';
+          }
+          return;
+        }
+      }
+
+      // Case E: Ambiguous partial settlement across multiple open invoices
+      hasAmbiguousSettlement = true;
+    }
   };
 
   for (const ev of events) {
@@ -173,22 +211,28 @@ export function deriveAccountingStateFromEvents(
           line.debit > 0 &&
           isPayableName(line.accountName)
         ) {
-          let targetBal: OutstandingAccountBalance | undefined;
+          let explicitTargetBal: OutstandingAccountBalance | undefined;
           if (ev.targetBalanceKey && balancesMap.has(ev.targetBalanceKey)) {
-            targetBal = balancesMap.get(ev.targetBalanceKey);
+            explicitTargetBal = balancesMap.get(ev.targetBalanceKey);
           } else if (ev.targetTransactionId) {
-            targetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId && b.nature === 'PAYABLE');
-          }
-          if (!targetBal) {
-            targetBal = findOpenPayableBalance(line.accountName);
+            explicitTargetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId && b.nature === 'PAYABLE');
           }
 
-          if (targetBal) {
-            const delta = Math.min(targetBal.remainingAmount, line.debit);
-            targetBal.settledAmount = roundMoney(targetBal.settledAmount + delta);
-            targetBal.remainingAmount = Math.max(0, roundMoney(targetBal.originalAmount - targetBal.settledAmount));
-            targetBal.status = targetBal.remainingAmount <= 0 ? 'settled' : (targetBal.settledAmount > 0 ? 'partial' : 'open');
+          const lineNameLower = (line.accountName || '').toLowerCase();
+          const openPayables = Array.from(balancesMap.values()).filter(
+            b => (b.nature === 'PAYABLE' || b.direction === 'payable') && b.remainingAmount > 0
+          );
+          let matchingOpenBalances = openPayables.filter(b =>
+            b.accountName.toLowerCase() === lineNameLower ||
+            b.accountName.toLowerCase().includes(lineNameLower) ||
+            lineNameLower.includes(b.accountName.toLowerCase())
+          );
+          if (matchingOpenBalances.length === 0 && openPayables.length > 0) {
+            matchingOpenBalances = openPayables;
           }
+
+          const refText = `${ev.targetTransactionId || ''} ${ev.description || ''} ${line.lineExplanation || ''}`.toLowerCase();
+          applySettlementReduction(line.debit, matchingOpenBalances, explicitTargetBal, refText);
         }
 
         // 2. Receivables:
@@ -233,22 +277,28 @@ export function deriveAccountingStateFromEvents(
           line.credit > 0 &&
           isReceivableName(line.accountName)
         ) {
-          let targetBal: OutstandingAccountBalance | undefined;
+          let explicitTargetBal: OutstandingAccountBalance | undefined;
           if (ev.targetBalanceKey && balancesMap.has(ev.targetBalanceKey)) {
-            targetBal = balancesMap.get(ev.targetBalanceKey);
+            explicitTargetBal = balancesMap.get(ev.targetBalanceKey);
           } else if (ev.targetTransactionId) {
-            targetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId && b.nature === 'RECEIVABLE');
-          }
-          if (!targetBal) {
-            targetBal = findOpenReceivableBalance(line.accountName);
+            explicitTargetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId && b.nature === 'RECEIVABLE');
           }
 
-          if (targetBal) {
-            const delta = Math.min(targetBal.remainingAmount, line.credit);
-            targetBal.settledAmount = roundMoney(targetBal.settledAmount + delta);
-            targetBal.remainingAmount = Math.max(0, roundMoney(targetBal.originalAmount - targetBal.settledAmount));
-            targetBal.status = targetBal.remainingAmount <= 0 ? 'settled' : (targetBal.settledAmount > 0 ? 'partial' : 'open');
+          const lineNameLower = (line.accountName || '').toLowerCase();
+          const openReceivables = Array.from(balancesMap.values()).filter(
+            b => (b.nature === 'RECEIVABLE' || b.direction === 'receivable') && b.remainingAmount > 0
+          );
+          let matchingOpenBalances = openReceivables.filter(b =>
+            b.accountName.toLowerCase() === lineNameLower ||
+            b.accountName.toLowerCase().includes(lineNameLower) ||
+            lineNameLower.includes(b.accountName.toLowerCase())
+          );
+          if (matchingOpenBalances.length === 0 && openReceivables.length > 0) {
+            matchingOpenBalances = openReceivables;
           }
+
+          const refText = `${ev.targetTransactionId || ''} ${ev.description || ''} ${line.lineExplanation || ''}`.toLowerCase();
+          applySettlementReduction(line.credit, matchingOpenBalances, explicitTargetBal, refText);
         }
 
         // 3. Track Recognized Equity (Credit to Share Capital)
@@ -260,30 +310,24 @@ export function deriveAccountingStateFromEvents(
       // Event without explicit lines, but classified as settlement
       const eventType = ev.eventType || ev.type;
       if (eventType === 'settlement' || eventType === 'partial_settlement') {
-        let targetBal: OutstandingAccountBalance | undefined;
+        let explicitTargetBal: OutstandingAccountBalance | undefined;
         if (ev.targetBalanceKey && balancesMap.has(ev.targetBalanceKey)) {
-          targetBal = balancesMap.get(ev.targetBalanceKey);
+          explicitTargetBal = balancesMap.get(ev.targetBalanceKey);
         } else if (ev.targetTransactionId) {
-          targetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId);
-        } else {
-          // Find matching open balance by direction/nature
-          targetBal = Array.from(balancesMap.values()).find(b => b.remainingAmount > 0);
+          explicitTargetBal = Array.from(balancesMap.values()).find(b => b.transactionId === ev.targetTransactionId);
         }
 
-        if (targetBal) {
-          const settleAmt = ev.amount ?? 0;
-          const effectiveReduction = Math.min(targetBal.remainingAmount, settleAmt);
-          targetBal.settledAmount = roundMoney(targetBal.settledAmount + effectiveReduction);
-          targetBal.remainingAmount = Math.max(0, roundMoney(targetBal.originalAmount - targetBal.settledAmount));
-          targetBal.status = targetBal.remainingAmount <= 0 ? 'settled' : (targetBal.settledAmount > 0 ? 'partial' : 'open');
-        }
+        const openBalances = Array.from(balancesMap.values()).filter(b => b.remainingAmount > 0);
+        const refText = `${ev.targetTransactionId || ''} ${ev.description || ''}`.toLowerCase();
+        applySettlementReduction(ev.amount ?? 0, openBalances, explicitTargetBal, refText);
       }
     }
   }
 
   return {
     outstandingBalances: Array.from(balancesMap.values()),
-    recognizedEquityTotal: roundMoney(recognizedEquityTotal)
+    recognizedEquityTotal: roundMoney(recognizedEquityTotal),
+    hasAmbiguousSettlement
   };
 }
 
@@ -630,7 +674,8 @@ export function extractAccountingContext(
     outstandingBalances,
     recognizedEquityTotal,
     priorJournals,
-    isHypothetical: Boolean(currentScenario?.isHypothetical)
+    isHypothetical: Boolean(currentScenario?.isHypothetical),
+    hasAmbiguousSettlement: derived.hasAmbiguousSettlement
   };
 }
 

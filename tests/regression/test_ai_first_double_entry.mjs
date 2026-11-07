@@ -2298,6 +2298,576 @@ try {
     passed++;
   }
 
+  console.log('\n--- 10. Review Findings 1–4 & Image Validation Regressions ---');
+
+  // 10A: Finding 1 — Revised journal validation
+  {
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Purchased office supplies for S$500 paid by bank transfer.',
+      transactionTitle: 'Office Supplies Purchase',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-sup-1',
+        eventDate: '01/03/2025',
+        title: 'Office Supplies Purchase',
+        summary: 'Purchased office supplies for S$500',
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ],
+        totalDebit: 500,
+        totalCredit: 500,
+        isBalanced: true
+      }],
+      directGroups: [{
+        id: 'grp-sup-1',
+        eventDate: '01/03/2025',
+        title: 'Office Supplies Purchase',
+        summary: 'Purchased office supplies for S$500',
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ],
+        totalDebit: 500,
+        totalCredit: 500,
+        isBalanced: true
+      }]
+    };
+
+    // Turn 2 returns revised entry with SAME ID 'grp-sup-1', but imbalanced (650 vs 600)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Revised Office Supplies Purchase',
+      directGroups: [{
+        id: 'grp-sup-1',
+        eventDate: '01/03/2025',
+        title: 'Revised Office Supplies Purchase',
+        summary: 'Correction to office supplies purchase',
+        journalAction: 'revised',
+        totalDebit: 650,
+        totalCredit: 600,
+        isBalanced: false,
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 650, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ]
+      }]
+    });
+
+    const res10A = await processAccountingQuery(
+      'Correction: the supplies were actually S$650.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.match(res10A.messageText, /AI-Proposed Journal Rejected/i, 'Imbalanced revised journal must be rejected');
+    assert.equal(res10A.scenarioState.isComplete, false, 'Must not be complete');
+    assert.equal(res10A.scenarioState.committedDirectGroups?.length, 1, 'Must preserve Turn 1 committed direct group');
+    assert.equal(res10A.scenarioState.committedDirectGroups[0].totalDebit, 500, 'Must preserve original S$500 amount');
+    console.log('✓ 10A. Finding 1 revised journal validation verified');
+    passed++;
+  }
+
+  // 10B: Finding 2 — Unidentified correction does not overwrite wrong transaction
+  {
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Purchased inventory for S$1,000 on credit, then paid supplier S$600 by bank transfer.',
+      transactionTitle: 'Inventory Purchase & Payment',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [
+        {
+          id: 'grp-inv-1',
+          transactionId: 'grp-inv-1',
+          eventDate: '01/03/2025',
+          title: 'Inventory Purchase',
+          summary: 'Purchased inventory on credit',
+          lines: [
+            { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+          ],
+          totalDebit: 1000,
+          totalCredit: 1000,
+          isBalanced: true
+        },
+        {
+          id: 'grp-pay-1',
+          transactionId: 'grp-pay-1',
+          eventDate: '05/03/2025',
+          title: 'Supplier Settlement',
+          summary: 'Partial payment to supplier',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        }
+      ],
+      directGroups: [
+        {
+          id: 'grp-inv-1',
+          transactionId: 'grp-inv-1',
+          eventDate: '01/03/2025',
+          title: 'Inventory Purchase',
+          summary: 'Purchased inventory on credit',
+          lines: [
+            { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+          ],
+          totalDebit: 1000,
+          totalCredit: 1000,
+          isBalanced: true
+        },
+        {
+          id: 'grp-pay-1',
+          transactionId: 'grp-pay-1',
+          eventDate: '05/03/2025',
+          title: 'Supplier Settlement',
+          summary: 'Partial payment to supplier',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        }
+      ]
+    };
+
+    // Subcase 1: Unidentified correction (generic accounts, unrecognised ID, no targetTransactionId)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Transaction Correction',
+      directGroups: [{
+        id: 'grp-rev-unknown',
+        eventDate: '01/03/2025',
+        title: 'Correction Entry',
+        summary: 'Correction of transaction amount',
+        journalAction: 'revised',
+        totalDebit: 1200,
+        totalCredit: 1200,
+        isBalanced: true,
+        lines: [
+          { accountName: 'General Expense', category: 'EXPENSE', debit: 1200, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1200 }
+        ]
+      }]
+    });
+
+    const res10B1 = await processAccountingQuery(
+      'Correction: it was actually S$1,200.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10B1.scenarioState.isComplete, false, 'Unidentified revision must prompt clarification');
+    assert.match(res10B1.messageText, /Clarification Required — Ambiguous Revision Target/i);
+    assert.ok(res10B1.scenarioState.missingFields?.some(f => f.fieldKey === 'revisionTarget'));
+    assert.equal(res10B1.scenarioState.committedDirectGroups?.length, 2, 'Must preserve both committed groups');
+    assert.equal(res10B1.scenarioState.committedDirectGroups[1].id, 'grp-pay-1', 'Must not overwrite Group 2');
+    assert.equal(res10B1.scenarioState.committedDirectGroups[1].totalDebit, 600, 'Must preserve Group 2 amount');
+
+    // Subcase 2: Valid identified correction with targetTransactionId: 'grp-inv-1'
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Inventory Purchase Revision',
+      directGroups: [{
+        id: 'grp-inv-revised',
+        targetTransactionId: 'grp-inv-1',
+        eventDate: '01/03/2025',
+        title: 'Revised Inventory Purchase',
+        summary: 'Revised inventory purchase cost',
+        journalAction: 'revised',
+        totalDebit: 1200,
+        totalCredit: 1200,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1200, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1200 }
+        ]
+      }]
+    });
+
+    const res10B2 = await processAccountingQuery(
+      'Correction: the inventory purchase was actually S$1,200.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10B2.scenarioState.committedDirectGroups?.length, 2, 'Must keep 2 committed groups');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[0].totalDebit, 1200, 'Group 1 must be revised to S$1,200');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[1].id, 'grp-pay-1', 'Group 2 must remain intact');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[1].totalDebit, 600, 'Group 2 amount must remain S$600');
+    console.log('✓ 10B. Finding 2 unidentified correction does not overwrite wrong transaction verified');
+    passed++;
+  }
+
+  // 10C: Finding 3 — AI-generated remainingBalances reconciled against committed movements
+  {
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Received supplier invoice for office supplies S$1,000 on credit.',
+      transactionTitle: 'Office Supplies Invoice',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-inv-10c',
+        eventDate: '10/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Received supplier invoice',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }],
+      directGroups: [{
+        id: 'grp-inv-10c',
+        eventDate: '10/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Received supplier invoice',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }]
+    };
+
+    // Turn 2: Payment of S$600, but AI erroneously returns remainingBalances of 1000
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Payment',
+      directGroups: [{
+        id: 'grp-pay-10c',
+        eventDate: '15/03/2025',
+        title: 'Supplier Payment',
+        summary: 'Paid supplier S$600',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ],
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true
+      }],
+      remainingBalances: [
+        { accountName: 'Trade Payables', amount: 1000, currency: 'SGD' }
+      ]
+    });
+
+    const res10C = await processAccountingQuery(
+      'Paid supplier S$600 by bank transfer.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.ok(res10C.scenarioState.remainingBalances, 'remainingBalances should exist');
+    assert.equal(res10C.scenarioState.remainingBalances[0].amount, 400, 'Reconciled remaining balance must be S$400, not 1000');
+    assert.match(res10C.messageText, /Remaining balance \(Trade Payables\): [^\n]*400\.00/, 'Message text must render authoritative 400.00');
+    assert.doesNotMatch(res10C.messageText, /Remaining balance \(Trade Payables\): [^\n]*1,?000\.00/, 'Remaining balance line must not claim unverified 1,000.00');
+    console.log('✓ 10C. Finding 3 AI-generated remainingBalances reconciled against committed movements verified');
+    passed++;
+  }
+
+  // 10D: Finding 4 — Multiple outstanding invoices under same Trade Payables account
+  {
+    const twoInvoicesScenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Received invoice 1 for S$600 and invoice 2 for S$400.',
+      transactionTitle: 'Two Supplier Invoices',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [
+        {
+          id: 'inv-1',
+          transactionId: 'inv-1',
+          eventDate: '01/03/2025',
+          title: 'Supplier Invoice 1',
+          summary: 'Invoice 1 from supplier',
+          lines: [
+            { accountName: 'Office Supplies', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        },
+        {
+          id: 'inv-2',
+          transactionId: 'inv-2',
+          eventDate: '05/03/2025',
+          title: 'Supplier Invoice 2',
+          summary: 'Invoice 2 from supplier',
+          lines: [
+            { accountName: 'Office Equipment', category: 'ASSET', debit: 400, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 400 }
+          ],
+          totalDebit: 400,
+          totalCredit: 400,
+          isBalanced: true
+        }
+      ],
+      directGroups: [
+        {
+          id: 'inv-1',
+          transactionId: 'inv-1',
+          eventDate: '01/03/2025',
+          title: 'Supplier Invoice 1',
+          summary: 'Invoice 1 from supplier',
+          lines: [
+            { accountName: 'Office Supplies', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        },
+        {
+          id: 'inv-2',
+          transactionId: 'inv-2',
+          eventDate: '05/03/2025',
+          title: 'Supplier Invoice 2',
+          summary: 'Invoice 2 from supplier',
+          lines: [
+            { accountName: 'Office Equipment', category: 'ASSET', debit: 400, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 400 }
+          ],
+          totalDebit: 400,
+          totalCredit: 400,
+          isBalanced: true
+        }
+      ]
+    };
+
+    // Case 1: Full settlement of both invoices (S$1,000)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Full Settlement of Invoices',
+      directGroups: [{
+        id: 'grp-pay-full',
+        eventDate: '10/03/2025',
+        title: 'Full Payment',
+        summary: 'Paid both invoices in full',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 1000, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }]
+    });
+
+    const res10D1 = await processAccountingQuery(
+      'Paid both supplier invoices for S$1,000 by bank transfer.',
+      twoInvoicesScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.doesNotMatch(res10D1.messageText, /AI-Proposed Journal Rejected/i, 'Full multi-invoice settlement must not be rejected');
+    assert.equal(res10D1.scenarioState.remainingBalances, undefined, 'All balances should be fully settled');
+
+    // Case 2: Explicitly referenced single invoice settlement (targetTransactionId: 'inv-2', S$400)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Payment for Invoice 2',
+      directGroups: [{
+        id: 'grp-pay-inv2',
+        targetTransactionId: 'inv-2',
+        eventDate: '10/03/2025',
+        title: 'Payment of Invoice 2',
+        summary: 'Paid invoice 2',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 400, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 400 }
+        ],
+        totalDebit: 400,
+        totalCredit: 400,
+        isBalanced: true
+      }]
+    });
+
+    const res10D2 = await processAccountingQuery(
+      'Paid invoice 2 for S$400 by bank transfer.',
+      twoInvoicesScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.doesNotMatch(res10D2.messageText, /AI-Proposed Journal Rejected/i);
+    assert.ok(res10D2.scenarioState.remainingBalances?.length === 1, 'One invoice remaining');
+    assert.equal(res10D2.scenarioState.remainingBalances[0].amount, 600, 'Remaining balance must be S$600 for inv-1');
+
+    // Case 3: Ambiguous partial settlement across multiple open invoices without target reference
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Ambiguous Payment',
+      directGroups: [{
+        id: 'grp-pay-ambig',
+        eventDate: '10/03/2025',
+        title: 'Payment without Reference',
+        summary: 'Paid supplier S$300',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 300, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 300 }
+        ],
+        totalDebit: 300,
+        totalCredit: 300,
+        isBalanced: true
+      }]
+    });
+
+    const res10D3 = await processAccountingQuery(
+      'Paid supplier S$300 by bank transfer.',
+      twoInvoicesScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.match(res10D3.messageText, /Clarification Required — Ambiguous Settlement Target|AMBIGUOUS_SETTLEMENT_TARGET/i, 'Ambiguous settlement must be flagged for clarification');
+    assert.equal(res10D3.scenarioState.isComplete, false, 'Must not be marked complete');
+    assert.ok(res10D3.scenarioState.missingFields?.some(f => f.fieldKey === 'settlementTarget'), 'Missing field must be settlementTarget');
+
+    console.log('✓ 10D. Finding 4 multiple outstanding invoices handling verified');
+    passed++;
+  }
+
+  // 10E: Additional Issue — Image-based journals pass through final validation
+  {
+    const chatWithImage = [
+      {
+        id: 'msg-1',
+        sender: 'user',
+        text: 'Record the purchase shown in this invoice screenshot.',
+        images: [
+          {
+            id: 'img-inv-1',
+            name: 'invoice.png',
+            mimeType: 'image/png',
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+          }
+        ]
+      }
+    ];
+
+    // Subcase 1: Imbalanced journal extracted from image evidence
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice from Screenshot',
+      imageEvidence: [
+        {
+          imageId: 'img-inv-1',
+          journalLines: [
+            { accountName: 'Office Equipment', debit: 500, credit: 0 },
+            { accountName: 'Cash at Bank', debit: 0, credit: 400 }
+          ],
+          fields: []
+        }
+      ],
+      directGroups: [{
+        id: 'grp-img-imbal',
+        eventDate: '01/03/2025',
+        title: 'Invoice Journal',
+        summary: 'Extracted from screenshot',
+        totalDebit: 500,
+        totalCredit: 400,
+        isBalanced: false,
+        lines: [
+          { accountName: 'Office Equipment', category: 'ASSET', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 400 }
+        ]
+      }]
+    });
+
+    const res10E1 = await processAccountingQuery(
+      'Record the purchase shown in this invoice screenshot.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      chatWithImage
+    );
+
+    assert.equal(res10E1.scenarioState.isComplete, false, 'Imbalanced image-derived journal must not be marked complete');
+    assert.ok(
+      res10E1.messageText.includes('AI-Proposed Journal Rejected') ||
+      res10E1.messageText.includes('failed accounting validation') ||
+      res10E1.scenarioState.missingFields?.some(f => f.fieldKey.startsWith('imageGuardrail-') || f.fieldKey === 'journalValidation'),
+      'Imbalanced image journal must fail validation and be rejected'
+    );
+
+    // Subcase 2: Valid balanced journal from screenshot passes validation
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice from Screenshot',
+      imageEvidence: [
+        {
+          imageId: 'img-inv-1',
+          journalLines: [
+            { accountName: 'Office Equipment', debit: 500, credit: 0 },
+            { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+          ],
+          fields: []
+        }
+      ],
+      directGroups: [{
+        id: 'grp-img-bal',
+        eventDate: '01/03/2025',
+        title: 'Invoice Journal',
+        summary: 'Extracted from screenshot',
+        totalDebit: 500,
+        totalCredit: 500,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Equipment', category: 'ASSET', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ]
+      }]
+    });
+
+    const res10E2 = await processAccountingQuery(
+      'Record the purchase shown in this invoice screenshot.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      chatWithImage
+    );
+
+    assert.equal(res10E2.scenarioState.isComplete, true, 'Valid balanced image journal must pass validation');
+    assert.equal(res10E2.scenarioState.directGroups?.length, 1, 'Must have 1 journal group');
+    assert.equal(res10E2.scenarioState.directGroups[0].totalDebit, 500);
+    assert.equal(res10E2.scenarioState.directGroups[0].totalCredit, 500);
+
+    console.log('✓ 10E. Image-based journals pass through final validation verified');
+    passed++;
+  }
+
 } finally {
   globalThis.fetch = origFetch;
 }
