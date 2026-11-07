@@ -33,7 +33,7 @@ const VALID_CATEGORIES = new Set<AccountCategory>([
 /**
  * Maps known account names to their mandatory standard accounting category.
  */
-function getMandatoryCategory(accountName: string): AccountCategory | undefined {
+export function getMandatoryCategory(accountName: string): AccountCategory | undefined {
   const n = accountName.trim().toLowerCase();
 
   // Multi-word overrides and specific IFRS/SFRS(I) accounts
@@ -129,6 +129,16 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   }
 
   // ASSET
+  if (
+    /\b(?:receivables?|recoverables?|due\s+from|contract\s+assets?|prepaid|prepayments?|right-of-use\s+assets?|rou\s+assets?|deferred\s+tax\s+assets?)\b/i.test(n) &&
+    !n.includes('payable') &&
+    !n.includes('liability') &&
+    !n.includes('liabilities') &&
+    !n.includes('deferred revenue') &&
+    !n.includes('unearned')
+  ) {
+    return 'ASSET';
+  }
   if (n.startsWith('prepaid ') || n === 'prepayments' || n === 'prepayment') {
     return 'ASSET';
   }
@@ -161,7 +171,12 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     'lease liability', 'lease liabilities'
   ];
   if (
-    liabilityNames.includes(n) ||
+    /\b(?:customer\s+deposits?|tenant\s+deposits?|deposits?\s+(?:received|from\s+customers?|from\s+tenants?)|advances?\s+from\s+customers?|unearned\s+deposits?)\b/i.test(n)
+  ) {
+    return 'LIABILITY';
+  }
+  if (
+    (liabilityNames.includes(n) ||
     n.startsWith('accrued ') ||
     n.startsWith('unearned ') ||
     n.startsWith('deferred revenue') ||
@@ -176,7 +191,8 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
     n === 'skills development levy payable' ||
     n === 'current tax payable' ||
     n === 'income tax payable' ||
-    n === 'corporate tax payable'
+    n === 'corporate tax payable') &&
+    !/\b(?:receivables?|recoverables?|due\s+from|prepaid|asset|assets)\b/i.test(n)
   ) {
     return 'LIABILITY';
   }
@@ -233,9 +249,33 @@ export function inferAccountCategoryFromName(accountName: string): AccountCatego
 
   const n = accountName.trim().toLowerCase();
 
+  // Next, check for conflicting/ambiguous category signals before applying regex heuristics
+  const hasAssetRelationship = /\b(?:receivables?|recoverables?|due\s+from|prepaid|prepayments?|contract\s+assets?|deferred\s+tax\s+assets?|right-of-use|rou\s+assets?|cash|bank|petty\s+cash|current\s+account|savings\s+account|inventory|inventories|equipment|machinery|motor\s+vehicles?|delivery\s+van|furniture|fixtures|buildings?|land|intangible|software|patent|goodwill|investment|financial\s+assets?|input\s+gst|accumulated\s+depreciation|accumulated\s+amorti[sz]ation|loss\s+allowance|allowance\s+for\s+(?:doubtful|impairment|expected\s+credit)|refundable\s+deposits?|security\s+deposits?|rental\s+deposits?|utility\s+deposits?|deposits?\s+paid|fixed\s+deposits?|bank\s+deposits?|time\s+deposits?|call\s+deposits?)\b/i.test(n);
+  const hasExplicitLiabilityRelationship = /\b(?:payables?|liabilit(?:y|ies)|accrued|unearned|deferred\s+revenue|deferred\s+income|deferred\s+tax\s+liabilit\w*|provisions?|due\s+to|creditors?|output\s+gst|overdraft|customer\s+deposits?|tenant\s+deposits?|deposits?\s+(?:received|from\s+customers?|from\s+tenants?)|advances?\s+from\s+customers?|unearned\s+deposits?)\b/i.test(n);
+
+  if (hasAssetRelationship && hasExplicitLiabilityRelationship) {
+    return undefined;
+  }
+
+  // Check specific Asset relationships BEFORE generic liability keywords
+  if (
+    /\b(?:receivables?|recoverables?|due\s+from|prepaid|prepayments?|contract\s+assets?|deferred\s+tax\s+assets?|loan\s+receivables?|loans\s+receivables?|notes?\s+receivables?|advances?\s+to|deposits?\s+paid|security\s+deposits?|rental\s+deposits?|refundable\s+deposits?|utility\s+deposits?|fixed\s+deposits?|bank\s+deposits?|time\s+deposits?|call\s+deposits?|loans?\s+to\s+(?:staff|directors?|employees?|shareholders?|subsidiary|related\s+part\w*))\b/i.test(n) &&
+    !n.includes('payable') &&
+    !n.includes('liability') &&
+    !n.includes('liabilities') &&
+    !n.includes('due to') &&
+    !n.includes('from')
+  ) {
+    return 'ASSET';
+  }
+
   // Liability patterns
   if (
-    /\b(?:payable|payables|liability|liabilities|accrued|unearned|deferred\s+revenue|deferred\s+income|deferred\s+tax\s+liabilit\w*|provision|provisions|loan|loans|borrowings?|hire\s+purchase\s+(?:liabilit\w*|creditor\w*)|lease\s+liabilit\w*|due\s+to|creditor\w*|output\s+gst|gst\s+payable|tax\s+payable|cpf\s+payable|salaries\s+payable|wages\s+payable|bonds?\s+payable|notes?\s+payable|overdraft)\b/i.test(n)
+    /\b(?:customer\s+deposits?|tenant\s+deposits?|deposits?\s+(?:received|from\s+customers?|from\s+tenants?)|advances?\s+from\s+customers?|unearned\s+deposits?|loans?\s+from\s+(?:directors?|shareholders?|staff|employees?|bank|parent|related\s+part\w*))\b/i.test(n) ||
+    /\b(?:payables?|liabilit(?:y|ies)|accrued|unearned|deferred\s+revenue|deferred\s+income|deferred\s+tax\s+liabilit\w*|provisions?|hire\s+purchase\s+(?:liabilit\w*|creditor\w*)|lease\s+liabilit\w*|due\s+to|creditors?|output\s+gst|gst\s+payable|tax\s+payable|cpf\s+payable|salaries\s+payable|wages\s+payable|bonds?\s+payable|notes?\s+payable|overdraft)\b/i.test(n) ||
+    (/\b(?:loan|loans|borrowings?|bonds?|notes?)\b/i.test(n) &&
+     !/\b(?:receivables?|recoverables?|due\s+from|to\s+staff|to\s+director|to\s+employee|to\s+related|to\s+subsidiary|asset|assets)\b/i.test(n) &&
+     !/\b(?:director'?s?|shareholder'?s?|staff|employee|intercompany|related\s+party)\s+loans?\b/i.test(n))
   ) {
     return 'LIABILITY';
   }
@@ -280,7 +320,7 @@ export function inferAccountCategoryFromName(accountName: string): AccountCatego
 
   // Asset patterns
   if (
-    /\b(?:cash|bank|current\s+account|petty\s+cash|receivable|receivables|debtors?|inventory|inventories|stock|prepaid|prepayments?|deposit|deposits|equipment|machinery|motor\s+vehicles?|delivery\s+van|furniture|fixtures|buildings?|land|property,\s*plant|right-of-use|rou\s+asset|intangible|software|patent|goodwill|investment|financial\s+asset|deferred\s+tax\s+asset|input\s+gst|tax\s+recoverable|due\s+from|accumulated\s+depreciation|accumulated\s+amorti[sz]ation|loss\s+allowance|allowance\s+for\s+(?:doubtful|impairment|expected\s+credit))\b/i.test(n)
+    /\b(?:cash|bank|current\s+account|petty\s+cash|receivables?|debtors?|inventory|inventories|stock|prepaid|prepayments?|refundable\s+deposits?|security\s+deposits?|rental\s+deposits?|utility\s+deposits?|deposits?\s+paid|fixed\s+deposits?|bank\s+deposits?|time\s+deposits?|call\s+deposits?|equipment|machinery|motor\s+vehicles?|delivery\s+van|furniture|fixtures|buildings?|land|property,\s*plant|right-of-use|rou\s+assets?|intangible|software|patent|goodwill|investment|financial\s+assets?|deferred\s+tax\s+assets?|input\s+gst|tax\s+recoverable|due\s+from|accumulated\s+depreciation|accumulated\s+amorti[sz]ation|loss\s+allowance|allowance\s+for\s+(?:doubtful|impairment|expected\s+credit))\b/i.test(n)
   ) {
     return 'ASSET';
   }
@@ -293,6 +333,12 @@ export function inferAccountCategoryFromName(accountName: string): AccountCatego
   return undefined;
 }
 
+export interface OutstandingBalanceContext {
+  accountName: string;
+  nature: 'RECEIVABLE' | 'PAYABLE' | 'DEPOSIT';
+  remainingAmount: number;
+}
+
 export interface ValidateJournalGroupsOptions {
   rawQuery?: string;
   hasPriorContextAmount?: boolean;
@@ -300,6 +346,7 @@ export interface ValidateJournalGroupsOptions {
   priorContextTexts?: string[];
   priorContextAmounts?: number[];
   isFollowUp?: boolean;
+  outstandingBalances?: OutstandingBalanceContext[];
 }
 
 export function stripNonMonetaryTokens(text: string): string {
@@ -324,6 +371,8 @@ export function stripNonMonetaryTokens(text: string): string {
 export interface DerivableNumbersResult {
   baseNumbers: number[];
   monetaryOccurrences: number[];
+  currentMonetaryOccurrences: number[];
+  priorMonetaryOccurrences: number[];
   timeOrQuantityFactors: number[];
   statedPercentages: number[];
   allCombinedText: string;
@@ -342,16 +391,13 @@ export function extractDerivableNumbers(
   const monetaryOccurrences: number[] = [];
   const timeOrQuantityFactors: number[] = [];
 
-  for (const amt of priorContextAmounts) {
-    if (typeof amt === 'number' && Number.isFinite(amt) && amt > 0) {
-      monetaryOccurrences.push(amt);
-    }
-  }
+  const WORD_TO_INT: Record<string, number> = {
+    one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+    seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12
+  };
 
-  for (const text of allTexts) {
-    if (!text) continue;
-
-    // Track matched spans [start, end] within this text to avoid double-counting same token
+  function extractFromText(text: string): { monetary: number[]; factors: number[] } {
+    if (!text) return { monetary: [], factors: [] };
     const matchedSpans: Array<{ start: number; end: number }> = [];
     const isSpanOverlapping = (start: number, end: number) => {
       return matchedSpans.some(span => Math.max(start, span.start) < Math.min(end, span.end));
@@ -367,6 +413,7 @@ export function extractDerivableNumbers(
       hasCurrencyPrefix: boolean;
       hasDecimal: boolean;
       rawStr: string;
+      index: number;
     }
     const candidates: ExtractedCandidate[] = [];
 
@@ -379,7 +426,7 @@ export function extractDerivableNumbers(
         addSpan(start, end);
         const lower = m[0].toLowerCase();
         const val = (lower.includes('50') || lower.includes('half')) ? 0.5 : (lower.includes('two') ? 2 : 1);
-        candidates.push({ val, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0] });
+        candidates.push({ val, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0], index: candidates.length });
       }
     }
 
@@ -392,7 +439,7 @@ export function extractDerivableNumbers(
         addSpan(start, end);
         const val = parseFloat(m[1]);
         if (Number.isFinite(val) && val > 0) {
-          candidates.push({ val: val / 100, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0] });
+          candidates.push({ val: val / 100, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0], index: candidates.length });
         }
       }
     }
@@ -406,7 +453,7 @@ export function extractDerivableNumbers(
         addSpan(start, end);
         const val = parseFloat(m[1].replace(/,/g, ''));
         if (Number.isFinite(val) && val > 0) {
-          candidates.push({ val: val * 1000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0] });
+          candidates.push({ val: val * 1000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0], index: candidates.length });
         }
       }
     }
@@ -420,26 +467,36 @@ export function extractDerivableNumbers(
         addSpan(start, end);
         const val = parseFloat(m[1].replace(/,/g, ''));
         if (Number.isFinite(val) && val > 0) {
-          candidates.push({ val: val * 1000000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0] });
+          candidates.push({ val: val * 1000000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0], index: candidates.length });
         }
       }
     }
 
-    // 5) General monetary & numeric values
-    const numMatches = text.matchAll(/(?:(?:\$|SGD|S\$|\bS\$)\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?))|(?:\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\b)/gi);
+    // 5) General monetary & numeric values (including suffix currency notations like "50 SGD" or "100 dollars")
+    const numMatches = text.matchAll(/(?:(?:\$|SGD|S\$|\bS\$)\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?))|(?:\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*(?:SGD|S\$|USD|EUR|GBP|dollars?)\b)|(?:\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\b)/gi);
     for (const m of numMatches) {
       const start = m.index!;
       const end = start + m[0].length;
       if (!isSpanOverlapping(start, end)) {
         addSpan(start, end);
-        const rawNumStr = (m[1] || m[2] || '').replace(/,/g, '');
+        const rawNumStr = (m[1] || m[2] || m[3] || '').replace(/,/g, '');
         const val = parseFloat(rawNumStr);
         if (Number.isFinite(val) && val > 0) {
-          const hasCurrencyPrefix = Boolean(m[1]) || /[\$]|SGD|S\$/i.test(m[0]);
+          const hasCurrencyPrefix = Boolean(m[1]) || /[\$]|SGD|S\$|USD|EUR|GBP|dollars?/i.test(m[0]);
           const hasDecimal = rawNumStr.includes('.');
-          candidates.push({ val, start, end, hasCurrencyPrefix, hasDecimal, rawStr: m[0] });
+          candidates.push({ val, start, end, hasCurrencyPrefix, hasDecimal, rawStr: m[0], index: candidates.length });
         }
       }
+    }
+
+    const textFactors: number[] = [];
+    const textMonetary: number[] = [];
+
+    // Word numbers 1..12 followed by duration/quantity units
+    const wordMatches = text.matchAll(/\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\s*[-–]\s*|\s+)(?:years?|yrs?|months?|mos?|quarters?|weeks?|days?|units?|items?|shares?|instalments?|installments?)\b/gi);
+    for (const wm of wordMatches) {
+      const wVal = WORD_TO_INT[wm[1].toLowerCase()];
+      if (wVal) textFactors.push(wVal);
     }
 
     const hasMajorMonetaryInText = candidates.some(c => c.val >= 100 || c.hasCurrencyPrefix || c.hasDecimal) ||
@@ -447,17 +504,73 @@ export function extractDerivableNumbers(
 
     for (const c of candidates) {
       const isInteger = Number.isInteger(c.val);
-      if (isInteger && c.val >= 1 && c.val <= 365) {
-        timeOrQuantityFactors.push(c.val);
+      const beforeText = text.slice(Math.max(0, c.start - 25), c.start);
+      const afterText = text.slice(c.end, Math.min(text.length, c.end + 30));
+
+      const hasSuffixCurrency = /^\s*(?:SGD|S\$|USD|EUR|GBP|dollars?)\b/i.test(afterText);
+      const isCurrency = c.hasCurrencyPrefix || hasSuffixCurrency;
+
+      const isFactorCandidate = !isCurrency && (
+        /^\s*(?:[-–]\s*)?(?:years?|yrs?|months?|mos?|quarters?|qtrs?|weeks?|wks?|days?|hours?|hrs?|units?|items?|pieces?|pcs|shares?|lots?|seats?|licen[cs]es?|laptops?|computers?|machines?|vehicles?|vans?|instalments?|installments?|payments?|times?|x\b|employees?|staff|workers?|headcount|persons?|people|tonnes?|tons?|kg|litres?|liters?|sq\s*ft|sqm|periods?)\b/i.test(afterText) ||
+        /\b(?:×|x|qty|quantity|duration|term|useful\s+life(?:\s+of)?|life\s+of|period\s+of)\s*$/i.test(beforeText) ||
+        (c.val > 0 && c.val <= 20 && (
+          /\b(?:rate|fx|exchange\s+rate|spot\s+rate)\s*(?:of|=|:)?\s*$/i.test(beforeText) ||
+          /^\s*(?:per\b|\/)/i.test(afterText)
+        ))
+      );
+
+      if (isFactorCandidate && isInteger && c.val >= 1 && c.val <= 365) {
+        textFactors.push(c.val);
       }
 
-      const isBareSmallInteger = !c.hasCurrencyPrefix && !c.hasDecimal && isInteger && c.val <= 60;
+      // If pure integer duration/quantity factor, do NOT add to monetaryOccurrences if there is already monetary context
+      if (!isCurrency && !c.hasDecimal && isFactorCandidate && (hasMajorMonetaryInText || candidates.some(other => other.hasCurrencyPrefix))) {
+        continue;
+      }
+
+      const isBareSmallInteger = !isCurrency && !c.hasDecimal && isInteger && c.val <= 60;
       if (hasMajorMonetaryInText && isBareSmallInteger) {
         continue;
       }
-      monetaryOccurrences.push(c.val);
+
+      textMonetary.push(c.val);
+    }
+
+    return { monetary: textMonetary, factors: textFactors };
+  }
+
+  // 1. Extract from current query (rawQuery)
+  const currentExtracted = extractFromText(strippedQuery);
+  const currentMonetaryOccurrences = [...currentExtracted.monetary];
+  timeOrQuantityFactors.push(...currentExtracted.factors);
+
+  // 2. Extract from prior context (texts and amounts), deduplicated by cent value
+  const currentCents = new Set(currentExtracted.monetary.map(m => Math.round(m * 100)));
+  const priorCentsSet = new Set<number>();
+
+  for (const amt of priorContextAmounts) {
+    if (typeof amt === 'number' && Number.isFinite(amt) && amt > 0) {
+      priorCentsSet.add(Math.round(amt * 100));
     }
   }
+
+  for (const pt of strippedPrior) {
+    const priorExt = extractFromText(pt);
+    timeOrQuantityFactors.push(...priorExt.factors);
+    for (const m of priorExt.monetary) {
+      priorCentsSet.add(Math.round(m * 100));
+    }
+  }
+
+  // Prior amounts only contribute values that are not already present in the current turn
+  const priorMonetaryOccurrences: number[] = [];
+  for (const c of priorCentsSet) {
+    if (!currentCents.has(c)) {
+      priorMonetaryOccurrences.push(c / 100);
+    }
+  }
+
+  monetaryOccurrences.push(...currentMonetaryOccurrences, ...priorMonetaryOccurrences);
 
   // Stated percentages
   const percentages = new Set<number>();
@@ -478,11 +591,20 @@ export function extractDerivableNumbers(
   return {
     baseNumbers,
     monetaryOccurrences,
+    currentMonetaryOccurrences,
+    priorMonetaryOccurrences,
     timeOrQuantityFactors: Array.from(new Set(timeOrQuantityFactors)),
     statedPercentages: Array.from(percentages),
     allCombinedText
   };
 }
+
+const MAX_OCCURRENCES = 12;
+const MAX_BUCKET_SIZE = 16;
+const MAX_TIME_FRACTION_OPS = 500;
+const MAX_PAIR_OPS = 800;
+const MAX_TRIPLE_OPS = 1000;
+const MAX_QUAD_OPS = 700;
 
 export function buildDerivableCents(
   baseNumbers: number[],
@@ -490,6 +612,8 @@ export function buildDerivableCents(
   priorAmounts: number[] = [],
   options?: {
     monetaryOccurrences?: number[];
+    currentMonetaryOccurrences?: number[];
+    priorMonetaryOccurrences?: number[];
     timeOrQuantityFactors?: number[];
     allCombinedText?: string;
   }
@@ -511,17 +635,23 @@ export function buildDerivableCents(
     if (c !== undefined) derivedCents.add(c);
   }
 
-  const occurrences = (options?.monetaryOccurrences && options.monetaryOccurrences.length > 0)
-    ? options.monetaryOccurrences
-    : [...baseNumbers, ...priorAmounts];
+  const currentOccurrences = (options?.currentMonetaryOccurrences || []).slice(0, MAX_OCCURRENCES);
+  const priorOccurrences = (options?.priorMonetaryOccurrences || priorAmounts || []).slice(0, MAX_OCCURRENCES);
 
-  const factors = (options?.timeOrQuantityFactors && options.timeOrQuantityFactors.length > 0)
+  const rawOccurrences = (options?.monetaryOccurrences && options.monetaryOccurrences.length > 0)
+    ? options.monetaryOccurrences
+    : (currentOccurrences.length > 0 || priorOccurrences.length > 0)
+      ? [...currentOccurrences, ...priorOccurrences]
+      : [...baseNumbers, ...priorAmounts];
+  const occurrences = rawOccurrences.slice(0, MAX_OCCURRENCES);
+
+  const factors = (options?.timeOrQuantityFactors !== undefined)
     ? options.timeOrQuantityFactors
     : baseNumbers.filter(n => Number.isInteger(n) && n >= 1 && n <= 365);
 
   const text = options?.allCombinedText || '';
 
-  // 1) Base values in dollars -> cents & percentage derivations for each occurrence
+  // 1) Base values in dollars -> cents & percentage/factor derivations for each occurrence
   const buckets: number[][] = [];
 
   for (let i = 0; i < occurrences.length; i++) {
@@ -548,15 +678,15 @@ export function buildDerivableCents(
 
     // Multiply/divide with factors (e.g. quantities or time units)
     for (const f of factors) {
-      if (f > 0 && f <= 365) {
+      if (f > 0 && f <= 10000) {
         const prod = toCents(b * f);
         const quot = toCents(b / f);
-        if (prod && b <= 1000) { bSet.add(prod); derivedCents.add(prod); }
+        if (prod && b <= 100000) { bSet.add(prod); derivedCents.add(prod); }
         if (quot) { bSet.add(quot); derivedCents.add(quot); }
       }
     }
 
-    buckets.push(Array.from(bSet));
+    buckets.push(Array.from(bSet).slice(0, MAX_BUCKET_SIZE));
   }
 
   // Also include prior amounts directly
@@ -564,111 +694,12 @@ export function buildDerivableCents(
     addVal(a);
   }
 
-  // 2) Products & quotients of distinct pairs (a, b) and straight-line depreciation:
-  const occLen = occurrences.length;
-  for (let i = 0; i < occLen; i++) {
-    const a = occurrences[i];
-    for (let j = 0; j < occLen; j++) {
-      if (i === j) continue;
-      const b = occurrences[j];
-      // Only multiply if one is a factor or FX rate <= 10
-      if ((a <= 10 || b <= 10) && Math.min(a, b) <= 1000) {
-        addVal(a * b);
-      }
-      if (b > 0 && b <= 365) {
-        addVal(a / b);
-      }
-      // Straight-line depreciation: (cost - salvage) / useful_life
-      if (a > b) {
-        for (const c of factors) {
-          if (c > 0 && c <= 100) {
-            addVal((a - b) / c);
-          }
-        }
-      }
-    }
-  }
-
-  // 3) Multi-term linear combinations (sums and differences of strictly distinct occurrence indices)
-  // CRITICAL: Only combine distinct indices (j < i, k < j, l < k) so a single occurrence is never added to itself!
-  if (occLen >= 2) {
-    for (let i = 0; i < occLen; i++) {
-      const bucketI = buckets[i];
-      for (let j = 0; j < i; j++) {
-        const bucketJ = buckets[j];
-        for (const ci of bucketI) {
-          for (const cj of bucketJ) {
-            const sum2 = ci + cj;
-            const diff2 = Math.abs(ci - cj);
-            if (sum2 > 0) derivedCents.add(sum2);
-            if (diff2 > 0) derivedCents.add(diff2);
-          }
-        }
-      }
-    }
-  }
-
-  if (occLen >= 3) {
-    for (let i = 0; i < occLen; i++) {
-      const bucketI = buckets[i];
-      for (let j = 0; j < i; j++) {
-        const bucketJ = buckets[j];
-        for (let k = 0; k < j; k++) {
-          const bucketK = buckets[k];
-          for (const ci of bucketI) {
-            for (const cj of bucketJ) {
-              for (const ck of bucketK) {
-                const sum3 = ci + cj + ck;
-                const diff3a = Math.abs(ci + cj - ck);
-                const diff3b = Math.abs(ci + ck - cj);
-                const diff3c = Math.abs(cj + ck - ci);
-                if (sum3 > 0) derivedCents.add(sum3);
-                if (diff3a > 0) derivedCents.add(diff3a);
-                if (diff3b > 0) derivedCents.add(diff3b);
-                if (diff3c > 0) derivedCents.add(diff3c);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (occLen >= 4) {
-    const quadCap = Math.min(occLen, 6);
-    for (let i = 0; i < quadCap; i++) {
-      const bucketI = buckets[i];
-      for (let j = 0; j < i; j++) {
-        const bucketJ = buckets[j];
-        for (let k = 0; k < j; k++) {
-          const bucketK = buckets[k];
-          for (let l = 0; l < k; l++) {
-            const bucketL = buckets[l];
-            for (const a of bucketI) {
-              for (const b of bucketJ) {
-                for (const c of bucketK) {
-                  for (const d of bucketL) {
-                    const sum4 = a + b + c + d;
-                    const diff4a = Math.abs(a + b + c - d);
-                    const diff4b = Math.abs(a + b - c - d);
-                    if (sum4 > 0) derivedCents.add(sum4);
-                    if (diff4a > 0) derivedCents.add(diff4a);
-                    if (diff4b > 0) derivedCents.add(diff4b);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 4) Common accounting time fractions:
-  // Apply ONLY when allCombinedText contains time/accrual/depreciation/amortisation/lease/interest/proration cues
+  // 2) First-order accounting time fractions (/ 12, / 4, * m / 12, * d / 365, * d / 360)
+  // RUN BEFORE multi-term combinations with dedicated budget MAX_TIME_FRACTION_OPS (500)
   const hasTimeCues = Boolean(text) && /\b(?:month\w*|quarter\w*|year\w*|annual\w*|p\.?a\.?|day\w*|prorat\w*|depreciat\w*|amorti[sz]\w*|interest|lease|prepaid|accru\w*|unearned|defer\w*)\b/i.test(text);
 
   if (hasTimeCues) {
+    let timeOps = 0;
     const statedMonths = factors.filter(n => n >= 1 && n <= 60);
     const statedDays = factors.filter(n => n >= 1 && n <= 365);
     const candidateCents = Array.from(derivedCents).slice(0, 150);
@@ -688,6 +719,143 @@ export function buildDerivableCents(
         addVal((dollars * d) / 365);
         addVal((dollars * d) / 360);
       }
+      timeOps += 4 + statedMonths.length + (statedDays.length * 2);
+      if (timeOps >= MAX_TIME_FRACTION_OPS) break;
+    }
+  }
+
+  // Straight-line depreciation: (cost - salvage) / useful_life
+  const occLen = occurrences.length;
+  for (let i = 0; i < occLen; i++) {
+    const a = occurrences[i];
+    for (let j = 0; j < occLen; j++) {
+      if (i === j) continue;
+      const b = occurrences[j];
+      if (a > b) {
+        for (const f of factors) {
+          if (f > 0 && f <= 365) {
+            addVal((a - b) / f);
+          }
+        }
+      }
+    }
+  }
+
+  // 3) Multi-term linear combinations with per-tier operation budgets
+  // Cap at MAX_PAIR_OPS, MAX_TRIPLE_OPS, MAX_QUAD_OPS
+  const currentLen = currentOccurrences.length;
+  const isMultiTurnWithCurrent = currentLen > 0 && priorOccurrences.length > 0;
+
+  // Pairwise combinations (2-term): cap at MAX_PAIR_OPS = 800
+  if (occLen >= 2) {
+    let pairOps = 0;
+    for (let i = 0; i < occLen; i++) {
+      const isCurrentI = i < currentLen;
+      const bucketI = buckets[i];
+      for (let j = 0; j < i; j++) {
+        const isCurrentJ = j < currentLen;
+        const bucketJ = buckets[j];
+
+        // Per Finding 4: If one is current and one is prior, or both are prior when current is non-empty:
+        // ONLY allow difference (|ci - cj|), do NOT add prior to current or prior to prior!
+        const allowSum = !isMultiTurnWithCurrent || (isCurrentI && isCurrentJ);
+
+        for (const ci of bucketI) {
+          for (const cj of bucketJ) {
+            if (allowSum) {
+              const sum2 = ci + cj;
+              if (sum2 > 0) derivedCents.add(sum2);
+            }
+            const diff2 = Math.abs(ci - cj);
+            if (diff2 > 0) derivedCents.add(diff2);
+            pairOps++;
+            if (pairOps >= MAX_PAIR_OPS) break;
+          }
+          if (pairOps >= MAX_PAIR_OPS) break;
+        }
+        if (pairOps >= MAX_PAIR_OPS) break;
+      }
+      if (pairOps >= MAX_PAIR_OPS) break;
+    }
+  }
+
+  // Triple combinations (3-term): cap at MAX_TRIPLE_OPS = 1000
+  // When currentLen > 0, restrict to current occurrences so prior amounts don't participate in 3-way sums
+  const tripleSourceLen = isMultiTurnWithCurrent ? currentLen : occLen;
+  if (tripleSourceLen >= 3) {
+    let tripleOps = 0;
+    const tripleCap = Math.min(tripleSourceLen, 8);
+    for (let i = 0; i < tripleCap; i++) {
+      const bucketI = buckets[i].slice(0, 8);
+      for (let j = 0; j < i; j++) {
+        const bucketJ = buckets[j].slice(0, 8);
+        for (let k = 0; k < j; k++) {
+          const bucketK = buckets[k].slice(0, 8);
+          for (const ci of bucketI) {
+            for (const cj of bucketJ) {
+              for (const ck of bucketK) {
+                const sum3 = ci + cj + ck;
+                const diff3a = Math.abs(ci + cj - ck);
+                const diff3b = Math.abs(ci + ck - cj);
+                const diff3c = Math.abs(cj + ck - ci);
+                if (sum3 > 0) derivedCents.add(sum3);
+                if (diff3a > 0) derivedCents.add(diff3a);
+                if (diff3b > 0) derivedCents.add(diff3b);
+                if (diff3c > 0) derivedCents.add(diff3c);
+                tripleOps++;
+                if (tripleOps >= MAX_TRIPLE_OPS) break;
+              }
+              if (tripleOps >= MAX_TRIPLE_OPS) break;
+            }
+            if (tripleOps >= MAX_TRIPLE_OPS) break;
+          }
+          if (tripleOps >= MAX_TRIPLE_OPS) break;
+        }
+        if (tripleOps >= MAX_TRIPLE_OPS) break;
+      }
+      if (tripleOps >= MAX_TRIPLE_OPS) break;
+    }
+  }
+
+  // Quadruple combinations (4-term): cap at MAX_QUAD_OPS = 700
+  const quadSourceLen = isMultiTurnWithCurrent ? currentLen : occLen;
+  if (quadSourceLen >= 4) {
+    let quadOps = 0;
+    const quadCap = Math.min(quadSourceLen, 6);
+    for (let i = 0; i < quadCap; i++) {
+      const bucketI = buckets[i].slice(0, 6);
+      for (let j = 0; j < i; j++) {
+        const bucketJ = buckets[j].slice(0, 6);
+        for (let k = 0; k < j; k++) {
+          const bucketK = buckets[k].slice(0, 6);
+          for (let l = 0; l < k; l++) {
+            const bucketL = buckets[l].slice(0, 6);
+            for (const a of bucketI) {
+              for (const b of bucketJ) {
+                for (const c of bucketK) {
+                  for (const d of bucketL) {
+                    const sum4 = a + b + c + d;
+                    const diff4a = Math.abs(a + b + c - d);
+                    const diff4b = Math.abs(a + b - c - d);
+                    if (sum4 > 0) derivedCents.add(sum4);
+                    if (diff4a > 0) derivedCents.add(diff4a);
+                    if (diff4b > 0) derivedCents.add(diff4b);
+                    quadOps++;
+                    if (quadOps >= MAX_QUAD_OPS) break;
+                  }
+                  if (quadOps >= MAX_QUAD_OPS) break;
+                }
+                if (quadOps >= MAX_QUAD_OPS) break;
+              }
+              if (quadOps >= MAX_QUAD_OPS) break;
+            }
+            if (quadOps >= MAX_QUAD_OPS) break;
+          }
+          if (quadOps >= MAX_QUAD_OPS) break;
+        }
+        if (quadOps >= MAX_QUAD_OPS) break;
+      }
+      if (quadOps >= MAX_QUAD_OPS) break;
     }
   }
 
@@ -704,6 +872,11 @@ export function splitQueryIntoClauses(text: string): string[] {
   for (const part of rawSplits) {
     const trimmed = part.trim();
     if (!trimmed) continue;
+    // Don't split on a comma when the part contains a conditional subordinator
+    if (/\b(?:if|when|once|unless|until|provided\s+that|assuming|suppose|contingent|conditional|subject\s+to)\b/i.test(trimmed)) {
+      clauses.push(trimmed);
+      continue;
+    }
     const subSplits = trimmed.split(/,\s+(?:(?:and|while|whereas|but)\s+)?(?=[^;]{1,120}?\b(?:will|shall|is\s+to|are\s+to|was|were|has\s+been|have\s+been|to\s+be|scheduled|pending|paid|settled|transferred|remitted|cleared|disbursed|not\s+paid|unpaid)\b)/gi);
     for (const sub of subSplits) {
       const subTrimmed = sub.trim();
@@ -723,16 +896,20 @@ export function hasNonExecutedSettlementCue(text: string): boolean {
   if (/\b(?:will|shall|going\s+to|is\s+to|are\s+to|to)\s+(?:be\s+)?(?:paid|settled|transferred|remitted|cleared|disbursed|made)\b/i.test(text)) return true;
   if (/\b(?:will|shall)\s+(?:pay|settle|transfer|remit|clear|disburse|make\s+payment)\b/i.test(text)) return true;
 
-  // 2. Modal / conditional / uncertain
+  // 2. Modal / conditional / uncertain / hypothetical
   if (/\b(?:should|would|could|might|may|must|can|ought\s+to|needs?\s+to)\s+(?:be\s+)?(?:paid|settled|transferred|remitted|cleared|disbursed|made|pay|settle)\b/i.test(text)) return true;
+  if (/\b(?:hypothetical(?:ly)?|what\s+if|illustrat(?:e|ive))\b/i.test(text)) return true;
 
-  // 3. Pending / scheduled / unexecuted / conditional
-  if (/\b(?:yet\s+to\s+be|has\s+yet\s+to\s+be|have\s+yet\s+to\s+be|remains?\s+to\s+be|scheduled\s+(?:for|to)|planned\s+(?:for|to)|slated\s+(?:for|to)|pending\s+(?:payment|settlement|transfer|remittance|approval|bank)|awaiting\s+(?:payment|settlement|transfer|remittance|approval|bank)|subject\s+to\s+approval|if\s+(?:approved|paid|settled)|upon\s+approval|once\s+approved)\b/i.test(text)) return true;
+  // 3. Conditional subordinators
+  if (/\b(?:if|once|when|whenever|unless|until|provided\s+that|assuming(?:\s+that)?|suppose|supposing|in\s+case|in\s+the\s+event(?:\s+that)?|on\s+condition\s+that|where\s+.*?\b(?:is|are)\s+(?:paid|settled))\b/i.test(text)) return true;
 
-  // 4. Explicit negation
+  // 4. Pending / scheduled / unexecuted / approval / contingent / conditional
+  if (/\b(?:contingent\s+(?:up)?on|conditional\s+(?:up)?on|subject\s+to\b|upon\s+(?:receipt|delivery|completion|inspection|signing|verification|clearance|approval)|pending\s+(?:payment|settlement|transfer|remittance|approval|bank|receipt|delivery|completion|inspection|verification|clearance)|awaiting\s+(?:payment|settlement|transfer|remittance|approval|bank)|yet\s+to\s+be|has\s+yet\s+to\s+be|have\s+yet\s+to\s+be|remains?\s+to\s+be|scheduled\s+(?:for|to)|planned\s+(?:for|to)|slated\s+(?:for|to)|subject\s+to\s+approval|upon\s+approval|once\s+approved)\b/i.test(text)) return true;
+
+  // 5. Explicit negation
   if (/\b(?:no\s+(?:payment|settlement)|not\s+(?:yet\s+)?(?:paid|settled|transferred|remitted|cleared|made)|(?:was|were|is|are|has|have)\s+not\s+(?:been\s+)?(?:paid|settled|transferred|remitted|cleared|made)|unpaid|unsettled|outstanding)\b/i.test(text)) return true;
 
-  // 5. Future time markers when not paired with confirmed past verb
+  // 6. Future time markers when not paired with confirmed past verb
   if (/\b(?:next\s+(?:week|month|quarter|year|monday|tuesday|wednesday|thursday|friday)|tomorrow|in\s+due\s+course|later)\b/i.test(text)) {
     if (!/\b(?:paid|settled|transferred|remitted|cleared)\s+(?:yesterday|today|this\s+morning|already)\b/i.test(text)) {
       return true;
@@ -764,14 +941,19 @@ export function hasConfirmedSettlementVerb(text: string): boolean {
     }
   }
 
-  // Imperative instruction with payment method / instrument: e.g. "pay ... by bank transfer", "settle ... via bank"
-  if (/^\s*(?:pay|settle|transfer|remit|clear|disburse)\b.*?\b(?:by|via|in|from|using)\b/i.test(text.trim())) {
+  // Imperative settlement instruction for previously accrued liabilities with payment method
+  if (/^\s*(?:pay|settle|transfer|remit|clear|disburse)\b.*?\b(?:previously\s+accrued|accrued)\b.*?\b(?:by|via|in|from|using)\b/i.test(text.trim())) {
     return true;
   }
 
   // Participle completion with payment method/date:
-  if (/\b(?:paid|settled|transferred|remitted|cleared|disbursed)\b.*?\b(?:by\s+(?:bank|cash|cheque|check|giro|paynow|wire|transfer)|in\s+(?:cash|full)|via\s+(?:bank|giro|paynow|wire)|from\s+bank|on\s+\d|yesterday|today|this\s+morning)\b/i.test(text)) {
-    return true;
+  // Must NOT be preceded by auxiliary passive verbs (is/are/be/being) or conditional subordinators (if/when/once/unless/until)
+  const participleRegex = /\b(?:paid|settled|transferred|remitted|cleared|disbursed)\b.*?\b(?:by\s+(?:bank|cash|cheque|check|giro|paynow|wire|transfer)|in\s+(?:cash|full)|via\s+(?:bank|giro|paynow|wire)|from\s+bank|on\s+\d|yesterday|today|this\s+morning)\b/gi;
+  for (const m of text.matchAll(participleRegex)) {
+    const preceding = text.substring(0, m.index!).trim();
+    if (!/\b(?:is|are|be|being|if|when|once|unless|until|not|never|to)$/i.test(preceding)) {
+      return true;
+    }
   }
 
   return false;
@@ -981,6 +1163,66 @@ export function validateJournalGroups(
       }
     }
 
+    // Outstanding Balance Settlement Check
+    if (options?.isFollowUp && Array.isArray(options.outstandingBalances) && options.outstandingBalances.length > 0) {
+      const creditsCash = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current account|cheque|check|giro|paynow)\b/i.test(l.accountName));
+      const debitsCash = group.lines.some(l => l.debit > 0 && /\b(?:cash|bank|current account|cheque|check|giro|paynow)\b/i.test(l.accountName));
+
+      if (creditsCash) {
+        // Settling liabilities
+        for (const line of group.lines) {
+          if (line.debit > 0 && (line.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(line.accountName))) {
+            const lineNameLower = line.accountName.toLowerCase();
+            const payableBalances = options.outstandingBalances.filter(b => b.nature === 'PAYABLE');
+            const matched = payableBalances.find(b =>
+              b.accountName.toLowerCase() === lineNameLower ||
+              b.accountName.toLowerCase().includes(lineNameLower) ||
+              lineNameLower.includes(b.accountName.toLowerCase())
+            );
+            const remaining = matched
+              ? matched.remainingAmount
+              : payableBalances.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
+
+            if (remaining > 0 && line.debit > remaining + 0.01) {
+              issues.push({
+                code: 'UNSTATED_AMOUNT',
+                message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${remaining.toFixed(2)}.`,
+                groupTitle,
+                accountName: line.accountName
+              });
+            }
+          }
+        }
+      }
+
+      if (debitsCash) {
+        // Settling receivables
+        for (const line of group.lines) {
+          if (line.credit > 0 && (line.category === 'ASSET' || /\b(?:receivable|receivables|recoverable|due from)\b/i.test(line.accountName)) && !/\b(?:cash|bank|current account)\b/i.test(line.accountName)) {
+            const lineNameLower = line.accountName.toLowerCase();
+            const receivableBalances = options.outstandingBalances.filter(b => b.nature === 'RECEIVABLE');
+            const matched = receivableBalances.find(b =>
+              b.accountName.toLowerCase() === lineNameLower ||
+              b.accountName.toLowerCase().includes(lineNameLower) ||
+              lineNameLower.includes(b.accountName.toLowerCase())
+            );
+            const remaining = matched
+              ? matched.remainingAmount
+              : receivableBalances.reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
+
+            if (remaining > 0 && line.credit > remaining + 0.01) {
+              issues.push({
+                code: 'UNSTATED_AMOUNT',
+                message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${remaining.toFixed(2)}.`,
+                groupTitle,
+                accountName: line.accountName
+              });
+            }
+          }
+        }
+      }
+    }
+
     // Unconfirmed Settlement Check:
     // Check if the group credits Cash/Bank while debiting any Liability account.
     const creditsCashOrBank = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current account|cheque|check|giro|paynow)\b/i.test(l.accountName));
@@ -989,6 +1231,7 @@ export function validateJournalGroups(
     if (creditsCashOrBank && debitedLiabilityLines.length > 0 && options?.rawQuery) {
       const rawQuery = options.rawQuery;
       const clauses = splitQueryIntoClauses(rawQuery);
+      const sentences = rawQuery.split(/(?:;\s*|\n+|\.(?!\d)\s*)/gi).map(s => s.trim()).filter(Boolean);
 
       for (const line of debitedLiabilityLines) {
         const accLower = line.accountName.toLowerCase();
@@ -1008,8 +1251,15 @@ export function validateJournalGroups(
         const matchingClauses = clauses.filter(c => legKeywords.test(c));
         const legText = matchingClauses.length > 0 ? matchingClauses.join('; ') : rawQuery;
 
-        const hasUnexecuted = hasNonExecutedSettlementCue(legText);
-        const hasConfirmed = hasConfirmedSettlementVerb(legText);
+        const enclosingSentence = sentences.find(s => legKeywords.test(s)) || rawQuery;
+        const sentenceClauses = splitQueryIntoClauses(enclosingSentence);
+        const hasBareConditionInSentence = sentenceClauses.some(sc =>
+          /\b(?:if|unless|until|provided\s+that|assuming|suppose|what\s+if|in\s+the\s+event|on\s+condition\s+that|contingent|conditional|subject\s+to)\b/i.test(sc) &&
+          !/\b(?:salaries|salary|wages?|payroll|staff|cpf|payables?|accrued|liabilit(?:y|ies)|creditors?|suppliers?|vendors?|tax|taxes|gst|rent|bills?|invoices?)\b/i.test(sc)
+        );
+
+        const hasUnexecuted = hasNonExecutedSettlementCue(legText) || hasBareConditionInSentence;
+        const hasConfirmed = !hasUnexecuted && hasConfirmedSettlementVerb(legText);
 
         if (hasUnexecuted) {
           issues.push({
@@ -1019,19 +1269,12 @@ export function validateJournalGroups(
             accountName: line.accountName
           });
         } else if (!hasConfirmed) {
-          const isMethodOnlyFollowUp = Boolean(
-            options?.isFollowUp &&
-            /^\s*(?:by|via|in|with|using|both)?\s*(?:bank|cash|cheque|check|giro|paynow|wire|transfer|both|salaries\s+in\s+cash|salaries\s+by\s+bank)(?:\s+(?:transfer|by\s+bank|by\s+cash|by\s+giro|via\s+bank))?\s*[.]?\s*$/i.test(rawQuery.trim())
-          );
-
-          if (!isMethodOnlyFollowUp) {
-            issues.push({
-              code: 'UNCONFIRMED_SETTLEMENT',
-              message: `Group '${groupTitle}' records a settlement of liability '${line.accountName}', but lacks confirmation that payment was completed. Clarification is required.`,
-              groupTitle,
-              accountName: line.accountName
-            });
-          }
+          issues.push({
+            code: 'UNCONFIRMED_SETTLEMENT',
+            message: `Group '${groupTitle}' records a settlement of liability '${line.accountName}', but lacks confirmation that payment was completed. Clarification is required.`,
+            groupTitle,
+            accountName: line.accountName
+          });
         }
       }
     }
@@ -1080,14 +1323,22 @@ export function validateJournalGroups(
         options.priorContextAmounts,
         {
           monetaryOccurrences: derivable.monetaryOccurrences,
+          currentMonetaryOccurrences: derivable.currentMonetaryOccurrences,
+          priorMonetaryOccurrences: derivable.priorMonetaryOccurrences,
           timeOrQuantityFactors: derivable.timeOrQuantityFactors,
           allCombinedText: derivable.allCombinedText
         }
       );
 
+      const currentMonetary = derivable.currentMonetaryOccurrences || [];
       const hasTimeOrProrationCue = /\b(?:month\w*|quarter\w*|year\w*|annual\w*|p\.?a\.?|day\w*|prorat\w*|depreciat\w*|amorti[sz]\w*|interest|lease|prepaid|accru\w*|unearned|defer\w*|partial|instal\w*|half)\b/i.test(derivable.allCombinedText);
-      const singleAmountQuery = derivable.monetaryOccurrences.length === 1 && derivable.statedPercentages.length === 0 && derivable.timeOrQuantityFactors.length === 0 && !hasTimeOrProrationCue;
-      const expectedCents = singleAmountQuery ? Math.round(derivable.monetaryOccurrences[0] * 100) : 0;
+      const singleAmountQuery = (currentMonetary.length > 0 ? currentMonetary.length === 1 : derivable.monetaryOccurrences.length === 1) &&
+        derivable.statedPercentages.length === 0 &&
+        derivable.timeOrQuantityFactors.length === 0 &&
+        !hasTimeOrProrationCue;
+      const expectedCents = singleAmountQuery
+        ? (currentMonetary.length === 1 ? Math.round(currentMonetary[0] * 100) : Math.round(derivable.monetaryOccurrences[0] * 100))
+        : 0;
 
       for (const group of groups) {
         if (group.isHypothetical) continue;

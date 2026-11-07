@@ -2584,17 +2584,19 @@ export function normalizeAccountCategory(raw: unknown, accountName?: string): Ac
 
 /**
  * Computes a deterministic canonical fingerprint for a journal entry group
- * based on its title, debit/credit totals, and sorted line contents.
+ * based on its date, transactionId, title, debit/credit totals, and sorted line contents.
  */
 export function journalGroupFingerprint(g: JournalEntryGroup): string {
   const title = (g.title || '').trim().toLowerCase();
+  const eventDate = (g.eventDate || '').trim().toLowerCase();
+  const txId = (g.transactionId || '').trim().toLowerCase();
   const dr = Math.round((g.totalDebit || 0) * 100);
   const cr = Math.round((g.totalCredit || 0) * 100);
   const linesSig = (g.lines || [])
     .map(l => `${(l.accountName || '').trim().toLowerCase()}:${(l.category || '').trim().toUpperCase()}:${Math.round((l.debit || 0) * 100)}:${Math.round((l.credit || 0) * 100)}`)
     .sort()
     .join('|');
-  return `${title}#${dr}#${cr}#${linesSig}`;
+  return `${eventDate}#${txId}#${title}#${dr}#${cr}#${linesSig}`;
 }
 
 /**
@@ -2904,9 +2906,19 @@ export function postProcessAIResponse(
         verifiedCitations = topLevelVerifiedCitations;
       }
 
+      const extractedDateCue = !grp.eventDate ? (
+        userInput.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+        userInput.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{2,4})?)\b/i)?.[0] ||
+        userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:,?\s+\d{2,4})?)\b/i)?.[0] ||
+        userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{4})?)\b/i)?.[0] ||
+        grp.title?.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+        grp.title?.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{2,4})?)\b/i)?.[0] ||
+        grp.summary?.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0]
+      ) : undefined;
+
       return {
         id: grp.id || `grp-${gIdx + 1}`,
-        eventDate: formatSingaporeDate(grp.eventDate || new Date()),
+        eventDate: formatSingaporeDate(grp.eventDate || extractedDateCue || new Date()),
         title: grp.title || `Entry Group ${gIdx + 1}`,
         summary: grp.summary || '',
         lines,
@@ -2936,20 +2948,43 @@ export function postProcessAIResponse(
     if (priorCommitted.length > 0 && directGroups.length > 0) {
       const priorFingerprints = new Set(priorCommitted.map(journalGroupFingerprint));
       const priorIds = new Set(priorCommitted.map(p => p.id));
+      const isRecurringRequest = /\b(?:recurring|repeat|another|second|third|fourth|next\s+(?:month|quarter|year|week|instalment|installment|payment|period)|subsequent|again|month\s+\d+|year\s+\d+|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.test(userInput);
 
-      // Deduplicate groups that are exact repetitions of a prior committed group
-      // and ensure distinct group IDs for new groups
-      const dedupedNewGroups = directGroups
-        .filter(grp => !priorFingerprints.has(journalGroupFingerprint(grp)))
-        .map((grp, gIdx) => {
-          if (priorIds.has(grp.id)) {
-            return {
-              ...grp,
-              id: `grp-turn-${priorCommitted.length + gIdx + 1}`
-            };
+      const priorFingerprintCounts = new Map<string, number>();
+      for (const p of priorCommitted) {
+        const fp = journalGroupFingerprint(p);
+        priorFingerprintCounts.set(fp, (priorFingerprintCounts.get(fp) || 0) + 1);
+      }
+
+      let newGroupsToKeep: JournalEntryGroup[] = [];
+
+      if (directGroups.length > priorCommitted.length) {
+        const skipCounts = new Map<string, number>(priorFingerprintCounts);
+        for (const grp of directGroups) {
+          const fp = journalGroupFingerprint(grp);
+          const remainingSkip = skipCounts.get(fp) || 0;
+          if (remainingSkip > 0) {
+            skipCounts.set(fp, remainingSkip - 1);
+          } else {
+            newGroupsToKeep.push(grp);
           }
-          return grp;
-        });
+        }
+      } else if (isRecurringRequest) {
+        newGroupsToKeep = directGroups;
+      } else {
+        newGroupsToKeep = directGroups.filter(grp => !priorFingerprints.has(journalGroupFingerprint(grp)));
+      }
+
+      // Ensure distinct group IDs for all newly added groups
+      const dedupedNewGroups = newGroupsToKeep.map((grp, gIdx) => {
+        if (priorIds.has(grp.id) || !grp.id) {
+          return {
+            ...grp,
+            id: `grp-turn-${priorCommitted.length + gIdx + 1}`
+          };
+        }
+        return grp;
+      });
 
       committedDirectGroups = [...priorCommitted, ...dedupedNewGroups];
       directGroups = [...priorCommitted, ...dedupedNewGroups];

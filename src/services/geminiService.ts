@@ -20,6 +20,7 @@ import {
   type GroundedReasoningContext,
   type SourceMapFallbackTrace
 } from './groundingContextBuilder';
+import { extractAccountingContext } from './conversationAccountingState';
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -696,19 +697,17 @@ export async function processAccountingQuery(
     if (activeScenario?.transactionTitle) priorContextTexts.push(activeScenario.transactionTitle);
     if (activeScenario?.accountingTreatmentSummary) priorContextTexts.push(activeScenario.accountingTreatmentSummary);
 
-    const priorContextAmounts: number[] = [];
-    if (typeof activeScenario?.amount === 'number' && Number.isFinite(activeScenario.amount)) {
-      priorContextAmounts.push(activeScenario.amount);
+    const priorAmountsSet = new Set<number>();
+    if (typeof activeScenario?.amount === 'number' && Number.isFinite(activeScenario.amount) && activeScenario.amount > 0) {
+      priorAmountsSet.add(activeScenario.amount);
     }
     for (const g of (activeScenario?.committedDirectGroups || activeScenario?.directGroups || [])) {
-      if (typeof g.totalDebit === 'number' && Number.isFinite(g.totalDebit) && g.totalDebit > 0) {
-        priorContextAmounts.push(g.totalDebit);
-      }
       for (const l of (g.lines || [])) {
-        if (typeof l.debit === 'number' && l.debit > 0) priorContextAmounts.push(l.debit);
-        if (typeof l.credit === 'number' && l.credit > 0) priorContextAmounts.push(l.credit);
+        if (typeof l.debit === 'number' && l.debit > 0) priorAmountsSet.add(l.debit);
+        if (typeof l.credit === 'number' && l.credit > 0) priorAmountsSet.add(l.credit);
       }
     }
+    const priorContextAmounts: number[] = Array.from(priorAmountsSet);
 
     const isFollowUp = Boolean(
       activeScenario &&
@@ -723,6 +722,8 @@ export async function processAccountingQuery(
       ? groups.filter(g => !priorGroupIds.has(g.id))
       : groups;
 
+    const acctCtx = extractAccountingContext(activeScenario);
+
     let priorIntegrity = { isValid: true, issues: [] as any[] };
     if (priorCommitted && priorCommitted.length > 0) {
       priorIntegrity = validateJournalGroups(priorCommitted);
@@ -731,11 +732,12 @@ export async function processAccountingQuery(
     const newIntegrity = (newGroups.length > 0)
       ? validateJournalGroups(newGroups, {
           rawQuery: userInput,
-          hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
+          hasPriorContextAmount: isFollowUp && Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
           enforceAmountProvenance: liveProviderConfigured && !isFixture,
-          priorContextTexts,
-          priorContextAmounts,
-          isFollowUp
+          priorContextTexts: isFollowUp ? priorContextTexts : [],
+          priorContextAmounts: isFollowUp ? priorContextAmounts : [],
+          isFollowUp,
+          outstandingBalances: isFollowUp ? acctCtx.outstandingBalances : []
         })
       : { isValid: true, issues: [] };
 

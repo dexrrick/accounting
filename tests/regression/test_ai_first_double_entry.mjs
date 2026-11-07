@@ -1,8 +1,20 @@
 import assert from 'node:assert/strict';
 import { processAccountingQuery, isMeaningfulAIJsonPayload } from '../../src/services/geminiService.ts';
 import { repairAndParseAIJson } from '../../src/utils/jsonRepair.ts';
-import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
-import { postProcessAIResponse, normalizeAccountCategory, buildGroundedReasoningContext, formatGroundedSystemPrompt } from '../../src/services/groundingContextBuilder.ts';
+import {
+  validateJournalGroups,
+  inferAccountCategoryFromName,
+  getMandatoryCategory,
+  extractDerivableNumbers,
+  buildDerivableCents
+} from '../../src/verification/journalIntegrity.ts';
+import {
+  postProcessAIResponse,
+  normalizeAccountCategory,
+  buildGroundedReasoningContext,
+  formatGroundedSystemPrompt,
+  journalGroupFingerprint
+} from '../../src/services/groundingContextBuilder.ts';
 
 console.log('================================================================');
 console.log('🧪 RUNNING AI-FIRST DOUBLE-ENTRY ARCHITECTURE REGRESSION SUITE');
@@ -1319,6 +1331,711 @@ try {
     assert.equal(processed.scenarioState.isComplete, true, 'Balanced journal must mark scenario complete even with empty statutory evidence');
 
     console.log('✓ 7E. P2-B Journal completion independent of retrieved evidence verified (isComplete === true)');
+    passed++;
+  }
+
+  // --------------------------------------------------------------------------
+  // 8. Review Findings Regressions (Findings 1 through 6)
+  // --------------------------------------------------------------------------
+  console.log('\n--- 8. Review Findings Regressions (Findings 1 through 6) ---');
+
+  // 8A: Finding 1 — Small SGD currency amounts not mistaken for multiplication factors
+  {
+    const query = 'Purchased office equipment for S$100, paid by bank.';
+    const derivable = extractDerivableNumbers(query);
+    assert.deepEqual(derivable.monetaryOccurrences, [100], 'Monetary occurrences must contain exactly S$100');
+    assert.deepEqual(derivable.timeOrQuantityFactors, [], 'Currency amount S$100 must not be treated as a factor');
+
+    // AI proposes fabricated Dr Equipment S$10,000 / Cr Bank S$10,000
+    const fabGroups = [{
+      id: 'grp-fab-10k',
+      title: 'Office Equipment Purchase',
+      eventDate: '01/03/2025',
+      totalDebit: 10000,
+      totalCredit: 10000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Office Equipment', category: 'ASSET', debit: 10000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 10000 }
+      ]
+    }];
+    const vFab = validateJournalGroups(fabGroups, { rawQuery: query, enforceAmountProvenance: true });
+    assert.equal(vFab.isValid, false, 'Fabricated S$10,000 must fail validation');
+    assert.ok(vFab.issues.some(i => i.code === 'UNSTATED_AMOUNT'), 'Must emit UNSTATED_AMOUNT');
+
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Office Equipment Purchase',
+      directGroups: fabGroups
+    });
+    const res8A = await processAccountingQuery(query, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
+    assert.equal(res8A.scenarioState.directGroups?.length, 0, 'Fabricated amount entry must be rejected');
+    assert.match(res8A.messageText, /AI-Proposed Journal Rejected/i);
+
+    // Valid S$100 entry passes
+    const valid100Groups = [{
+      id: 'grp-val-100',
+      title: 'Office Equipment Purchase',
+      eventDate: '01/03/2025',
+      totalDebit: 100,
+      totalCredit: 100,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Office Equipment', category: 'ASSET', debit: 100, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 100 }
+      ]
+    }];
+    const vValid = validateJournalGroups(valid100Groups, { rawQuery: query, enforceAmountProvenance: true });
+    assert.equal(vValid.isValid, true, 'Valid S$100 journal must pass');
+
+    // Genuine quantity factor (5 laptops at S$100 each = S$500)
+    const laptopQuery = 'Purchased 5 laptops at S$100 each, paid by bank.';
+    const laptopDerivable = extractDerivableNumbers(laptopQuery);
+    assert.ok(laptopDerivable.timeOrQuantityFactors.includes(5), 'Factor 5 must be extracted');
+    const laptopGroups = [{
+      id: 'grp-laptop-500',
+      title: 'Laptop Purchase',
+      eventDate: '01/03/2025',
+      totalDebit: 500,
+      totalCredit: 500,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Office Equipment', category: 'ASSET', debit: 500, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+      ]
+    }];
+    const vLaptop = validateJournalGroups(laptopGroups, { rawQuery: laptopQuery, enforceAmountProvenance: true });
+    assert.equal(vLaptop.isValid, true, 'S$500 derived from 5 × S$100 must be valid');
+
+    // Genuine straight-line depreciation (S$12,000 over 5-year useful life = S$2,400)
+    const depQuery = 'Record 1 year of depreciation on S$12,000 equipment over 5-year useful life.';
+    const depDerivable = extractDerivableNumbers(depQuery);
+    assert.ok(depDerivable.timeOrQuantityFactors.includes(5), 'Useful life factor 5 must be extracted');
+    const depGroups = [{
+      id: 'grp-dep-2400',
+      title: 'Annual Depreciation',
+      eventDate: '31/12/2025',
+      totalDebit: 2400,
+      totalCredit: 2400,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Depreciation Expense', category: 'EXPENSE', debit: 2400, credit: 0 },
+        { accountName: 'Accumulated Depreciation', category: 'ASSET', debit: 0, credit: 2400 }
+      ]
+    }];
+    const vDep = validateJournalGroups(depGroups, { rawQuery: depQuery, enforceAmountProvenance: true });
+    assert.equal(vDep.isValid, true, 'S$2,400 derived from S$12,000 / 5 must be valid');
+
+    // Reviewer edge case 1: Suffix currency notations ("50 SGD", "100 dollars")
+    const suffixQuery = 'Purchased office stationery for 50 SGD on credit.';
+    const suffixDerivable = extractDerivableNumbers(suffixQuery);
+    assert.deepEqual(suffixDerivable.monetaryOccurrences, [50], '50 SGD must be extracted as monetary occurrence');
+    assert.deepEqual(suffixDerivable.timeOrQuantityFactors, [], '50 SGD must not be classified as a factor');
+
+    const dollarsQuery = 'Purchased supplies for 100 dollars on credit.';
+    const dollarsDerivable = extractDerivableNumbers(dollarsQuery);
+    assert.deepEqual(dollarsDerivable.monetaryOccurrences, [100], '100 dollars must be extracted as monetary occurrence');
+    assert.deepEqual(dollarsDerivable.timeOrQuantityFactors, [], '100 dollars must not be classified as a factor');
+
+    // Reviewer edge case 1b: Generic preposition without unit ("for 50 on credit")
+    const prepQuery = 'Purchased supplies for 50 on credit.';
+    const prepDerivable = extractDerivableNumbers(prepQuery);
+    assert.ok(!prepDerivable.timeOrQuantityFactors.includes(50), 'Generic preposition "for 50" without unit must not be factor');
+
+    console.log('✓ 8A. Finding 1 small SGD currency amount not mistaken for factor verified');
+    passed++;
+  }
+
+  // 8B: Finding 2 — Recurring journal entries preserved across turns
+  {
+    // 1. Recurring rent
+    const queryRent1 = 'Record January rent of S$2,000 paid by bank transfer.';
+    const ctxRent1 = await buildGroundedReasoningContext(queryRent1);
+    const grpRent1 = {
+      id: 'grp-rent-1',
+      eventDate: '31/01/2025',
+      title: 'Monthly Rent Payment',
+      lines: [
+        { accountName: 'Rent Expense', category: 'EXPENSE', debit: 2000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2000 }
+      ]
+    };
+    const pRent1 = postProcessAIResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Monthly Rent Payment',
+      directGroups: [grpRent1]
+    }, null, queryRent1, ctxRent1);
+    assert.equal(pRent1.scenarioState.directGroups?.length, 1);
+
+    const queryRent2 = 'Record February rent of S$2,000 paid by bank transfer.';
+    const ctxRent2 = await buildGroundedReasoningContext(queryRent2);
+    const grpRent2 = {
+      id: 'grp-rent-1', // Same group ID to test collision avoidance
+      eventDate: '28/02/2025',
+      title: 'Monthly Rent Payment',
+      lines: [
+        { accountName: 'Rent Expense', category: 'EXPENSE', debit: 2000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2000 }
+      ]
+    };
+    assert.notEqual(
+      journalGroupFingerprint(pRent1.scenarioState.directGroups[0]),
+      journalGroupFingerprint(grpRent2),
+      'Fingerprints for different dates must be distinct'
+    );
+    const pRent2 = postProcessAIResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Monthly Rent Payment',
+      directGroups: [grpRent2]
+    }, pRent1.scenarioState, queryRent2, ctxRent2);
+
+    assert.equal(pRent2.scenarioState.directGroups?.length, 2, 'Recurring rent must retain both January and February groups');
+    assert.equal(pRent2.scenarioState.committedDirectGroups?.length, 2);
+    assert.notEqual(pRent2.scenarioState.directGroups[0].id, pRent2.scenarioState.directGroups[1].id, 'Group IDs must be distinct');
+
+    // 2. Recurring payroll
+    const grpPay1 = {
+      id: 'grp-pay-1',
+      eventDate: '31/01/2025',
+      title: 'Monthly Payroll',
+      totalDebit: 5000,
+      totalCredit: 5000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Salaries and Wages', category: 'EXPENSE', debit: 5000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+      ]
+    };
+    const grpPay2 = {
+      id: 'grp-pay-1',
+      eventDate: '28/02/2025',
+      title: 'Monthly Payroll',
+      totalDebit: 5000,
+      totalCredit: 5000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Salaries and Wages', category: 'EXPENSE', debit: 5000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+      ]
+    };
+    assert.notEqual(journalGroupFingerprint(grpPay1), journalGroupFingerprint(grpPay2));
+
+    // 3. Recurring CPF
+    const grpCpf1 = {
+      id: 'grp-cpf-1',
+      eventDate: '14/02/2025',
+      title: 'CPF Remittance',
+      totalDebit: 1850,
+      totalCredit: 1850,
+      isBalanced: true,
+      lines: [
+        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1850 }
+      ]
+    };
+    const grpCpf2 = {
+      id: 'grp-cpf-1',
+      eventDate: '14/03/2025',
+      title: 'CPF Remittance',
+      totalDebit: 1850,
+      totalCredit: 1850,
+      isBalanced: true,
+      lines: [
+        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1850 }
+      ]
+    };
+    assert.notEqual(journalGroupFingerprint(grpCpf1), journalGroupFingerprint(grpCpf2));
+
+    // 4. Recurring depreciation
+    const grpDep1 = {
+      id: 'grp-dep-1',
+      eventDate: '31/12/2025',
+      title: 'Annual Depreciation',
+      totalDebit: 2400,
+      totalCredit: 2400,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Depreciation Expense', category: 'EXPENSE', debit: 2400, credit: 0 },
+        { accountName: 'Accumulated Depreciation', category: 'ASSET', debit: 0, credit: 2400 }
+      ]
+    };
+    const grpDep2 = {
+      id: 'grp-dep-1',
+      eventDate: '31/12/2026',
+      title: 'Annual Depreciation',
+      totalDebit: 2400,
+      totalCredit: 2400,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Depreciation Expense', category: 'EXPENSE', debit: 2400, credit: 0 },
+        { accountName: 'Accumulated Depreciation', category: 'ASSET', debit: 0, credit: 2400 }
+      ]
+    };
+    assert.notEqual(journalGroupFingerprint(grpDep1), journalGroupFingerprint(grpDep2));
+
+    // Reviewer edge case 2: Recurring entry in Turn 2 without explicit calendar date
+    const queryRentTurn1 = 'Record monthly rent of S$2,000 paid by bank transfer.';
+    const ctxRentTurn1 = await buildGroundedReasoningContext(queryRentTurn1);
+    const grpRentTurn1 = {
+      id: 'grp-rent',
+      eventDate: '01/01/2025',
+      title: 'Rent Payment',
+      lines: [
+        { accountName: 'Rent Expense', category: 'EXPENSE', debit: 2000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2000 }
+      ]
+    };
+    const pRentTurn1 = postProcessAIResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Rent Payment',
+      directGroups: [grpRentTurn1]
+    }, null, queryRentTurn1, ctxRentTurn1);
+    assert.equal(pRentTurn1.scenarioState.directGroups?.length, 1);
+
+    const queryRentTurn2 = 'Record another month of rent of S$2,000 paid by bank.';
+    const ctxRentTurn2 = await buildGroundedReasoningContext(queryRentTurn2);
+    // AI proposes single group with same eventDate and lines
+    const grpRentTurn2 = {
+      id: 'grp-rent',
+      eventDate: '01/01/2025',
+      title: 'Rent Payment',
+      lines: [
+        { accountName: 'Rent Expense', category: 'EXPENSE', debit: 2000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2000 }
+      ]
+    };
+    const pRentTurn2 = postProcessAIResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Rent Payment',
+      directGroups: [grpRentTurn2]
+    }, pRentTurn1.scenarioState, queryRentTurn2, ctxRentTurn2);
+    assert.equal(pRentTurn2.scenarioState.directGroups?.length, 2, 'Recurring rent without date must retain both Turn 1 and Turn 2');
+    assert.notEqual(pRentTurn2.scenarioState.directGroups[0].id, pRentTurn2.scenarioState.directGroups[1].id, 'Turn 2 group must receive distinct ID');
+
+    // Reviewer edge case 2b: AI echoes Turn 1 + includes Turn 2 in directGroups on recurring request
+    const pRentTurn2Echoed = postProcessAIResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Rent Payment',
+      directGroups: [grpRentTurn1, grpRentTurn2]
+    }, pRentTurn1.scenarioState, queryRentTurn2, ctxRentTurn2);
+    assert.equal(pRentTurn2Echoed.scenarioState.directGroups?.length, 2, 'Echoed history + recurring group must retain exactly 2 groups');
+
+    console.log('✓ 8B. Finding 2 recurring journal entries preserved across turns verified');
+    passed++;
+  }
+
+  // 8C: Finding 3 — Conditional payments and method-only follow-ups rejected
+  {
+    // Query 1: Leading "If" conditional
+    const q1 = 'If salaries payable of S$4,000 are paid by bank, record the settlement journal.';
+    const groups1 = [{
+      id: 'grp-sal-settle',
+      title: 'Settlement of Salaries Payable',
+      eventDate: '01/03/2025',
+      totalDebit: 4000,
+      totalCredit: 4000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
+      ]
+    }];
+    const v1 = validateJournalGroups(groups1, { rawQuery: q1 });
+    assert.equal(v1.isValid, false, 'Conditional "If" settlement must fail validation');
+    assert.ok(v1.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'), 'Must flag UNCONFIRMED_SETTLEMENT');
+
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Settlement of Salaries',
+      directGroups: groups1
+    });
+    const res8C1 = await processAccountingQuery(q1, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
+    assert.equal(res8C1.scenarioState.directGroups?.length, 0);
+    assert.match(res8C1.messageText, /AI-Proposed Journal Rejected/i);
+
+    // Query 2: "Unless" conditional
+    const q2 = 'Unless supplier invoice of S$2,500 is disputed, it is paid by bank transfer.';
+    const groups2 = [{
+      id: 'grp-supp-settle',
+      title: 'Supplier Settlement',
+      eventDate: '01/03/2025',
+      totalDebit: 2500,
+      totalCredit: 2500,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 2500, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2500 }
+      ]
+    }];
+    const v2 = validateJournalGroups(groups2, { rawQuery: q2 });
+    assert.equal(v2.isValid, false);
+    assert.ok(v2.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
+
+    // Query 3: Method-only follow-up ("By bank transfer.")
+    const q3 = 'By bank transfer.';
+    const v3 = validateJournalGroups(groups1, { rawQuery: q3, isFollowUp: true });
+    assert.equal(v3.isValid, false, 'Method-only follow-up must not establish settlement completion');
+    assert.ok(v3.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
+
+    // Reviewer edge case 3a: Compound sentence with one confirmed leg and one conditional leg
+    const compoundQuery = 'Salaries payable of S$4,000 were paid by bank; CPF payable of S$1,850 will be paid if approved.';
+    const confirmedSalariesGroup = [{
+      id: 'grp-sal',
+      title: 'Settlement of Salaries Payable',
+      eventDate: '01/03/2025',
+      totalDebit: 4000,
+      totalCredit: 4000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
+      ]
+    }];
+    const vConfirmed = validateJournalGroups(confirmedSalariesGroup, { rawQuery: compoundQuery });
+    assert.equal(vConfirmed.isValid, true, 'Confirmed leg in compound query must pass validation');
+
+    const conditionalCpfGroup = [{
+      id: 'grp-cpf',
+      title: 'Settlement of CPF Payable',
+      eventDate: '01/03/2025',
+      totalDebit: 1850,
+      totalCredit: 1850,
+      isBalanced: true,
+      lines: [
+        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1850 }
+      ]
+    }];
+    const vConditional = validateJournalGroups(conditionalCpfGroup, { rawQuery: compoundQuery });
+    assert.equal(vConditional.isValid, false, 'Conditional leg in compound query must fail validation');
+    assert.ok(vConditional.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT' && i.accountName === 'CPF Payable'));
+
+    // Reviewer edge case 3b: Additional contingent cues ("subject to approval")
+    const contingentQuery = 'Salaries payable of S$4,000 are subject to director approval before payment.';
+    const vContingent = validateJournalGroups(confirmedSalariesGroup, { rawQuery: contingentQuery });
+    assert.equal(vContingent.isValid, false, 'Contingent "subject to approval" settlement must fail validation');
+    assert.ok(vContingent.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
+
+    // Reviewer edge case 3c: Bare imperative instruction without completed verb
+    const bareImperativeQuery = 'Pay salaries payable of S$4,000 by bank.';
+    const vImperative = validateJournalGroups(confirmedSalariesGroup, { rawQuery: bareImperativeQuery });
+    assert.equal(vImperative.isValid, false, 'Bare imperative settlement without completed verb must fail confirmation');
+    assert.ok(vImperative.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
+
+    console.log('✓ 8C. Finding 3 conditional payments and method-only follow-ups rejected (UNCONFIRMED_SETTLEMENT)');
+    passed++;
+  }
+
+  // 8D: Finding 4 — Prior journal amounts cannot be self-added & settlement bounded by outstanding balance
+  {
+    // Turn 1 scenario state: Supplier payable of S$1,000 recognised
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Purchased inventory for S$1,000 on 30 days credit from supplier.',
+      transactionTitle: 'Inventory Purchase on Credit',
+      amount: 1000,
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-turn1-inv',
+        title: 'Inventory Purchase',
+        eventDate: '01/02/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }],
+      directGroups: [{
+        id: 'grp-turn1-inv',
+        title: 'Inventory Purchase',
+        eventDate: '01/02/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }]
+    };
+
+    // Turn 2: "We paid the supplier by bank."
+    // Rogue AI hallucinates Dr Trade Payables S$2,000 / Cr Cash at Bank S$2,000
+    const rogue2kGroups = [{
+      id: 'grp-turn2-pay',
+      title: 'Supplier Settlement',
+      eventDate: '15/02/2025',
+      totalDebit: 2000,
+      totalCredit: 2000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 2000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2000 }
+      ]
+    }];
+
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Settlement',
+      directGroups: rogue2kGroups
+    });
+
+    const res8D1 = await processAccountingQuery(
+      'We paid the supplier by bank.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res8D1.scenarioState.directGroups?.length, 1, 'Turn 2 rogue S$2,000 must be rejected and Turn 1 preserved');
+    assert.match(res8D1.messageText, /AI-Proposed Journal Rejected/i);
+
+    // Also test when Turn 2 mentions the S$1,000 amount explicitly: "We paid the S$1,000 supplier payable by bank."
+    const res8D2 = await processAccountingQuery(
+      'We paid the S$1,000 supplier payable by bank.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res8D2.scenarioState.directGroups?.length, 1, 'Restating S$1,000 in Turn 2 must not permit S$2,000 self-addition');
+    assert.match(res8D2.messageText, /AI-Proposed Journal Rejected/i);
+
+    // Valid S$1,000 full settlement is accepted
+    const valid1kGroups = [{
+      id: 'grp-turn2-pay-1k',
+      title: 'Supplier Settlement',
+      eventDate: '15/02/2025',
+      totalDebit: 1000,
+      totalCredit: 1000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 1000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1000 }
+      ]
+    }];
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Settlement',
+      directGroups: valid1kGroups
+    });
+    const res8D3 = await processAccountingQuery(
+      'We paid the supplier by bank.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res8D3.scenarioState.directGroups?.length, 2, 'Valid S$1,000 settlement must be accepted alongside Turn 1');
+
+    // Partial settlement of S$600 is also accepted
+    const valid600Groups = [{
+      id: 'grp-turn2-pay-600',
+      title: 'Partial Supplier Settlement',
+      eventDate: '15/02/2025',
+      totalDebit: 600,
+      totalCredit: 600,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+      ]
+    }];
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Partial Supplier Settlement',
+      directGroups: valid600Groups
+    });
+    const res8D4 = await processAccountingQuery(
+      'We paid S$600 to the supplier by bank.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res8D4.scenarioState.directGroups?.length, 2, 'Stated partial settlement S$600 must be accepted');
+
+    // Reviewer edge case 4a: Independent new transaction must not be polluted by prior turn amounts
+    const independentQuery = 'Purchased office equipment for S$500 by bank.';
+    const fabricatedPriorAmountGroup = [{
+      id: 'grp-fab-prior',
+      title: 'Equipment Purchase',
+      eventDate: '01/03/2025',
+      totalDebit: 1000, // Fabricates Turn 1's S$1,000 instead of current S$500
+      totalCredit: 1000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Office Equipment', category: 'ASSET', debit: 1000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1000 }
+      ]
+    }];
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Equipment Purchase',
+      directGroups: fabricatedPriorAmountGroup
+    });
+    const resIndependent = await processAccountingQuery(
+      independentQuery,
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resIndependent.scenarioState.directGroups?.length, 0, 'Independent transaction must reject fabricated prior amount');
+    assert.match(resIndependent.messageText, /AI-Proposed Journal Rejected/i);
+
+    // Reviewer edge case 4b: Stating a single amount in follow-up constrains 2-line journal to current amount
+    const followUpQuery = 'We paid S$600 to the supplier by bank.';
+    const roguePriorIn2LineGroup = [{
+      id: 'grp-rogue-2line',
+      title: 'Supplier Settlement',
+      eventDate: '15/02/2025',
+      totalDebit: 1000, // Contradicts single stated current turn amount of S$600
+      totalCredit: 1000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 1000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1000 }
+      ]
+    }];
+    const vRogue2Line = validateJournalGroups(roguePriorIn2LineGroup, {
+      rawQuery: followUpQuery,
+      enforceAmountProvenance: true,
+      priorContextAmounts: [1000],
+      isFollowUp: true
+    });
+    assert.equal(vRogue2Line.isValid, false, '2-line journal must not contradict single stated current turn amount');
+    assert.ok(vRogue2Line.issues.some(i => i.code === 'UNSTATED_AMOUNT'));
+
+    console.log('✓ 8D. Finding 4 self-addition across turns rejected & settlement bounded by outstanding balance');
+    passed++;
+  }
+
+  // 8E: Finding 5 — Account-category inference prioritises specific relationships & fails closed on ambiguity
+  {
+    assert.equal(inferAccountCategoryFromName('Loan Receivable'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Loans Receivable'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Director Loan Receivable'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Notes Receivable'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Interest Receivable'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Deferred Tax Asset'), 'ASSET');
+
+    // Misclassified Loan Receivable as LIABILITY fails validation with CATEGORY_MISMATCH
+    const misclassifiedGroups = [{
+      id: 'grp-loan-mis',
+      title: 'Loan Disbursed',
+      eventDate: '01/03/2025',
+      totalDebit: 5000,
+      totalCredit: 5000,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Loan Receivable', category: 'LIABILITY', debit: 5000, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+      ]
+    }];
+    const vMis = validateJournalGroups(misclassifiedGroups);
+    assert.equal(vMis.isValid, false);
+    assert.ok(vMis.issues.some(i => i.code === 'CATEGORY_MISMATCH' && i.accountName === 'Loan Receivable'));
+
+    // Ambiguous hybrid accounts fail closed (return undefined)
+    assert.equal(inferAccountCategoryFromName('Loan Receivable / Payable Clearing'), undefined);
+    assert.equal(inferAccountCategoryFromName('Custom Suspense Clearing'), undefined);
+
+    // Reviewer edge case 5a: Bare ambiguous loans without receivable/payable/direction fail closed
+    assert.equal(inferAccountCategoryFromName('Director Loan'), undefined, 'Bare "Director Loan" must return undefined');
+    assert.equal(inferAccountCategoryFromName('Staff Loan'), undefined, 'Bare "Staff Loan" must return undefined');
+    assert.equal(inferAccountCategoryFromName('Shareholder Loan'), undefined, 'Bare "Shareholder Loan" must return undefined');
+
+    // Reviewer edge case 5b: Bare ambiguous "Deposit" fails closed
+    assert.equal(inferAccountCategoryFromName('Deposit'), undefined, 'Bare "Deposit" must return undefined');
+    assert.equal(inferAccountCategoryFromName('Deposits'), undefined, 'Bare "Deposits" must return undefined');
+
+    // Reviewer edge case 5c: Explicit customer/tenant deposits and advances are LIABILITY
+    assert.equal(inferAccountCategoryFromName('Customer Deposit'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Customer Deposits'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Tenant Deposit'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Advances from Customers'), 'LIABILITY');
+    assert.equal(getMandatoryCategory('Customer Deposits'), 'LIABILITY');
+
+    // Reviewer edge case 5d: Explicit directional loans
+    assert.equal(inferAccountCategoryFromName('Director Loan Payable'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Loan from Director'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Loan from Shareholder'), 'LIABILITY');
+    assert.equal(inferAccountCategoryFromName('Loan to Director'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Loan to Staff'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Security Deposit'), 'ASSET');
+    assert.equal(inferAccountCategoryFromName('Rental Deposit'), 'ASSET');
+
+    const emptyCategoryGroups = [{
+      id: 'grp-ambig',
+      title: 'Suspense Entry',
+      eventDate: '01/03/2025',
+      totalDebit: 500,
+      totalCredit: 500,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Custom Suspense Clearing', category: '', debit: 500, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+      ]
+    }];
+    const vAmbig = validateJournalGroups(emptyCategoryGroups);
+    assert.equal(vAmbig.isValid, false);
+    assert.ok(vAmbig.issues.some(i => i.code === 'INVALID_LINE'));
+
+    console.log('✓ 8E. Finding 5 account-category inference specific relationships & fail-closed verified');
+    passed++;
+  }
+
+  // 8F: Finding 6 — Bounded amount-validation complexity benchmark
+  {
+    const lengthyQuery = 'Settlement of January rent S$3,500, office supplies S$450, and 9% GST over 12 months with S$150 deposit.';
+    const priorTexts = [
+      'Purchased equipment for S$24,000 with 5-year useful life.',
+      'Recognised payroll of S$8,000 and employer CPF of S$1,360.',
+      'Purchased inventory of S$12,500 subject to 9% GST on credit.',
+      'Paid supplier S$5,000 by bank transfer on 30-day terms.'
+    ];
+    const priorAmounts = [24000, 8000, 1360, 12500, 5000, 150, 450, 3500];
+
+    const t0 = performance.now();
+    const derivable = extractDerivableNumbers(lengthyQuery, priorTexts, priorAmounts);
+    const derivedCents = buildDerivableCents(
+      derivable.baseNumbers,
+      derivable.statedPercentages,
+      priorAmounts,
+      {
+        monetaryOccurrences: derivable.monetaryOccurrences,
+        timeOrQuantityFactors: derivable.timeOrQuantityFactors,
+        allCombinedText: derivable.allCombinedText
+      }
+    );
+    const groupsToValidate = [{
+      id: 'grp-bench',
+      title: 'Benchmark Group',
+      eventDate: '01/03/2025',
+      totalDebit: 3500,
+      totalCredit: 3500,
+      isBalanced: true,
+      lines: [
+        { accountName: 'Rent Expense', category: 'EXPENSE', debit: 3500, credit: 0 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 3500 }
+      ]
+    }];
+    const vResult = validateJournalGroups(groupsToValidate, {
+      rawQuery: lengthyQuery,
+      enforceAmountProvenance: true,
+      priorContextTexts: priorTexts,
+      priorContextAmounts: priorAmounts,
+      isFollowUp: true
+    });
+    const elapsedMs = performance.now() - t0;
+
+    assert.ok(vResult.isValid, 'Benchmark entry must be valid');
+    assert.ok(derivedCents.size > 0, 'Derived cents set must be populated');
+    assert.ok(derivedCents.has(29167), 'Time fraction S$3,500 / 12 = 291.67 must be derived without starvation');
+    assert.ok(elapsedMs < 50, `Execution time (${elapsedMs.toFixed(2)}ms) must be strictly below 50ms budget`);
+
+    console.log(`✓ 8F. Finding 6 bounded complexity benchmark completed in ${elapsedMs.toFixed(2)}ms (< 50ms budget)`);
     passed++;
   }
 
