@@ -715,14 +715,34 @@ export async function processAccountingQuery(
       assessConversationRelation(userInput, activeScenario) !== 'NEW'
     );
 
-    const integrity = validateJournalGroups(groups, {
-      rawQuery: userInput,
-      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
-      enforceAmountProvenance: liveProviderConfigured && !isFixture,
-      priorContextTexts,
-      priorContextAmounts,
-      isFollowUp
-    });
+    const priorCommitted = activeScenario?.committedDirectGroups ||
+      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+
+    const priorGroupIds = new Set((priorCommitted || []).map(g => g.id));
+    const newGroups = (priorCommitted && priorCommitted.length > 0)
+      ? groups.filter(g => !priorGroupIds.has(g.id))
+      : groups;
+
+    let priorIntegrity = { isValid: true, issues: [] as any[] };
+    if (priorCommitted && priorCommitted.length > 0) {
+      priorIntegrity = validateJournalGroups(priorCommitted);
+    }
+
+    const newIntegrity = (newGroups.length > 0)
+      ? validateJournalGroups(newGroups, {
+          rawQuery: userInput,
+          hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length),
+          enforceAmountProvenance: liveProviderConfigured && !isFixture,
+          priorContextTexts,
+          priorContextAmounts,
+          isFollowUp
+        })
+      : { isValid: true, issues: [] };
+
+    const integrity = {
+      isValid: priorIntegrity.isValid && newIntegrity.isValid,
+      issues: [...priorIntegrity.issues, ...newIntegrity.issues]
+    };
     if (integrity.isValid) return response;
 
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
@@ -756,15 +776,12 @@ export async function processAccountingQuery(
           whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines, account categories, and totals are valid and balance to the cent.'
         };
 
-    const priorCommitted = activeScenario?.committedDirectGroups ||
-      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
-
     return {
       ...response,
       messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
       scenarioState: {
         ...response.scenarioState,
-        directGroups: [],
+        directGroups: priorCommitted || [],
         committedDirectGroups: priorCommitted,
         projectedGroups: [],
         isComplete: false,
@@ -2088,9 +2105,15 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       }
 
       const strippedStreamJson = rawJsonText.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-      if (streamFinishReason === 'MAX_TOKENS' || !strippedStreamJson.endsWith('}')) {
+      let parsedStream: any;
+      try {
+        parsedStream = repairAndParseAIJson(rawJsonText);
+      } catch {
+        parsedStream = null;
+      }
+      if (streamFinishReason === 'MAX_TOKENS' || !strippedStreamJson.endsWith('}') || !isMeaningfulAIJsonPayload(parsedStream, rawJsonText)) {
         rawJsonText = '';
-        throw new Error('Streaming response truncated before JSON completion');
+        throw new Error('Streaming response produced incomplete or malformed JSON');
       }
     } else {
       throw new Error(`Streaming response returned ${streamRes.status}`);
@@ -2238,7 +2261,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       } else {
         const priorCommitted = currentScenario?.committedDirectGroups ||
           (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
-        result.scenarioState.directGroups = [];
+        result.scenarioState.directGroups = priorCommitted || [];
         result.scenarioState.committedDirectGroups = priorCommitted;
         result.scenarioState.projectedGroups = [];
         result.scenarioState.isComplete = false;

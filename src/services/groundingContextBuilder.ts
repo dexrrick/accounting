@@ -40,6 +40,7 @@ import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retr
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
+import { inferAccountCategoryFromName } from '../verification/journalIntegrity';
 import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
 import {
   buildSemanticDiscoveryQuery,
@@ -2516,14 +2517,24 @@ Return pure JSON only.
 /**
  * Pure helper to normalize account category strings returned by AI providers
  * to canonical IFRS / SFRS(I) AccountCategory elements or preserve unknown strings for validation.
+ * If raw is missing/empty, attempts to infer the category from accountName using inferAccountCategoryFromName.
+ * Returns empty string if category cannot be established, allowing validation to fail closed.
  */
-export function normalizeAccountCategory(raw: unknown): AccountCategory {
+export function normalizeAccountCategory(raw: unknown, accountName?: string): AccountCategory {
   if (raw === undefined || raw === null || raw === '') {
-    return 'ASSET';
+    if (accountName && typeof accountName === 'string' && accountName.trim()) {
+      const inferred = inferAccountCategoryFromName(accountName);
+      if (inferred) return inferred;
+    }
+    return '' as AccountCategory;
   }
   const str = String(raw).trim();
   if (!str) {
-    return 'ASSET';
+    if (accountName && typeof accountName === 'string' && accountName.trim()) {
+      const inferred = inferAccountCategoryFromName(accountName);
+      if (inferred) return inferred;
+    }
+    return '' as AccountCategory;
   }
   const upper = str.toUpperCase();
   switch (upper) {
@@ -2569,6 +2580,21 @@ export function normalizeAccountCategory(raw: unknown): AccountCategory {
     default:
       return str as AccountCategory;
   }
+}
+
+/**
+ * Computes a deterministic canonical fingerprint for a journal entry group
+ * based on its title, debit/credit totals, and sorted line contents.
+ */
+export function journalGroupFingerprint(g: JournalEntryGroup): string {
+  const title = (g.title || '').trim().toLowerCase();
+  const dr = Math.round((g.totalDebit || 0) * 100);
+  const cr = Math.round((g.totalCredit || 0) * 100);
+  const linesSig = (g.lines || [])
+    .map(l => `${(l.accountName || '').trim().toLowerCase()}:${(l.category || '').trim().toUpperCase()}:${Math.round((l.debit || 0) * 100)}:${Math.round((l.credit || 0) * 100)}`)
+    .sort()
+    .join('|');
+  return `${title}#${dr}#${cr}#${linesSig}`;
 }
 
 /**
@@ -2644,7 +2670,7 @@ export function postProcessAIResponse(
       functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
       transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
       accountingTreatmentSummary: explanation || undefined,
-      directGroups: [],
+      directGroups: priorCommittedGroups || [],
       committedDirectGroups: priorCommittedGroups,
       isComplete: false,
       missingFields,
@@ -2829,7 +2855,7 @@ export function postProcessAIResponse(
         id: l.id || `line-${gIdx}-${lIdx}`,
         accountCode: l.accountCode || '1000',
         accountName: l.accountName || 'Account',
-        category: normalizeAccountCategory(l.category),
+        category: normalizeAccountCategory(l.category, l.accountName),
         debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
         credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
         foreignCurrency: l.foreignCurrency,
@@ -2903,19 +2929,35 @@ export function postProcessAIResponse(
   let committedDirectGroups: JournalEntryGroup[] | undefined;
 
   if (isFollowUpRelation && currentScenario) {
-    const priorCommitted = currentScenario.committedDirectGroups ||
-      (currentScenario.isComplete ? (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : []);
+    const priorCommitted = (currentScenario.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+      ? currentScenario.committedDirectGroups
+      : ((currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0));
 
     if (priorCommitted.length > 0 && directGroups.length > 0) {
-      const alreadyIncludesPrior = directGroups.some(g => g.id === priorCommitted[0].id);
-      if (!alreadyIncludesPrior) {
-        committedDirectGroups = [...priorCommitted, ...directGroups];
-        directGroups = [...priorCommitted, ...directGroups];
-      } else {
-        committedDirectGroups = directGroups;
-      }
+      const priorFingerprints = new Set(priorCommitted.map(journalGroupFingerprint));
+      const priorIds = new Set(priorCommitted.map(p => p.id));
+
+      // Deduplicate groups that are exact repetitions of a prior committed group
+      // and ensure distinct group IDs for new groups
+      const dedupedNewGroups = directGroups
+        .filter(grp => !priorFingerprints.has(journalGroupFingerprint(grp)))
+        .map((grp, gIdx) => {
+          if (priorIds.has(grp.id)) {
+            return {
+              ...grp,
+              id: `grp-turn-${priorCommitted.length + gIdx + 1}`
+            };
+          }
+          return grp;
+        });
+
+      committedDirectGroups = [...priorCommitted, ...dedupedNewGroups];
+      directGroups = [...priorCommitted, ...dedupedNewGroups];
     } else if (directGroups.length > 0) {
       committedDirectGroups = directGroups;
+    } else if (priorCommitted.length > 0) {
+      committedDirectGroups = priorCommitted;
+      directGroups = priorCommitted;
     }
   } else if (directGroups.length > 0) {
     committedDirectGroups = directGroups;
@@ -3068,7 +3110,10 @@ export function postProcessAIResponse(
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
     ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
     semanticUnderstanding: groundedContext.semanticUnderstanding || currentScenario?.semanticUnderstanding,
-    isComplete: groundedContext.missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
+    isComplete: groundedContext.missingFacts.length === 0 && (
+      (isAiFirstSchema && directGroups.length > 0 && directGroups.every(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0 && g.lines && g.lines.length >= 2)) ||
+      retrievedEvidenceScope.length > 0
+    ),
     missingFields: []
   };
 

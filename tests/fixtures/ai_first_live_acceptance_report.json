@@ -1,0 +1,393 @@
+{
+  "timestamp": "2026-11-07T10:12:21.636Z",
+  "totalCases": 13,
+  "passedCases": 13,
+  "cases": [
+    {
+      "caseId": "case-1",
+      "name": "Finding A: Bare Nominal Settlement Phrase Refusal",
+      "query": "Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank transfer.",
+      "latencyMs": 9293,
+      "isComplete": false,
+      "directGroupsCount": 0,
+      "groupIds": [],
+      "groupsSummary": []
+    },
+    {
+      "caseId": "case-2",
+      "name": "Finding B: Multi-Event Unstated Rent Refusal",
+      "query": "Salaries payable S$4,000 and CPF payable S$1,850 were paid by bank; rent was paid by bank transfer.",
+      "latencyMs": 4191,
+      "isComplete": false,
+      "directGroupsCount": 0,
+      "groupIds": [],
+      "groupsSummary": []
+    },
+    {
+      "caseId": "case-3",
+      "name": "Finding C: Exact Decimals & Future Leg Schedule",
+      "query": "Salaries payable S$4,000.50 paid by bank, CPF payable S$1,850.25 will be paid by bank next week.",
+      "latencyMs": 5806,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Payment of Salaries Payable",
+          "totalDebit": 4000.5,
+          "totalCredit": 4000.5,
+          "lines": [
+            {
+              "accountName": "Salaries Payable",
+              "category": "LIABILITY",
+              "debit": 4000.5,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 4000.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-4a",
+      "name": "Finding D: Mixed Accrual Followed by Partial Settlement & Future Leg",
+      "query": "We accrued monthly staff salaries of S$4,000 and employer CPF contributions of S$1,850 for January 2025, both unpaid at month-end. -> Salaries payable of S$4,000 were paid by bank transfer today, while CPF payable of S$1,850 will be paid by bank next week.",
+      "latencyMs": 15361,
+      "isComplete": true,
+      "directGroupsCount": 2,
+      "groupIds": [
+        "grp-1",
+        "grp-turn-2"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Accrual of January 2025 Salaries and Employer CPF",
+          "totalDebit": 5850,
+          "totalCredit": 5850,
+          "lines": [
+            {
+              "accountName": "Salaries and Wages Expense",
+              "category": "EXPENSE",
+              "debit": 4000,
+              "credit": 0
+            },
+            {
+              "accountName": "CPF Contributions Expense",
+              "category": "EXPENSE",
+              "debit": 1850,
+              "credit": 0
+            },
+            {
+              "accountName": "Salaries Payable",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 4000
+            },
+            {
+              "accountName": "CPF Payable",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 1850
+            }
+          ]
+        },
+        {
+          "id": "grp-turn-2",
+          "title": "Settlement of January 2025 Salaries Payable",
+          "totalDebit": 4000,
+          "totalCredit": 4000,
+          "lines": [
+            {
+              "accountName": "Salaries Payable",
+              "category": "LIABILITY",
+              "debit": 4000,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 4000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-4b",
+      "name": "Finding D: Machinery Acquisition followed by Partial Settlement",
+      "query": "We acquired machinery on credit from TechMach Ltd for S$15,000 on 10/01/2025. -> On 25/01/2025, we paid TechMach Ltd S$9,000 by bank transfer as partial settlement.",
+      "latencyMs": 9516,
+      "isComplete": true,
+      "directGroupsCount": 2,
+      "groupIds": [
+        "grp-1",
+        "grp-turn-2"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Recognition of Machinery Purchase on Credit",
+          "totalDebit": 15000,
+          "totalCredit": 15000,
+          "lines": [
+            {
+              "accountName": "Machinery",
+              "category": "ASSET",
+              "debit": 15000,
+              "credit": 0
+            },
+            {
+              "accountName": "Trade Payables",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 15000
+            }
+          ]
+        },
+        {
+          "id": "grp-turn-2",
+          "title": "Partial Settlement of Trade Payables",
+          "totalDebit": 9000,
+          "totalCredit": 9000,
+          "lines": [
+            {
+              "accountName": "Trade Payables",
+              "category": "LIABILITY",
+              "debit": 9000,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 9000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-5",
+      "name": "Novel Scenario 1: Hire Purchase Acquisition",
+      "query": "Acquired a delivery van for S$50,000 on hire purchase, paying S$10,000 deposit from bank account with S$40,000 balance under hire purchase agreement.",
+      "latencyMs": 21345,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Recognition of Delivery Van and Hire Purchase Liability",
+          "totalDebit": 50000,
+          "totalCredit": 50000,
+          "lines": [
+            {
+              "accountName": "Motor Vehicles",
+              "category": "ASSET",
+              "debit": 50000,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 10000
+            },
+            {
+              "accountName": "Hire Purchase Liability",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 40000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-6",
+      "name": "Novel Scenario 2: SFRS(I) 16 Lease Initial Recognition",
+      "query": "Entered into a 3-year office lease commencing 01/01/2025 with annual payments of S$30,000 at year-end. Present value of lease payments is S$81,697 at incremental borrowing rate of 5%. Record initial recognition.",
+      "latencyMs": 9425,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Initial Recognition of Right-of-Use Asset and Lease Liability",
+          "totalDebit": 81697,
+          "totalCredit": 81697,
+          "lines": [
+            {
+              "accountName": "Right-of-Use Asset",
+              "category": "ASSET",
+              "debit": 81697,
+              "credit": 0
+            },
+            {
+              "accountName": "Lease Liability",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 81697
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-7",
+      "name": "Novel Scenario 3: Intercompany Recharge",
+      "query": "Parent company paid S$12,000 audit fee on behalf of subsidiary via bank transfer. Record the intercompany recharge in parent's books.",
+      "latencyMs": 9533,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Recording intercompany recharge of audit fee",
+          "totalDebit": 12000,
+          "totalCredit": 12000,
+          "lines": [
+            {
+              "accountName": "Amount Due from Subsidiary",
+              "category": "ASSET",
+              "debit": 12000,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 12000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-8",
+      "name": "Novel Scenario 4: SFRS(I) 1-12 Deferred Tax Provision",
+      "query": "Provide for deferred tax liability of S$5,100 on accelerated depreciation temporary difference of S$30,000 at 17% under SFRS(I) 1-12.",
+      "latencyMs": 17685,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Deferred Tax Liability Recognition",
+          "totalDebit": 5100,
+          "totalCredit": 5100,
+          "lines": [
+            {
+              "accountName": "Deferred Tax Expense",
+              "category": "EXPENSE",
+              "debit": 5100,
+              "credit": 0
+            },
+            {
+              "accountName": "Deferred Tax Liability",
+              "category": "LIABILITY",
+              "debit": 0,
+              "credit": 5100
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-9",
+      "name": "Novel Scenario 5: Multi-Line PPE Disposal with Gain (CAT-11)",
+      "query": "Sold equipment for S$22,000 cash at bank. Original cost was S$80,000, and accumulated depreciation up to the date of disposal was S$62,000. Prepare the disposal journal entry.",
+      "latencyMs": 8253,
+      "isComplete": true,
+      "directGroupsCount": 1,
+      "groupIds": [
+        "grp-1"
+      ],
+      "groupsSummary": [
+        {
+          "id": "grp-1",
+          "title": "Disposal of Equipment and Recognition of Gain",
+          "totalDebit": 84000,
+          "totalCredit": 84000,
+          "lines": [
+            {
+              "accountName": "Accumulated Depreciation - Equipment",
+              "category": "ASSET",
+              "debit": 62000,
+              "credit": 0
+            },
+            {
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 22000,
+              "credit": 0
+            },
+            {
+              "accountName": "Property, Plant and Equipment",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 80000
+            },
+            {
+              "accountName": "Gain on Disposal of Equipment",
+              "category": "REVENUE",
+              "debit": 0,
+              "credit": 4000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "caseId": "case-10",
+      "name": "Missing Fact Refusal: No Silent Fabrication",
+      "query": "We purchased machinery from a supplier on credit.",
+      "latencyMs": 4268,
+      "isComplete": false,
+      "directGroupsCount": 0,
+      "groupIds": [],
+      "groupsSummary": []
+    },
+    {
+      "caseId": "case-11",
+      "name": "Statutory Advisory Boundary: Employment Act Part IV",
+      "query": "What are the statutory annual leave and outpatient sick leave entitlements under Part IV of the Singapore Employment Act?",
+      "latencyMs": 6861,
+      "isComplete": true,
+      "directGroupsCount": 0,
+      "groupIds": [],
+      "groupsSummary": []
+    },
+    {
+      "caseId": "case-12",
+      "name": "Adversarial Subject-First Future Payment Refusal",
+      "query": "Salaries payable S$4,000 will be paid by bank next week.",
+      "latencyMs": 13148,
+      "isComplete": true,
+      "directGroupsCount": 0,
+      "groupIds": [],
+      "groupsSummary": []
+    }
+  ]
+}

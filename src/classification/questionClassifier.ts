@@ -649,7 +649,7 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   }
 
   // Lease missing facts (only for active lease scenarios, not conceptual questions like "What is a lease under SFRS(I) 16?")
-  if (!isPureConceptualQuery && (q.includes('rental agreement') || q.includes('lease agreement') || q.includes('renting') || q.includes('paying') || (q.includes('lease') && (/\d+/.test(q) || q.includes('term') || asksForEntries)))) {
+  if (!isPureConceptualQuery && (q.includes('rental agreement') || q.includes('lease agreement') || q.includes('renting') || (/\b(?:lease|leasing|leases)\b/i.test(q) && (/\d+/.test(q) || q.includes('term') || q.includes('paying') || asksForEntries)))) {
     if (!q.includes('discount rate') && !q.includes('borrowing rate') && !q.includes('interest rate') && !q.includes('%')) {
       missingFacts.push('Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26');
     }

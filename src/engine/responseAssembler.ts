@@ -9,6 +9,7 @@ import type {
   JournalAuthorityStatus
 } from '../types/accounting';
 import type { GroundedReasoningContext, GroundingEvidenceTrace, SourceMapFallbackTrace } from '../services/groundingContextBuilder';
+import { normalizeAccountCategory } from '../services/groundingContextBuilder';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
@@ -505,7 +506,7 @@ export function assembleDeterministicResponse(
         id: l.id || `l-${idx}-${lIdx}`,
         accountCode: l.accountCode || '1000',
         accountName: l.accountName || 'Account',
-        category: l.category || 'ASSET',
+        category: normalizeAccountCategory(l.category, l.accountName),
         debit: typeof l.debit === 'number' ? Math.round(l.debit * 100) / 100 : 0,
         credit: typeof l.credit === 'number' ? Math.round(l.credit * 100) / 100 : 0,
         foreignCurrency: l.foreignCurrency,
@@ -1129,7 +1130,10 @@ export function assembleDeterministicResponse(
     projectedMeasurementBasis: resolvedProjectedBasis,
     underlyingTransaction: resolvedUnderlyingTx,
     classification: (resolvedProjectedBasis || resolvedActualBasis) as any,
-    isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
+    isComplete: !hasPendingValuation && missingFacts.length === 0 && (
+      (directGroups.length > 0 && directGroups.every(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0 && g.lines && g.lines.length >= 2)) ||
+      retrievedEvidenceScope.length > 0
+    ),
     missingFields: []
   };
 

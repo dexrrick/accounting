@@ -221,6 +221,78 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   return undefined;
 }
 
+/**
+ * Infers the canonical AccountCategory from an account name using mandatory dictionary rules
+ * and standard accounting taxonomy regex patterns. Returns undefined if the account name cannot
+ * be unambiguously resolved.
+ */
+export function inferAccountCategoryFromName(accountName: string): AccountCategory | undefined {
+  if (!accountName || typeof accountName !== 'string') return undefined;
+  const direct = getMandatoryCategory(accountName);
+  if (direct) return direct;
+
+  const n = accountName.trim().toLowerCase();
+
+  // Liability patterns
+  if (
+    /\b(?:payable|payables|liability|liabilities|accrued|unearned|deferred\s+revenue|deferred\s+income|deferred\s+tax\s+liabilit\w*|provision|provisions|loan|loans|borrowings?|hire\s+purchase\s+(?:liabilit\w*|creditor\w*)|lease\s+liabilit\w*|due\s+to|creditor\w*|output\s+gst|gst\s+payable|tax\s+payable|cpf\s+payable|salaries\s+payable|wages\s+payable|bonds?\s+payable|notes?\s+payable|overdraft)\b/i.test(n)
+  ) {
+    return 'LIABILITY';
+  }
+
+  // Equity patterns
+  if (
+    !n.includes('unpaid') &&
+    !n.includes('receivable') &&
+    !n.includes('due from') &&
+    !n.includes('income') &&
+    !n.includes('revenue') &&
+    /\b(?:share\s+capital|ordinary\s+shares?|preference\s+shares?|retained\s+earnings|accumulated\s+profits?|capital\s+reserve|translation\s+reserve|fair\s+value\s+reserve|revaluation\s+reserve|hedging\s+reserve|other\s+reserves?|treasury\s+shares|share\s+buyback\s+reserve|owner'?s?\s+capital|owner'?s?\s+equity|owner'?s?\s+drawings|drawings|dividends?\s+declared)\b/i.test(n)
+  ) {
+    return 'EQUITY';
+  }
+
+  // Revenue patterns
+  if (
+    !n.startsWith('unearned') &&
+    !n.startsWith('deferred') &&
+    !n.includes('receivable') &&
+    !n.startsWith('accrued') &&
+    /\b(?:revenue|sales|service\s+income|fee\s+income|management\s+fee\s+income|interest\s+income|dividend\s+income|rental\s+income|other\s+income|discount\s+received|gain\s+on)\b/i.test(n)
+  ) {
+    return 'REVENUE';
+  }
+
+  // Expense patterns
+  if (
+    !n.startsWith('prepaid') &&
+    !n.startsWith('accrued') &&
+    !n.includes('payable') &&
+    !n.includes('liability') &&
+    !n.includes('accumulated') &&
+    !n.includes('allowance') &&
+    !n.includes('provision') &&
+    !n.includes('deferred tax') &&
+    /\b(?:expense|expenses|cost\s+of\s+goods\s+sold|cost\s+of\s+sales|cogs|depreciation|amortisation|amortization|impairment\s+loss|expected\s+credit\s+loss\w*|bad\s+debts?|discount\s+allowed|loss\s+on|salaries\s+and\s+wages|staff\s+costs?|employer\s+cpf|audit\s+fees?|legal\s+fees?|professional\s+fees?|bank\s+charges?|finance\s+costs?|interest\s+expense|rent|utilities|repairs?\s+and\s+maintenance|insurance)\b/i.test(n)
+  ) {
+    return 'EXPENSE';
+  }
+
+  // Asset patterns
+  if (
+    /\b(?:cash|bank|current\s+account|petty\s+cash|receivable|receivables|debtors?|inventory|inventories|stock|prepaid|prepayments?|deposit|deposits|equipment|machinery|motor\s+vehicles?|delivery\s+van|furniture|fixtures|buildings?|land|property,\s*plant|right-of-use|rou\s+asset|intangible|software|patent|goodwill|investment|financial\s+asset|deferred\s+tax\s+asset|input\s+gst|tax\s+recoverable|due\s+from|accumulated\s+depreciation|accumulated\s+amorti[sz]ation|loss\s+allowance|allowance\s+for\s+(?:doubtful|impairment|expected\s+credit))\b/i.test(n)
+  ) {
+    return 'ASSET';
+  }
+
+  // OCI patterns
+  if (/\b(?:other\s+comprehensive\s+income|oci)\b/i.test(n)) {
+    return 'OTHER_COMPREHENSIVE_INCOME';
+  }
+
+  return undefined;
+}
+
 export interface ValidateJournalGroupsOptions {
   rawQuery?: string;
   hasPriorContextAmount?: boolean;
@@ -249,61 +321,141 @@ export function stripNonMonetaryTokens(text: string): string {
     .replace(/\b(?:GL|code|account)\s*#?\s*\d{3,5}\b/gi, ' ');
 }
 
+export interface DerivableNumbersResult {
+  baseNumbers: number[];
+  monetaryOccurrences: number[];
+  timeOrQuantityFactors: number[];
+  statedPercentages: number[];
+  allCombinedText: string;
+}
+
 export function extractDerivableNumbers(
   rawQuery: string,
   priorContextTexts: string[] = [],
   priorContextAmounts: number[] = []
-): { baseNumbers: number[]; statedPercentages: number[]; allCombinedText: string } {
+): DerivableNumbersResult {
   const strippedQuery = stripNonMonetaryTokens(rawQuery || '');
   const strippedPrior = priorContextTexts.map(t => stripNonMonetaryTokens(t || ''));
   const allTexts = [strippedQuery, ...strippedPrior];
   const allCombinedText = allTexts.join(' ');
 
-  const numbers: number[] = [...priorContextAmounts];
+  const monetaryOccurrences: number[] = [];
+  const timeOrQuantityFactors: number[] = [];
 
-  for (const text of allTexts) {
-    if (/\b50\s*cents?\b|\bhalf\s+a\s+dollar\b/i.test(text)) numbers.push(0.5);
-    if (/\b(?:one|a)\s+dollar\b/i.test(text)) numbers.push(1);
-    if (/\btwo\s+dollars\b/i.test(text)) numbers.push(2);
-
-    // cents: (\d+(?:\.\d+)?)\s*cents?
-    const centsMatches = text.matchAll(/\b(\d+(?:\.\d+)?)\s*cents?\b/gi);
-    for (const m of centsMatches) {
-      const val = parseFloat(m[1]);
-      if (Number.isFinite(val) && val > 0) numbers.push(val / 100);
-    }
-
-    // k / thousand
-    const kMatches = text.matchAll(/\b(\d+(?:\.\d+)?)\s*(?:k|thousand)\b/gi);
-    for (const m of kMatches) {
-      const val = parseFloat(m[1].replace(/,/g, ''));
-      if (Number.isFinite(val) && val > 0) numbers.push(val * 1000);
-    }
-
-    // m / million
-    const mMatches = text.matchAll(/\b(\d+(?:\.\d+)?)\s*(?:m|million)\b/gi);
-    for (const m of mMatches) {
-      const val = parseFloat(m[1].replace(/,/g, ''));
-      if (Number.isFinite(val) && val > 0) numbers.push(val * 1000000);
-    }
-
-    // general monetary & numeric values
-    const numMatches = text.matchAll(/(?:\b|\$|SGD|S\$|\bS\$)(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\b/gi);
-    for (const m of numMatches) {
-      const cleanStr = m[1].replace(/,/g, '');
-      const val = parseFloat(cleanStr);
-      if (Number.isFinite(val) && val > 0) {
-        numbers.push(val);
-      }
+  for (const amt of priorContextAmounts) {
+    if (typeof amt === 'number' && Number.isFinite(amt) && amt > 0) {
+      monetaryOccurrences.push(amt);
     }
   }
 
-  // Raw integers from strippedQuery (1..365)
-  const intMatches = strippedQuery.matchAll(/\b([1-9]\d{0,2})\b/g);
-  for (const m of intMatches) {
-    const val = parseInt(m[1], 10);
-    if (val >= 1 && val <= 365) {
-      numbers.push(val);
+  for (const text of allTexts) {
+    if (!text) continue;
+
+    // Track matched spans [start, end] within this text to avoid double-counting same token
+    const matchedSpans: Array<{ start: number; end: number }> = [];
+    const isSpanOverlapping = (start: number, end: number) => {
+      return matchedSpans.some(span => Math.max(start, span.start) < Math.min(end, span.end));
+    };
+    const addSpan = (start: number, end: number) => {
+      matchedSpans.push({ start, end });
+    };
+
+    interface ExtractedCandidate {
+      val: number;
+      start: number;
+      end: number;
+      hasCurrencyPrefix: boolean;
+      hasDecimal: boolean;
+      rawStr: string;
+    }
+    const candidates: ExtractedCandidate[] = [];
+
+    // 1) Word phrases: 50 cents, half a dollar, one dollar, two dollars
+    const phraseRegex = /\b(?:50\s*cents?|half\s+a\s+dollar|one\s+dollar|a\s+dollar|two\s+dollars)\b/gi;
+    for (const m of text.matchAll(phraseRegex)) {
+      const start = m.index!;
+      const end = start + m[0].length;
+      if (!isSpanOverlapping(start, end)) {
+        addSpan(start, end);
+        const lower = m[0].toLowerCase();
+        const val = (lower.includes('50') || lower.includes('half')) ? 0.5 : (lower.includes('two') ? 2 : 1);
+        candidates.push({ val, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0] });
+      }
+    }
+
+    // 2) cents matches: (\d+(?:\.\d+)?)\s*cents?\b
+    const centsMatches = text.matchAll(/\b(\d+(?:\.\d+)?)\s*cents?\b/gi);
+    for (const m of centsMatches) {
+      const start = m.index!;
+      const end = start + m[0].length;
+      if (!isSpanOverlapping(start, end)) {
+        addSpan(start, end);
+        const val = parseFloat(m[1]);
+        if (Number.isFinite(val) && val > 0) {
+          candidates.push({ val: val / 100, start, end, hasCurrencyPrefix: true, hasDecimal: true, rawStr: m[0] });
+        }
+      }
+    }
+
+    // 3) k / thousand
+    const kMatches = text.matchAll(/(?:(?:\$|SGD|S\$|\bS\$)\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*(?:k|thousand)\b/gi);
+    for (const m of kMatches) {
+      const start = m.index!;
+      const end = start + m[0].length;
+      if (!isSpanOverlapping(start, end)) {
+        addSpan(start, end);
+        const val = parseFloat(m[1].replace(/,/g, ''));
+        if (Number.isFinite(val) && val > 0) {
+          candidates.push({ val: val * 1000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0] });
+        }
+      }
+    }
+
+    // 4) m / million
+    const mMatches = text.matchAll(/(?:(?:\$|SGD|S\$|\bS\$)\s*)?(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\s*(?:m|million)\b/gi);
+    for (const m of mMatches) {
+      const start = m.index!;
+      const end = start + m[0].length;
+      if (!isSpanOverlapping(start, end)) {
+        addSpan(start, end);
+        const val = parseFloat(m[1].replace(/,/g, ''));
+        if (Number.isFinite(val) && val > 0) {
+          candidates.push({ val: val * 1000000, start, end, hasCurrencyPrefix: true, hasDecimal: false, rawStr: m[0] });
+        }
+      }
+    }
+
+    // 5) General monetary & numeric values
+    const numMatches = text.matchAll(/(?:(?:\$|SGD|S\$|\bS\$)\s*(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?))|(?:\b(\d{1,3}(?:,\d{3})*(?:\.\d+)?|\d+(?:\.\d+)?)\b)/gi);
+    for (const m of numMatches) {
+      const start = m.index!;
+      const end = start + m[0].length;
+      if (!isSpanOverlapping(start, end)) {
+        addSpan(start, end);
+        const rawNumStr = (m[1] || m[2] || '').replace(/,/g, '');
+        const val = parseFloat(rawNumStr);
+        if (Number.isFinite(val) && val > 0) {
+          const hasCurrencyPrefix = Boolean(m[1]) || /[\$]|SGD|S\$/i.test(m[0]);
+          const hasDecimal = rawNumStr.includes('.');
+          candidates.push({ val, start, end, hasCurrencyPrefix, hasDecimal, rawStr: m[0] });
+        }
+      }
+    }
+
+    const hasMajorMonetaryInText = candidates.some(c => c.val >= 100 || c.hasCurrencyPrefix || c.hasDecimal) ||
+      priorContextAmounts.some(a => a >= 100);
+
+    for (const c of candidates) {
+      const isInteger = Number.isInteger(c.val);
+      if (isInteger && c.val >= 1 && c.val <= 365) {
+        timeOrQuantityFactors.push(c.val);
+      }
+
+      const isBareSmallInteger = !c.hasCurrencyPrefix && !c.hasDecimal && isInteger && c.val <= 60;
+      if (hasMajorMonetaryInText && isBareSmallInteger) {
+        continue;
+      }
+      monetaryOccurrences.push(c.val);
     }
   }
 
@@ -316,13 +468,17 @@ export function extractDerivableNumbers(
   }
   if (/\bgst\b/i.test(allCombinedText)) {
     percentages.add(9);
-  }
-  if (/\b2023\b/.test(allCombinedText)) {
-    percentages.add(8);
+    if (/\b2023\b/.test(allCombinedText)) {
+      percentages.add(8);
+    }
   }
 
+  const baseNumbers = Array.from(new Set([...monetaryOccurrences, ...timeOrQuantityFactors].filter(n => Number.isFinite(n) && n > 0)));
+
   return {
-    baseNumbers: Array.from(new Set(numbers.filter(n => Number.isFinite(n) && n > 0))),
+    baseNumbers,
+    monetaryOccurrences,
+    timeOrQuantityFactors: Array.from(new Set(timeOrQuantityFactors)),
     statedPercentages: Array.from(percentages),
     allCombinedText
   };
@@ -331,143 +487,294 @@ export function extractDerivableNumbers(
 export function buildDerivableCents(
   baseNumbers: number[],
   percentages: number[],
-  priorAmounts: number[] = []
+  priorAmounts: number[] = [],
+  options?: {
+    monetaryOccurrences?: number[];
+    timeOrQuantityFactors?: number[];
+    allCombinedText?: string;
+  }
 ): Set<number> {
   const derivedCents = new Set<number>();
 
-  function addCents(val: number) {
+  function toCents(val: number): number | undefined {
     if (Number.isFinite(val) && val > 0) {
       const c = Math.round(val * 100);
       if (Number.isSafeInteger(c) && c > 0) {
-        derivedCents.add(c);
+        return c;
       }
     }
+    return undefined;
   }
 
-  // 1) Base values in dollars -> cents & prior context amounts
-  for (const v of baseNumbers) addCents(v);
-  for (const a of priorAmounts) addCents(a);
+  function addVal(val: number) {
+    const c = toCents(val);
+    if (c !== undefined) derivedCents.add(c);
+  }
 
-  // 2) Percentage / tax / discount derivations
-  for (const b of baseNumbers) {
+  const occurrences = (options?.monetaryOccurrences && options.monetaryOccurrences.length > 0)
+    ? options.monetaryOccurrences
+    : [...baseNumbers, ...priorAmounts];
+
+  const factors = (options?.timeOrQuantityFactors && options.timeOrQuantityFactors.length > 0)
+    ? options.timeOrQuantityFactors
+    : baseNumbers.filter(n => Number.isInteger(n) && n >= 1 && n <= 365);
+
+  const text = options?.allCombinedText || '';
+
+  // 1) Base values in dollars -> cents & percentage derivations for each occurrence
+  const buckets: number[][] = [];
+
+  for (let i = 0; i < occurrences.length; i++) {
+    const b = occurrences[i];
+    const bSet = new Set<number>();
+    const c = toCents(b);
+    if (c !== undefined) {
+      bSet.add(c);
+      derivedCents.add(c);
+    }
+
     for (const p of percentages) {
-      addCents(b * (p / 100));
-      addCents(b * (1 + p / 100));
-      addCents(b * (1 - p / 100));
-      addCents(b * 100 / (100 + p));
-      addCents(b * p / (100 + p));
+      const v1 = toCents(b * (p / 100));
+      const v2 = toCents(b * (1 + p / 100));
+      const v3 = toCents(b * (1 - p / 100));
+      const v4 = toCents((b * 100) / (100 + p));
+      const v5 = toCents((b * p) / (100 + p));
+      if (v1) { bSet.add(v1); derivedCents.add(v1); }
+      if (v2) { bSet.add(v2); derivedCents.add(v2); }
+      if (v3) { bSet.add(v3); derivedCents.add(v3); }
+      if (v4) { bSet.add(v4); derivedCents.add(v4); }
+      if (v5) { bSet.add(v5); derivedCents.add(v5); }
     }
+
+    // Multiply/divide with factors (e.g. quantities or time units)
+    for (const f of factors) {
+      if (f > 0 && f <= 365) {
+        const prod = toCents(b * f);
+        const quot = toCents(b / f);
+        if (prod && b <= 1000) { bSet.add(prod); derivedCents.add(prod); }
+        if (quot) { bSet.add(quot); derivedCents.add(quot); }
+      }
+    }
+
+    buckets.push(Array.from(bSet));
   }
 
-  // 3) Products & quotients of pairs (a, b) and straight-line depreciation
-  const baseLen = baseNumbers.length;
-  for (let i = 0; i < baseLen; i++) {
-    const a = baseNumbers[i];
-    for (let j = 0; j < baseLen; j++) {
+  // Also include prior amounts directly
+  for (const a of priorAmounts) {
+    addVal(a);
+  }
+
+  // 2) Products & quotients of distinct pairs (a, b) and straight-line depreciation:
+  const occLen = occurrences.length;
+  for (let i = 0; i < occLen; i++) {
+    const a = occurrences[i];
+    for (let j = 0; j < occLen; j++) {
       if (i === j) continue;
-      const b = baseNumbers[j];
-      if (Math.min(a, b) <= 1000) {
-        addCents(a * b);
+      const b = occurrences[j];
+      // Only multiply if one is a factor or FX rate <= 10
+      if ((a <= 10 || b <= 10) && Math.min(a, b) <= 1000) {
+        addVal(a * b);
       }
-      if (b > 0) {
-        addCents(a / b);
+      if (b > 0 && b <= 365) {
+        addVal(a / b);
       }
-      // Straight-line: (a - b) / c
+      // Straight-line depreciation: (cost - salvage) / useful_life
       if (a > b) {
-        for (let k = 0; k < baseLen; k++) {
-          const c = baseNumbers[k];
+        for (const c of factors) {
           if (c > 0 && c <= 100) {
-            addCents((a - b) / c);
+            addVal((a - b) / c);
           }
         }
       }
     }
   }
 
-  // Multi-term priority combinations from core numbers before time-fraction expansion
-  const coreCents = Array.from(derivedCents).slice(0, 24);
-  const coreLen = coreCents.length;
-  for (let i = 0; i < coreLen; i++) {
-    const ci = coreCents[i];
-    for (let j = 0; j <= i; j++) {
-      const cj = coreCents[j];
-      const sum2 = ci + cj;
-      const diff2 = Math.abs(ci - cj);
-      if (sum2 > 0) derivedCents.add(sum2);
-      if (diff2 > 0) derivedCents.add(diff2);
-
-      for (let k = 0; k <= j; k++) {
-        const ck = coreCents[k];
-        const sum3 = ci + cj + ck;
-        const diff3a = Math.abs(ci + cj - ck);
-        const diff3b = Math.abs(ci - cj - ck);
-        if (sum3 > 0) derivedCents.add(sum3);
-        if (diff3a > 0) derivedCents.add(diff3a);
-        if (diff3b > 0) derivedCents.add(diff3b);
-      }
-    }
-  }
-
-  const quadSlice = coreCents.slice(0, 12);
-  const quadLen = quadSlice.length;
-  for (let i = 0; i < quadLen; i++) {
-    const a = quadSlice[i];
-    for (let j = 0; j <= i; j++) {
-      const b = quadSlice[j];
-      for (let k = 0; k <= j; k++) {
-        const c = quadSlice[k];
-        for (let l = 0; l <= k; l++) {
-          const d = quadSlice[l];
-          const sum4 = a + b + c + d;
-          const diff4a = Math.abs(a + b + c - d);
-          const diff4b = Math.abs(a + b - c - d);
-          if (sum4 > 0) derivedCents.add(sum4);
-          if (diff4a > 0) derivedCents.add(diff4a);
-          if (diff4b > 0) derivedCents.add(diff4b);
+  // 3) Multi-term linear combinations (sums and differences of strictly distinct occurrence indices)
+  // CRITICAL: Only combine distinct indices (j < i, k < j, l < k) so a single occurrence is never added to itself!
+  if (occLen >= 2) {
+    for (let i = 0; i < occLen; i++) {
+      const bucketI = buckets[i];
+      for (let j = 0; j < i; j++) {
+        const bucketJ = buckets[j];
+        for (const ci of bucketI) {
+          for (const cj of bucketJ) {
+            const sum2 = ci + cj;
+            const diff2 = Math.abs(ci - cj);
+            if (sum2 > 0) derivedCents.add(sum2);
+            if (diff2 > 0) derivedCents.add(diff2);
+          }
         }
       }
     }
   }
 
-  // Common accounting time fractions on all derived cents so far:
-  const statedMonths = baseNumbers.filter(n => Number.isInteger(n) && n >= 1 && n <= 60);
-  const statedDays = baseNumbers.filter(n => Number.isInteger(n) && n >= 1 && n <= 365);
-  const initialCents = Array.from(derivedCents).slice(0, 120);
-
-  for (const c of initialCents) {
-    const dollars = c / 100;
-    addCents(dollars / 12);
-    addCents(dollars / 4);
-    addCents(dollars / 2);
-    for (const m of statedMonths) {
-      addCents(dollars * m / 12);
-    }
-    for (const d of statedDays) {
-      addCents(dollars * d / 365);
-      addCents(dollars * d / 360);
+  if (occLen >= 3) {
+    for (let i = 0; i < occLen; i++) {
+      const bucketI = buckets[i];
+      for (let j = 0; j < i; j++) {
+        const bucketJ = buckets[j];
+        for (let k = 0; k < j; k++) {
+          const bucketK = buckets[k];
+          for (const ci of bucketI) {
+            for (const cj of bucketJ) {
+              for (const ck of bucketK) {
+                const sum3 = ci + cj + ck;
+                const diff3a = Math.abs(ci + cj - ck);
+                const diff3b = Math.abs(ci + ck - cj);
+                const diff3c = Math.abs(cj + ck - ci);
+                if (sum3 > 0) derivedCents.add(sum3);
+                if (diff3a > 0) derivedCents.add(diff3a);
+                if (diff3b > 0) derivedCents.add(diff3b);
+                if (diff3c > 0) derivedCents.add(diff3c);
+              }
+            }
+          }
+        }
+      }
     }
   }
 
-  // 4) Multi-step sums and absolute differences (up to 2 closure passes, capped at 4000)
-  for (let pass = 0; pass < 2; pass++) {
-    const current = Array.from(derivedCents);
-    const len = current.length;
-    for (let i = 0; i < len; i++) {
-      const ci = current[i];
-      for (let j = 0; j <= i; j++) {
-        const cj = current[j];
-        const sum = ci + cj;
-        const diff = Math.abs(ci - cj);
-        if (sum > 0) derivedCents.add(sum);
-        if (diff > 0) derivedCents.add(diff);
-        if (derivedCents.size >= 4000) break;
+  if (occLen >= 4) {
+    const quadCap = Math.min(occLen, 6);
+    for (let i = 0; i < quadCap; i++) {
+      const bucketI = buckets[i];
+      for (let j = 0; j < i; j++) {
+        const bucketJ = buckets[j];
+        for (let k = 0; k < j; k++) {
+          const bucketK = buckets[k];
+          for (let l = 0; l < k; l++) {
+            const bucketL = buckets[l];
+            for (const a of bucketI) {
+              for (const b of bucketJ) {
+                for (const c of bucketK) {
+                  for (const d of bucketL) {
+                    const sum4 = a + b + c + d;
+                    const diff4a = Math.abs(a + b + c - d);
+                    const diff4b = Math.abs(a + b - c - d);
+                    if (sum4 > 0) derivedCents.add(sum4);
+                    if (diff4a > 0) derivedCents.add(diff4a);
+                    if (diff4b > 0) derivedCents.add(diff4b);
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-      if (derivedCents.size >= 4000) break;
     }
-    if (derivedCents.size >= 4000) break;
+  }
+
+  // 4) Common accounting time fractions:
+  // Apply ONLY when allCombinedText contains time/accrual/depreciation/amortisation/lease/interest/proration cues
+  const hasTimeCues = Boolean(text) && /\b(?:month\w*|quarter\w*|year\w*|annual\w*|p\.?a\.?|day\w*|prorat\w*|depreciat\w*|amorti[sz]\w*|interest|lease|prepaid|accru\w*|unearned|defer\w*)\b/i.test(text);
+
+  if (hasTimeCues) {
+    const statedMonths = factors.filter(n => n >= 1 && n <= 60);
+    const statedDays = factors.filter(n => n >= 1 && n <= 365);
+    const candidateCents = Array.from(derivedCents).slice(0, 150);
+    const hasHalfCue = /\b(?:half|semi[-\s]?annual\w*)\b/i.test(text);
+
+    for (const c of candidateCents) {
+      const dollars = c / 100;
+      addVal(dollars / 12);
+      addVal(dollars / 4);
+      if (hasHalfCue) {
+        addVal(dollars / 2);
+      }
+      for (const m of statedMonths) {
+        addVal((dollars * m) / 12);
+      }
+      for (const d of statedDays) {
+        addVal((dollars * d) / 365);
+        addVal((dollars * d) / 360);
+      }
+    }
   }
 
   return derivedCents;
+}
+
+/**
+ * Splits query text into semantic clauses around punctuation and contrastive conjunctions.
+ */
+export function splitQueryIntoClauses(text: string): string[] {
+  if (!text) return [];
+  const rawSplits = text.split(/(?:;\s*|\n+|\.(?!\d)\s*|\b(?:while|whereas|but|however|although|though)\b\s*)/gi);
+  const clauses: string[] = [];
+  for (const part of rawSplits) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const subSplits = trimmed.split(/,\s+(?:(?:and|while|whereas|but)\s+)?(?=[^;]{1,120}?\b(?:will|shall|is\s+to|are\s+to|was|were|has\s+been|have\s+been|to\s+be|scheduled|pending|paid|settled|transferred|remitted|cleared|disbursed|not\s+paid|unpaid)\b)/gi);
+    for (const sub of subSplits) {
+      const subTrimmed = sub.trim();
+      if (subTrimmed) clauses.push(subTrimmed);
+    }
+  }
+  return clauses.length > 0 ? clauses : [text.trim()];
+}
+
+/**
+ * Detects future, scheduled, pending, conditional, or negated settlement phrasing.
+ */
+export function hasNonExecutedSettlementCue(text: string): boolean {
+  if (!text) return false;
+
+  // 1. Future modals & infinitives
+  if (/\b(?:will|shall|going\s+to|is\s+to|are\s+to|to)\s+(?:be\s+)?(?:paid|settled|transferred|remitted|cleared|disbursed|made)\b/i.test(text)) return true;
+  if (/\b(?:will|shall)\s+(?:pay|settle|transfer|remit|clear|disburse|make\s+payment)\b/i.test(text)) return true;
+
+  // 2. Modal / conditional / uncertain
+  if (/\b(?:should|would|could|might|may|must|can|ought\s+to|needs?\s+to)\s+(?:be\s+)?(?:paid|settled|transferred|remitted|cleared|disbursed|made|pay|settle)\b/i.test(text)) return true;
+
+  // 3. Pending / scheduled / unexecuted / conditional
+  if (/\b(?:yet\s+to\s+be|has\s+yet\s+to\s+be|have\s+yet\s+to\s+be|remains?\s+to\s+be|scheduled\s+(?:for|to)|planned\s+(?:for|to)|slated\s+(?:for|to)|pending\s+(?:payment|settlement|transfer|remittance|approval|bank)|awaiting\s+(?:payment|settlement|transfer|remittance|approval|bank)|subject\s+to\s+approval|if\s+(?:approved|paid|settled)|upon\s+approval|once\s+approved)\b/i.test(text)) return true;
+
+  // 4. Explicit negation
+  if (/\b(?:no\s+(?:payment|settlement)|not\s+(?:yet\s+)?(?:paid|settled|transferred|remitted|cleared|made)|(?:was|were|is|are|has|have)\s+not\s+(?:been\s+)?(?:paid|settled|transferred|remitted|cleared|made)|unpaid|unsettled|outstanding)\b/i.test(text)) return true;
+
+  // 5. Future time markers when not paired with confirmed past verb
+  if (/\b(?:next\s+(?:week|month|quarter|year|monday|tuesday|wednesday|thursday|friday)|tomorrow|in\s+due\s+course|later)\b/i.test(text)) {
+    if (!/\b(?:paid|settled|transferred|remitted|cleared)\s+(?:yesterday|today|this\s+morning|already)\b/i.test(text)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detects affirmative completed settlement verbs with appropriate subjects, methods, or dates.
+ */
+export function hasConfirmedSettlementVerb(text: string): boolean {
+  if (!text) return false;
+  if (hasNonExecutedSettlementCue(text)) return false;
+
+  // Passive past/completed
+  if (/\b(?:was|were|has\s+been|have\s+been|had\s+been|is\s+now|are\s+now)\s+(?:(?:already|duly|fully|partially|actually|promptly)\s+)*(?:paid|settled|transferred|remitted|cleared|disbursed|completed|made|executed)\b/i.test(text)) {
+    return true;
+  }
+
+  // Active past/completed: [we|company|entity|employer|firm|business|management|parent|subsidiary|customer|client]? paid|settled|transferred|remitted|cleared|disbursed
+  // excluding when preceded by negative/modal/future markers
+  const activeRegex = /\b(?:(we|company|entity|employer|firm|business|management|parent|subsidiary|customer|client)\s+)?(paid|settled|transferred|remitted|cleared|disbursed)\b/gi;
+  for (const m of text.matchAll(activeRegex)) {
+    const precedingText = text.substring(0, m.index!).trim();
+    if (!/\b(?:not|never|if|whether|will|shall|should|would|could|might|may|must|to|yet\s+to|pending|before|until)$/i.test(precedingText)) {
+      return true;
+    }
+  }
+
+  // Imperative instruction with payment method / instrument: e.g. "pay ... by bank transfer", "settle ... via bank"
+  if (/^\s*(?:pay|settle|transfer|remit|clear|disburse)\b.*?\b(?:by|via|in|from|using)\b/i.test(text.trim())) {
+    return true;
+  }
+
+  // Participle completion with payment method/date:
+  if (/\b(?:paid|settled|transferred|remitted|cleared|disbursed)\b.*?\b(?:by\s+(?:bank|cash|cheque|check|giro|paynow|wire|transfer)|in\s+(?:cash|full)|via\s+(?:bank|giro|paynow|wire)|from\s+bank|on\s+\d|yesterday|today|this\s+morning)\b/i.test(text)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -675,24 +982,56 @@ export function validateJournalGroups(
     }
 
     // Unconfirmed Settlement Check:
-    // If !options?.isFollowUp and options?.rawQuery starts with a bare nominal settlement phrase
-    // and lacks any finite completion verb, and any group credits Cash/Bank while debiting a Liability, emit UNCONFIRMED_SETTLEMENT.
-    if (!options?.isFollowUp && options?.rawQuery) {
-      const isBareNominalSettlement = /^\s*(?:settlement|payment|clearing|discharge)\s+of\b/i.test(options.rawQuery);
-      const hasFiniteCompletion =
-        /\b(?:was|were|has\s+been|have\s+been|had\s+been|is\s+now|are\s+now)\s+(?:paid|settled|transferred|remitted|cleared|completed|made)\b/i.test(options.rawQuery) ||
-        /\b(?:we|company|entity|employer)\s+(?:paid|settled|transferred|remitted|cleared)\b/i.test(options.rawQuery) ||
-        /\b(?:paid|settled|transferred|remitted|cleared)\s+(?:on\s+\d|yesterday|today|this\s+morning|in\s+full)\b/i.test(options.rawQuery);
+    // Check if the group credits Cash/Bank while debiting any Liability account.
+    const creditsCashOrBank = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current account|cheque|check|giro|paynow)\b/i.test(l.accountName));
+    const debitedLiabilityLines = group.lines.filter(l => l.debit > 0 && (l.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(l.accountName)));
 
-      if (isBareNominalSettlement && !hasFiniteCompletion) {
-        const creditsCashOrBank = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current account)\b/i.test(l.accountName));
-        const debitsLiability = group.lines.some(l => l.debit > 0 && l.category === 'LIABILITY');
-        if (creditsCashOrBank && debitsLiability) {
+    if (creditsCashOrBank && debitedLiabilityLines.length > 0 && options?.rawQuery) {
+      const rawQuery = options.rawQuery;
+      const clauses = splitQueryIntoClauses(rawQuery);
+
+      for (const line of debitedLiabilityLines) {
+        const accLower = line.accountName.toLowerCase();
+        let legKeywords: RegExp;
+        if (/salaries|salary|wage|payroll|staff/i.test(accLower)) {
+          legKeywords = /\b(?:salaries|salary|wages?|payroll|staff)\b/i;
+        } else if (/cpf/i.test(accLower)) {
+          legKeywords = /\bcpf\b/i;
+        } else if (/trade\s+payable|supplier|vendor/i.test(accLower)) {
+          legKeywords = /\b(?:trade\s+payables?|suppliers?|vendors?)\b/i;
+        } else if (/gst/i.test(accLower)) {
+          legKeywords = /\bgst\b/i;
+        } else {
+          legKeywords = new RegExp(`\\b${line.accountName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        }
+
+        const matchingClauses = clauses.filter(c => legKeywords.test(c));
+        const legText = matchingClauses.length > 0 ? matchingClauses.join('; ') : rawQuery;
+
+        const hasUnexecuted = hasNonExecutedSettlementCue(legText);
+        const hasConfirmed = hasConfirmedSettlementVerb(legText);
+
+        if (hasUnexecuted) {
           issues.push({
             code: 'UNCONFIRMED_SETTLEMENT',
-            message: `Group '${groupTitle}' records a settlement of a liability based on a bare nominal phrase without confirmation that payment was completed. Clarification is required.`,
-            groupTitle
+            message: `Group '${groupTitle}' debits liability account '${line.accountName}' as a settlement, but the transaction indicates payment is future-dated, pending, scheduled, conditional, or not yet executed: "${legText}". Settlement cannot be posted as a completed transaction.`,
+            groupTitle,
+            accountName: line.accountName
           });
+        } else if (!hasConfirmed) {
+          const isMethodOnlyFollowUp = Boolean(
+            options?.isFollowUp &&
+            /^\s*(?:by|via|in|with|using|both)?\s*(?:bank|cash|cheque|check|giro|paynow|wire|transfer|both|salaries\s+in\s+cash|salaries\s+by\s+bank)(?:\s+(?:transfer|by\s+bank|by\s+cash|by\s+giro|via\s+bank))?\s*[.]?\s*$/i.test(rawQuery.trim())
+          );
+
+          if (!isMethodOnlyFollowUp) {
+            issues.push({
+              code: 'UNCONFIRMED_SETTLEMENT',
+              message: `Group '${groupTitle}' records a settlement of liability '${line.accountName}', but lacks confirmation that payment was completed. Clarification is required.`,
+              groupTitle,
+              accountName: line.accountName
+            });
+          }
         }
       }
     }
@@ -718,13 +1057,13 @@ export function validateJournalGroups(
 
   // Fact-Amount Provenance Check (enforceAmountProvenance)
   if (options?.enforceAmountProvenance) {
-    const { baseNumbers, statedPercentages } = extractDerivableNumbers(
+    const derivable = extractDerivableNumbers(
       options.rawQuery || '',
       options.priorContextTexts,
       options.priorContextAmounts
     );
 
-    if (baseNumbers.length === 0) {
+    if (derivable.baseNumbers.length === 0) {
       const hasNonHypotheticalAmount = groups.some(
         g => !g.isHypothetical && (g.totalDebit > 0 || (g.lines && g.lines.some(l => l.debit > 0)))
       );
@@ -735,12 +1074,44 @@ export function validateJournalGroups(
         });
       }
     } else {
-      const derivedCents = buildDerivableCents(baseNumbers, statedPercentages, options.priorContextAmounts);
+      const derivedCents = buildDerivableCents(
+        derivable.baseNumbers,
+        derivable.statedPercentages,
+        options.priorContextAmounts,
+        {
+          monetaryOccurrences: derivable.monetaryOccurrences,
+          timeOrQuantityFactors: derivable.timeOrQuantityFactors,
+          allCombinedText: derivable.allCombinedText
+        }
+      );
+
+      const hasTimeOrProrationCue = /\b(?:month\w*|quarter\w*|year\w*|annual\w*|p\.?a\.?|day\w*|prorat\w*|depreciat\w*|amorti[sz]\w*|interest|lease|prepaid|accru\w*|unearned|defer\w*|partial|instal\w*|half)\b/i.test(derivable.allCombinedText);
+      const singleAmountQuery = derivable.monetaryOccurrences.length === 1 && derivable.statedPercentages.length === 0 && derivable.timeOrQuantityFactors.length === 0 && !hasTimeOrProrationCue;
+      const expectedCents = singleAmountQuery ? Math.round(derivable.monetaryOccurrences[0] * 100) : 0;
 
       for (const group of groups) {
         if (group.isHypothetical) continue;
         const groupTitle = group.title || 'Untitled Group';
-        for (const line of group.lines || []) {
+        const lines = group.lines || [];
+
+        // Check line-level semantic consistency for single-amount queries
+        if (singleAmountQuery && lines.length === 2 && expectedCents > 0) {
+          for (const line of lines) {
+            const debitCents = Math.round((line.debit || 0) * 100);
+            const creditCents = Math.round((line.credit || 0) * 100);
+            const lineCents = debitCents > 0 ? debitCents : creditCents;
+            if (lineCents > 0 && Math.abs(lineCents - expectedCents) > 2) {
+              issues.push({
+                code: 'UNSTATED_AMOUNT',
+                message: `Line '${line.accountName}' in group '${groupTitle}' uses amount S$${(lineCents / 100).toFixed(2)} which contradicts the single stated transaction amount S$${(expectedCents / 100).toFixed(2)}.`,
+                groupTitle,
+                accountName: line.accountName
+              });
+            }
+          }
+        }
+
+        for (const line of lines) {
           const debitCents = Math.round((line.debit || 0) * 100);
           const creditCents = Math.round((line.credit || 0) * 100);
           const amountCents = debitCents > 0 ? debitCents : creditCents;

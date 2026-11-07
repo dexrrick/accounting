@@ -148,6 +148,8 @@ export function isDeterministicFixture(query: string): boolean {
   const isPureStatutoryInquiry =
     isStatutoryInquiry(q) &&
     querySingaporeStatutes(query).length > 0 &&
+    !/\b(?:we|our)\s+(?:accru\w*|paid|bought|purchased|sold|acquired|issued|settled|invoiced|recharged)\b/i.test(q) &&
+    !/\b(?:accru\w*|unpaid)\b/i.test(q) &&
     !q.includes('double entry') &&
     !q.includes('journal') &&
     !q.includes('debit') &&
