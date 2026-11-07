@@ -12,7 +12,20 @@ export function formatSingaporeDate(dateInput: string | Date | undefined | null)
     if (isNaN(dateInput.getTime())) return '';
     str = dateInput.toISOString();
   } else {
-    str = String(dateInput);
+    str = String(dateInput).trim();
+  }
+
+  if (!str) return '';
+
+  // Reject incomplete period strings like "February 2025", "Jan 2026", "2025", "Q1 2025"
+  if (
+    /^(?:FY|YA|CY|Q[1-4]|H[12])\b/i.test(str) ||
+    /^\d{4}$/.test(str) ||
+    /^(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}$/i.test(str) ||
+    /^\d{4}[-/](?:0?[1-9]|1[0-2])$/.test(str) ||
+    /^(?:0?[1-9]|1[0-2])[-/]\d{4}$/.test(str)
+  ) {
+    return '';
   }
 
   // If already in DD/MM/YYYY
@@ -35,16 +48,23 @@ export function formatSingaporeDate(dateInput: string | Date | undefined | null)
     return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
   }
 
-  // Fallback to JS Date parsing
-  const d = new Date(str);
-  if (!isNaN(d.getTime())) {
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    return `${day}/${month}/${year}`;
+  // Only parse via new Date(trimmed) when trimmed contains an explicit day-month-year pattern
+  const hasExplicitDayPattern =
+    /\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b/i.test(str) ||
+    /\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/i.test(str) ||
+    /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str);
+
+  if (hasExplicitDayPattern) {
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
   }
 
-  return str;
+  return '';
 }
 
 export function getSingaporeTimestamp(): string {

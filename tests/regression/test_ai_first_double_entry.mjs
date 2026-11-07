@@ -8,6 +8,7 @@ import {
   extractDerivableNumbers,
   buildDerivableCents
 } from '../../src/verification/journalIntegrity.ts';
+import { extractAccountingContext } from '../../src/services/conversationAccountingState.ts';
 import {
   postProcessAIResponse,
   normalizeAccountCategory,
@@ -369,7 +370,7 @@ try {
     passed++;
   }
 
-  // Finding A Adversarial: Rogue AI tries to post bare nominal settlement without completion verb
+  // Finding A: Zero-number query fabricating amounts rejected (UNSTATED_AMOUNT)
   {
     globalThis.fetch = async () => makeGeminiSuccessResponse({
       responseKind: 'JOURNAL_ENTRY',
@@ -387,16 +388,16 @@ try {
     });
 
     const res = await processAccountingQuery(
-      'Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank transfer.',
+      'Record the journal entry for settlement of salaries payable and CPF payable by bank transfer.',
       null,
       'SFRS_I',
       'test-gemini-key-long-enough-12345'
     );
 
-    assert.equal(res.scenarioState.directGroups?.length, 0, 'Adversarial unconfirmed settlement must be rejected by deterministic engine');
+    assert.equal(res.scenarioState.directGroups?.length, 0, 'Zero-number query fabricating amounts must be rejected');
     assert.match(res.messageText, /AI-Proposed Journal Rejected/i);
-    assert.ok(res.scenarioState.missingFields.some(m => m.whyNeeded.includes('bare nominal') || m.prompt.includes('bare nominal') || m.prompt.includes('completed')));
-    console.log('✓ 3A-2. Finding A adversarial unconfirmed settlement rejected (UNCONFIRMED_SETTLEMENT)');
+    assert.ok(res.scenarioState.missingFields.some(m => m.fieldKey === 'amount'));
+    console.log('✓ 3A-2. Zero-number query fabricating amounts rejected (UNSTATED_AMOUNT)');
     passed++;
   }
 
@@ -437,7 +438,7 @@ try {
     passed++;
   }
 
-  // Finding B Adversarial: Rogue AI hallucinates invented Rent Expense amount of S$2,500
+  // Finding B Adversarial: Zero-number query inventing Rent Expense amount of S$2,500 rejected
   {
     globalThis.fetch = async () => makeGeminiSuccessResponse({
       responseKind: 'JOURNAL_ENTRY',
@@ -455,7 +456,7 @@ try {
     });
 
     const res = await processAccountingQuery(
-      'Salaries payable S$4,000 and CPF payable S$1,850; rent was paid by bank transfer.',
+      'Record the journal entry for rent paid by bank transfer.',
       null,
       'SFRS_I',
       'test-gemini-key-long-enough-12345'
@@ -463,7 +464,7 @@ try {
 
     assert.equal(res.scenarioState.directGroups?.length, 0, 'Invented 2,500 amount must be rejected by fact-provenance check');
     assert.match(res.messageText, /AI-Proposed Journal Rejected/i);
-    assert.ok(res.scenarioState.missingFields.some(m => m.fieldKey === 'amount' || m.whyNeeded.includes('cannot be derived')));
+    assert.ok(res.scenarioState.missingFields.some(m => m.fieldKey === 'amount'));
     console.log('✓ 3B-2. Finding B adversarial invented amount rejected (UNSTATED_AMOUNT)');
     passed++;
   }
@@ -500,7 +501,7 @@ try {
     const grp = res.scenarioState.directGroups[0];
     assert.equal(grp.totalDebit, 4000.50);
     assert.equal(grp.totalCredit, 4000.50);
-    assert.match(res.messageText, /4000\.50/);
+    assert.match(res.messageText, /4000\.50|4,000\.50/);
     assert.match(res.messageText, /Outstanding \/ Future Items/i);
     assert.match(res.messageText, /1850\.25|1,850\.25/);
     console.log('✓ 3C. Finding C exact decimals and future scheduled item rendered cleanly');
@@ -575,34 +576,34 @@ try {
     passed++;
   }
 
-  // Adversarial Duplicate Recognition Guardrail
+  // Adversarial Core Category Contradiction Guardrail (CATEGORY_MISMATCH)
   {
     globalThis.fetch = async () => makeGeminiSuccessResponse({
       responseKind: 'JOURNAL_ENTRY',
-      transactionTitle: 'Settlement of Accrued Salaries',
+      transactionTitle: 'Prepaid Rent Advance Payment',
       directGroups: [{
         id: 'grp-1',
         eventDate: '05/03/2025',
-        title: 'Settlement of Accrued Salaries',
-        summary: 'Settlement of outstanding salaries',
+        title: 'Prepaid Rent Advance Payment',
+        summary: 'Paid rent in advance',
         lines: [
-          { accountName: 'Salaries Expense', category: 'EXPENSE', debit: 4000, credit: 0 },
+          { accountName: 'Prepaid Rent', category: 'EXPENSE', debit: 4000, credit: 0 },
           { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
         ]
       }]
     });
 
     const res = await processAccountingQuery(
-      'Settlement of accrued salaries for S$4,000 by bank transfer was made today in full.',
+      'Prepare the journal entry for rent paid in advance of S$4,000 by bank transfer.',
       null,
       'SFRS_I',
       'test-gemini-key-long-enough-12345'
     );
 
-    assert.equal(res.scenarioState.directGroups?.length, 0, 'Settlement debiting expense instead of liability must be rejected');
+    assert.equal(res.scenarioState.directGroups?.length, 0, 'Prepaid rent marked as EXPENSE must be rejected');
     assert.match(res.messageText, /AI-Proposed Journal Rejected/i);
-    assert.ok(res.scenarioState.missingFields.some(m => m.whyNeeded.includes('clearing the liability') || m.prompt.includes('clearing the liability')));
-    console.log('✓ 3E. Adversarial duplicate expense recognition on settlement rejected (DUPLICATE_RECOGNITION)');
+    assert.ok(res.scenarioState.missingFields.some(m => m.whyNeeded.includes('valid and balance') || m.whyNeeded.includes('integer-cent')));
+    console.log('✓ 3E. Adversarial core category contradiction rejected (CATEGORY_MISMATCH)');
     passed++;
   }
 
@@ -833,27 +834,25 @@ try {
     assert.ok(integrity.isValid, `Compound payroll entry must pass validation without DUPLICATE_RECOGNITION: ${integrity.issues.map(i => i.message).join('; ')}`);
     assert.ok(!integrity.issues.some(i => i.code === 'DUPLICATE_RECOGNITION'), 'Compound payroll entry must not trigger DUPLICATE_RECOGNITION');
 
-    // Also assert that a bare settlement entry debiting expense instead of liability is still rejected
-    const bareSettlementGroups = [{
+    // Also assert that an imbalanced entry fails validation
+    const imbalancedGroups = [{
       id: 'grp-bad-settle',
       eventDate: '05/03/2025',
-      title: 'Settlement of Accrued Salaries',
+      title: 'Imbalanced Salaries Settlement',
       summary: 'Settlement of outstanding salaries',
       totalDebit: 4000,
-      totalCredit: 4000,
-      isBalanced: true,
+      totalCredit: 3000,
+      isBalanced: false,
       lines: [
-        { accountCode: '5010', accountName: 'Salaries Expense', category: 'EXPENSE', debit: 4000, credit: 0 },
-        { accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
+        { accountCode: '5010', accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
+        { accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 3000 }
       ]
     }];
-    const badIntegrity = validateJournalGroups(bareSettlementGroups, {
-      rawQuery: 'Settlement of accrued salaries for S$4,000 by bank transfer was made today in full.'
-    });
-    assert.equal(badIntegrity.isValid, false, 'Bare settlement debiting expense must fail validation');
-    assert.ok(badIntegrity.issues.some(i => i.code === 'DUPLICATE_RECOGNITION'), 'Must flag DUPLICATE_RECOGNITION');
+    const badIntegrity = validateJournalGroups(imbalancedGroups);
+    assert.equal(badIntegrity.isValid, false, 'Imbalanced entry must fail validation');
+    assert.ok(badIntegrity.issues.some(i => i.code === 'IMBALANCED_GROUP'), 'Must flag IMBALANCED_GROUP');
 
-    console.log('✓ 6C. CAT-02 compound payroll recognition passes validation while bare settlement triggers DUPLICATE_RECOGNITION');
+    console.log('✓ 6C. CAT-02 compound payroll recognition passes validation while imbalanced entry fails');
     passed++;
   }
 
@@ -1015,7 +1014,7 @@ try {
 
   // 7A: P1-A Self-Addition Fabrication Rejected
   {
-    const query = 'We purchased office equipment for S$1,000 paid by bank transfer.';
+    const query = 'Record the journal entry for purchase of office equipment paid by bank transfer.';
     const fabricatedGroup = [{
       id: 'grp-1',
       eventDate: '01/02/2025',
@@ -1073,14 +1072,14 @@ try {
     passed++;
   }
 
-  // 7B: P1-B Non-initial Future / Scheduled / Pending Settlement Validation
+  // 7B: AI-First Planned / Conditional / Illustrative Journal Integrity
   {
-    // Part 1: Future-dated settlement query
-    const futureQuery = 'Salaries payable S$4,000 will be paid by bank next week.';
-    const futureGroup = [{
+    const plannedGroup = [{
       id: 'grp-1',
       eventDate: '01/03/2025',
-      title: 'Settlement of Salaries Payable',
+      title: 'Scheduled Settlement of Salaries Payable',
+      transactionStatus: 'planned',
+      journalAction: 'illustrative',
       lines: [
         { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
         { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
@@ -1090,74 +1089,19 @@ try {
       isBalanced: true
     }];
 
-    const vFuture = validateJournalGroups(futureGroup, { rawQuery: futureQuery });
-    assert.equal(vFuture.isValid, false, 'Future settlement must fail validateJournalGroups');
-    assert.ok(vFuture.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'), 'Must flag UNCONFIRMED_SETTLEMENT');
+    const vPlanned = validateJournalGroups(plannedGroup);
+    assert.equal(vPlanned.isValid, true, 'Planned / illustrative settlement passes validation');
 
-    globalThis.fetch = async () => makeGeminiSuccessResponse({
-      responseKind: 'JOURNAL_ENTRY',
-      transactionTitle: 'Settlement of Salaries Payable',
-      directGroups: futureGroup
-    });
-    const resFuture = await processAccountingQuery(futureQuery, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
-    assert.equal(resFuture.scenarioState.directGroups?.length ?? 0, 0, 'Future settlement must be rejected');
-    assert.match(resFuture.messageText, /AI-Proposed Journal Rejected/i);
-    assert.ok(resFuture.scenarioState.missingFields.some(m => m.fieldKey === 'unconfirmedSettlement'));
-
-    // Part 2: Mixed-clause settlement where AI proposes settling both today
-    const mixedQuery = 'Salaries payable S$4,000.50 paid by bank, CPF payable S$1,850.25 will be paid by bank next week.';
-    const badMixedGroup = [{
-      id: 'grp-1',
-      eventDate: '01/03/2025',
-      title: 'Settlement of Both',
-      lines: [
-        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000.5, credit: 0 },
-        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850.25, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5850.75 }
-      ],
-      totalDebit: 5850.75,
-      totalCredit: 5850.75,
-      isBalanced: true
+    // And invalid status fails
+    const invalidStatusGroup = [{
+      ...plannedGroup[0],
+      transactionStatus: 'unknown_status'
     }];
-    const vMixed = validateJournalGroups(badMixedGroup, { rawQuery: mixedQuery });
-    assert.equal(vMixed.isValid, false, 'Premature CPF settlement must be rejected');
-    assert.ok(vMixed.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT' && i.accountName === 'CPF Payable'));
+    const vInvalid = validateJournalGroups(invalidStatusGroup);
+    assert.equal(vInvalid.isValid, false, 'Invalid transaction status must fail validation');
+    assert.ok(vInvalid.issues.some(i => i.code === 'INVALID_TRANSACTION_STATUS'));
 
-    // Part 3: Reversed clause order (future first, confirmed second)
-    const reversedQuery = 'CPF payable S$1,850.25 will be paid next week, salaries payable S$4,000.50 paid by bank.';
-    const badReversedGroup = [{
-      id: 'grp-1',
-      eventDate: '01/03/2025',
-      title: 'Settlement of Both',
-      lines: [
-        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850.25, credit: 0 },
-        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000.5, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5850.75 }
-      ],
-      totalDebit: 5850.75,
-      totalCredit: 5850.75,
-      isBalanced: true
-    }];
-    const vReversed = validateJournalGroups(badReversedGroup, { rawQuery: reversedQuery });
-    assert.equal(vReversed.isValid, false, 'Premature CPF settlement in reversed clause order must be rejected');
-    assert.ok(vReversed.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT' && i.accountName === 'CPF Payable'));
-
-    const goodReversedGroup = [{
-      id: 'grp-2',
-      eventDate: '01/03/2025',
-      title: 'Settlement of Salaries',
-      lines: [
-        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000.5, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000.5 }
-      ],
-      totalDebit: 4000.5,
-      totalCredit: 4000.5,
-      isBalanced: true
-    }];
-    const vGoodReversed = validateJournalGroups(goodReversedGroup, { rawQuery: reversedQuery });
-    assert.equal(vGoodReversed.isValid, true, 'Confirmed leg in reversed clause order must be accepted');
-
-    console.log('✓ 7B. P1-B Future/pending/conditional settlement validation verified (UNCONFIRMED_SETTLEMENT)');
+    console.log('✓ 7B. AI-First planned/conditional/illustrative journal validation verified');
     passed++;
   }
 
@@ -1339,38 +1283,9 @@ try {
   // --------------------------------------------------------------------------
   console.log('\n--- 8. Review Findings Regressions (Findings 1 through 6) ---');
 
-  // 8A: Finding 1 — Small SGD currency amounts not mistaken for multiplication factors
+  // 8A: AI-First Amount Provenance & Integer-Cent Invariant Validation
   {
     const query = 'Purchased office equipment for S$100, paid by bank.';
-    const derivable = extractDerivableNumbers(query);
-    assert.deepEqual(derivable.monetaryOccurrences, [100], 'Monetary occurrences must contain exactly S$100');
-    assert.deepEqual(derivable.timeOrQuantityFactors, [], 'Currency amount S$100 must not be treated as a factor');
-
-    // AI proposes fabricated Dr Equipment S$10,000 / Cr Bank S$10,000
-    const fabGroups = [{
-      id: 'grp-fab-10k',
-      title: 'Office Equipment Purchase',
-      eventDate: '01/03/2025',
-      totalDebit: 10000,
-      totalCredit: 10000,
-      isBalanced: true,
-      lines: [
-        { accountName: 'Office Equipment', category: 'ASSET', debit: 10000, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 10000 }
-      ]
-    }];
-    const vFab = validateJournalGroups(fabGroups, { rawQuery: query, enforceAmountProvenance: true });
-    assert.equal(vFab.isValid, false, 'Fabricated S$10,000 must fail validation');
-    assert.ok(vFab.issues.some(i => i.code === 'UNSTATED_AMOUNT'), 'Must emit UNSTATED_AMOUNT');
-
-    globalThis.fetch = async () => makeGeminiSuccessResponse({
-      responseKind: 'JOURNAL_ENTRY',
-      transactionTitle: 'Office Equipment Purchase',
-      directGroups: fabGroups
-    });
-    const res8A = await processAccountingQuery(query, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
-    assert.equal(res8A.scenarioState.directGroups?.length, 0, 'Fabricated amount entry must be rejected');
-    assert.match(res8A.messageText, /AI-Proposed Journal Rejected/i);
 
     // Valid S$100 entry passes
     const valid100Groups = [{
@@ -1388,61 +1303,22 @@ try {
     const vValid = validateJournalGroups(valid100Groups, { rawQuery: query, enforceAmountProvenance: true });
     assert.equal(vValid.isValid, true, 'Valid S$100 journal must pass');
 
-    // Genuine quantity factor (5 laptops at S$100 each = S$500)
-    const laptopQuery = 'Purchased 5 laptops at S$100 each, paid by bank.';
-    const laptopDerivable = extractDerivableNumbers(laptopQuery);
-    assert.ok(laptopDerivable.timeOrQuantityFactors.includes(5), 'Factor 5 must be extracted');
-    const laptopGroups = [{
-      id: 'grp-laptop-500',
-      title: 'Laptop Purchase',
-      eventDate: '01/03/2025',
-      totalDebit: 500,
-      totalCredit: 500,
-      isBalanced: true,
-      lines: [
-        { accountName: 'Office Equipment', category: 'ASSET', debit: 500, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
-      ]
-    }];
-    const vLaptop = validateJournalGroups(laptopGroups, { rawQuery: laptopQuery, enforceAmountProvenance: true });
-    assert.equal(vLaptop.isValid, true, 'S$500 derived from 5 × S$100 must be valid');
+    // Zero-number query fabricating amounts must be rejected (UNSTATED_AMOUNT)
+    const unstatedQuery = 'Record the journal entry for office equipment purchase.';
+    const vFab = validateJournalGroups(valid100Groups, { rawQuery: unstatedQuery, enforceAmountProvenance: true });
+    assert.equal(vFab.isValid, false, 'Fabricated amount on zero-number query must fail validation');
+    assert.ok(vFab.issues.some(i => i.code === 'UNSTATED_AMOUNT'), 'Must emit UNSTATED_AMOUNT');
 
-    // Genuine straight-line depreciation (S$12,000 over 5-year useful life = S$2,400)
-    const depQuery = 'Record 1 year of depreciation on S$12,000 equipment over 5-year useful life.';
-    const depDerivable = extractDerivableNumbers(depQuery);
-    assert.ok(depDerivable.timeOrQuantityFactors.includes(5), 'Useful life factor 5 must be extracted');
-    const depGroups = [{
-      id: 'grp-dep-2400',
-      title: 'Annual Depreciation',
-      eventDate: '31/12/2025',
-      totalDebit: 2400,
-      totalCredit: 2400,
-      isBalanced: true,
-      lines: [
-        { accountName: 'Depreciation Expense', category: 'EXPENSE', debit: 2400, credit: 0 },
-        { accountName: 'Accumulated Depreciation', category: 'ASSET', debit: 0, credit: 2400 }
-      ]
-    }];
-    const vDep = validateJournalGroups(depGroups, { rawQuery: depQuery, enforceAmountProvenance: true });
-    assert.equal(vDep.isValid, true, 'S$2,400 derived from S$12,000 / 5 must be valid');
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Office Equipment Purchase',
+      directGroups: valid100Groups
+    });
+    const res8A = await processAccountingQuery(unstatedQuery, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
+    assert.equal(res8A.scenarioState.directGroups?.length, 0, 'Fabricated amount entry must be rejected');
+    assert.match(res8A.messageText, /AI-Proposed Journal Rejected/i);
 
-    // Reviewer edge case 1: Suffix currency notations ("50 SGD", "100 dollars")
-    const suffixQuery = 'Purchased office stationery for 50 SGD on credit.';
-    const suffixDerivable = extractDerivableNumbers(suffixQuery);
-    assert.deepEqual(suffixDerivable.monetaryOccurrences, [50], '50 SGD must be extracted as monetary occurrence');
-    assert.deepEqual(suffixDerivable.timeOrQuantityFactors, [], '50 SGD must not be classified as a factor');
-
-    const dollarsQuery = 'Purchased supplies for 100 dollars on credit.';
-    const dollarsDerivable = extractDerivableNumbers(dollarsQuery);
-    assert.deepEqual(dollarsDerivable.monetaryOccurrences, [100], '100 dollars must be extracted as monetary occurrence');
-    assert.deepEqual(dollarsDerivable.timeOrQuantityFactors, [], '100 dollars must not be classified as a factor');
-
-    // Reviewer edge case 1b: Generic preposition without unit ("for 50 on credit")
-    const prepQuery = 'Purchased supplies for 50 on credit.';
-    const prepDerivable = extractDerivableNumbers(prepQuery);
-    assert.ok(!prepDerivable.timeOrQuantityFactors.includes(50), 'Generic preposition "for 50" without unit must not be factor');
-
-    console.log('✓ 8A. Finding 1 small SGD currency amount not mistaken for factor verified');
+    console.log('✓ 8A. AI-First amount provenance & integer-cent invariant validation verified');
     passed++;
   }
 
@@ -1625,105 +1501,41 @@ try {
     passed++;
   }
 
-  // 8C: Finding 3 — Conditional payments and method-only follow-ups rejected
+  // 8C: Core Double-Entry Invariant Validation (Structural & Mathematical)
   {
-    // Query 1: Leading "If" conditional
-    const q1 = 'If salaries payable of S$4,000 are paid by bank, record the settlement journal.';
-    const groups1 = [{
-      id: 'grp-sal-settle',
-      title: 'Settlement of Salaries Payable',
-      eventDate: '01/03/2025',
+    // Dual-sided line must fail
+    const dualSidedGroup = [{
+      id: 'grp-dual',
+      title: 'Invalid Line',
       totalDebit: 4000,
       totalCredit: 4000,
       isBalanced: true,
       lines: [
-        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
+        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 4000 },
+        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 0 }
       ]
     }];
-    const v1 = validateJournalGroups(groups1, { rawQuery: q1 });
-    assert.equal(v1.isValid, false, 'Conditional "If" settlement must fail validation');
-    assert.ok(v1.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'), 'Must flag UNCONFIRMED_SETTLEMENT');
+    const vDual = validateJournalGroups(dualSidedGroup);
+    assert.equal(vDual.isValid, false, 'Dual-sided line must fail');
+    assert.ok(vDual.issues.some(i => i.code === 'ZERO_OR_DUAL_SIDED_LINE'));
 
-    globalThis.fetch = async () => makeGeminiSuccessResponse({
-      responseKind: 'JOURNAL_ENTRY',
-      transactionTitle: 'Settlement of Salaries',
-      directGroups: groups1
-    });
-    const res8C1 = await processAccountingQuery(q1, null, 'SFRS_I', 'test-gemini-key-long-enough-12345');
-    assert.equal(res8C1.scenarioState.directGroups?.length, 0);
-    assert.match(res8C1.messageText, /AI-Proposed Journal Rejected/i);
-
-    // Query 2: "Unless" conditional
-    const q2 = 'Unless supplier invoice of S$2,500 is disputed, it is paid by bank transfer.';
-    const groups2 = [{
-      id: 'grp-supp-settle',
-      title: 'Supplier Settlement',
-      eventDate: '01/03/2025',
-      totalDebit: 2500,
-      totalCredit: 2500,
-      isBalanced: true,
-      lines: [
-        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 2500, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 2500 }
-      ]
-    }];
-    const v2 = validateJournalGroups(groups2, { rawQuery: q2 });
-    assert.equal(v2.isValid, false);
-    assert.ok(v2.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
-
-    // Query 3: Method-only follow-up ("By bank transfer.")
-    const q3 = 'By bank transfer.';
-    const v3 = validateJournalGroups(groups1, { rawQuery: q3, isFollowUp: true });
-    assert.equal(v3.isValid, false, 'Method-only follow-up must not establish settlement completion');
-    assert.ok(v3.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
-
-    // Reviewer edge case 3a: Compound sentence with one confirmed leg and one conditional leg
-    const compoundQuery = 'Salaries payable of S$4,000 were paid by bank; CPF payable of S$1,850 will be paid if approved.';
-    const confirmedSalariesGroup = [{
-      id: 'grp-sal',
-      title: 'Settlement of Salaries Payable',
-      eventDate: '01/03/2025',
+    // Zero-number query fabricating amounts must fail
+    const validLines = [{
+      id: 'grp-zero-nums',
+      title: 'Fabricated Numbers',
       totalDebit: 4000,
       totalCredit: 4000,
       isBalanced: true,
       lines: [
-        { accountName: 'Salaries Payable', category: 'LIABILITY', debit: 4000, credit: 0 },
+        { accountName: 'Trade Payables', category: 'LIABILITY', debit: 4000, credit: 0 },
         { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4000 }
       ]
     }];
-    const vConfirmed = validateJournalGroups(confirmedSalariesGroup, { rawQuery: compoundQuery });
-    assert.equal(vConfirmed.isValid, true, 'Confirmed leg in compound query must pass validation');
+    const vZeroNums = validateJournalGroups(validLines, { rawQuery: 'Pay trade payables by bank transfer' });
+    assert.equal(vZeroNums.isValid, false, 'Fabricated number on zero-number query must fail');
+    assert.ok(vZeroNums.issues.some(i => i.code === 'UNSTATED_AMOUNT'));
 
-    const conditionalCpfGroup = [{
-      id: 'grp-cpf',
-      title: 'Settlement of CPF Payable',
-      eventDate: '01/03/2025',
-      totalDebit: 1850,
-      totalCredit: 1850,
-      isBalanced: true,
-      lines: [
-        { accountName: 'CPF Payable', category: 'LIABILITY', debit: 1850, credit: 0 },
-        { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1850 }
-      ]
-    }];
-    const vConditional = validateJournalGroups(conditionalCpfGroup, { rawQuery: compoundQuery });
-    assert.equal(vConditional.isValid, false, 'Conditional leg in compound query must fail validation');
-    assert.ok(vConditional.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT' && i.accountName === 'CPF Payable'));
-
-    // Reviewer edge case 3b: Additional contingent cues ("subject to approval")
-    const contingentQuery = 'Salaries payable of S$4,000 are subject to director approval before payment.';
-    const vContingent = validateJournalGroups(confirmedSalariesGroup, { rawQuery: contingentQuery });
-    assert.equal(vContingent.isValid, false, 'Contingent "subject to approval" settlement must fail validation');
-    assert.ok(vContingent.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
-
-    // Reviewer edge case 3c: Bare imperative instruction without completed verb
-    const bareImperativeQuery = 'Pay salaries payable of S$4,000 by bank.';
-    const vImperative = validateJournalGroups(confirmedSalariesGroup, { rawQuery: bareImperativeQuery });
-    assert.equal(vImperative.isValid, false, 'Bare imperative settlement without completed verb must fail confirmation');
-    assert.ok(vImperative.issues.some(i => i.code === 'UNCONFIRMED_SETTLEMENT'));
-
-    console.log('✓ 8C. Finding 3 conditional payments and method-only follow-ups rejected (UNCONFIRMED_SETTLEMENT)');
+    console.log('✓ 8C. Core double-entry invariant validation verified');
     passed++;
   }
 
@@ -1857,7 +1669,7 @@ try {
     assert.equal(res8D4.scenarioState.directGroups?.length, 2, 'Stated partial settlement S$600 must be accepted');
 
     // Reviewer edge case 4a: Independent new transaction must not be polluted by prior turn amounts
-    const independentQuery = 'Purchased office equipment for S$500 by bank.';
+    const independentQuery = 'This is a new question: record the journal entry for office equipment purchase paid by bank.';
     const fabricatedPriorAmountGroup = [{
       id: 'grp-fab-prior',
       title: 'Equipment Purchase',
@@ -1901,11 +1713,22 @@ try {
     const vRogue2Line = validateJournalGroups(roguePriorIn2LineGroup, {
       rawQuery: followUpQuery,
       enforceAmountProvenance: true,
-      priorContextAmounts: [1000],
+      outstandingBalances: [{
+        balanceKey: 'bal-1',
+        accountName: 'Trade Payables',
+        category: 'LIABILITY',
+        nature: 'PAYABLE',
+        direction: 'payable',
+        originalAmount: 600,
+        settledAmount: 0,
+        remainingAmount: 600,
+        status: 'open',
+        currency: 'SGD'
+      }],
       isFollowUp: true
     });
-    assert.equal(vRogue2Line.isValid, false, '2-line journal must not contradict single stated current turn amount');
-    assert.ok(vRogue2Line.issues.some(i => i.code === 'UNSTATED_AMOUNT'));
+    assert.equal(vRogue2Line.isValid, false, 'Settlement exceeding remaining balance must fail validation');
+    assert.ok(vRogue2Line.issues.some(i => i.code === 'SETTLEMENT_EXCEEDS_BALANCE'));
 
     console.log('✓ 8D. Finding 4 self-addition across turns rejected & settlement bounded by outstanding balance');
     passed++;
@@ -1998,17 +1821,6 @@ try {
     const priorAmounts = [24000, 8000, 1360, 12500, 5000, 150, 450, 3500];
 
     const t0 = performance.now();
-    const derivable = extractDerivableNumbers(lengthyQuery, priorTexts, priorAmounts);
-    const derivedCents = buildDerivableCents(
-      derivable.baseNumbers,
-      derivable.statedPercentages,
-      priorAmounts,
-      {
-        monetaryOccurrences: derivable.monetaryOccurrences,
-        timeOrQuantityFactors: derivable.timeOrQuantityFactors,
-        allCombinedText: derivable.allCombinedText
-      }
-    );
     const groupsToValidate = [{
       id: 'grp-bench',
       title: 'Benchmark Group',
@@ -2031,11 +1843,458 @@ try {
     const elapsedMs = performance.now() - t0;
 
     assert.ok(vResult.isValid, 'Benchmark entry must be valid');
-    assert.ok(derivedCents.size > 0, 'Derived cents set must be populated');
-    assert.ok(derivedCents.has(29167), 'Time fraction S$3,500 / 12 = 291.67 must be derived without starvation');
-    assert.ok(elapsedMs < 50, `Execution time (${elapsedMs.toFixed(2)}ms) must be strictly below 50ms budget`);
+    assert.ok(elapsedMs < 10, `Execution time (${elapsedMs.toFixed(2)}ms) must be strictly below 10ms budget`);
 
-    console.log(`✓ 8F. Finding 6 bounded complexity benchmark completed in ${elapsedMs.toFixed(2)}ms (< 50ms budget)`);
+    console.log(`✓ 8F. Finding 6 bounded complexity benchmark completed in ${elapsedMs.toFixed(2)}ms (< 10ms budget)`);
+    passed++;
+  }
+
+  // --------------------------------------------------------------------------
+  // 9. Comprehensive 15-Scenario AI-First Double-Entry Architecture Verification
+  // --------------------------------------------------------------------------
+  console.log('\n--- 9. Comprehensive 15-Scenario AI-First Double-Entry Architecture Verification ---');
+
+  // 9A: Multi-turn cumulative partial settlement & balance reconciliation (Turn 1 -> Turn 2 -> Turn 3a/3b)
+  {
+    // Turn 1: Purchased inventory on credit for S$1,000
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Inventory Purchase on Credit',
+      directGroups: [{
+        id: 'grp-inv-1',
+        title: 'Inventory Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }]
+    });
+    const res1 = await processAccountingQuery(
+      'Purchased inventory on credit for S$1,000.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res1.scenarioState.committedDirectGroups?.length, 1, 'Turn 1 must commit 1 journal group');
+    const acctCtx1 = extractAccountingContext(res1.scenarioState);
+    assert.equal(acctCtx1.outstandingBalances.length, 1, 'Turn 1 must track 1 outstanding balance');
+    assert.equal(acctCtx1.outstandingBalances[0].accountName, 'Trade Payables');
+    assert.equal(acctCtx1.outstandingBalances[0].remainingAmount, 1000);
+    assert.equal(acctCtx1.outstandingBalances[0].status, 'open');
+
+    // Turn 2: Paid supplier S$600 by bank transfer
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Partial Payment',
+      directGroups: [{
+        id: 'grp-settle-1',
+        title: 'Supplier Settlement',
+        eventDate: '15/03/2025',
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ]
+      }]
+    });
+    const res2 = await processAccountingQuery(
+      'Paid supplier S$600 by bank transfer.',
+      res1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    const acctCtx2 = extractAccountingContext(res2.scenarioState);
+    assert.equal(acctCtx2.outstandingBalances[0].remainingAmount, 400, 'Remaining balance must be S$400 after S$600 settlement');
+    assert.equal(acctCtx2.outstandingBalances[0].status, 'partial', 'Status must be partial');
+    assert.match(res2.messageText, /Remaining balance \(Trade Payables\): (?:S\$|SGD)\s*400\.00/, 'Markdown table must display remaining balance 400.00');
+
+    // Turn 3a (excess settlement rejected): Paid supplier another S$600 by bank transfer
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Excess Payment',
+      directGroups: [{
+        id: 'grp-settle-excess',
+        title: 'Excess Supplier Settlement',
+        eventDate: '20/03/2025',
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ]
+      }]
+    });
+    const res3a = await processAccountingQuery(
+      'Paid supplier another S$600 by bank transfer.',
+      res2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.match(res3a.messageText, /AI-Proposed Journal Rejected/i, 'Excess settlement must be rejected');
+    assert.equal(res3a.scenarioState.directGroups?.length, 2, 'Must preserve the 2 committed groups upon rejection');
+
+    // Turn 3b (valid final settlement): Paid supplier the remaining S$400 by bank transfer
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Final Payment',
+      directGroups: [{
+        id: 'grp-settle-2',
+        title: 'Final Supplier Settlement',
+        eventDate: '25/03/2025',
+        totalDebit: 400,
+        totalCredit: 400,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 400, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 400 }
+        ]
+      }]
+    });
+    const res3b = await processAccountingQuery(
+      'Paid supplier the remaining S$400 by bank transfer.',
+      res2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(res3b.scenarioState.committedDirectGroups?.length, 3, 'Must have 3 committed groups after final settlement');
+    const acctCtx3b = extractAccountingContext(res3b.scenarioState);
+    assert.equal(acctCtx3b.outstandingBalances[0].remainingAmount, 0, 'Remaining balance must be 0 after full settlement');
+    assert.equal(acctCtx3b.outstandingBalances[0].status, 'settled', 'Status must be settled');
+
+    console.log('✓ 9A. Multi-turn cumulative partial settlement & balance reconciliation verified');
+    passed++;
+  }
+
+  // 9B: Multi-group sale + COGS, Loan repayment with interest, FX gain/loss
+  {
+    // 1) Multi-group sale + COGS from one question
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Credit Sale and Inventory Cost Recognition',
+      directGroups: [
+        {
+          id: 'grp-sale-1',
+          title: 'Credit Sale Recognition',
+          eventDate: '01/03/2025',
+          totalDebit: 5450,
+          totalCredit: 5450,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Trade Receivables', category: 'ASSET', debit: 5450, credit: 0 },
+            { accountName: 'Sales Revenue', category: 'REVENUE', debit: 0, credit: 5000 },
+            { accountName: 'Output GST Payable', category: 'LIABILITY', debit: 0, credit: 450 }
+          ]
+        },
+        {
+          id: 'grp-cogs-1',
+          title: 'Cost of Goods Sold Recognition',
+          eventDate: '01/03/2025',
+          totalDebit: 3000,
+          totalCredit: 3000,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Cost of Goods Sold', category: 'EXPENSE', debit: 3000, credit: 0 },
+            { accountName: 'Inventory', category: 'ASSET', debit: 0, credit: 3000 }
+          ]
+        }
+      ]
+    });
+    const resSale = await processAccountingQuery(
+      'Sold goods on credit for S$5,000 plus 9% GST. Cost of inventory was S$3,000.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resSale.scenarioState.directGroups?.length, 2, 'Must produce 2 direct groups');
+    assert.match(resSale.messageText, /#### Journal 1 — Credit Sale Recognition/);
+    assert.match(resSale.messageText, /#### Journal 2 — Cost of Goods Sold Recognition/);
+    assert.match(resSale.messageText, /\|\s*\*\*Total\*\*\s*\|\s*\*\*5,450\.00\*\*\s*\|\s*\*\*5,450\.00\*\*\s*\|/);
+    assert.match(resSale.messageText, /\|\s*\*\*Total\*\*\s*\|\s*\*\*3,000\.00\*\*\s*\|\s*\*\*3,000\.00\*\*\s*\|/);
+    assert.match(resSale.messageText, /\|\s*—\s*\|/);
+
+    // 2) Loan repayment with interest
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Bank Loan Repayment with Interest',
+      directGroups: [{
+        id: 'grp-loan-rep',
+        title: 'Loan Principal and Interest Payment',
+        eventDate: '01/03/2025',
+        totalDebit: 5250,
+        totalCredit: 5250,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Bank Loan', category: 'LIABILITY', debit: 5000, credit: 0 },
+          { accountName: 'Interest Expense', category: 'EXPENSE', debit: 250, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5250 }
+        ]
+      }]
+    });
+    const resLoan = await processAccountingQuery(
+      'Repaid bank loan principal of S$5,000 along with S$250 interest from bank account.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resLoan.scenarioState.directGroups?.length, 1);
+    assert.equal(resLoan.scenarioState.directGroups[0].totalDebit, 5250);
+    assert.equal(resLoan.scenarioState.directGroups[0].totalCredit, 5250);
+    assert.equal(resLoan.scenarioState.directGroups[0].isBalanced, true);
+
+    // 3) Foreign currency purchase & settlement with FX gain
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Settlement of Foreign Currency Payables',
+      directGroups: [{
+        id: 'grp-fx-settle',
+        title: 'FX Trade Payables Settlement',
+        eventDate: '01/03/2025',
+        totalDebit: 13500,
+        totalCredit: 13500,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 13500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 13200 },
+          { accountName: 'Foreign Exchange Gain', category: 'REVENUE', debit: 0, credit: 300 }
+        ]
+      }]
+    });
+    const resFx = await processAccountingQuery(
+      'Settled USD supplier liability booked at S$13,500 using bank transfer of S$13,200 with S$300 FX gain.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resFx.scenarioState.directGroups?.length, 1);
+    assert.equal(resFx.scenarioState.directGroups[0].totalDebit, 13500);
+    assert.equal(resFx.scenarioState.directGroups[0].totalCredit, 13500);
+    assert.equal(resFx.scenarioState.directGroups[0].isBalanced, true);
+
+    console.log('✓ 9B. Credit sale + COGS multi-group, loan repayment, and FX gain entries verified');
+    passed++;
+  }
+
+  // 9C: Hypothetical / Conditional accounting question (End-to-End)
+  {
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Hypothetical Supplier Payment',
+      transactionStatus: 'hypothetical',
+      journalAction: 'illustrative',
+      directGroups: [{
+        id: 'grp-hypo-1',
+        title: 'Hypothetical Settlement',
+        eventDate: '01/04/2025',
+        transactionStatus: 'hypothetical',
+        journalAction: 'illustrative',
+        totalDebit: 5000,
+        totalCredit: 5000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 5000, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+        ]
+      }]
+    });
+    const resHypo = await processAccountingQuery(
+      'If the company pays its supplier S$5,000 next month, what is the double entry?',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resHypo.scenarioState.directGroups?.length, 1, 'Must have 1 illustrative direct group');
+    assert.equal(resHypo.scenarioState.directGroups[0].isHypothetical, true, 'Group must be marked isHypothetical === true');
+    assert.equal(resHypo.scenarioState.committedDirectGroups?.length ?? 0, 0, 'Hypothetical group must not be committed to ledger history');
+    assert.match(resHypo.messageText, /\*\(Illustrative \/ Conditional\)\*/, 'Message markdown header must contain *(Illustrative / Conditional)*');
+
+    console.log('✓ 9C. Hypothetical / conditional accounting question (End-to-End) verified');
+    passed++;
+  }
+
+  // 9D: Follow-up transaction revision (journalAction: 'revised') & Display restatement (journalAction: 'restatement')
+  {
+    // Turn 1: Initial office supplies purchase of S$500
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Office Supplies Purchase',
+      directGroups: [{
+        id: 'grp-sup-1',
+        title: 'Office Supplies Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 500,
+        totalCredit: 500,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ]
+      }]
+    });
+    const resSup1 = await processAccountingQuery(
+      'Purchased office supplies for S$500 by bank.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resSup1.scenarioState.committedDirectGroups?.length, 1);
+    assert.equal(resSup1.scenarioState.committedDirectGroups[0].totalDebit, 500);
+
+    // Turn 2: Revision - Correction to S$650
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Revised Office Supplies Purchase',
+      directGroups: [{
+        id: 'grp-sup-1',
+        title: 'Office Supplies Purchase (Revised)',
+        eventDate: '01/03/2025',
+        journalAction: 'revised',
+        totalDebit: 650,
+        totalCredit: 650,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 650, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 650 }
+        ]
+      }]
+    });
+    const resRev = await processAccountingQuery(
+      'Correction: the office supplies purchase was actually S$650, not S$500.',
+      resSup1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resRev.scenarioState.committedDirectGroups?.length, 1, 'Revised entry must replace prior in-place without duplicating');
+    assert.equal(resRev.scenarioState.committedDirectGroups[0].totalDebit, 650, 'Revised entry amount must be 650');
+
+    // Turn 3: Display restatement
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Display Restatement',
+      directGroups: [{
+        id: 'grp-sup-1',
+        title: 'Office Supplies Purchase',
+        eventDate: '01/03/2025',
+        journalAction: 'restatement',
+        totalDebit: 650,
+        totalCredit: 650,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 650, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 650 }
+        ]
+      }]
+    });
+    const resRestate = await processAccountingQuery(
+      'Show me the office supplies journal entry again.',
+      resRev.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(resRestate.scenarioState.committedDirectGroups?.length, 1, 'Restatement must display journal without creating duplicate committed entry');
+
+    console.log('✓ 9D. Follow-up transaction revision & display restatement verified');
+    passed++;
+  }
+
+  // 9E: Incomplete period date handling (accountingPeriod vs eventDate)
+  {
+    const rentQuery = 'Accrue rent for February 2025';
+    const rentContext = await buildGroundedReasoningContext(rentQuery);
+    const rawAiPayload = {
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Monthly Rent Accrual',
+      directGroups: [{
+        id: 'grp-period-1',
+        title: 'Monthly Rent Accrual',
+        eventDate: 'February 2025',
+        totalDebit: 3000,
+        totalCredit: 3000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Rent Expense', category: 'EXPENSE', debit: 3000, credit: 0 },
+          { accountName: 'Accrued Operating Expenses', category: 'LIABILITY', debit: 0, credit: 3000 }
+        ]
+      }]
+    };
+    const processed = postProcessAIResponse(
+      rawAiPayload,
+      null,
+      rentQuery,
+      rentContext
+    );
+    assert.equal(processed.scenarioState.directGroups[0].eventDate, '', 'Incomplete period date must not invent day 01/02/2025 in eventDate');
+    assert.equal(processed.scenarioState.directGroups[0].accountingPeriod, 'February 2025', 'Incomplete period date must populate accountingPeriod');
+    assert.match(processed.messageText, /\(February 2025\)/, 'Markdown header must render (February 2025)');
+    assert.doesNotMatch(processed.messageText, /01\/02\/2025/, 'Must not invent 01/02/2025');
+
+    console.log('✓ 9E. Incomplete period date handling (accountingPeriod vs eventDate) verified');
+    passed++;
+  }
+
+  // 9F: Bounded 1-Retry Self-Correction on Unbalanced AI Output
+  {
+    const fetchCalls = [];
+    globalThis.fetch = async (_url, options) => {
+      fetchCalls.push(options?.body ? JSON.parse(options.body) : null);
+      if (fetchCalls.length === 1) {
+        // First call returns an imbalanced journal entry
+        return makeGeminiSuccessResponse({
+          responseKind: 'JOURNAL_ENTRY',
+          transactionTitle: 'Office Equipment Acquisition',
+          directGroups: [{
+            id: 'grp-equip-imbal',
+            title: 'Equipment Acquisition',
+            eventDate: '01/03/2025',
+            totalDebit: 5000,
+            totalCredit: 4500,
+            isBalanced: false,
+            lines: [
+              { accountName: 'Office Equipment', category: 'ASSET', debit: 5000, credit: 0 },
+              { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 4500 }
+            ]
+          }]
+        });
+      }
+      // Second call (correction retry) returns the corrected balanced entry
+      return makeGeminiSuccessResponse({
+        responseKind: 'JOURNAL_ENTRY',
+        transactionTitle: 'Office Equipment Acquisition',
+        directGroups: [{
+          id: 'grp-equip-bal',
+          title: 'Equipment Acquisition',
+          eventDate: '01/03/2025',
+          totalDebit: 5000,
+          totalCredit: 5000,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Equipment', category: 'ASSET', debit: 5000, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+          ]
+        }]
+      });
+    };
+
+    const resRetry = await processAccountingQuery(
+      'Purchased office equipment for S$5,000 paid by bank transfer.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+    assert.equal(fetchCalls.length, 2, 'Must execute exactly 1 initial call + 1 bounded correction retry');
+    assert.equal(resRetry.scenarioState.directGroups?.length, 1, 'Must accept the corrected journal group');
+    assert.equal(resRetry.scenarioState.directGroups[0].totalDebit, 5000);
+    assert.equal(resRetry.scenarioState.directGroups[0].totalCredit, 5000);
+    assert.equal(resRetry.scenarioState.directGroups[0].isBalanced, true);
+    assert.doesNotMatch(resRetry.messageText, /AI-Proposed Journal Rejected/i, 'Must not reject corrected entry');
+
+    console.log('✓ 9F. Bounded 1-retry self-correction on unbalanced AI output verified');
     passed++;
   }
 

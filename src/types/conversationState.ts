@@ -182,6 +182,8 @@ export interface OutstandingAccountBalance {
   originalAmount: number;
   settledAmount: number;
   remainingAmount: number;
+  direction?: 'payable' | 'receivable';
+  status?: 'open' | 'partial' | 'settled';
   currency: string;
 }
 

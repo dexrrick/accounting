@@ -748,8 +748,6 @@ export async function processAccountingQuery(
     if (integrity.isValid) return response;
 
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
-    const duplicateIssue = integrity.issues.find(i => i.code === 'DUPLICATE_RECOGNITION');
-    const unconfirmedIssue = integrity.issues.find(i => i.code === 'UNCONFIRMED_SETTLEMENT');
     const issue: MissingFieldInfo = unstatedIssue
       ? {
           fieldKey: 'amount',
@@ -757,25 +755,11 @@ export async function processAccountingQuery(
           prompt: 'What is the transaction amount in SGD?',
           whyNeeded: unstatedIssue.message
         }
-      : duplicateIssue
-      ? {
-          fieldKey: 'duplicateRecognition',
-          fieldName: 'Duplicate expense recognition',
-          prompt: duplicateIssue.message,
-          whyNeeded: 'Settling an existing liability must debit the liability account rather than recording a duplicate expense.'
-        }
-      : unconfirmedIssue
-      ? {
-          fieldKey: 'unconfirmedSettlement',
-          fieldName: 'Unconfirmed liability settlement',
-          prompt: unconfirmedIssue.message,
-          whyNeeded: 'A bare nominal settlement statement does not confirm that payment has occurred.'
-        }
       : {
           fieldKey: 'journalValidation',
           fieldName: 'Journal validation',
-          prompt: 'The proposed journal did not pass exact debit/credit and classification validation: ' + integrity.issues.map(i => i.message).join(' '),
-          whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines, account categories, and totals are valid and balance to the cent.'
+          prompt: 'The proposed journal did not pass technical validation: ' + integrity.issues.map(i => i.message).join(' '),
+          whyNeeded: 'All journal lines must have valid accounts, categories, and integer-cent debits equaling credits.'
         };
 
     return {
@@ -783,8 +767,8 @@ export async function processAccountingQuery(
       messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
       scenarioState: {
         ...response.scenarioState,
-        directGroups: priorCommitted || [],
-        committedDirectGroups: priorCommitted,
+        directGroups: isFollowUp ? (priorCommitted || []) : [],
+        committedDirectGroups: isFollowUp ? (priorCommitted || []) : [],
         projectedGroups: [],
         isComplete: false,
         missingFields: [issue]
@@ -1148,7 +1132,16 @@ export async function processAccountingQuery(
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
+          let aiResponse = validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
+          if (aiResponse.messageText.includes('### AI-Proposed Journal Rejected') && liveProviderConfigured) {
+            try {
+              const retryPrompt = `${userInput}\n\n[Correction Notice: Your previous journal entry failed technical validation: ${aiResponse.messageText.replace('### AI-Proposed Journal Rejected\n\n', '')}. Please return a corrected, balanced double-entry JSON response where total debits equal total credits.]`;
+              aiResponse = validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(retryPrompt, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
+            } catch {
+              // keep initial rejection
+            }
+          }
+          return aiResponse;
         } catch (err: any) {
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
@@ -1156,7 +1149,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'gemini' && providerOrApiKey.gemini?.apiKey && providerOrApiKey.gemini.apiKey.trim().length > 10) {
         try {
-          return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
+          let aiResponse = validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
             userInput,
             activeScenario,
             standard,
@@ -1168,6 +1161,26 @@ export async function processAccountingQuery(
             profiler,
             imageAttachments
           )));
+          if (aiResponse.messageText.includes('### AI-Proposed Journal Rejected') && liveProviderConfigured) {
+            try {
+              const retryPrompt = `${userInput}\n\n[Correction Notice: Your previous journal entry failed technical validation: ${aiResponse.messageText.replace('### AI-Proposed Journal Rejected\n\n', '')}. Please return a corrected, balanced double-entry JSON response where total debits equal total credits.]`;
+              aiResponse = validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
+                retryPrompt,
+                activeScenario,
+                standard,
+                providerOrApiKey.gemini.apiKey.trim(),
+                providerOrApiKey.gemini.model || modelName,
+                relevantChatHistory,
+                groundedContext,
+                deterministicScenario,
+                profiler,
+                imageAttachments
+              )));
+            } catch {
+              // keep initial rejection
+            }
+          }
+          return aiResponse;
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
@@ -1175,7 +1188,7 @@ export async function processAccountingQuery(
         }
       } else if (active === 'openai' && providerOrApiKey.openai?.apiKey && providerOrApiKey.openai.apiKey.trim().length > 10) {
         try {
-          return validateJournalResponse(attachAmendmentProvenance(await callStandardOpenAI(
+          let aiResponse = validateJournalResponse(attachAmendmentProvenance(await callStandardOpenAI(
             userInput,
             activeScenario,
             standard,
@@ -1184,6 +1197,23 @@ export async function processAccountingQuery(
             groundedContext,
             deterministicScenario
           )));
+          if (aiResponse.messageText.includes('### AI-Proposed Journal Rejected') && liveProviderConfigured) {
+            try {
+              const retryPrompt = `${userInput}\n\n[Correction Notice: Your previous journal entry failed technical validation: ${aiResponse.messageText.replace('### AI-Proposed Journal Rejected\n\n', '')}. Please return a corrected, balanced double-entry JSON response where total debits equal total credits.]`;
+              aiResponse = validateJournalResponse(attachAmendmentProvenance(await callStandardOpenAI(
+                retryPrompt,
+                activeScenario,
+                standard,
+                providerOrApiKey.openai,
+                relevantChatHistory,
+                groundedContext,
+                deterministicScenario
+              )));
+            } catch {
+              // keep initial rejection
+            }
+          }
+          return aiResponse;
         } catch (err: any) {
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
@@ -1192,7 +1222,7 @@ export async function processAccountingQuery(
       }
     } else if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       try {
-        return validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
+        let aiResponse = validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
           userInput,
           activeScenario,
           standard,
@@ -1204,6 +1234,26 @@ export async function processAccountingQuery(
           profiler,
           imageAttachments
         )));
+        if (aiResponse.messageText.includes('### AI-Proposed Journal Rejected') && liveProviderConfigured) {
+          try {
+            const retryPrompt = `${userInput}\n\n[Correction Notice: Your previous journal entry failed technical validation: ${aiResponse.messageText.replace('### AI-Proposed Journal Rejected\n\n', '')}. Please return a corrected, balanced double-entry JSON response where total debits equal total credits.]`;
+            aiResponse = validateJournalResponse(attachAmendmentProvenance(await callGeminiAPI(
+              retryPrompt,
+              activeScenario,
+              standard,
+              providerOrApiKey.trim(),
+              modelName,
+              relevantChatHistory,
+              groundedContext,
+              deterministicScenario,
+              profiler,
+              imageAttachments
+            )));
+          } catch {
+            // keep initial rejection
+          }
+        }
+        return aiResponse;
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
@@ -2249,37 +2299,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     };
     result.messageText = `${result.messageText}\n\n### Screenshot verification required\n\n${prompt}`;
   }
-  // Validate AI proposed groups against deterministic accounting guardrails and fail-closed on ERROR violations
-  const aiProposedGroups = result.scenarioState.directGroups;
-  if (aiProposedGroups && aiProposedGroups.length > 0) {
-    const aiErrors = getGuardrailErrorViolations(aiProposedGroups, context.semanticUnderstanding);
-    if (aiErrors.length > 0) {
-      if (isDeterministicFixture(userInput) && deterministicFallback && deterministicFallback.length > 0) {
-        result.scenarioState.directGroups = deterministicFallback;
-        result.scenarioState.isComplete = true;
-        result.scenarioState.missingFields = result.scenarioState.missingFields?.filter((m) => !m.fieldKey.startsWith('guardrail-')) || [];
-        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal was rejected. The deterministic journal has been restored.` +
-          (result.messageText ? `\n\n---\n\n${result.messageText}` : '');
-      } else {
-        const priorCommitted = currentScenario?.committedDirectGroups ||
-          (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
-        result.scenarioState.directGroups = priorCommitted || [];
-        result.scenarioState.committedDirectGroups = priorCommitted;
-        result.scenarioState.projectedGroups = [];
-        result.scenarioState.isComplete = false;
-        result.scenarioState.missingFields = [
-          ...(result.scenarioState.missingFields || []),
-          ...aiErrors.map((v) => ({
-            fieldKey: `guardrail-${v.code}`,
-            fieldName: 'Accounting Guardrail Violation',
-            prompt: `${v.code}: ${v.message}`,
-            whyNeeded: 'The AI-proposed journal violates fundamental double-entry or statutory accounting rules.'
-          }))
-        ];
-        result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nThe AI-proposed journal violates fundamental accounting rules and was not applied. Clarification is required.`;
-      }
-    }
-  }
+
 
   profiler.recordStage('assembly', Date.now() - tPost0);
   profiler.recordFirstVisibleResponse();

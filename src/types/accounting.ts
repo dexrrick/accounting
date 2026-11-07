@@ -147,6 +147,11 @@ export interface JournalEntryGroup {
   accountingEventId?: string;
   relatedEventIds?: string[];
   taxSummary?: string;
+  transactionStatus?: 'actual' | 'hypothetical' | 'planned' | 'conditional';
+  journalAction?: 'new' | 'revised' | 'restatement' | 'illustrative';
+  accountingPeriod?: string;
+  currency?: string;
+  narration?: string;
 }
 
 export type AccountingEventType =
@@ -248,6 +253,7 @@ export interface AccountingScenarioState {
   accountingEvents?: import('./conversationState').AccountingEvent[];
   actualEvents?: import('./conversationState').AccountingEvent[];
   cumulativeBalances?: import('./conversationState').OutstandingAccountBalance[];
+  remainingBalances?: Array<{ accountName: string; amount: number; currency?: string }>;
   isHypothetical?: boolean;
 
   // Structured Transaction Semantics (Side Quest 2 & 3 Integration)

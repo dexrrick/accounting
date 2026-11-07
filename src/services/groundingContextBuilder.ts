@@ -2421,10 +2421,15 @@ Return ONLY this compact JSON payload:
   "directGroups": [
     {
       "id": "grp-1",
-      "eventDate": "DD/MM/YYYY",
+      "eventDate": "DD/MM/YYYY (empty string if only month/period is known)",
+      "accountingPeriod": "YYYY-MM or period label (e.g. 'February 2025') if no exact date",
+      "currency": "SGD",
       "title": "Descriptive group title",
       "eventType": "RECOGNITION" | "ACCRUAL" | "SETTLEMENT" | "PREPAYMENT" | "ADJUSTMENT" | "DEPRECIATION_AMORTISATION" | "IMPAIRMENT" | "REVERSAL" | "TAX",
+      "transactionStatus": "actual" | "hypothetical" | "planned" | "conditional",
+      "journalAction": "new" | "revised" | "restatement" | "illustrative",
       "summary": "Specific journal entry summary",
+      "narration": "Concise explanation of the journal entry",
       "lines": [
         {
           "accountCode": "1000",
@@ -2437,6 +2442,9 @@ Return ONLY this compact JSON payload:
       ],
       "rationalePoints": ["Key technical accounting reasons"]
     }
+  ],
+  "remainingBalances": [
+    { "accountName": "Trade Payables", "amount": 4000.00, "currency": "SGD" }
   ],
   "requiredAccounts": [],
   "outstandingOrFutureItems": ["Unpaid balances or future-dated/scheduled legs NOT posted today"],
@@ -2457,21 +2465,25 @@ Return ONLY this compact JSON payload:
 }
 
 RULES GOVERNING DOUBLE-ENTRY GENERATION:
-1. Exact Fact-Backed Amounts:
+1. AI-First Accounting Reasoning:
+   - Reason from IFRS / SFRS(I) accounting principles to determine the appropriate treatment, account names, categories, and calculations (including GST, accruals, prepayments, depreciation, disposal gains/losses, FX, and partial settlements).
+   - Distinguish actual completed transactions ("transactionStatus": "actual", "journalAction": "new") from hypothetical, conditional, or planned questions (e.g. "If the company pays its supplier S$5,000 next month, what is the double entry?" -> provide an illustrative journal with "transactionStatus": "hypothetical" or "conditional" and "journalAction": "illustrative", clearly noting in the explanation that it applies if/when the transaction occurs).
+   - Distinguish follow-up revisions ("journalAction": "revised" when correcting an earlier transaction), display restatements ("journalAction": "restatement" when asked to show an earlier journal again), and new recurring transactions ("journalAction": "new").
+   - Only populate "eventDate" (DD/MM/YYYY) when a full calendar date is known; if only a month/quarter/year is mentioned (e.g. "February 2025"), set "eventDate": "" and "accountingPeriod": "February 2025".
+   - If material facts required to determine the accounting treatment or amount are genuinely missing (e.g. no transaction amount is stated), set "isComplete": false, "directGroups": [], and populate "missingFields" and "clarificationPrompt". Never fabricate unsupported numbers.
+2. Exact Fact-Backed Amounts:
    - Every debit/credit must be a finite number rounded to 2 decimal places (>= 0, single-sided per line, sum(debit) === sum(credit) per group) derived strictly from stated user facts and [CURRENT ACTIVE TRANSACTION CONTEXT].
    - Preserve exact decimals (e.g. 4000.50, 1850.25). Never invent amounts.
-2. Timing, Accruals & Settlements:
+3. Timing, Accruals & Settlements:
    - Distinguish ACCRUAL/RECOGNITION from SETTLEMENT:
      * Settling a payable debits the liability and credits Cash at Bank.
      * Settling a receivable debits Cash at Bank and credits the receivable.
      * NEVER re-recognise an expense/revenue or re-credit Share Capital upon settlement.
-   - A bare nominal phrase with a payment method (e.g. "Settlement of salaries payable S$4,000 and CPF payable S$1,850 by bank transfer.") without a finite completion verb ("was paid", "has been transferred", "we paid") does NOT establish that payment occurred -> return "responseKind": "CLARIFICATION_REQUIRED", "directGroups": [], and ask in "missingFields" whether payment has been completed or is still pending.
-   - Future or scheduled events ("will be paid next week", "to be paid next month") must NOT clear liabilities or credit Cash/Bank today: post ONLY confirmed completed events in "directGroups", and list future/unpaid obligations in "outstandingOrFutureItems".
-   - In mixed-status follow-ups ("Salaries were paid by bank, but CPF will be paid next week"), post ONLY the confirmed leg (Dr Salaries Payable / Cr Cash at Bank) using the exact amount from active context, and list the remaining unpaid liability (CPF Payable) in "outstandingOrFutureItems".
-3. Multi-Event Separation & Missing Amounts:
-   - Separate distinct transactions into separate directGroups. NEVER settle payroll or another liability using an unrelated payment clause (e.g. "Salaries payable S$4,000 and CPF payable S$1,850; rent was paid by bank transfer").
-   - If ANY material event in the prompt lacks a required monetary amount or material completion status (such as an unstated rent amount alongside unconfirmed payroll liabilities), do NOT invent amounts and do NOT post partial guesses: return "responseKind": "CLARIFICATION_REQUIRED", "directGroups": [], and list each missing item in "missingFields".
-4. IFRS/SFRS(I) & Singapore Rules:
+   - Future or scheduled events ("will be paid next week", "to be paid next month") must NOT clear liabilities or credit Cash/Bank today: post ONLY confirmed completed events in "directGroups", or provide an illustrative journal with "transactionStatus": "conditional" / "planned", and list future/unpaid obligations in "outstandingOrFutureItems" or "remainingBalances".
+4. Multi-Event Separation & Missing Amounts:
+   - Separate distinct transactions into separate directGroups.
+   - If ANY material event in the prompt lacks a required monetary amount (such as an unstated rent amount), do NOT invent amounts: return "responseKind": "CLARIFICATION_REQUIRED", "directGroups": [], and list each missing item in "missingFields".
+5. IFRS/SFRS(I) & Singapore Rules:
    - Do NOT apply 9% GST unless GST registration, standard-rated supply, or GST is stated (post the stated amount without GST rather than blocking for clarification solely over unstated GST status).
    - Singapore Companies Act §68: no par value / no Share Premium for ordinary shares; SFRS(I) 1-32 §33: own equity / treasury shares are EQUITY, never financial assets.
    - Deduct supplier trade discounts directly from initial cost (never post Trade Discount Expense).
@@ -2906,28 +2918,61 @@ export function postProcessAIResponse(
         verifiedCitations = topLevelVerifiedCitations;
       }
 
-      const extractedDateCue = !grp.eventDate ? (
-        userInput.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
-        userInput.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{2,4})?)\b/i)?.[0] ||
-        userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:,?\s+\d{2,4})?)\b/i)?.[0] ||
-        userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{4})?)\b/i)?.[0] ||
-        grp.title?.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
-        grp.title?.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:\s+\d{2,4})?)\b/i)?.[0] ||
-        grp.summary?.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0]
-      ) : undefined;
+      let normalizedEventDate = '';
+      let accountingPeriod = (typeof grp.accountingPeriod === 'string' ? grp.accountingPeriod.trim() : '') || '';
+      if (grp.eventDate) {
+        const formatted = formatSingaporeDate(String(grp.eventDate));
+        if (formatted) {
+          normalizedEventDate = formatted;
+        } else {
+          // If grp.eventDate is a month-year string like "February 2025", move it to accountingPeriod
+          if (!accountingPeriod) {
+            accountingPeriod = String(grp.eventDate).trim();
+          }
+        }
+      }
+      if (!normalizedEventDate) {
+        // Only extract fallback from userInput when userInput contains a complete calendar date (day + month + year)
+        const completeDateMatch =
+          userInput.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+          userInput.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4})\b/i)?.[0] ||
+          userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4})\b/i)?.[0];
+        if (completeDateMatch) {
+          normalizedEventDate = formatSingaporeDate(completeDateMatch);
+        }
+      }
+
+      // Hypothetical / Conditional / Illustrative status:
+      const txStatus = (grp.transactionStatus as any) || (grp.isHypothetical ? 'hypothetical' : 'actual');
+      const jAction = (grp.journalAction as any) || (txStatus !== 'actual' ? 'illustrative' : 'new');
+      const isHypo = Boolean(
+        grp.isHypothetical ||
+        txStatus === 'hypothetical' ||
+        txStatus === 'conditional' ||
+        txStatus === 'planned' ||
+        jAction === 'illustrative'
+      );
+      const authStatus = isHypo ? 'CONDITIONAL' : (grp.authorityStatus || 'AI_PROPOSED');
 
       return {
         id: grp.id || `grp-${gIdx + 1}`,
-        eventDate: formatSingaporeDate(grp.eventDate || extractedDateCue || new Date()),
+        transactionId: grp.transactionId || grp.id || `grp-${gIdx + 1}`,
+        eventDate: normalizedEventDate,
+        accountingPeriod: accountingPeriod || undefined,
+        currency: grp.currency || parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
         title: grp.title || `Entry Group ${gIdx + 1}`,
         summary: grp.summary || '',
+        narration: grp.narration || grp.summary || '',
+        transactionStatus: txStatus,
+        journalAction: jAction,
+        isHypothetical: isHypo,
+        authorityStatus: authStatus,
         lines,
         totalDebit,
         totalCredit,
         isBalanced,
         citations: verifiedCitations,
-        rationalePoints: grp.rationalePoints || [],
-        authorityStatus: computedAuthorityStatus
+        rationalePoints: grp.rationalePoints || []
       };
     });
   }
@@ -2946,56 +2991,88 @@ export function postProcessAIResponse(
       : ((currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0));
 
     if (priorCommitted.length > 0 && directGroups.length > 0) {
-      const priorFingerprints = new Set(priorCommitted.map(journalGroupFingerprint));
-      const priorIds = new Set(priorCommitted.map(p => p.id));
-      const isRecurringRequest = /\b(?:recurring|repeat|another|second|third|fourth|next\s+(?:month|quarter|year|week|instalment|installment|payment|period)|subsequent|again|month\s+\d+|year\s+\d+|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.test(userInput);
+      const isRestatement = directGroups.some(g => g.journalAction === 'restatement') ||
+        /\b(?:show|display|view|see|print|repeat)\b[\s\S]*\b(?:journal|entry|entries)\b[\s\S]*\b(?:again|earlier|previous|above)\b/i.test(userInput);
+      const isRevision = directGroups.some(g => g.journalAction === 'revised') ||
+        /\b(?:actually|correction|correct|mistake|amend|amendment|instead of|change to|update to|revised?|it was S?\$|should be S?\$)\b/i.test(userInput);
 
-      const priorFingerprintCounts = new Map<string, number>();
-      for (const p of priorCommitted) {
-        const fp = journalGroupFingerprint(p);
-        priorFingerprintCounts.set(fp, (priorFingerprintCounts.get(fp) || 0) + 1);
-      }
-
-      let newGroupsToKeep: JournalEntryGroup[] = [];
-
-      if (directGroups.length > priorCommitted.length) {
-        const skipCounts = new Map<string, number>(priorFingerprintCounts);
-        for (const grp of directGroups) {
-          const fp = journalGroupFingerprint(grp);
-          const remainingSkip = skipCounts.get(fp) || 0;
-          if (remainingSkip > 0) {
-            skipCounts.set(fp, remainingSkip - 1);
-          } else {
-            newGroupsToKeep.push(grp);
+      if (isRestatement) {
+        committedDirectGroups = [...priorCommitted];
+      } else if (isRevision) {
+        const newActualGroups = directGroups.filter(g => !g.isHypothetical);
+        if (newActualGroups.length > 0) {
+          const updated = [...priorCommitted];
+          for (const newGrp of newActualGroups) {
+            const matchIdx = updated.findIndex(p => p.id === newGrp.id || (newGrp.transactionId && p.transactionId === newGrp.transactionId));
+            if (matchIdx !== -1) {
+              updated[matchIdx] = newGrp;
+            } else {
+              updated[updated.length - 1] = newGrp;
+            }
           }
+          committedDirectGroups = updated;
+          directGroups = updated;
+        } else {
+          committedDirectGroups = [...priorCommitted];
         }
-      } else if (isRecurringRequest) {
-        newGroupsToKeep = directGroups;
       } else {
-        newGroupsToKeep = directGroups.filter(grp => !priorFingerprints.has(journalGroupFingerprint(grp)));
-      }
+        const actualNewGroups = directGroups.filter(g => !g.isHypothetical);
+        const priorIds = new Set(priorCommitted.map(p => p.id));
+        const priorFingerprints = new Set(priorCommitted.map(journalGroupFingerprint));
+        const isRecurringRequest = /\b(?:recurring|repeat|another|second|third|fourth|next\s+(?:month|quarter|year|week|instalment|installment|payment|period)|subsequent|again|month\s+\d+|year\s+\d+|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i.test(userInput);
 
-      // Ensure distinct group IDs for all newly added groups
-      const dedupedNewGroups = newGroupsToKeep.map((grp, gIdx) => {
-        if (priorIds.has(grp.id) || !grp.id) {
-          return {
-            ...grp,
-            id: `grp-turn-${priorCommitted.length + gIdx + 1}`
-          };
+        const priorFingerprintCounts = new Map<string, number>();
+        for (const p of priorCommitted) {
+          const fp = journalGroupFingerprint(p);
+          priorFingerprintCounts.set(fp, (priorFingerprintCounts.get(fp) || 0) + 1);
         }
-        return grp;
-      });
 
-      committedDirectGroups = [...priorCommitted, ...dedupedNewGroups];
-      directGroups = [...priorCommitted, ...dedupedNewGroups];
+        let groupsToAdd: JournalEntryGroup[] = [];
+        if (actualNewGroups.length > priorCommitted.length) {
+          const skipCounts = new Map<string, number>(priorFingerprintCounts);
+          for (const grp of actualNewGroups) {
+            const fp = journalGroupFingerprint(grp);
+            const remainingSkip = skipCounts.get(fp) || 0;
+            if (remainingSkip > 0) {
+              skipCounts.set(fp, remainingSkip - 1);
+            } else {
+              groupsToAdd.push(grp);
+            }
+          }
+        } else if (isRecurringRequest) {
+          groupsToAdd = actualNewGroups;
+        } else {
+          groupsToAdd = actualNewGroups.filter(grp => !priorFingerprints.has(journalGroupFingerprint(grp)));
+        }
+
+        const dedupedNewGroups = groupsToAdd.map((grp, gIdx) => {
+          if (priorIds.has(grp.id) || !grp.id) {
+            const freshId = `grp-turn-${priorCommitted.length + gIdx + 1}`;
+            return {
+              ...grp,
+              id: freshId,
+              transactionId: freshId
+            };
+          }
+          return grp;
+        });
+
+        committedDirectGroups = [...priorCommitted, ...dedupedNewGroups];
+        const hypoGroups = directGroups.filter(g => g.isHypothetical);
+        if (hypoGroups.length > 0) {
+          directGroups = [...priorCommitted, ...dedupedNewGroups, ...hypoGroups];
+        } else {
+          directGroups = [...priorCommitted, ...dedupedNewGroups];
+        }
+      }
     } else if (directGroups.length > 0) {
-      committedDirectGroups = directGroups;
+      committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
     } else if (priorCommitted.length > 0) {
       committedDirectGroups = priorCommitted;
       directGroups = priorCommitted;
     }
   } else if (directGroups.length > 0) {
-    committedDirectGroups = directGroups;
+    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
   }
 
   // If deterministic scenario provided keyParameters, prioritize them
@@ -3067,26 +3144,67 @@ export function postProcessAIResponse(
     groundedContext.missingFacts
   );
 
+  const updatedScenarioForBalances: AccountingScenarioState = {
+    ...(currentScenario || {}),
+    scenarioType: currentScenario?.scenarioType || 'UNRECOGNIZED',
+    rawQuery: userInput,
+    transactionTitle: finalTitle,
+    functionalCurrency: currentScenario?.functionalCurrency || parsed.transactionCurrency || 'SGD',
+    transactionCurrency: parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
+    committedDirectGroups,
+    directGroups,
+    missingFields: currentScenario?.missingFields || [],
+    isComplete: true
+  };
+  const postTurnAcctCtx = extractAccountingContext(updatedScenarioForBalances);
+
+  const derivedBalances = postTurnAcctCtx.outstandingBalances
+    .filter(b => b.remainingAmount > 0)
+    .map(b => ({ accountName: b.accountName, amount: b.remainingAmount, currency: b.currency }));
+  const scenarioRemainingBalances = (Array.isArray(parsed.remainingBalances) && parsed.remainingBalances.length > 0)
+    ? parsed.remainingBalances
+    : (derivedBalances.length > 0 ? derivedBalances : undefined);
+
   let rawMessageText = parsed.messageText || '';
   if (!rawMessageText && directGroups.length > 0) {
-    const currency = parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD';
     let md = `### ${finalTitle}\n\n`;
     if (selectedAccountingTreatmentSummary) {
       md += `${selectedAccountingTreatmentSummary}\n\n`;
     }
-    for (const grp of directGroups) {
-      md += `#### ${grp.title} (${grp.eventDate})\n`;
-      if (grp.summary) {
-        md += `${grp.summary}\n\n`;
+    for (let idx = 0; idx < directGroups.length; idx++) {
+      const grp = directGroups[idx];
+      const statusSuffix = grp.isHypothetical ? ' *(Illustrative / Conditional)*' : '';
+      const dateOrPeriod = grp.eventDate ? ` (${grp.eventDate})` : (grp.accountingPeriod ? ` (${grp.accountingPeriod})` : '');
+      const headerTitle = `#### Journal ${idx + 1} — ${grp.title}${dateOrPeriod}${statusSuffix}`;
+
+      const currencyLabel = grp.currency || 'S$';
+      const formatAmt = (n: number) => n.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      let tableMd = `${headerTitle}\n\n| Account | Debit (${currencyLabel}) | Credit (${currencyLabel}) |\n| :--- | ---: | ---: |\n`;
+      for (const line of grp.lines || []) {
+        const dr = line.debit > 0 ? formatAmt(line.debit) : '—';
+        const cr = line.credit > 0 ? formatAmt(line.credit) : '—';
+        tableMd += `| ${line.accountName} | ${dr} | ${cr} |\n`;
       }
-      md += `| Account | Category | Debit (${currency}) | Credit (${currency}) |\n`;
-      md += `| :--- | :--- | :---: | :---: |\n`;
-      for (const l of grp.lines) {
-        const drStr = l.debit > 0 ? l.debit.toFixed(2) : '-';
-        const crStr = l.credit > 0 ? l.credit.toFixed(2) : '-';
-        md += `| ${l.accountName} | ${l.category} | ${drStr} | ${crStr} |\n`;
+      const totalDr = formatAmt(grp.totalDebit ?? 0);
+      const totalCr = formatAmt(grp.totalCredit ?? 0);
+      tableMd += `| **Total** | **${totalDr}** | **${totalCr}** |\n\n`;
+
+      if (grp.narration || grp.summary) {
+        const expl = grp.narration || grp.summary;
+        if (!md.includes(expl)) {
+          tableMd += `**Explanation:** ${expl}\n\n`;
+        }
       }
-      md += `\n`;
+
+      md += tableMd;
+    }
+
+    if (Array.isArray(scenarioRemainingBalances) && scenarioRemainingBalances.length > 0) {
+      for (const bal of scenarioRemainingBalances) {
+        const amtStr = bal.amount.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const balCurr = bal.currency || 'S$';
+        md += `**Remaining balance (${bal.accountName}): ${balCurr} ${amtStr}**\n\n`;
+      }
     }
 
     if (Array.isArray(parsed.outstandingOrFutureItems) && parsed.outstandingOrFutureItems.length > 0) {
@@ -3140,6 +3258,7 @@ export function postProcessAIResponse(
     keyParameters,
     directGroups,
     committedDirectGroups,
+    remainingBalances: scenarioRemainingBalances,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
