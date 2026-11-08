@@ -333,25 +333,42 @@ export function isHighRiskStatutoryClaim(text: string): boolean {
   const complianceDeadline = signals.materialDeadline &&
     /\b(?:fil(?:e|ing|ed)|submit\w*|lodge\w*|notif\w*|report\w*|return|registration|register\w*|tax|statutory|regulatory|compliance)\b/i.test(normalizedText);
   const complianceContext = /\b(?:legal|law|laws|statutory|regulatory|regulator|compliance|government|authority|acra|iras|cpf|mom|mas|tax|gst|taxable|taxation|income\s+tax|company\s+secretary|resident\s+director|statutory\s+auditor)\b/i.test(normalizedText);
-  const obligationModal = /\b(?:must|shall|is\s+required\s+to|are\s+required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\b/i;
-  const explicitComplianceAction = new RegExp(`${obligationModal.source}\\s+(?:submit|file|lodge|notify|register|withhold|furnish)\\b`, 'i').test(normalizedText);
+  const obligationModal = /\b(?:must(?:\s+not)?|shall(?:\s+not)?|(?:is|are)\s+(?:not\s+)?required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\b/i;
+  const explicitComplianceAction = new RegExp(
+    `${obligationModal.source}\\s+(?:submit|file|lodge|notify|register\\b(?!(?:\\s+(?:the\\s+)?(?:asset|item|transaction|expense|invoice|account|balance)\\b)?[^.!?;]{0,35}\\b(?:in|into)\\s+(?:the\\s+)?(?:fixed\\s+asset|asset|general\\s+ledger|accounting)\\s+register\\b)|withhold|furnish)\\b`,
+    'i'
+  ).test(normalizedText);
   const contextBoundReportingAction = new RegExp(`${obligationModal.source}\\s+(?:report|declare)\\b`, 'i').test(normalizedText) && complianceContext;
+  // Exclude only the commercial licence mention, preserving other regulated
+  // objects and obligations in the same claim.
+  const regulatedObjectText = normalizedText.replace(
+    /\b(?:software|commercial|subscription|application|end[- ]user)(?:\s+(?:software|application))?\s+licen[cs]es?\b/gi,
+    'commercial entitlement'
+  );
   const regulatedObjectPattern = complianceContext
     ? String.raw`\b(?:licen[cs]es?|permits?|registrations?|approvals?)\b`
     : String.raw`\b(?:licen[cs]es?|permits?|registrations?)\b`;
-  const nominalObligationStatus = String.raw`\b(?:required|requires|requirement|necessary|mandatory|needed|need\s+not|not\s+(?:required|necessary|needed|applicable)|does\s+not\s+need|do\s+not\s+need|unnecessary|does\s+not\s+apply|do\s+not\s+apply)\b`;
+  const nominalObligationStatus = String.raw`\b(?:required|requires|requirement|necessary|mandatory|needed|need\s+not|not\s+(?:required|necessary|needed|applicable|optional)|does\s+not\s+need|do\s+not\s+need|unnecessary|optional|exempt(?:\s+from\s+(?:obtaining|holding|renewing))?|waived|does\s+not\s+apply|do\s+not\s+apply)\b`;
   const modalComplianceAction = String.raw`(?:obtain|renew\w*|hold|maintain|seek|apply|secure|be\s+(?:renewed|licensed|licenced|approved|obtained|held|maintained|sought|applied\s+for|secured))`;
   const regulatedObjectObligation = new RegExp(
     `(?:${obligationModal.source}\\s+${modalComplianceAction}[^.!?;]{0,45}${regulatedObjectPattern}|${regulatedObjectPattern}[^.!?;]{0,45}${obligationModal.source}\\s+${modalComplianceAction}|${regulatedObjectPattern}[^.!?;]{0,70}${nominalObligationStatus}|${nominalObligationStatus}[^.!?;]{0,70}${regulatedObjectPattern})`,
     'i'
+  ).test(regulatedObjectText);
+  const permissionWithoutLicence = /\b(?:may|can)\s+(?:legally\s+)?operate\s+without\b[^.!?;]{0,30}\blicen[cs]es?\b/i.test(regulatedObjectText);
+  const appointmentRole = String.raw`(?:director|company\s+secretary|(?:statutory\s+)?auditor)`;
+  const appointmentSubject = String.raw`(?:appointment\s+of\s+(?:(?:a|an|the)\s+)?${appointmentRole}|${appointmentRole}\s+appointment)`;
+  const nominalAppointmentConclusion = new RegExp(
+    `(?:^|[.!?;,]\\s*|\\b(?:and|but)\\s+)(?:(?:no|the|a|an|this|that)\\s+)?${appointmentSubject}\\s+(?:(?:is|are)\\s+)?(?:not\\s+)?(?:required|necessary|mandatory|needed|optional|unnecessary|waived)\\b`,
+    'i'
   ).test(normalizedText);
-  const regulatedAppointment = /\b(?:appoint\w*|appointment)\b/i.test(normalizedText) &&
-    (complianceContext || /\b(?:director|company\s+secretary|auditor)\b/i.test(normalizedText)) &&
-    (obligationModal.test(normalizedText) || /\b(?:required|requirement|necessary|not\s+required|not\s+necessary|not\s+applicable|does\s+not\s+apply)\b/i.test(normalizedText));
+  const regulatedAppointment =
+    new RegExp(`${obligationModal.source}\\s+appoint\\w*\\b[^.!?;]{0,45}\\b(?:director|company\\s+secretary|auditor)\\b`, 'i').test(normalizedText) ||
+    new RegExp(`\\b(?:director|company\\s+secretary|statutory\\s+auditor|auditor)\\b[^.!?;]{0,25}${obligationModal.source}\\s+be\\s+appointed\\b`, 'i').test(normalizedText) ||
+    nominalAppointmentConclusion;
   const explicitLegalCompliance = complianceContext && /\bcomply\b/i.test(normalizedText) &&
     /\b(?:law|laws|statute|statutes|regulation|regulations|legal\s+requirements)\b/i.test(normalizedText) && obligationModal.test(normalizedText);
   const complianceActionObligation = explicitComplianceAction || contextBoundReportingAction ||
-    regulatedObjectObligation || regulatedAppointment || explicitLegalCompliance;
+    permissionWithoutLicence || regulatedObjectObligation || regulatedAppointment || explicitLegalCompliance;
   return statutoryApplicability || standaloneEligibility || signals.definitiveStatutoryOutcome || statutoryRequirement ||
     complianceDeadline || complianceActionObligation;
 }
@@ -370,7 +387,7 @@ function containsHighRiskClaim(text: string): boolean {
     new RegExp(`\\b${writtenNumber}\\s+(?:dollars?|euros?|pounds?|days?|months?|years?|percent|per cent)\\b`, 'i').test(normalizedText);
   const spelledDeadline = (materialDeadline && new RegExp(`\\b${writtenNumber}\\b`, 'i').test(normalizedText)) ||
     new RegExp(`\\b(?:within|by|before|after)\\s+(?:${writtenNumber}|\\d+)\\s+(?:business\\s+)?(?:days?|months?|years?)\\b`, 'i').test(normalizedText);
-  return categoricalApplicability || definitiveStatutoryOutcome || statutoryRequirement || materialDeadline || explicitDate || exactRate || specificProvision || numericalCalculation || effectiveDateClaim || journalInstruction || exactQuantity || spelledDeadline;
+  return isHighRiskStatutoryClaim(normalizedText) || categoricalApplicability || definitiveStatutoryOutcome || statutoryRequirement || materialDeadline || explicitDate || exactRate || specificProvision || numericalCalculation || effectiveDateClaim || journalInstruction || exactQuantity || spelledDeadline;
 }
 
 function cleanModelText(value: unknown): string {
