@@ -24,6 +24,49 @@ export type { TargetResolutionCriteria, EquityMeasurementBasis, UnderlyingTransa
  * Deterministically generates a standardized unique balance key.
  * Format: `${accountCode || normalize(accountName)}_${counterpartyRole || 'none'}_${transactionId || 'default'}`
  */
+export function areAccountNamesCanonicallyEquivalent(name1: string, name2: string): boolean {
+  if (!name1 && !name2) return true;
+  if (!name1 || !name2) return false;
+
+  const normalize = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/\((?:non-current asset|current asset|current liability|non-current liability|asset|liability|equity|expense|revenue|p&l)\)/gi, '')
+      .replace(/[/&-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const toCanonical = (norm: string): string => {
+    const cashBankSet = new Set([
+      'cash', 'bank', 'cash at bank', 'cash and bank', 'cash bank',
+      'bank account', 'current account', 'cash at bank current account'
+    ]);
+    if (cashBankSet.has(norm)) return '__canonical_cash_at_bank__';
+
+    const tradePayablesSet = new Set([
+      'trade payable', 'trade payables', 'accounts payable', 'account payable',
+      'trade creditor', 'trade creditors'
+    ]);
+    if (tradePayablesSet.has(norm)) return '__canonical_trade_payables__';
+
+    const tradeReceivablesSet = new Set([
+      'trade receivable', 'trade receivables', 'accounts receivable', 'account receivable',
+      'trade debtor', 'trade debtors'
+    ]);
+    if (tradeReceivablesSet.has(norm)) return '__canonical_trade_receivables__';
+
+    return norm;
+  };
+
+  const n1 = normalize(name1);
+  const n2 = normalize(name2);
+  if (n1 === n2) return true;
+  const c1 = toCanonical(n1);
+  const c2 = toCanonical(n2);
+  return c1 === c2;
+}
+
 export function generateBalanceKey(
   accountCode?: string,
   accountName?: string,
@@ -225,6 +268,7 @@ export function deriveAccountingStateFromEvents(
             );
           }
           let matchingOpenBalances = openPayables.filter(b =>
+            areAccountNamesCanonicallyEquivalent(b.accountName, line.accountName) ||
             b.accountName.toLowerCase() === lineNameLower ||
             b.accountName.toLowerCase().includes(lineNameLower) ||
             lineNameLower.includes(b.accountName.toLowerCase())
@@ -296,6 +340,7 @@ export function deriveAccountingStateFromEvents(
             );
           }
           let matchingOpenBalances = openReceivables.filter(b =>
+            areAccountNamesCanonicallyEquivalent(b.accountName, line.accountName) ||
             b.accountName.toLowerCase() === lineNameLower ||
             b.accountName.toLowerCase().includes(lineNameLower) ||
             lineNameLower.includes(b.accountName.toLowerCase())
@@ -512,9 +557,13 @@ export function extractAccountingContext(
   currentScenario?: AccountingScenarioState | null,
   _chatHistory?: any[]
 ): ConversationAccountingContext {
-  // Committed direct groups (excluding any hypothetical projections)
-  const priorJournals: JournalEntryGroup[] = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
-    ? [...currentScenario.committedDirectGroups]
+  const hasExplicitGroupState =
+    currentScenario?.committedDirectGroups !== undefined ||
+    currentScenario?.directGroups !== undefined;
+  const priorJournals: JournalEntryGroup[] = Array.isArray(currentScenario?.committedDirectGroups)
+    ? (currentScenario.committedDirectGroups.length > 0 || currentScenario.isComplete === false
+        ? [...currentScenario.committedDirectGroups]
+        : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []))
     : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
 
   const defaultCurr = currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD';
@@ -538,7 +587,7 @@ export function extractAccountingContext(
   if (journalEvents.length > 0 && existingEvents.length === 0) {
     actualEvents = journalEvents;
   } else if (journalEvents.length === 0) {
-    actualEvents = existingEvents;
+    actualEvents = hasExplicitGroupState ? [] : existingEvents;
   } else {
     const existingById = new Map<string, AccountingEvent>();
     const existingByTxId = new Map<string, AccountingEvent>();
@@ -547,29 +596,19 @@ export function extractAccountingContext(
       if (e.transactionId) existingByTxId.set(e.transactionId, e);
     }
 
-    const matchedExistingIds = new Set<string>();
-    let allJournalsMatched = true;
-
     const mergedJournals = journalEvents.map(jEvt => {
       const match = (jEvt.id && existingById.get(jEvt.id)) ||
                     (jEvt.transactionId && existingByTxId.get(jEvt.transactionId));
       if (match) {
-        if (match.id) matchedExistingIds.add(match.id);
         return {
           ...match,
           ...jEvt
         };
       }
-      allJournalsMatched = false;
       return jEvt;
     });
 
-    if (existingEvents.length > journalEvents.length && allJournalsMatched) {
-      const remainingUnmatched = existingEvents.filter(e => !e.id || !matchedExistingIds.has(e.id));
-      actualEvents = [...mergedJournals, ...remainingUnmatched];
-    } else {
-      actualEvents = mergedJournals;
-    }
+    actualEvents = mergedJournals;
   }
 
   // Replay actual events to derive deterministic balances and equity
@@ -710,7 +749,11 @@ export function extractAccountingContext(
     underlyingTransaction,
     actualMeasurementBasis,
     projectedMeasurementBasis,
-    events: currentScenario?.accountingEvents || actualEvents,
+    events: actualEvents.length > 0
+      ? (currentScenario?.accountingEvents && currentScenario.accountingEvents.length === actualEvents.length
+          ? currentScenario.accountingEvents
+          : actualEvents)
+      : (hasExplicitGroupState ? [] : (currentScenario?.accountingEvents || actualEvents)),
     actualEvents,
     outstandingBalances,
     recognizedEquityTotal,

@@ -6,7 +6,7 @@ import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
 import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
-import { validateJournalGroups } from '../verification/journalIntegrity';
+import { validateJournalGroups, getMandatoryCategory } from '../verification/journalIntegrity';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
@@ -17,11 +17,14 @@ import {
   formatGroundedSystemPrompt,
   isStandaloneOutputGstCalculationRequest,
   journalGroupFingerprint,
+  normalizeAccountCategory,
   postProcessAIResponse,
+  rollbackRejectedScenarioState,
+  synchronizeCommittedScenarioState,
   type GroundedReasoningContext,
   type SourceMapFallbackTrace
 } from './groundingContextBuilder';
-import { extractAccountingContext } from './conversationAccountingState';
+import { extractAccountingContext, areAccountNamesCanonicallyEquivalent } from './conversationAccountingState';
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -90,9 +93,13 @@ export function supportsGeminiVision(modelName: string): boolean {
 }
 
 export function createGeminiImageParts(attachments: ChatImageAttachment[]): Array<{ inlineData: { mimeType: string; data: string } }> {
-  return attachments.map((image) => ({
-    inlineData: { mimeType: image.mimeType, data: image.dataUrl.slice(image.dataUrl.indexOf(',') + 1) }
-  }));
+  return attachments.map((image) => {
+    const d = image.dataUrl || (image as any).data || '';
+    const sliceIdx = d.indexOf(',');
+    return {
+      inlineData: { mimeType: image.mimeType, data: sliceIdx !== -1 ? d.slice(sliceIdx + 1) : d }
+    };
+  });
 }
 
 function getCurrentImageAttachments(chatHistory: ChatMessage[]): ChatImageAttachment[] {
@@ -108,11 +115,22 @@ function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAtta
     const attachmentIndex = typeof record.imageIndex === 'number' && record.imageIndex >= 1 && record.imageIndex <= attachments.length
       ? record.imageIndex - 1
       : imageIndex;
-    const fieldsSource = record.fields && typeof record.fields === 'object' ? record.fields as Record<string, unknown> : {};
-    const fields: ExtractedEvidence[] = Object.entries(fieldsSource).flatMap(([field, value]) => {
-      if (typeof value !== 'string' && typeof value !== 'number') return [];
-      return [{ source: 'image' as const, imageId: attachments[attachmentIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
-    });
+    let fields: ExtractedEvidence[] = [];
+    if (Array.isArray(record.fields)) {
+      fields = record.fields.flatMap((f: any) => {
+        if (!f || typeof f !== 'object') return [];
+        const fieldName = String(f.field || f.name || f.key || '');
+        const val = f.value !== undefined ? f.value : f.val;
+        if (!fieldName || (typeof val !== 'string' && typeof val !== 'number')) return [];
+        return [{ source: 'image' as const, imageId: attachments[attachmentIndex]?.id, field: fieldName, value: val, confidence: typeof f.confidence === 'number' ? f.confidence : (typeof record.confidence === 'number' ? record.confidence : undefined) }];
+      });
+    } else if (record.fields && typeof record.fields === 'object') {
+      const fieldsSource = record.fields as Record<string, unknown>;
+      fields = Object.entries(fieldsSource).flatMap(([field, value]) => {
+        if (typeof value !== 'string' && typeof value !== 'number') return [];
+        return [{ source: 'image' as const, imageId: attachments[attachmentIndex]?.id, field, value, confidence: typeof record.confidence === 'number' ? record.confidence : undefined }];
+      });
+    }
     const journalLines = Array.isArray(record.journalLines) ? record.journalLines.flatMap((line): ExtractedJournalLine[] => {
       if (!line || typeof line !== 'object') return [];
       const journalLine = line as Record<string, unknown>;
@@ -128,19 +146,169 @@ function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAtta
   });
 }
 
+export function extractDateFromText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  const completeDateMatch =
+    text.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+    text.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4})\b/i)?.[0] ||
+    text.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4})\b/i)?.[0];
+  if (completeDateMatch) {
+    return formatSingaporeDate(completeDateMatch) || '';
+  }
+  return '';
+}
+
+export function extractDateFromImageFields(fields: ExtractedEvidence[] | Record<string, any>): string {
+  if (!fields) return '';
+  const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
+
+  const fieldList: Array<{ field?: string; value?: unknown; rawText?: unknown }> = Array.isArray(fields)
+    ? fields
+    : typeof fields === 'object'
+      ? Object.entries(fields).map(([field, value]) => ({ field, value }))
+      : [];
+
+  for (const field of fieldList) {
+    if (!field || field.value === undefined || field.value === null) continue;
+    const cleanKey = String(field.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (dateKeyPattern.test(cleanKey)) {
+      const formatted = formatSingaporeDate(String(field.value));
+      if (formatted) return formatted;
+    }
+  }
+
+  // Fallback: check if any field value or rawText contains a date
+  for (const field of fieldList) {
+    if (!field) continue;
+    if (field.value !== undefined && field.value !== null) {
+      const fromVal = extractDateFromText(String(field.value));
+      if (fromVal) return fromVal;
+    }
+    const raw = (field as any).rawText || (field as any).raw_text;
+    if (raw) {
+      const fromRaw = extractDateFromText(String(raw));
+      if (fromRaw) return fromRaw;
+    }
+  }
+
+  return '';
+}
+
+export function areImageAccountsCompatible(
+  extLine: { accountName?: string; category?: string; accountCode?: string },
+  aiLine: { accountName?: string; category?: string; accountCode?: string }
+): boolean {
+  const norm = (name?: string): string => {
+    let s = (name || '')
+      .toLowerCase()
+      .replace(/\((?:non-current asset|current asset|current liability|non-current liability|asset|liability|equity|expense|revenue|p&l)\)/gi, '')
+      .replace(/[/&-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    const strippedSuffix = s.replace(/\s*(?:-\s*cost|cost|account)$/i, '').trim();
+    if (strippedSuffix.length > 0) {
+      s = strippedSuffix;
+    }
+    return s;
+  };
+
+  const toCanon = (s: string): string => {
+    const cashBankSet = new Set([
+      'cash', 'bank', 'cash at bank', 'cash and bank', 'cash bank',
+      'bank transfer', 'current account', 'cash at bank current account'
+    ]);
+    if (cashBankSet.has(s)) return '__canonical_cash_at_bank__';
+
+    const tradePayablesSet = new Set([
+      'trade payable', 'trade payables', 'accounts payable', 'account payable',
+      'trade creditor', 'trade creditors'
+    ]);
+    if (tradePayablesSet.has(s)) return '__canonical_trade_payables__';
+
+    const tradeReceivablesSet = new Set([
+      'trade receivable', 'trade receivables', 'accounts receivable', 'account receivable',
+      'trade debtor', 'trade debtors'
+    ]);
+    if (tradeReceivablesSet.has(s)) return '__canonical_trade_receivables__';
+
+    return s;
+  };
+
+  const normExt = norm(extLine.accountName);
+  const normAi = norm(aiLine.accountName);
+
+  if (!normExt || !normAi) return false;
+
+  const canonExt = toCanon(normExt);
+  const canonAi = toCanon(normAi);
+
+  if (canonExt !== canonAi) {
+    return false;
+  }
+
+  const extCat = normalizeAccountCategory(extLine.category, extLine.accountName);
+  const aiCat = normalizeAccountCategory(aiLine.category, aiLine.accountName);
+  if (extCat && aiCat && extCat !== aiCat) {
+    const mandatoryExt = getMandatoryCategory(extLine.accountName || '');
+    const mandatoryAi = getMandatoryCategory(aiLine.accountName || '');
+    if (mandatoryExt && mandatoryAi && mandatoryExt !== mandatoryAi) {
+      return false;
+    }
+    if (mandatoryExt && extCat === mandatoryExt && aiCat !== mandatoryExt) {
+      return false;
+    }
+    if (mandatoryAi && aiCat === mandatoryAi && extCat !== mandatoryAi) {
+      return false;
+    }
+    if (!mandatoryExt && !mandatoryAi && canonExt === canonAi) {
+      // Account names are canonical equivalents without statutory category contradictions
+    } else {
+      return false;
+    }
+  }
+
+  const extCode = (extLine.accountCode || '').trim().toLowerCase();
+  const aiCode = (aiLine.accountCode || '').trim().toLowerCase();
+  if (extCode && aiCode && extCode !== 'image' && extCode !== '1000' && aiCode !== 'image' && aiCode !== '1000') {
+    if (extCode !== aiCode) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function buildJournalGroupsFromImageEvidence(imageEvidence: ExtractedImageEvidence[]): JournalEntryGroup[] {
   return imageEvidence.flatMap((image, imageIndex) => {
     const extractedLines = image.journalLines || [];
     if (extractedLines.length < 2) return [];
     const lines = extractedLines.map((line, lineIndex) => {
       const lowerName = line.accountName.toLowerCase();
-      const category = /payable|liability|loan/.test(lowerName) ? 'LIABILITY' as const : /revenue|sales/.test(lowerName) ? 'REVENUE' as const : /expense|cost/.test(lowerName) ? 'EXPENSE' as const : 'ASSET' as const;
+      const category = normalizeAccountCategory(undefined, line.accountName) ||
+        (/payable|liability|loan/.test(lowerName) ? 'LIABILITY' as const :
+         /equity|share capital|retained earnings/.test(lowerName) ? 'EQUITY' as const :
+         /revenue|sales|income/.test(lowerName) ? 'REVENUE' as const :
+         /expense|cost|supplies|fee/.test(lowerName) ? 'EXPENSE' as const : 'ASSET' as const);
       return { id: `image-${imageIndex + 1}-line-${lineIndex + 1}`, accountCode: line.accountCode || 'IMAGE', accountName: line.accountName, category, debit: line.debit || 0, credit: line.credit || 0, lineExplanation: 'Visible journal line extracted from the screenshot.' };
     });
     const totalDebit = Math.round(lines.reduce((sum, line) => sum + line.debit, 0) * 100) / 100;
     const totalCredit = Math.round(lines.reduce((sum, line) => sum + line.credit, 0) * 100) / 100;
     const isBalanced = totalDebit > 0 && totalCredit > 0 && Math.abs(totalDebit - totalCredit) < 0.01;
-    return [{ id: `image-journal-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Journal extracted from image ${imageIndex + 1}`, summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.', lines, totalDebit, totalCredit, isBalanced, citations: [], rationalePoints: ['Amounts and accounts were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
+    const grpId = `image-journal-${image.imageId}`;
+    return [{
+      id: grpId,
+      transactionId: grpId,
+      eventDate: extractDateFromImageFields(image.fields),
+      title: `Journal extracted from image ${imageIndex + 1}`,
+      summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.',
+      lines,
+      totalDebit,
+      totalCredit,
+      isBalanced,
+      citations: [],
+      rationalePoints: ['Amounts and accounts were extracted from the screenshot.'],
+      authorityStatus: 'AI_PROPOSED' as const
+    }];
   });
 }
 
@@ -162,7 +330,21 @@ export function buildTransactionGroupsFromImageEvidence(imageEvidence: Extracted
     ];
     const totalCredit = Math.round((immediatePayment + remainingPayable) * 100) / 100;
     const isBalanced = totalAmount > 0 && totalCredit > 0 && Math.abs(totalAmount - totalCredit) < 0.01;
-    return [{ id: `image-transaction-${image.imageId}`, eventDate: formatSingaporeDate(new Date()), title: `Transaction extracted from image ${imageIndex + 1}`, summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.', lines, totalDebit: totalAmount, totalCredit, isBalanced, citations: [], rationalePoints: ['Amounts and settlement split were extracted from the screenshot.'], authorityStatus: 'AI_PROPOSED' as const }];
+    const grpId = `image-transaction-${image.imageId}`;
+    return [{
+      id: grpId,
+      transactionId: grpId,
+      eventDate: extractDateFromImageFields(image.fields),
+      title: `Transaction extracted from image ${imageIndex + 1}`,
+      summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.',
+      lines,
+      totalDebit: totalAmount,
+      totalCredit,
+      isBalanced,
+      citations: [],
+      rationalePoints: ['Amounts and settlement split were extracted from the screenshot.'],
+      authorityStatus: 'AI_PROPOSED' as const
+    }];
   });
 }
 
@@ -200,13 +382,15 @@ function buildGuardrailValidationMessage(violations: Array<{ code: string; messa
 }
 
 export function getDeterministicFallbackGroups(
-  currentScenario: AccountingScenarioState | null,
+  _currentScenario: AccountingScenarioState | null,
   deterministicScenario: AccountingScenarioState | null | undefined
 ): JournalEntryGroup[] | undefined {
-  if (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0) {
-    return currentScenario.committedDirectGroups;
-  }
-  if (deterministicScenario?.directGroups && deterministicScenario.directGroups.length > 0) {
+  if (
+    deterministicScenario &&
+    deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+    deterministicScenario.directGroups &&
+    deterministicScenario.directGroups.length > 0
+  ) {
     return deterministicScenario.directGroups;
   }
   return undefined;
@@ -541,6 +725,7 @@ export async function processAccountingQuery(
   let authorityEvidenceMessage: string | undefined;
   let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
   let requestCompletenessContext: RequestCompletenessContext | undefined;
+  let groundedContext: GroundedReasoningContext | undefined;
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
     if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return response;
     const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
@@ -677,9 +862,13 @@ export async function processAccountingQuery(
       activeScenario &&
       assessConversationRelation(userInput, activeScenario) !== 'NEW'
     );
-    const priorCommitted = activeScenario?.committedDirectGroups ||
-      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
-    const safePriorGroups = isFollowUp ? (priorCommitted || []) : [];
+    const priorCommitted: JournalEntryGroup[] = activeScenario
+      ? (Array.isArray(activeScenario.committedDirectGroups)
+          ? (activeScenario.committedDirectGroups.length > 0 || activeScenario.isComplete === false
+              ? [...activeScenario.committedDirectGroups]
+              : (activeScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+          : (activeScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+      : [];
 
     if (response.scenarioState.missingFields?.some(f =>
       f.fieldKey === 'revisionTarget' ||
@@ -689,13 +878,7 @@ export async function processAccountingQuery(
     )) {
       return {
         ...response,
-        scenarioState: {
-          ...response.scenarioState,
-          directGroups: safePriorGroups,
-          committedDirectGroups: safePriorGroups,
-          projectedGroups: [],
-          isComplete: false
-        }
+        scenarioState: rollbackRejectedScenarioState(response.scenarioState, activeScenario, isFollowUp, response.scenarioState.missingFields || [])
       };
     }
     if (!hasImages && !journalRequested && (
@@ -819,10 +1002,15 @@ export async function processAccountingQuery(
       const syncedCommitted = groups.filter(g => !g.isHypothetical);
       return {
         ...response,
-        scenarioState: {
-          ...response.scenarioState,
-          committedDirectGroups: syncedCommitted
-        }
+        scenarioState: synchronizeCommittedScenarioState(
+          {
+            ...response.scenarioState,
+            directGroups: groups,
+            committedDirectGroups: syncedCommitted
+          },
+          syncedCommitted,
+          activeScenario?.actualEvents
+        )
       };
     }
 
@@ -854,14 +1042,7 @@ export async function processAccountingQuery(
       messageText: ambigIssue
         ? ('### Clarification Required — Ambiguous Settlement Target\n\n' + issue.prompt)
         : ('### AI-Proposed Journal Rejected\n\n' + issue.prompt),
-      scenarioState: {
-        ...response.scenarioState,
-        directGroups: isFollowUp ? (priorCommitted || []) : [],
-        committedDirectGroups: isFollowUp ? (priorCommitted || []) : [],
-        projectedGroups: [],
-        isComplete: false,
-        missingFields: [issue]
-      },
+      scenarioState: rollbackRejectedScenarioState(response.scenarioState, activeScenario, isFollowUp, [issue]),
       clarifications: [issue]
     };
   };
@@ -1158,7 +1339,7 @@ export async function processAccountingQuery(
 
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
-  const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, liveProviderConfigured ? undefined : providerOrApiKey, {
+  groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, liveProviderConfigured ? undefined : providerOrApiKey, {
     questionUnderstanding,
     requestCompletenessContext,
     ...(liveProviderConfigured && isAccountingTransactionOrFollowUp && !usesIrasEvidencePolicy(prelimClassification, userInput)
@@ -2337,12 +2518,12 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     (context.semanticUnderstanding?.followUpAnalysis?.isFollowUp ||
      assessConversationRelation(userInput, currentScenario) !== 'NEW')
   );
-  const priorCommittedForImage: JournalEntryGroup[] = isFollowUpForImage
-    ? (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0
-        ? [...currentScenario.committedDirectGroups]
-        : (currentScenario?.isComplete
-            ? (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0)
-            : []))
+  const priorCommittedForImage: JournalEntryGroup[] = (isFollowUpForImage && currentScenario)
+    ? (Array.isArray(currentScenario.committedDirectGroups)
+        ? (currentScenario.committedDirectGroups.length > 0 || currentScenario.isComplete === false
+            ? [...currentScenario.committedDirectGroups]
+            : (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+        : (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
     : [];
 
   if (imageEvidence.length > 0) {
@@ -2365,27 +2546,56 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       const imageErrors: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }> = [...guardrailErrors, ...integrityErrors];
 
       const rawAiGroups = Array.isArray(parsed.directGroups) ? parsed.directGroups : [];
-      if (rawAiGroups.length > 0 && (!deterministicFallback || deterministicFallback.length === 0)) {
-        const isCashOrBank = (n: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(n || '');
-        const isPayable = (n: string) => /\b(?:payable|payables|due\s*to)\b/i.test(n || '');
-        const isReceivable = (n: string) => /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(n || '');
-        const areAccountsCompatible = (name1: string, name2: string) => {
-          const a = (name1 || '').toLowerCase().trim();
-          const b = (name2 || '').toLowerCase().trim();
-          if (a === b || a.includes(b) || b.includes(a)) return true;
-          if (isCashOrBank(a) && isCashOrBank(b)) return true;
-          if (isPayable(a) && isPayable(b)) return true;
-          if (isReceivable(a) && isReceivable(b)) return true;
-          return false;
-        };
+      let currentTurnAiGroups = rawAiGroups;
+      if (isFollowUpForImage && priorCommittedForImage.length > 0 && rawAiGroups.length > extractedGroups.length) {
+        currentTurnAiGroups = rawAiGroups.filter((aiGrp: any) => {
+          const isPriorMatch = priorCommittedForImage.some(p => {
+            if (aiGrp.id && p.id && aiGrp.id === p.id) return true;
+            const pDrCents = Math.round((p.totalDebit || 0) * 100);
+            const pCrCents = Math.round((p.totalCredit || 0) * 100);
+            const aiLines = Array.isArray(aiGrp.lines) ? aiGrp.lines : [];
+            const aiDrCents = Math.round((typeof aiGrp.totalDebit === 'number' ? aiGrp.totalDebit : aiLines.reduce((s: number, l: any) => s + (Number(l.debit) || 0), 0)) * 100);
+            const aiCrCents = Math.round((typeof aiGrp.totalCredit === 'number' ? aiGrp.totalCredit : aiLines.reduce((s: number, l: any) => s + (Number(l.credit) || 0), 0)) * 100);
+            if (pDrCents === aiDrCents && pCrCents === aiCrCents && p.lines.length === aiLines.length) {
+              const allLinesMatch = p.lines.every((pl, lIdx) => {
+                const al = aiLines[lIdx];
+                return al &&
+                  Math.round(pl.debit * 100) === Math.round((Number(al.debit) || 0) * 100) &&
+                  Math.round(pl.credit * 100) === Math.round((Number(al.credit) || 0) * 100) &&
+                  areImageAccountsCompatible(pl, al);
+              });
+              if (allLinesMatch) return true;
+            }
+            return false;
+          });
+          return !isPriorMatch;
+        });
+      }
 
-        let conflictExists = false;
-        if (rawAiGroups.length !== extractedGroups.length) {
+      const userQueryDate = extractDateFromText(userInput);
+
+      let conflictExists = false;
+      if (currentTurnAiGroups.length > 0 && (!deterministicFallback || deterministicFallback.length === 0)) {
+        if (currentTurnAiGroups.length !== extractedGroups.length) {
           conflictExists = true;
         } else {
           for (let i = 0; i < extractedGroups.length; i++) {
-            const aiGrp = rawAiGroups[i];
+            const aiGrp = currentTurnAiGroups[i];
             const extGrp = extractedGroups[i];
+
+            const rawAiDateStr = typeof aiGrp.eventDate === 'string' ? aiGrp.eventDate.trim() : '';
+            const aiDate = rawAiDateStr ? formatSingaporeDate(rawAiDateStr) : '';
+            const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
+
+            if ((rawAiDateStr && !aiDate) ||
+                (extDate && aiDate && extDate !== aiDate) ||
+                (extDate && !aiDate) ||
+                (extDate && userQueryDate && extDate !== userQueryDate) ||
+                (aiDate && userQueryDate && aiDate !== userQueryDate)) {
+              conflictExists = true;
+              break;
+            }
+
             const aiLines = Array.isArray(aiGrp.lines) ? aiGrp.lines : [];
             const aiDrCents = Math.round((typeof aiGrp.totalDebit === 'number' ? aiGrp.totalDebit : aiLines.reduce((s: number, l: any) => s + (Number(l.debit) || 0), 0)) * 100);
             const aiCrCents = Math.round((typeof aiGrp.totalCredit === 'number' ? aiGrp.totalCredit : aiLines.reduce((s: number, l: any) => s + (Number(l.credit) || 0), 0)) * 100);
@@ -2397,20 +2607,33 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
               break;
             }
 
+            const usedAiLineIndices = new Set<number>();
+            let linesMatched = true;
             for (const extLine of extGrp.lines) {
               const extLDr = Math.round((Number(extLine.debit) || 0) * 100);
               const extLCr = Math.round((Number(extLine.credit) || 0) * 100);
-              const matched = aiLines.find((al: any) => {
+              let foundIndex = -1;
+              for (let aIdx = 0; aIdx < aiLines.length; aIdx++) {
+                if (usedAiLineIndices.has(aIdx)) continue;
+                const al = aiLines[aIdx];
                 const alDr = Math.round((Number(al.debit) || 0) * 100);
                 const alCr = Math.round((Number(al.credit) || 0) * 100);
-                return alDr === extLDr && alCr === extLCr && areAccountsCompatible(extLine.accountName, al.accountName);
-              });
-              if (!matched) {
-                conflictExists = true;
+                if (alDr === extLDr && alCr === extLCr && areImageAccountsCompatible(extLine, al)) {
+                  foundIndex = aIdx;
+                  break;
+                }
+              }
+              if (foundIndex === -1) {
+                linesMatched = false;
                 break;
               }
+              usedAiLineIndices.add(foundIndex);
             }
-            if (conflictExists) break;
+
+            if (!linesMatched) {
+              conflictExists = true;
+              break;
+            }
           }
         }
 
@@ -2423,35 +2646,191 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         }
       }
 
+      for (let i = 0; i < extractedGroups.length; i++) {
+        const extGrp = extractedGroups[i];
+        const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
+        const resolvedDate = extDate || userQueryDate || '';
+        if (!resolvedDate) {
+          imageErrors.push({
+            code: 'IMAGE_MISSING_TRANSACTION_DATE',
+            message: 'A consistent transaction date is required for image-derived journal entries.',
+            severity: 'ERROR' as const
+          });
+          break;
+        }
+      }
+
+      const priorOutstandingBalances = isFollowUpForImage && currentScenario
+        ? extractAccountingContext(currentScenario).outstandingBalances
+        : [];
+
+      const reconciledExtractedGroups: JournalEntryGroup[] = extractedGroups.map((extGrp, i) => {
+        const aiGrp = currentTurnAiGroups[i];
+        const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
+        const resolvedDate = extDate || userQueryDate || '';
+
+        let grpId = aiGrp?.id || extGrp.id;
+        let txId = aiGrp?.transactionId || grpId;
+        if (isFollowUpForImage && priorCommittedForImage.some(p => p.id === grpId || p.transactionId === txId) && aiGrp?.journalAction !== 'revised') {
+          grpId = `${grpId}-turn-${priorCommittedForImage.length + i + 1}`;
+          txId = grpId;
+        }
+
+        const aiLines = Array.isArray(aiGrp?.lines) ? aiGrp.lines : [];
+        const usedAiIndices = new Set<number>();
+
+        const reconciledLines = extGrp.lines.map((extLine, lIdx) => {
+          const extLDr = Math.round((Number(extLine.debit) || 0) * 100);
+          const extLCr = Math.round((Number(extLine.credit) || 0) * 100);
+          let matchedAiLine: any;
+          for (let aIdx = 0; aIdx < aiLines.length; aIdx++) {
+            if (usedAiIndices.has(aIdx)) continue;
+            const al = aiLines[aIdx];
+            const alDr = Math.round((Number(al.debit) || 0) * 100);
+            const alCr = Math.round((Number(al.credit) || 0) * 100);
+            if (alDr === extLDr && alCr === extLCr && areImageAccountsCompatible(extLine, al)) {
+              matchedAiLine = al;
+              usedAiIndices.add(aIdx);
+              break;
+            }
+          }
+
+          let finalAccountName = extLine.accountName;
+          if (isFollowUpForImage && priorOutstandingBalances.length > 0) {
+            const canonicalBal = priorOutstandingBalances.find(b =>
+              b.remainingAmount > 0 && areAccountNamesCanonicallyEquivalent(b.accountName, extLine.accountName)
+            );
+            if (canonicalBal) {
+              finalAccountName = canonicalBal.accountName;
+            }
+          }
+
+          const category = normalizeAccountCategory(matchedAiLine?.category || extLine.category, finalAccountName) || extLine.category;
+          const accountCode = (extLine.accountCode && extLine.accountCode !== 'IMAGE')
+            ? extLine.accountCode
+            : (matchedAiLine?.accountCode || extLine.accountCode || 'IMAGE');
+
+          return {
+            id: extLine.id || `${grpId}-line-${lIdx + 1}`,
+            accountCode,
+            accountName: finalAccountName,
+            category,
+            debit: extLine.debit,
+            credit: extLine.credit,
+            foreignCurrency: matchedAiLine?.foreignCurrency || extLine.foreignCurrency,
+            foreignDebit: matchedAiLine?.foreignDebit || extLine.foreignDebit,
+            foreignCredit: matchedAiLine?.foreignCredit || extLine.foreignCredit,
+            exchangeRate: matchedAiLine?.exchangeRate || extLine.exchangeRate,
+            lineExplanation: extLine.lineExplanation || matchedAiLine?.lineExplanation || 'Visible journal line extracted from screenshot.'
+          };
+        });
+
+        return {
+          id: grpId,
+          transactionId: txId,
+          targetTransactionId: aiGrp?.targetTransactionId || extGrp.targetTransactionId,
+          eventDate: resolvedDate,
+          accountingPeriod: aiGrp?.accountingPeriod || extGrp.accountingPeriod,
+          currency: extGrp.currency || aiGrp?.currency || 'SGD',
+          title: aiGrp?.title || extGrp.title,
+          summary: aiGrp?.summary || extGrp.summary,
+          narration: aiGrp?.narration || extGrp.narration,
+          transactionStatus: extGrp.transactionStatus || 'actual',
+          journalAction: aiGrp?.journalAction || extGrp.journalAction || 'new',
+          isHypothetical: false,
+          authorityStatus: extGrp.authorityStatus || 'AI_PROPOSED',
+          lines: reconciledLines,
+          totalDebit: extGrp.totalDebit,
+          totalCredit: extGrp.totalCredit,
+          isBalanced: extGrp.isBalanced,
+          citations: extGrp.citations || aiGrp?.citations || [],
+          rationalePoints: extGrp.rationalePoints || aiGrp?.rationalePoints
+        };
+      });
+
+      const reconciledValidation = validateJournalGroups(reconciledExtractedGroups, {
+        isFollowUp: isFollowUpForImage,
+        outstandingBalances: isFollowUpForImage && currentScenario ? extractAccountingContext(currentScenario).outstandingBalances : []
+      });
+      for (const issue of reconciledValidation.issues) {
+        imageErrors.push({
+          code: issue.code,
+          message: issue.message,
+          severity: 'ERROR' as const
+        });
+      }
+
       if (imageErrors.length > 0) {
         // Fail-closed: image-derived journals must not override deterministic output or clear committed groups
         result.messageText += `\n\n${buildGuardrailValidationMessage(imageErrors)}\n\nImage-derived journal was not applied because it failed accounting validation.`;
-        result.scenarioState.directGroups = [...priorCommittedForImage];
-        result.scenarioState.committedDirectGroups = [...priorCommittedForImage];
-        result.scenarioState.projectedGroups = [];
-        result.scenarioState.remainingBalances = isFollowUpForImage ? currentScenario?.remainingBalances : undefined;
-        result.scenarioState.isComplete = false;
-        result.scenarioState.missingFields = [
-          ...(result.scenarioState.missingFields || []),
-          ...imageErrors.map((v) => ({
-            fieldKey: `imageGuardrail-${v.code}`,
-            fieldName: 'Image-derived journal validation',
-            prompt: `${v.code}: ${v.message}`,
-            whyNeeded: 'The screenshot-derived journal violates an accounting guardrail and cannot be posted automatically.'
-          }))
+        const imageErrorFields: MissingFieldInfo[] = imageErrors.map((v) => ({
+          fieldKey: `imageGuardrail-${v.code}`,
+          fieldName: 'Image-derived journal validation',
+          prompt: `${v.code}: ${v.message}`,
+          whyNeeded: 'The screenshot-derived journal violates an accounting guardrail and cannot be posted automatically.'
+        }));
+        result.scenarioState = rollbackRejectedScenarioState(
+          result.scenarioState,
+          currentScenario,
+          isFollowUpForImage,
+          [...(result.scenarioState.missingFields || []), ...imageErrorFields]
+        );
+        result.scenarioState.imageEvidence = imageEvidence;
+        result.scenarioState.evidence = [
+          ...(result.scenarioState.evidence || []),
+          ...flattenImageEvidence(imageEvidence)
         ];
       } else if (deterministicFallback && deterministicFallback.length > 0) {
         // Preserve deterministic/committed journals; do not clear committedDirectGroups
         result.scenarioState.directGroups = [...deterministicFallback];
-        result.scenarioState.committedDirectGroups = deterministicFallback.filter(g => !g.isHypothetical);
+        result.scenarioState = synchronizeCommittedScenarioState(
+          result.scenarioState,
+          deterministicFallback,
+          currentScenario?.actualEvents
+        );
+        result.scenarioState.imageEvidence = imageEvidence;
+        result.scenarioState.evidence = [
+          ...(result.scenarioState.evidence || []),
+          ...flattenImageEvidence(imageEvidence)
+        ];
         result.messageText += `\n\n### Journal visible in screenshot\n\nA balanced journal was extracted from the screenshot, but the existing deterministic journal has been preserved. Review the image evidence before overriding it.`;
       } else {
         // No deterministic output available; merge validated image-derived groups
-        const nextGroups = isFollowUpForImage && priorCommittedForImage.length > 0
-          ? [...priorCommittedForImage, ...extractedGroups]
-          : extractedGroups;
+        let nextGroups: JournalEntryGroup[];
+        if (isFollowUpForImage && priorCommittedForImage.length > 0) {
+          const updated = [...priorCommittedForImage];
+          for (const newGrp of reconciledExtractedGroups) {
+            let replaced = false;
+            if (newGrp.journalAction === 'revised') {
+              const targetIdx = updated.findIndex(p =>
+                (newGrp.targetTransactionId && (p.id === newGrp.targetTransactionId || p.transactionId === newGrp.targetTransactionId)) ||
+                (p.id === newGrp.id || p.transactionId === newGrp.transactionId)
+              );
+              if (targetIdx !== -1) {
+                updated[targetIdx] = newGrp;
+                replaced = true;
+              }
+            }
+            if (!replaced) {
+              updated.push(newGrp);
+            }
+          }
+          nextGroups = updated;
+        } else {
+          nextGroups = reconciledExtractedGroups;
+        }
+
         result.scenarioState.directGroups = nextGroups;
-        result.scenarioState.committedDirectGroups = nextGroups.filter(g => !g.isHypothetical);
+        result.scenarioState = synchronizeCommittedScenarioState(
+          result.scenarioState,
+          nextGroups,
+          currentScenario?.actualEvents
+        );
+        result.scenarioState.imageEvidence = imageEvidence;
+        result.scenarioState.evidence = [
+          ...(result.scenarioState.evidence || []),
+          ...flattenImageEvidence(imageEvidence)
+        ];
         result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
       }
     }
@@ -2463,22 +2842,25 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   if (uncertainMaterialFields.length > 0) {
     const fieldNames = [...new Set(uncertainMaterialFields.map((field) => field.field.replace(/([A-Z])/g, ' $1').toLowerCase()))];
     const prompt = `Please verify the screenshot ${fieldNames.join(', ')} before I prepare a definitive journal entry.`;
-    result.scenarioState = {
-      ...result.scenarioState,
-      directGroups: [...priorCommittedForImage],
-      committedDirectGroups: [...priorCommittedForImage],
-      projectedGroups: [],
-      remainingBalances: isFollowUpForImage ? currentScenario?.remainingBalances : undefined,
-      isComplete: false,
-      missingFacts: [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])],
-      missingFields: [{
-        fieldKey: 'imageVerification',
-        fieldName: 'Screenshot amount or other material fact',
-        prompt,
-        whyNeeded: 'The image evidence is not sufficiently reliable for a balanced accounting entry.'
-      }],
-      uncertaintyDisclaimer: `Possible value detected from screenshot. ${prompt}`
+    const imageVerificationField: MissingFieldInfo = {
+      fieldKey: 'imageVerification',
+      fieldName: 'Screenshot amount or other material fact',
+      prompt,
+      whyNeeded: 'The image evidence is not sufficiently reliable for a balanced accounting entry.'
     };
+    result.scenarioState = rollbackRejectedScenarioState(
+      result.scenarioState,
+      currentScenario,
+      isFollowUpForImage,
+      [...(result.scenarioState.missingFields || []), imageVerificationField]
+    );
+    result.scenarioState.imageEvidence = imageEvidence;
+    result.scenarioState.evidence = [
+      ...(result.scenarioState.evidence || []),
+      ...flattenImageEvidence(imageEvidence)
+    ];
+    result.scenarioState.missingFacts = [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])];
+    result.scenarioState.uncertaintyDisclaimer = `Possible value detected from screenshot. ${prompt}`;
     result.messageText = `${result.messageText}\n\n### Screenshot verification required\n\n${prompt}`;
   }
 

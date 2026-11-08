@@ -10,6 +10,7 @@ import type {
   StandardCitation,
   JournalAuthorityStatus
 } from '../types/accounting';
+import type { AccountingEvent } from '../types/conversationState';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import { classifyQuestion } from '../classification/questionClassifier';
 import type { ProviderSettings } from '../types/provider';
@@ -2611,6 +2612,135 @@ export function journalGroupFingerprint(g: JournalEntryGroup): string {
   return `${eventDate}#${txId}#${title}#${dr}#${cr}#${linesSig}`;
 }
 
+export function buildSynchronizedEventsFromGroups(
+  committedGroups: JournalEntryGroup[],
+  defaultCurrency: string = 'SGD',
+  existingEvents?: AccountingEvent[]
+): AccountingEvent[] {
+  if (!Array.isArray(committedGroups) || committedGroups.length === 0) {
+    return [];
+  }
+  const existingById = new Map<string, AccountingEvent>();
+  const existingByTxId = new Map<string, AccountingEvent>();
+  for (const e of (existingEvents || []).filter(e => !e.isHypothetical)) {
+    if (e.id) existingById.set(e.id, e);
+    if (e.transactionId) existingByTxId.set(e.transactionId, e);
+  }
+
+  return committedGroups
+    .filter(g => !g.isHypothetical)
+    .map((grp, idx) => {
+      const id = grp.id || `evt-init-${idx + 1}`;
+      const txId = grp.transactionId || grp.id || `tx-init-${idx + 1}`;
+      const match = existingById.get(id) || existingByTxId.get(txId);
+      const defaultType = (grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction';
+      const eventType = (match?.type && grp.journalAction !== 'revised') ? match.type : defaultType;
+      return {
+        ...(match || {}),
+        id,
+        transactionId: txId,
+        targetTransactionId: grp.targetTransactionId ?? match?.targetTransactionId,
+        type: eventType,
+        description: grp.title || 'Initial transaction',
+        amount: grp.totalDebit,
+        currency: grp.currency || defaultCurrency,
+        affectedAccounts: (grp.lines || []).map(l => l.accountName),
+        journalLines: grp.lines,
+        isHypothetical: false,
+        timestamp: grp.eventDate,
+        eventDate: grp.eventDate
+      };
+    });
+}
+
+export function synchronizeCommittedScenarioState(
+  state: AccountingScenarioState,
+  committedGroups: JournalEntryGroup[],
+  existingEvents?: AccountingEvent[]
+): AccountingScenarioState {
+  const committed = (committedGroups || []).filter(g => !g.isHypothetical);
+  const defaultCurr = state.transactionCurrency || state.functionalCurrency || 'SGD';
+  const syncedEvents = buildSynchronizedEventsFromGroups(committed, defaultCurr, existingEvents ?? state.actualEvents);
+  const tempScenario: AccountingScenarioState = {
+    ...state,
+    committedDirectGroups: committed,
+    directGroups: state.directGroups && state.directGroups.length > 0 ? state.directGroups : committed,
+    actualEvents: syncedEvents,
+    accountingEvents: syncedEvents
+  };
+  const postTurnAcctCtx = extractAccountingContext(tempScenario);
+  const derivedBalances = postTurnAcctCtx.outstandingBalances
+    .filter(b => b.remainingAmount > 0)
+    .map(b => ({ accountName: b.accountName, amount: b.remainingAmount, currency: b.currency }));
+  const remainingBalances = postTurnAcctCtx.hasAmbiguousSettlement
+    ? undefined
+    : (derivedBalances.length > 0 ? derivedBalances : undefined);
+  return {
+    ...state,
+    committedDirectGroups: committed,
+    actualEvents: syncedEvents,
+    accountingEvents: syncedEvents,
+    remainingBalances
+  };
+}
+
+export function rollbackRejectedScenarioState(
+  state: AccountingScenarioState,
+  priorScenario: AccountingScenarioState | null | undefined,
+  isFollowUp: boolean,
+  missingFields: MissingFieldInfo[]
+): AccountingScenarioState {
+  const priorCommitted: JournalEntryGroup[] = (isFollowUp && priorScenario)
+    ? (Array.isArray(priorScenario.committedDirectGroups)
+        ? (priorScenario.committedDirectGroups.length > 0 || priorScenario.isComplete === false
+            ? [...priorScenario.committedDirectGroups]
+            : (priorScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+        : (priorScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+    : [];
+
+  if (isFollowUp && priorScenario && priorCommitted.length > 0) {
+    const baseState: AccountingScenarioState = {
+      ...state,
+      scenarioType: priorScenario.scenarioType || state.scenarioType,
+      rawQuery: priorScenario.rawQuery || state.rawQuery,
+      transactionTitle: priorScenario.transactionTitle || state.transactionTitle,
+      functionalCurrency: priorScenario.functionalCurrency || state.functionalCurrency || 'SGD',
+      transactionCurrency: priorScenario.transactionCurrency || state.transactionCurrency || 'SGD',
+      accountingTreatmentSummary: priorScenario.accountingTreatmentSummary,
+      singaporeTaxTreatmentSummary: priorScenario.singaporeTaxTreatmentSummary,
+      regulatoryMandatesSummary: priorScenario.regulatoryMandatesSummary,
+      keyParameters: priorScenario.keyParameters || [],
+      amount: priorScenario.amount,
+      ownershipContext: priorScenario.ownershipContext,
+      semanticUnderstanding: priorScenario.semanticUnderstanding,
+      underlyingTransaction: priorScenario.underlyingTransaction,
+      directGroups: [...priorCommitted],
+      committedDirectGroups: [...priorCommitted],
+      projectedGroups: [],
+      isComplete: false,
+      missingFields
+    };
+    return synchronizeCommittedScenarioState(baseState, priorCommitted, priorScenario.actualEvents);
+  } else {
+    return {
+      ...state,
+      directGroups: [],
+      committedDirectGroups: [],
+      projectedGroups: [],
+      actualEvents: [],
+      accountingEvents: [],
+      remainingBalances: undefined,
+      accountingTreatmentSummary: undefined,
+      singaporeTaxTreatmentSummary: undefined,
+      regulatoryMandatesSummary: undefined,
+      keyParameters: [],
+      amount: undefined,
+      isComplete: false,
+      missingFields
+    };
+  }
+}
+
 /**
  * Post-processes an AI-generated accounting response:
  * 1. Executes post-generation citation verification on all returned citations.
@@ -2655,8 +2785,12 @@ export function postProcessAIResponse(
       whyNeeded: typeof m === 'string' ? m : (m.whyNeeded || m.prompt || 'Required to establish accounting entries.')
     }));
 
-    const priorCommittedGroups = currentScenario?.committedDirectGroups ||
-      (currentScenario?.isComplete ? (currentScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+    const isFollowUp = Boolean(
+      currentScenario && (
+        groundedContext.semanticUnderstanding?.followUpAnalysis?.isFollowUp ||
+        assessConversationRelation(userInput, currentScenario) !== 'NEW'
+      )
+    );
 
     let explanation = parsed.accountingTreatmentSummary || parsed.treatment || '';
     let clarifyMarkdown = `### Clarification Required\n\n`;
@@ -2675,7 +2809,7 @@ export function postProcessAIResponse(
       }
     }
 
-    const scenarioState: AccountingScenarioState = {
+    const baseState: AccountingScenarioState = {
       scenarioType: currentScenario?.scenarioType || 'UNIVERSAL',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'ACCOUNTING_SFRS',
@@ -2683,13 +2817,16 @@ export function postProcessAIResponse(
       transactionTitle: parsed.transactionTitle || currentScenario?.transactionTitle || 'Clarification Required',
       functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
       transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
-      accountingTreatmentSummary: explanation || undefined,
-      directGroups: priorCommittedGroups || [],
-      committedDirectGroups: priorCommittedGroups,
       isComplete: false,
-      missingFields,
-      missingFacts: missingFields.map(m => m.prompt)
+      missingFields
     };
+
+    const scenarioState = rollbackRejectedScenarioState(baseState, currentScenario, isFollowUp, missingFields);
+    scenarioState.missingFacts = missingFields.map(m => m.prompt);
+    const priorCount = scenarioState.committedDirectGroups?.length || 0;
+    if (explanation && (!/\d/.test(explanation) || priorCount === 0)) {
+      scenarioState.accountingTreatmentSummary = explanation;
+    }
 
     return {
       messageText: clarifyMarkdown,
@@ -3102,7 +3239,7 @@ export function postProcessAIResponse(
               prompt: 'Which earlier transaction would you like to revise? Please specify the transaction or journal entry (for example, by title, account, or transaction reference).',
               whyNeeded: 'Multiple committed transactions exist in this conversation, and the revision target could not be uniquely identified.'
             };
-            const scenarioState: AccountingScenarioState = {
+            const baseState: AccountingScenarioState = {
               scenarioType: currentScenario?.scenarioType || 'UNIVERSAL',
               queryIntent: 'TRANSACTION',
               primaryDomain: 'ACCOUNTING_SFRS',
@@ -3110,13 +3247,15 @@ export function postProcessAIResponse(
               transactionTitle: parsed.transactionTitle || currentScenario?.transactionTitle || 'Clarification Required',
               functionalCurrency: currentScenario?.functionalCurrency || 'SGD',
               transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
-              directGroups: [...priorCommitted],
-              committedDirectGroups: [...priorCommitted],
-              actualEvents: currentScenario?.actualEvents,
-              accountingEvents: currentScenario?.accountingEvents,
               isComplete: false,
               missingFields: [revisionClarification]
             };
+            const scenarioState = rollbackRejectedScenarioState(
+              baseState,
+              currentScenario,
+              Boolean(isFollowUpRelation),
+              [revisionClarification]
+            );
             return {
               messageText: '### Clarification Required — Ambiguous Revision Target\n\n' + revisionClarification.prompt,
               scenarioState,
@@ -3258,22 +3397,12 @@ export function postProcessAIResponse(
     groundedContext.missingFacts
   );
 
-  const syncedActualEvents = (committedDirectGroups && committedDirectGroups.length > 0)
-    ? committedDirectGroups.map((grp, idx) => ({
-        id: grp.id || `evt-init-${idx + 1}`,
-        transactionId: grp.transactionId || grp.id || `tx-init-${idx + 1}`,
-        targetTransactionId: grp.targetTransactionId,
-        type: ((grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction') as 'settlement' | 'initial_transaction',
-        description: grp.title || 'Initial transaction',
-        amount: grp.totalDebit,
-        currency: grp.currency || parsed.transactionCurrency || currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD',
-        affectedAccounts: grp.lines.map(l => l.accountName),
-        journalLines: grp.lines,
-        isHypothetical: false,
-        timestamp: grp.eventDate,
-        eventDate: grp.eventDate
-      }))
-    : currentScenario?.actualEvents;
+  const defaultCurr = parsed.transactionCurrency || currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD';
+  const syncedActualEvents = buildSynchronizedEventsFromGroups(
+    committedDirectGroups || [],
+    defaultCurr,
+    currentScenario?.actualEvents
+  );
 
   const updatedScenarioForBalances: AccountingScenarioState = {
     ...(currentScenario || {}),

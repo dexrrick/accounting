@@ -2789,7 +2789,7 @@ try {
             { accountName: 'Office Equipment', debit: 500, credit: 0 },
             { accountName: 'Cash at Bank', debit: 0, credit: 400 }
           ],
-          fields: []
+          fields: [{ field: 'invoiceDate', value: '01/03/2025' }]
         }
       ],
       directGroups: [{
@@ -2837,7 +2837,7 @@ try {
             { accountName: 'Office Equipment', debit: 500, credit: 0 },
             { accountName: 'Cash at Bank', debit: 0, credit: 500 }
           ],
-          fields: []
+          fields: [{ field: 'invoiceDate', value: '01/03/2025' }]
         }
       ],
       directGroups: [{
@@ -2904,7 +2904,7 @@ try {
             { accountName: 'Office Equipment', debit: 500, credit: 0 },
             { accountName: 'Cash at Bank', debit: 0, credit: 500 }
           ],
-          fields: []
+          fields: [{ field: 'invoiceDate', value: '01/03/2025' }]
         }
       ],
       directGroups: [{
@@ -2947,7 +2947,7 @@ try {
             { accountName: 'Office Equipment', debit: 500, credit: 0 },
             { accountName: 'Cash at Bank', debit: 0, credit: 500 }
           ],
-          fields: []
+          fields: [{ field: 'invoiceDate', value: '01/03/2025' }]
         }
       ],
       directGroups: [{
@@ -3056,7 +3056,7 @@ try {
             { accountName: 'Trade Payables', debit: 500, credit: 0 },
             { accountName: 'Cash at Bank', debit: 0, credit: 400 }
           ],
-          fields: []
+          fields: [{ field: 'paymentDate', value: '05/03/2025' }]
         }
       ],
       directGroups: [{
@@ -3464,6 +3464,564 @@ try {
     assert.equal(acctCtx10I3.outstandingBalances[0].remainingAmount, 0, 'Remaining balance in context must be 0');
 
     console.log('✓ 10I. Multi-turn event-history synchronisation & revision identity verified');
+    passed++;
+  }
+
+  // --- 10J. Atomic journal commits, multi-turn rejection rollback & image consistency ---
+  {
+    console.log('\n--- 10J. Atomic journal commits, multi-turn rejection rollback & image consistency ---');
+
+    // 1. Initial-turn journal rejection followed by another conversation turn
+    // Turn 1: AI proposes an invalid/imbalanced journal (Office Supplies Dr 1,000 / Trade Payables Cr 800)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Office Supplies on Credit',
+      directGroups: [{
+        id: 'grp-bad-init',
+        title: 'Office Supplies Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 800,
+        isBalanced: false,
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 800 }
+        ]
+      }]
+    });
+
+    const res10J1_t1 = await processAccountingQuery(
+      'Received supplier invoice for S$1,000 office supplies on credit on 01/03/2025.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J1_t1.scenarioState.directGroups?.length, 0, 'Turn 1 rejected directGroups must be empty');
+    assert.equal(res10J1_t1.scenarioState.committedDirectGroups?.length, 0, 'Turn 1 rejected committedDirectGroups must be empty');
+    assert.equal(res10J1_t1.scenarioState.actualEvents?.length, 0, 'Turn 1 actualEvents must be empty');
+    assert.equal(res10J1_t1.scenarioState.accountingEvents?.length, 0, 'Turn 1 accountingEvents must be empty');
+    assert.equal(res10J1_t1.scenarioState.remainingBalances, undefined, 'Turn 1 remainingBalances must be undefined');
+    const ctx10J1_t1 = extractAccountingContext(res10J1_t1.scenarioState);
+    assert.equal(ctx10J1_t1.actualEvents.length, 0, 'Turn 1 context actualEvents must be empty');
+    assert.equal(ctx10J1_t1.outstandingBalances.length, 0, 'Turn 1 context outstandingBalances must be empty');
+
+    // Turn 2: Valid transaction facts, balanced proposal
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Office Supplies on Credit',
+      directGroups: [{
+        id: 'grp-supplies-t2',
+        title: 'Office Supplies Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }]
+    });
+
+    const res10J1_t2 = await processAccountingQuery(
+      'Received supplier invoice for S$1,000 on 01/03/2025 on credit.',
+      res10J1_t1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J1_t2.scenarioState.committedDirectGroups?.length, 1, 'Turn 2 must have 1 committed group');
+    assert.equal(res10J1_t2.scenarioState.actualEvents?.length, 1, 'Turn 2 must have 1 actual event');
+    const ctx10J1_t2 = extractAccountingContext(res10J1_t2.scenarioState);
+    assert.equal(ctx10J1_t2.outstandingBalances.length, 1, 'Must have only single balance from Turn 2');
+    assert.equal(ctx10J1_t2.outstandingBalances[0].remainingAmount, 1000, 'Balance must be S$1,000');
+
+    // 2. Follow-up journal rejection followed by another conversation turn
+    // Turn 1: Valid committed invoice
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Inventory Purchase',
+      directGroups: [{
+        id: 'grp-inv-1',
+        title: 'Inventory Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }]
+    });
+
+    const res10J2_t1 = await processAccountingQuery(
+      'Purchased inventory for S$1,000 on credit on 01/03/2025.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J2_t1.scenarioState.committedDirectGroups?.length, 1);
+    assert.equal(res10J2_t1.scenarioState.actualEvents?.length, 1);
+    assert.equal(res10J2_t1.scenarioState.remainingBalances?.[0]?.amount, 1000);
+
+    // Turn 2: Rejected follow-up journal (imbalanced settlement Dr 600 / Cr 500)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Payment',
+      directGroups: [{
+        id: 'grp-pay-bad',
+        targetTransactionId: 'grp-inv-1',
+        title: 'Supplier Settlement',
+        eventDate: '05/03/2025',
+        totalDebit: 600,
+        totalCredit: 500,
+        isBalanced: false,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ]
+      }]
+    });
+
+    const res10J2_t2 = await processAccountingQuery(
+      'Paid supplier S$600 by bank on 05/03/2025.',
+      res10J2_t1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J2_t2.scenarioState.isComplete, false, 'Turn 2 must be incomplete due to rejection');
+    assert.equal(res10J2_t2.scenarioState.committedDirectGroups?.length, 1, 'Turn 2 committedDirectGroups must remain 1');
+    assert.equal(res10J2_t2.scenarioState.committedDirectGroups[0].id, 'grp-inv-1');
+    assert.equal(res10J2_t2.scenarioState.actualEvents?.length, 1, 'Turn 2 actualEvents must remain 1');
+    assert.equal(res10J2_t2.scenarioState.accountingEvents?.length, 1, 'Turn 2 accountingEvents must remain 1');
+    assert.equal(res10J2_t2.scenarioState.remainingBalances?.[0]?.amount, 1000, 'Remaining balance must remain 1000');
+    const ctx10J2_t2 = extractAccountingContext(res10J2_t2.scenarioState);
+    assert.equal(ctx10J2_t2.actualEvents.length, 1);
+    assert.equal(ctx10J2_t2.outstandingBalances[0].remainingAmount, 1000);
+
+    // Turn 3 (using res10J2_t2.scenarioState from rejected Turn 2!): Valid partial settlement S$600
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Payment',
+      directGroups: [{
+        id: 'grp-pay-good',
+        targetTransactionId: 'grp-inv-1',
+        title: 'Supplier Settlement',
+        eventDate: '06/03/2025',
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ]
+      }]
+    });
+
+    const res10J2_t3 = await processAccountingQuery(
+      'Paid S$600 by bank transfer to settle supplier invoice on 06/03/2025.',
+      res10J2_t2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J2_t3.scenarioState.isComplete, true, 'Turn 3 must succeed and be complete');
+    assert.equal(res10J2_t3.scenarioState.committedDirectGroups?.length, 2, 'Must have 2 committed groups');
+    assert.equal(res10J2_t3.scenarioState.actualEvents?.length, 2, 'Must have 2 actual events');
+    assert.equal(res10J2_t3.scenarioState.remainingBalances?.[0]?.amount, 400, 'Remaining balance must be S$400');
+
+    // 3. Image-derived journal follow-up handling
+    // Subcase A: Valid follow-up with screenshot
+    const turn1ImageBaseScenario = {
+      scenarioType: 'UNIVERSAL',
+      rawQuery: 'Purchased inventory for S$1,000 on credit on 01/03/2025.',
+      transactionTitle: 'Inventory Purchase',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-inv-1',
+        transactionId: 'grp-inv-1',
+        title: 'Inventory Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }],
+      directGroups: [{
+        id: 'grp-inv-1',
+        transactionId: 'grp-inv-1',
+        title: 'Inventory Purchase',
+        eventDate: '01/03/2025',
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }],
+      remainingBalances: [{ accountName: 'Trade Payables', amount: 1000, currency: 'SGD' }]
+    };
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplier Payment',
+                directGroups: [{
+                  id: 'grp-img-pay',
+                  targetTransactionId: 'grp-inv-1',
+                  title: 'Supplier Payment',
+                  eventDate: '05/03/2025',
+                  totalDebit: 600,
+                  totalCredit: 600,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-pay-1',
+                  fields: { paymentDate: '05/03/2025', totalAmount: 600 },
+                  journalLines: [
+                    { accountName: 'Trade Payables', debit: 600, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 600 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J3_subA = await processAccountingQuery(
+      'Here is the payment confirmation voucher.',
+      turn1ImageBaseScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Here is the payment confirmation voucher.', images: [{ id: 'img-pay-1', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(res10J3_subA.scenarioState.committedDirectGroups?.length, 2, 'Subcase A: Must merge with Turn 1 (length 2)');
+    assert.equal(res10J3_subA.scenarioState.actualEvents?.length, 2, 'Subcase A: actualEvents must be length 2');
+    assert.equal(res10J3_subA.scenarioState.remainingBalances?.[0]?.amount, 400, 'Subcase A: remaining balance must be S$400');
+    assert.equal(res10J3_subA.scenarioState.directGroups[1].eventDate, '05/03/2025', 'Subcase A: directGroups[1].eventDate must be 05/03/2025');
+    assert.equal(res10J3_subA.scenarioState.actualEvents[1].eventDate, '05/03/2025', 'Subcase A: actualEvents[1].eventDate must be 05/03/2025');
+
+    // Subcase B: Rejected follow-up screenshot -> rejected, actualEvents remains length 1, followed by clean Turn 3 settlement
+    // Conflicting screenshot (Screenshot says S$500 Dr, AI says S$600 Dr)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplier Payment',
+                directGroups: [{
+                  id: 'grp-img-pay-conflict',
+                  targetTransactionId: 'grp-inv-1',
+                  title: 'Supplier Payment',
+                  eventDate: '05/03/2025',
+                  totalDebit: 600,
+                  totalCredit: 600,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-pay-conflict',
+                  fields: { paymentDate: '05/03/2025', totalAmount: 500 },
+                  journalLines: [
+                    { accountName: 'Trade Payables', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J3_subB_t2 = await processAccountingQuery(
+      'Payment voucher attached.',
+      turn1ImageBaseScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Payment voucher attached.', images: [{ id: 'img-pay-conflict', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(res10J3_subB_t2.scenarioState.committedDirectGroups?.length, 1, 'Subcase B: committedDirectGroups must remain length 1');
+    assert.equal(res10J3_subB_t2.scenarioState.actualEvents?.length, 1, 'Subcase B: actualEvents must remain length 1');
+    assert.equal(res10J3_subB_t2.scenarioState.remainingBalances?.[0]?.amount, 1000, 'Subcase B: balance S$1,000 preserved');
+
+    // Turn 3: Settle cleanly without screenshot
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Settlement',
+      directGroups: [{
+        id: 'grp-clean-settle',
+        targetTransactionId: 'grp-inv-1',
+        title: 'Supplier Settlement',
+        eventDate: '06/03/2025',
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ]
+      }]
+    });
+
+    const res10J3_subB_t3 = await processAccountingQuery(
+      'Paid S$600 by bank transfer to settle supplier invoice on 06/03/2025.',
+      res10J3_subB_t2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10J3_subB_t3.scenarioState.committedDirectGroups?.length, 2, 'Subcase B Turn 3: Must have 2 committed groups');
+    assert.equal(res10J3_subB_t3.scenarioState.actualEvents?.length, 2, 'Subcase B Turn 3: Must have 2 actual events');
+    assert.equal(res10J3_subB_t3.scenarioState.remainingBalances?.[0]?.amount, 400, 'Subcase B Turn 3: Remaining balance must be S$400');
+
+    // 4. Image-derived entry account identity and transaction date consistency
+    // Subcase A: Account identity conflict (Screenshot has Trade Payables Cr 500, AI group has GST Payable Cr 500)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice',
+                directGroups: [{
+                  id: 'grp-ai-gst',
+                  eventDate: '15/03/2025',
+                  title: 'Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'GST Payable', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-acct-conflict',
+                  fields: { invoiceDate: '15/03/2025' },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J4_subA = await processAccountingQuery(
+      'Invoice screenshot attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice screenshot attached.', images: [{ id: 'img-acct-conflict', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.ok(
+      res10J4_subA.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT'),
+      'Must reject Trade Payables vs GST Payable conflict with IMAGE_JOURNAL_CONFLICT'
+    );
+    assert.equal(res10J4_subA.scenarioState.directGroups?.length, 0, 'Direct groups must be empty on conflict');
+
+    // Subcase B: Transaction date conflict (Screenshot has 15/03/2025, AI has 01/03/2025)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice',
+                directGroups: [{
+                  id: 'grp-ai-date',
+                  eventDate: '01/03/2025',
+                  title: 'Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-date-conflict',
+                  fields: { invoiceDate: '15/03/2025' },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J4_subB = await processAccountingQuery(
+      'Invoice screenshot attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice screenshot attached.', images: [{ id: 'img-date-conflict', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.ok(
+      res10J4_subB.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT'),
+      'Must reject date conflict with IMAGE_JOURNAL_CONFLICT'
+    );
+    assert.equal(res10J4_subB.scenarioState.directGroups?.length, 0, 'Direct groups must be empty on date conflict');
+
+    // Subcase C: Consistent transaction date preserved (Screenshot has 15/03/2025, AI has 15/03/2025)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Invoice',
+                directGroups: [{
+                  id: 'grp-ai-date-match',
+                  eventDate: '15/03/2025',
+                  title: 'Office Supplies Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-date-match',
+                  fields: { invoiceDate: '15/03/2025' },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J4_subC = await processAccountingQuery(
+      'Invoice screenshot attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice screenshot attached.', images: [{ id: 'img-date-match', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(res10J4_subC.scenarioState.directGroups?.length, 1, 'Subcase C: Must have 1 directGroup');
+    assert.equal(res10J4_subC.scenarioState.directGroups[0].eventDate, '15/03/2025', 'Subcase C: eventDate must be 15/03/2025');
+    assert.equal(res10J4_subC.scenarioState.actualEvents[0].eventDate, '15/03/2025', 'Subcase C: actualEvents[0].eventDate must be 15/03/2025');
+
+    // Subcase D: Missing transaction date in image-derived entry (when image fields and user query have no transaction date, even if AI proposes a fabricated eventDate or omits eventDate)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Invoice',
+                directGroups: [{
+                  id: 'grp-ai-date-missing',
+                  eventDate: '20/03/2025',
+                  title: 'Office Supplies Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-date-missing',
+                  fields: { totalAmount: 500 },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const res10J4_subD = await processAccountingQuery(
+      'Invoice screenshot attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice screenshot attached.', images: [{ id: 'img-date-missing', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.ok(
+      res10J4_subD.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Subcase D: Must reject missing transaction date with IMAGE_MISSING_TRANSACTION_DATE'
+    );
+    assert.equal(res10J4_subD.scenarioState.directGroups?.length, 0, 'Subcase D: directGroups must be rolled back to empty');
+    assert.equal(res10J4_subD.scenarioState.committedDirectGroups?.length, 0, 'Subcase D: committedDirectGroups must be rolled back to empty');
+    assert.equal(res10J4_subD.scenarioState.actualEvents?.length, 0, 'Subcase D: actualEvents must be rolled back to empty');
+
+    console.log('✓ 10J. Atomic journal commits, multi-turn rejection rollback & image consistency verified');
     passed++;
   }
 
