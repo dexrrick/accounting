@@ -24,7 +24,7 @@ import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, hasUnresolvedMealInputTaxEligibility } from '../engine/responseAssembler';
-import { extractAccountingContext } from './conversationAccountingState';
+import { extractAccountingContext, areAccountNamesCanonicallyEquivalent } from './conversationAccountingState';
 import { assessConversationRelation } from './conversationBoundary';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import {
@@ -2741,6 +2741,120 @@ export function rollbackRejectedScenarioState(
   }
 }
 
+export function resolveAndApplyJournalRevisions(
+  priorCommitted: JournalEntryGroup[],
+  newActualGroups: JournalEntryGroup[],
+  userInput: string
+): { updatedGroups: JournalEntryGroup[]; unidentifiedRevision: boolean } {
+  if (newActualGroups.length === 0) {
+    return { updatedGroups: [...priorCommitted], unidentifiedRevision: false };
+  }
+  const updated = [...priorCommitted];
+  let unidentifiedRevision = false;
+  const isCashOrBank = (name: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(name || '');
+
+  for (const newGrp of newActualGroups) {
+    let matchIdx = -1;
+
+    if (priorCommitted.length === 1) {
+      if (
+        newGrp.targetTransactionId &&
+        newGrp.targetTransactionId !== priorCommitted[0].id &&
+        newGrp.targetTransactionId !== priorCommitted[0].transactionId
+      ) {
+        matchIdx = -1;
+      } else {
+        matchIdx = 0;
+      }
+    } else {
+      // priorCommitted.length > 1
+      // a) Check explicit targetTransactionId
+      if (newGrp.targetTransactionId) {
+        matchIdx = updated.findIndex(p =>
+          p.id === newGrp.targetTransactionId ||
+          (p.transactionId && p.transactionId === newGrp.targetTransactionId)
+        );
+      }
+
+      // b) Check id or transactionId
+      if (matchIdx === -1) {
+        const idMatchIdx = updated.findIndex(p =>
+          p.id === newGrp.id ||
+          (newGrp.transactionId && p.transactionId === newGrp.transactionId)
+        );
+        if (idMatchIdx !== -1) {
+          if (newGrp.id !== 'grp-1') {
+            matchIdx = idMatchIdx;
+          } else {
+            const targetGrp = updated[idMatchIdx];
+            const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+            const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+            const hasAccountOverlap = newNonCash.some(n => targetNonCash.some(tn =>
+              areAccountNamesCanonicallyEquivalent(n, tn) ||
+              tn.toLowerCase().includes(n.toLowerCase().trim()) ||
+              n.toLowerCase().includes(tn.toLowerCase().trim())
+            ));
+            const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
+            const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
+            const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
+            if (hasAccountOverlap || hasTitleOverlap) {
+              matchIdx = idMatchIdx;
+            }
+          }
+        }
+      }
+
+      // c) Check unique candidate match by non-cash accounts or title
+      if (matchIdx === -1) {
+        const candidates: number[] = [];
+        const userLower = userInput.toLowerCase();
+        const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+
+        for (let i = 0; i < updated.length; i++) {
+          const grp = updated[i];
+          const grpNonCash = (grp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+          const grpTitle = (grp.title || '').toLowerCase();
+          const matchesUserInput = grpNonCash.some(n => {
+            const clean = n.toLowerCase().trim();
+            return clean.length > 3 && userLower.includes(clean);
+          }) || (grpTitle.length > 4 && userLower.includes(grpTitle));
+          const matchesNewGrp = newNonCash.some(n => grpNonCash.some(gn =>
+            areAccountNamesCanonicallyEquivalent(n, gn) ||
+            gn.toLowerCase().includes(n.toLowerCase().trim()) ||
+            n.toLowerCase().includes(gn.toLowerCase().trim())
+          ));
+          if (matchesUserInput || matchesNewGrp) {
+            candidates.push(i);
+          }
+        }
+
+        if (candidates.length === 1) {
+          matchIdx = candidates[0];
+        }
+      }
+    }
+
+    if (matchIdx !== -1) {
+      const originalGrp = updated[matchIdx];
+      const stableId = originalGrp.id;
+      const stableTxId = originalGrp.transactionId || originalGrp.id;
+      updated[matchIdx] = {
+        ...newGrp,
+        id: stableId,
+        transactionId: stableTxId,
+        targetTransactionId: newGrp.targetTransactionId || stableTxId,
+        journalAction: 'revised',
+        revisedFromId: newGrp.id && newGrp.id !== stableId ? newGrp.id : originalGrp.revisedFromId
+      };
+    } else {
+      unidentifiedRevision = true;
+      break;
+    }
+  }
+
+  return { updatedGroups: updated, unidentifiedRevision };
+}
+
 /**
  * Post-processes an AI-generated accounting response:
  * 1. Executes post-generation citation verification on all returned citations.
@@ -3058,13 +3172,17 @@ export function postProcessAIResponse(
       let normalizedEventDate = '';
       let accountingPeriod = (typeof grp.accountingPeriod === 'string' ? grp.accountingPeriod.trim() : '') || '';
       if (grp.eventDate) {
-        const formatted = formatSingaporeDate(String(grp.eventDate));
+        const rawDateStr = String(grp.eventDate).trim();
+        const formatted = formatSingaporeDate(rawDateStr);
         if (formatted) {
           normalizedEventDate = formatted;
         } else {
-          // If grp.eventDate is a month-year string like "February 2025", move it to accountingPeriod
-          if (!accountingPeriod) {
-            accountingPeriod = String(grp.eventDate).trim();
+          // Only move to accountingPeriod if it matches genuine period formats (e.g., "February 2025", "FY2025", "Q1 2025")
+          // and does NOT contain an invalid day-month-year calendar date token (e.g., 31/02/2025, 29/02/2025, 31 April 2025)
+          const isCalendarDateToken =
+            /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/i.test(rawDateStr);
+          if (!isCalendarDateToken && !accountingPeriod) {
+            accountingPeriod = rawDateStr;
           }
         }
       }
@@ -3141,96 +3259,7 @@ export function postProcessAIResponse(
       } else if (isRevision) {
         const newActualGroups = directGroups.filter(g => !g.isHypothetical);
         if (newActualGroups.length > 0) {
-          const updated = [...priorCommitted];
-          let unidentifiedRevision = false;
-          const isCashOrBank = (name: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(name || '');
-
-          for (const newGrp of newActualGroups) {
-            let matchIdx = -1;
-
-            if (priorCommitted.length === 1) {
-              if (newGrp.targetTransactionId &&
-                  newGrp.targetTransactionId !== priorCommitted[0].id &&
-                  newGrp.targetTransactionId !== priorCommitted[0].transactionId) {
-                matchIdx = -1;
-              } else {
-                matchIdx = 0;
-              }
-            } else {
-              // priorCommitted.length > 1
-              // a) Check explicit targetTransactionId
-              if (newGrp.targetTransactionId) {
-                matchIdx = updated.findIndex(p =>
-                  p.id === newGrp.targetTransactionId ||
-                  (p.transactionId && p.transactionId === newGrp.targetTransactionId)
-                );
-              }
-
-              // b) Check id or transactionId
-              if (matchIdx === -1) {
-                const idMatchIdx = updated.findIndex(p =>
-                  p.id === newGrp.id ||
-                  (newGrp.transactionId && p.transactionId === newGrp.transactionId)
-                );
-                if (idMatchIdx !== -1) {
-                  if (newGrp.id !== 'grp-1') {
-                    matchIdx = idMatchIdx;
-                  } else {
-                    const targetGrp = updated[idMatchIdx];
-                    const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
-                    const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
-                    const hasAccountOverlap = newNonCash.some(n => targetNonCash.some(tn => tn.includes(n) || n.includes(tn)));
-                    const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
-                    const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
-                    const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
-                    if (hasAccountOverlap || hasTitleOverlap) {
-                      matchIdx = idMatchIdx;
-                    }
-                  }
-                }
-              }
-
-              // c) Check unique candidate match by non-cash accounts or title
-              if (matchIdx === -1) {
-                const candidates: number[] = [];
-                const userLower = userInput.toLowerCase();
-                const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
-
-                for (let i = 0; i < updated.length; i++) {
-                  const grp = updated[i];
-                  const grpNonCash = (grp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n)).map(n => n.toLowerCase().trim());
-                  const grpTitle = (grp.title || '').toLowerCase();
-                  const matchesUserInput = grpNonCash.some(n => n.length > 3 && userLower.includes(n)) ||
-                    (grpTitle.length > 4 && userLower.includes(grpTitle));
-                  const matchesNewGrp = newNonCash.some(n => grpNonCash.some(gn => gn.includes(n) || n.includes(gn)));
-                  if (matchesUserInput || matchesNewGrp) {
-                    candidates.push(i);
-                  }
-                }
-
-                if (candidates.length === 1) {
-                  matchIdx = candidates[0];
-                }
-              }
-            }
-
-            if (matchIdx !== -1) {
-              const originalGrp = updated[matchIdx];
-              const stableId = originalGrp.id;
-              const stableTxId = originalGrp.transactionId || originalGrp.id;
-              updated[matchIdx] = {
-                ...newGrp,
-                id: stableId,
-                transactionId: stableTxId,
-                targetTransactionId: newGrp.targetTransactionId || stableTxId,
-                journalAction: 'revised',
-                revisedFromId: newGrp.id && newGrp.id !== stableId ? newGrp.id : originalGrp.revisedFromId
-              };
-            } else {
-              unidentifiedRevision = true;
-              break;
-            }
-          }
+          const { updatedGroups, unidentifiedRevision } = resolveAndApplyJournalRevisions(priorCommitted, newActualGroups, userInput);
 
           if (unidentifiedRevision) {
             const revisionClarification: MissingFieldInfo = {
@@ -3263,8 +3292,8 @@ export function postProcessAIResponse(
             };
           }
 
-          committedDirectGroups = updated;
-          directGroups = updated;
+          committedDirectGroups = updatedGroups;
+          directGroups = updatedGroups;
         } else {
           committedDirectGroups = [...priorCommitted];
         }
