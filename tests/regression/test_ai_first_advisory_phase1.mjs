@@ -120,6 +120,8 @@ for (const safe of [
   'A software licence is required to run the application.',
   'A commercial licence is required to use the paid application.',
   'The bookkeeper must register the asset in the fixed asset register.',
+  'The accountant must register the asset at cost in the fixed asset register.',
+  'The bookkeeper must register the asset on acquisition in the general ledger.',
   'The bookkeeper must register the new asset in the fixed asset register.',
   'The bookkeeper must register the asset in the general ledger.',
   'The company must return the leased equipment to the supplier.',
@@ -157,6 +159,12 @@ assert.equal(isHighRiskAdvisoryClaim('The company must register with ACRA and no
   'a later accounting-ledger reference does not exempt a statutory registration obligation');
 assert.equal(isHighRiskAdvisoryClaim('The company must return the leased equipment to the supplier, and must register with ACRA.'), true,
   'a commercial equipment return does not mask a separate statutory registration obligation');
+for (const mixedRegistration of [
+  'The company must register with ACRA and note the asset at cost in the fixed asset register.',
+  'The bookkeeper must register the asset on acquisition in the general ledger, and the company must register with ACRA.',
+  'The business must register its premises with the regulator, then note the asset in the general ledger.'
+]) assert.equal(isHighRiskAdvisoryClaim(mixedRegistration), true,
+  `an accounting ledger detail does not suppress a separate government registration obligation: ${mixedRegistration}`);
 for (const risky of ['The applicable rate is ９ percent.', 'The filing deadline is ３１ March ２０２６.']) {
   assert.equal(isHighRiskAdvisoryClaim(risky), true, `compatibility and Unicode digits should not bypass risk checks: ${risky}`);
 }
@@ -233,7 +241,7 @@ try {
   const aiFirstPayload = {
     directAnswer: 'Accrual accounting records activity when it occurs. The business must renew its operating licence every year. The company must appoint directors.',
     explanation: ['The business may operate without an operating licence.', 'The company must appoint auditors.', 'The business can operate without a permit.', 'The company may operate without regulatory registration.'],
-    accountingTreatment: ['An operating licence is optional for this company.', 'The bookkeeper must register the asset in the general ledger. The bookkeeper must register the new asset in the fixed asset register.'],
+    accountingTreatment: ['An operating licence is optional for this company.', 'The bookkeeper must register the asset in the general ledger. The bookkeeper must register the new asset in the fixed asset register. The accountant must register the asset at cost in the fixed asset register. The bookkeeper must register the asset on acquisition in the general ledger.'],
     conditions: ['The expense belongs in the period it relates to. The company is exempt from obtaining an operating licence. The company must return the leased equipment to the supplier.'],
     sourceIds: []
   };
@@ -248,6 +256,10 @@ try {
     'ordinary asset registration in the general ledger remains visible');
   assert.match(aiFirstResponse.messageText, /register the new asset in the fixed asset register/,
     'registering a new asset in the fixed asset register remains visible');
+  assert.match(aiFirstResponse.messageText, /register the asset at cost in the fixed asset register/,
+    'an at-cost qualifier does not hide a fixed-asset register instruction');
+  assert.match(aiFirstResponse.messageText, /register the asset on acquisition in the general ledger/,
+    'an on-acquisition qualifier does not hide a general-ledger instruction');
   assert.match(aiFirstResponse.messageText, /return the leased equipment to the supplier/,
     'a commercial equipment return remains visible');
   assert.doesNotMatch(aiFirstResponse.messageText, /renew its operating licence|may operate without an operating licence|licence is optional|exempt from obtaining an operating licence|appoint directors|appoint auditors|operate without a permit|operate without regulatory registration/i,
@@ -258,7 +270,10 @@ try {
     'The company must appoint directors. The company must appoint auditors. The business can operate without a permit.',
     'The company may operate without regulatory registration.',
     'The company must register with ACRA and note it in the general ledger.',
-    'The company must return the leased equipment to the supplier, and must register with ACRA.'
+    'The company must return the leased equipment to the supplier, and must register with ACRA.',
+    'The company must register with ACRA and note the asset at cost in the fixed asset register.',
+    'The bookkeeper must register the asset on acquisition in the general ledger, and the company must register with ACRA.',
+    'The business must register its premises with the regulator, then note the asset in the general ledger.'
   ]) {
     globalThis.fetch = async () => new Response(JSON.stringify({
       choices: [{ message: { content: JSON.stringify({
@@ -268,7 +283,7 @@ try {
     const allUnsafeResponse = await processAccountingQuery(cases[0].question, null, 'SFRS_I', adapters[2].settings, 'unused', []);
     assert.equal(allUnsafeResponse.advisoryFailureStatus, 'INVALID_RESPONSE',
       `an all-unsafe AI-first payload is rejected: ${unsafeClaim}`);
-    assert.doesNotMatch(allUnsafeResponse.messageText, /may operate without an operating licence|appoint directors|appoint auditors|operate without a permit|register with ACRA|return the leased equipment/i,
+    assert.doesNotMatch(allUnsafeResponse.messageText, /may operate without an operating licence|appoint directors|appoint auditors|operate without a permit|register with ACRA|register the asset at cost|register the asset on acquisition|register its premises|return the leased equipment/i,
       `unsupported statutory claims are withheld: ${unsafeClaim}`);
   }
 } finally {

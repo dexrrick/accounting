@@ -655,6 +655,9 @@ try {
     'The bookkeeper must register the asset in the fixed asset register, and the business must register with the regulator.',
     'The company must register with ACRA and note it in the general ledger.',
     'The company must return the leased equipment to the supplier, and must register with ACRA.',
+    'The company must register with ACRA and note the asset at cost in the fixed asset register.',
+    'The bookkeeper must register the asset on acquisition in the general ledger, and the company must register with ACRA.',
+    'The business must register its premises with the regulator, then note the asset in the general ledger.',
     'A software licence is required to run the application, and an operating licence is required to trade.',
     'The company must declare taxable income.',
     'The company must comply with the law.'
@@ -695,6 +698,8 @@ try {
     'A software licence is required to run the application.',
     'A commercial licence is required to use the paid application.',
     'The bookkeeper must register the asset in the fixed asset register.',
+    'The accountant must register the asset at cost in the fixed asset register.',
+    'The bookkeeper must register the asset on acquisition in the general ledger.',
     'The bookkeeper must register the new asset in the fixed asset register.',
     'The bookkeeper must register the asset in the general ledger.',
     'The company must return the leased equipment to the supplier.',

@@ -335,7 +335,7 @@ export function isHighRiskStatutoryClaim(text: string): boolean {
   const complianceContext = /\b(?:legal|law|laws|statutory|regulatory|regulator|compliance|government|authority|acra|iras|cpf|mom|mas|tax|gst|taxable|taxation|income\s+tax|company\s+secretary|resident\s+director|statutory\s+auditor)\b/i.test(normalizedText);
   const obligationModal = /\b(?:must(?:\s+not)?|shall(?:\s+not)?|(?:is|are)\s+(?:not\s+)?required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\b/i;
   const explicitComplianceAction = new RegExp(
-    `${obligationModal.source}\\s+(?:submit|file|lodge|notify|register\\b(?!(?:\\s+(?:the\\s+)?(?:(?:new|existing|acquired|purchased|leased)\\s+)?(?:asset|item|transaction|expense|invoice|account|balance)\\b)?\\s+\\b(?:in|into)\\s+(?:the\\s+)?(?:fixed\\s+asset\\s+register|asset\\s+register|general\\s+ledger(?:\\s+register)?|accounting\\s+register)\\b)|withhold|furnish)\\b`,
+    `${obligationModal.source}\\s+(?:submit|file|lodge|notify|register\\b(?!(?:\\s+(?:the\\s+)?(?:(?:new|existing|acquired|purchased|leased)\\s+)?(?:asset|item|transaction|expense|invoice|account|balance)\\b)?(?:\\s+(?:at\\s+cost|on\\s+acquisition))?\\s+\\b(?:in|into)\\s+(?:the\\s+)?(?:fixed\\s+asset\\s+register|asset\\s+register|general\\s+ledger(?:\\s+register)?|accounting\\s+register)\\b)|withhold|furnish)\\b`,
     'i'
   ).test(normalizedText);
   const contextBoundReportingAction = new RegExp(`${obligationModal.source}\\s+(?:report|declare)\\b`, 'i').test(normalizedText) && complianceContext;
