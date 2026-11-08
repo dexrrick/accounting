@@ -1,0 +1,742 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "accounting-asset-register",
+  "question": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+  "reviewFocus": "Accounting advice remains visible and explains the two records; no statutory-registration detour or fabricated amounts.",
+  "authorities": [],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-08T02:43:55.508Z",
+  "status": "COMPLETED",
+  "stopRemainingCases": false,
+  "modelRequestCap": 8,
+  "modelRequests": [
+    {
+      "number": 1,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 9172,
+      "status": 200,
+      "durationMs": 2408,
+      "candidateText": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"ACCOUNTING_STANDARDS\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"ACCOUNTING\",\n  \"population\": \"COMPANY\",\n  \"primarySubject\": \"fixed asset registration and general ledger acquisition accounting\",\n  \"concepts\": [\n    {\n      \"concept\": \"fixed asset register\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"general ledger\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"cost measurement\",\n      \"role\": \"RELATED\"\n    }\n  ],\n  \"requestedOperation\": \"EXPLAIN_INTERACTION\",\n  \"factsExplicitlyProvided\": [],\n  \"confidence\": 0.9,\n  \"issues\": [\n    {\n      \"subject\": \"fixed asset registration and general ledger acquisition treatment\",\n      \"population\": \"COMPANY\",\n      \"domain\": \"ACCOUNTING\",\n      \"governingAuthorities\": [\n        \"ACCOUNTING_STANDARDS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.9\n    },\n    {\n      \"subject\": \"relationship between fixed asset register and general ledger\",\n      \"population\": \"COMPANY\",\n      \"domain\": \"ACCOUNTING\",\n      \"governingAuthorities\": [\n        \"ACCOUNTING_STANDARDS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_INTERACTION\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.9\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1902,
+        "candidatesTokenCount": 422,
+        "totalTokenCount": 2324,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1902
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 2408,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    }
+  ],
+  "authorityWorkstreams": {
+    "query": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+    "issuePlan": {
+      "source": "SEMANTIC_ISSUES",
+      "issues": [
+        {
+          "subject": "fixed asset registration and general ledger acquisition treatment",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9,
+          "id": "issue_9577c5db",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "subject": "relationship between fixed asset register and general ledger",
+          "population": "COMPANY",
+          "domain": "ACCOUNTING",
+          "governingAuthorities": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_INTERACTION",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9,
+          "id": "issue_ee7172e4",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "coverageEstablished": false,
+      "hasUnmappedResidual": true
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.\"]",
+      "rawQuery": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+      "inputLength": 199,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 199
+            }
+          }
+        ],
+        "inputLength": 199
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "primarySubject": "fixed asset registration and general ledger acquisition accounting",
+          "concepts": [
+            {
+              "concept": "fixed asset register",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "general ledger",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "cost measurement",
+              "role": "RELATED"
+            }
+          ],
+          "requestedOperation": "EXPLAIN_INTERACTION",
+          "requiresUserSpecificFacts": true,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [],
+          "confidence": 0.9,
+          "issues": [
+            {
+              "subject": "fixed asset registration and general ledger acquisition treatment",
+              "population": "COMPANY",
+              "domain": "ACCOUNTING",
+              "governingAuthorities": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 0.9
+            },
+            {
+              "subject": "relationship between fixed asset register and general ledger",
+              "population": "COMPANY",
+              "domain": "ACCOUNTING",
+              "governingAuthorities": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_INTERACTION",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+              "confidence": 0.9
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 0.9
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 0.9,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "fixed asset registration and general ledger acquisition treatment"
+          },
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 1,
+            "subject": "relationship between fixed asset register and general ledger"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "fixed asset registration and general ledger acquisition treatment",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE"
+          },
+          {
+            "subject": "relationship between fixed asset register and general ledger",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_INTERACTION"
+          }
+        ]
+      }
+    },
+    "workstreams": [
+      {
+        "id": "ACCOUNTING_STANDARDS:ACCOUNTING",
+        "authority": "ACCOUNTING_STANDARDS",
+        "domain": "ACCOUNTING",
+        "sourceSections": [],
+        "populations": [
+          "COMPANY"
+        ],
+        "issues": [
+          {
+            "issueId": "issue_9577c5db",
+            "subject": "fixed asset registration and general ledger acquisition treatment",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "governingAuthority": "ACCOUNTING_STANDARDS",
+            "sourceSections": [],
+            "lifecycle": {
+              "requested": true,
+              "mapped": false,
+              "retrievalAttempted": false,
+              "evidenceFound": false,
+              "admitted": false,
+              "verified": false,
+              "covered": false
+            },
+            "applicationStatus": "NOT_REQUIRED",
+            "evidenceStatus": "INSUFFICIENT",
+            "verifiedClaims": [],
+            "sources": [],
+            "gaps": [
+              {
+                "issueId": "issue_9577c5db",
+                "authority": "ACCOUNTING_STANDARDS",
+                "domain": "ACCOUNTING",
+                "subject": "fixed asset registration and general ledger acquisition treatment",
+                "operation": "EXPLAIN_RULE",
+                "stage": "mapped",
+                "code": "NO_COVERAGE_TOPIC",
+                "reason": "The issue has no resolved authority and topic mapping for this workstream."
+              }
+            ]
+          },
+          {
+            "issueId": "issue_ee7172e4",
+            "subject": "relationship between fixed asset register and general ledger",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "operation": "EXPLAIN_INTERACTION",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "governingAuthority": "ACCOUNTING_STANDARDS",
+            "sourceSections": [],
+            "lifecycle": {
+              "requested": true,
+              "mapped": false,
+              "retrievalAttempted": false,
+              "evidenceFound": false,
+              "admitted": false,
+              "verified": false,
+              "covered": false
+            },
+            "applicationStatus": "UNRESOLVED",
+            "applicationReason": "For relationship between fixed asset register and general ledger, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.",
+            "evidenceStatus": "INSUFFICIENT",
+            "verifiedClaims": [],
+            "sources": [],
+            "gaps": [
+              {
+                "issueId": "issue_ee7172e4",
+                "authority": "ACCOUNTING_STANDARDS",
+                "domain": "ACCOUNTING",
+                "subject": "relationship between fixed asset register and general ledger",
+                "operation": "EXPLAIN_INTERACTION",
+                "stage": "mapped",
+                "code": "NO_COVERAGE_TOPIC",
+                "reason": "The issue has no resolved authority and topic mapping for this workstream."
+              }
+            ]
+          }
+        ],
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "verifiedClaims": [],
+        "sources": [],
+        "gaps": [
+          {
+            "issueId": "issue_9577c5db",
+            "authority": "ACCOUNTING_STANDARDS",
+            "domain": "ACCOUNTING",
+            "subject": "fixed asset registration and general ledger acquisition treatment",
+            "operation": "EXPLAIN_RULE",
+            "stage": "mapped",
+            "code": "NO_COVERAGE_TOPIC",
+            "reason": "The issue has no resolved authority and topic mapping for this workstream."
+          },
+          {
+            "issueId": "issue_ee7172e4",
+            "authority": "ACCOUNTING_STANDARDS",
+            "domain": "ACCOUNTING",
+            "subject": "relationship between fixed asset register and general ledger",
+            "operation": "EXPLAIN_INTERACTION",
+            "stage": "mapped",
+            "code": "NO_COVERAGE_TOPIC",
+            "reason": "The issue has no resolved authority and topic mapping for this workstream."
+          }
+        ]
+      }
+    ],
+    "evidenceStatus": "INSUFFICIENT",
+    "applicationStatus": "UNRESOLVED",
+    "status": "INSUFFICIENT",
+    "gaps": [
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "Issue plan",
+        "operation": "OTHER",
+        "stage": "covered",
+        "code": "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "reason": "The reconciled issue plan does not establish coverage of the complete question."
+      },
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "fixed asset register",
+        "operation": "OTHER",
+        "stage": "mapped",
+        "code": "UNROUTED_MATERIAL_CONCEPT",
+        "reason": "A material concept without a reviewed topic was not assigned to a uniquely matching requested issue."
+      },
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "general ledger",
+        "operation": "OTHER",
+        "stage": "mapped",
+        "code": "UNROUTED_MATERIAL_CONCEPT",
+        "reason": "A material concept without a reviewed topic was not assigned to a uniquely matching requested issue."
+      },
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "cost measurement",
+        "operation": "OTHER",
+        "stage": "mapped",
+        "code": "UNROUTED_MATERIAL_CONCEPT",
+        "reason": "A material concept without a reviewed topic was not assigned to a uniquely matching requested issue."
+      },
+      {
+        "issueId": "issue_9577c5db",
+        "authority": "ACCOUNTING_STANDARDS",
+        "domain": "ACCOUNTING",
+        "subject": "fixed asset registration and general ledger acquisition treatment",
+        "operation": "EXPLAIN_RULE",
+        "stage": "mapped",
+        "code": "NO_COVERAGE_TOPIC",
+        "reason": "The issue has no resolved authority and topic mapping for this workstream."
+      },
+      {
+        "issueId": "issue_ee7172e4",
+        "authority": "ACCOUNTING_STANDARDS",
+        "domain": "ACCOUNTING",
+        "subject": "relationship between fixed asset register and general ledger",
+        "operation": "EXPLAIN_INTERACTION",
+        "stage": "mapped",
+        "code": "NO_COVERAGE_TOPIC",
+        "reason": "The issue has no resolved authority and topic mapping for this workstream."
+      }
+    ]
+  },
+  "finalResponse": {
+    "messageText": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**fixed asset registration and general ledger acquisition treatment** (party in scope: Company)\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n\n**relationship between fixed asset register and general ledger** (party in scope: Company)\n- **Application unresolved:** For relationship between fixed asset register and general ledger, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.\n- **Evidence gap:** relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- fixed asset register: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- general ledger: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- cost measurement: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.\n- relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream.\n- fixed asset registration and general ledger acquisition treatment: No reviewed topic was resolved for this issue\n- relationship between fixed asset register and general ledger: No reviewed topic was resolved for this issue",
+    "scenarioState": {
+      "scenarioType": "UNRECOGNIZED",
+      "authorityStatus": "AI_PROPOSED",
+      "queryIntent": "TRANSACTION",
+      "rawQuery": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+      "transactionTitle": "Transaction facts",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "directGroups": [],
+      "isComplete": false,
+      "missingFields": [],
+      "assumptions": [],
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.\"]",
+        "rawQuery": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+        "inputLength": 199,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 199
+              }
+            }
+          ],
+          "inputLength": 199
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "SEMANTIC_INTERPRETATION",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "normalizedInterpretation": {
+            "jurisdiction": [
+              "Singapore"
+            ],
+            "authorityCandidates": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "ACCOUNTING",
+            "population": "COMPANY",
+            "primarySubject": "fixed asset registration and general ledger acquisition accounting",
+            "concepts": [
+              {
+                "concept": "fixed asset register",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "general ledger",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "cost measurement",
+                "role": "RELATED"
+              }
+            ],
+            "requestedOperation": "EXPLAIN_INTERACTION",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": [],
+            "confidence": 0.9,
+            "issues": [
+              {
+                "subject": "fixed asset registration and general ledger acquisition treatment",
+                "population": "COMPANY",
+                "domain": "ACCOUNTING",
+                "governingAuthorities": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "EXPLAIN_RULE",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                "confidence": 0.9
+              },
+              {
+                "subject": "relationship between fixed asset register and general ledger",
+                "population": "COMPANY",
+                "domain": "ACCOUNTING",
+                "governingAuthorities": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "EXPLAIN_INTERACTION",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                "confidence": 0.9
+              }
+            ]
+          },
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "observedConfidence": 0.9
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "observedConfidence": 0.9,
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 0,
+              "subject": "fixed asset registration and general ledger acquisition treatment"
+            },
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 1,
+              "subject": "relationship between fixed asset register and general ledger"
+            }
+          ],
+          "matches": [],
+          "issues": [
+            {
+              "subject": "fixed asset registration and general ledger acquisition treatment",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_RULE"
+            },
+            {
+              "subject": "relationship between fixed asset register and general ledger",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_INTERACTION"
+            }
+          ]
+        }
+      },
+      "statutoryAdvisory": [],
+      "officialAnswerLinks": [],
+      "authorityEvidencePresentation": {
+        "query": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.\"]",
+          "rawQuery": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+          "inputLength": 199,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 199
+                }
+              }
+            ],
+            "inputLength": 199
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "SEMANTIC_INTERPRETATION",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "normalizedInterpretation": {
+              "jurisdiction": [
+                "Singapore"
+              ],
+              "authorityCandidates": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "domain": "ACCOUNTING",
+              "population": "COMPANY",
+              "primarySubject": "fixed asset registration and general ledger acquisition accounting",
+              "concepts": [
+                {
+                  "concept": "fixed asset register",
+                  "role": "PRIMARY"
+                },
+                {
+                  "concept": "general ledger",
+                  "role": "PRIMARY"
+                },
+                {
+                  "concept": "cost measurement",
+                  "role": "RELATED"
+                }
+              ],
+              "requestedOperation": "EXPLAIN_INTERACTION",
+              "requiresUserSpecificFacts": true,
+              "calculationRequested": false,
+              "factsExplicitlyProvided": [],
+              "confidence": 0.9,
+              "issues": [
+                {
+                  "subject": "fixed asset registration and general ledger acquisition treatment",
+                  "population": "COMPANY",
+                  "domain": "ACCOUNTING",
+                  "governingAuthorities": [
+                    "ACCOUNTING_STANDARDS"
+                  ],
+                  "contextualAuthorities": [],
+                  "operation": "EXPLAIN_RULE",
+                  "mappedTopicIds": [],
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "confidence": 0.9
+                },
+                {
+                  "subject": "relationship between fixed asset register and general ledger",
+                  "population": "COMPANY",
+                  "domain": "ACCOUNTING",
+                  "governingAuthorities": [
+                    "ACCOUNTING_STANDARDS"
+                  ],
+                  "contextualAuthorities": [],
+                  "operation": "EXPLAIN_INTERACTION",
+                  "mappedTopicIds": [],
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "confidence": 0.9
+                }
+              ]
+            },
+            "structuralAcceptance": "ACCEPTED",
+            "confidenceAcceptance": "ACCEPTED",
+            "observedConfidence": 0.9
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "ACCEPTED",
+            "confidenceAcceptance": "ACCEPTED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "observedConfidence": 0.9,
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                "issueIndex": 0,
+                "subject": "fixed asset registration and general ledger acquisition treatment"
+              },
+              {
+                "stage": "BRIDGE",
+                "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                "issueIndex": 1,
+                "subject": "relationship between fixed asset register and general ledger"
+              }
+            ],
+            "matches": [],
+            "issues": [
+              {
+                "subject": "fixed asset registration and general ledger acquisition treatment",
+                "population": "COMPANY",
+                "operation": "EXPLAIN_RULE"
+              },
+              {
+                "subject": "relationship between fixed asset register and general ledger",
+                "population": "COMPANY",
+                "operation": "EXPLAIN_INTERACTION"
+              }
+            ]
+          }
+        },
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "workstreams": [
+          {
+            "id": "ACCOUNTING_STANDARDS:ACCOUNTING",
+            "authority": "ACCOUNTING_STANDARDS",
+            "authorityLabel": "Singapore accounting standards",
+            "domain": "ACCOUNTING",
+            "domainLabel": "Accounting treatment",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_9577c5db",
+                "subject": "fixed asset registration and general ledger acquisition treatment",
+                "population": "Company",
+                "operation": "EXPLAIN_RULE",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "claims": [],
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              },
+              {
+                "id": "issue_ee7172e4",
+                "subject": "relationship between fixed asset register and general ledger",
+                "population": "Company",
+                "operation": "EXPLAIN_INTERACTION",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "applicationReason": "For relationship between fixed asset register and general ledger, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.",
+                "claims": [],
+                "gaps": [
+                  "The issue has no resolved authority and topic mapping for this workstream."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.",
+              "relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "fixed asset register: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.",
+          "general ledger: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.",
+          "cost measurement: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.",
+          "fixed asset registration and general ledger acquisition treatment: The issue has no resolved authority and topic mapping for this workstream.",
+          "relationship between fixed asset register and general ledger: The issue has no resolved authority and topic mapping for this workstream.",
+          "fixed asset registration and general ledger acquisition treatment: No reviewed topic was resolved for this issue",
+          "relationship between fixed asset register and general ledger: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "committedDirectGroups": [],
+      "projectedGroups": [],
+      "uncertaintyDisclaimer": "The original advisory response was not retained because its claims did not pass verification."
+    },
+    "displayFullAnswer": true,
+    "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+    "advisoryFailureStatus": "OTHER",
+    "clarifications": []
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 3091,
+  "completedAt": "2026-11-08T02:43:58.599Z",
+  "modelRequestCount": 1,
+  "sourceCount": 0
+}

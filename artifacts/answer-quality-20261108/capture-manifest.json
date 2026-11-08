@@ -1,0 +1,56 @@
+{
+  "testedCommit": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "algorithm": "SHA-256",
+  "captures": [
+    {
+      "path": "answers/accounting-accrual-control.json",
+      "bytes": 27585,
+      "sha256": "8af41586540cfc1de6a921299504dd7ba0419515095c97e9d6f96297a0efb0fb"
+    },
+    {
+      "path": "answers/accounting-accrual.json",
+      "bytes": 38281,
+      "sha256": "8b41bd22df9dd3089015f17653b9a4db86023f1eabffc615dd91e9ef846b6f57"
+    },
+    {
+      "path": "answers/accounting-asset-register.json",
+      "bytes": 33440,
+      "sha256": "5c25e89a87c0f3e450f7ad3cdd96545f1533307983467c507de56d116ef9b3f7"
+    },
+    {
+      "path": "answers/acra-sole-director-secretary.json",
+      "bytes": 161012,
+      "sha256": "e62083c74584f7cbcb0583e135b51c649b95973272f7cb04d5d507ce3a5f4439"
+    },
+    {
+      "path": "answers/cpf-employer-responsibility.json",
+      "bytes": 82676,
+      "sha256": "ff77315cf92e7bb627bfeb973ea8f9c48756c938ffd8bccde0fa5df20402e8c3"
+    },
+    {
+      "path": "answers/iras-private-car-retry1.json",
+      "bytes": 295747,
+      "sha256": "117c69e638a5b6a29bd669f947bea5496af51bab542e10ca5e5cab0cf1c76258"
+    },
+    {
+      "path": "answers/iras-private-car.json",
+      "bytes": 65274,
+      "sha256": "6effc272fd96f6cc33267893cc2e7937ec38f9e0763f3c7c5c6c5f7e3b425c17"
+    },
+    {
+      "path": "answers/mas-fund-management-startup.json",
+      "bytes": 35721,
+      "sha256": "96f9fdd9b93afbda61d0c15ea1e7469f8fe74563caeb62bcb9c68115ec976a53"
+    },
+    {
+      "path": "answers/mixed-first-employee.json",
+      "bytes": 83871,
+      "sha256": "4e5606c3859faec4d7ef5efe6a96f92f0bb75cdbe60e91cbac77866a537e895c"
+    },
+    {
+      "path": "answers/mom-salary-overtime.json",
+      "bytes": 104423,
+      "sha256": "82dc0f321eaf0e362efe9c4d571d961767ff09cb0960ad31b7a42be47c1e498a"
+    }
+  ]
+}

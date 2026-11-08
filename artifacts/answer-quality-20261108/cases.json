@@ -1,0 +1,56 @@
+[
+  {
+    "id": "accounting-accrual",
+    "authorities": [],
+    "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+    "reviewFocus": "Useful explanation of timing and unpaid liabilities; no unsolicited statutory requirements or invented journal."
+  },
+  {
+    "id": "accounting-asset-register",
+    "authorities": [],
+    "question": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+    "reviewFocus": "Accounting advice remains visible and explains the two records; no statutory-registration detour or fabricated amounts."
+  },
+  {
+    "id": "iras-private-car",
+    "authorities": ["IRAS"],
+    "question": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+    "reviewFocus": "Business use alone does not establish input-tax recovery; identifies relevant restriction and qualifications with official support."
+  },
+  {
+    "id": "cpf-employer-responsibility",
+    "authorities": ["CPF"],
+    "question": "We are hiring a Singapore citizen employee on a contract of service. Who is responsible for paying CPF contributions, and what employee and pay details should payroll collect before calculating them? Do not calculate a contribution or create a journal.",
+    "reviewFocus": "Explains employer responsibility and distinguishes employee deductions; requests material calculation facts without inventing rates or amounts."
+  },
+  {
+    "id": "mom-salary-overtime",
+    "authorities": ["MOM"],
+    "question": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+    "reviewFocus": "Addresses ordinary salary versus overtime deadlines accurately and practically, with official support and no journal."
+  },
+  {
+    "id": "acra-sole-director-secretary",
+    "authorities": ["ACRA"],
+    "question": "Our Singapore private company has one director. Can that sole director also act as company secretary, and what should we do when appointing a secretary? Please cite the official requirements. No accounting entry is requested.",
+    "reviewFocus": "Directly addresses sole-director restriction and practical appointment requirements; avoids unsupported eligibility claims."
+  },
+  {
+    "id": "mas-fund-management-startup",
+    "authorities": ["MAS"],
+    "question": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+    "reviewFocus": "Recognises regulatory perimeter, distinguishes checking licensing/exemptions from confirming eligibility, identifies missing facts and provides useful official sources."
+  },
+  {
+    "id": "mixed-first-employee",
+    "authorities": ["CPF", "MOM"],
+    "question": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+    "reviewFocus": "Covers both authorities, separates duties, asks for material employee/pay facts, and does not fabricate eligibility, rates, amounts or journals."
+  },
+  {
+    "id": "accounting-accrual-control",
+    "authorities": [],
+    "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation.",
+    "reviewFocus": "Exploratory paired control after initial eight-case assessment: remove explicit negative journal directive to observe AI-first route; do not mix this additional case into the original sample's score."
+  }
+]

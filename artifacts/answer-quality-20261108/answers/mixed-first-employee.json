@@ -1,0 +1,1922 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "mixed-first-employee",
+  "question": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+  "reviewFocus": "Covers both authorities, separates duties, asks for material employee/pay facts, and does not fabricate eligibility, rates, amounts or journals.",
+  "authorities": [
+    "CPF",
+    "MOM"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-08T02:47:26.781Z",
+  "status": "COMPLETED",
+  "stopRemainingCases": false,
+  "modelRequestCap": 8,
+  "modelRequests": [
+    {
+      "number": 1,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 9253,
+      "status": 200,
+      "durationMs": 2279,
+      "candidateText": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"CPF\",\n    \"MOM\"\n  ],\n  \"contextualAuthorities\": [\n    \"CPF\",\n    \"MOM\"\n  ],\n  \"domain\": \"UNKNOWN\",\n  \"population\": \"EMPLOYER\",\n  \"primarySubject\": \"employer obligations for CPF and MOM\",\n  \"concepts\": [\n    {\n      \"concept\": \"CPF registration and contribution\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"MOM salary-payment duties\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"first employee hiring\",\n      \"role\": \"CONTEXT_ONLY\"\n    }\n  ],\n  \"requestedOperation\": \"EXPLAIN_INTERACTION\",\n  \"factsExplicitlyProvided\": [\n    \"hiring our first employee in Singapore\"\n  ],\n  \"confidence\": 0.95,\n  \"issues\": [\n    {\n      \"subject\": \"CPF registration and contribution duties\",\n      \"population\": \"EMPLOYER\",\n      \"domain\": \"CPF_PAYROLL\",\n      \"governingAuthorities\": [\n        \"CPF\"\n      ],\n      \"contextualAuthorities\": [\n        \"MOM\"\n      ],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    },\n    {\n      \"subject\": \"MOM salary-payment duties\",\n      \"population\": \"EMPLOYER\",\n      \"domain\": \"MOM_EMPLOYMENT\",\n      \"governingAuthorities\": [\n        \"MOM\"\n      ],\n      \"contextualAuthorities\": [\n        \"CPF\"\n      ],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    },\n    {\n      \"subject\": \"interaction between CPF and MOM employer duties\",\n      \"population\": \"EMPLOYER\",\n      \"domain\": \"UNKNOWN\",\n      \"governingAuthorities\": [\n        \"MOM\"\n      ],\n      \"contextualAuthorities\": [\n        \"CPF\"\n      ],\n      \"operation\": \"EXPLAIN_INTERACTION\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1915,
+        "candidatesTokenCount": 585,
+        "totalTokenCount": 2500,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1915
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 2279,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 75,
+      "responseMetadata": {
+        "contentType": "application/pdf",
+        "contentLength": "152971",
+        "etag": "\"2ce78-6322aee29dc80-gzip\"",
+        "lastModified": "Mon, 07 Apr 2025 07:10:26 GMT"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 37,
+      "responseMetadata": {
+        "contentType": "text/html;charset=utf-8",
+        "contentLength": "22058",
+        "etag": "\"38cd1-65fb8912b3496-gzip\"",
+        "lastModified": "Sun, 08 Nov 2026 00:02:54 GMT"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 116,
+      "responseMetadata": {
+        "contentType": "text/html; charset=utf-8",
+        "contentLength": "14229",
+        "etag": "\"9529992918501C62CB45445BE9FB76CA--gzip\""
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 94,
+      "responseMetadata": {
+        "contentType": "text/html; charset=utf-8",
+        "contentLength": "14229",
+        "etag": "\"97A428010A8656C44A7CE3E8C7A49DBB--gzip\""
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 619,
+      "responseMetadata": {
+        "contentType": "application/pdf; charset=UTF-8",
+        "contentLength": "567996"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 114,
+      "responseMetadata": {
+        "contentType": "text/html; charset=utf-8",
+        "contentLength": "14228",
+        "etag": "\"CC4C91A74ED7F4881E121FD5C8918376--gzip\""
+      },
+      "modelRequest": false
+    }
+  ],
+  "authorityWorkstreams": {
+    "query": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+    "issuePlan": {
+      "source": "TAXONOMY_FALLBACK",
+      "issues": [
+        {
+          "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+          "population": "UNKNOWN",
+          "domain": "CPF_PAYROLL",
+          "governingAuthorities": [
+            "CPF"
+          ],
+          "contextualAuthorities": [],
+          "operation": "OTHER",
+          "mappedTopicIds": [
+            "cpf_contribution_rates",
+            "cpf-ordinary-wages"
+          ],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 1,
+          "id": "issue_2c18c9aa",
+          "status": "MAPPED"
+        }
+      ],
+      "coverageEstablished": false,
+      "hasUnmappedResidual": true
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.\"]",
+      "rawQuery": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+      "inputLength": 280,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 280
+            }
+          }
+        ],
+        "inputLength": 280
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "DETERMINISTIC_FALLBACK",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+        "structuralAcceptance": "REJECTED",
+        "confidenceAcceptance": "NOT_EVALUATED"
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "REJECTED",
+        "confidenceAcceptance": "NOT_EVALUATED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "OBSERVATION_WRAPPER_FAILED"
+          }
+        ],
+        "matches": [],
+        "issues": []
+      }
+    },
+    "workstreams": [
+      {
+        "id": "CPF:CPF_PAYROLL",
+        "authority": "CPF",
+        "domain": "CPF_PAYROLL",
+        "sourceSections": [
+          "CPF_CONTRIBUTIONS"
+        ],
+        "populations": [
+          "UNKNOWN"
+        ],
+        "issues": [
+          {
+            "issueId": "issue_2c18c9aa",
+            "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+            "population": "UNKNOWN",
+            "domain": "CPF_PAYROLL",
+            "operation": "OTHER",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "governingAuthority": "CPF",
+            "sourceSections": [
+              "CPF_CONTRIBUTIONS"
+            ],
+            "lifecycle": {
+              "requested": true,
+              "mapped": true,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": false,
+              "covered": false
+            },
+            "applicationStatus": "NOT_REQUIRED",
+            "evidenceStatus": "INSUFFICIENT",
+            "verifiedClaims": [],
+            "sources": [],
+            "gaps": [
+              {
+                "issueId": "issue_2c18c9aa",
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+                "operation": "OTHER",
+                "stage": "verified",
+                "code": "CPF_RATE_SCHEDULE_UNVERIFIED",
+                "reason": "No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence."
+              },
+              {
+                "issueId": "issue_2c18c9aa",
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+                "operation": "OTHER",
+                "stage": "verified",
+                "code": "NO_VERIFIED_CLAIM",
+                "reason": "No complete source quotation passed claim verification for this issue."
+              },
+              {
+                "issueId": "issue_2c18c9aa",
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+                "operation": "OTHER",
+                "stage": "covered",
+                "code": "ISSUE_CONCEPT_UNCOVERED",
+                "reason": "Verified quotations do not support the requested topic cpf_contribution_rates."
+              },
+              {
+                "issueId": "issue_2c18c9aa",
+                "authority": "CPF",
+                "domain": "CPF_PAYROLL",
+                "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+                "operation": "OTHER",
+                "stage": "covered",
+                "code": "ISSUE_CONCEPT_UNCOVERED",
+                "reason": "Verified quotations do not support the requested topic cpf-ordinary-wages."
+              }
+            ],
+            "retrievalTrace": {
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "EXHAUSTED",
+                  "reason": "The stage was exhausted without sufficient admitted evidence."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SUFFICIENT",
+                  "reason": "The stage supplied reviewed evidence candidates."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                }
+              ],
+              "attempts": [
+                {
+                  "topicId": "cpf_contribution_rates",
+                  "fetchStatus": "SUCCESS",
+                  "pageTitle": "CPF Contribution Rate Table from 1 January 2026"
+                },
+                {
+                  "topicId": "cpf_contribution_rates",
+                  "fetchStatus": "SUCCESS",
+                  "pageTitle": "CPFB | How much CPF contributions to pay"
+                },
+                {
+                  "topicId": "cpf_contribution_rates",
+                  "fetchStatus": "TOPIC_MISMATCH",
+                  "pageTitle": "Central Provident Fund Board(CPFB)"
+                },
+                {
+                  "topicId": "cpf-ordinary-wages",
+                  "fetchStatus": "TOPIC_MISMATCH",
+                  "pageTitle": "Central Provident Fund Board(CPFB)"
+                },
+                {
+                  "topicId": "cpf-ordinary-wages",
+                  "fetchStatus": "SUCCESS",
+                  "pageTitle": "Examples for computation of Additional Wage (AW) Ceiling"
+                },
+                {
+                  "topicId": "cpf-ordinary-wages",
+                  "fetchStatus": "TOPIC_MISMATCH",
+                  "pageTitle": "Central Provident Fund Board(CPFB)"
+                }
+              ]
+            },
+            "admissionDiagnostics": {
+              "retrievalTraceStatus": "AVAILABLE",
+              "retrievalTraceOptionalMetadataStatus": "VALID",
+              "retrievalEvidenceQualityTrace": {
+                "path": "DISCOVERED_SOURCE",
+                "sourceMapIds": [],
+                "selectedRecordIds": [
+                  "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                  "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                  "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6"
+                ],
+                "finalVerifiedUrls": [
+                  "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+                  "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                  "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1"
+                ],
+                "candidateOnly": true,
+                "attempts": [
+                  {
+                    "topicId": "cpf_contribution_rates",
+                    "candidateUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+                    "pageTitle": "CPF Contribution Rate Table from 1 January 2026",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "discoveryStage": "MAPPED_SOURCE"
+                  },
+                  {
+                    "topicId": "cpf_contribution_rates",
+                    "candidateUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+                    "pageTitle": "CPFB | How much CPF contributions to pay",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "discoveryStage": "MAPPED_SOURCE"
+                  },
+                  {
+                    "topicId": "cpf_contribution_rates",
+                    "candidateUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+                    "fetchStatus": "TOPIC_MISMATCH",
+                    "finalUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+                    "pageTitle": "Central Provident Fund Board(CPFB)",
+                    "titleMatched": false,
+                    "contentMatched": false,
+                    "discoveryStage": "MAPPED_SOURCE",
+                    "error": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+                  },
+                  {
+                    "topicId": "cpf-ordinary-wages",
+                    "candidateUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+                    "fetchStatus": "TOPIC_MISMATCH",
+                    "finalUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+                    "pageTitle": "Central Provident Fund Board(CPFB)",
+                    "titleMatched": false,
+                    "contentMatched": false,
+                    "discoveryStage": "MAPPED_SOURCE",
+                    "error": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+                  },
+                  {
+                    "topicId": "cpf-ordinary-wages",
+                    "candidateUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+                    "pageTitle": "Examples for computation of Additional Wage (AW) Ceiling",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "discoveryStage": "MAPPED_SOURCE"
+                  },
+                  {
+                    "topicId": "cpf-ordinary-wages",
+                    "candidateUrl": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+                    "fetchStatus": "TOPIC_MISMATCH",
+                    "finalUrl": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+                    "pageTitle": "Central Provident Fund Board(CPFB)",
+                    "titleMatched": false,
+                    "contentMatched": false,
+                    "discoveryStage": "MAPPED_SOURCE",
+                    "error": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+                  }
+                ],
+                "discoveryFetchAttempts": [],
+                "coverageDecisions": [
+                  {
+                    "scope": "REGISTERED",
+                    "targetTopicIds": [],
+                    "admissionTopicIds": [],
+                    "eligibleRecordIds": [],
+                    "rejectedRecords": [
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      }
+                    ],
+                    "uncoveredTopicIds": [],
+                    "uncoveredConcepts": []
+                  },
+                  {
+                    "scope": "REGISTERED",
+                    "targetTopicIds": [],
+                    "admissionTopicIds": [],
+                    "eligibleRecordIds": [],
+                    "rejectedRecords": [
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      }
+                    ],
+                    "uncoveredTopicIds": [],
+                    "uncoveredConcepts": []
+                  },
+                  {
+                    "scope": "REGISTERED",
+                    "targetTopicIds": [],
+                    "admissionTopicIds": [],
+                    "eligibleRecordIds": [],
+                    "rejectedRecords": [
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      }
+                    ],
+                    "uncoveredTopicIds": [],
+                    "uncoveredConcepts": []
+                  },
+                  {
+                    "scope": "REGISTERED",
+                    "targetTopicIds": [],
+                    "admissionTopicIds": [],
+                    "eligibleRecordIds": [],
+                    "rejectedRecords": [
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      }
+                    ],
+                    "uncoveredTopicIds": [],
+                    "uncoveredConcepts": []
+                  },
+                  {
+                    "scope": "REGISTERED",
+                    "targetTopicIds": [],
+                    "admissionTopicIds": [],
+                    "eligibleRecordIds": [],
+                    "rejectedRecords": [
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      },
+                      {
+                        "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                        "code": "IRAS_TOPIC_UNRESOLVED",
+                        "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                      }
+                    ],
+                    "uncoveredTopicIds": [],
+                    "uncoveredConcepts": []
+                  }
+                ],
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "EXHAUSTED",
+                    "reason": "Local retrieval was insufficient for at least one routed topic."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SUFFICIENT",
+                    "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "Sitemap discovery was not attempted for this request."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "Official-domain search was not attempted for this request."
+                  }
+                ]
+              },
+              "candidates": [
+                {
+                  "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+                  "admitted": false,
+                  "firstFailedPredicate": "topic:cpf_contribution_rates.topicBoundToRecord",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": false
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    },
+                    {
+                      "topicId": "cpf-ordinary-wages",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": false
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    }
+                  ]
+                },
+                {
+                  "recordId": "CPF_WAGE_CEILINGS_2026",
+                  "admitted": false,
+                  "firstFailedPredicate": "topic:cpf_contribution_rates.topicBoundToRecord",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    },
+                    {
+                      "topicId": "cpf-ordinary-wages",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    }
+                  ]
+                },
+                {
+                  "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+                  "admitted": false,
+                  "firstFailedPredicate": "topic:cpf_contribution_rates.topicBoundToRecord",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": false
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    },
+                    {
+                      "topicId": "cpf-ordinary-wages",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": false
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    }
+                  ]
+                },
+                {
+                  "recordId": "CPF_WAGE_CEILING_2024",
+                  "admitted": false,
+                  "firstFailedPredicate": "recordEligibility",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": false,
+                      "result": "HISTORICAL_TARGET_DATE_REQUIRED"
+                    }
+                  ],
+                  "topics": []
+                },
+                {
+                  "recordId": "CPF_WAGE_CEILING_2025",
+                  "admitted": false,
+                  "firstFailedPredicate": "recordEligibility",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": false,
+                      "result": "HISTORICAL_TARGET_DATE_REQUIRED"
+                    }
+                  ],
+                  "topics": []
+                },
+                {
+                  "recordId": "CPF_RATES_BY_AGE_2026",
+                  "admitted": false,
+                  "firstFailedPredicate": "recordEligibility",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": false,
+                      "result": "LOCAL_SOURCE_NOT_VERIFIED"
+                    }
+                  ],
+                  "topics": []
+                },
+                {
+                  "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+                  "admitted": false,
+                  "firstFailedPredicate": "recordEligibility",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "reviewedRegistryMatch",
+                          "passed": true,
+                          "result": "MATCH"
+                        }
+                      ]
+                    },
+                    "liveExternal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "REVIEWED_LOCAL"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": false,
+                      "result": "LOCAL_SOURCE_NOT_VERIFIED"
+                    }
+                  ],
+                  "topics": []
+                },
+                {
+                  "recordId": "LIVE_TOPIC_cpf_contribution_rates_7ab21a34bd83",
+                  "documentHash": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+                  "admitted": false,
+                  "firstFailedPredicate": "topic:cpf_contribution_rates.issueSubjectSupport",
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "liveExternal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "officialDiscoveryAuthority",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "lifecycleState",
+                          "passed": true,
+                          "result": "CANDIDATE"
+                        },
+                        {
+                          "predicate": "sourceStatus",
+                          "passed": true,
+                          "result": "NEEDS_REVIEW"
+                        },
+                        {
+                          "predicate": "extractionStatus",
+                          "passed": true,
+                          "result": "PARTIAL"
+                        },
+                        {
+                          "predicate": "verificationMethod",
+                          "passed": true,
+                          "result": "LIVE_OFFICIAL_TOPIC_VERIFIED"
+                        },
+                        {
+                          "predicate": "sourceAuthority",
+                          "passed": true,
+                          "result": "CPF"
+                        },
+                        {
+                          "predicate": "selectedRecordId",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "finalVerifiedUrl",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "successfulTitleContentFetch",
+                          "passed": true,
+                          "result": "cpf_contribution_rates"
+                        }
+                      ]
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "VALIDATED_CURRENT_FETCH"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": false
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "issueSubjectSupport"
+                    },
+                    {
+                      "topicId": "cpf-ordinary-wages",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    }
+                  ]
+                },
+                {
+                  "recordId": "LIVE_TOPIC_cpf_contribution_rates_c7e9059f2c7a",
+                  "documentHash": "c7e9059f2c7a52aaf4271e62b79152cbac59cc231723022f8d98ffb74b7e6f03",
+                  "admitted": true,
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "liveExternal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "officialDiscoveryAuthority",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "lifecycleState",
+                          "passed": true,
+                          "result": "CANDIDATE"
+                        },
+                        {
+                          "predicate": "sourceStatus",
+                          "passed": true,
+                          "result": "NEEDS_REVIEW"
+                        },
+                        {
+                          "predicate": "extractionStatus",
+                          "passed": true,
+                          "result": "PARTIAL"
+                        },
+                        {
+                          "predicate": "verificationMethod",
+                          "passed": true,
+                          "result": "LIVE_OFFICIAL_TOPIC_VERIFIED"
+                        },
+                        {
+                          "predicate": "sourceAuthority",
+                          "passed": true,
+                          "result": "CPF"
+                        },
+                        {
+                          "predicate": "selectedRecordId",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "finalVerifiedUrl",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "successfulTitleContentFetch",
+                          "passed": true,
+                          "result": "cpf_contribution_rates"
+                        }
+                      ]
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "VALIDATED_CURRENT_FETCH"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": true
+                    }
+                  ]
+                },
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_98fc7777d8c6",
+                  "documentHash": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+                  "admitted": true,
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "liveExternal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "officialDiscoveryAuthority",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "lifecycleState",
+                          "passed": true,
+                          "result": "CANDIDATE"
+                        },
+                        {
+                          "predicate": "sourceStatus",
+                          "passed": true,
+                          "result": "NEEDS_REVIEW"
+                        },
+                        {
+                          "predicate": "extractionStatus",
+                          "passed": true,
+                          "result": "PARTIAL"
+                        },
+                        {
+                          "predicate": "verificationMethod",
+                          "passed": true,
+                          "result": "LIVE_OFFICIAL_TOPIC_VERIFIED"
+                        },
+                        {
+                          "predicate": "sourceAuthority",
+                          "passed": true,
+                          "result": "CPF"
+                        },
+                        {
+                          "predicate": "selectedRecordId",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "finalVerifiedUrl",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "successfulTitleContentFetch",
+                          "passed": true,
+                          "result": "cpf-ordinary-wages"
+                        }
+                      ]
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "VALIDATED_CURRENT_FETCH"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "cpf_contribution_rates",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": false
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": false,
+                      "firstFailedPredicate": "topicBoundToRecord"
+                    },
+                    {
+                      "topicId": "cpf-ordinary-wages",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "verifiedClaims": [],
+        "sources": [],
+        "gaps": [
+          {
+            "issueId": "issue_2c18c9aa",
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+            "operation": "OTHER",
+            "stage": "verified",
+            "code": "CPF_RATE_SCHEDULE_UNVERIFIED",
+            "reason": "No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence."
+          },
+          {
+            "issueId": "issue_2c18c9aa",
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+            "operation": "OTHER",
+            "stage": "verified",
+            "code": "NO_VERIFIED_CLAIM",
+            "reason": "No complete source quotation passed claim verification for this issue."
+          },
+          {
+            "issueId": "issue_2c18c9aa",
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+            "operation": "OTHER",
+            "stage": "covered",
+            "code": "ISSUE_CONCEPT_UNCOVERED",
+            "reason": "Verified quotations do not support the requested topic cpf_contribution_rates."
+          },
+          {
+            "issueId": "issue_2c18c9aa",
+            "authority": "CPF",
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+            "operation": "OTHER",
+            "stage": "covered",
+            "code": "ISSUE_CONCEPT_UNCOVERED",
+            "reason": "Verified quotations do not support the requested topic cpf-ordinary-wages."
+          }
+        ]
+      }
+    ],
+    "evidenceStatus": "INSUFFICIENT",
+    "applicationStatus": "NOT_REQUIRED",
+    "status": "INSUFFICIENT",
+    "gaps": [
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "Issue plan",
+        "operation": "OTHER",
+        "stage": "covered",
+        "code": "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "reason": "The reconciled issue plan does not establish coverage of the complete question."
+      },
+      {
+        "issueId": "issue_2c18c9aa",
+        "authority": "CPF",
+        "domain": "CPF_PAYROLL",
+        "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+        "operation": "OTHER",
+        "stage": "verified",
+        "code": "CPF_RATE_SCHEDULE_UNVERIFIED",
+        "reason": "No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence."
+      },
+      {
+        "issueId": "issue_2c18c9aa",
+        "authority": "CPF",
+        "domain": "CPF_PAYROLL",
+        "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+        "operation": "OTHER",
+        "stage": "verified",
+        "code": "NO_VERIFIED_CLAIM",
+        "reason": "No complete source quotation passed claim verification for this issue."
+      },
+      {
+        "issueId": "issue_2c18c9aa",
+        "authority": "CPF",
+        "domain": "CPF_PAYROLL",
+        "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+        "operation": "OTHER",
+        "stage": "covered",
+        "code": "ISSUE_CONCEPT_UNCOVERED",
+        "reason": "Verified quotations do not support the requested topic cpf_contribution_rates."
+      },
+      {
+        "issueId": "issue_2c18c9aa",
+        "authority": "CPF",
+        "domain": "CPF_PAYROLL",
+        "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+        "operation": "OTHER",
+        "stage": "covered",
+        "code": "ISSUE_CONCEPT_UNCOVERED",
+        "reason": "Verified quotations do not support the requested topic cpf-ordinary-wages."
+      }
+    ]
+  },
+  "finalResponse": {
+    "messageText": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages** (party in scope: Not established)\n- **Evidence gap:** No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf_contribution_rates.\n- **Evidence gap:** Verified quotations do not support the requested topic cpf-ordinary-wages.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.\n- **Evidence gap:** CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.\n- CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages.",
+    "scenarioState": {
+      "scenarioType": "AUTHORITY_ADVISORY",
+      "rawQuery": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+      "transactionTitle": "Transaction facts",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "directGroups": [],
+      "missingFields": [],
+      "isComplete": false,
+      "queryIntent": "TRANSACTION",
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.\"]",
+        "rawQuery": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+        "inputLength": 280,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 280
+              }
+            }
+          ],
+          "inputLength": 280
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "DETERMINISTIC_FALLBACK",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+          "structuralAcceptance": "REJECTED",
+          "confidenceAcceptance": "NOT_EVALUATED"
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "REJECTED",
+          "confidenceAcceptance": "NOT_EVALUATED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "OBSERVATION_WRAPPER_FAILED"
+            }
+          ],
+          "matches": [],
+          "issues": []
+        }
+      },
+      "assumptions": [],
+      "statutoryAdvisory": [],
+      "officialAnswerLinks": [],
+      "authorityEvidencePresentation": {
+        "query": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.\"]",
+          "rawQuery": "We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.",
+          "inputLength": 280,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 280
+                }
+              }
+            ],
+            "inputLength": 280
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "DETERMINISTIC_FALLBACK",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED"
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "REJECTED",
+            "confidenceAcceptance": "NOT_EVALUATED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "OBSERVATION_WRAPPER_FAILED"
+              }
+            ],
+            "matches": [],
+            "issues": []
+          }
+        },
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "NOT_REQUIRED",
+        "workstreams": [
+          {
+            "id": "CPF:CPF_PAYROLL",
+            "authority": "CPF",
+            "authorityLabel": "CPF Board",
+            "domain": "CPF_PAYROLL",
+            "domainLabel": "CPF contributions",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "NOT_REQUIRED",
+            "issues": [
+              {
+                "id": "issue_2c18c9aa",
+                "subject": "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages",
+                "population": "Not established",
+                "operation": "OTHER",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "claims": [],
+                "gaps": [
+                  "No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.",
+                  "No complete source quotation passed claim verification for this issue.",
+                  "Verified quotations do not support the requested topic cpf_contribution_rates.",
+                  "Verified quotations do not support the requested topic cpf-ordinary-wages."
+                ]
+              }
+            ],
+            "sources": [],
+            "gaps": [
+              "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.",
+              "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.",
+              "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.",
+              "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No independently validated CPF rate-schedule parser covers the requested period and population with the admitted evidence.",
+          "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: No complete source quotation passed claim verification for this issue.",
+          "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf_contribution_rates.",
+          "CPF Tiered Contribution Rates by Age; CPF Treatment of Ordinary Wages: Verified quotations do not support the requested topic cpf-ordinary-wages."
+        ]
+      },
+      "committedDirectGroups": [],
+      "projectedGroups": [],
+      "uncertaintyDisclaimer": "The original advisory response was not retained because its claims did not pass verification."
+    },
+    "displayFullAnswer": true,
+    "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+    "advisoryFailureStatus": "OTHER",
+    "clarifications": []
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 5682,
+  "completedAt": "2026-11-08T02:47:32.463Z",
+  "modelRequestCount": 1,
+  "sourceCount": 6
+}

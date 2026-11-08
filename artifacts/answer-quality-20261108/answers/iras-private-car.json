@@ -1,0 +1,1473 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "iras-private-car",
+  "question": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+  "reviewFocus": "Business use alone does not establish input-tax recovery; identifies relevant restriction and qualifications with official support.",
+  "authorities": [
+    "IRAS"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-08T02:43:58.922Z",
+  "status": "PROVIDER_STOP",
+  "stopRemainingCases": true,
+  "modelRequestCap": 8,
+  "modelRequests": [
+    {
+      "number": 1,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 9217,
+      "status": 503,
+      "durationMs": 4095,
+      "candidateText": "",
+      "providerError": {
+        "code": 503,
+        "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+        "status": "UNAVAILABLE"
+      }
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 503,
+      "durationMs": 4095,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    }
+  ],
+  "stopReason": "provider unavailable",
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "MIXED",
+      "domains": [
+        "IRAS_GST",
+        "ACCOUNTING_SFRS",
+        "MULTI_AUTHORITY"
+      ],
+      "topicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "authorities": [
+        "ACRA",
+        "IRAS"
+      ],
+      "multiAuthority": true,
+      "currentInformationRequired": true,
+      "accountingAnalysisRequired": true,
+      "taxAnalysisRequired": true,
+      "regulatoryAnalysisRequired": true,
+      "calculationRequired": false,
+      "journalEntryRequired": true,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+        "Vehicle registration/use details and whether a specific motor-car exception applies",
+        "Vehicle ownership or hire/lease arrangement"
+      ],
+      "intent": "TRANSACTION",
+      "reasoning": "Multi-authority question spanning ACRA & IRAS. Separating financial reporting from statutory tax/regulatory compliance."
+    },
+    "userFacts": [
+      "Numerical quantities stated: ,, ,",
+      "Transaction type: asset_purchase",
+      "Ownership context: not_applicable",
+      "Transaction subject: property, plant and equipment acquisition"
+    ],
+    "missingFacts": [
+      "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+      "Vehicle registration/use details and whether a specific motor-car exception applies",
+      "Vehicle ownership or hire/lease arrangement",
+      "Currency is not specified",
+      "Settlement/payment timing is unspecified",
+      "Transaction amount is unspecified",
+      "Transaction currency is unspecified"
+    ],
+    "assumptions": [],
+    "primaryEvidence": [
+      {
+        "id": "GST_REG28_DE_MINIMIS_RULE",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Singapore Statutes Online / AGC",
+        "legalOrStandardInstrument": "GST (General) Regulations",
+        "documentTitle": "GST (General) Regulations",
+        "standardOrActCode": "GSTA1993",
+        "paragraphOrSection": "Regulation 28",
+        "sourceText": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+        "principleSummary": "De Minimis Rule for Input Tax Attribution on Exempt Supplies (Partial Exemption)",
+        "effectiveDate": "1994-04-01",
+        "officialSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "de minimis rule",
+          "regulation 28",
+          "partial exemption",
+          "exempt supplies 40000",
+          "input tax recovery 5%"
+        ],
+        "sourceStatus": "VERIFIED",
+        "sourceType": "AUTHORITATIVE_SOURCE",
+        "evidenceTier": "PRIMARY_SOURCE",
+        "isVerbatimText": true,
+        "validFrom": "1994-04-01",
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+        "sourceAuthority": "AGC",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "STATUTORY_LEGISLATION_AUDIT",
+        "contentHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+        "provisionHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+        "extractionStatus": "EXACT",
+        "sourceLocator": {
+          "heading": "Regulation 28",
+          "elementId": "pr28-"
+        },
+        "freshnessStatus": "ACTIVE_CURRENT"
+      }
+    ],
+    "officialGuidance": [
+      {
+        "id": "GST_REG26_BLOCKED_INPUT_TAX",
+        "authority": "IRAS",
+        "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+        "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+        "legalOrStandardInstrument": "GST (General) Regulations",
+        "documentTitle": "GST (General) Regulations",
+        "standardOrActCode": "GSTA1993",
+        "paragraphOrSection": "Regulation 26 & 27",
+        "sourceText": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+        "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+        "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "domain": "IRAS_GST",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "blocked input tax",
+          "regulation 26",
+          "regulation 27",
+          "gst car claim",
+          "medical insurance gst",
+          "club subscriptions"
+        ],
+        "sourceStatus": "VERIFIED",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "OFFICIAL_GUIDANCE",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-26",
+        "reviewAuditCycleDays": 90,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+        "sourceAuthority": "IRAS",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT",
+        "urlVerificationStatus": "VERIFIED",
+        "urlVerifiedDate": "2026-09-26",
+        "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+        "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+        "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      }
+    ],
+    "curatedSummaries": [],
+    "applicationRules": [
+      "Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places."
+    ],
+    "currentInformationRequired": true,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [
+          "reporting_entity:company",
+          "ownership_context:not_applicable",
+          "transaction_type:asset_purchase"
+        ],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-11-08T02:44:04.517Z"
+      },
+      "reportingEntity": {
+        "type": "company",
+        "description": "Reporting entity is the corporate business"
+      },
+      "transactionType": "asset_purchase",
+      "subject": "property, plant and equipment acquisition",
+      "instrument": "property_plant_equipment",
+      "ownershipContext": "not_applicable",
+      "paymentStatus": "unknown",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [
+        "Currency is not specified",
+        "Settlement/payment timing is unspecified",
+        "Transaction amount is unspecified",
+        "Transaction currency is unspecified"
+      ],
+      "assumptions": [],
+      "confidence": 0.45,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "DETERMINISTIC_FALLBACK",
+      "failure": "PROVIDER_ERROR"
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.\"]",
+      "rawQuery": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+      "inputLength": 244,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 244
+            }
+          }
+        ],
+        "inputLength": 244
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "DETERMINISTIC_FALLBACK",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+        "structuralAcceptance": "REJECTED",
+        "confidenceAcceptance": "NOT_EVALUATED"
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "REJECTED",
+        "confidenceAcceptance": "NOT_EVALUATED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "OBSERVATION_WRAPPER_FAILED"
+          }
+        ],
+        "matches": [],
+        "issues": []
+      }
+    },
+    "evidenceQuality": {
+      "status": "LIMITED",
+      "eligibleRecords": [
+        {
+          "id": "GST_REG28_DE_MINIMIS_RULE",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Singapore Statutes Online / AGC",
+          "legalOrStandardInstrument": "GST (General) Regulations",
+          "documentTitle": "GST (General) Regulations",
+          "standardOrActCode": "GSTA1993",
+          "paragraphOrSection": "Regulation 28",
+          "sourceText": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+          "principleSummary": "De Minimis Rule for Input Tax Attribution on Exempt Supplies (Partial Exemption)",
+          "effectiveDate": "1994-04-01",
+          "officialSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "de minimis rule",
+            "regulation 28",
+            "partial exemption",
+            "exempt supplies 40000",
+            "input tax recovery 5%"
+          ],
+          "sourceStatus": "VERIFIED",
+          "sourceType": "AUTHORITATIVE_SOURCE",
+          "evidenceTier": "PRIMARY_SOURCE",
+          "isVerbatimText": true,
+          "validFrom": "1994-04-01",
+          "lastVerifiedDate": "2026-09-01",
+          "reviewAuditCycleDays": 365,
+          "provenance": "LOCAL_STATIC",
+          "lifecycleState": "ACTIVE",
+          "version": "2026.09",
+          "canonicalSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+          "sourceAuthority": "AGC",
+          "retrievedAt": "2026-09-01T00:00:00Z",
+          "verificationMethod": "STATUTORY_LEGISLATION_AUDIT",
+          "contentHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+          "provisionHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+          "extractionStatus": "EXACT",
+          "sourceLocator": {
+            "heading": "Regulation 28",
+            "elementId": "pr28-"
+          },
+          "freshnessStatus": "ACTIVE_CURRENT"
+        },
+        {
+          "id": "GST_REG26_BLOCKED_INPUT_TAX",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "GST (General) Regulations",
+          "documentTitle": "GST (General) Regulations",
+          "standardOrActCode": "GSTA1993",
+          "paragraphOrSection": "Regulation 26 & 27",
+          "sourceText": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "blocked input tax",
+            "regulation 26",
+            "regulation 27",
+            "gst car claim",
+            "medical insurance gst",
+            "club subscriptions"
+          ],
+          "sourceStatus": "VERIFIED",
+          "sourceType": "CURATED_SUMMARY",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-09-26",
+          "reviewAuditCycleDays": 90,
+          "provenance": "LOCAL_STATIC",
+          "lifecycleState": "ACTIVE",
+          "version": "2026.09",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-09-01T00:00:00Z",
+          "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+          "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "extractionStatus": "PARTIAL",
+          "freshnessStatus": "ACTIVE_CURRENT",
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-09-26",
+          "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+          "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+          "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        }
+      ],
+      "rejectedRecords": [],
+      "coveredTopicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-gst-motor-vehicles",
+        "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+      ],
+      "uncoveredConceptGroups": {
+        "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr": [
+          [
+            "gst",
+            "registered",
+            "singapore",
+            "company",
+            "bought",
+            "private",
+            "motor",
+            "business"
+          ],
+          [
+            "motor",
+            "dealer"
+          ],
+          [
+            "driving",
+            "school"
+          ],
+          [
+            "recover",
+            "input",
+            "gst"
+          ],
+          [
+            "restriction"
+          ],
+          [
+            "exception",
+            "check"
+          ],
+          [
+            "only",
+            "need",
+            "advice"
+          ],
+          [
+            "journal"
+          ]
+        ]
+      },
+      "requestedConcepts": [],
+      "coveredConcepts": [],
+      "uncoveredConcepts": [],
+      "acceptedSourceGroups": [
+        "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+        "Vehicle registration/use details and whether a specific motor-car exception applies",
+        "Vehicle ownership or hire/lease arrangement"
+      ],
+      "targetDateConfidence": "LOW"
+    },
+    "sourceMapFallbackTrace": {
+      "path": "MAPPED_SOURCE_REJECTED",
+      "sourceMapIds": [
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
+      ],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "fetchStatus": "NETWORK_ERROR",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "MAPPED_SOURCE",
+          "error": "Network error: Provider stopped: provider unavailable"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "NETWORK_ERROR",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "MAPPED_SOURCE",
+          "error": "Network error: Provider stopped: provider unavailable"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "FULL_QUERY",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_1",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_2",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_3",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "FULL_QUERY",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_1",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_2",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_3",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        }
+      ],
+      "discoveryFetchAttempts": [
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NETWORK_ERROR"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NETWORK_ERROR"
+        }
+      ],
+      "coverageDecisions": [
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        }
+      ],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "EXHAUSTED",
+          "reason": "Local retrieval was insufficient for at least one routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "EXHAUSTED",
+          "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "EXHAUSTED",
+          "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "EXHAUSTED",
+          "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+        },
+        {
+          "stage": "INSUFFICIENT",
+          "status": "EXHAUSTED",
+          "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+        }
+      ]
+    }
+  },
+  "finalResponse": {
+    "messageText": "This evidence review covers the IRAS component. Other authority requirements have not been verified by this tax evidence check.\n\nConnect an AI Provider (Gemini, Azure OpenAI, or OpenAI) in Settings for dynamic reasoning and source citation on unmapped accounting queries.\n\nThe provider could not complete the answer. The available source evidence is shown below.\n\nThe available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.\n\nInformation still needed to complete the question:\n- Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)\n- Vehicle registration/use details and whether a specific motor-car exception applies\n- Vehicle ownership or hire/lease arrangement\n- Currency is not specified\n- Settlement/payment timing is unspecified\n- Transaction amount is unspecified\n- Transaction currency is unspecified\n\nAdmitted source evidence and reviewed summaries:\n\n> Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.\n\nGST (General) Regulations — validated local evidence; public URL not independently verified; recorded scope 1994-04-01 to open-ended.\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.\n\nReviewed local editorial summary (nonverbatim; GST (General) Regulations); [related IRAS guidance page](<https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax>).\n\nThis evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.",
+    "scenarioState": {
+      "scenarioType": "UNRECOGNIZED",
+      "queryIntent": "HYBRID",
+      "primaryDomain": "IRAS_TAX",
+      "rawQuery": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+      "transactionTitle": "IRAS evidence review",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "authorityStatus": "CONDITIONAL",
+      "isComplete": false,
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+        "Vehicle registration/use details and whether a specific motor-car exception applies",
+        "Vehicle ownership or hire/lease arrangement",
+        "Currency is not specified",
+        "Settlement/payment timing is unspecified",
+        "Transaction amount is unspecified",
+        "Transaction currency is unspecified"
+      ],
+      "missingFields": [],
+      "accountingTreatmentSummary": "Connect an AI Provider (Gemini, Azure OpenAI, or OpenAI) in Settings for dynamic reasoning and source citation on unmapped accounting queries.",
+      "directGroups": [],
+      "keyParameters": [],
+      "irasEvidencePresentation": {
+        "query": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+        "domainLabel": "IRAS GST",
+        "status": "INSUFFICIENT",
+        "chatAnswer": "IRAS GST — verified guidance\n\nThe admitted rules relevant to the question are:\n• Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies. [1]\n• Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable. [2]\n\nSources: [1] GST (General) Regulations; [2] GST (General) Regulations\n\nApplication status: Evidence Incomplete — Review Required. The verified sources do not cover every required topic. Material facts to confirm: Vehicle registration classification (S-plate passenger car vs commercial goods vehicle); Vehicle registration/use details and whether a specific motor-car exception applies; Vehicle ownership or hire/lease arrangement; Currency is not specified; Settlement/payment timing is unspecified; Transaction amount is unspecified; Transaction currency is unspecified",
+        "overview": "The verified guidance is grouped into 2 official source sections below. Expand a section to inspect each admitted passage, its record reference and recorded scope.",
+        "applicationStatus": "Evidence Incomplete — Review Required. The verified sources do not cover every required topic. Material facts to confirm: Vehicle registration classification (S-plate passenger car vs commercial goods vehicle); Vehicle registration/use details and whether a specific motor-car exception applies; Vehicle ownership or hire/lease arrangement; Currency is not specified; Settlement/payment timing is unspecified; Transaction amount is unspecified; Transaction currency is unspecified",
+        "factsToConfirm": [
+          "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+          "Vehicle registration/use details and whether a specific motor-car exception applies",
+          "Vehicle ownership or hire/lease arrangement",
+          "Currency is not specified",
+          "Settlement/payment timing is unspecified",
+          "Transaction amount is unspecified",
+          "Transaction currency is unspecified"
+        ],
+        "sourceGroups": [
+          {
+            "key": "record:GST_REG28_DE_MINIMIS_RULE|LOCAL_STATIC|1994-04-01|",
+            "title": "GST (General) Regulations",
+            "summary": "1 verified source passage; expand to inspect the admitted wording and scope.",
+            "passages": [
+              {
+                "text": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+                "supportKind": "EXACT_SOURCE_QUOTE",
+                "claimReferences": [
+                  {
+                    "recordId": "GST_REG28_DE_MINIMIS_RULE",
+                    "provenance": "LOCAL_STATIC",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "validFrom": "1994-04-01"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "key": "url:https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+            "title": "GST (General) Regulations",
+            "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+            "summary": "1 reviewed non-verbatim summary; expand to inspect the admitted wording and scope.",
+            "passages": [
+              {
+                "text": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+                "supportKind": "REVIEWED_EDITORIAL_SUMMARY",
+                "claimReferences": [
+                  {
+                    "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+                    "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+                    "provenance": "LOCAL_STATIC",
+                    "supportKind": "REVIEWED_EDITORIAL_SUMMARY"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.\"]",
+        "rawQuery": "Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.",
+        "inputLength": 244,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 244
+              }
+            }
+          ],
+          "inputLength": 244
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "DETERMINISTIC_FALLBACK",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "rejectionCode": "OBSERVATION_WRAPPER_FAILED",
+          "structuralAcceptance": "REJECTED",
+          "confidenceAcceptance": "NOT_EVALUATED"
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "REJECTED",
+          "confidenceAcceptance": "NOT_EVALUATED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "OBSERVATION_WRAPPER_FAILED"
+            }
+          ],
+          "matches": [],
+          "issues": []
+        }
+      },
+      "uncertaintyDisclaimer": "Required facts remain unresolved: Vehicle registration classification (S-plate passenger car vs commercial goods vehicle); Vehicle registration/use details and whether a specific motor-car exception applies; Vehicle ownership or hire/lease arrangement; Currency is not specified; Settlement/payment timing is unspecified; Transaction amount is unspecified; Transaction currency is unspecified.",
+      "statutoryAdvisory": [
+        {
+          "authority": "IRAS",
+          "topic": "Supplied source evidence",
+          "summary": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+          "statuteOrAct": "GST (General) Regulations",
+          "sectionOrSchedule": "Regulation 28",
+          "officialUrl": "",
+          "keyRules": []
+        },
+        {
+          "authority": "IRAS",
+          "topic": "Supplied source evidence",
+          "summary": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "statuteOrAct": "GST (General) Regulations",
+          "sectionOrSchedule": "Regulation 26 & 27",
+          "officialUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "keyRules": []
+        }
+      ]
+    },
+    "sourceMapFallbackTrace": {
+      "path": "MAPPED_SOURCE_REJECTED",
+      "sourceMapIds": [
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
+      ],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "sourceMapId": "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+          "fetchStatus": "NETWORK_ERROR",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "MAPPED_SOURCE",
+          "error": "Network error: Provider stopped: provider unavailable"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "candidateUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "fetchStatus": "NETWORK_ERROR",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "MAPPED_SOURCE",
+          "error": "Network error: Provider stopped: provider unavailable"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "FULL_QUERY",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_1",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_2",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_3",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "FULL_QUERY",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_1",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_2",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        },
+        {
+          "topicId": "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr",
+          "fetchStatus": "NO_CANDIDATES",
+          "titleMatched": false,
+          "contentMatched": false,
+          "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+          "searchQueryVariant": "TOPIC_HINT_3",
+          "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+        }
+      ],
+      "discoveryFetchAttempts": [
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NETWORK_ERROR"
+        },
+        {
+          "topicId": "iras-gst-motor-vehicles",
+          "fetchStatus": "NETWORK_ERROR"
+        }
+      ],
+      "coverageDecisions": [
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "TOPIC",
+          "targetTopicIds": [
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        },
+        {
+          "scope": "REGISTERED",
+          "targetTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "admissionTopicIds": [
+            "iras-gst-motor-vehicles"
+          ],
+          "eligibleRecordIds": [],
+          "rejectedRecords": [],
+          "uncoveredTopicIds": [
+            "iras-gst-motor-vehicles",
+            "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+          ],
+          "uncoveredConcepts": []
+        }
+      ],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "EXHAUSTED",
+          "reason": "Local retrieval was insufficient for at least one routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "EXHAUSTED",
+          "reason": "Every applicable reviewed source-map pointer was attempted before discovery; adequacy was checked against each routed topic."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "EXHAUSTED",
+          "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "EXHAUSTED",
+          "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+        },
+        {
+          "stage": "INSUFFICIENT",
+          "status": "EXHAUSTED",
+          "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+        }
+      ]
+    },
+    "evidenceQuality": {
+      "status": "LIMITED",
+      "eligibleRecords": [
+        {
+          "id": "GST_REG28_DE_MINIMIS_RULE",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Singapore Statutes Online / AGC",
+          "legalOrStandardInstrument": "GST (General) Regulations",
+          "documentTitle": "GST (General) Regulations",
+          "standardOrActCode": "GSTA1993",
+          "paragraphOrSection": "Regulation 28",
+          "sourceText": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+          "principleSummary": "De Minimis Rule for Input Tax Attribution on Exempt Supplies (Partial Exemption)",
+          "effectiveDate": "1994-04-01",
+          "officialSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "de minimis rule",
+            "regulation 28",
+            "partial exemption",
+            "exempt supplies 40000",
+            "input tax recovery 5%"
+          ],
+          "sourceStatus": "VERIFIED",
+          "sourceType": "AUTHORITATIVE_SOURCE",
+          "evidenceTier": "PRIMARY_SOURCE",
+          "isVerbatimText": true,
+          "validFrom": "1994-04-01",
+          "lastVerifiedDate": "2026-09-01",
+          "reviewAuditCycleDays": 365,
+          "provenance": "LOCAL_STATIC",
+          "lifecycleState": "ACTIVE",
+          "version": "2026.09",
+          "canonicalSourceUrl": "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+          "sourceAuthority": "AGC",
+          "retrievedAt": "2026-09-01T00:00:00Z",
+          "verificationMethod": "STATUTORY_LEGISLATION_AUDIT",
+          "contentHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+          "provisionHash": "952c2bbac5256efcdd7dbb2a40079898e101033cf8018a2a097e5d8ece69eed4",
+          "extractionStatus": "EXACT",
+          "sourceLocator": {
+            "heading": "Regulation 28",
+            "elementId": "pr28-"
+          },
+          "freshnessStatus": "ACTIVE_CURRENT"
+        },
+        {
+          "id": "GST_REG26_BLOCKED_INPUT_TAX",
+          "authority": "IRAS",
+          "authorityName": "Inland Revenue Authority of Singapore (IRAS)",
+          "sourcePublisher": "Inland Revenue Authority of Singapore (IRAS)",
+          "legalOrStandardInstrument": "GST (General) Regulations",
+          "documentTitle": "GST (General) Regulations",
+          "standardOrActCode": "GSTA1993",
+          "paragraphOrSection": "Regulation 26 & 27",
+          "sourceText": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "principleSummary": "Disallowed / Blocked Input Tax Claims under Singapore GST Law",
+          "officialSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "domain": "IRAS_GST",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "blocked input tax",
+            "regulation 26",
+            "regulation 27",
+            "gst car claim",
+            "medical insurance gst",
+            "club subscriptions"
+          ],
+          "sourceStatus": "VERIFIED",
+          "sourceType": "CURATED_SUMMARY",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-09-26",
+          "reviewAuditCycleDays": 90,
+          "provenance": "LOCAL_STATIC",
+          "lifecycleState": "ACTIVE",
+          "version": "2026.09",
+          "canonicalSourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "sourceAuthority": "IRAS",
+          "retrievedAt": "2026-09-01T00:00:00Z",
+          "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+          "contentHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "provisionHash": "2ee2266f07fde7b95c7f6a9eb9d54e1892c2ec1d590bbf83ec7b5a376ea6481d",
+          "extractionStatus": "PARTIAL",
+          "freshnessStatus": "ACTIVE_CURRENT",
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-09-26",
+          "urlVerificationMethod": "VERIFIED_SOURCE_MAP_URL_IDENTITY_MATCH",
+          "urlVerificationEvidence": "Exact URL identity matches verified source-map record IRAS_GST_INPUT_TAX_SOURCE_MAP; Directly opened the official IRAS page; final URL, page title and relevant topic were confirmed on 2026-09-26.",
+          "urlVerificationSourceMapId": "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+        }
+      ],
+      "rejectedRecords": [],
+      "coveredTopicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax"
+      ],
+      "uncoveredTopicIds": [
+        "iras-gst-motor-vehicles",
+        "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr"
+      ],
+      "uncoveredConceptGroups": {
+        "iras-authority-query-our-gst-registered-singapore-company-bought-a-pr": [
+          [
+            "gst",
+            "registered",
+            "singapore",
+            "company",
+            "bought",
+            "private",
+            "motor",
+            "business"
+          ],
+          [
+            "motor",
+            "dealer"
+          ],
+          [
+            "driving",
+            "school"
+          ],
+          [
+            "recover",
+            "input",
+            "gst"
+          ],
+          [
+            "restriction"
+          ],
+          [
+            "exception",
+            "check"
+          ],
+          [
+            "only",
+            "need",
+            "advice"
+          ],
+          [
+            "journal"
+          ]
+        ]
+      },
+      "requestedConcepts": [],
+      "coveredConcepts": [],
+      "uncoveredConcepts": [],
+      "acceptedSourceGroups": [
+        "https://sso.agc.gov.sg/SL/GSTA1993-RG1?ProvIds=P15-#pr28-",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+      ],
+      "missingFacts": [
+        "Vehicle registration classification (S-plate passenger car vs commercial goods vehicle)",
+        "Vehicle registration/use details and whether a specific motor-car exception applies",
+        "Vehicle ownership or hire/lease arrangement"
+      ],
+      "targetDateConfidence": "LOW"
+    },
+    "claimVerification": {
+      "accepted": [
+        {
+          "text": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+          "recordId": "GST_REG28_DE_MINIMIS_RULE",
+          "quote": "Where in any prescribed accounting period the value of exempt supplies made by a taxable person does not exceed an average of $40,000 per month and 5% of the total value of all supplies made by him in that period, all input tax incurred by him in that period shall be treated as attributable to taxable supplies.",
+          "supportKind": "EXACT_SOURCE_QUOTE"
+        },
+        {
+          "text": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "recordId": "GST_REG26_BLOCKED_INPUT_TAX",
+          "quote": "Regulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable.",
+          "canonicalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+          "supportKind": "REVIEWED_EDITORIAL_SUMMARY"
+        }
+      ],
+      "rejected": []
+    },
+    "applicationConclusions": [],
+    "answerPath": "PROVIDER_FAILURE",
+    "providerStatus": "FAILED"
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 5688,
+  "completedAt": "2026-11-08T02:44:04.610Z",
+  "modelRequestCount": 1,
+  "sourceCount": 0
+}

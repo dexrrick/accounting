@@ -1,0 +1,866 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "accounting-accrual",
+  "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+  "reviewFocus": "Useful explanation of timing and unpaid liabilities; no unsolicited statutory requirements or invented journal.",
+  "authorities": [],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-08T02:42:55.515Z",
+  "status": "COMPLETED",
+  "stopRemainingCases": false,
+  "modelRequestCap": 8,
+  "modelRequests": [
+    {
+      "number": 1,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 9141,
+      "status": 200,
+      "durationMs": 2704,
+      "candidateText": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"ACCOUNTING_STANDARDS\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"ACCOUNTING\",\n  \"population\": \"COMPANY\",\n  \"primarySubject\": \"accrual accounting versus cash accounting\",\n  \"concepts\": [\n    {\n      \"concept\": \"accrual accounting\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"cash accounting\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"unpaid supplier invoices\",\n      \"role\": \"RELATED\"\n    }\n  ],\n  \"requestedOperation\": \"EXPLAIN_RULE\",\n  \"factsExplicitlyProvided\": [\n    \"small business\",\n    \"unpaid supplier invoices\"\n  ],\n  \"confidence\": 0.95,\n  \"issues\": [\n    {\n      \"subject\": \"accrual accounting versus cash accounting for unpaid supplier invoices\",\n      \"population\": \"COMPANY\",\n      \"domain\": \"ACCOUNTING\",\n      \"governingAuthorities\": [\n        \"ACCOUNTING_STANDARDS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.95\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1895,
+        "candidatesTokenCount": 337,
+        "totalTokenCount": 2232,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1895
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 2,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "",
+      "stage": "understanding-or-other",
+      "promptChars": 1065,
+      "status": 200,
+      "durationMs": 880,
+      "candidateText": "{\"events\":[]}",
+      "usageMetadata": {
+        "promptTokenCount": 258,
+        "candidatesTokenCount": 4,
+        "totalTokenCount": 262,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 258
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 3,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "You are an expert economic and accounting transaction classifier for Singapore and international financial reporting.",
+      "stage": "understanding-or-other",
+      "promptChars": 6527,
+      "status": 200,
+      "durationMs": 1871,
+      "candidateText": "{\n  \"reportingEntity\": {\n    \"type\": \"company\",\n    \"description\": \"Small business entity\"\n  },\n  \"counterparty\": {\n    \"role\": \"supplier\",\n    \"description\": \"Supplier of goods or services with unpaid invoices\"\n  },\n  \"transactionType\": \"expense_incurred\",\n  \"subject\": \"unpaid supplier invoices and accounting methods comparison\",\n  \"instrument\": \"trade_payable\",\n  \"ownershipContext\": \"not_applicable\",\n  \"paymentStatus\": \"unpaid\",\n  \"amount\": null,\n  \"currency\": {\n    \"value\": null,\n    \"source\": \"unknown\",\n    \"confidence\": 0.0,\n    \"rationale\": \"No specific transaction amount or currency was provided in the query.\"\n  },\n  \"transactionDate\": null,\n  \"jurisdiction\": \"SG\",\n  \"factsMissing\": [\n    \"Transaction amount\",\n    \"Transaction currency\",\n    \"Specific details of supplier invoices\"\n  ],\n  \"assumptions\": [\n    \"The query is educational/conceptual regarding accounting methods rather than a specific recorded transaction.\"\n  ],\n  \"confidence\": 0.8,\n  \"measurementBasis\": \"AMORTISED_COST\",\n  \"isHypothetical\": true,\n  \"followUpAnalysis\": {\n    \"eventType\": \"other\",\n    \"isFollowUp\": false,\n    \"targetMeasurementBasis\": null,\n    \"targetOutstandingAccount\": null,\n    \"settlementAmount\": null,\n    \"remainingReceivableOrPayable\": null,\n    \"settlementAccount\": null,\n    \"isHypothetical\": true,\n    \"explanation\": \"The user is asking for an conceptual explanation of accrual versus cash accounting rather than requesting a specific transaction or journal entry.\"\n  }\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1731,
+        "candidatesTokenCount": 410,
+        "totalTokenCount": 2141,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1731
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 4,
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional accountants.",
+      "stage": "answer-generation",
+      "promptChars": 12611,
+      "status": 200,
+      "durationMs": 1189,
+      "responseJsonError": "Unexpected token 'd', \"data: {\"ca\"... is not valid JSON"
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 2704,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 880,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1871,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1189,
+      "responseMetadata": {
+        "contentType": "text/event-stream"
+      },
+      "modelRequest": true
+    }
+  ],
+  "groundedContext": {
+    "classification": {
+      "primaryDomain": "ACCOUNTING",
+      "domains": [
+        "ACCOUNTING_SFRS"
+      ],
+      "topicIds": [],
+      "authorities": [
+        "ACRA"
+      ],
+      "multiAuthority": false,
+      "currentInformationRequired": false,
+      "accountingAnalysisRequired": true,
+      "taxAnalysisRequired": false,
+      "regulatoryAnalysisRequired": false,
+      "calculationRequired": false,
+      "journalEntryRequired": true,
+      "missingFacts": [],
+      "intent": "HYBRID",
+      "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+    },
+    "userFacts": [
+      "Counterparty role: supplier",
+      "Payment status: unpaid"
+    ],
+    "missingFacts": [
+      "Reporting entity perspective is unspecified",
+      "Transaction currency is unspecified"
+    ],
+    "assumptions": [],
+    "primaryEvidence": [],
+    "officialGuidance": [],
+    "curatedSummaries": [
+      {
+        "id": "IFRS9_DEBT_CLASSIFICATION",
+        "authority": "ACRA",
+        "authorityName": "IFRS Foundation",
+        "sourcePublisher": "IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 9 §4.1.1-§4.1.5 Financial Assets - Business Model and Contractual Cash Flow Classification",
+        "documentTitle": "Financial Assets - Business Model and Contractual Cash Flow Classification",
+        "standardOrActCode": "SFRS(I) 9",
+        "paragraphOrSection": "§4.1.1-§4.1.5",
+        "sourceText": "A financial asset is classified using both the entity’s business model for managing the asset and the asset’s contractual cash flow characteristics. A debt asset is measured at amortised cost when it is held within a business model whose objective is to collect contractual cash flows and its contractual terms give rise on specified dates to cash flows that are solely payments of principal and interest on the principal amount outstanding. A qualifying debt asset held in a business model achieved by both collecting contractual cash flows and selling is measured at fair value through other comprehensive income. Assets outside those categories are measured at fair value through profit or loss, subject to the applicable designation and scope requirements.",
+        "principleSummary": "Financial Assets - Business Model and Contractual Cash Flow Classification",
+        "effectiveDate": "2018-01-01",
+        "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "financial assets - business model and contractual cash flow classification",
+          "§4.1.1-§4.1.5",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "validFrom": "2018-01-01",
+        "lastVerifiedDate": "2026-09-25",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "fb87ce3d01762b71da4f0a122a5739a0dd82db47db8f85e860f12890a5c73cf1",
+        "provisionHash": "fb87ce3d01762b71da4f0a122a5739a0dd82db47db8f85e860f12890a5c73cf1",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "SFRS_I_1_20_GOVERNMENT_GRANTS",
+        "authority": "ACRA",
+        "authorityName": "Accounting Standards Council (ACRA) & IASB",
+        "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 1-20 §7, §12, §24 & §29 Accounting for Government Grants and Disclosure of Government Assistance",
+        "documentTitle": "Accounting for Government Grants and Disclosure of Government Assistance",
+        "standardOrActCode": "SFRS(I) 1-20",
+        "paragraphOrSection": "§7, §12, §24 & §29",
+        "sourceText": "Government grants shall not be recognized until there is reasonable assurance that the entity will comply with conditions attaching to them and the grants will be received (§7). Grants shall be recognized in profit or loss on a systematic basis over the periods in which the entity recognizes as expenses the related costs which the grants are intended to compensate (§12). Capital grants related to assets may be presented either as deferred income or by deducting the grant in arriving at the carrying amount of the asset (§24). Operating grants (e.g. wage credits, hiring incentives) may be presented as other income or deducted from the related expense (§29).",
+        "principleSummary": "Accounting for Government Grants and Disclosure of Government Assistance",
+        "effectiveDate": "2018-01-01",
+        "officialSourceUrl": "",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "accounting for government grants and disclosure of government assistance",
+          "§7, §12, §24 & §29",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "validFrom": "2018-01-01",
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "sourceAuthority": "ACRA",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "0800958eb08f7eb61c2d489d4a78d2dcee1f9e8976d1dd4ff2f86478a7ef380b",
+        "provisionHash": "0800958eb08f7eb61c2d489d4a78d2dcee1f9e8976d1dd4ff2f86478a7ef380b",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "SFRS_I_1_8_POLICIES_ESTIMATES_ERRORS",
+        "authority": "ACRA",
+        "authorityName": "Accounting Standards Council (ACRA) & IASB",
+        "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 1-8 §14, §19, §32 & §42 Accounting Policies, Changes in Accounting Estimates and Errors",
+        "documentTitle": "Accounting Policies, Changes in Accounting Estimates and Errors",
+        "standardOrActCode": "SFRS(I) 1-8",
+        "paragraphOrSection": "§14, §19, §32 & §42",
+        "sourceText": "An entity shall change an accounting policy only if the change is required by an SFRS(I) or results in more reliable and relevant information (§14). Changes in accounting policy are accounted for retrospectively (§19). The effect of a change in an accounting estimate (e.g. useful life, residual value, bad debt allowance percentage) shall be recognized prospectively by including it in profit or loss in the period of change and future periods (§32). Material prior period errors must be corrected retrospectively in the first set of financial statements authorised for issue after their discovery by restating comparative amounts (§42).",
+        "principleSummary": "Accounting Policies, Changes in Accounting Estimates and Errors",
+        "effectiveDate": "2018-01-01",
+        "officialSourceUrl": "",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "accounting policies, changes in accounting estimates and errors",
+          "§14, §19, §32 & §42",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "validFrom": "2018-01-01",
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "sourceAuthority": "ACRA",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "fe54714d2a08bc1a8089d10b4ee6bd1223f185767e48aedb41a6c41e045f1af0",
+        "provisionHash": "fe54714d2a08bc1a8089d10b4ee6bd1223f185767e48aedb41a6c41e045f1af0",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "IFRS9_EQUITY_CLASSIFICATION",
+        "authority": "ACRA",
+        "authorityName": "IFRS Foundation",
+        "sourcePublisher": "IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 9 §4.1.4, §5.7.5-§5.7.6 & B5.7.1 Classification of Equity Instruments",
+        "documentTitle": "Classification of Equity Instruments",
+        "standardOrActCode": "SFRS(I) 9",
+        "paragraphOrSection": "§4.1.4, §5.7.5-§5.7.6 & B5.7.1",
+        "sourceText": "An investment in an equity instrument is measured at fair value through profit or loss unless the entity makes the irrevocable election at initial recognition to present subsequent changes in fair value in other comprehensive income for an investment that is neither held for trading nor contingent consideration recognised by an acquirer in a business combination within IFRS 3. Amounts accumulated in OCI for an elected investment are not subsequently reclassified to profit or loss on disposal; a transfer within equity may be made.",
+        "principleSummary": "Classification of Equity Instruments",
+        "effectiveDate": "2018-01-01",
+        "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "classification of equity instruments",
+          "§4.1.4, §5.7.5-§5.7.6 & b5.7.1",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "validFrom": "2018-01-01",
+        "lastVerifiedDate": "2026-09-25",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "canonicalSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "cd4e07f657c2e5649d663b7d1d8ce0e757ae19da32a6dc980a4f8a59e9efb1c9",
+        "provisionHash": "cd4e07f657c2e5649d663b7d1d8ce0e757ae19da32a6dc980a4f8a59e9efb1c9",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "IAS21_INITIAL_FOREIGN_CURRENCY",
+        "authority": "ACRA",
+        "authorityName": "Accounting Standards Council (ACRA) & IASB",
+        "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 1-21 §21 The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+        "documentTitle": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+        "standardOrActCode": "SFRS(I) 1-21",
+        "paragraphOrSection": "§21",
+        "sourceText": "A foreign currency transaction shall be recorded, on initial recognition in the functional currency, by applying the spot exchange rate at the transaction date.",
+        "principleSummary": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+        "officialSourceUrl": "",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "the effects of changes in foreign exchange rates - initial spot rate",
+          "§21",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "sourceAuthority": "ACRA",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+        "provisionHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      },
+      {
+        "id": "SFRS_I_1_12_INCOME_TAXES",
+        "authority": "ACRA",
+        "authorityName": "Accounting Standards Council (ACRA) & IASB",
+        "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+        "legalOrStandardInstrument": "SFRS(I) 1-12 §15, §17(b) & §24 Income Taxes - Accounting vs Tax Bases & Deferred Tax",
+        "documentTitle": "Income Taxes - Accounting vs Tax Bases & Deferred Tax",
+        "standardOrActCode": "SFRS(I) 1-12",
+        "paragraphOrSection": "§15, §17(b) & §24",
+        "sourceText": "Deferred tax arises from temporary differences between the accounting carrying amounts of assets/liabilities and their corresponding tax bases under the Income Tax Act. Taxable temporary differences require Deferred Tax Liabilities; deductible temporary differences generate Deferred Tax Assets.",
+        "principleSummary": "Income Taxes - Accounting vs Tax Bases & Deferred Tax",
+        "officialSourceUrl": "",
+        "domain": "ACCOUNTING_SFRS",
+        "jurisdiction": "Singapore",
+        "tags": [
+          "income taxes - accounting vs tax bases & deferred tax",
+          "§15, §17(b) & §24",
+          "accounting standard",
+          "sfrs(i)"
+        ],
+        "sourceStatus": "NEEDS_REVIEW",
+        "sourceType": "CURATED_SUMMARY",
+        "evidenceTier": "CURATED_SUMMARY",
+        "isVerbatimText": false,
+        "lastVerifiedDate": "2026-09-01",
+        "reviewAuditCycleDays": 365,
+        "provenance": "LOCAL_STATIC",
+        "lifecycleState": "ACTIVE",
+        "version": "2026.09",
+        "sourceAuthority": "ACRA",
+        "retrievedAt": "2026-09-01T00:00:00Z",
+        "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+        "contentHash": "b1fd278ca4965449bae74b05e463cc891f45d396e1ec4f44e1eb7ad8f6e20947",
+        "provisionHash": "b1fd278ca4965449bae74b05e463cc891f45d396e1ec4f44e1eb7ad8f6e20947",
+        "extractionStatus": "PARTIAL",
+        "freshnessStatus": "ACTIVE_CURRENT"
+      }
+    ],
+    "applicationRules": [
+      "Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places."
+    ],
+    "currentInformationRequired": false,
+    "semanticUnderstanding": {
+      "extractionSource": "deterministic_fallback",
+      "provenance": {
+        "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+        "isFallback": true,
+        "engine": "heuristic_pattern_matcher",
+        "appliedRules": [
+          "counterparty_role:supplier",
+          "payment_status:unpaid"
+        ],
+        "confidenceCapped": true,
+        "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+        "timestamp": "2026-11-08T02:43:01.795Z"
+      },
+      "reportingEntity": {
+        "type": "unknown"
+      },
+      "counterparty": {
+        "role": "supplier",
+        "description": "Vendor / trade supplier"
+      },
+      "transactionType": "unclassified_transaction",
+      "ownershipContext": "unknown",
+      "paymentStatus": "unpaid",
+      "currency": {
+        "value": null,
+        "source": "unknown",
+        "confidence": 0,
+        "rationale": "No currency specified in query"
+      },
+      "transactionDate": null,
+      "jurisdiction": "SG",
+      "factsMissing": [
+        "Reporting entity perspective is unspecified",
+        "Transaction currency is unspecified"
+      ],
+      "assumptions": [],
+      "confidence": 0.3,
+      "actualMeasurementBasis": "UNKNOWN",
+      "measurementBasis": "UNKNOWN",
+      "isHypothetical": false
+    },
+    "questionUnderstanding": {
+      "mode": "SEMANTIC_PLUS_RULES",
+      "assessmentStatus": "PASSED",
+      "transportAttempts": [
+        {
+          "attempt": 1,
+          "status": 200,
+          "elapsedMs": 2711,
+          "retryScheduled": false
+        }
+      ],
+      "interpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "ACCOUNTING",
+        "population": "COMPANY",
+        "primarySubject": "accrual accounting versus cash accounting",
+        "concepts": [
+          {
+            "concept": "accrual accounting",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "cash accounting",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "unpaid supplier invoices",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "EXPLAIN_RULE",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [
+          "small business",
+          "unpaid supplier invoices"
+        ],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "accrual accounting versus cash accounting for unpaid supplier invoices",
+            "population": "COMPANY",
+            "domain": "ACCOUNTING",
+            "governingAuthorities": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          }
+        ]
+      }
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.\"]",
+      "rawQuery": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+      "inputLength": 168,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 168
+            }
+          }
+        ],
+        "inputLength": 168
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "ACCOUNTING_STANDARDS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "ACCOUNTING",
+          "population": "COMPANY",
+          "primarySubject": "accrual accounting versus cash accounting",
+          "concepts": [
+            {
+              "concept": "accrual accounting",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "cash accounting",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "unpaid supplier invoices",
+              "role": "RELATED"
+            }
+          ],
+          "requestedOperation": "EXPLAIN_RULE",
+          "requiresUserSpecificFacts": false,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [
+            "small business",
+            "unpaid supplier invoices"
+          ],
+          "confidence": 0.95,
+          "issues": [
+            {
+              "subject": "accrual accounting versus cash accounting for unpaid supplier invoices",
+              "population": "COMPANY",
+              "domain": "ACCOUNTING",
+              "governingAuthorities": [
+                "ACCOUNTING_STANDARDS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 0.95
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 0.95
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 0.95,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "accrual accounting versus cash accounting for unpaid supplier invoices"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "accrual accounting versus cash accounting for unpaid supplier invoices",
+            "population": "COMPANY",
+            "operation": "EXPLAIN_RULE"
+          }
+        ]
+      }
+    },
+    "sourceMapFallbackTrace": {
+      "path": "NOT_NEEDED",
+      "sourceMapIds": [],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "SKIPPED",
+          "reason": "No fallback was requested for a routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SKIPPED",
+          "reason": "A source-map fetch was not needed."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "SKIPPED",
+          "reason": "Sitemap discovery was not needed."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "SKIPPED",
+          "reason": "Official-domain search was not needed."
+        }
+      ]
+    }
+  },
+  "finalResponse": {
+    "messageText": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+    "scenarioState": {
+      "scenarioType": "UNRECOGNIZED",
+      "authorityStatus": "AI_PROPOSED",
+      "queryIntent": "TRANSACTION",
+      "rawQuery": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+      "transactionTitle": "Transaction facts",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "directGroups": [],
+      "isComplete": false,
+      "missingFields": [],
+      "assumptions": [],
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.\"]",
+        "rawQuery": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+        "inputLength": 168,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 168
+              }
+            }
+          ],
+          "inputLength": 168
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "SEMANTIC_INTERPRETATION",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "normalizedInterpretation": {
+            "jurisdiction": [
+              "Singapore"
+            ],
+            "authorityCandidates": [
+              "ACCOUNTING_STANDARDS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "ACCOUNTING",
+            "population": "COMPANY",
+            "primarySubject": "accrual accounting versus cash accounting",
+            "concepts": [
+              {
+                "concept": "accrual accounting",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "cash accounting",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "unpaid supplier invoices",
+                "role": "RELATED"
+              }
+            ],
+            "requestedOperation": "EXPLAIN_RULE",
+            "requiresUserSpecificFacts": false,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": [
+              "small business",
+              "unpaid supplier invoices"
+            ],
+            "confidence": 0.95,
+            "issues": [
+              {
+                "subject": "accrual accounting versus cash accounting for unpaid supplier invoices",
+                "population": "COMPANY",
+                "domain": "ACCOUNTING",
+                "governingAuthorities": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "EXPLAIN_RULE",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                "confidence": 0.95
+              }
+            ]
+          },
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "observedConfidence": 0.95
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "observedConfidence": 0.95,
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 0,
+              "subject": "accrual accounting versus cash accounting for unpaid supplier invoices"
+            }
+          ],
+          "matches": [],
+          "issues": [
+            {
+              "subject": "accrual accounting versus cash accounting for unpaid supplier invoices",
+              "population": "COMPANY",
+              "operation": "EXPLAIN_RULE"
+            }
+          ]
+        }
+      },
+      "statutoryAdvisory": [],
+      "officialAnswerLinks": [],
+      "committedDirectGroups": [],
+      "projectedGroups": [],
+      "uncertaintyDisclaimer": "The original advisory response was not retained because its claims did not pass verification."
+    },
+    "sourceMapFallbackTrace": {
+      "path": "NOT_NEEDED",
+      "sourceMapIds": [],
+      "selectedRecordIds": [],
+      "finalVerifiedUrls": [],
+      "candidateOnly": false,
+      "attempts": [],
+      "stages": [
+        {
+          "stage": "LOCAL_VERIFIED",
+          "status": "SKIPPED",
+          "reason": "No fallback was requested for a routed topic."
+        },
+        {
+          "stage": "MAPPED_SOURCE",
+          "status": "SKIPPED",
+          "reason": "A source-map fetch was not needed."
+        },
+        {
+          "stage": "SITEMAP_DISCOVERY",
+          "status": "SKIPPED",
+          "reason": "Sitemap discovery was not needed."
+        },
+        {
+          "stage": "OFFICIAL_DOMAIN_SEARCH",
+          "status": "SKIPPED",
+          "reason": "Official-domain search was not needed."
+        }
+      ]
+    },
+    "groundingEvidence": [
+      {
+        "recordId": "IFRS9_DEBT_CLASSIFICATION",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "SFRS_I_1_20_GOVERNMENT_GRANTS",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "SFRS_I_1_8_POLICIES_ESTIMATES_ERRORS",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "IFRS9_EQUITY_CLASSIFICATION",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "IAS21_INITIAL_FOREIGN_CURRENCY",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "",
+        "candidateOnly": false
+      },
+      {
+        "recordId": "SFRS_I_1_12_INCOME_TAXES",
+        "lifecycleState": "ACTIVE",
+        "groundingEligible": true,
+        "provenance": "LOCAL_STATIC",
+        "officialSourceUrl": "",
+        "candidateOnly": false
+      }
+    ],
+    "displayFullAnswer": true,
+    "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+    "advisoryFailureStatus": "OTHER",
+    "clarifications": []
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 8069,
+  "completedAt": "2026-11-08T02:43:03.584Z",
+  "modelRequestCount": 4,
+  "sourceCount": 0
+}

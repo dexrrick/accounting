@@ -1,0 +1,105 @@
+{
+  "commit": "2a282cef56a42e99b7f057de22e863258fddb972",
+  "totalModelRequests": 21,
+  "modelRequestBudget": 40,
+  "qualityAssessment": "REVIEWED_INDEPENDENT_AGENT_AND_SUPERVISOR",
+  "cases": [
+    {
+      "caseId": "accounting-accrual",
+      "status": "COMPLETED",
+      "modelRequests": 4,
+      "sourceRequests": 0,
+      "durationMs": 8069,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "advisoryFailureStatus": "OTHER",
+      "capture": "answers/accounting-accrual.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "accounting-asset-register",
+      "status": "COMPLETED",
+      "modelRequests": 1,
+      "sourceRequests": 0,
+      "durationMs": 3091,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "advisoryFailureStatus": "OTHER",
+      "capture": "answers/accounting-asset-register.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "iras-private-car",
+      "status": "COMPLETED",
+      "modelRequests": 3,
+      "sourceRequests": 118,
+      "durationMs": 34799,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "advisoryFailureStatus": null,
+      "capture": "answers/iras-private-car-retry1.json",
+      "priorAttemptCapture": "answers/iras-private-car.json"
+    },
+    {
+      "caseId": "cpf-employer-responsibility",
+      "status": "COMPLETED",
+      "modelRequests": 1,
+      "sourceRequests": 3,
+      "durationMs": 5501,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "advisoryFailureStatus": "OTHER",
+      "capture": "answers/cpf-employer-responsibility.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "mom-salary-overtime",
+      "status": "COMPLETED",
+      "modelRequests": 3,
+      "sourceRequests": 7,
+      "durationMs": 6452,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "advisoryFailureStatus": null,
+      "capture": "answers/mom-salary-overtime.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "acra-sole-director-secretary",
+      "status": "COMPLETED",
+      "modelRequests": 3,
+      "sourceRequests": 4,
+      "durationMs": 6708,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "advisoryFailureStatus": null,
+      "capture": "answers/acra-sole-director-secretary.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "mas-fund-management-startup",
+      "status": "COMPLETED",
+      "modelRequests": 3,
+      "sourceRequests": 0,
+      "durationMs": 7151,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "advisoryFailureStatus": "OTHER",
+      "capture": "answers/mas-fund-management-startup.json",
+      "priorAttemptCapture": null
+    },
+    {
+      "caseId": "mixed-first-employee",
+      "status": "COMPLETED",
+      "modelRequests": 1,
+      "sourceRequests": 6,
+      "durationMs": 5682,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "advisoryFailureStatus": "OTHER",
+      "capture": "answers/mixed-first-employee.json",
+      "priorAttemptCapture": null
+    }
+  ],
+  "originalSampleModelRequests": 20,
+  "assessment": "assessment.json",
+  "supplementalControl": {
+    "caseId": "accounting-accrual-control",
+    "capture": "answers/accounting-accrual-control.json",
+    "modelRequests": 1,
+    "originalSample": false
+  },
+  "publicationNote": "Capture index paths normalized for repository navigation; raw answer captures unchanged."
+}
