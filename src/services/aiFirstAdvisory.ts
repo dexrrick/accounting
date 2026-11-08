@@ -319,7 +319,7 @@ function highRiskAdvisorySignals(normalizedText: string) {
     /\b(?:you|your|i|my|we|our|this|that|the company|the business)\b[^.!?;]{0,100}\b(?:can|may|might|could|will|would|is|are|be|being)\b[^.!?;]{0,60}\b(?:recover\w*|claim\w*|deduct\w*|exempt\w*|eligib\w*|qualif\w*|liable|taxable|allowable|entitled)\b/i.test(normalizedText);
   const definitiveStatutoryOutcome = /\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b[^.!?;]{0,75}\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b|\b(?:gst|tax|relief|recover\w*|input\s+tax|deduct\w*|exempt\w*)\b[^.!?;]{0,75}\b(?:qualif(?:y|ies|ied)|(?:is|are|was|were|will\s+be|can\s+be|may\s+be|might\s+be|could\s+be|would\s+be)\s+(?:fully\s+)?(?:eligible|entitled))\b/i.test(normalizedText);
   const materialDeadline = /\b(?:deadline|due\s+(?:date|by|on)|file\s+(?:by|within)|filing\s+deadline|submit\s+by|must\s+be\s+filed\s+by)\b/i.test(normalizedText);
-  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
+  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return(?!\s+(?:(?:the|its)\s+)?(?:leased\s+)?(?:equipment|asset|goods|items?|products?|vehicle|property)\b[^.!?;]{0,45}\bto\b))\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|invoice|document|record|evidence|filing|return(?!\s+(?:(?:the|its)\s+)?(?:leased\s+)?(?:equipment|asset|goods|items?|products?|vehicle|property)\b[^.!?;]{0,45}\bto\b))\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
   return { categoricalApplicability, definitiveStatutoryOutcome, statutoryRequirement, materialDeadline };
 }
 
@@ -329,13 +329,13 @@ export function isHighRiskStatutoryClaim(text: string): boolean {
   const statutoryApplicability = signals.categoricalApplicability &&
     /\b(?:gst|tax|input\s+tax|output\s+tax|taxable|exempt(?:ion)?|relief|deductible|audit\s+exempt(?:ion)?|statutory|regulatory)\b/i.test(normalizedText);
   const standaloneEligibility = /\b(?:eligible|entitled|qualif(?:y|ies|ied)|exempt(?:ion)?)\b[^.!?;]{0,40}\b(?:scheme|relief|exemption)\b/i.test(normalizedText);
-  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return)\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
+  const statutoryRequirement = /\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b[^.!?;]{0,100}\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return(?!\s+(?:(?:the|its)\s+)?(?:leased\s+)?(?:equipment|asset|goods|items?|products?|vehicle|property)\b[^.!?;]{0,45}\bto\b))\b|\b(?:gst|tax|claim\w*|relief|input\s+tax|output\s+tax|filing|return(?!\s+(?:(?:the|its)\s+)?(?:leased\s+)?(?:equipment|asset|goods|items?|products?|vehicle|property)\b[^.!?;]{0,45}\bto\b))\b[^.!?;]{0,100}\b(?:mandatory|must|required|requires|requirement|legally\s+necessary)\b/i.test(normalizedText);
   const complianceDeadline = signals.materialDeadline &&
     /\b(?:fil(?:e|ing|ed)|submit\w*|lodge\w*|notif\w*|report\w*|return|registration|register\w*|tax|statutory|regulatory|compliance)\b/i.test(normalizedText);
   const complianceContext = /\b(?:legal|law|laws|statutory|regulatory|regulator|compliance|government|authority|acra|iras|cpf|mom|mas|tax|gst|taxable|taxation|income\s+tax|company\s+secretary|resident\s+director|statutory\s+auditor)\b/i.test(normalizedText);
   const obligationModal = /\b(?:must(?:\s+not)?|shall(?:\s+not)?|(?:is|are)\s+(?:not\s+)?required\s+to|has\s+to|have\s+to|needs\s+to|need\s+to)\b/i;
   const explicitComplianceAction = new RegExp(
-    `${obligationModal.source}\\s+(?:submit|file|lodge|notify|register\\b(?!(?:\\s+(?:the\\s+)?(?:asset|item|transaction|expense|invoice|account|balance)\\b)?[^.!?;]{0,35}\\b(?:in|into)\\s+(?:the\\s+)?(?:fixed\\s+asset|asset|general\\s+ledger|accounting)\\s+register\\b)|withhold|furnish)\\b`,
+    `${obligationModal.source}\\s+(?:submit|file|lodge|notify|register\\b(?!(?:\\s+(?:the\\s+)?(?:(?:new|existing|acquired|purchased|leased)\\s+)?(?:asset|item|transaction|expense|invoice|account|balance)\\b)?\\s+\\b(?:in|into)\\s+(?:the\\s+)?(?:fixed\\s+asset\\s+register|asset\\s+register|general\\s+ledger(?:\\s+register)?|accounting\\s+register)\\b)|withhold|furnish)\\b`,
     'i'
   ).test(normalizedText);
   const contextBoundReportingAction = new RegExp(`${obligationModal.source}\\s+(?:report|declare)\\b`, 'i').test(normalizedText) && complianceContext;
@@ -354,16 +354,16 @@ export function isHighRiskStatutoryClaim(text: string): boolean {
     `(?:${obligationModal.source}\\s+${modalComplianceAction}[^.!?;]{0,45}${regulatedObjectPattern}|${regulatedObjectPattern}[^.!?;]{0,45}${obligationModal.source}\\s+${modalComplianceAction}|${regulatedObjectPattern}[^.!?;]{0,70}${nominalObligationStatus}|${nominalObligationStatus}[^.!?;]{0,70}${regulatedObjectPattern})`,
     'i'
   ).test(regulatedObjectText);
-  const permissionWithoutLicence = /\b(?:may|can)\s+(?:legally\s+)?operate\s+without\b[^.!?;]{0,30}\blicen[cs]es?\b/i.test(regulatedObjectText);
-  const appointmentRole = String.raw`(?:director|company\s+secretary|(?:statutory\s+)?auditor)`;
+  const permissionWithoutLicence = /\b(?:may|can)\s+(?:legally\s+)?operate\s+without\b[^.!?;]{0,30}\b(?:licen[cs]es?|permits?|registrations?)\b/i.test(regulatedObjectText);
+  const appointmentRole = String.raw`(?:directors?|company\s+secretar(?:y|ies)|(?:statutory\s+)?auditors?)`;
   const appointmentSubject = String.raw`(?:appointment\s+of\s+(?:(?:a|an|the)\s+)?${appointmentRole}|${appointmentRole}\s+appointment)`;
   const nominalAppointmentConclusion = new RegExp(
     `(?:^|[.!?;,]\\s*|\\b(?:and|but)\\s+)(?:(?:no|the|a|an|this|that)\\s+)?${appointmentSubject}\\s+(?:(?:is|are)\\s+)?(?:not\\s+)?(?:required|necessary|mandatory|needed|optional|unnecessary|waived)\\b`,
     'i'
   ).test(normalizedText);
   const regulatedAppointment =
-    new RegExp(`${obligationModal.source}\\s+appoint\\w*\\b[^.!?;]{0,45}\\b(?:director|company\\s+secretary|auditor)\\b`, 'i').test(normalizedText) ||
-    new RegExp(`\\b(?:director|company\\s+secretary|statutory\\s+auditor|auditor)\\b[^.!?;]{0,25}${obligationModal.source}\\s+be\\s+appointed\\b`, 'i').test(normalizedText) ||
+    new RegExp(`${obligationModal.source}\\s+appoint\\w*\\b[^.!?;]{0,45}\\b${appointmentRole}\\b`, 'i').test(normalizedText) ||
+    new RegExp(`\\b${appointmentRole}\\b[^.!?;]{0,25}${obligationModal.source}\\s+be\\s+appointed\\b`, 'i').test(normalizedText) ||
     nominalAppointmentConclusion;
   const explicitLegalCompliance = complianceContext && /\bcomply\b/i.test(normalizedText) &&
     /\b(?:law|laws|statute|statutes|regulation|regulations|legal\s+requirements)\b/i.test(normalizedText) && obligationModal.test(normalizedText);
