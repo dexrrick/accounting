@@ -3000,6 +3000,7 @@ export function postProcessAIResponse(
 
       if (isRestatement) {
         committedDirectGroups = [...priorCommitted];
+        directGroups = [...priorCommitted];
       } else if (isRevision) {
         const newActualGroups = directGroups.filter(g => !g.isHypothetical);
         if (newActualGroups.length > 0) {
@@ -3077,7 +3078,17 @@ export function postProcessAIResponse(
             }
 
             if (matchIdx !== -1) {
-              updated[matchIdx] = newGrp;
+              const originalGrp = updated[matchIdx];
+              const stableId = originalGrp.id;
+              const stableTxId = originalGrp.transactionId || originalGrp.id;
+              updated[matchIdx] = {
+                ...newGrp,
+                id: stableId,
+                transactionId: stableTxId,
+                targetTransactionId: newGrp.targetTransactionId || stableTxId,
+                journalAction: 'revised',
+                revisedFromId: newGrp.id && newGrp.id !== stableId ? newGrp.id : originalGrp.revisedFromId
+              };
             } else {
               unidentifiedRevision = true;
               break;
@@ -3101,6 +3112,8 @@ export function postProcessAIResponse(
               transactionCurrency: currentScenario?.transactionCurrency || 'SGD',
               directGroups: [...priorCommitted],
               committedDirectGroups: [...priorCommitted],
+              actualEvents: currentScenario?.actualEvents,
+              accountingEvents: currentScenario?.accountingEvents,
               isComplete: false,
               missingFields: [revisionClarification]
             };
@@ -3245,6 +3258,23 @@ export function postProcessAIResponse(
     groundedContext.missingFacts
   );
 
+  const syncedActualEvents = (committedDirectGroups && committedDirectGroups.length > 0)
+    ? committedDirectGroups.map((grp, idx) => ({
+        id: grp.id || `evt-init-${idx + 1}`,
+        transactionId: grp.transactionId || grp.id || `tx-init-${idx + 1}`,
+        targetTransactionId: grp.targetTransactionId,
+        type: ((grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction') as 'settlement' | 'initial_transaction',
+        description: grp.title || 'Initial transaction',
+        amount: grp.totalDebit,
+        currency: grp.currency || parsed.transactionCurrency || currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD',
+        affectedAccounts: grp.lines.map(l => l.accountName),
+        journalLines: grp.lines,
+        isHypothetical: false,
+        timestamp: grp.eventDate,
+        eventDate: grp.eventDate
+      }))
+    : currentScenario?.actualEvents;
+
   const updatedScenarioForBalances: AccountingScenarioState = {
     ...(currentScenario || {}),
     scenarioType: currentScenario?.scenarioType || 'UNRECOGNIZED',
@@ -3254,6 +3284,8 @@ export function postProcessAIResponse(
     transactionCurrency: parsed.transactionCurrency || currentScenario?.transactionCurrency || 'SGD',
     committedDirectGroups,
     directGroups,
+    actualEvents: syncedActualEvents,
+    accountingEvents: syncedActualEvents,
     missingFields: currentScenario?.missingFields || [],
     isComplete: true
   };
@@ -3386,6 +3418,8 @@ export function postProcessAIResponse(
     keyParameters,
     directGroups,
     committedDirectGroups,
+    actualEvents: syncedActualEvents,
+    accountingEvents: syncedActualEvents,
     remainingBalances: scenarioRemainingBalances,
     statutoryAdvisory: statutoryAdvisory.length > 0 ? statutoryAdvisory : undefined,
     assumptions: assumptions.length > 0 ? assumptions : undefined,

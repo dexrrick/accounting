@@ -673,13 +673,30 @@ export async function processAccountingQuery(
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
+    const isFollowUp = Boolean(
+      activeScenario &&
+      assessConversationRelation(userInput, activeScenario) !== 'NEW'
+    );
+    const priorCommitted = activeScenario?.committedDirectGroups ||
+      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
+    const safePriorGroups = isFollowUp ? (priorCommitted || []) : [];
+
     if (response.scenarioState.missingFields?.some(f =>
       f.fieldKey === 'revisionTarget' ||
       f.fieldKey === 'settlementTarget' ||
       f.fieldKey.startsWith('imageGuardrail-') ||
       f.fieldKey === 'imageVerification'
     )) {
-      return response;
+      return {
+        ...response,
+        scenarioState: {
+          ...response.scenarioState,
+          directGroups: safePriorGroups,
+          committedDirectGroups: safePriorGroups,
+          projectedGroups: [],
+          isComplete: false
+        }
+      };
     }
     if (!hasImages && !journalRequested && (
       isStatutoryComplianceQuestion ||
@@ -693,7 +710,8 @@ export async function processAccountingQuery(
         ...response,
         scenarioState: {
           ...response.scenarioState,
-          directGroups: []
+          directGroups: [],
+          committedDirectGroups: []
         }
       };
     }
@@ -719,14 +737,6 @@ export async function processAccountingQuery(
       }
     }
     const priorContextAmounts: number[] = Array.from(priorAmountsSet);
-
-    const isFollowUp = Boolean(
-      activeScenario &&
-      assessConversationRelation(userInput, activeScenario) !== 'NEW'
-    );
-
-    const priorCommitted = activeScenario?.committedDirectGroups ||
-      (activeScenario?.isComplete ? (activeScenario?.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0) : undefined);
 
     const priorById = new Map((priorCommitted || []).map(g => [g.id, g]));
     const priorEditableFingerprints = new Map((priorCommitted || []).map(g => [g.id, journalGroupFingerprint(g)]));
@@ -760,7 +770,15 @@ export async function processAccountingQuery(
       }
     }
 
-    const acctCtx = extractAccountingContext(activeScenario);
+    const hasInPlaceRevision = isFollowUp && changedOrNewGroups.some(g => priorById.has(g.id));
+    const acctCtx = hasInPlaceRevision
+      ? extractAccountingContext({
+          ...(activeScenario || {}),
+          committedDirectGroups: unchangedPriorGroups,
+          directGroups: unchangedPriorGroups,
+          actualEvents: undefined
+        } as AccountingScenarioState)
+      : extractAccountingContext(activeScenario);
 
     const unchangedIntegrity = (unchangedPriorGroups.length > 0)
       ? validateJournalGroups(unchangedPriorGroups)
@@ -797,7 +815,16 @@ export async function processAccountingQuery(
       isValid: unchangedIntegrity.isValid && changedOrNewIntegrity.isValid && combinedIntegrity.isValid,
       issues: uniqueIssues
     };
-    if (integrity.isValid) return response;
+    if (integrity.isValid) {
+      const syncedCommitted = groups.filter(g => !g.isHypothetical);
+      return {
+        ...response,
+        scenarioState: {
+          ...response.scenarioState,
+          committedDirectGroups: syncedCommitted
+        }
+      };
+    }
 
     const ambigIssue = integrity.issues.find(i => i.code === 'AMBIGUOUS_SETTLEMENT_TARGET');
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
@@ -2304,6 +2331,20 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   }
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
+
+  const isFollowUpForImage = Boolean(
+    currentScenario &&
+    (context.semanticUnderstanding?.followUpAnalysis?.isFollowUp ||
+     assessConversationRelation(userInput, currentScenario) !== 'NEW')
+  );
+  const priorCommittedForImage: JournalEntryGroup[] = isFollowUpForImage
+    ? (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0
+        ? [...currentScenario.committedDirectGroups]
+        : (currentScenario?.isComplete
+            ? (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0)
+            : []))
+    : [];
+
   if (imageEvidence.length > 0) {
     result.scenarioState.imageEvidence = imageEvidence;
     result.scenarioState.evidence = [
@@ -2321,10 +2362,74 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         message: issue.message,
         severity: 'ERROR' as const
       }));
-      const imageErrors = [...guardrailErrors, ...integrityErrors];
+      const imageErrors: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }> = [...guardrailErrors, ...integrityErrors];
+
+      const rawAiGroups = Array.isArray(parsed.directGroups) ? parsed.directGroups : [];
+      if (rawAiGroups.length > 0 && (!deterministicFallback || deterministicFallback.length === 0)) {
+        const isCashOrBank = (n: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(n || '');
+        const isPayable = (n: string) => /\b(?:payable|payables|due\s*to)\b/i.test(n || '');
+        const isReceivable = (n: string) => /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(n || '');
+        const areAccountsCompatible = (name1: string, name2: string) => {
+          const a = (name1 || '').toLowerCase().trim();
+          const b = (name2 || '').toLowerCase().trim();
+          if (a === b || a.includes(b) || b.includes(a)) return true;
+          if (isCashOrBank(a) && isCashOrBank(b)) return true;
+          if (isPayable(a) && isPayable(b)) return true;
+          if (isReceivable(a) && isReceivable(b)) return true;
+          return false;
+        };
+
+        let conflictExists = false;
+        if (rawAiGroups.length !== extractedGroups.length) {
+          conflictExists = true;
+        } else {
+          for (let i = 0; i < extractedGroups.length; i++) {
+            const aiGrp = rawAiGroups[i];
+            const extGrp = extractedGroups[i];
+            const aiLines = Array.isArray(aiGrp.lines) ? aiGrp.lines : [];
+            const aiDrCents = Math.round((typeof aiGrp.totalDebit === 'number' ? aiGrp.totalDebit : aiLines.reduce((s: number, l: any) => s + (Number(l.debit) || 0), 0)) * 100);
+            const aiCrCents = Math.round((typeof aiGrp.totalCredit === 'number' ? aiGrp.totalCredit : aiLines.reduce((s: number, l: any) => s + (Number(l.credit) || 0), 0)) * 100);
+            const extDrCents = Math.round((extGrp.totalDebit || 0) * 100);
+            const extCrCents = Math.round((extGrp.totalCredit || 0) * 100);
+
+            if (aiDrCents !== extDrCents || aiCrCents !== extCrCents || aiLines.length !== extGrp.lines.length) {
+              conflictExists = true;
+              break;
+            }
+
+            for (const extLine of extGrp.lines) {
+              const extLDr = Math.round((Number(extLine.debit) || 0) * 100);
+              const extLCr = Math.round((Number(extLine.credit) || 0) * 100);
+              const matched = aiLines.find((al: any) => {
+                const alDr = Math.round((Number(al.debit) || 0) * 100);
+                const alCr = Math.round((Number(al.credit) || 0) * 100);
+                return alDr === extLDr && alCr === extLCr && areAccountsCompatible(extLine.accountName, al.accountName);
+              });
+              if (!matched) {
+                conflictExists = true;
+                break;
+              }
+            }
+            if (conflictExists) break;
+          }
+        }
+
+        if (conflictExists) {
+          imageErrors.push({
+            code: 'IMAGE_JOURNAL_CONFLICT',
+            message: 'The AI-structured journal entry conflicts with the journal extracted from the screenshot.',
+            severity: 'ERROR' as const
+          });
+        }
+      }
+
       if (imageErrors.length > 0) {
         // Fail-closed: image-derived journals must not override deterministic output or clear committed groups
         result.messageText += `\n\n${buildGuardrailValidationMessage(imageErrors)}\n\nImage-derived journal was not applied because it failed accounting validation.`;
+        result.scenarioState.directGroups = [...priorCommittedForImage];
+        result.scenarioState.committedDirectGroups = [...priorCommittedForImage];
+        result.scenarioState.projectedGroups = [];
+        result.scenarioState.remainingBalances = isFollowUpForImage ? currentScenario?.remainingBalances : undefined;
         result.scenarioState.isComplete = false;
         result.scenarioState.missingFields = [
           ...(result.scenarioState.missingFields || []),
@@ -2337,10 +2442,16 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         ];
       } else if (deterministicFallback && deterministicFallback.length > 0) {
         // Preserve deterministic/committed journals; do not clear committedDirectGroups
+        result.scenarioState.directGroups = [...deterministicFallback];
+        result.scenarioState.committedDirectGroups = deterministicFallback.filter(g => !g.isHypothetical);
         result.messageText += `\n\n### Journal visible in screenshot\n\nA balanced journal was extracted from the screenshot, but the existing deterministic journal has been preserved. Review the image evidence before overriding it.`;
       } else {
         // No deterministic output available; merge validated image-derived groups
-        result.scenarioState.directGroups = extractedGroups;
+        const nextGroups = isFollowUpForImage && priorCommittedForImage.length > 0
+          ? [...priorCommittedForImage, ...extractedGroups]
+          : extractedGroups;
+        result.scenarioState.directGroups = nextGroups;
+        result.scenarioState.committedDirectGroups = nextGroups.filter(g => !g.isHypothetical);
         result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
       }
     }
@@ -2354,8 +2465,10 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     const prompt = `Please verify the screenshot ${fieldNames.join(', ')} before I prepare a definitive journal entry.`;
     result.scenarioState = {
       ...result.scenarioState,
-      directGroups: [],
+      directGroups: [...priorCommittedForImage],
+      committedDirectGroups: [...priorCommittedForImage],
       projectedGroups: [],
+      remainingBalances: isFollowUpForImage ? currentScenario?.remainingBalances : undefined,
       isComplete: false,
       missingFacts: [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])],
       missingFields: [{

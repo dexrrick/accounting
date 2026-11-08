@@ -149,6 +149,7 @@ export interface JournalEntryGroup {
   taxSummary?: string;
   transactionStatus?: 'actual' | 'hypothetical' | 'planned' | 'conditional';
   journalAction?: 'new' | 'revised' | 'restatement' | 'illustrative';
+  revisedFromId?: string;
   accountingPeriod?: string;
   currency?: string;
   narration?: string;

@@ -1,4 +1,5 @@
 import type { AccountCategory, JournalEntryGroup } from '../types/accounting';
+import type { OutstandingAccountBalance } from '../types/conversationState';
 
 export interface JournalIntegrityIssue {
   code:
@@ -47,7 +48,7 @@ export interface JournalValidationOptions {
   priorContextTexts?: string[];
   priorContextAmounts?: number[];
   isFollowUp?: boolean;
-  outstandingBalances?: OutstandingBalanceContext[];
+  outstandingBalances?: (OutstandingBalanceContext | OutstandingAccountBalance)[];
 }
 
 export type ValidateJournalGroupsOptions = JournalValidationOptions;
@@ -260,7 +261,12 @@ export function validateJournalGroups(
     }
   }
 
-  for (const group of groups) {
+  const workingBalances: OutstandingAccountBalance[] = ((options?.outstandingBalances || []) as OutstandingAccountBalance[])
+    .filter(b => b.remainingAmount > 0)
+    .map(b => ({ ...b }));
+
+  for (let gIdx = 0; gIdx < groups.length; gIdx++) {
+    const group = groups[gIdx];
     const groupTitle = group.title || 'Untitled Group';
 
     // 3. Verify Array.isArray(group.lines) && group.lines.length >= 2 (INVALID_LINE_COUNT)
@@ -424,120 +430,205 @@ export function validateJournalGroups(
       group.transactionStatus === 'planned' ||
       group.journalAction === 'illustrative'
     );
-    if (!isHypotheticalGroup && options?.outstandingBalances && options.outstandingBalances.length > 0) {
+    if (!isHypotheticalGroup) {
       const creditsCash = group.lines.some(l => l.credit > 0 && /\b(?:cash|bank|current\s*account|cheque|check|giro|paynow)\b/i.test(l.accountName));
       const debitsCash = group.lines.some(l => l.debit > 0 && /\b(?:cash|bank|current\s*account|cheque|check|giro|paynow)\b/i.test(l.accountName));
 
       const refSources = [group.targetTransactionId, group.summary, group.narration, group.title, options?.rawQuery].filter(Boolean).join(' ').toLowerCase();
 
-      if (creditsCash) {
-        for (const line of group.lines) {
-          if (line.debit > 0 && (line.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(line.accountName))) {
-            const lineNameLower = line.accountName.toLowerCase();
-            const payableBalances = options.outstandingBalances.filter(b => b.nature === 'PAYABLE' && b.remainingAmount > 0);
-            let matchedPayables = payableBalances.filter(b =>
-              b.accountName.toLowerCase() === lineNameLower ||
-              b.accountName.toLowerCase().includes(lineNameLower) ||
-              lineNameLower.includes(b.accountName.toLowerCase())
-            );
-            if (matchedPayables.length === 0 && payableBalances.length > 0) {
-              matchedPayables = payableBalances;
-            }
-            if (matchedPayables.length === 0) continue;
-
-            const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
-            const referencedPayables = matchedPayables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
-            const aggregateRemaining = Math.round(matchedPayables.reduce((sum, b) => sum + (b.remainingAmount || 0), 0) * 100) / 100;
-
-            // 1. SETTLEMENT_EXCEEDS_BALANCE check
-            if (referencedPayables.length > 0) {
-              const referencedRemaining = Math.round(referencedPayables.reduce((sum, b) => sum + b.remainingAmount, 0) * 100) / 100;
-              if (line.debit > referencedRemaining + 0.01) {
-                issues.push({
-                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
-                  message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
+      if (workingBalances.length > 0) {
+        if (creditsCash) {
+          for (const line of group.lines) {
+            if (line.debit > 0 && (line.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(line.accountName))) {
+              const lineNameLower = line.accountName.toLowerCase();
+              const payableBalances = workingBalances.filter(b => b.nature === 'PAYABLE');
+              let matchedPayables = payableBalances.filter(b =>
+                b.accountName.toLowerCase() === lineNameLower ||
+                b.accountName.toLowerCase().includes(lineNameLower) ||
+                lineNameLower.includes(b.accountName.toLowerCase())
+              );
+              if (matchedPayables.length === 0 && payableBalances.length > 0) {
+                matchedPayables = payableBalances;
               }
-            } else {
-              if (aggregateRemaining > 0 && line.debit > aggregateRemaining + 0.01) {
-                issues.push({
-                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
-                  message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
+              if (matchedPayables.length === 0) continue;
+
+              const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
+              const referencedPayables = matchedPayables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
+              const openMatchedPayables = matchedPayables.filter(b => b.remainingAmount > 0);
+              const aggregateRemaining = Math.round(matchedPayables.reduce((sum, b) => sum + Math.max(0, b.remainingAmount || 0), 0) * 100) / 100;
+
+              // 1. SETTLEMENT_EXCEEDS_BALANCE check
+              if (referencedPayables.length > 0) {
+                const referencedRemaining = Math.round(referencedPayables.reduce((sum, b) => sum + Math.max(0, b.remainingAmount || 0), 0) * 100) / 100;
+                if (line.debit > referencedRemaining + 0.01) {
+                  issues.push({
+                    code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                    message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+                let remDeduct = line.debit;
+                for (const b of referencedPayables) {
+                  const avail = Math.max(0, b.remainingAmount || 0);
+                  const deduct = Math.min(avail, remDeduct);
+                  b.remainingAmount = Math.round((b.remainingAmount - deduct) * 100) / 100;
+                  remDeduct = Math.round((remDeduct - deduct) * 100) / 100;
+                  if (remDeduct <= 0) break;
+                }
+                if (remDeduct > 0 && referencedPayables.length > 0) {
+                  referencedPayables[referencedPayables.length - 1].remainingAmount = Math.round((referencedPayables[referencedPayables.length - 1].remainingAmount - remDeduct) * 100) / 100;
+                }
+              } else {
+                if (line.debit > aggregateRemaining + 0.01) {
+                  issues.push({
+                    code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                    message: `Settlement amount S$${line.debit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+
+                // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
+                if (openMatchedPayables.length > 1 && Math.abs(line.debit - aggregateRemaining) > 0.01) {
+                  issues.push({
+                    code: 'AMBIGUOUS_SETTLEMENT_TARGET',
+                    message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.debit.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+                let remDeduct = line.debit;
+                for (const b of matchedPayables) {
+                  const avail = Math.max(0, b.remainingAmount || 0);
+                  const deduct = Math.min(avail, remDeduct);
+                  b.remainingAmount = Math.round((b.remainingAmount - deduct) * 100) / 100;
+                  remDeduct = Math.round((remDeduct - deduct) * 100) / 100;
+                  if (remDeduct <= 0) break;
+                }
+                if (remDeduct > 0 && matchedPayables.length > 0) {
+                  matchedPayables[matchedPayables.length - 1].remainingAmount = Math.round((matchedPayables[matchedPayables.length - 1].remainingAmount - remDeduct) * 100) / 100;
+                }
               }
             }
+          }
+        }
 
-            // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
-            if (matchedPayables.length > 1 && referencedPayables.length === 0) {
-              if (Math.abs(line.debit - aggregateRemaining) > 0.01) {
-                issues.push({
-                  code: 'AMBIGUOUS_SETTLEMENT_TARGET',
-                  message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.debit.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
+        if (debitsCash) {
+          for (const line of group.lines) {
+            if (line.credit > 0 && (line.category === 'ASSET' || /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(line.accountName))) {
+              const lineNameLower = line.accountName.toLowerCase();
+              const receivableBalances = workingBalances.filter(b => b.nature === 'RECEIVABLE');
+              let matchedReceivables = receivableBalances.filter(b =>
+                b.accountName.toLowerCase() === lineNameLower ||
+                b.accountName.toLowerCase().includes(lineNameLower) ||
+                lineNameLower.includes(b.accountName.toLowerCase())
+              );
+              if (matchedReceivables.length === 0 && receivableBalances.length > 0) {
+                matchedReceivables = receivableBalances;
+              }
+              if (matchedReceivables.length === 0) continue;
+
+              const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
+              const referencedReceivables = matchedReceivables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
+              const openMatchedReceivables = matchedReceivables.filter(b => b.remainingAmount > 0);
+              const aggregateRemaining = Math.round(matchedReceivables.reduce((sum, b) => sum + Math.max(0, b.remainingAmount || 0), 0) * 100) / 100;
+
+              // 1. SETTLEMENT_EXCEEDS_BALANCE check
+              if (referencedReceivables.length > 0) {
+                const referencedRemaining = Math.round(referencedReceivables.reduce((sum, b) => sum + Math.max(0, b.remainingAmount || 0), 0) * 100) / 100;
+                if (line.credit > referencedRemaining + 0.01) {
+                  issues.push({
+                    code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                    message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+                let remDeduct = line.credit;
+                for (const b of referencedReceivables) {
+                  const avail = Math.max(0, b.remainingAmount || 0);
+                  const deduct = Math.min(avail, remDeduct);
+                  b.remainingAmount = Math.round((b.remainingAmount - deduct) * 100) / 100;
+                  remDeduct = Math.round((remDeduct - deduct) * 100) / 100;
+                  if (remDeduct <= 0) break;
+                }
+                if (remDeduct > 0 && referencedReceivables.length > 0) {
+                  referencedReceivables[referencedReceivables.length - 1].remainingAmount = Math.round((referencedReceivables[referencedReceivables.length - 1].remainingAmount - remDeduct) * 100) / 100;
+                }
+              } else {
+                if (line.credit > aggregateRemaining + 0.01) {
+                  issues.push({
+                    code: 'SETTLEMENT_EXCEEDS_BALANCE',
+                    message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+
+                // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
+                if (openMatchedReceivables.length > 1 && Math.abs(line.credit - aggregateRemaining) > 0.01) {
+                  issues.push({
+                    code: 'AMBIGUOUS_SETTLEMENT_TARGET',
+                    message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.credit.toFixed(2)}.`,
+                    groupTitle,
+                    accountName: line.accountName
+                  });
+                }
+                let remDeduct = line.credit;
+                for (const b of matchedReceivables) {
+                  const avail = Math.max(0, b.remainingAmount || 0);
+                  const deduct = Math.min(avail, remDeduct);
+                  b.remainingAmount = Math.round((b.remainingAmount - deduct) * 100) / 100;
+                  remDeduct = Math.round((remDeduct - deduct) * 100) / 100;
+                  if (remDeduct <= 0) break;
+                }
+                if (remDeduct > 0 && matchedReceivables.length > 0) {
+                  matchedReceivables[matchedReceivables.length - 1].remainingAmount = Math.round((matchedReceivables[matchedReceivables.length - 1].remainingAmount - remDeduct) * 100) / 100;
+                }
               }
             }
           }
         }
       }
 
-      if (debitsCash) {
-        for (const line of group.lines) {
-          if (line.credit > 0 && (line.category === 'ASSET' || /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(line.accountName))) {
-            const lineNameLower = line.accountName.toLowerCase();
-            const receivableBalances = options.outstandingBalances.filter(b => b.nature === 'RECEIVABLE' && b.remainingAmount > 0);
-            let matchedReceivables = receivableBalances.filter(b =>
-              b.accountName.toLowerCase() === lineNameLower ||
-              b.accountName.toLowerCase().includes(lineNameLower) ||
-              lineNameLower.includes(b.accountName.toLowerCase())
-            );
-            if (matchedReceivables.length === 0 && receivableBalances.length > 0) {
-              matchedReceivables = receivableBalances;
-            }
-            if (matchedReceivables.length === 0) continue;
-
-            const lineRefSources = `${refSources} ${line.lineExplanation || ''}`.toLowerCase();
-            const referencedReceivables = matchedReceivables.filter(b => b.transactionId && lineRefSources.includes(b.transactionId.toLowerCase()));
-            const aggregateRemaining = Math.round(matchedReceivables.reduce((sum, b) => sum + (b.remainingAmount || 0), 0) * 100) / 100;
-
-            // 1. SETTLEMENT_EXCEEDS_BALANCE check
-            if (referencedReceivables.length > 0) {
-              const referencedRemaining = Math.round(referencedReceivables.reduce((sum, b) => sum + b.remainingAmount, 0) * 100) / 100;
-              if (line.credit > referencedRemaining + 0.01) {
-                issues.push({
-                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
-                  message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${referencedRemaining.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
-              }
-            } else {
-              if (aggregateRemaining > 0 && line.credit > aggregateRemaining + 0.01) {
-                issues.push({
-                  code: 'SETTLEMENT_EXCEEDS_BALANCE',
-                  message: `Settlement amount S$${line.credit.toFixed(2)} for '${line.accountName}' exceeds the outstanding balance of S$${aggregateRemaining.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
-              }
-            }
-
-            // 2. Ambiguous multi-invoice settlement check (AMBIGUOUS_SETTLEMENT_TARGET)
-            if (matchedReceivables.length > 1 && referencedReceivables.length === 0) {
-              if (Math.abs(line.credit - aggregateRemaining) > 0.01) {
-                issues.push({
-                  code: 'AMBIGUOUS_SETTLEMENT_TARGET',
-                  message: `Multiple outstanding balances exist for '${line.accountName}' (total S$${aggregateRemaining.toFixed(2)}). Please specify which invoice or transaction reference is being settled by S$${line.credit.toFixed(2)}.`,
-                  groupTitle,
-                  accountName: line.accountName
-                });
-              }
-            }
+      // Track newly created payables/receivables for multi-group turns
+      for (const line of group.lines) {
+        if (!debitsCash && line.credit > 0 && (line.category === 'LIABILITY' || /\b(?:payable|payables|accrued|liability|liabilities)\b/i.test(line.accountName))) {
+          const txId = group.transactionId || group.id || `grp-${gIdx + 1}`;
+          const exists = workingBalances.some(b => b.transactionId === txId && b.nature === 'PAYABLE' && b.accountName.toLowerCase() === line.accountName.toLowerCase());
+          if (!exists) {
+            workingBalances.push({
+              balanceKey: `${txId}-payable-${line.accountName}`,
+              accountName: line.accountName,
+              category: 'LIABILITY',
+              nature: 'PAYABLE',
+              direction: 'payable',
+              transactionId: txId,
+              originalAmount: line.credit,
+              settledAmount: 0,
+              remainingAmount: line.credit,
+              status: 'open',
+              currency: group.currency || 'SGD'
+            });
+          }
+        } else if (!creditsCash && line.debit > 0 && (line.category === 'ASSET' || /\b(?:receivable|receivables|debtor|debtors|due\s*from)\b/i.test(line.accountName))) {
+          const txId = group.transactionId || group.id || `grp-${gIdx + 1}`;
+          const exists = workingBalances.some(b => b.transactionId === txId && b.nature === 'RECEIVABLE' && b.accountName.toLowerCase() === line.accountName.toLowerCase());
+          if (!exists) {
+            workingBalances.push({
+              balanceKey: `${txId}-receivable-${line.accountName}`,
+              accountName: line.accountName,
+              category: 'ASSET',
+              nature: 'RECEIVABLE',
+              direction: 'receivable',
+              transactionId: txId,
+              originalAmount: line.debit,
+              settledAmount: 0,
+              remainingAmount: line.debit,
+              status: 'open',
+              currency: group.currency || 'SGD'
+            });
           }
         }
       }

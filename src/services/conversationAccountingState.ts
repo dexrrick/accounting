@@ -88,9 +88,8 @@ export function deriveAccountingStateFromEvents(
   ): void => {
     // Case A: Explicit single target
     if (explicitTargetBal) {
-      const delta = Math.min(explicitTargetBal.remainingAmount, settleAmt);
-      explicitTargetBal.settledAmount = roundMoney(explicitTargetBal.settledAmount + delta);
-      explicitTargetBal.remainingAmount = Math.max(0, roundMoney(explicitTargetBal.originalAmount - explicitTargetBal.settledAmount));
+      explicitTargetBal.settledAmount = roundMoney(explicitTargetBal.settledAmount + settleAmt);
+      explicitTargetBal.remainingAmount = roundMoney(explicitTargetBal.originalAmount - explicitTargetBal.settledAmount);
       explicitTargetBal.status = explicitTargetBal.remainingAmount <= 0 ? 'settled' : (explicitTargetBal.settledAmount > 0 ? 'partial' : 'open');
       return;
     }
@@ -98,9 +97,8 @@ export function deriveAccountingStateFromEvents(
     // Case B: Single open balance
     if (matchingOpenBalances.length === 1) {
       const b = matchingOpenBalances[0];
-      const delta = Math.min(b.remainingAmount, settleAmt);
-      b.settledAmount = roundMoney(b.settledAmount + delta);
-      b.remainingAmount = Math.max(0, roundMoney(b.originalAmount - b.settledAmount));
+      b.settledAmount = roundMoney(b.settledAmount + settleAmt);
+      b.remainingAmount = roundMoney(b.originalAmount - b.settledAmount);
       b.status = b.remainingAmount <= 0 ? 'settled' : (b.settledAmount > 0 ? 'partial' : 'open');
       return;
     }
@@ -124,9 +122,8 @@ export function deriveAccountingStateFromEvents(
       );
       if (referencedBalances.length === 1) {
         const b = referencedBalances[0];
-        const delta = Math.min(b.remainingAmount, settleAmt);
-        b.settledAmount = roundMoney(b.settledAmount + delta);
-        b.remainingAmount = Math.max(0, roundMoney(b.originalAmount - b.settledAmount));
+        b.settledAmount = roundMoney(b.settledAmount + settleAmt);
+        b.remainingAmount = roundMoney(b.originalAmount - b.settledAmount);
         b.status = b.remainingAmount <= 0 ? 'settled' : (b.settledAmount > 0 ? 'partial' : 'open');
         return;
       } else if (referencedBalances.length > 1) {
@@ -219,9 +216,14 @@ export function deriveAccountingStateFromEvents(
           }
 
           const lineNameLower = (line.accountName || '').toLowerCase();
-          const openPayables = Array.from(balancesMap.values()).filter(
+          let openPayables = Array.from(balancesMap.values()).filter(
             b => (b.nature === 'PAYABLE' || b.direction === 'payable') && b.remainingAmount > 0
           );
+          if (openPayables.length === 0) {
+            openPayables = Array.from(balancesMap.values()).filter(
+              b => b.nature === 'PAYABLE' || b.direction === 'payable'
+            );
+          }
           let matchingOpenBalances = openPayables.filter(b =>
             b.accountName.toLowerCase() === lineNameLower ||
             b.accountName.toLowerCase().includes(lineNameLower) ||
@@ -285,9 +287,14 @@ export function deriveAccountingStateFromEvents(
           }
 
           const lineNameLower = (line.accountName || '').toLowerCase();
-          const openReceivables = Array.from(balancesMap.values()).filter(
+          let openReceivables = Array.from(balancesMap.values()).filter(
             b => (b.nature === 'RECEIVABLE' || b.direction === 'receivable') && b.remainingAmount > 0
           );
+          if (openReceivables.length === 0) {
+            openReceivables = Array.from(balancesMap.values()).filter(
+              b => b.nature === 'RECEIVABLE' || b.direction === 'receivable'
+            );
+          }
           let matchingOpenBalances = openReceivables.filter(b =>
             b.accountName.toLowerCase() === lineNameLower ||
             b.accountName.toLowerCase().includes(lineNameLower) ||
@@ -510,25 +517,59 @@ export function extractAccountingContext(
     ? [...currentScenario.committedDirectGroups]
     : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
 
-  // Determine base actual events (source of truth - strictly committed history)
+  const defaultCurr = currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD';
+  const journalEvents: AccountingEvent[] = priorJournals.map((grp, idx) => ({
+    id: grp.id || `evt-init-${idx + 1}`,
+    transactionId: grp.transactionId || grp.id || `tx-init-${idx + 1}`,
+    targetTransactionId: grp.targetTransactionId,
+    type: (grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction',
+    description: grp.title || 'Initial transaction',
+    amount: grp.totalDebit,
+    currency: grp.currency || defaultCurr,
+    affectedAccounts: grp.lines.map(l => l.accountName),
+    journalLines: grp.lines,
+    isHypothetical: false,
+    timestamp: grp.eventDate,
+    eventDate: grp.eventDate
+  }));
+  const existingEvents: AccountingEvent[] = (currentScenario?.actualEvents || []).filter(e => !e.isHypothetical);
+
   let actualEvents: AccountingEvent[] = [];
-  if (currentScenario?.actualEvents && currentScenario.actualEvents.length > 0) {
-    actualEvents = currentScenario.actualEvents.filter(e => !e.isHypothetical);
-  } else if (priorJournals.length > 0) {
-    actualEvents = priorJournals.map((grp, idx) => ({
-      id: grp.id || `evt-init-${idx + 1}`,
-      transactionId: grp.transactionId || grp.id || `tx-init-${idx + 1}`,
-      targetTransactionId: grp.targetTransactionId,
-      type: (grp.title && grp.title.toLowerCase().includes('settle')) ? 'settlement' : 'initial_transaction',
-      description: grp.title || 'Initial transaction',
-      amount: grp.totalDebit,
-      currency: currentScenario?.transactionCurrency || currentScenario?.functionalCurrency || 'SGD',
-      affectedAccounts: grp.lines.map(l => l.accountName),
-      journalLines: grp.lines,
-      isHypothetical: false,
-      timestamp: grp.eventDate,
-      eventDate: grp.eventDate
-    }));
+  if (journalEvents.length > 0 && existingEvents.length === 0) {
+    actualEvents = journalEvents;
+  } else if (journalEvents.length === 0) {
+    actualEvents = existingEvents;
+  } else {
+    const existingById = new Map<string, AccountingEvent>();
+    const existingByTxId = new Map<string, AccountingEvent>();
+    for (const e of existingEvents) {
+      if (e.id) existingById.set(e.id, e);
+      if (e.transactionId) existingByTxId.set(e.transactionId, e);
+    }
+
+    const matchedExistingIds = new Set<string>();
+    let allJournalsMatched = true;
+
+    const mergedJournals = journalEvents.map(jEvt => {
+      const match = (jEvt.id && existingById.get(jEvt.id)) ||
+                    (jEvt.transactionId && existingByTxId.get(jEvt.transactionId));
+      if (match) {
+        if (match.id) matchedExistingIds.add(match.id);
+        return {
+          ...match,
+          ...jEvt
+        };
+      }
+      allJournalsMatched = false;
+      return jEvt;
+    });
+
+    if (existingEvents.length > journalEvents.length && allJournalsMatched) {
+      const remainingUnmatched = existingEvents.filter(e => !e.id || !matchedExistingIds.has(e.id));
+      actualEvents = [...mergedJournals, ...remainingUnmatched];
+    } else {
+      actualEvents = mergedJournals;
+    }
   }
 
   // Replay actual events to derive deterministic balances and equity

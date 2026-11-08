@@ -8,7 +8,7 @@ import {
   extractDerivableNumbers,
   buildDerivableCents
 } from '../../src/verification/journalIntegrity.ts';
-import { extractAccountingContext } from '../../src/services/conversationAccountingState.ts';
+import { extractAccountingContext, deriveAccountingStateFromEvents } from '../../src/services/conversationAccountingState.ts';
 import {
   postProcessAIResponse,
   normalizeAccountCategory,
@@ -2510,6 +2510,9 @@ try {
     );
 
     assert.equal(res10B2.scenarioState.committedDirectGroups?.length, 2, 'Must keep 2 committed groups');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[0].id, 'grp-inv-1', 'Group 1 id must remain grp-inv-1');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[0].transactionId, 'grp-inv-1', 'Group 1 transactionId must remain grp-inv-1');
+    assert.equal(res10B2.scenarioState.committedDirectGroups[0].revisedFromId, 'grp-inv-revised', 'Group 1 revisedFromId must track revised payload ID');
     assert.equal(res10B2.scenarioState.committedDirectGroups[0].totalDebit, 1200, 'Group 1 must be revised to S$1,200');
     assert.equal(res10B2.scenarioState.committedDirectGroups[1].id, 'grp-pay-1', 'Group 2 must remain intact');
     assert.equal(res10B2.scenarioState.committedDirectGroups[1].totalDebit, 600, 'Group 2 amount must remain S$600');
@@ -2814,6 +2817,8 @@ try {
     );
 
     assert.equal(res10E1.scenarioState.isComplete, false, 'Imbalanced image-derived journal must not be marked complete');
+    assert.equal(res10E1.scenarioState.directGroups?.length ?? 0, 0, 'Direct groups must be empty on failed validation');
+    assert.equal(res10E1.scenarioState.committedDirectGroups?.length ?? 0, 0, 'Committed direct groups must be empty on failed validation');
     assert.ok(
       res10E1.messageText.includes('AI-Proposed Journal Rejected') ||
       res10E1.messageText.includes('failed accounting validation') ||
@@ -2861,10 +2866,604 @@ try {
 
     assert.equal(res10E2.scenarioState.isComplete, true, 'Valid balanced image journal must pass validation');
     assert.equal(res10E2.scenarioState.directGroups?.length, 1, 'Must have 1 journal group');
+    assert.equal(res10E2.scenarioState.committedDirectGroups?.length, 1, 'Must have 1 committed group');
+    assert.deepEqual(res10E2.scenarioState.directGroups, res10E2.scenarioState.committedDirectGroups, 'Direct and committed groups must be synchronized');
     assert.equal(res10E2.scenarioState.directGroups[0].totalDebit, 500);
     assert.equal(res10E2.scenarioState.directGroups[0].totalCredit, 500);
 
     console.log('✓ 10E. Image-based journals pass through final validation verified');
+    passed++;
+  }
+
+  // 10F: AI structured journal conflicting with screenshot extracted journal
+  {
+    const chatWithImage = [
+      {
+        id: 'msg-1',
+        sender: 'user',
+        text: 'Record the purchase shown in this invoice screenshot.',
+        images: [
+          {
+            id: 'img-inv-1',
+            name: 'invoice.png',
+            mimeType: 'image/png',
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+          }
+        ]
+      }
+    ];
+
+    // Case 1: Conflicting AI journal (SGD 800) vs Image-extracted journal (SGD 500)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice from Screenshot',
+      imageEvidence: [
+        {
+          imageId: 'img-inv-1',
+          journalLines: [
+            { accountName: 'Office Equipment', debit: 500, credit: 0 },
+            { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+          ],
+          fields: []
+        }
+      ],
+      directGroups: [{
+        id: 'grp-ai-800',
+        eventDate: '01/03/2025',
+        title: 'Invoice Journal',
+        summary: 'AI invented 800 amount',
+        totalDebit: 800,
+        totalCredit: 800,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Equipment', category: 'ASSET', debit: 800, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 800 }
+        ]
+      }]
+    });
+
+    const res10F1 = await processAccountingQuery(
+      'Record the purchase shown in this invoice screenshot.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      chatWithImage
+    );
+
+    assert.equal(res10F1.scenarioState.isComplete, false, 'Conflicting AI journal must not be marked complete');
+    assert.ok(res10F1.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT'), 'Must include IMAGE_JOURNAL_CONFLICT guardrail');
+    assert.equal(res10F1.scenarioState.directGroups?.length ?? 0, 0, 'directGroups must be empty on conflict');
+    assert.equal(res10F1.scenarioState.committedDirectGroups?.length ?? 0, 0, 'committedDirectGroups must be empty on conflict');
+
+    // Case 2: Matching AI journal (SGD 500)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice from Screenshot',
+      imageEvidence: [
+        {
+          imageId: 'img-inv-1',
+          journalLines: [
+            { accountName: 'Office Equipment', debit: 500, credit: 0 },
+            { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+          ],
+          fields: []
+        }
+      ],
+      directGroups: [{
+        id: 'grp-ai-500',
+        eventDate: '01/03/2025',
+        title: 'Invoice Journal',
+        summary: 'Matching 500 amount',
+        totalDebit: 500,
+        totalCredit: 500,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Office Equipment', category: 'ASSET', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+        ]
+      }]
+    });
+
+    const res10F2 = await processAccountingQuery(
+      'Record the purchase shown in this invoice screenshot.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      chatWithImage
+    );
+
+    assert.equal(res10F2.scenarioState.isComplete, true, 'Matching AI journal must pass validation');
+    assert.equal(res10F2.scenarioState.directGroups?.length, 1);
+    assert.equal(res10F2.scenarioState.committedDirectGroups?.length, 1);
+    assert.equal(res10F2.scenarioState.directGroups[0].totalDebit, 500);
+
+    console.log('✓ 10F. Conflicting AI journal vs screenshot journal rejected verified');
+    passed++;
+  }
+
+  // 10G: Failed image validation on a follow-up turn restores Turn 1 committed groups
+  {
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Purchased inventory S$1,000 on credit.',
+      transactionTitle: 'Inventory Purchase',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-inv-turn1',
+        transactionId: 'grp-inv-turn1',
+        eventDate: '01/03/2025',
+        title: 'Inventory Purchase',
+        summary: 'Purchased inventory',
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }],
+      directGroups: [{
+        id: 'grp-inv-turn1',
+        transactionId: 'grp-inv-turn1',
+        eventDate: '01/03/2025',
+        title: 'Inventory Purchase',
+        summary: 'Purchased inventory',
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }]
+    };
+
+    const chatWithImageFollowUp = [
+      {
+        id: 'msg-1',
+        sender: 'user',
+        text: 'Purchased inventory S$1,000 on credit.'
+      },
+      {
+        id: 'msg-2',
+        sender: 'user',
+        text: 'Here is the payment receipt screenshot.',
+        images: [
+          {
+            id: 'img-pay-1',
+            name: 'payment.png',
+            mimeType: 'image/png',
+            dataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+          }
+        ]
+      }
+    ];
+
+    // Image-derived journal is imbalanced (500 vs 400)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Payment Receipt from Screenshot',
+      imageEvidence: [
+        {
+          imageId: 'img-pay-1',
+          journalLines: [
+            { accountName: 'Trade Payables', debit: 500, credit: 0 },
+            { accountName: 'Cash at Bank', debit: 0, credit: 400 }
+          ],
+          fields: []
+        }
+      ],
+      directGroups: [{
+        id: 'grp-img-imbal',
+        eventDate: '05/03/2025',
+        title: 'Payment Receipt',
+        summary: 'Imbalanced payment',
+        totalDebit: 500,
+        totalCredit: 400,
+        isBalanced: false,
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 500, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 400 }
+        ]
+      }]
+    });
+
+    const res10G = await processAccountingQuery(
+      'Here is the payment receipt screenshot.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      chatWithImageFollowUp
+    );
+
+    assert.equal(res10G.scenarioState.isComplete, false, 'Turn 2 must fail validation');
+    assert.equal(res10G.scenarioState.directGroups?.length, 1, 'Must restore Turn 1 direct group');
+    assert.equal(res10G.scenarioState.committedDirectGroups?.length, 1, 'Must restore Turn 1 committed group');
+    assert.equal(res10G.scenarioState.committedDirectGroups[0].id, 'grp-inv-turn1', 'Must be Turn 1 inventory group');
+    assert.equal(res10G.scenarioState.committedDirectGroups[0].totalDebit, 1000);
+
+    console.log('✓ 10G. Failed image validation on follow-up preserves Turn 1 committed groups verified');
+    passed++;
+  }
+
+  // 10H: Cumulative settlement validation across groups in same turn & no 0-capping
+  {
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Received supplier invoice for S$1,000 on credit.',
+      transactionTitle: 'Supplier Invoice',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-inv-10h',
+        transactionId: 'grp-inv-10h',
+        eventDate: '01/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Invoice for S$1,000',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }],
+      directGroups: [{
+        id: 'grp-inv-10h',
+        transactionId: 'grp-inv-10h',
+        eventDate: '01/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Invoice for S$1,000',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }]
+    };
+
+    // AI proposes two payment groups in the same turn: Payment 1 = 600, Payment 2 = 600 (Total 1,200 > 1,000)
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Payments',
+      directGroups: [
+        {
+          id: 'grp-pay-1',
+          targetTransactionId: 'grp-inv-10h',
+          eventDate: '05/03/2025',
+          title: 'Payment 1',
+          summary: 'Paid supplier S$600',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        },
+        {
+          id: 'grp-pay-2',
+          targetTransactionId: 'grp-inv-10h',
+          eventDate: '06/03/2025',
+          title: 'Payment 2',
+          summary: 'Paid supplier S$600 again',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        }
+      ]
+    });
+
+    const res10H = await processAccountingQuery(
+      'Paid supplier S$600 on 5 March and S$600 on 6 March by bank transfer.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10H.scenarioState.isComplete, false, 'Turn must be rejected due to cumulative over-settlement');
+    assert.ok(res10H.scenarioState.missingFields?.some(f => f.fieldKey === 'journalValidation' && (f.prompt.includes('exceeds the outstanding balance') || f.prompt.includes('SETTLEMENT_EXCEEDS_BALANCE'))), 'Must flag SETTLEMENT_EXCEEDS_BALANCE');
+    assert.equal(res10H.scenarioState.directGroups?.length, 1, 'Must preserve Turn 1 direct group');
+    assert.equal(res10H.scenarioState.committedDirectGroups?.length, 1, 'Must preserve Turn 1 committed group');
+    assert.equal(res10H.scenarioState.committedDirectGroups[0].id, 'grp-inv-10h');
+
+    // Also verify deriveAccountingStateFromEvents does not cap over-settlements at 0
+    const overSettleEvents = [
+      {
+        id: 'evt-inv',
+        transactionId: 'tx-inv-1',
+        type: 'initial_transaction',
+        description: 'Supplier Invoice',
+        amount: 1000,
+        currency: 'SGD',
+        affectedAccounts: ['Office Supplies', 'Trade Payables'],
+        eventDate: '01/03/2025',
+        journalLines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      },
+      {
+        id: 'evt-pay',
+        transactionId: 'tx-pay-1',
+        targetTransactionId: 'tx-inv-1',
+        type: 'settlement',
+        description: 'Over-settlement payment',
+        amount: 1200,
+        currency: 'SGD',
+        affectedAccounts: ['Trade Payables', 'Cash at Bank'],
+        eventDate: '05/03/2025',
+        journalLines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 1200, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 1200 }
+        ]
+      }
+    ];
+
+    const stateFromEvents = deriveAccountingStateFromEvents(overSettleEvents, 'SGD');
+    assert.equal(stateFromEvents.outstandingBalances.length, 1);
+    const payBal = stateFromEvents.outstandingBalances[0];
+    assert.equal(payBal.settledAmount, 1200, 'Settled amount must reflect actual 1200');
+    assert.equal(payBal.remainingAmount, -200, 'Remaining amount must be negative -200, not capped at 0');
+
+    console.log('✓ 10H. Cumulative settlement validation and uncapped over-settlement verified');
+    passed++;
+  }
+
+  // 10I: Multi-turn event-history synchronisation & revision identity
+  {
+    // Part 1: Turn 1 with actualEvents (S$1,000 Trade Payables); Turn 2 commits S$600 payment
+    const turn1Scenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Received supplier invoice for S$1,000 on credit.',
+      transactionTitle: 'Supplier Invoice',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [{
+        id: 'grp-inv-10i',
+        transactionId: 'grp-inv-10i',
+        eventDate: '01/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Invoice for S$1,000',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }],
+      directGroups: [{
+        id: 'grp-inv-10i',
+        transactionId: 'grp-inv-10i',
+        eventDate: '01/03/2025',
+        title: 'Supplier Invoice',
+        summary: 'Invoice for S$1,000',
+        lines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ],
+        totalDebit: 1000,
+        totalCredit: 1000,
+        isBalanced: true
+      }],
+      actualEvents: [{
+        id: 'evt-inv-10i',
+        transactionId: 'grp-inv-10i',
+        type: 'initial_transaction',
+        description: 'Supplier Invoice',
+        amount: 1000,
+        currency: 'SGD',
+        affectedAccounts: ['Office Supplies', 'Trade Payables'],
+        eventDate: '01/03/2025',
+        journalLines: [
+          { accountName: 'Office Supplies', category: 'EXPENSE', debit: 1000, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+        ]
+      }]
+    };
+
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Supplier Payment',
+      directGroups: [{
+        id: 'grp-pay-10i',
+        targetTransactionId: 'grp-inv-10i',
+        eventDate: '05/03/2025',
+        title: 'Supplier Settlement',
+        summary: 'Paid supplier S$600',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ],
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true
+      }]
+    });
+
+    const res10I1 = await processAccountingQuery(
+      'Paid supplier S$600 by bank transfer.',
+      turn1Scenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10I1.scenarioState.committedDirectGroups?.length, 2, 'Committed groups must have 2 entries');
+    const acctCtx10I1 = extractAccountingContext(res10I1.scenarioState);
+    assert.equal(acctCtx10I1.outstandingBalances.length, 1);
+    assert.equal(acctCtx10I1.outstandingBalances[0].remainingAmount, 400, 'Context balance must be S$400, not stale 1000');
+    assert.equal(res10I1.scenarioState.remainingBalances?.length, 1);
+    assert.equal(res10I1.scenarioState.remainingBalances[0].amount, 400);
+    assert.equal(res10I1.scenarioState.actualEvents?.length, 2, 'actualEvents must have 2 synchronized events');
+
+    // Part 2: Revision and subsequent settlement
+    // Turn 1: Invoice grp-inv-1 (S$1,000) and partial payment grp-pay-1 (S$600)
+    const turn1RevisionScenario = {
+      scenarioType: 'UNIVERSAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: 'Invoice S$1,000, paid S$600.',
+      transactionTitle: 'Invoice and Partial Payment',
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      isComplete: true,
+      committedDirectGroups: [
+        {
+          id: 'grp-inv-1',
+          transactionId: 'grp-inv-1',
+          eventDate: '01/03/2025',
+          title: 'Inventory Purchase',
+          summary: 'Purchased inventory',
+          lines: [
+            { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+          ],
+          totalDebit: 1000,
+          totalCredit: 1000,
+          isBalanced: true
+        },
+        {
+          id: 'grp-pay-1',
+          transactionId: 'grp-pay-1',
+          targetTransactionId: 'grp-inv-1',
+          eventDate: '05/03/2025',
+          title: 'Supplier Settlement',
+          summary: 'Partial payment',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        }
+      ],
+      directGroups: [
+        {
+          id: 'grp-inv-1',
+          transactionId: 'grp-inv-1',
+          eventDate: '01/03/2025',
+          title: 'Inventory Purchase',
+          summary: 'Purchased inventory',
+          lines: [
+            { accountName: 'Inventory', category: 'ASSET', debit: 1000, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1000 }
+          ],
+          totalDebit: 1000,
+          totalCredit: 1000,
+          isBalanced: true
+        },
+        {
+          id: 'grp-pay-1',
+          transactionId: 'grp-pay-1',
+          targetTransactionId: 'grp-inv-1',
+          eventDate: '05/03/2025',
+          title: 'Supplier Settlement',
+          summary: 'Partial payment',
+          lines: [
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+            { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+          ],
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true
+        }
+      ]
+    };
+
+    // Turn 2: Revise grp-inv-1 to S$1,200 with new id 'grp-inv-rev'
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Inventory Purchase Revision',
+      directGroups: [{
+        id: 'grp-inv-rev',
+        targetTransactionId: 'grp-inv-1',
+        eventDate: '01/03/2025',
+        title: 'Revised Inventory Purchase',
+        summary: 'Revised inventory purchase cost',
+        journalAction: 'revised',
+        totalDebit: 1200,
+        totalCredit: 1200,
+        isBalanced: true,
+        lines: [
+          { accountName: 'Inventory', category: 'ASSET', debit: 1200, credit: 0 },
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 1200 }
+        ]
+      }]
+    });
+
+    const res10I2 = await processAccountingQuery(
+      'Correction: the inventory purchase was actually S$1,200.',
+      turn1RevisionScenario,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10I2.scenarioState.committedDirectGroups?.length, 2);
+    const revisedGrp = res10I2.scenarioState.committedDirectGroups[0];
+    assert.equal(revisedGrp.id, 'grp-inv-1', 'Stable id must be preserved');
+    assert.equal(revisedGrp.transactionId, 'grp-inv-1', 'Stable transactionId must be preserved');
+    assert.equal(revisedGrp.revisedFromId, 'grp-inv-rev', 'revisedFromId must be grp-inv-rev');
+    assert.equal(revisedGrp.totalDebit, 1200);
+
+    const acctCtx10I2 = extractAccountingContext(res10I2.scenarioState);
+    assert.equal(acctCtx10I2.outstandingBalances.length, 1);
+    assert.equal(acctCtx10I2.outstandingBalances[0].remainingAmount, 600, 'Remaining balance must be S$1,200 - S$600 = S$600');
+    assert.equal(res10I2.scenarioState.remainingBalances?.[0]?.amount, 600);
+
+    // Turn 3: Settle the remaining S$600 referencing grp-inv-1
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Final Settlement',
+      directGroups: [{
+        id: 'grp-pay-final',
+        targetTransactionId: 'grp-inv-1',
+        eventDate: '10/03/2025',
+        title: 'Supplier Settlement',
+        summary: 'Final payment',
+        lines: [
+          { accountName: 'Trade Payables', category: 'LIABILITY', debit: 600, credit: 0 },
+          { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+        ],
+        totalDebit: 600,
+        totalCredit: 600,
+        isBalanced: true
+      }]
+    });
+
+    const res10I3 = await processAccountingQuery(
+      'Paid the remaining S$600 for the inventory purchase by bank transfer.',
+      res10I2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345'
+    );
+
+    assert.equal(res10I3.scenarioState.isComplete, true, 'Final settlement must be marked complete');
+    assert.equal(res10I3.scenarioState.remainingBalances, undefined, 'remainingBalances must be cleared to undefined');
+    const acctCtx10I3 = extractAccountingContext(res10I3.scenarioState);
+    assert.equal(acctCtx10I3.outstandingBalances[0].remainingAmount, 0, 'Remaining balance in context must be 0');
+
+    console.log('✓ 10I. Multi-turn event-history synchronisation & revision identity verified');
     passed++;
   }
 
