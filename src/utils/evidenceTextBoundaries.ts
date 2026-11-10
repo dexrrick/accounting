@@ -77,7 +77,7 @@ export function isEvidenceHeadingTransition(blocks: readonly string[], index: nu
     Boolean(blocks[index + 2] && hasClearSentenceEnd(blocks[index + 2]));
 }
 
-/** Returns a contiguous colon- or dash-introduced list and its attached qualifications. */
+/** Returns a contiguous heading-, colon- or dash-introduced list and its attached qualifications. */
 export function visibleEvidenceListSpan(
   blocks: readonly string[],
   introIndex: number
@@ -90,7 +90,14 @@ export function visibleEvidenceListSpan(
   if (!firstItemKind) return undefined;
   const hasColonIntroduction = /:$/.test(introduction);
   const hasDashIntroduction = /[—–-]$/.test(introduction);
-  if (firstItemKind === 'BULLET' ? !hasColonIntroduction : !hasColonIntroduction && !hasDashIntroduction) {
+  // Ordinary source headings often introduce a list without punctuation. Do
+  // not treat an earlier list item or extraction marker as such a heading;
+  // otherwise nested lists could be detached from their parent item.
+  const hasUnpunctuatedHeading = /^\p{L}/u.test(introduction) && !hasClearSentenceEnd(introduction) &&
+    !/[:;]$/.test(introduction) && !visibleListItemKind(introduction) && !isVisibleEvidenceListMarker(introduction);
+  if (firstItemKind === 'BULLET'
+    ? !hasColonIntroduction && !hasUnpunctuatedHeading
+    : !hasColonIntroduction && !hasDashIntroduction && !hasUnpunctuatedHeading) {
     return undefined;
   }
 
