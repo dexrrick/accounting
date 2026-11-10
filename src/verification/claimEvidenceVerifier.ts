@@ -956,6 +956,7 @@ function quoteIsWholeSourceSpan(
     }
   }
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
+    if (protectedListParagraphIndices.has(paragraphIndex)) continue;
     const paragraph = paragraphs[paragraphIndex];
     if (normalizeEvidenceText(paragraph) === normalizedQuote) {
       const nextParagraph = paragraphs[paragraphIndex + 1];
@@ -973,11 +974,20 @@ function quoteIsWholeSourceSpan(
       while (attachedEnd + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
         attachedEnd += 1;
       }
-      let attachedSpan = normalizeEvidenceText(paragraph);
-      for (let end = paragraphIndex + 1; end <= attachedEnd; end += 1) {
-        attachedSpan += ` ${normalizeEvidenceText(paragraphs[end])}`;
-        if (attachedSpan === normalizedQuote) {
-          return end === attachedEnd ? 'MATCH' : 'OMITS_ATTACHED_QUALIFICATION';
+      let overlapsProtectedList = false;
+      for (let index = paragraphIndex; index <= attachedEnd; index += 1) {
+        if (protectedListParagraphIndices.has(index)) {
+          overlapsProtectedList = true;
+          break;
+        }
+      }
+      if (!overlapsProtectedList) {
+        let attachedSpan = normalizeEvidenceText(paragraph);
+        for (let end = paragraphIndex + 1; end <= attachedEnd; end += 1) {
+          attachedSpan += ` ${normalizeEvidenceText(paragraphs[end])}`;
+          if (attachedSpan === normalizedQuote) {
+            return end === attachedEnd ? 'MATCH' : 'OMITS_ATTACHED_QUALIFICATION';
+          }
         }
       }
     }

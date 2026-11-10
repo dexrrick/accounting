@@ -450,6 +450,7 @@ assert.doesNotMatch(selectRelevantFetchedText(
   'required invoice supporting records'
 ), /first condition|required invoice|supporting records/,
 'A missing middle ordered condition leaves the entire marker run unselected after an unknown prose introduction.');
+
 const shortGappedNumberedSource = [
   independentGstRateParagraph,
   numberedIntroduction,
@@ -480,6 +481,113 @@ const shortGappedWhole = verifyEvidenceClaims([{
 }], [shortGappedRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' });
 assert.equal(shortGappedWhole.accepted.length, 0,
 'Literal verification does not certify the entire malformed ordered list as a complete list.');
+
+const qualifiedMalformedApplicantsList = [
+  'Applicants must meet all these requirements.',
+  '1. The applicant satisfies condition A.',
+  '3. The applicant satisfies condition C.',
+  'Unless the statutory exception applies.'
+].join('\n\n');
+const qualifiedMalformedApplicantsRecord = verifiedLocalRecord({
+  id: 'IRAS_GAPPED_APPLICANTS_LIST_WITH_EXCEPTION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, qualifiedMalformedApplicantsList);
+const qualifiedMalformedApplicantsScope = { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' };
+const lastMalformedApplicantItemAndException = [
+  '3. The applicant satisfies condition C.',
+  'Unless the statutory exception applies.'
+].join('\n\n');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: lastMalformedApplicantItemAndException, quote: lastMalformedApplicantItemAndException,
+  recordId: qualifiedMalformedApplicantsRecord.id
+}], [qualifiedMalformedApplicantsRecord], qualifiedMalformedApplicantsScope).accepted.length, 0,
+  'The last item and its attached exception cannot be quoted from a gapped numbered list.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: qualifiedMalformedApplicantsList, quote: qualifiedMalformedApplicantsList,
+  recordId: qualifiedMalformedApplicantsRecord.id
+}], [qualifiedMalformedApplicantsRecord], qualifiedMalformedApplicantsScope).accepted.length, 0,
+  'A malformed full numbered list with its attached exception is not certified as complete.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: '3. The applicant satisfies condition C.', quote: '3. The applicant satisfies condition C.',
+  recordId: qualifiedMalformedApplicantsRecord.id
+}], [qualifiedMalformedApplicantsRecord], qualifiedMalformedApplicantsScope).accepted.length, 0,
+  'An isolated item from the malformed numbered list remains rejected.');
+
+const precedingRuleBeforeQualifiedList = [
+  'The general statutory rule applies.',
+  'Unless the following requirements apply.',
+  '1. The applicant satisfies condition A.',
+  '2. The applicant satisfies condition B.'
+].join('\n\n');
+const precedingRuleBeforeQualifiedListRecord = verifiedLocalRecord({
+  id: 'IRAS_RULE_BEFORE_ATTACHED_LIST_QUALIFICATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, precedingRuleBeforeQualifiedList);
+const precedingRuleWithListIntroduction = [
+  'The general statutory rule applies.',
+  'Unless the following requirements apply.'
+].join('\n\n');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: precedingRuleWithListIntroduction, quote: precedingRuleWithListIntroduction,
+  recordId: precedingRuleBeforeQualifiedListRecord.id
+}], [precedingRuleBeforeQualifiedListRecord], qualifiedMalformedApplicantsScope).accepted.length, 0,
+  'A generic attached span cannot overlap a protected list introduction and omit its conditions.');
+
+const completeQualifiedApplicantsList = [
+  'Applicants must meet all these requirements.',
+  '1. The applicant satisfies condition A.',
+  '2. The applicant satisfies condition B.',
+  '3. The applicant satisfies condition C.',
+  'Unless the statutory exception applies.'
+].join('\n\n');
+const completeQualifiedApplicantsRecord = verifiedLocalRecord({
+  id: 'IRAS_COMPLETE_APPLICANTS_LIST_WITH_EXCEPTION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, completeQualifiedApplicantsList);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: completeQualifiedApplicantsList, quote: completeQualifiedApplicantsList,
+  recordId: completeQualifiedApplicantsRecord.id
+}], [completeQualifiedApplicantsRecord], qualifiedMalformedApplicantsScope).accepted.length, 1,
+  'A contiguous complete numbered list and attached exception remains accepted.');
+
+const independentQualifiedProse = [
+  'Childcare leave eligibility follows the ordinary service requirement.',
+  'Unless the employee falls within the stated exception.'
+].join('\n\n');
+const independentQualifiedProseRecord = verifiedLocalRecord({
+  id: 'IRAS_INDEPENDENT_QUALIFIED_PROSE',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, independentQualifiedProse);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: independentQualifiedProse, quote: independentQualifiedProse,
+  recordId: independentQualifiedProseRecord.id
+}], [independentQualifiedProseRecord], qualifiedMalformedApplicantsScope).accepted.length, 1,
+  'An independent prose paragraph with its attached qualification still verifies as a complete source span.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: 'Childcare leave eligibility follows the ordinary service requirement.',
+  quote: 'Childcare leave eligibility follows the ordinary service requirement.',
+  recordId: independentQualifiedProseRecord.id
+}], [independentQualifiedProseRecord], qualifiedMalformedApplicantsScope).accepted.length, 0,
+  'Independent qualified prose still rejects a quote that omits its qualification.');
+
+const childcareIntroduction = 'This section explains statutory rules. Childcare leave eligibility depends on these criteria.';
+const childcareEligibilityList = [
+  childcareIntroduction,
+  '• The employee has completed three months of service.',
+  '• The child is below seven years old.'
+].join('\n\n');
+const paddedChildcareEligibilityPage = childcareEligibilityList + '\n\n' +
+  Array.from({ length: 18 }, (_, index) => `Unrelated background information ${index} concerns other statutory rules.`).join('\n\n');
+const childcareQuerySelection = selectRelevantFetchedText(
+  paddedChildcareEligibilityPage, [], 260, 'Childcare leave eligibility depends on these criteria'
+);
+assert.ok(childcareQuerySelection.includes(childcareEligibilityList),
+  'Query relevance found only in the second introduction sentence keeps the entire list and context together.');
+const childcareTopicSelection = selectRelevantFetchedText(
+  paddedChildcareEligibilityPage, ['childcare leave eligibility'], 260
+);
+assert.ok(childcareTopicSelection.includes(childcareEligibilityList),
+  'Topic relevance found in a list introduction scores the whole atomic list unit.');
 
 const completeInputTaxConditions = [
   'Input tax requirements',

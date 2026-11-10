@@ -1444,17 +1444,18 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
     const first = sentenceRanges.get(textStart);
     const last = sentenceRanges.get(list.end);
     if (!first || !last) continue;
+    const listText = list.contextQuote || list.quote;
     units.push({
       id: units.length,
       startIndex: first.start,
       endIndex: last.end,
       startParagraph: textStart,
       endParagraph: list.end,
-      text: list.contextQuote || list.quote,
+      text: listText,
       atomic: true,
       contextParagraph: list.contextStart,
-      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0),
-      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0)
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(listText, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(listText, term) ? 1 : 0), 0)
     });
   }
   sentences.forEach((sentence, index) => {
