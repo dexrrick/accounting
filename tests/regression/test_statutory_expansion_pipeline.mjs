@@ -140,8 +140,16 @@ for (const example of examples) {
       subject: example.subject, officialUrl: example.url };
     assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: registeredRecord.sourceText }), true,
       'The registered MOM excerpt retains its complete rule proof.');
-    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), false,
-      'The truncated issue-scoped excerpt remains independently insufficient.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), true,
+      'The issue-scoped excerpt retains all rule proof after punctuation-independent list selection.');
+    const issueScopedWithoutOpportunity = scopedRecord.sourceText
+      .split(/\r?\n\s*\r?\n/)
+      .filter(block => !/\bopportunity to explain\b/i.test(block))
+      .join('\n\n');
+    assert.notEqual(issueScopedWithoutOpportunity, scopedRecord.sourceText,
+      'The insufficient-evidence control removes a source block containing a required condition.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: issueScopedWithoutOpportunity }), false,
+      'The issue-scoped excerpt becomes insufficient when its opportunity-to-explain condition is removed.');
     assert.equal(fetches.filter(url => url === example.url).length, 1,
       'Both topic scopes reuse one successful page fetch.');
     assert.ok(scopedRecord.tags?.some(tag => tag.startsWith('iras-authority-query-issue-mom-')));

@@ -7,7 +7,7 @@ import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriev
 import { SourceCache } from '../../src/retrieval/sourceCache.ts';
 import { renderIrasEvidenceResponse } from '../../src/services/irasEvidencePolicy.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
-import { splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../../src/utils/evidenceTextBoundaries.ts';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../../src/utils/evidenceTextBoundaries.ts';
 
 const sourceCases = [
   {
@@ -91,7 +91,6 @@ for (const sourceCase of sourceCases) {
   assert.equal(result.accepted.length, 1, sourceCase.id + ': complete paragraph survives HTML cleanup and passes strict evidence verification.');
   assert.equal(result.accepted[0].quote, sourceCase.quote);
 }
-
 const unrelatedParagraphs = Array.from({ length: 12 }, (_, index) =>
   '<p>Unrelated filing detail ' + index + ' has no bearing on vehicle eligibility.</p>').join('');
 const separatedHtml = '<main><p>Motor vehicle input tax may be restricted.</p>' + unrelatedParagraphs +
@@ -128,6 +127,50 @@ assert.equal(disconnectedQuote.accepted.length, 0,
   'A claim that joins separated HTML excerpts still fails strict source-span verification.');
 assert.equal(disconnectedQuote.rejected[0].reason, 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH');
 
+const proseBeforeSingleList = 'Input tax eligibility depends on the purpose of the purchase.' +
+  '\n\n• A separate restriction applies to the listed category.';
+const proseBeforeSingleListRecord = verifiedLocalRecord({
+  id: 'IRAS_SINGLE_LIST_AFTER_PROSE',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, proseBeforeSingleList);
+const completeSingleListClaim = {
+  kind: 'RULE', text: proseBeforeSingleList, quote: proseBeforeSingleList,
+  recordId: proseBeforeSingleListRecord.id
+};
+const singleListScope = { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' };
+assert.equal(verifyEvidenceClaims([completeSingleListClaim], [proseBeforeSingleListRecord], singleListScope).accepted.length, 1,
+  'The strict verifier accepts a full source span containing one bullet and its introduction.');
+const proseBeforeSingleListPage = proseBeforeSingleList + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  proseBeforeSingleListPage, ['input tax eligibility', 'separate restriction'], 220, 'input tax eligibility restriction'
+).includes(proseBeforeSingleList),
+  'The selector retains the full one-bullet source span when a padded page exceeds the excerpt budget.');
+const truncatedSingleListQuote = '• A separate restriction applies to the listed category.';
+const rejectedSingleListQuote = verifyEvidenceClaims([{
+  kind: 'RULE', text: truncatedSingleListQuote, quote: truncatedSingleListQuote,
+  recordId: proseBeforeSingleListRecord.id
+}], [proseBeforeSingleListRecord], singleListScope);
+assert.equal(rejectedSingleListQuote.accepted.length, 0,
+  'A single bullet introduced by prose is still protected against item-only quotation.');
+assert.equal(rejectedSingleListQuote.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
+const singleOrderedListWithQualification = [
+  'Input tax qualification applies.',
+  '1. You hold the required invoice.',
+  'Unless a separate statutory restriction applies.'
+].join('\n\n');
+const singleOrderedListPage = singleOrderedListWithQualification + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  singleOrderedListPage, ['required invoice'], 500, 'required invoice'
+).includes(singleOrderedListWithQualification),
+  'A single ordered item remains complete with its attached qualification.');
+assert.equal(completeVisibleEvidenceListSpan(splitEvidenceTextBlocks([
+  'The following condition applies.',
+  '2. The condition must be met.'
+].join('\n\n')), 0), undefined,
+  'A one-item ordered list starting at ordinal two remains incomplete.');
+
 const completeInputTaxConditions = [
   'Input tax requirements',
   '• The purchase is made for a real business purpose and supports the input tax claim.',
@@ -149,6 +192,16 @@ assert.match(selectedCompleteList, /• You hold/,
   'Relevance selection keeps an unnumbered middle bullet and its second sentence when it selects a list.');
 assert.ok(selectedCompleteList.includes(completeInputTaxConditions),
   'An unpunctuated heading keeps the full multi-sentence condition and attached qualification as one source unit.');
+const periodEndedInputTaxConditions = completeInputTaxConditions.replace(
+  'Input tax requirements', 'The following conditions must all be satisfied.'
+);
+const periodEndedInputTaxPage = periodEndedInputTaxConditions + '\n\n' + Array.from({ length: 12 }, (_, index) =>
+  `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  periodEndedInputTaxPage, ['input tax claim', 'invoice or import permit'], 650,
+  'input tax claim invoice or import permit'
+).includes(periodEndedInputTaxConditions),
+  'A period-ended introduction retains the full bullet list and attached qualification within budget.');
 const lowerCaseInputTaxConditions = completeInputTaxConditions.replace('Input tax requirements', 'input tax requirements');
 const lowerCaseInputTaxPage = lowerCaseInputTaxConditions + '\n\n' + Array.from({ length: 12 }, (_, index) =>
   `Background registration note ${index} contains unrelated information.`).join('\n\n');
@@ -189,6 +242,24 @@ const rejectedOmittedHeadingList = verifyEvidenceClaims([omittedHeadingListClaim
 assert.equal(rejectedOmittedHeadingList.accepted.length, 0,
   'The verifier rejects a single condition quoted from a list under an unpunctuated heading.');
 assert.equal(rejectedOmittedHeadingList.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
+const periodEndedListRecord = verifiedLocalRecord({
+  id: 'IRAS_INPUT_TAX_PERIOD_ENDED_LIST',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, periodEndedInputTaxConditions);
+const periodEndedListClaim = {
+  kind: 'RULE', text: periodEndedInputTaxConditions, quote: periodEndedInputTaxConditions,
+  recordId: periodEndedListRecord.id
+};
+const periodEndedListScope = { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' };
+assert.equal(verifyEvidenceClaims([periodEndedListClaim], [periodEndedListRecord], periodEndedListScope).accepted.length, 1,
+  'The strict verifier accepts the complete list after a period-ended introduction.');
+const periodEndedPartialQuote = '• The purchase is made for a real business purpose and supports the input tax claim.';
+const rejectedPeriodEndedPartialList = verifyEvidenceClaims([{
+  ...periodEndedListClaim, text: periodEndedPartialQuote, quote: periodEndedPartialQuote
+}], [periodEndedListRecord], periodEndedListScope);
+assert.equal(rejectedPeriodEndedPartialList.accepted.length, 0,
+  'The strict verifier rejects a single condition from the list after a period-ended introduction.');
+assert.equal(rejectedPeriodEndedPartialList.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
 
 const completeNumberedHeadingList = [
   'input tax requirements',
@@ -215,12 +286,52 @@ const selectedMalformedNumberedHeadingList = selectRelevantFetchedText(
 );
 assert.doesNotMatch(selectedMalformedNumberedHeadingList, /The purchase must support|You must hold/,
   'An unpunctuated heading does not make an incomplete numbered list safe to select.');
+const periodEndedNumberedList = completeNumberedHeadingList.replace(
+  'input tax requirements', 'The following conditions must all be satisfied.'
+);
+const periodEndedNumberedPage = periodEndedNumberedList + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  periodEndedNumberedPage, ['invoice or import permit'], 500, 'input tax invoice or import permit'
+).includes(periodEndedNumberedList),
+  'A period-ended introduction retains a complete ordered list.');
+const periodEndedMalformedNumberedList = malformedNumberedHeadingList.replace(
+  'input tax requirements', 'The following conditions must all be satisfied.'
+);
+const periodEndedMalformedNumberedPage = periodEndedMalformedNumberedList + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.doesNotMatch(selectRelevantFetchedText(
+  periodEndedMalformedNumberedPage, ['invoice or import permit'], 500, 'input tax invoice or import permit'
+), /The purchase must support|You must hold/,
+  'A period-ended introduction does not make a gapped ordered list complete.');
 assert.equal(visibleEvidenceListSpan(splitEvidenceTextBlocks([
   '• Parent requirement without punctuation',
   '• First nested condition',
   '• Second nested condition'
 ].join('\n\n')), 0), undefined,
   'A preceding bullet item is not reinterpreted as an unpunctuated list heading.');
+const colonItemIntroducedNestedList = [
+  '• For invoices:',
+  '◦ You hold the required invoice or import permit.',
+  '◦ You retain the supporting records.'
+].join('\n\n');
+const colonItemIntroducedNestedPage = colonItemIntroducedNestedList + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  colonItemIntroducedNestedPage, ['required invoice'], 500, 'required invoice'
+).includes(colonItemIntroducedNestedList),
+  'A colon-ended list item still introduces and preserves its complete nested list.');
+const oversizedColonItemIntroducedList = [
+  '• For invoices:',
+  '◦ You hold ' + 'the required invoice and supporting details '.repeat(24) + '.',
+  '◦ You retain the supporting records.'
+].join('\n\n');
+const oversizedColonItemIntroducedPage = oversizedColonItemIntroducedList + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+assert.doesNotMatch(selectRelevantFetchedText(
+  oversizedColonItemIntroducedPage, ['required invoice'], 220, 'required invoice'
+), /For invoices:|You hold|supporting records/,
+  'An oversized nested list introduced by a colon-ended list item is withheld as a whole.');
 
 const nestedInputTaxBlocks = [
   'input tax requirements',
@@ -241,6 +352,24 @@ const nestedOverBudget = selectRelevantFetchedText(
 assert.doesNotMatch(nestedOverBudget,
   /For invoices:|You hold the required invoice|supporting documentation|goods must support taxable supplies|Unless a separate statutory restriction applies/,
   'When an enclosing lowercase-heading list is over budget, nested invoice fragments, later conditions and the attached qualification are withheld too.');
+const periodEndedNestedInputTaxBlocks = [...nestedInputTaxBlocks];
+periodEndedNestedInputTaxBlocks[0] = 'The following conditions must all be satisfied.';
+const periodEndedNestedInputTaxList = periodEndedNestedInputTaxBlocks.join('\n\n');
+const periodEndedNestedInputTaxPage = periodEndedNestedInputTaxList + '\n\n' +
+  Array.from({ length: 100 }, () => 'Unrelated filing detail.').join('\n\n');
+const periodEndedNestedOverBudget = selectRelevantFetchedText(
+  periodEndedNestedInputTaxPage, nestedInputTaxTerms, 220, 'required invoice'
+);
+assert.doesNotMatch(periodEndedNestedOverBudget,
+  /For invoices:|You hold the required invoice|supporting documentation|goods must support taxable supplies|Unless a separate statutory restriction applies/,
+  'An over-budget list after a period-ended introduction is withheld with its qualification.');
+const periodEndedPartialPreferred = selectRelevantFetchedText(
+  periodEndedNestedInputTaxPage, nestedInputTaxTerms, 220, 'required invoice',
+  [periodEndedNestedInputTaxBlocks[0]]
+);
+assert.doesNotMatch(periodEndedPartialPreferred,
+  /The following conditions|For invoices:|You hold the required invoice|Unless a separate statutory restriction applies/,
+  'A preferred introduction cannot split an over-budget period-ended list.');
 
 const nestedInnerPreferred = nestedInputTaxBlocks.slice(2).join('\n\n');
 const nestedUnderBudget = selectRelevantFetchedText(
@@ -278,7 +407,10 @@ const noLocalInputTaxEvidence = {
   getSourceById: id => defaultSourceRetriever.getSourceById(id),
   findSourcesByStandardOrAct: (...args) => defaultSourceRetriever.findSourcesByStandardOrAct(...args)
 };
-for (const heading of ['Input tax requirements', 'input tax requirements', 'Conditions for claiming input tax are:']) {
+for (const heading of [
+  'Input tax requirements', 'input tax requirements', 'The following conditions must all be satisfied.',
+  'Conditions for claiming input tax are:'
+]) {
   const conditionHtml = '<html><head><title>Conditions for Claiming Input Tax</title></head><body><main>' +
     '<h1>Conditions for Claiming Input Tax</h1>' +
     '<p>When purchasing from GST-registered suppliers or importing goods into Singapore, a business may incur input tax.</p>' +

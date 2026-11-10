@@ -77,7 +77,7 @@ export function isEvidenceHeadingTransition(blocks: readonly string[], index: nu
     Boolean(blocks[index + 2] && hasClearSentenceEnd(blocks[index + 2]));
 }
 
-/** Returns a contiguous heading-, colon- or dash-introduced list and its attached qualifications. */
+/** Returns a contiguous introduction with its list and attached qualifications. */
 export function visibleEvidenceListSpan(
   blocks: readonly string[],
   introIndex: number
@@ -88,17 +88,18 @@ export function visibleEvidenceListSpan(
   while (firstItemIndex < blocks.length && isVisibleEvidenceListMarker(blocks[firstItemIndex])) firstItemIndex += 1;
   const firstItemKind = blocks[firstItemIndex] ? visibleListItemKind(blocks[firstItemIndex]) : undefined;
   if (!firstItemKind) return undefined;
-  const hasColonIntroduction = /:$/.test(introduction);
-  const hasDashIntroduction = /[—–-]$/.test(introduction);
-  // Ordinary source headings often introduce a list without punctuation. Do
-  // not treat an earlier list item or extraction marker as such a heading;
-  // otherwise nested lists could be detached from their parent item.
-  const hasUnpunctuatedHeading = /^\p{L}/u.test(introduction) && !hasClearSentenceEnd(introduction) &&
-    !/[:;]$/.test(introduction) && !visibleListItemKind(introduction) && !isVisibleEvidenceListMarker(introduction);
-  if (firstItemKind === 'BULLET'
-    ? !hasColonIntroduction && !hasUnpunctuatedHeading
-    : !hasColonIntroduction && !hasDashIntroduction && !hasUnpunctuatedHeading) {
-    return undefined;
+  // Ordinary introductions need no fixed punctuation. For an introduction
+  // that is itself a list item, keep the existing punctuation boundary used
+  // for nested lists; marker-only extraction blocks are never introductions.
+  if (isVisibleEvidenceListMarker(introduction)) return undefined;
+  if (visibleListItemKind(introduction)) {
+    const hasColonIntroduction = /:$/.test(introduction);
+    const hasDashIntroduction = /[—–-]$/.test(introduction);
+    if (firstItemKind === 'BULLET'
+      ? !hasColonIntroduction
+      : !hasColonIntroduction && !hasDashIntroduction) {
+      return undefined;
+    }
   }
 
   let listEndIndex = introIndex;
@@ -151,7 +152,7 @@ export function completeVisibleEvidenceListSpan(
   introIndex: number
 ): CompleteVisibleEvidenceListSpan | undefined {
   const span = visibleEvidenceListSpan(blocks, introIndex);
-  if (!span || span.itemCount < 2) return undefined;
+  if (!span) return undefined;
 
   const listBlockEndOffset = span.listEndIndex - span.startIndex;
   const listBlocks = span.blocks.slice(1, listBlockEndOffset + 1);
