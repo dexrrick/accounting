@@ -140,10 +140,18 @@ for (const example of examples) {
       subject: example.subject, officialUrl: example.url };
     assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: registeredRecord.sourceText }), true,
       'The registered MOM excerpt retains its complete rule proof.');
-    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), false,
-      'The issue-scoped excerpt lacks the revocable written-consent exception required for a complete rule conclusion.');
-    assert.doesNotMatch(scopedRecord.sourceText, /withdraw your written consent at any time/i,
-      'The issue-scoped excerpt does not include the source qualification permitting consent withdrawal.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), true,
+      'The issue-scoped excerpt contains the complete deduction rule and its revocable written-consent exception.');
+    assert.match(scopedRecord.sourceText, /withdraw your written consent at any time/i,
+      'The issue-scoped excerpt includes the source qualification permitting consent withdrawal.');
+    const scopedWithoutConsentWithdrawal = scopedRecord.sourceText
+      .split(/\r?\n\s*\r?\n/)
+      .filter(block => !/withdraw your written consent at any time/i.test(block))
+      .join('\n\n');
+    assert.notEqual(scopedWithoutConsentWithdrawal, scopedRecord.sourceText,
+      'The negative scoped control removes the source block containing the consent-withdrawal qualification.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedWithoutConsentWithdrawal }), false,
+      'The scoped MOM rule no longer passes when its consent-withdrawal exception is removed.');
     const registeredWithoutOpportunity = registeredRecord.sourceText
       .split(/\r?\n\s*\r?\n/)
       .filter(block => !/\bopportunity to explain\b/i.test(block))

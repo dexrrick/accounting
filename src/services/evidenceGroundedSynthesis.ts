@@ -326,7 +326,7 @@ function completeNarrativeDocumentQuotes(sourceText: string): string[] {
     const visibleList = visibleEvidenceListSpan(blocks, index);
     if (visibleList) {
       const completeList = completeVisibleEvidenceListSpan(blocks, index);
-      if (completeList) result.push({ start: index, quote: completeList.quote });
+      if (completeList) result.push({ start: index, quote: completeList.contextQuote || completeList.quote });
       index = visibleList.endIndex + 1;
       continue;
     }

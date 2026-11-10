@@ -2103,7 +2103,7 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
             !recordMatchesGovernorAndDomain(record, topicAuthority, topic)) continue;
         for (let blockIndex = 0; blockIndex < sourceBlocks.length; blockIndex += 1) {
           const completeList = completeVisibleEvidenceListSpan(sourceBlocks, blockIndex);
-          if (completeList) quoteCandidates.push(completeList.quote);
+          if (completeList) quoteCandidates.push(completeList.contextQuote || completeList.quote);
         }
         const request = {
           authority: topicAuthority, topicId: topic.id,

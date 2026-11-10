@@ -922,7 +922,7 @@ function quoteIsWholeSourceSpan(
   if (isIncompleteColonEndedQuote(normalizedQuote)) return 'OMITS_ATTACHED_QUALIFICATION';
 
   const protectedListParagraphIndices = new Set<number>();
-  for (let introIndex = 0; introIndex + 1 < paragraphs.length; introIndex += 1) {
+  for (let introIndex = 0; introIndex < paragraphs.length; introIndex += 1) {
     const visibleList = visibleEvidenceListSpan(paragraphs, introIndex);
     if (!visibleList) continue;
     for (let index = visibleList.startIndex; index <= visibleList.endIndex; index += 1) {
@@ -930,7 +930,7 @@ function quoteIsWholeSourceSpan(
     }
     const completeList = completeVisibleEvidenceListSpan(paragraphs, introIndex);
     if (!completeList) continue;
-    const completeNormalized = normalizeEvidenceText(completeList.quote);
+    const completeNormalized = normalizeEvidenceText(completeList.contextQuote || completeList.quote);
     if (normalizedQuote === completeNormalized) {
       return completeListScope && record.authority === completeListScope.authority && record.domain === completeListScope.domain
         ? 'MATCH' : 'NO_MATCH';

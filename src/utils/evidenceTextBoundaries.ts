@@ -3,9 +3,13 @@ const STRONG_ATTACHED_QUALIFICATION_START = /^(?:however\b|except\b|provided\b|u
 
 export interface VisibleEvidenceListSpan {
   startIndex: number;
+  listStartIndex: number;
+  contextStartIndex?: number;
+  contextQuote?: string;
   listEndIndex: number;
   endIndex: number;
   itemCount: number;
+  tableContinuation?: boolean;
   blocks: string[];
   quote: string;
 }
@@ -62,6 +66,35 @@ function visibleListItemKind(value: string): VisibleListItemKind | undefined {
   return visibleOrderedListMarker(value)?.kind;
 }
 
+function isStructuralEvidenceDivider(value: string): boolean {
+  const block = value.trim();
+  return /^(?:[-–—_]{3,}|(?:\*\s*){3,})$/u.test(block) ||
+    /^\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?$/u.test(block);
+}
+
+function orderedMarkerInPipeDelimitedRow(value: string): VisibleOrderedListMarker | undefined {
+  if (!value.includes('|')) return undefined;
+  for (const cell of value.split('|')) {
+    const marker = visibleOrderedListMarker(cell);
+    if (marker) return marker;
+  }
+  return undefined;
+}
+
+function pipeTableContinuation(blocks: readonly string[], index: number): {
+  rowIndex: number;
+  firstMarker: VisibleOrderedListMarker;
+} | undefined {
+  const marker = visibleOrderedListMarker(blocks[index]);
+  if (!marker || marker.ordinal < 2) return undefined;
+  let previous = index - 1;
+  while (previous >= 0 && isStructuralEvidenceDivider(blocks[previous])) previous -= 1;
+  if (previous < 0) return undefined;
+  const firstMarker = orderedMarkerInPipeDelimitedRow(blocks[previous]);
+  if (!firstMarker || firstMarker.kind !== marker.kind) return undefined;
+  return { rowIndex: previous, firstMarker };
+}
+
 function hasClearSentenceEnd(value: string): boolean {
   return /[.!?]["'’”)\]]*$/u.test(value.trim());
 }
@@ -84,39 +117,49 @@ export function visibleEvidenceListSpan(
 ): VisibleEvidenceListSpan | undefined {
   const introduction = blocks[introIndex]?.trim();
   if (!introduction) return undefined;
-  let firstItemIndex = introIndex + 1;
-  while (firstItemIndex < blocks.length && isVisibleEvidenceListMarker(blocks[firstItemIndex])) firstItemIndex += 1;
-  const firstItemKind = blocks[firstItemIndex] ? visibleListItemKind(blocks[firstItemIndex]) : undefined;
-  if (!firstItemKind) return undefined;
+  const introductionIsListItem = Boolean(visibleListItemKind(introduction));
   const hasColonIntroduction = /:$/.test(introduction);
   const hasDashIntroduction = /[—–-]$/.test(introduction);
+  const isListItemIntroduction = introductionIsListItem && (hasColonIntroduction || hasDashIntroduction);
+  const tableContinuation = introductionIsListItem ? pipeTableContinuation(blocks, introIndex) : undefined;
+  // A visible marker run defines its own boundary. Do not depend on the prose
+  // immediately before it to decide whether the items form a complete list:
+  // that prose may be an ordinary fact followed by unrelated bullets.
+  if (introductionIsListItem && introIndex > 0 && visibleListItemKind(blocks[introIndex - 1])) return undefined;
+  let firstItemIndex = introIndex + 1;
+  if (tableContinuation) firstItemIndex = tableContinuation.rowIndex;
+  else if (introductionIsListItem && !isListItemIntroduction) firstItemIndex = introIndex;
+  else while (firstItemIndex < blocks.length && isVisibleEvidenceListMarker(blocks[firstItemIndex])) firstItemIndex += 1;
+  const firstItemKind = tableContinuation
+    ? tableContinuation.firstMarker.kind
+    : introductionIsListItem
+    ? visibleListItemKind(introduction)
+    : blocks[firstItemIndex] ? visibleListItemKind(blocks[firstItemIndex]) : undefined;
+  if (!firstItemKind) return undefined;
   const isExplicitForwardListReference =
     /\bthe following\s+(?:\d+\s+)?(?:conditions?|requirements?|criteria|items?|steps?|points?|qualifications?|details?|examples?|documents?|factors?|options?)\b/i.test(introduction) ||
     /\b(?:as follows|listed below|set out below|shown below)[.!?:;]*$/i.test(introduction);
-  const isBoundedUnpunctuatedHeading = /^\p{L}/u.test(introduction) &&
-    introduction.length <= 160 && introduction.split(/\s+/).length <= 24 &&
-    !hasClearSentenceEnd(introduction) && !/[:;]/.test(introduction) && !hasDashIntroduction;
-  // Recognized headings and forward references may introduce lists without
-  // punctuation. List-item introductions keep their existing boundary, and
-  // marker-only extraction blocks are never introductions.
+  // A preceding sentence may be kept as separate context. Only punctuation
+  // or an explicit forward reference binds it to the marker run. Unpunctuated
+  // prose remains independently selectable; the marker run has its own span.
   if (isVisibleEvidenceListMarker(introduction)) return undefined;
-  if (visibleListItemKind(introduction)) {
-    if (firstItemKind === 'BULLET'
-      ? !hasColonIntroduction
-      : !hasColonIntroduction && !hasDashIntroduction) {
-      return undefined;
-    }
-  } else {
+  if (!introductionIsListItem) {
     const hasPunctuatedIntroduction = hasColonIntroduction || hasDashIntroduction;
-    if (!hasPunctuatedIntroduction && !isExplicitForwardListReference && !isBoundedUnpunctuatedHeading) {
+    if (!hasPunctuatedIntroduction && !isExplicitForwardListReference) {
       return undefined;
     }
   }
 
-  let listEndIndex = introIndex;
-  let itemCount = 0;
-  let nextIndex = introIndex + 1;
+  let listEndIndex = tableContinuation
+    ? firstItemIndex
+    : introductionIsListItem && !isListItemIntroduction ? introIndex - 1 : introIndex;
+  let itemCount = tableContinuation ? 1 : 0;
+  let nextIndex = tableContinuation ? firstItemIndex + 1 : firstItemIndex;
   while (nextIndex < blocks.length) {
+    if (tableContinuation && isStructuralEvidenceDivider(blocks[nextIndex])) {
+      nextIndex += 1;
+      continue;
+    }
     const itemKind = visibleListItemKind(blocks[nextIndex]);
     if (itemKind) {
       listEndIndex = nextIndex;
@@ -146,12 +189,26 @@ export function visibleEvidenceListSpan(
     endIndex = nextIndex;
     qualificationContinuation = !hasClearSentenceEnd(nextBlock);
   }
-  const spanBlocks = blocks.slice(introIndex, endIndex + 1).map(block => block.trim());
+  const spanStartIndex = tableContinuation
+    ? tableContinuation.rowIndex
+    : introductionIsListItem && !isListItemIntroduction ? firstItemIndex : introIndex;
+  const spanBlocks = blocks.slice(spanStartIndex, endIndex + 1).map(block => block.trim());
+  let contextStartIndex = spanStartIndex - 1;
+  while (contextStartIndex >= 0 && (isVisibleEvidenceListMarker(blocks[contextStartIndex]) ||
+      isStructuralEvidenceDivider(blocks[contextStartIndex]))) contextStartIndex -= 1;
+  const contextBlocks = blocks.slice(contextStartIndex, spanStartIndex).map(block => block.trim()).filter(Boolean);
+  const requiresPrecedingContext = introductionIsListItem || spanStartIndex < introIndex;
   return {
-    startIndex: introIndex,
+    startIndex: spanStartIndex,
+    listStartIndex: tableContinuation ? tableContinuation.rowIndex : firstItemIndex,
+    ...(requiresPrecedingContext && contextBlocks.length > 0 &&
+      !visibleListItemKind(blocks[contextStartIndex])
+      ? { contextStartIndex, contextQuote: `${contextBlocks.join('\n\n')}\n\n${spanBlocks.join('\n\n')}` }
+      : {}),
     listEndIndex,
     endIndex,
     itemCount,
+    ...(tableContinuation ? { tableContinuation: true } : {}),
     blocks: spanBlocks,
     quote: spanBlocks.join('\n\n')
   };
@@ -165,21 +222,26 @@ export function completeVisibleEvidenceListSpan(
   const span = visibleEvidenceListSpan(blocks, introIndex);
   if (!span) return undefined;
 
+  const listStartOffset = span.listStartIndex - span.startIndex;
   const listBlockEndOffset = span.listEndIndex - span.startIndex;
-  const listBlocks = span.blocks.slice(1, listBlockEndOffset + 1);
+  const listBlocks = span.blocks.slice(listStartOffset, listBlockEndOffset + 1);
   const attachedQualifications = span.blocks.slice(listBlockEndOffset + 1);
   if (attachedQualifications.length > 0 &&
       !hasClearSentenceEnd(attachedQualifications[attachedQualifications.length - 1])) return undefined;
-  const orderedMarkers = listBlocks.map(visibleOrderedListMarker).filter(
-    (marker): marker is VisibleOrderedListMarker => marker !== undefined
-  );
+  const orderedMarkers = (span.tableContinuation
+    ? listBlocks.map((block, index) => index === 0
+      ? orderedMarkerInPipeDelimitedRow(block) : visibleOrderedListMarker(block))
+    : listBlocks.map(visibleOrderedListMarker)
+  ).filter((marker): marker is VisibleOrderedListMarker => marker !== undefined);
   if (orderedMarkers.length === 0) {
     const bulletCount = listBlocks.filter(isVisibleEvidenceListItem).length;
     return bulletCount === span.itemCount ? span : undefined;
   }
 
   if (orderedMarkers.length !== span.itemCount ||
-      listBlocks.some(block => isVisibleEvidenceListItem(block) || isVisibleEvidenceListMarker(block))) {
+      listBlocks.some(block => !isStructuralEvidenceDivider(block) &&
+        (isVisibleEvidenceListItem(block) || isVisibleEvidenceListMarker(block) ||
+          (span.tableContinuation && !visibleOrderedListMarker(block) && !orderedMarkerInPipeDelimitedRow(block))))) {
     return undefined;
   }
   const first = orderedMarkers[0];
@@ -187,6 +249,7 @@ export function completeVisibleEvidenceListSpan(
       orderedMarkers.some((marker, index) => marker.kind !== first.kind || marker.ordinal !== index + 1)) {
     return undefined;
   }
+  if (span.tableContinuation) return span;
   const lastListBlock = listBlocks[listBlocks.length - 1];
   return lastListBlock && hasClearSentenceEnd(lastListBlock) ? span : undefined;
 }

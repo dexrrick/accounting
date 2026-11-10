@@ -201,6 +201,286 @@ assert.equal(completeVisibleEvidenceListSpan(splitEvidenceTextBlocks([
 ].join('\n\n')), 0), undefined,
   'A one-item ordered list starting at ordinal two remains incomplete.');
 
+const mandatoryListIntroductions = [
+  'The following conditions must all be satisfied.',
+  'Applicants must meet all these requirements.',
+  'Applicants must satisfy the conditions below.',
+  'Eligibility requires satisfying all conditions described here.'
+];
+for (const [index, introduction] of mandatoryListIntroductions.entries()) {
+  const list = [
+    introduction,
+    '• The applicant must satisfy the first eligibility condition.',
+    '• The second condition is a material exclusion. ' + 'Supporting scope text. '.repeat(24).trimEnd(),
+    '• The applicant must hold the required invoice.',
+    'Unless the separate statutory exception applies.'
+  ].join('\n\n');
+  const page = list + '\n\n' + Array.from({ length: 20 }, (_, detail) =>
+    `Unrelated background detail ${detail} does not describe eligibility.`).join('\n\n');
+  const selected = selectRelevantFetchedText(page, ['required invoice'], 220, 'required invoice');
+  assert.doesNotMatch(selected,
+    /first eligibility condition|material exclusion|required invoice|statutory exception applies/,
+    `An oversized marker-rooted list is withheld intact after introduction ${index + 1}.`);
+  const withinBudget = selectRelevantFetchedText(page, ['required invoice'], 1_200, 'required invoice');
+  assert.ok(withinBudget.includes(list),
+    `An under-budget marker-rooted list stays together with its complete introduction and exception ${index + 1}.`);
+
+  const record = verifiedLocalRecord({
+    id: `IRAS_GENERIC_INTRO_LIST_${index}`,
+    url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+  }, list);
+  assert.equal(verifyEvidenceClaims([{
+    kind: 'RULE', text: list, quote: list, recordId: record.id
+  }], [record], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 1,
+  `A complete marker-rooted list verifies literally after introduction ${index + 1}.`);
+  const partialQuote = '• The applicant must hold the required invoice.';
+  const partial = verifyEvidenceClaims([{
+    kind: 'RULE', text: partialQuote, quote: partialQuote, recordId: record.id
+  }], [record], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' });
+  assert.equal(partial.accepted.length, 0,
+    `A single condition cannot verify as a complete list after introduction ${index + 1}.`);
+  assert.equal(partial.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
+  const bareList = list.split('\n\n').slice(1).join('\n\n');
+  const missingIntroduction = verifyEvidenceClaims([{
+    kind: 'RULE', text: bareList, quote: bareList, recordId: record.id
+  }], [record], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' });
+  assert.equal(missingIntroduction.accepted.length, 0,
+    `The full condition list alone cannot drop its immediately preceding source qualification ${index + 1}.`);
+}
+
+const unpunctuatedFactualText = 'The GST rate applies to taxable supplies made by a GST-registered business';
+const unpunctuatedFactualPage = unpunctuatedFactualText + '\n\n' + unrelatedGlossaryBullet + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Unrelated registration note ${index}.`).join('\n\n');
+const selectedUnpunctuatedFactual = selectRelevantFetchedText(
+  unpunctuatedFactualPage, ['GST rate'], 160, 'GST rate'
+);
+assert.ok(selectedUnpunctuatedFactual.includes(unpunctuatedFactualText),
+  'A standalone factual paragraph without terminal punctuation remains selectable before an unrelated bullet.');
+const unpunctuatedFactualRecord = verifiedLocalRecord({
+  id: 'IRAS_INDEPENDENT_GST_RATE_WITHOUT_PUNCTUATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, unpunctuatedFactualPage);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: unpunctuatedFactualText, quote: unpunctuatedFactualText,
+  recordId: unpunctuatedFactualRecord.id
+}], [unpunctuatedFactualRecord], { missingFacts: [] }).accepted.length, 1,
+  'Literal claim verification accepts a standalone factual paragraph without punctuation before a glossary bullet.');
+const shortUnpunctuatedFact = 'GST rate applies to taxable supplies';
+const shortFactWithNavigation = [
+  shortUnpunctuatedFact,
+  '• Glossary label: unrelated term.',
+  '• Navigation item: see another page.'
+].join('\n\n');
+assert.ok(selectRelevantFetchedText(shortFactWithNavigation + '\n\n' +
+  Array.from({ length: 15 }, (_, index) => `Unrelated page detail ${index}.`).join('\n\n'),
+['GST rate'], 100, 'GST rate').includes(shortUnpunctuatedFact),
+'A short standalone fact remains independently selectable before multiple unrelated bullets.');
+
+const tableContinuation = [
+  'For recipients below age 55 | (a) Top-up to Special Account under the RSTU scheme',
+  '* * *',
+  '(b) Top-up to MediSave Account under the relevant scheme'
+].join('\n\n');
+const tableContinuationBlocks = splitEvidenceTextBlocks(tableContinuation);
+const completeTableContinuation = completeVisibleEvidenceListSpan(tableContinuationBlocks, 2);
+assert.equal(completeTableContinuation?.tableContinuation, true,
+  'A lettered table continuation is joined to its preceding same-kind ordinal cell.');
+const tableContinuationPage = tableContinuation + '\n\n' +
+  Array.from({ length: 20 }, (_, index) => `Unrelated table context ${index}.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(tableContinuationPage, ['MediSave'], 500, 'MediSave', [tableContinuation])
+  .includes(tableContinuation),
+'A complete preferred table passage remains selectable across its lettered row continuation.');
+const tableContinuationRecord = verifiedLocalRecord({
+  id: 'IRAS_TABLE_ORDERED_CONTINUATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, tableContinuation);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: tableContinuation, quote: tableContinuation, recordId: tableContinuationRecord.id
+}], [tableContinuationRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 1,
+'The complete pipe-row and divider continuation verifies literally as one table span.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: '(b) Top-up to MediSave Account under the relevant scheme',
+  quote: '(b) Top-up to MediSave Account under the relevant scheme', recordId: tableContinuationRecord.id
+}], [tableContinuationRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+'A single table continuation cannot verify without its preceding ordered row.');
+const tableOnlyContinuation = [
+  'Eligibility | (a) You must be registered.',
+  '* * *',
+  '(b) You hold the required invoice.'
+].join('\n\n');
+const tableOnlyContinuationRecord = verifiedLocalRecord({
+  id: 'IRAS_TABLE_ONLY_CONTINUATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, tableOnlyContinuation);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: '(b) You hold the required invoice.', quote: '(b) You hold the required invoice.',
+  recordId: tableOnlyContinuationRecord.id
+}], [tableOnlyContinuationRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+'A single table continuation cannot be verified apart from its ordered table row.');
+assert.doesNotMatch(selectRelevantFetchedText(tableOnlyContinuation, ['required invoice'], 60, 'required invoice'),
+  /You hold the required invoice/,
+'A table continuation whose full ordered row exceeds the budget is withheld.');
+const gappedTableContinuation = [
+  'Eligibility | (a) You hold a valid business registration.',
+  '* * *',
+  '(c) You hold the required invoice.'
+].join('\n\n');
+const gappedTableRecord = verifiedLocalRecord({
+  id: 'IRAS_GAPPED_TABLE_CONTINUATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, gappedTableContinuation);
+assert.equal(selectRelevantFetchedText(gappedTableContinuation, ['required invoice'], 100, 'required invoice'),
+  gappedTableContinuation,
+'A short gapped table source stays intact when it fits the excerpt budget.');
+for (const fragment of ['Eligibility | (a) You hold a valid business registration.', '(c) You hold the required invoice.']) {
+  assert.equal(verifyEvidenceClaims([{
+    kind: 'RULE', text: fragment, quote: fragment, recordId: gappedTableRecord.id
+  }], [gappedTableRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+  'A fragment from a gapped (a)/(c) table continuation cannot pass literal verification.');
+}
+const realGappedNumberedListAfterTable = [
+  'Definition | 1. Background scope.',
+  '* * *',
+  '1. The applicant must satisfy the first condition.',
+  '3. The applicant must hold the required invoice.'
+].join('\n\n');
+assert.equal(completeVisibleEvidenceListSpan(splitEvidenceTextBlocks(realGappedNumberedListAfterTable), 2), undefined,
+  'A pipe cell beginning with ordinal one cannot mask a gapped ordered list whose first item also starts at one.');
+const continuedButGappedNumbered = realGappedNumberedListAfterTable.replace('1. The applicant must satisfy the first condition.',
+  '2. The applicant must satisfy the first condition.').replace('3. The applicant must hold',
+  '4. The applicant must hold');
+assert.equal(completeVisibleEvidenceListSpan(splitEvidenceTextBlocks(continuedButGappedNumbered), 2), undefined,
+  'A table ordinal followed by a gapped 2./4. tail remains incomplete.');
+const continuedButGappedPage = continuedButGappedNumbered + '\n\n' +
+  Array.from({ length: 18 }, (_, index) => `Unrelated table explanation ${index}.`).join('\n\n');
+assert.doesNotMatch(selectRelevantFetchedText(continuedButGappedPage, ['required invoice'], 300, 'required invoice'),
+  /Background scope|first condition|required invoice/,
+'A table continuation with a later numbering gap does not expose a matching condition in retrieval.');
+const continuedButGappedRecord = verifiedLocalRecord({
+  id: 'IRAS_TABLE_GAPPED_CONTINUATION',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, continuedButGappedNumbered);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: continuedButGappedNumbered, quote: continuedButGappedNumbered,
+  recordId: continuedButGappedRecord.id
+}], [continuedButGappedRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+'Literal verification rejects the full table span when its ordered continuation is gapped.');
+
+const materiallyQualifiedIntro = [
+  'Only these applicants are excluded.',
+  '• Applicants in the first category are excluded.',
+  '• Applicants in the second category are also excluded.',
+  '• This additional class is excluded under the stated rule.'
+].join('\n\n');
+const materiallyQualifiedCore = materiallyQualifiedIntro.split('\n\n').slice(1).join('\n\n');
+assert.ok(materiallyQualifiedCore.length < 200 && materiallyQualifiedIntro.length > 200,
+  'The contextual budget control distinguishes the marker run from its preceding qualifier.');
+const qualifiedBudgetPage = materiallyQualifiedIntro + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background detail ${index} is unrelated.`).join('\n\n');
+assert.doesNotMatch(selectRelevantFetchedText(qualifiedBudgetPage, ['applicants excluded'], 200, 'applicants excluded'),
+  /first category|second category|additional class/,
+  'A preceding material qualification counts against the budget; the bare list is not selected without it.');
+
+const terminalMarkerSource = 'Only these applicants are excluded.\n\n• Applicants in the excluded category.';
+const terminalMarkerRecord = verifiedLocalRecord({
+  id: 'IRAS_TERMINAL_MARKER_ROOT_LIST',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, terminalMarkerSource);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: '• Applicants in the excluded category.', quote: '• Applicants in the excluded category.',
+  recordId: terminalMarkerRecord.id
+}], [terminalMarkerRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+'The verifier checks a marker-rooted item even when it is the final source paragraph.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: terminalMarkerSource, quote: terminalMarkerSource, recordId: terminalMarkerRecord.id
+}], [terminalMarkerRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 1,
+'The complete preceding context and terminal marker-rooted item verify together.');
+
+for (const listIntroduction of ['• Applicants with:', '• Applicants with —']) {
+  const longApplicantContext = 'Only these applicants are excluded. ' + 'The material scope applies. '.repeat(10);
+  const parentListSource = [
+    longApplicantContext,
+    listIntroduction,
+    '◦ The required invoice must be available.',
+    '◦ The additional qualifying status must also apply.',
+    '• Other excluded applicants.'
+  ].join('\n\n');
+  const parentListBlocks = splitEvidenceTextBlocks(parentListSource);
+  const parentListSpan = completeVisibleEvidenceListSpan(parentListBlocks, 1);
+  assert.ok(parentListSpan?.contextQuote?.startsWith(longApplicantContext.trimEnd()),
+    `The preceding scope remains attached to a marker-rooted ${listIntroduction.endsWith(':') ? 'colon' : 'dash'} list.`);
+  assert.ok(parentListSpan.contextQuote.length > 180,
+    'The parent list plus its preceding scope exceeds the excerpt budget.');
+  assert.doesNotMatch(selectRelevantFetchedText(parentListSource, ['required invoice'], 180, 'required invoice'),
+    /Applicants with|required invoice|qualifying status|Other excluded applicants/,
+  'An over-budget parent list with mandatory preceding scope is withheld intact.');
+  const parentListRecord = verifiedLocalRecord({
+    id: `IRAS_PARENT_ROOT_${listIntroduction.endsWith(':') ? 'COLON' : 'DASH'}`,
+    url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+  }, parentListSource);
+  assert.equal(verifyEvidenceClaims([{
+    kind: 'RULE', text: parentListSpan.quote, quote: parentListSpan.quote, recordId: parentListRecord.id
+  }], [parentListRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+  'Literal verification rejects a complete parent list that omits preceding source scope.');
+  assert.equal(verifyEvidenceClaims([{
+    kind: 'RULE', text: parentListSpan.contextQuote, quote: parentListSpan.contextQuote, recordId: parentListRecord.id
+  }], [parentListRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 1,
+  'Literal verification accepts the complete parent list with its preceding source scope.');
+}
+
+const numberedIntroduction = 'Applicants must meet all these requirements.';
+const completeGenericNumberedList = [
+  numberedIntroduction,
+  '1. The applicant must meet the first condition.',
+  '2. The applicant must hold the required invoice.',
+  '3. The applicant must retain the supporting records.'
+].join('\n\n');
+const completeGenericNumberedPage = completeGenericNumberedList + '\n\n' +
+  Array.from({ length: 18 }, (_, index) => `Unrelated numbered-list context ${index}.`).join('\n\n');
+assert.ok(selectRelevantFetchedText(completeGenericNumberedPage, ['required invoice'], 650, 'required invoice')
+  .includes(completeGenericNumberedList),
+'A complete ordered list stays whole after a prose introduction that was not recognized by phrase pattern.');
+const missingMiddleGenericNumberedList = completeGenericNumberedList.replace(
+  '2. The applicant must hold the required invoice.\n\n', ''
+);
+const missingMiddleGenericNumberedPage = missingMiddleGenericNumberedList + '\n\n' +
+  Array.from({ length: 18 }, (_, index) => `Unrelated numbered-list context ${index}.`).join('\n\n');
+assert.doesNotMatch(selectRelevantFetchedText(
+  missingMiddleGenericNumberedPage, ['required invoice', 'supporting records'], 650,
+  'required invoice supporting records'
+), /first condition|required invoice|supporting records/,
+'A missing middle ordered condition leaves the entire marker run unselected after an unknown prose introduction.');
+const shortGappedNumberedSource = [
+  independentGstRateParagraph,
+  numberedIntroduction,
+  '1. The applicant must meet the first condition.',
+  '3. The applicant must retain the supporting records.'
+].join('\n\n');
+const selectedShortGappedSource = selectRelevantFetchedText(
+  shortGappedNumberedSource, ['supporting records'], 1_000, 'supporting records'
+);
+assert.equal(selectedShortGappedSource, shortGappedNumberedSource,
+  'A short gapped ordered list remains intact with its visible numbering gap when the whole source fits.');
+const selectedShortGappedFact = selectRelevantFetchedText(shortGappedNumberedSource, ['GST rate'], 1_000, 'GST rate');
+assert.equal(selectedShortGappedFact, shortGappedNumberedSource,
+  'The short-source fast path preserves the complete page, including prose around an incomplete ordered list.');
+const shortGappedRecord = verifiedLocalRecord({
+  id: 'IRAS_SHORT_GAPPED_NUMBERED_SOURCE',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, shortGappedNumberedSource);
+const shortGappedPartial = verifyEvidenceClaims([{
+  kind: 'RULE', text: '3. The applicant must retain the supporting records.',
+  quote: '3. The applicant must retain the supporting records.', recordId: shortGappedRecord.id
+}], [shortGappedRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' });
+assert.equal(shortGappedPartial.accepted.length, 0,
+'Literal verification does not certify one item from a gapped short ordered list.');
+const shortGappedWhole = verifyEvidenceClaims([{
+  kind: 'RULE', text: shortGappedNumberedSource, quote: shortGappedNumberedSource,
+  recordId: shortGappedRecord.id
+}], [shortGappedRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' });
+assert.equal(shortGappedWhole.accepted.length, 0,
+'Literal verification does not certify the entire malformed ordered list as a complete list.');
+
 const completeInputTaxConditions = [
   'Input tax requirements',
   '• The purchase is made for a real business purpose and supports the input tax claim.',
@@ -354,12 +634,37 @@ assert.doesNotMatch(selectRelevantFetchedText(
   periodEndedMalformedNumberedPage, ['invoice or import permit'], 500, 'input tax invoice or import permit'
 ), /The purchase must support|You must hold/,
   'A period-ended introduction does not make a gapped ordered list complete.');
-assert.equal(visibleEvidenceListSpan(splitEvidenceTextBlocks([
+const listMarkerRoot = splitEvidenceTextBlocks([
   '• Parent requirement without punctuation',
   '• First nested condition',
   '• Second nested condition'
-].join('\n\n')), 0), undefined,
-  'A preceding bullet item is not reinterpreted as an unpunctuated list heading.');
+].join('\n\n'));
+assert.equal(completeVisibleEvidenceListSpan(listMarkerRoot, 0)?.itemCount, 3,
+  'A marker-rooted list is kept whole without treating its first item as an introduction.');
+const scaffoldedListBlocks = splitEvidenceTextBlocks([
+  'Applicants must meet all these requirements.',
+  '•',
+  '• The applicant must satisfy the first condition.',
+  '• The applicant must hold the required invoice.',
+  'Unless the statutory exception applies.'
+].join('\n\n'));
+const scaffoldedCompleteList = completeVisibleEvidenceListSpan(scaffoldedListBlocks, 2);
+assert.ok(scaffoldedCompleteList?.contextQuote?.includes('Applicants must meet all these requirements.'),
+  'List marker-only extraction scaffolding does not discard the actual preceding introduction.');
+const scaffoldedListRecord = verifiedLocalRecord({
+  id: 'IRAS_SCAFFOLDED_LIST_CONTEXT',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, scaffoldedListBlocks.join('\n\n'));
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: scaffoldedCompleteList.contextQuote, quote: scaffoldedCompleteList.contextQuote,
+  recordId: scaffoldedListRecord.id
+}], [scaffoldedListRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 1,
+'Literal verification agrees with the shared boundary after omitting marker-only scaffolding.');
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: scaffoldedCompleteList.quote, quote: scaffoldedCompleteList.quote,
+  recordId: scaffoldedListRecord.id
+}], [scaffoldedListRecord], { missingFacts: [], expectedAuthority: 'IRAS', expectedDomain: 'IRAS' }).accepted.length, 0,
+'The marker-rooted list cannot verify while omitting its source introduction.');
 const colonItemIntroducedNestedList = [
   '• For invoices:',
   '◦ You hold the required invoice or import permit.',
@@ -436,8 +741,6 @@ const selectedWithPartialPreferred = selectRelevantFetchedText(
   'conditions for claiming input tax tax invoice import permit',
   [preferredPartialList]
 );
-assert.doesNotMatch(selectedWithPartialPreferred, /Input tax requirements/,
-  'A preferred passage cannot preserve a partial source list when the complete list exceeds the excerpt budget.');
 assert.doesNotMatch(selectedWithPartialPreferred, /• The purchase|• This category|• You hold/,
   'When the complete list does not fit, none of its items leaks into the selected excerpt.');
 const lowerCasePartialPreferredList = lowerCaseInputTaxConditions.split('\n\n').slice(0, 2).join('\n\n');
@@ -448,8 +751,8 @@ const selectedWithLowerCasePartialPreferred = selectRelevantFetchedText(
   'input tax claim invoice or import permit',
   [lowerCasePartialPreferredList]
 );
-assert.doesNotMatch(selectedWithLowerCasePartialPreferred, /input tax requirements|• The purchase|• This category|• You hold/,
-  'A lowercase heading and partial preferred passage cannot leak conditions from an over-budget list.');
+assert.doesNotMatch(selectedWithLowerCasePartialPreferred, /• The purchase|• This category|• You hold/,
+  'A lowercase heading remains independently usable while its over-budget condition list is withheld.');
 
 const inputTaxQuery = 'What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?';
 const noLocalInputTaxEvidence = {
@@ -459,7 +762,10 @@ const noLocalInputTaxEvidence = {
 };
 for (const heading of [
   'Input tax requirements', 'input tax requirements', 'The following conditions must all be satisfied.',
-  'Conditions for claiming input tax are:'
+  'Conditions for claiming input tax are:',
+  'Applicants must meet all these requirements.',
+  'Applicants must satisfy the conditions below.',
+  'Eligibility requires satisfying all conditions described here.'
 ]) {
   const conditionHtml = '<html><head><title>Conditions for Claiming Input Tax</title></head><body><main>' +
     '<h1>Conditions for Claiming Input Tax</h1>' +

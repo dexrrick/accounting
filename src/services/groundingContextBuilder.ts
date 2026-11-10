@@ -1361,8 +1361,10 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
   const visibleLists: Array<{
     start: number;
     end: number;
+    contextStart?: number;
     complete: ReturnType<typeof completeVisibleEvidenceListSpan>;
     quote: string;
+    contextQuote?: string;
   }> = [];
   for (let index = 0; index < pageBlocks.length;) {
     const span = visibleEvidenceListSpan(pageBlocks, index);
@@ -1373,8 +1375,10 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
     visibleLists.push({
       start: span.startIndex,
       end: span.endIndex,
+      contextStart: span.contextStartIndex,
       complete: completeVisibleEvidenceListSpan(pageBlocks, index),
-      quote: span.quote
+      quote: span.quote,
+      contextQuote: span.contextQuote
     });
     // Nested list introductions can also look like list items to an enclosing
     // bullet list. Keep only the maximal source span so its children cannot be
@@ -1394,7 +1398,7 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
     const end = start + blocks.length - 1;
     const overlapsList = visibleLists.some(list => start <= list.end && end >= list.start);
     const preservesLists = visibleLists.every(list => start > list.end || end < list.start ||
-      Boolean(list.complete && start <= list.start && end >= list.end));
+      Boolean(list.complete && start <= (list.contextStart ?? list.start) && end >= list.end));
     if (overlapsList && !preservesLists) continue;
     preferred = candidate;
     preferredStart = start;
@@ -1424,6 +1428,7 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
     endParagraph: number;
     text: string;
     atomic: boolean;
+    contextParagraph?: number;
     topicMatches: number;
     queryMatches: number;
   };
@@ -1435,17 +1440,19 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
   for (const list of visibleLists) {
     for (let paragraph = list.start; paragraph <= list.end; paragraph += 1) consumedParagraphs.add(paragraph);
     if (!list.complete) continue;
-    const first = sentenceRanges.get(list.start);
+    const textStart = list.contextStart ?? list.start;
+    const first = sentenceRanges.get(textStart);
     const last = sentenceRanges.get(list.end);
     if (!first || !last) continue;
     units.push({
       id: units.length,
       startIndex: first.start,
       endIndex: last.end,
-      startParagraph: list.start,
+      startParagraph: textStart,
       endParagraph: list.end,
-      text: list.quote,
+      text: list.contextQuote || list.quote,
       atomic: true,
+      contextParagraph: list.contextStart,
       topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0),
       queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0)
     });
@@ -1477,7 +1484,12 @@ export function selectRelevantFetchedText(pageText: string, terms: string[], max
   const renderChosen = (segments: Map<number, SelectionUnit>): string => {
     let output = '';
     let previous: SelectionUnit | undefined;
-    for (const unit of [...segments.values()].sort((a, b) => a.startIndex - b.startIndex)) {
+    const atomicContextParagraphs = new Set([...segments.values()]
+      .filter(unit => unit.atomic && unit.contextParagraph !== undefined)
+      .map(unit => unit.contextParagraph));
+    for (const unit of [...segments.values()]
+      .filter(unit => unit.atomic || !atomicContextParagraphs.has(unit.startParagraph))
+      .sort((a, b) => a.startIndex - b.startIndex)) {
       const separator = !output ? '' : previous && !unit.atomic && !previous.atomic &&
         unit.startIndex === previous.endIndex + 1 && unit.startParagraph === previous.endParagraph ? ' ' : '\n\n';
       output += separator + unit.text;

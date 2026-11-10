@@ -629,7 +629,7 @@ function selectEvidenceOnlyQuotes(
       // quote verification.
       const completeList = completeVisibleEvidenceListSpan(sourceBlocks, index);
       if (completeList) {
-        paragraphs.push(completeList.quote);
+        paragraphs.push(completeList.contextQuote || completeList.quote);
         index = completeList.endIndex + 1;
         continue;
       }
