@@ -88,16 +88,27 @@ export function visibleEvidenceListSpan(
   while (firstItemIndex < blocks.length && isVisibleEvidenceListMarker(blocks[firstItemIndex])) firstItemIndex += 1;
   const firstItemKind = blocks[firstItemIndex] ? visibleListItemKind(blocks[firstItemIndex]) : undefined;
   if (!firstItemKind) return undefined;
-  // Ordinary introductions need no fixed punctuation. For an introduction
-  // that is itself a list item, keep the existing punctuation boundary used
-  // for nested lists; marker-only extraction blocks are never introductions.
+  const hasColonIntroduction = /:$/.test(introduction);
+  const hasDashIntroduction = /[—–-]$/.test(introduction);
+  const isExplicitForwardListReference =
+    /\bthe following\s+(?:\d+\s+)?(?:conditions?|requirements?|criteria|items?|steps?|points?|qualifications?|details?|examples?|documents?|factors?|options?)\b/i.test(introduction) ||
+    /\b(?:as follows|listed below|set out below|shown below)[.!?:;]*$/i.test(introduction);
+  const isBoundedUnpunctuatedHeading = /^\p{L}/u.test(introduction) &&
+    introduction.length <= 160 && introduction.split(/\s+/).length <= 24 &&
+    !hasClearSentenceEnd(introduction) && !/[:;]/.test(introduction) && !hasDashIntroduction;
+  // Recognized headings and forward references may introduce lists without
+  // punctuation. List-item introductions keep their existing boundary, and
+  // marker-only extraction blocks are never introductions.
   if (isVisibleEvidenceListMarker(introduction)) return undefined;
   if (visibleListItemKind(introduction)) {
-    const hasColonIntroduction = /:$/.test(introduction);
-    const hasDashIntroduction = /[—–-]$/.test(introduction);
     if (firstItemKind === 'BULLET'
       ? !hasColonIntroduction
       : !hasColonIntroduction && !hasDashIntroduction) {
+      return undefined;
+    }
+  } else {
+    const hasPunctuatedIntroduction = hasColonIntroduction || hasDashIntroduction;
+    if (!hasPunctuatedIntroduction && !isExplicitForwardListReference && !isBoundedUnpunctuatedHeading) {
       return undefined;
     }
   }

@@ -127,7 +127,7 @@ assert.equal(disconnectedQuote.accepted.length, 0,
   'A claim that joins separated HTML excerpts still fails strict source-span verification.');
 assert.equal(disconnectedQuote.rejected[0].reason, 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH');
 
-const proseBeforeSingleList = 'Input tax eligibility depends on the purpose of the purchase.' +
+const proseBeforeSingleList = 'The following requirement applies.' +
   '\n\n• A separate restriction applies to the listed category.';
 const proseBeforeSingleListRecord = verifiedLocalRecord({
   id: 'IRAS_SINGLE_LIST_AFTER_PROSE',
@@ -154,8 +154,38 @@ const rejectedSingleListQuote = verifyEvidenceClaims([{
 assert.equal(rejectedSingleListQuote.accepted.length, 0,
   'A single bullet introduced by prose is still protected against item-only quotation.');
 assert.equal(rejectedSingleListQuote.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
+const independentGstRateParagraph = 'The GST rate applies to taxable supplies made by a GST-registered business.';
+const unrelatedGlossaryBullet = '• Glossary note: This term is an unrelated label. ' +
+  'Unrelated definition text. '.repeat(80);
+const independentParagraphSource = independentGstRateParagraph + '\n\n' + unrelatedGlossaryBullet;
+assert.equal(visibleEvidenceListSpan(splitEvidenceTextBlocks(independentParagraphSource), 0), undefined,
+  'An independent sentence is not treated as the introduction to a glossary bullet.');
+const independentParagraphRecord = verifiedLocalRecord({
+  id: 'IRAS_INDEPENDENT_GST_RATE_PARAGRAPH',
+  url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'
+}, independentParagraphSource);
+assert.equal(verifyEvidenceClaims([{
+  kind: 'RULE', text: independentGstRateParagraph, quote: independentGstRateParagraph,
+  recordId: independentParagraphRecord.id
+}], [independentParagraphRecord], { missingFacts: [] }).accepted.length, 1,
+  'The strict verifier accepts the independent GST-rate paragraph from the original source.');
+const independentParagraphPage = independentParagraphSource + '\n\n' +
+  Array.from({ length: 12 }, (_, index) => `Background registration note ${index} contains unrelated information.`).join('\n\n');
+for (const budget of [160, 300, 500]) {
+  const selectedIndependentParagraph = selectRelevantFetchedText(
+    independentParagraphPage, ['GST rate'], budget, 'GST rate'
+  );
+  assert.ok(selectedIndependentParagraph.includes(independentGstRateParagraph),
+    `The independent GST-rate paragraph remains selectable at a ${budget}-character budget.`);
+}
+const temporalFollowingText = [
+  'The following financial year is the reporting period for this example.',
+  '• This glossary item is unrelated.'
+].join('\n\n');
+assert.equal(visibleEvidenceListSpan(splitEvidenceTextBlocks(temporalFollowingText), 0), undefined,
+  'A factual reference to the following financial year is not a list introduction.');
 const singleOrderedListWithQualification = [
-  'Input tax qualification applies.',
+  'The following qualification applies.',
   '1. You hold the required invoice.',
   'Unless a separate statutory restriction applies.'
 ].join('\n\n');
@@ -202,6 +232,15 @@ assert.ok(selectRelevantFetchedText(
   'input tax claim invoice or import permit'
 ).includes(periodEndedInputTaxConditions),
   'A period-ended introduction retains the full bullet list and attached qualification within budget.');
+const prefixedPeriodInputTaxConditions = periodEndedInputTaxConditions.replace(
+  'The following conditions must all be satisfied.', 'To qualify, you must satisfy the following conditions.'
+);
+assert.ok(selectRelevantFetchedText(
+  prefixedPeriodInputTaxConditions + '\n\n' + Array.from({ length: 12 }, (_, index) =>
+    `Background registration note ${index} contains unrelated information.`).join('\n\n'),
+  ['input tax claim', 'invoice or import permit'], 650, 'input tax claim invoice or import permit'
+).includes(prefixedPeriodInputTaxConditions),
+  'An inline forward reference keeps its period-ended introduction and full list together.');
 const lowerCaseInputTaxConditions = completeInputTaxConditions.replace('Input tax requirements', 'input tax requirements');
 const lowerCaseInputTaxPage = lowerCaseInputTaxConditions + '\n\n' + Array.from({ length: 12 }, (_, index) =>
   `Background registration note ${index} contains unrelated information.`).join('\n\n');
@@ -218,6 +257,17 @@ assert.ok(selectRelevantFetchedText(
   'input tax claim invoice or import permit'
 ).includes(colonHeadingInputTaxConditions),
   'The existing colon-introduced list remains protected.');
+const dashHeadingBulletList = [
+  'Input tax requirements—',
+  '• The purchase supports the business activity.',
+  '• You hold the required invoice.'
+].join('\n\n');
+assert.ok(selectRelevantFetchedText(
+  dashHeadingBulletList + '\n\n' + Array.from({ length: 12 }, (_, index) =>
+    `Background registration note ${index} contains unrelated information.`).join('\n\n'),
+  ['required invoice'], 500, 'required invoice'
+).includes(dashHeadingBulletList),
+  'An em dash heading preserves its complete bullet list.');
 
 const completeHeadingListRecord = verifiedLocalRecord({
   id: 'IRAS_INPUT_TAX_UNPUNCTUATED_LIST',
@@ -414,6 +464,9 @@ for (const heading of [
   const conditionHtml = '<html><head><title>Conditions for Claiming Input Tax</title></head><body><main>' +
     '<h1>Conditions for Claiming Input Tax</h1>' +
     '<p>When purchasing from GST-registered suppliers or importing goods into Singapore, a business may incur input tax.</p>' +
+    (heading === 'Input tax requirements'
+      ? `<p>${independentGstRateParagraph}</p><ul><li>${unrelatedGlossaryBullet.slice(2)} ${'Unrelated definition text. '.repeat(220)}</li></ul>`
+      : '') +
     `<p>${heading}</p><ul>` +
     '<li>The purchase is made for a real business purpose and supports the input tax claim.</li>' +
     '<li>This category is expressly barred by the applicable statutory schedule. ' + 'Detailed supporting context '.repeat(1_700) + 'This exclusion applies to the complete class of affected supplies.</li>' +
@@ -443,12 +496,20 @@ for (const heading of [
   const retrievedInputTaxRecord = productionContext.evidenceQuality.eligibleRecords.find(record =>
     record.provenance === 'LIVE_EXTERNAL' && record.officialSourceUrl?.includes('conditions-for-claiming-input-tax'));
   assert.ok(retrievedInputTaxRecord, 'The mapped IRAS document is admitted through production retrieval.');
+  if (heading === 'Input tax requirements') {
+    assert.ok(retrievedInputTaxRecord.sourceText.includes(independentGstRateParagraph),
+      'Production retrieval retains the independent GST-rate paragraph before an unrelated glossary bullet.');
+  }
   assert.doesNotMatch(retrievedInputTaxRecord.sourceText, /• The purchase|• This category|• You hold/,
     'When the full conditions list exceeds the excerpt budget, production retrieval withholds the whole list.');
   assert.doesNotMatch(retrievedInputTaxRecord.sourceText, /Unless a separate statutory restriction applies/,
     'Production retrieval also withholds the qualification attached to the over-budget list.');
   const renderedInputTaxFallback = renderIrasEvidenceResponse({}, productionContext, inputTaxQuery,
     null, 'SFRS_I', 'PROVIDER_NO_CLAIMS');
+  if (heading === 'Input tax requirements') {
+    assert.ok(renderedInputTaxFallback.messageText.includes(independentGstRateParagraph),
+      'The IRAS no-claim fallback retains the independently retrieved GST-rate paragraph.');
+  }
   assert.doesNotMatch(renderedInputTaxFallback.messageText, /• The purchase|• This category|• You hold/,
     'IRAS no-claim fallback does not present a shortened retrieved list as complete official evidence.');
   assert.doesNotMatch(renderedInputTaxFallback.messageText, /Unless a separate statutory restriction applies/,

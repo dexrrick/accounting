@@ -140,16 +140,18 @@ for (const example of examples) {
       subject: example.subject, officialUrl: example.url };
     assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: registeredRecord.sourceText }), true,
       'The registered MOM excerpt retains its complete rule proof.');
-    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), true,
-      'The issue-scoped excerpt retains all rule proof after punctuation-independent list selection.');
-    const issueScopedWithoutOpportunity = scopedRecord.sourceText
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), false,
+      'The issue-scoped excerpt lacks the revocable written-consent exception required for a complete rule conclusion.');
+    assert.doesNotMatch(scopedRecord.sourceText, /withdraw your written consent at any time/i,
+      'The issue-scoped excerpt does not include the source qualification permitting consent withdrawal.');
+    const registeredWithoutOpportunity = registeredRecord.sourceText
       .split(/\r?\n\s*\r?\n/)
       .filter(block => !/\bopportunity to explain\b/i.test(block))
       .join('\n\n');
-    assert.notEqual(issueScopedWithoutOpportunity, scopedRecord.sourceText,
+    assert.notEqual(registeredWithoutOpportunity, registeredRecord.sourceText,
       'The insufficient-evidence control removes a source block containing a required condition.');
-    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: issueScopedWithoutOpportunity }), false,
-      'The issue-scoped excerpt becomes insufficient when its opportunity-to-explain condition is removed.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: registeredWithoutOpportunity }), false,
+      'The complete registered proof becomes insufficient when the opportunity-to-explain condition is removed.');
     assert.equal(fetches.filter(url => url === example.url).length, 1,
       'Both topic scopes reuse one successful page fetch.');
     assert.ok(scopedRecord.tags?.some(tag => tag.startsWith('iras-authority-query-issue-mom-')));
