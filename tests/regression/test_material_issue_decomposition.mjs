@@ -55,6 +55,9 @@ await interpretSemanticQuestion('What is the individual tax treatment?', 'test-s
 });
 assert.match(capturedSemanticPrompt, /Include 1–12 issues, one for every requested material outcome, including exactly one for a simple single-outcome question/i,
   'The V2 production prompt requires a nonempty issue list and one issue on a simple question while legacy validation remains backward compatible.');
+assert.match(capturedSemanticPrompt,
+  /Preserve one issue for each explicitly requested PRIMARY subject governed by a named authority; relationship and fact-gathering issues add to those issues and never replace them/i,
+  'The prompt keeps requested governed subjects alongside interaction and fact-gathering issues.');
 
 // Oracle contract fixtures: these exercise the structured issue-plan contract,
 // not live-model accuracy or completeness.

@@ -14,7 +14,13 @@ import { selectPracticalExpansionQuotes, supportPracticalExpansionRule } from '.
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, sourceProvesKnowledgeDate } from '../retrieval/statutoryKnowledge20261027b';
 import { selectMomSalaryPaymentRuleQuote, supportMomSalaryPaymentIssue } from '../retrieval/momSalaryPaymentRule';
 
-import { normalizeEvidenceText, startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
+import {
+  completeVisibleEvidenceListSpan,
+  normalizeEvidenceText,
+  splitEvidenceTextBlocks,
+  startsAttachedEvidenceQualification,
+  visibleEvidenceListSpan
+} from '../utils/evidenceTextBoundaries';
 export { startsAttachedEvidenceQualification } from '../utils/evidenceTextBoundaries';
 
 export type VerifiedEvidenceClaim = {
@@ -40,12 +46,18 @@ export type EvidenceClaimsVerificationResult = {
   rejected: RejectedEvidenceClaim[];
 };
 
+export interface CompleteVisibleListScope {
+  authority: StatutoryAuthority;
+  domain: QueryDomain;
+}
+
 export interface VerifyEvidenceClaimsOptions {
   missingFacts: string[];
   targetDate?: string;
   referenceDate?: string;
   expectedAuthority?: StatutoryAuthority;
   expectedDomain?: QueryDomain;
+  completeListScope?: CompleteVisibleListScope;
   applicabilityTarget?: 'ACRA_FYE';
   versioningManager?: SourceVersioningManager;
   boundedCoverageRequest?: BoundedCoverageRequest;
@@ -814,14 +826,13 @@ function splitParagraphIntoSentences(paragraph: string): string[] {
   return sentences;
 }
 
-function quoteIsWholeSourceSpan(record: AuthoritativeSourceRecord, quote: string): 'MATCH' | 'NO_MATCH' | 'OMITS_ATTACHED_QUALIFICATION' {
+function quoteIsWholeSourceSpan(
+  record: AuthoritativeSourceRecord,
+  quote: string,
+  completeListScope?: CompleteVisibleListScope
+): 'MATCH' | 'NO_MATCH' | 'OMITS_ATTACHED_QUALIFICATION' {
   const sourceText = record.sourceText;
-  const paragraphs = sourceText
-    .normalize('NFC')
-    .replace(/\u00a0/g, ' ')
-    .split(/\r?\n[\t ]*\r?\n+/)
-    .map(paragraph => paragraph.trim())
-    .filter(Boolean);
+  const paragraphs = splitEvidenceTextBlocks(sourceText);
   const normalizedQuote = normalizeEvidenceText(quote);
   const eciDeadlineDutyAnchor = /\b(?:file|furnish)\s+eci\s+within\s+(?:3|three)\s+months?\b/i.test(quote);
   if (isIrasEciFilingDeadlineRecord(record) && hasIrasEciColonEndedIntro(sourceText) &&
@@ -910,6 +921,40 @@ function quoteIsWholeSourceSpan(record: AuthoritativeSourceRecord, quote: string
   }
   if (isIncompleteColonEndedQuote(normalizedQuote)) return 'OMITS_ATTACHED_QUALIFICATION';
 
+  const protectedListParagraphIndices = new Set<number>();
+  for (let introIndex = 0; introIndex + 1 < paragraphs.length; introIndex += 1) {
+    const visibleList = visibleEvidenceListSpan(paragraphs, introIndex);
+    if (!visibleList) continue;
+    for (let index = visibleList.startIndex; index <= visibleList.endIndex; index += 1) {
+      protectedListParagraphIndices.add(index);
+    }
+    const completeList = completeVisibleEvidenceListSpan(paragraphs, introIndex);
+    if (!completeList) continue;
+    const completeNormalized = normalizeEvidenceText(completeList.quote);
+    if (normalizedQuote === completeNormalized) {
+      return completeListScope && record.authority === completeListScope.authority && record.domain === completeListScope.domain
+        ? 'MATCH' : 'NO_MATCH';
+    }
+    for (let start = completeList.startIndex; start <= completeList.endIndex; start += 1) {
+      let partial = '';
+      for (let end = start; end <= completeList.endIndex; end += 1) {
+        partial = partial ? `${partial} ${normalizeEvidenceText(paragraphs[end])}` : normalizeEvidenceText(paragraphs[end]);
+        if (partial === normalizedQuote) return 'OMITS_ATTACHED_QUALIFICATION';
+        if (partial.length > normalizedQuote.length) break;
+      }
+    }
+  }
+  for (const paragraphIndex of protectedListParagraphIndices) {
+    const sentences = splitParagraphIntoSentences(paragraphs[paragraphIndex]);
+    for (let start = 0; start < sentences.length; start += 1) {
+      let span = '';
+      for (let end = start; end < sentences.length; end += 1) {
+        span = span ? `${span} ${sentences[end]}` : sentences[end];
+        if (normalizeEvidenceText(span) === normalizedQuote) return 'OMITS_ATTACHED_QUALIFICATION';
+        if (normalizeEvidenceText(span).length > normalizedQuote.length) break;
+      }
+    }
+  }
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex += 1) {
     const paragraph = paragraphs[paragraphIndex];
     if (normalizeEvidenceText(paragraph) === normalizedQuote) {
@@ -1147,7 +1192,9 @@ export function verifyEvidenceClaims(
       }
     }
 
-    const sourceSpanResult = quoteIsWholeSourceSpan(record, quote);
+    const completeListScope = options.completeListScope || (options.expectedAuthority && options.expectedDomain
+      ? { authority: options.expectedAuthority, domain: options.expectedDomain } : undefined);
+    const sourceSpanResult = quoteIsWholeSourceSpan(record, quote, completeListScope);
     const selectedExpansionComponent = sourceSpanResult === 'OMITS_ATTACHED_QUALIFICATION' &&
       options?.boundedCoverageRequest &&
       supportPracticalExpansionRule({ ...options.boundedCoverageRequest, sourceText: record.sourceText,

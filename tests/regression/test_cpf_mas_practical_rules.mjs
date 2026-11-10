@@ -15,12 +15,17 @@ import {
   provesCpfMasPracticalRuleSource
 } from '../../src/retrieval/cpfMasPracticalRules.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
+import { practicalExpansionDiscoveryPointers } from '../../src/retrieval/practicalStatutoryExpansion.ts';
 
 const cpfUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions';
 const masUrl = 'https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing';
 const cpfTitle = 'CPF Board | What constitutes wages for CPF contributions';
 const masTitle = 'Fund Management Licensing | Monetary Authority of Singapore';
 const cpfBody = 'Wages which are not classified as Ordinary Wages will be Additional Wages for the month. For example, annual performance bonus.';
+const employerOverviewPointers = practicalExpansionDiscoveryPointers().filter(pointer =>
+  pointer.url === 'https://www.cpf.gov.sg/employer/employer-obligations');
+assert.deepEqual(employerOverviewPointers.map(pointer => pointer.population).sort(), ['Company', 'Employer'],
+  'The same CPF employer-obligations page can seed issue-scoped retrieval for employer and company audiences.');
 
 const lfmcCmsTopics = defaultQueryTopicResolver.decomposeQuery('Does an LFMC need a CMS licence?').topics.map(topic => topic.id);
 assert.ok(lfmcCmsTopics.includes('mas-lfmc'), 'LFMC-only CMS licensing wording routes to the existing LFMC topic');
@@ -193,14 +198,29 @@ masClaimsFromSeparatePages.sources.push({
 assert.equal(getCpfMasPracticalRuleEvidence(samples[1].query, masClaimsFromSeparatePages, masClaimsFromSeparatePages.issues[0]), undefined,
   'The MAS answer does not combine the duty and exemption claims across sources.');
 const masClaimsFromSeparateRevisions = structuredClone(mas.presentedStream);
-const masRevisionSource = masClaimsFromSeparateRevisions.sources[0];
-const masRevisionExemptionClaim = masRevisionSource.claims.find(claim => claim.text.toLowerCase().includes('class exemption'));
-const masFetchedBinding = masRevisionExemptionClaim?.fetchedSourceBinding;
+const masRevisionSource = structuredClone(masClaimsFromSeparateRevisions.sources[0]);
+const masRevisionSamePageClaims = masRevisionSource.claims;
+const masRevisionLicensingClaim = masRevisionSamePageClaims.find(claim => claim.text === masGeneralRule);
+const masRevisionExemptionClaim = masRevisionSamePageClaims.find(claim => claim.text === masExemption);
+assert.ok(masRevisionLicensingClaim && masRevisionExemptionClaim,
+  'The verified MAS source has literal licensing-only and class-exemption claims.');
+const masFetchedBinding = masRevisionExemptionClaim.fetchedSourceBinding;
 assert.ok(masFetchedBinding, 'The MAS exemption quote retains its fetched-source revision binding.');
+assert.deepEqual(masRevisionLicensingClaim.fetchedSourceBinding, masFetchedBinding,
+  'Both literal claims start bound to the same fetched record revision.');
 assert.equal(masFetchedBinding.recordId, mas.record.id);
 assert.equal(masFetchedBinding.documentHash, (mas.record.documentHash || mas.record.contentHash).toLowerCase());
 assert.equal(masFetchedBinding.canonicalUrl, mas.record.canonicalSourceUrl);
 assert.equal(masFetchedBinding.retrievedAt, mas.record.retrievedAt);
+masRevisionSource.claims = [masRevisionLicensingClaim, masRevisionExemptionClaim];
+masClaimsFromSeparateRevisions.sources = [masRevisionSource];
+assert.ok(getCpfMasPracticalRuleEvidence(samples[1].query, masClaimsFromSeparateRevisions,
+  masClaimsFromSeparateRevisions.issues[0]),
+  'The two literal MAS premises support the answer while bound to one fetched record revision.');
+assert.equal(masClaimsFromSeparateRevisions.sources.length, 1,
+  'The revision-boundary control contains no alternative source records or claim groups.');
+assert.notEqual('a'.repeat(64), masFetchedBinding.documentHash,
+  'The controlled mismatch hash is distinct from the verified revision.');
 masRevisionExemptionClaim.fetchedSourceBinding = {
   ...masFetchedBinding,
   documentHash: 'a'.repeat(64)

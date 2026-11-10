@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { extractPdfDocumentText } from '../../src/retrieval/pdfDocumentTextExtractor.ts';
 import { STATUTORY_VERIFIED_EXCERPTS } from './statutoryCoverageVerifiedExcerpts.mjs';
 
 const researched = '2026-10-25';
@@ -19,6 +21,29 @@ const page = (id, authority, title, sourceUrl, topicIds, prose, fixtureKind = 'P
   html: '<!doctype html><html><head><title>' + title + ' | ' + publishers[authority] + ' (offline fixture title)</title></head><body><main><h1>' + title + '</h1>' + (STATUTORY_VERIFIED_EXCERPTS[id]?.html || '<p>' + prose.replace(/\n/g, '<br>') + '</p>') + '</main></body></html>'
 });
 
+const awCeilingSourceUrl = 'https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1';
+const awCeilingNativePdf = await readFile(new URL('./statutoryKnowledge20261027b/cpf-aw-ceiling-native-2026.pdf', import.meta.url));
+const awCeilingProductionExtraction = await extractPdfDocumentText(new Uint8Array(awCeilingNativePdf));
+const awCeilingFirstPageText = awCeilingProductionExtraction.pageTexts[0]?.trim();
+if (!awCeilingFirstPageText) throw new Error('Retained CPF AW-ceiling PDF extract is missing its first-page text.');
+const escapeHtml = text => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const awCeilingNativeFixture = Object.freeze({
+  id: 'cpf-aw-ceiling', authority: 'CPF', title: 'Examples for computation of Additional Wage (AW) Ceiling',
+  sourceUrl: awCeilingSourceUrl, topicIds: Object.freeze(['cpf-additional-wage-ceiling']), researched,
+  authorityPublisher: publishers.CPF,
+  fixtureHtmlTitle: 'Examples for computation of Additional Wage (AW) Ceiling | ' + publishers.CPF + ' (offline fixture title)',
+  fixtureKind: 'VERIFIED_OFFICIAL_RETAINED_PDF_EXCERPT',
+  provenanceNote: 'The response body is the exact native official PDF retained under tests/fixtures/statutoryKnowledge20261027b/cpf-aw-ceiling-native-2026.pdf (SHA-256 98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220), captured in Singapore on 2026-10-27 and recorded in cpf-source-manifest.json. The HTML view contains page 1 exactly as rendered by the production PDF text extractor from those retained bytes, escaped and displayed with line breaks; it is a normalized excerpt, not a complete raw capture. The pypdf extract and source manifest are retained alongside the PDF.',
+  body: awCeilingNativePdf, contentType: 'application/pdf',
+  html: '<!doctype html><html><head><title>Examples for computation of Additional Wage (AW) Ceiling | ' + publishers.CPF + ' (offline fixture title)</title></head><body><main><h1>Examples for computation of Additional Wage (AW) Ceiling</h1><p>Normalized text extract from page 1 of the retained official PDF.</p><p>' + escapeHtml(awCeilingFirstPageText).replace(/\r?\n/g, '<br>') + '</p></main></body></html>'
+});
+
+export const STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES = Object.freeze([
+  Object.freeze({ authority: 'CPF', sourceUrl: 'https://www.cpf.gov.sg/employer/employer-obligations', expectedStatus: 404,
+    provenanceNote: 'This exact URL is returned as an explicit offline replay miss; no page body or official-source evidence is supplied.' }),
+  Object.freeze({ authority: 'CPF', sourceUrl: 'https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions', expectedStatus: 404,
+    provenanceNote: 'This exact URL is returned as an explicit offline replay miss; no page body or official-source evidence is supplied.' })
+]);
 export const STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES = Object.freeze([
   page('iras-input-tax', 'IRAS', 'Conditions for Claiming Input Tax',
     'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax',
@@ -46,10 +71,7 @@ export const STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES = Object.freeze([
     'https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions',
     ['cpf-contribution-due-dates'],
     'CPF contributions are legally due on the last calendar day of the month. If they remain unpaid by the 14th of the following month, the employer may face enforcement action. When the 14th falls on a Saturday, Sunday or public holiday, the following working day applies to this enforcement cut-off. The legal due date and the enforcement cut-off are distinct.'),
-  page('cpf-aw-ceiling', 'CPF', 'What Is the Additional Wage Ceiling?',
-    'https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling',
-    ['cpf-additional-wage-ceiling'],
-    'The Additional Wage ceiling applies per employee, per employer and per calendar year. It is calculated as SGD 102,000 less that employee’s Ordinary Wages that attracted CPF for the year. The applicable amount depends on the wages subject to CPF in the relevant year; a personal ceiling requires those payroll facts.'),
+  awCeilingNativeFixture,
   page('cpf-contribution-rates', 'CPF', 'How Much CPF Contributions to Pay',
     'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay',
     ['cpf_contribution_rates', 'cpf-pr-contribution-rates'],

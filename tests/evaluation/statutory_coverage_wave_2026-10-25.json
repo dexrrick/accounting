@@ -1612,7 +1612,8 @@
       },
       "officialSources": [
         "https://www.cpf.gov.sg/service/article/what-is-the-additional-wage-aw-ceiling",
-        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+        "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1"
       ],
       "temporal": {
         "status": "REQUIRES_CURRENT_OFFICIAL_SOURCE_AND_DATE_SCOPE"

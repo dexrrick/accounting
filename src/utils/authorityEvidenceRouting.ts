@@ -3,9 +3,10 @@ import {
   isConservativeUnmappedAccountingRuleExplanationIntent,
   type SemanticAuthority,
   type SemanticIssueReconciliation,
-  type SemanticQuestionOperation
+  type SemanticQuestionOperation,
+  type SemanticQuestionUnderstanding
 } from '../services/semanticQuestionUnderstanding';
-import { planAuthorityWorkstreams } from '../services/authorityWorkstreams';
+import { hasValidatedUnmappedGovernedAdvisoryIssue, planAuthorityWorkstreams } from '../services/authorityWorkstreams';
 import { getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { hasSpecificIrasWhtTreatyScope } from '../retrieval/irasMasKnowledge20261027b';
 
@@ -199,6 +200,8 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   classification: QuestionClassificationResult;
   explicitIrasEvidenceRequest: boolean;
   hasImages: boolean;
+  questionUnderstanding?: SemanticQuestionUnderstanding;
+  rawQuery?: string;
 }): boolean {
   const { issuePlan, classification } = input;
   if (input.hasImages) return false;
@@ -218,6 +221,13 @@ export function shouldUseAuthorityEvidenceRuntime(input: {
   // accounting journal gap. This route cannot turn the whole request into a
   // standalone statutory answer or claim that a journal has been prepared.
   if (hasMomRulesAndUnresolvedAccountingJournal(issuePlan, classification)) return true;
+
+  // A validated same-request semantic child with a known governor and canonical
+  // domain may use official discovery while its issue remains unresolved.
+  if (input.questionUnderstanding && input.rawQuery &&
+      classification.intent === 'STATUTORY_ADVISORY' && !classification.accountingAnalysisRequired &&
+      !classification.journalEntryRequired && !classification.calculationRequired &&
+      hasValidatedUnmappedGovernedAdvisoryIssue(issuePlan, input.questionUnderstanding, input.rawQuery)) return true;
 
   if (input.explicitIrasEvidenceRequest &&
       classification.intent === 'STATUTORY_ADVISORY' && classification.regulatoryAnalysisRequired &&

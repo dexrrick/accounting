@@ -11,6 +11,7 @@ import {
   isAiFirstAdvisoryEligible,
   isHighRiskAdvisoryClaim
 } from '../../src/services/aiFirstAdvisory.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetriever.ts';
@@ -42,6 +43,24 @@ for (const scenario of cases) {
 }
 assert.equal(isAiFirstAdvisoryEligible('How much GST is payable on SGD 1,000?', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, 'numeric calculation remains with the deterministic workflow');
 assert.equal(isAiFirstAdvisoryEligible('Prepare a double entry for the equipment purchase.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), false, 'posting requests remain with the journal workflow');
+const journalRoutingProvider = { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} };
+const negativeJournalAdvisories = [
+  'Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.',
+  'Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.'
+];
+for (const question of negativeJournalAdvisories) {
+  const classification = classifyQuestion(question);
+  assert.equal(classification.journalEntryRequired, false, `negative journal wording must not request entries: ${question}`);
+  assert.equal(classification.calculationRequired, false, `negative journal wording must not request calculations: ${question}`);
+  assert.equal(isAiFirstAdvisoryEligible(question, journalRoutingProvider, false, null), true,
+    `a conceptual accounting explanation with no journal request remains AI-first eligible: ${question}`);
+}
+assert.equal(classifyQuestion('Explain accrual accounting, but I am not asking for a journal entry; prepare a double entry for the equipment purchase.').journalEntryRequired, true,
+  'an explicit positive journal request remains active alongside a negative phrase');
+assert.equal(classifyQuestion('Prepare a double entry for the equipment purchase; no journal entry is needed.').journalEntryRequired, true,
+  'a negative phrase does not cancel a separate positive journal request');
+assert.equal(classifyQuestion('No journal entry is needed.').journalEntryRequired, false,
+  'a singular journal-entry statement of no need does not trigger the journal workflow');
 assert.equal(isAiFirstAdvisoryEligible('Explain input tax credits and compare them with an expense reversal.', { activeProvider: 'openai', openai: { apiKey: 'test-key-123456789', model: 'gpt-test' }, azure: {}, gemini: {} }, false, null), true, 'conceptual questions can mention credits and reversals without initiating state changes');
 const activeScenario = { scenarioType: 'UNRECOGNIZED', rawQuery: '', transactionTitle: 'Supplier payable', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
 for (const request of ['Can you settle the payable?', 'Could you update the supplier name to Acme?', 'Can you correct the amount?']) {

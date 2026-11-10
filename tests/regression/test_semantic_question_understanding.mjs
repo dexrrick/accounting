@@ -709,6 +709,63 @@ assert.equal(ambiguousRecipient.classification.domains.some(domain => ['IRAS_IND
 
 const promptCalls = [];
 const provider = { activeProvider: 'gemini', gemini: { apiKey: '0123456789012345', model: 'gemini-3.5-flash-lite' } };
+const mixedCpfMomQuestion = 'We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.';
+const validMixedIssue = (subject, domain, population, authority) => ({
+  subject, population, domain, governingAuthorities: [authority], contextualAuthorities: [],
+  operation: 'EXPLAIN_RULE', mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.95
+});
+const mixedCpfMomMeaning = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['CPF', 'MOM'], contextualAuthorities: [],
+  domain: 'UNKNOWN', population: 'UNKNOWN',
+  primarySubject: 'employer CPF duties and MOM salary-payment duties',
+  concepts: [{ concept: 'CPF registration and contributions', role: 'PRIMARY' },
+    { concept: 'MOM salary-payment duties', role: 'RELATED' }],
+  requestedOperation: 'OTHER', factsExplicitlyProvided: [], confidence: 0.95,
+  issues: [
+    validMixedIssue('employer CPF registration and contribution duties', 'CPF_PAYROLL', 'EMPLOYER', 'CPF'),
+    validMixedIssue('MOM salary-payment duties', 'MOM_EMPLOYMENT', 'EMPLOYER', 'MOM'),
+    { subject: 'relationship between CPF contribution duties and MOM salary-payment duties',
+      population: 'EMPLOYER', domain: 'UNKNOWN', governingAuthorities: ['MOM'], contextualAuthorities: ['CPF'],
+      operation: 'EXPLAIN_INTERACTION', mappedTopicIds: [], evidenceRequirement: 'UNRESOLVED', confidence: 0.95 }
+  ]
+};
+assert.equal(validateSemanticQuestionInterpretation(mixedCpfMomMeaning, mixedCpfMomQuestion), undefined,
+  'The strict exported validator continues rejecting an UNKNOWN-domain issue with a known governor.');
+const recoveredMixedCpfMom = await interpretSemanticQuestion(mixedCpfMomQuestion, provider,
+  async () => JSON.stringify(mixedCpfMomMeaning));
+assert.equal(recoveredMixedCpfMom.assessmentStatus, 'PASSED');
+assert.equal(recoveredMixedCpfMom.recoveredIssueCount, 1);
+assert.deepEqual(recoveredMixedCpfMom.interpretation.issues.slice(0, 2).map(item => item.governingAuthorities[0]), ['CPF', 'MOM'],
+  'Independently valid CPF and MOM obligations survive issue-level recovery.');
+const recoveredInteraction = recoveredMixedCpfMom.interpretation.issues[2];
+assert.equal(recoveredInteraction.domain, 'UNKNOWN');
+assert.deepEqual(recoveredInteraction.governingAuthorities, ['UNKNOWN']);
+assert.deepEqual(recoveredInteraction.contextualAuthorities, ['CPF', 'MOM']);
+assert.equal(recoveredInteraction.population, 'EMPLOYER');
+assert.equal(recoveredInteraction.operation, 'EXPLAIN_INTERACTION');
+const recoveredMixedRoute = reconcileQuestionUnderstanding(mixedCpfMomQuestion, classifyQuestion(mixedCpfMomQuestion), recoveredMixedCpfMom);
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'CPF_PAYROLL' && item.governingAuthorities.includes('CPF')),
+  'The CPF workstream survives reconciliation beside the unresolved issue.');
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'MOM_EMPLOYMENT' && item.governingAuthorities.includes('MOM')),
+  'The MOM workstream survives reconciliation beside the unresolved issue.');
+assert.ok(recoveredMixedRoute.issuePlan.issues.some(item => item.domain === 'UNKNOWN' && item.operation === 'EXPLAIN_INTERACTION' && item.status === 'UNRESOLVED'),
+  'The unresolved interaction remains beside both supported sibling workstreams.');
+for (const [label, invalidField] of [
+  ['population', { population: 'TAXPAYER' }],
+  ['operation', { operation: 'UNSAFE_OPERATION' }],
+  ['mapped topics', { mappedTopicIds: 'cpf_contribution_rates' }],
+  ['evidence requirement', { evidenceRequirement: 'REVIEWED_RULE' }]
+]) {
+  const malformed = structuredClone(mixedCpfMomMeaning);
+  Object.assign(malformed.issues[2], invalidField);
+  const result = await interpretSemanticQuestion(mixedCpfMomQuestion, provider, async () => JSON.stringify(malformed));
+  assert.equal(result.assessmentStatus, 'FAILED', `Recovery must not hide malformed original ${label}.`);
+}
+const noValidSiblingMeaning = structuredClone(mixedCpfMomMeaning);
+noValidSiblingMeaning.issues = [mixedCpfMomMeaning.issues[2], { ...mixedCpfMomMeaning.issues[2], subject: 'another contradictory unknown interaction' }];
+assert.equal((await interpretSemanticQuestion(mixedCpfMomQuestion, provider,
+  async () => JSON.stringify(noValidSiblingMeaning))).assessmentStatus, 'FAILED',
+  'Recovery requires at least one independently valid original child.');
 const modelResponse = JSON.stringify(interpretation());
 const interpreted = await interpretSemanticQuestion('How does personal income tax relief work?', provider, async (prompt, system, activeProvider, options) => {
   promptCalls.push({ prompt, system, activeProvider, options });

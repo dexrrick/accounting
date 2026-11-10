@@ -15,6 +15,43 @@ import {
 } from './acraMomKnowledge20261027b';
 
 /**
+ * Returns complete body text for restrictive same-document reasoning only.
+ * This deliberately keeps navigation, headings, disclosure text, hidden text,
+ * and other body chrome; none of it becomes positive evidence by inclusion.
+ * Missing or ambiguous body boundaries, incomplete non-content elements, and
+ * oversized pages fail closed instead of producing a partial context.
+ */
+export function extractCompleteHtmlBodyContext(rawDocument: string): string | undefined {
+  if (typeof rawDocument !== 'string' || !rawDocument.trim()) return undefined;
+
+  let markup = rawDocument.replace(/<!--[\s\S]*?-->/g, ' ');
+  if (/<!--|-->/i.test(markup)) return undefined;
+  for (const tag of ['script', 'style', 'template', 'head']) {
+    const pairedElement = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}\\s*>`, 'gi');
+    markup = markup.replace(pairedElement, ' ');
+    if (new RegExp(`<\\/?${tag}\\b`, 'i').test(markup)) return undefined;
+  }
+
+  const bodyOpenings = [...markup.matchAll(/<body\b[^>]*>/gi)];
+  const bodyClosings = [...markup.matchAll(/<\/body\s*>/gi)];
+  if (bodyOpenings.length !== 1 || bodyClosings.length !== 1) return undefined;
+  const bodyOpen = bodyOpenings[0];
+  const bodyClose = bodyClosings[0];
+  const bodyOpenIndex = bodyOpen.index;
+  const bodyEnd = bodyClose.index;
+  if (bodyOpenIndex === undefined || bodyEnd === undefined) return undefined;
+  const bodyStart = bodyOpenIndex + bodyOpen[0].length;
+  if (bodyEnd < bodyStart) return undefined;
+
+  const bodyMarkup = markup.slice(bodyStart, bodyEnd);
+  const bodyWithoutTagTokens = bodyMarkup.replace(/<\/?[A-Za-z][^>]*>/g, ' ');
+  if (bodyWithoutTagTokens.includes('<')) return undefined;
+  const bodyText = cleanHtmlText(bodyMarkup);
+  if (!bodyText || bodyText.length > 12_000) return undefined;
+  return bodyText;
+}
+
+/**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
  */
 export const ALLOWED_REGULATORY_HOSTNAMES = new Set([
@@ -85,6 +122,8 @@ export interface TopicContentExpectation {
   cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
   /** Enables the native Additional Wages definition card only for its bounded request. */
   cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Restores visible, link-free CPF action-card prose for an exact registered discovery candidate. */
+  preserveNativeDisclosureProse?: boolean;
   /** Preserves the one registered ACRA audit-exemption conditional heading for its bounded request. */
   acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
 }
@@ -523,20 +562,17 @@ function isInsideElement(element: BalancedMarkupElement, ancestor: BalancedMarku
   return false;
 }
 
-/**
- * Restores only the official CPF page's visible native action-card description,
- * and only when its complete criteria satisfy the bounded request. The source
- * card is replaced in place so body order and the source wording stay intact.
- */
-function preserveSupportedCpfWageCard(
-  mainMarkup: string,
-  request: BoundedStatutoryAdvisoryRequest
-): string {
-  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+interface VisibleCpfActionCardDescription {
+  start: number;
+  end: number;
+  descriptionMarkup: string;
+  proseMarkup: string;
+}
+
+/** Find structurally verified, visible native CPF action-card descriptions without interpreting their legal content. */
+function findVisibleCpfActionCardDescriptions(mainMarkup: string): VisibleCpfActionCardDescription[] {
   const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
-  // Parse only a bounded native card and its enclosing path. This keeps the
-  // extraction scoped to the real action-card description and avoids relying
-  // on unrelated CMS wrappers elsewhere in main.
+  const descriptions: VisibleCpfActionCardDescription[] = [];
   const actionCardPattern = /<div\b([^>]*)>/gi;
   let inspectedCards = 0;
   for (const match of markupWithoutComments.matchAll(actionCardPattern)) {
@@ -582,14 +618,45 @@ function preserveSupportedCpfWageCard(
         cardAncestors.some(element => element.tagName === 'a')) continue;
     const descendants = cardElements.filter(element => isInsideElement(element, description));
     if (descendants.some(element => element.tagName === 'a' || isHiddenMarkupElement(element) ||
-        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName))) continue;
+        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName) ||
+        (element !== description && (() => {
+          const identity = `${markupAttribute(element.attributes, 'class')} ${markupAttribute(element.attributes, 'id')}`;
+          return RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+            /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity);
+        })()))) continue;
 
     const descriptionMarkup = cardMarkup.slice(description.contentStart, description.contentEnd);
     if (/<(?:table|thead|tbody|tfoot|tr|td|th)\b/i.test(descriptionMarkup)) continue;
-    const ruleMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
-    if (!/<(?:p|li)\b/i.test(ruleMarkup) ||
-        supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(ruleMarkup) }) !== true) continue;
-    return markupWithoutComments.slice(0, cardStart) + '<div>' + ruleMarkup + '</div>' + markupWithoutComments.slice(cardEnd);
+    const proseMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
+    if (!/<(?:p|li)\b/i.test(proseMarkup)) continue;
+    descriptions.push({ start: cardStart, end: cardEnd, descriptionMarkup, proseMarkup });
+  }
+  return descriptions;
+}
+
+/** Restore a native card only when extraction retained all of its visible description text. */
+function preserveRegisteredCpfDisclosureProse(mainMarkup: string): string {
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  const descriptions = findVisibleCpfActionCardDescriptions(markupWithoutComments);
+  return descriptions.sort((left, right) => right.start - left.start).reduce((markup, description) => {
+    const proseRetainsDescription = normalizeVisibleText(description.descriptionMarkup) ===
+      normalizeVisibleText(description.proseMarkup);
+    const replacement = proseRetainsDescription ? '<div>' + description.proseMarkup + '</div>' : ' ';
+    return markup.slice(0, description.start) + replacement + markup.slice(description.end);
+  }, markupWithoutComments);
+}
+
+/** Preserve the existing complete, per-card bounded rule proof without pooling across cards. */
+function preserveSupportedCpfWageCard(
+  mainMarkup: string,
+  request: BoundedStatutoryAdvisoryRequest
+): string {
+  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  for (const description of findVisibleCpfActionCardDescriptions(markupWithoutComments)) {
+    if (supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(description.proseMarkup) }) !== true) continue;
+    return markupWithoutComments.slice(0, description.start) + '<div>' + description.proseMarkup + '</div>' +
+      markupWithoutComments.slice(description.end);
   }
   return mainMarkup;
 }
@@ -791,6 +858,7 @@ function extractVisiblePageText(
     acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
     cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
     cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    preserveNativeDisclosureProse?: boolean;
   } = {}
 ): string {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
@@ -803,7 +871,8 @@ function extractVisiblePageText(
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
   const cpfWageDefinitionRequest = options.cpfAdditionalWageDefinitionRequest || options.cpfOrdinaryWageDefinitionRequest;
-  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && cpfWageDefinitionRequest &&
+  const preserveNativeDisclosureProse = options.preserveNativeDisclosureProse === true && !cpfWageDefinitionRequest;
+  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && (cpfWageDefinitionRequest || preserveNativeDisclosureProse) &&
       !/<\/?main\b/i.test(contentMatch[1])) {
     const mainMarkup = rawDocument
       .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -832,7 +901,10 @@ function extractVisiblePageText(
     if (visibleMain && mainOpen && mainClosings[0]) {
       const mainContentStart = mainOpenIndex + mainOpen[0].length;
       const originalMainContent = mainMarkup.slice(mainContentStart, mainCloseIndex);
-      visibleMarkup = preserveSupportedCpfWageCard(originalMainContent, cpfWageDefinitionRequest)
+      const candidateMarkup = preserveNativeDisclosureProse
+        ? preserveRegisteredCpfDisclosureProse(originalMainContent) : originalMainContent;
+      visibleMarkup = (cpfWageDefinitionRequest
+        ? preserveSupportedCpfWageCard(candidateMarkup, cpfWageDefinitionRequest) : candidateMarkup)
         .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
         .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
     }
@@ -1054,7 +1126,8 @@ export class ExternalSourceValidator {
       requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
       acraAuditExemptionContextRequest: expectation.acraAuditExemptionContextRequest,
       cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
-      cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest
+      cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest,
+      preserveNativeDisclosureProse: expectation.preserveNativeDisclosureProse
     });
     if (cpfWageDefinitionRequest &&
         (!isBoundedStatutoryAdvisoryRequest(cpfWageDefinitionRequest) ||

@@ -2,6 +2,7 @@ import { hasIrasCpfExpansionContradiction, selectIrasCpfExpansionQuotes, support
 import { hasMomAcraMasExpansionContradiction, selectMomAcraMasExpansionQuotes, supportMomAcraMasExpansionRule } from './momAcraMasExpansionRules';
 import { hasAcraMomPracticalContradiction, selectAcraMomPracticalQuotes, supportAcraMomPracticalRule } from './acraMomPracticalRules20261027';
 import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027, hasIrasCpfMasPracticalContradiction, selectIrasCpfMasPracticalQuotes, supportIrasCpfMasPracticalRule } from './irasCpfMasPracticalRules20261027';
+import { CPF_MAS_PRACTICAL_DISCOVERY_POINTERS } from './cpfMasPracticalRules';
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, hasStatutoryKnowledgeContradiction,
   selectStatutoryKnowledgeQuotes, supportStatutoryKnowledgeRule } from './statutoryKnowledge20261027b';
 
@@ -39,15 +40,46 @@ export function hasPracticalExpansionContradiction(request: PracticalExpansionRe
 
 // Retrieval pointers are not evidence or source activation. Bodies, dates and
 // every selected premise must pass the existing admission/verification path.
-const CURRENT_POINTERS = [...IRAS_CPF_MAS_PRACTICAL_RULES_20261027.map(rule => ({
-  authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title
+export interface PracticalExpansionDiscoveryPointer {
+  authority: string;
+  topicIds: readonly string[];
+  url: string;
+  title: string;
+  expectedTitles?: readonly string[];
+  contentTerms?: readonly string[];
+  population?: string;
+  documentKind?: 'HTML' | 'PDF';
+  preserveNativeDisclosureProse?: boolean;
+}
+
+const CURRENT_POINTERS: readonly PracticalExpansionDiscoveryPointer[] = [...IRAS_CPF_MAS_PRACTICAL_RULES_20261027.map(rule => ({
+  authority: rule.authority, topicIds: rule.topicIds, url: rule.officialUrl, title: rule.title,
+  expectedTitles: [rule.title], contentTerms: [rule.population, rule.rule, ...rule.conditions, ...rule.requiredFacts],
+  population: rule.population, documentKind: /\.pdf$/i.test(new URL(rule.officialUrl).pathname) ? 'PDF' as const : 'HTML' as const
 })), {
   authority: 'CPF' as const,
   topicIds: ['cpf-ordinary-wages', 'cpf-additional-wages', 'cpf-bonus-backpay'],
   url: 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions',
   title: 'What constitutes wages for CPF contributions'
 }, ...STATUTORY_KNOWLEDGE_POINTERS_20261027B];
+const DISCOVERY_POINTERS: readonly PracticalExpansionDiscoveryPointer[] = Object.freeze([
+  ...CURRENT_POINTERS,
+  {
+    authority: 'MOM',
+    topicIds: ['mom-salary-payment'],
+    url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary',
+    title: 'Paying salary',
+    expectedTitles: ['Paying salary'],
+    contentTerms: ['salary', 'salary period', 'overtime', 'itemised payslips', 'employment records', 'payroll']
+  },
+  ...CPF_MAS_PRACTICAL_DISCOVERY_POINTERS
+]);
 const STATUTORY_KNOWLEDGE_POINTER_SET = new Set<(typeof CURRENT_POINTERS)[number]>(STATUTORY_KNOWLEDGE_POINTERS_20261027B);
+
+/** Data-only candidate inventory; it never runs statutory rule recognizers. */
+export function practicalExpansionDiscoveryPointers(): readonly PracticalExpansionDiscoveryPointer[] {
+  return DISCOVERY_POINTERS;
+}
 
 export function practicalExpansionPointers(request: PracticalExpansionRequest): typeof CURRENT_POINTERS {
   return CURRENT_POINTERS.filter(pointer => {

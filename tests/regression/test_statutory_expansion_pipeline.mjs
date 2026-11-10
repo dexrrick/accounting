@@ -8,7 +8,7 @@ import { OFFICIAL_SOURCE_DISCOVERY_PROVIDERS } from '../../src/retrieval/officia
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import { createAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
 import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
-import { MAS_VCFM_TOOLKIT_URL } from '../../src/retrieval/momAcraMasExpansionRules.ts';
+import { MAS_VCFM_TOOLKIT_URL, supportMomAcraMasExpansionRule } from '../../src/retrieval/momAcraMasExpansionRules.ts';
 import { supportGeneralIrasRuleConcept } from '../../src/retrieval/irasRuleConceptSupport.ts';
 import { selectIrasCpfExpansionQuotes } from '../../src/retrieval/irasCpfExpansionRules.ts';
 
@@ -35,7 +35,8 @@ const examples = [
   { id: 'deductions', authority: 'MOM', domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER', topic: 'mom-salary-payment',
     query: 'What limits apply to salary deductions for loss or damage under the Employment Act?',
     subject: 'Employment Act salary deduction grounds and limits', file: 'mom-salary-deductions-native.html', title: 'Salary deductions',
-    url: 'https://www.mom.gov.sg/employment-practices/salary/salary-deductions', answer: /25%|25 per cent/ },
+    url: 'https://www.mom.gov.sg/employment-practices/salary/salary-deductions',
+    answer: /salary deductions are limited to authorised reasons[\s\S]*damage or loss after an inquiry establishes the employee.s direct fault[\s\S]*opportunity to explain[\s\S]*25% of one month.s salary in a lump sum[\s\S]*50% cap per salary period/i },
   { id: 'secretary', authority: 'ACRA', domain: 'ACRA_CORPORATE', population: 'COMPANY', topic: 'acra_company-secretary',
     query: 'Can the sole director serve as company secretary, and what residence and vacancy rules apply?',
     subject: 'Company secretary appointment and eligibility requirements', file: 'acra-company-secretary-native.html',
@@ -125,6 +126,45 @@ for (const example of examples) {
   assert.match(answer, new RegExp(`${example.authority} rule explanation`), `${example.id}: usable explanation: ${JSON.stringify(diagnostics)}`);
   assert.match(answer, example.answer, `${example.id}: substantive rule conditions are rendered`);
   assert.ok(stream.sources.some(source => source.officialUrl === example.url), `${example.id}: citation is bound to supplied official document`);
+  if (example.id === 'deductions') {
+    const issue = result.workstreams.find(item => item.authority === example.authority).issues[0];
+    const registeredRecord = issue.sources.find(record => record.tags?.includes(example.topic));
+    const scopedRecord = issue.sources.find(record => record.id.startsWith('LIVE_TOPIC_iras-authority-query-issue-mom-'));
+    assert.ok(registeredRecord && scopedRecord, 'Registered and issue-scoped MOM excerpts remain distinct admitted records.');
+    assert.notEqual(registeredRecord.id, scopedRecord.id);
+    assert.equal(registeredRecord.canonicalSourceUrl, example.url);
+    assert.equal(scopedRecord.canonicalSourceUrl, example.url);
+    assert.equal(registeredRecord.documentHash, scopedRecord.documentHash,
+      'The separate scopes remain bound to the same fetched document revision.');
+    const supportRequest = { authority: example.authority, topicId: example.topic, query: example.query,
+      subject: example.subject, officialUrl: example.url };
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: registeredRecord.sourceText }), true,
+      'The registered MOM excerpt retains its complete rule proof.');
+    assert.equal(supportMomAcraMasExpansionRule({ ...supportRequest, sourceText: scopedRecord.sourceText }), false,
+      'The truncated issue-scoped excerpt remains independently insufficient.');
+    assert.equal(fetches.filter(url => url === example.url).length, 1,
+      'Both topic scopes reuse one successful page fetch.');
+    assert.ok(scopedRecord.tags?.some(tag => tag.startsWith('iras-authority-query-issue-mom-')));
+    assert.ok(issue.verifiedClaims.length > 0 && issue.verifiedClaims.every(claim =>
+      [registeredRecord.id, scopedRecord.id].includes(claim.recordId)),
+    'Each verified MOM claim stays bound to one admitted record identity.');
+    const presentedSource = stream.sources.find(source => source.officialUrl === example.url);
+    const exactClaims = presentedSource?.claims.filter(claim => claim.supportKind === 'EXACT_SOURCE_QUOTE') || [];
+    const recordsById = new Map(issue.sources.map(record => [record.id, record]));
+    assert.ok(exactClaims.length > 0 && exactClaims.every(claim => {
+      const binding = claim.fetchedSourceBinding;
+      const record = binding && recordsById.get(binding.recordId);
+      return Boolean(record && binding.documentHash === record.documentHash &&
+        binding.canonicalUrl === record.canonicalSourceUrl && record.canonicalSourceUrl === example.url);
+    }), 'Every exact MOM quote presentation retains its own record, hash and canonical URL binding.');
+    const registeredContext = issue.admittedDocumentContexts?.find(context => context.recordId === registeredRecord.id);
+    const scopedContext = issue.admittedDocumentContexts?.find(context => context.recordId === scopedRecord.id);
+    assert.ok(registeredContext && scopedContext, 'Each fetched record keeps its own admitted document context.');
+    assert.equal(registeredContext.documentHash, registeredRecord.documentHash);
+    assert.equal(registeredContext.canonicalUrl, registeredRecord.canonicalSourceUrl);
+    assert.equal(scopedContext.documentHash, scopedRecord.documentHash);
+    assert.equal(scopedContext.canonicalUrl, scopedRecord.canonicalSourceUrl);
+  }
   if (pdf) assert.ok(result.workstreams.flatMap(item => item.issues).flatMap(issue => issue.sources || [])
     .some(source => source.sourceLocator?.sourceType === 'PDF') ||
     result.workstreams.some(item => item.sources?.some(source => source.sourceLocator?.sourceType === 'PDF')),

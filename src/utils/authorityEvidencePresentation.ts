@@ -41,6 +41,16 @@ export interface AuthorityPresentedSource {
   claims: AuthorityPresentedClaim[];
 }
 
+function canonicalizeClaimTextForComparison(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'",
+    '&rsquo;': '’', '&lsquo;': '‘', '&rdquo;': '”', '&ldquo;': '“',
+    '&ndash;': '–', '&mdash;': '—'
+  };
+  return text.replace(/&(amp|lt|gt|quot|apos|rsquo|lsquo|rdquo|ldquo|ndash|mdash);/gi,
+    (entity) => entities[entity.toLowerCase()] ?? entity);
+}
+
 /** Keep complete-rule premises inside one verified document revision and issue. */
 export function groupExactIssueClaimsByDocument(
   source: AuthorityPresentedSource,
@@ -65,7 +75,20 @@ export function groupExactIssueClaimsByDocument(
     group.push(claim);
     groups.set(key, group);
   }
-  return [...groups.values()];
+  return [...groups.values()].map((claims) => {
+    const comparisonTexts = claims.map((claim) => canonicalizeClaimTextForComparison(claim.text));
+    return claims.filter((claim, index) => {
+    const sameScope = (other: AuthorityPresentedClaim) =>
+      other.validFrom === claim.validFrom && other.validTo === claim.validTo &&
+      JSON.stringify(other.sourceAdmissionOptions) === JSON.stringify(claim.sourceAdmissionOptions);
+    const currentText = comparisonTexts[index];
+    const earlierIdentical = claims.slice(0, index).some((other, otherIndex) =>
+      sameScope(other) && comparisonTexts[otherIndex] === currentText);
+    if (earlierIdentical) return false;
+    return !claims.some((other, otherIndex) => sameScope(other) && comparisonTexts[otherIndex].length > currentText.length &&
+      comparisonTexts[otherIndex].includes(currentText));
+    });
+  });
 }
 
 function isHexSha256(value: unknown): value is string {

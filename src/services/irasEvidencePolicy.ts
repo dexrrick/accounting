@@ -1,8 +1,13 @@
-import type { AccountingScenarioState, AccountingStandard, JournalEntryGroup } from '../types/accounting';
+import type {
+  AccountingScenarioState,
+  AccountingStandard,
+  JournalEntryGroup,
+  StatutoryAuthority
+} from '../types/accounting';
 import type { QuestionClassificationResult } from '../classification/questionClassifier';
 import type { GroundedReasoningContext } from './groundingContextBuilder';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
+import { SINGAPORE_DOMAIN_TAXONOMY, getCoverageTopicById, getCoverageTopicsByIds } from '../standards/coverageRegistry';
 import { assembleDeterministicResponse } from '../engine/responseAssembler';
 import {
   completeIrasEciFilingDeadlineQuote,
@@ -27,6 +32,13 @@ import {
 } from './semanticQuestionUnderstanding';
 import { ensureRequestCompletenessContext, readRequestCompletenessObservation } from './requestCompleteness';
 import { isMalformedAIJsonFallback } from '../utils/jsonRepair';
+import {
+  completeVisibleEvidenceListSpan,
+  isEvidenceHeadingTransition,
+  isVisibleEvidenceListItem,
+  splitEvidenceTextBlocks,
+  startsStrongAttachedEvidenceQualification
+} from '../utils/evidenceTextBoundaries';
 
 /** This policy governs IRAS answers; it does not change other regulatory workflows. */
 export function usesIrasEvidencePolicy(classification: QuestionClassificationResult, query?: string): boolean {
@@ -56,7 +68,7 @@ const FALLBACK_QUOTE_STOPWORDS = new Set([
 ]);
 
 function isVisibleListItemBlock(text: string): boolean {
-  return /^(?:\|\s*)*[•◦▪](?:\s|$)/.test(text);
+  return isVisibleEvidenceListItem(text);
 }
 
 function isKnownNavigationLabel(text: string): boolean {
@@ -602,7 +614,7 @@ function selectEvidenceOnlyQuotes(
 
   records.forEach((record, recordOrder) => {
     const liveExtractionCandidate = record.provenance === 'LIVE_EXTERNAL';
-    const sourceBlocks = record.sourceText.split(/\r?\n[\t ]*\r?\n+/).map(text => text.trim()).filter(Boolean);
+    const sourceBlocks = splitEvidenceTextBlocks(record.sourceText);
     const paragraphs: string[] = [];
     for (let index = 0; index < sourceBlocks.length;) {
       const block = sourceBlocks[index];
@@ -612,16 +624,20 @@ function selectEvidenceOnlyQuotes(
         index += 1;
         continue;
       }
+      // Keep a complete colon- or dash-introduced list with its attached
+      // qualification. The shared boundary finder is also used by literal
+      // quote verification.
+      const completeList = completeVisibleEvidenceListSpan(sourceBlocks, index);
+      if (completeList) {
+        paragraphs.push(completeList.quote);
+        index = completeList.endIndex + 1;
+        continue;
+      }
       if (!/:$/.test(block)) {
         paragraphs.push(block);
         index += 1;
         continue;
       }
-
-      // Never quote a colon-ended introduction without its list. Visible list
-      // markers from HTML extraction let us skip the complete associated list
-      // and continue with later source paragraphs. If boundaries are absent,
-      // stop using this record after the introduction rather than guessing.
       index += 1;
       if (sourceBlocks[index] && isVisibleListItemBlock(sourceBlocks[index])) {
         while (index < sourceBlocks.length && isVisibleListItemBlock(sourceBlocks[index])) index += 1;
@@ -632,7 +648,10 @@ function selectEvidenceOnlyQuotes(
     const candidates: typeof selected = [];
     for (let paragraphOrder = 0; paragraphOrder < paragraphs.length;) {
       let attachedEnd = paragraphOrder;
-      while (attachedEnd + 1 < paragraphs.length && startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
+      while (attachedEnd + 1 < paragraphs.length &&
+          (!isEvidenceHeadingTransition(paragraphs, attachedEnd + 1) ||
+            startsStrongAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) &&
+          startsAttachedEvidenceQualification(paragraphs[attachedEnd + 1])) {
         attachedEnd += 1;
       }
       const text = paragraphs.slice(paragraphOrder, attachedEnd + 1).join(' ');
@@ -920,6 +939,16 @@ export function renderIrasEvidenceResponse(
     ? parsedValue as Record<string, unknown>
     : {};
   const quality = context.evidenceQuality!;
+  const requestedAuthority = context.classification.authorities.length === 1
+    ? context.classification.authorities[0] as StatutoryAuthority : undefined;
+  const requestedDomain = context.classification.domains.length === 1
+    ? SINGAPORE_DOMAIN_TAXONOMY[context.classification.domains[0]] : undefined;
+  const expectedSourceDomain = requestedDomain?.legacyDomains.length === 1
+    ? requestedDomain.legacyDomains[0] : undefined;
+  const completeListScope = requestedAuthority && expectedSourceDomain &&
+    requestedDomain?.authorities.some(authority => authority === requestedAuthority)
+    ? { authority: requestedAuthority, domain: expectedSourceDomain } : undefined;
+  const verifierScope = completeListScope ? { completeListScope } : {};
   const requestCompletenessContext = ensureRequestCompletenessContext(
     query, context.requestCompletenessContext, context.questionUnderstanding
   );
@@ -954,7 +983,7 @@ export function renderIrasEvidenceResponse(
     : validatedIssueLocalGeneralExplainRule ? issueLocalSourceClaims
       : validatedGeneralExplainRule ? providerGeneralClaims : parsed.taxClaims;
   let verification = verifyEvidenceClaims(inputClaims, quality.eligibleRecords, {
-    missingFacts: context.missingFacts, targetDate: quality.targetDate
+    ...verifierScope, missingFacts: context.missingFacts, targetDate: quality.targetDate
   });
   let answerPath = mode === 'LOCAL' || validatedIssueLocalGeneralExplainRule ? 'VALIDATED_LOCAL'
     : mode === 'PROVIDER' ? 'VERIFIED_PROVIDER_QUOTES' : mode;
@@ -963,7 +992,7 @@ export function renderIrasEvidenceResponse(
       validatedIssueLocalGeneralExplainRule ? issueLocalTopics : context.classification.topicIds,
       true, validatedIssueLocalGeneralExplainRule);
     const sourceOnlyVerification = verifyEvidenceClaims(sourceOnlyClaims, quality.eligibleRecords, {
-      missingFacts: context.missingFacts, targetDate: quality.targetDate
+      ...verifierScope, missingFacts: context.missingFacts, targetDate: quality.targetDate
     });
     verification = {
       accepted: sourceOnlyVerification.accepted,
@@ -1005,7 +1034,7 @@ export function renderIrasEvidenceResponse(
       const supplementalClaims = selectEvidenceOnlyQuotes(context, query, missingCoveredTopics, false,
         validatedIssueLocalGeneralExplainRule);
       const supplementalVerification = verifyEvidenceClaims(supplementalClaims, quality.eligibleRecords, {
-        missingFacts: context.missingFacts, targetDate: quality.targetDate
+        ...verifierScope, missingFacts: context.missingFacts, targetDate: quality.targetDate
       });
       const acceptedKeys = new Set(verification.accepted.map(claim => `${claim.recordId}\n${claim.text.trim().toLowerCase()}`));
       verification = {

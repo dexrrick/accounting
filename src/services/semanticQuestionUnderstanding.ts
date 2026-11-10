@@ -202,6 +202,8 @@ export interface SemanticQuestionUnderstanding {
   failureReason?: 'RESPONSE_TOO_LARGE' | 'MALFORMED_JSON' | 'CONTRADICTORY_FIELDS' | 'SCHEMA_MISMATCH';
   /** Safe HTTP status extracted from the transport's sanitized error message. */
   providerStatus?: number;
+  /** Count of contradictory child issues retained as explicitly unresolved. */
+  recoveredIssueCount?: number;
 }
 
 export interface QuestionUnderstandingDiagnostics {
@@ -211,6 +213,7 @@ export interface QuestionUnderstandingDiagnostics {
   requestedOperation: SemanticQuestionOperation;
   authorityCandidates: SemanticAuthority[];
   concepts: string[];
+  recoveredIssueCount?: number;
 }
 
 /** Retrieval-only description of a material concept present in the question. */
@@ -876,27 +879,64 @@ const CONCEPT_SAMPLE = JSON.stringify({
   [SEMANTIC_CONCEPT_KEYS[1]]: SEMANTIC_CONCEPT_ROLE_VALUES[0]
 });
 
-const RESPONSE_SCHEMA = `Return a V2 JSON object with exactly these top-level keys: ${SEMANTIC_V2_INTERPRETATION_KEYS.join(', ')}. Set schemaVersion=${SEMANTIC_QUESTION_SCHEMA_VERSION}. The application derives the calculation flag from requestedOperation; it is not included in this wire response. Include ${SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum}–${SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum} issues, one for every requested material outcome, including exactly one for a simple single-outcome question. Do not provide issue IDs; they are assigned deterministically. Each issue has exactly: ${SEMANTIC_ISSUE_KEYS.join(', ')}. Each concept has exactly ${CONCEPT_FORMAT_EXAMPLE}; labels must be safe and nonempty, for example ${CONCEPT_SAMPLE}. Confidence is a number from ${SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum} through ${SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum}.
+const RESPONSE_SCHEMA = `Return a V2 JSON object with exactly these top-level keys: ${SEMANTIC_V2_INTERPRETATION_KEYS.join(', ')}. Set schemaVersion=${SEMANTIC_QUESTION_SCHEMA_VERSION}. The application derives the calculation flag from requestedOperation. Include ${SEMANTIC_V2_WIRE_LIMITS.issueItemsMinimum}–${SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum} issues, one for every requested material outcome, including exactly one for a simple single-outcome question. Do not provide issue IDs. Each issue has exactly ${SEMANTIC_ISSUE_KEYS.join(', ')}. Each concept has exactly ${CONCEPT_FORMAT_EXAMPLE}; labels must be safe and nonempty, for example ${CONCEPT_SAMPLE}. Confidence is ${SEMANTIC_V2_WIRE_LIMITS.confidenceMinimum}–${SEMANTIC_V2_WIRE_LIMITS.confidenceMaximum}.
 
-mappedTopicIds are optional candidate hints; the application derives candidates from the issue subject and maps them only when independently recognized in the original question and consistent with domain, population, and authority. Leave them empty when unsure; keep every issue even without a matching topic. evidenceRequirement is ${SEMANTIC_EVIDENCE_REQUIREMENT_VALUES.join('|')}; the application derives it from domain, operation, and issue specificity. Issues describe questions to resolve, never conclusions.
+mappedTopicIds are optional hints; the application derives candidates from each subject and retains topics independently recognized in the question and consistent with domain, population, and authority. Leave hints empty if unsure; never omit an issue for lack of a topic. The application derives evidenceRequirement (${SEMANTIC_EVIDENCE_REQUIREMENT_VALUES.join('|')}) from domain, operation, and issue specificity. Describe requested questions, not conclusions.
 
-For compound questions, decompose every distinct material outcome the user asks about into its own issue. An issue represents a requested answer or decision, not every noun, fact, or authority mentioned. Do not omit an issue because another authority or topic is more prominent. When the question asks separately about obligations or treatment for different parties, represent those as separate issues when their outcomes can differ; do not merge them just because they share a governing authority or domain. Multiple issues may have the same governing authority but different domains, populations, or operations. Assign exactly one governing authority to each issue and ensure it matches the issue domain. Put an authority in contextualAuthorities only when it is relevant context for that issue but does not govern it; merely mentioning an authority must not create an issue or workstream. Use UNKNOWN rather than inventing unsupported certainty. If a compound question has no single accurate top-level domain or population, set the top-level domain and population to UNKNOWN and put the precise values on issues[]. Use authorityCandidates=[UNKNOWN] when no single top-level authority set applies; never mix UNKNOWN with other top-level authority values.
+For compound questions, make one issue per separately requested material outcome, not per noun, fact, or mentioned authority. Keep distinct party outcomes separate when their answers may differ; never omit an outcome because another is more prominent. Preserve one issue for each explicitly requested PRIMARY subject governed by a named authority; relationship and fact-gathering issues add to those issues and never replace them. Multiple issues may share authority/domain but have different populations or operations. Assign exactly one governing authority to each issue and ensure it matches the issue domain. Put relevant non-governing authorities in contextualAuthorities; mention alone creates no issue. Use UNKNOWN rather than inventing certainty. If no single root domain or population applies, set that root field UNKNOWN and specify issues precisely. If no single top-level authority set applies, use authorityCandidates=[UNKNOWN], never mix UNKNOWN with named authorities.
 
-Role semantics: PRIMARY is the main requested outcome; RELATED is a material descriptor or related concept and does not itself require another issue; CONTEXT_ONLY is background. Create separate issues only for independently requested outcomes whose answers may differ. Keep different parties' outcomes separate and distinguish employer duties from company tax. A standard or accounting treatment mentioned only as tax context creates no accounting issue; add one only for a requested recognition, measurement, presentation, disclosure, or journal outcome.
+Concept roles: PRIMARY is the main requested outcome; RELATED is a material descriptor and does not itself require an issue; CONTEXT_ONLY is background. An accounting standard mentioned only as tax context creates no accounting issue; create one only for requested recognition, measurement, presentation, disclosure, or journal treatment.
 
-Classify each issue by the subject of the requested outcome. An employee's personal relief claim or salary/employment-income tax is individual income tax (IRAS); an employee benefit/perquisite tax question is employment-benefit tax (IRAS). EMPLOYEE alone does not imply a taxable benefit. Employer reporting is a separate issue only when the employer's reporting duty is requested; if the reporter is not established, use population=UNKNOWN rather than assuming the employee or company is the reporter. A company acting as employer for employment reporting has population=EMPLOYER; COMPANY is reserved for the company's own tax position. An employee's own CPF contribution amount and an employer's CPF contribution amount are separate payroll issues when both are requested.
+Classify each issue by its requested outcome. An employee's own salary/employment-income tax is individual IRAS tax; employee-benefit/perquisite tax is employment-benefit tax. EMPLOYEE alone does not imply a benefit. Create a separate employer-reporting issue only when requested; if the reporter is unclear use population=UNKNOWN. An employer reporting duty uses EMPLOYER; COMPANY is the company's own tax position. Separate employee and employer CPF contribution amounts when both are requested.
 
-Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement, even if claimant status is unclear; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER. Do not emit a requiresUserSpecificFacts field: the application derives case specificity and per-issue evidence from the query, independent of supplied-fact counts or provider hints. CALCULATE, DETERMINE_TREATMENT, and PREPARE_JOURNAL are always case-specific; CHECK_ELIGIBILITY is so only for a specific claimant or transaction. Generic employee/class eligibility, "who can claim/qualifies", conditions, and general rules are source-only. Distinguish an audience request from a claim about the user's circumstances. The root flag is the OR of issue specificity, plus mandatory top-operation lower bounds; keep mixed issues' evidence independent.
+Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER.
 
-Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, use top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. Record only user-supplied case facts in factsExplicitlyProvided.
+Do not emit a requiresUserSpecificFacts field: the application derives case specificity and per-issue evidence from the query, independent of supplied-fact counts or provider hints. CALCULATE, DETERMINE_TREATMENT, and PREPARE_JOURNAL are always case-specific; CHECK_ELIGIBILITY is so only for a specific claimant or transaction. Generic employee/class eligibility, "who can claim/qualifies", conditions, and general rules are source-only. Distinguish an audience request from a claim about the user's circumstances. The root specificity is the OR of issue specificity plus mandatory root-operation bounds; keep mixed issues' evidence independent.
 
-Enums: domain=${SEMANTIC_DOMAIN_VALUES.join('|')}; population=${SEMANTIC_POPULATION_VALUES.join('|')}; authority values=${SEMANTIC_AUTHORITY_VALUES.join('|')}; operation=${SEMANTIC_OPERATION_VALUES.join('|')}; concept role=${SEMANTIC_CONCEPT_ROLE_VALUES.join('|')}. PREPARE_JOURNAL requires ACCOUNTING.
+Set top-level requestedOperation only when one operation describes the whole question; use OTHER for mixed operations. For mixed journal and non-accounting outcomes, set top-level domain/population UNKNOWN and operation OTHER, retaining PREPARE_JOURNAL on its issue. For any UNKNOWN-domain issue, set governingAuthorities=[UNKNOWN]; put known relevant authorities only in contextualAuthorities. Separate issues for outcomes governed by different authorities. Preserve distinct issues for independently requested rules or obligations on both sides of a comparison, even when the same authority governs them; only when requested, add the relationship as a separate EXPLAIN_INTERACTION issue. Use UNKNOWN governor unless one authority truly governs it. Use EXPLAIN_RULE for requested responsibilities and facts to collect before rule application; reserve FILING_REQUIREMENT for actual filing, reporting, or notification procedures. Do not infer CALCULATE from a calculation mentioned later. factsExplicitlyProvided contains only user-supplied case facts.
 
-Conceptual rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. Case specificity does not mean facts are missing; omit hypothetical examples and general conditions from factsExplicitlyProvided.
+Enums: domain=${SEMANTIC_DOMAIN_VALUES.join('|')}; population=${SEMANTIC_POPULATION_VALUES.join('|')}; authority values=${SEMANTIC_AUTHORITY_VALUES.join('|')}; operation=${SEMANTIC_OPERATION_VALUES.join('|')}; concept role=${SEMANTIC_CONCEPT_ROLE_VALUES.join('|')}.
 
-Identify whose own tax or regulatory status is at issue. First-person plural or overseas receipt alone does not establish an individual, employer, company, or fund; use UNKNOWN. Use EMPLOYEE for the employee's position, EMPLOYER for employer obligations, and COMPANY only as taxpayer or claimant; a shareholder is not the company.
+General rules may mention parties, claims, conditions, or illustrative amounts without deciding an identified case. Case specificity does not mean facts are missing; do not list hypotheticals or general conditions as facts. First-person plural or overseas receipt alone does not establish individual, employer, company, or fund status; use UNKNOWN. Use EMPLOYEE for the employee's position, EMPLOYER for employer duties, and COMPANY only as taxpayer or claimant; a shareholder is not the company.
 
 Full V2 mixed journal-and-tax example: {"schemaVersion":2,"jurisdiction":["Singapore"],"authorityCandidates":["UNKNOWN"],"contextualAuthorities":[],"domain":"UNKNOWN","population":"UNKNOWN","primarySubject":"expense journal and tax deductibility","concepts":[{"concept":"expense accounting","role":"RELATED"},{"concept":"income-tax deductibility","role":"PRIMARY"}],"requestedOperation":"OTHER","factsExplicitlyProvided":[],"confidence":0.9,"issues":[{"subject":"expense journal","population":"COMPANY","domain":"ACCOUNTING","governingAuthorities":["ACCOUNTING_STANDARDS"],"contextualAuthorities":[],"operation":"PREPARE_JOURNAL","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9},{"subject":"company expense deduction eligibility","population":"COMPANY","domain":"IRAS_INCOME_TAX","governingAuthorities":["IRAS"],"contextualAuthorities":["ACCOUNTING_STANDARDS"],"operation":"CHECK_ELIGIBILITY","mappedTopicIds":[],"evidenceRequirement":"AUTHORITATIVE_SOURCE_AND_CASE_FACTS","confidence":0.9}]}`;
+
+/**
+ * Preserve independently valid issues when a multi-issue V2 response has only a
+ * structurally valid UNKNOWN-domain child with a contradictory known governor.
+ * The child is retained as unresolved; this does not amend the public validator.
+ */
+function recoverContradictoryUnknownDomainIssue(value: unknown, query: string): { interpretation: SemanticQuestionInterpretation; recoveredIssueCount: number } | undefined {
+  if (!isRecord(value) || value.schemaVersion !== SEMANTIC_QUESTION_SCHEMA_VERSION ||
+      !Array.isArray(value.issues) || value.issues.length < 2 ||
+      value.issues.length > SEMANTIC_V2_WIRE_LIMITS.issueItemsMaximum) return undefined;
+  let recoveredIssueCount = 0;
+  let independentlyValidIssueCount = 0;
+  const issues: unknown[] = [];
+  for (const issueValue of value.issues) {
+    if (validateSemanticQuestionIssue(issueValue)) {
+      issues.push(issueValue);
+      independentlyValidIssueCount += 1;
+      continue;
+    }
+    if (!isRecord(issueValue) || !hasExactKeys(issueValue, SEMANTIC_ISSUE_KEYS) ||
+        issueValue.domain !== 'UNKNOWN' || !validAuthorities(issueValue.governingAuthorities) ||
+        issueValue.governingAuthorities.length !== 1 || issueValue.governingAuthorities[0] === 'UNKNOWN' ||
+        !validAuthorities(issueValue.contextualAuthorities)) return undefined;
+    const unresolvedIssue = {
+      ...issueValue,
+      governingAuthorities: ['UNKNOWN'],
+      contextualAuthorities: [...new Set([...issueValue.contextualAuthorities, ...issueValue.governingAuthorities])]
+        .filter(authority => authority !== 'UNKNOWN')
+    };
+    if (!validateSemanticQuestionIssue(unresolvedIssue)) return undefined;
+    issues.push(unresolvedIssue);
+    recoveredIssueCount += 1;
+  }
+  if (recoveredIssueCount === 0 || independentlyValidIssueCount === 0) return undefined;
+  const normalized = validateSemanticQuestionInterpretation({ ...value, issues }, query);
+  return normalized ? { interpretation: normalized, recoveredIssueCount } : undefined;
+}
 
 /** Calls only the configured provider with the current question; no evidence or conversation history is supplied. */
 export async function interpretSemanticQuestion(
@@ -937,7 +977,9 @@ export async function interpretSemanticQuestion(
         failure: 'INVALID_RESPONSE', failureReason: 'MALFORMED_JSON'
       };
     }
-    const interpretation = validateSemanticQuestionInterpretation(raw, query);
+    const directInterpretation = validateSemanticQuestionInterpretation(raw, query);
+    const recovered = directInterpretation ? undefined : recoverContradictoryUnknownDomainIssue(raw, query);
+    const interpretation = directInterpretation || recovered?.interpretation;
     if (!interpretation) return {
       mode: 'DETERMINISTIC_FALLBACK',
       assessmentStatus: 'FAILED',
@@ -950,6 +992,7 @@ export async function interpretSemanticQuestion(
     };
     return {
       mode: 'SEMANTIC_INTERPRETATION', assessmentStatus: 'PASSED', transportAttempts,
+      ...(recovered ? { recoveredIssueCount: recovered.recoveredIssueCount } : {}),
       interpretation: normalizeAcraAnnualReturnDeadlineRuleInterpretation(query,
         normalizeGeneralCompanyTaxResidencyRuleInterpretation(query,
           normalizeIssueLocalCpfTaxOutcome(query, interpretation)))
@@ -4454,7 +4497,8 @@ export function projectQuestionUnderstandingDiagnostics(understanding: SemanticQ
     primarySubject: sanitizeSemanticDiagnosticLabel(semantic.primarySubject),
     requestedOperation: semantic.requestedOperation,
     authorityCandidates: semantic.authorityCandidates.filter(authority => authority !== 'UNKNOWN'),
-    concepts: semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => sanitizeSemanticDiagnosticLabel(item.concept)).filter(Boolean).slice(0, 12)
+    concepts: semantic.concepts.filter(item => item.role !== 'CONTEXT_ONLY').map(item => sanitizeSemanticDiagnosticLabel(item.concept)).filter(Boolean).slice(0, 12),
+    ...(understanding.recoveredIssueCount ? { recoveredIssueCount: understanding.recoveredIssueCount } : {})
   };
 }
 

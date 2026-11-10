@@ -46,6 +46,15 @@ export interface AuthorityEvidenceGap {
   reason: string;
 }
 
+/** Complete same-document text for selective claim verification; never source evidence by itself. */
+export interface AuthorityAdmittedDocumentContext {
+  recordId: string;
+  documentHash: string;
+  canonicalUrl: string;
+  targetDate: string;
+  completeness: "COMPLETE";
+  sourceText: string;
+}
 export interface AuthorityIssueEvidence {
   issueId: string;
   subject: string;
@@ -64,6 +73,12 @@ export interface AuthorityIssueEvidence {
   retrievalTrace?: AuthorityRetrievalTrace;
   /** Per-candidate admission results without duplicating any candidate source bodies. */
   admissionDiagnostics?: AuthorityIssueAdmissionDiagnostics;
+  /** Current-query admitted narrative document records, including records without selected rule claims. */
+  admittedDocumentSources?: AuthoritativeSourceRecord[];
+  /** Full, qualification-preserving document text bound to the same current admitted source record. */
+  admittedDocumentContexts?: AuthorityAdmittedDocumentContext[];
+  /** Target date used by the current issue admission gate for admittedDocumentSources. */
+  admittedDocumentTargetDate?: string;
   verifiedClaims: VerifiedEvidenceClaim[];
   /** Only admitted records supporting at least one verified claim. */
   sources: AuthoritativeSourceRecord[];
@@ -195,6 +210,8 @@ export interface AuthorityEvidenceRequest {
 
 export interface AuthorityEvidenceProviderResult {
   candidates: AuthoritativeSourceRecord[];
+  /** Complete fetched HTML body text for post-admission restrictive reasoning only. */
+  documentContexts?: AuthorityAdmittedDocumentContext[];
   /** Optional IRAS retrieval/admission trace; metadata fields never establish coverage. */
   trace?: AuthorityRetrievalTrace;
   /** Raw current-request retrieval trace: IRAS quality gate or strict non-IRAS live admission. */

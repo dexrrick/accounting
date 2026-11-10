@@ -146,6 +146,52 @@ function evidenceIssue(plan, supportingSource, claimOverrides = {}) {
   };
 }
 
+const claimScopeIssueId = 'claim-scope-regression';
+const claimScopeUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions';
+const claimScopeBinding = {
+  recordId: 'cpf-wages-revision-a', documentHash: 'a'.repeat(64), canonicalUrl: claimScopeUrl,
+  retrievedAt: '2026-10-25T00:00:00.000Z'
+};
+const completeRuleQuote = 'Complete passage: wages meet condition alpha and qualifier beta, so the stated treatment applies.';
+const canonicalEntityQuote = 'The employee’s salary deduction is capped at 25% after an inquiry.';
+const claimScopeSource = {
+  officialUrl: claimScopeUrl,
+  claims: [
+    { text: completeRuleQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: completeRuleQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'A noncontained partial premise stays alongside the complete passage.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding, validFrom: '2025-01-01' },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding, sourceAdmissionOptions: { targetDate: '2025-01-01', expectedAuthority: 'CPF' } },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: { ...claimScopeBinding, recordId: 'cpf-wages-revision-b' } },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: { ...claimScopeBinding, documentHash: 'b'.repeat(64) } },
+    { text: canonicalEntityQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee&rsquo;s salary deduction is capped at 25% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'employee&rsquo;s salary deduction', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee’s salary deduction is capped at 26% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee was not directly at fault for the damage.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee&amp;rsquo;s salary deduction is capped at 25% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding }
+  ]
+};
+const groupedClaimScopes = groupExactIssueClaimsByDocument(claimScopeSource, claimScopeIssueId);
+const findClaimGroup = predicate => groupedClaimScopes.find(group => group.some(predicate));
+const originalRevisionClaims = findClaimGroup(claim => claim.fetchedSourceBinding?.recordId === 'cpf-wages-revision-a');
+assert.deepEqual(originalRevisionClaims.map(claim => claim.text), [
+  completeRuleQuote,
+  'A noncontained partial premise stays alongside the complete passage.',
+  'condition alpha',
+  'qualifier beta',
+  canonicalEntityQuote,
+  'The employee’s salary deduction is capped at 26% after an inquiry.',
+  'The employee was not directly at fault for the damage.',
+  'The employee&amp;rsquo;s salary deduction is capped at 25% after an inquiry.'
+], 'only exact or entity-equivalent contained text is pruned; original text, numeric changes, and distinct qualifiers remain');
+assert.equal(findClaimGroup(claim => claim.fetchedSourceBinding?.recordId === 'cpf-wages-revision-b').length, 1,
+  'claims from a different record remain in a separate document group');
+assert.equal(findClaimGroup(claim => claim.fetchedSourceBinding?.documentHash === 'b'.repeat(64)).length, 1,
+  'claims from a different document hash remain in a separate revision group');
+
 const irasSource = source({ id: 'iras-source-1', authority: 'IRAS', title: 'IRAS income tax guidance' });
 const cpfSource = source({ id: 'cpf-source-1', authority: 'CPF', title: 'CPF contribution guidance' });
 const irasPlanA = plannedIssue({ id: 'iras-company-issue', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Company tax deduction', population: 'COMPANY' });

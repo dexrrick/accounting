@@ -13,7 +13,7 @@ import { classifyQuestion } from '../classification/questionClassifier';
 import type { ProviderSettings } from '../types/provider';
 import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
-import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
+import { getCoverageTopicsByIds, SINGAPORE_COVERAGE_REGISTRY, SINGAPORE_DOMAIN_TAXONOMY, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
@@ -33,7 +33,7 @@ import {
   OfficialSitemapDiscoveryAdapter
 } from '../retrieval/officialSitemapDiscovery';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
-import { defaultExternalSourceValidator, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
+import { defaultExternalSourceValidator, extractCompleteHtmlBodyContext, matchesTopicContentTerm } from '../retrieval/externalSourceValidator';
 import { isAcraAuditExemptionContextRequest } from '../retrieval/acraMomKnowledge20261027b';
 import { supportsAcraSmallCompanyAuditFacts } from '../retrieval/momAcraMasCoverageRules';
 import { cleanHtmlText } from '../retrieval/sourceAdapters';
@@ -44,7 +44,8 @@ import { provesIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPractica
 import { provesCpfMasPracticalRuleSource } from '../retrieval/cpfMasPracticalRules';
 import { supportIrasCpfCoverageRule } from '../retrieval/irasCpfCoverageRules';
 import { supportMomAcraMasCoverageRule } from '../retrieval/momAcraMasCoverageRules';
-import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule, practicalExpansionPointers } from '../retrieval/practicalStatutoryExpansion';
+import { hasPracticalExpansionContradiction, selectPracticalExpansionQuotes, supportPracticalExpansionRule,
+  practicalExpansionPointers, practicalExpansionDiscoveryPointers } from '../retrieval/practicalStatutoryExpansion';
 import { IRAS_CPF_MAS_PRACTICAL_RULES_20261027 } from '../retrieval/irasCpfMasPracticalRules20261027';
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B, knowledgePointerCoversDate,
   supportStatutoryKnowledgeRule } from '../retrieval/statutoryKnowledge20261027b';
@@ -71,7 +72,7 @@ import {
 } from '../retrieval/acraAnnualReturnFilingRule';
 import { formatIrasEvidencePrompt, renderIrasEvidenceResponse, usesIrasEvidencePolicy } from './irasEvidencePolicy';
 import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
-import type { AuthorityEvidenceScope } from '../types/authorityEvidence';
+import type { AuthorityAdmittedDocumentContext, AuthorityEvidenceScope } from '../types/authorityEvidence';
 import {
   buildSemanticDiscoveryQuery,
   getRequestedQuestionConcepts,
@@ -249,6 +250,8 @@ export interface GroundedReasoningContext {
   primaryEvidence: AuthoritativeSourceRecord[];
   officialGuidance: AuthoritativeSourceRecord[];
   curatedSummaries: AuthoritativeSourceRecord[];
+  /** Complete fetched HTML bodies, consumed only after same-record source admission. */
+  documentContexts?: AuthorityAdmittedDocumentContext[];
   applicationRules: string[];
   currentInformationRequired: boolean;
   semanticUnderstanding?: TransactionUnderstanding;
@@ -420,6 +423,8 @@ export interface MappedFallbackOptions {
   officialDomainSearchAdapter?: OfficialDomainSearchAdapter;
   /** Permit a transient authority-level query scope when no reviewed topic matches. */
   authorityLevelDiscovery?: boolean;
+  /** Permit supplementary issue-scoped discovery only after same-request semantic validation. */
+  allowTransientAuthorityIssueDiscovery?: boolean;
   /** Restrict this pass to reviewed local records; do not fetch mapped sources. */
   localOnly?: boolean;
   /** Stable date input used by target-date and freshness checks. */
@@ -505,6 +510,47 @@ function provisionalIrasDiscoveryTopic(query: string, semanticContext?: ReturnTy
     shortDescription: `Transient ${populationContext} routing context derived from the complete user query and validated intent labels; not reviewed knowledge.`
   } as unknown as MappedCoverageTopic;
   return topic;
+}
+
+/** Transient retrieval target for a validated, governed issue without a useful registry topic. */
+export function provisionalAuthorityIssueTopic(scope: AuthorityEvidenceScope): MappedCoverageTopic | undefined {
+  if (scope.authority === 'IRAS') return undefined;
+  const sourceDomainByAuthority = {
+    CPF: { topicDomain: 'CPF_CONTRIBUTIONS', sourceDomain: 'CPF_BOARD', authorityLabel: 'CPF Board' },
+    MOM: { topicDomain: 'MOM_EMPLOYMENT', sourceDomain: 'MOM_EMPLOYMENT', authorityLabel: 'Ministry of Manpower' },
+    ACRA: { topicDomain: 'ACRA_COMPANIES', sourceDomain: 'ACRA_CORP', authorityLabel: 'ACRA' },
+    MAS: { topicDomain: 'MAS_FUND_MANAGEMENT', sourceDomain: 'MAS_FUNDS', authorityLabel: 'MAS' }
+  } as const;
+  const metadata = sourceDomainByAuthority[scope.authority];
+  if (!metadata) return undefined;
+  const concepts = scope.requestedConcepts;
+  const phrases = [...new Set([
+    scope.context.primarySubject,
+    ...scope.context.concepts,
+    ...concepts.flatMap(concept => [concept.label, ...concept.terms])
+  ].map(value => value.trim()).filter(value => value && normalizeEvidenceText(value).split(' ').length >= 2))].slice(0, 16);
+  const issueTerms = phrases.flatMap(phrase => normalizeEvidenceText(phrase).split(' ')
+    .filter(term => term.length >= 4 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+  const discoveryTerms = [...new Set([...phrases, ...issueTerms])].slice(0, 32);
+  const slug = normalizeEvidenceText(scope.context.primarySubject).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 54);
+  return {
+    id: 'iras-authority-query-issue-' + scope.authority.toLowerCase() + '-' + (slug || 'request'),
+    title: metadata.authorityLabel + ': ' + scope.context.primarySubject.slice(0, 140),
+    domainId: metadata.topicDomain,
+    priority: 'P1',
+    status: 'MISSING',
+    authorities: [scope.authority],
+    legacyDomains: [metadata.sourceDomain],
+    sourceRecordIds: [],
+    requiredChecks: ['SOURCE_PROVENANCE', 'RETRIEVAL_EVALUATION', 'TEMPORAL_VALIDITY'],
+    keywords: discoveryTerms,
+    exclusionKeywords: [],
+    aliases: phrases,
+    actOrStandard: metadata.authorityLabel + ' official guidance',
+    shortDescription: 'Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.',
+    requestedConcepts: concepts,
+    mappedTopicIds: scope.topicIds
+  } as unknown as MappedCoverageTopic;
 }
 
 function provisionalIrasConceptTopics(
@@ -1611,7 +1657,7 @@ export async function resolveMappedOfficialSourceFallback(
   query: string,
   retriever: ISourceRetriever,
   options: MappedFallbackOptions = {}
-): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[] }> {
+): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[]; documentContexts?: AuthorityAdmittedDocumentContext[] }> {
   const webRetriever = options.webRetriever || defaultControlledWebRetriever;
   const discoveryAdapter = options.discoveryAdapter || getDefaultDiscoveryAdapter(webRetriever, options.fetchOptions);
   const scopedTopicIds = options.evidenceScope
@@ -1653,6 +1699,9 @@ export async function resolveMappedOfficialSourceFallback(
   const referenceDate = options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE;
   const targetDateResolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, referenceDate);
   const targetDate = targetDateResolution.targetDate;
+  // For an undated request, bind supplemental same-document context to the
+  // request's evidence-as-of date without inventing a transaction/effective date.
+  const documentContextDate = targetDate || referenceDate;
   const currentSingaporeYear = referenceDate.slice(0, 4);
   const currentYearYaProxy = targetDateResolution.source === 'INFERRED' &&
     /\b(?:ya|year of assessment)\s*20\d{2}\b/i.test(targetDateResolution.rawMatchedText || '') &&
@@ -1669,6 +1718,8 @@ export async function resolveMappedOfficialSourceFallback(
   // the period-vetted source-map requirement.
   const authorityFallbackPermitted = options.authorityLevelDiscovery === true &&
     !options.localEvidenceAdequate && !historicalIrasScopeRequested;
+  const scopedAuthorityTopic = authorityFallbackPermitted && options.allowTransientAuthorityIssueDiscovery === true && options.evidenceScope
+    ? provisionalAuthorityIssueTopic(options.evidenceScope) : undefined;
   const topicsRequiringFallback = [...expandedTopics.values()].filter(topic => topic.status !== 'HISTORICAL');
   const semanticIrasContext = options.evidenceScope ? {
     domainId: options.evidenceScope.context.domainId,
@@ -1689,12 +1740,18 @@ export async function resolveMappedOfficialSourceFallback(
   };
   const requestedConcepts = options.evidenceScope?.requestedConcepts ||
     semanticIrasContext?.requestedConcepts || getRequestedQuestionConcepts(query, options.questionUnderstanding);
-  const authorityDiscoveryTopics = authorityFallbackPermitted
+  const scopedDiscoveryQuery = options.evidenceScope && options.evidenceScope.authority !== 'IRAS'
+    ? [options.evidenceScope.context.primarySubject, ...options.evidenceScope.context.concepts,
+      ...options.evidenceScope.requestedConcepts.flatMap(concept => [concept.label, ...concept.terms]),
+      options.evidenceScope.context.population].filter(Boolean).join(' ')
+    : options.semanticDiscoveryQuery || query;
+  const authorityDiscoveryTopics = authorityFallbackPermitted &&
+      (!options.evidenceScope || options.evidenceScope.authority === 'IRAS')
     ? provisionalIrasConceptTopics(query, semanticIrasContext, requestedConcepts)
     : [];
   const provisionalTopics: MappedCoverageTopic[] = [...authorityDiscoveryTopics];
 
-  if (topicsRequiringFallback.length === 0 && authorityDiscoveryTopics.length === 0) {
+  if (topicsRequiringFallback.length === 0 && authorityDiscoveryTopics.length === 0 && !scopedAuthorityTopic) {
     const historicalBlocked = options.authorityLevelDiscovery === true && !options.localEvidenceAdequate && historicalIrasScopeRequested;
     if (historicalBlocked) {
       return { records: [], provisionalTopics: [], trace: {
@@ -1728,6 +1785,25 @@ export async function resolveMappedOfficialSourceFallback(
   const sitemapLinkedCandidates = new Map<string, LinkedOfficialCandidate[]>();
   const successfulPageFetches = new Map<string, Awaited<ReturnType<ControlledWebRetriever['fetchOfficialSource']>>>();
   const extractedDocuments = new Map<string, AuthoritativeSourceRecord>();
+  const fetchedHtmlContexts = new Map<string, { documentHash: string; canonicalUrl: string; sourceText: string }>();
+  const admittedDocumentContexts = new Map<string, AuthorityAdmittedDocumentContext>();
+  const retainFetchedHtmlContext = (candidateUrl: string, fetched: ControlledFetchResult): void => {
+    fetchedHtmlContexts.delete(candidateUrl);
+    const mediaType = fetched.contentType?.split(';', 1)[0]?.trim().toLowerCase();
+    if (fetched.status !== 'SUCCESS' || !fetched.content || !fetched.contentHash || !fetched.finalUrl ||
+        !['text/html', 'application/xhtml+xml'].includes(mediaType || '')) return;
+    try {
+      if (new URL(fetched.finalUrl).hostname.toLowerCase() === 'sso.agc.gov.sg') return;
+    } catch {
+      return;
+    }
+    const sourceText = extractCompleteHtmlBodyContext(fetched.content);
+    if (sourceText) fetchedHtmlContexts.set(candidateUrl, {
+      documentHash: fetched.contentHash,
+      canonicalUrl: fetched.finalUrl,
+      sourceText
+    });
+  };
   let mappedStageAttempted = false;
   let sitemapStageAttempted = false;
   let onlineSearchStageAttempted = false;
@@ -1738,8 +1814,13 @@ export async function resolveMappedOfficialSourceFallback(
     pointer?: SourceMapPointer,
     discoveryStage: SourceMapFallbackAttempt['discoveryStage'] = 'SITEMAP_DISCOVERY',
     discoveredPageTitle?: string,
-    discoverySourceUrl?: string
+    discoverySourceUrl?: string,
+    discoveryMetadata?: ReturnType<typeof practicalExpansionDiscoveryPointers>[number]
   ): Promise<AuthoritativeSourceRecord | undefined> => {
+    const trustedDiscoveryMetadata = discoveryMetadata &&
+      practicalExpansionDiscoveryPointers().some(pointer => pointer === discoveryMetadata &&
+        pointer.url === candidateUrl && pointer.authority === topic.authorities[0])
+      ? discoveryMetadata : undefined;
     const irasDiscovery = topic.domainId.startsWith('IRAS_') && !pointer;
     const cpfDiscovery = topic.domainId.startsWith('CPF_') && !pointer;
     const acraDiscovery = topic.domainId === 'ACRA_COMPANIES' && !pointer;
@@ -1786,12 +1867,13 @@ export async function resolveMappedOfficialSourceFallback(
       preferMainContent: topic.domainId === 'ACRA_COMPANIES',
       standardIdentifiers: [...getTopicStandardIdentifiers(topic, pointer), ...statutoryIdentifiers],
       expectedTitles: [pointer?.documentTitle, topic.pageTitle, ...(topic.actOrStandard || '').split(';').map(s => s.trim()), ...focusedStatutoryTitles,
-        discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
+        ...(trustedDiscoveryMetadata?.expectedTitles || []), discoveredPageTitle, ...candidateTitlePhrases(discoveredPageTitle)]
         .filter((value): value is string => Boolean(value)),
-      topicTerms: [...getTopicContentTerms(topic), ...coverageContentAnchors,
+      topicTerms: [...getTopicContentTerms(topic), ...coverageContentAnchors, ...(trustedDiscoveryMetadata?.contentTerms || []),
         ...(topic.id === 'mas-regulatory-reporting' && candidateUrl === MAS_VCFM_TOOLKIT_URL
           ? ['annual declaration', 'Form 25A', 'misconduct'] : [])],
-      minimumTopicTermMatches: (topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length) ||
+      minimumTopicTermMatches: topic.id.startsWith('iras-authority-query-issue-') ||
+        topic.id.startsWith('iras-authority-query-') && !topic.requestedConcepts?.length ||
         topic.id === 'iras-individual-foreign-tax-credit' ? 2 : 1,
       allowIrasTopicTokenEquivalence: topic.domainId.startsWith('IRAS_'),
       requireAcraAnnualReturnDeadlineTable: topic.id === 'acra_annual-returns' && isAcraAnnualReturnDeadlineQuestion(query),
@@ -1799,6 +1881,7 @@ export async function resolveMappedOfficialSourceFallback(
         topic.domainId.startsWith('MOM_') || topic.domainId.startsWith('MAS_'),
       cpfOrdinaryWageDefinitionRequest,
       cpfAdditionalWageDefinitionRequest,
+      preserveNativeDisclosureProse: trustedDiscoveryMetadata?.preserveNativeDisclosureProse === true,
       acraAuditExemptionContextRequest
     };
     let result = successfulPageFetches.get(candidateUrl);
@@ -1816,6 +1899,7 @@ export async function resolveMappedOfficialSourceFallback(
       if ((topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) || knowledgePdf) {
         const isLfmc = candidateUrl === lfmcToolkitUrl;
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        retainFetchedHtmlContext(candidateUrl, document);
         if (document.status === 'SUCCESS') {
           const extraction = await extractOfficialDocumentFromRetrieved({
             url: candidateUrl, authority: knowledgePdf?.authority || 'MAS', domain: topic.legacyDomains[0] || 'MAS_FUNDS', documentKind: 'PDF',
@@ -1888,6 +1972,7 @@ export async function resolveMappedOfficialSourceFallback(
         // topic validator. The raw response hash, final URL, and retrieval
         // metadata remain attached to the fetched document.
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        retainFetchedHtmlContext(candidateUrl, document);
         const rawTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
         const nativeTitle = rawTitle ? cleanHtmlText(rawTitle).replace(/\s+/g, ' ').trim() : '';
         const nativeTitleIdentityMatches = normalizeEvidenceText(nativeTitle) ===
@@ -1931,6 +2016,7 @@ export async function resolveMappedOfficialSourceFallback(
         // a complete, contradiction-checked rule from visible native markup;
         // then run the usual identity/body validation on those exact passages.
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        retainFetchedHtmlContext(candidateUrl, document);
         const quotes = document.status === 'SUCCESS' && document.content
           ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
         const nativeTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
@@ -1954,6 +2040,7 @@ export async function resolveMappedOfficialSourceFallback(
           ...options.fetchOptions,
           topicValidation: expectation
         });
+        retainFetchedHtmlContext(candidateUrl, result);
       }
       if (result.status === 'SUCCESS' && result.content) successfulPageFetches.set(candidateUrl, result);
     }
@@ -2182,25 +2269,20 @@ export async function resolveMappedOfficialSourceFallback(
     const fetchedRecord = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
     const extractedDocument = extractedDocuments.get(candidateUrl);
     if (extractedDocument) fetchedRecord.sourceLocator = extractedDocument.sourceLocator;
-    const isTransientTopic = (topicId: string): boolean => topicId.startsWith('iras-authority-query-');
-    const canMergeAcrossTopicScopes = isTransientTopic(topic.id);
-    const existingRecordIndex = records.findIndex(existing => existing.canonicalSourceUrl === fetchedRecord.canonicalSourceUrl &&
-      existing.contentHash === fetchedRecord.contentHash &&
-      // A single official page may serve multiple transient concept queries;
-      // keep their validated associations on one record. Registered topics
-      // retain separate records so each topic's source-map trace stays intact.
-      (canMergeAcrossTopicScopes || (existing.tags || []).some(isTransientTopic)));
-    let record = fetchedRecord;
-    if (existingRecordIndex >= 0) {
-      const existing = records[existingRecordIndex];
-      record = {
-        ...existing,
-        sourceText: [...new Set([existing.sourceText, fetchedRecord.sourceText].filter(Boolean))].join('\n\n'),
-        tags: [...new Set([...(existing.tags || []), ...(fetchedRecord.tags || [])])]
-      };
-      records[existingRecordIndex] = record;
-    } else {
-      records.push(record);
+    const record = fetchedRecord;
+    records.push(record);
+    const fetchedBodyContext = fetchedHtmlContexts.get(candidateUrl);
+    const recordHash = record.documentHash || record.contentHash;
+    if (fetchedBodyContext && recordHash && recordHash === fetchedBodyContext.documentHash &&
+        record.canonicalSourceUrl === fetchedBodyContext.canonicalUrl && documentContextDate) {
+      admittedDocumentContexts.set(record.id, {
+        recordId: record.id,
+        documentHash: recordHash,
+        canonicalUrl: record.canonicalSourceUrl,
+        targetDate: documentContextDate,
+        completeness: 'COMPLETE',
+        sourceText: fetchedBodyContext.sourceText
+      });
     }
     if (!pointer) discoveredEvidenceIds.add(record.id);
     finalVerifiedUrls.add(result.finalUrl);
@@ -2265,20 +2347,24 @@ export async function resolveMappedOfficialSourceFallback(
     const registeredTopics = topics.filter(topic => !topic.id.startsWith('iras-authority-query-'));
     const provisional = topics.filter(topic => topic.id.startsWith('iras-authority-query-'));
     const irasTopics = registeredTopics.filter(topic => topic.domainId.startsWith('IRAS_'));
-    const nonIrasTopics = registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_'));
+    const nonIrasTopics = [
+      ...registeredTopics.filter(topic => !topic.domainId.startsWith('IRAS_')),
+      ...provisional.filter(topic => !topic.domainId.startsWith('IRAS_'))
+    ];
     const nonIrasCovered = nonIrasTopics.every(topic => records.some(record => record.tags.includes(topic.id) &&
         (topic.id !== 'acra_annual-returns' || !isAcraAnnualReturnDeadlineQuestion(query) ||
           supportsAcraAnnualReturnDeadlineEvidence(record.sourceText)) &&
         attempts.some(attempt => attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
           attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.canonicalSourceUrl)));
     if (!nonIrasCovered) return false;
-    if (irasTopics.length === 0 && provisional.length === 0) return registeredTopics.length > 0;
+    const irasProvisional = provisional.filter(topic => topic.domainId.startsWith('IRAS_'));
+    if (irasTopics.length === 0 && irasProvisional.length === 0) return registeredTopics.length > 0 || nonIrasTopics.length > 0;
     // A concept-only provisional target can be supported by a fetched record
     // admitted through its registered topic in the same already-routed IRAS
     // domain. Include those registered topics for evidence admission, while
     // retaining `topics` as the only requested target for this decision.
-    const provisionalAdmissionTopics = provisional.length > 0
-      ? topicsRequiringFallback.filter(topic => topic.domainId === provisional[0].domainId && topic.domainId.startsWith('IRAS_'))
+    const provisionalAdmissionTopics = irasProvisional.length > 0
+      ? topicsRequiringFallback.filter(topic => topic.domainId === irasProvisional[0].domainId && topic.domainId.startsWith('IRAS_'))
       : [];
     const admissionTopics = [...new Map([...irasTopics, ...provisionalAdmissionTopics].map(topic => [topic.id, topic])).values()];
     const assessment = evaluateEvidenceQuality({
@@ -2394,7 +2480,7 @@ export async function resolveMappedOfficialSourceFallback(
       .filter((url): url is string => Boolean(url));
     const providerConfig = discoveryProviderForTopic(topic);
     const discoveryRequest: OfficialSourceDiscoveryRequest = {
-      query: options.semanticDiscoveryQuery || query,
+      query: scopedDiscoveryQuery,
       scopeQuery: query,
       authority: topic.authorities[0],
       topicId: topic.id,
@@ -2491,8 +2577,85 @@ export async function resolveMappedOfficialSourceFallback(
   // uncovered after the complete mapped-source pass.
   for (const topic of sitemapTopics()) await discoverSitemapForTopic(topic, false);
 
-  // Each unresolved material concept receives its own official discovery
-  // scope, even when a registered topic such as the relief cap already matched.
+  // Keep the validated issue-local discovery scope independent of registered
+  // topic matches. Topic evidence still passes through the ordinary admission
+  // and semantic-support checks before it can answer this issue.
+  if (scopedAuthorityTopic) provisionalTopics.push(scopedAuthorityTopic);
+  if (scopedAuthorityTopic && options.evidenceScope && options.evidenceScope.authority !== 'IRAS' &&
+      provisionalTopics.includes(scopedAuthorityTopic)) {
+    const scope = options.evidenceScope;
+    const scopeLegacyDomains = new Set(scopedAuthorityTopic.legacyDomains);
+    const contextDomain = Object.values(SINGAPORE_DOMAIN_TAXONOMY).find(domain => domain.id === scope.context.domainId);
+    const contextDomainMatchesScope = contextDomain
+      ? contextDomain.authorities.some(authority => authority === scope.authority) &&
+        contextDomain.legacyDomains.some(domainId => scopeLegacyDomains.has(domainId))
+      : [...scopeLegacyDomains].some(domainId => domainId === scope.context.domainId);
+    const compatibleTopicDomainIds = new Set(Object.values(SINGAPORE_DOMAIN_TAXONOMY)
+      .filter(domain => domain.authorities.some(authority => authority === scope.authority) &&
+        domain.legacyDomains.some(domainId => scopeLegacyDomains.has(domainId)))
+      .map(domain => domain.id));
+    const sourceTopicsById = new Map(SINGAPORE_COVERAGE_REGISTRY.map(topic => [topic.id, topic]));
+    const alreadyFetchedOrAttemptedUrls = new Set([
+      ...attempts.map(attempt => attempt.candidateUrl).filter((url): url is string => Boolean(url)),
+      ...successfulPageFetches.keys(),
+      ...records.map(record => record.canonicalSourceUrl).filter((url): url is string => Boolean(url))
+    ]);
+    const primaryTerms = new Set(normalizeEvidenceText([scope.context.primarySubject, ...scope.context.concepts].join(' '))
+      .split(' ').filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const conceptTerms = new Set(normalizeEvidenceText(scope.requestedConcepts.flatMap(concept =>
+      [concept.label, ...concept.terms]).join(' ')).split(' ')
+      .filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const populationTerms = new Set(normalizeEvidenceText(scope.context.population).split(' ')
+      .filter(term => term.length >= 3 && !AUTHORITY_QUERY_STOPWORDS.has(term)));
+    const expandTerm = (term: string): string[] => term.endsWith('ies') && term.length > 4
+      ? [term, term.slice(0, -3) + 'y']
+      : term.endsWith('s') && term.length > 4 && !/(ss|us|is)$/.test(term)
+        ? [term, term.slice(0, -1)] : [term];
+    const matchingTerms = (requested: Set<string>, metadata: readonly string[] | undefined): number => {
+      const available = new Set((metadata || []).flatMap(value => normalizeEvidenceText(value).split(' ')));
+      const expanded = new Set([...available].flatMap(expandTerm));
+      return [...requested].filter(term => expandTerm(term).some(candidate => expanded.has(candidate))).length;
+    };
+    const candidatesByUrl = new Map<string, {
+      pointer: ReturnType<typeof practicalExpansionDiscoveryPointers>[number];
+      score: number;
+      populationMatch: boolean;
+    }>();
+    if (contextDomainMatchesScope && scopeLegacyDomains.size > 0) for (const pointer of practicalExpansionDiscoveryPointers()) {
+      if (pointer.authority !== scope.authority || !isApprovedSingaporeSourceUrl(pointer.url) ||
+          alreadyFetchedOrAttemptedUrls.has(pointer.url)) continue;
+      const compatibleTopicIds = pointer.topicIds.filter(topicId => {
+        const sourceTopic = sourceTopicsById.get(topicId);
+        return Boolean(sourceTopic && !sourceTopic.routingOnly && sourceTopic.status !== 'HISTORICAL' &&
+          sourceTopic.authorities.some(authority => authority === scope.authority) &&
+          compatibleTopicDomainIds.has(sourceTopic.domainId) &&
+          sourceTopic.legacyDomains.some(domain => scopeLegacyDomains.has(domain)));
+      });
+      if (compatibleTopicIds.length === 0) continue;
+      const titleTerms = [...(pointer.expectedTitles || []), pointer.title];
+      const contentTerms = pointer.contentTerms || [];
+      const populationMatch = Boolean(pointer.population &&
+        normalizeEvidenceText(pointer.population) === normalizeEvidenceText(scope.context.population));
+      const score = matchingTerms(conceptTerms, titleTerms) * 5 + matchingTerms(primaryTerms, titleTerms) * 3 +
+        matchingTerms(conceptTerms, contentTerms) * 2 + matchingTerms(primaryTerms, contentTerms) +
+        (pointer.population && matchingTerms(populationTerms, [pointer.population]) > 0 ? 1 : 0);
+      if (score === 0 && !populationMatch) continue;
+      const existing = candidatesByUrl.get(pointer.url);
+      if (!existing || populationMatch && !existing.populationMatch ||
+          populationMatch === existing.populationMatch && score > existing.score) {
+        candidatesByUrl.set(pointer.url, { pointer, score, populationMatch });
+      }
+    }
+    const seedCandidates = [...candidatesByUrl.values()].sort((left, right) =>
+      Number(right.populationMatch) - Number(left.populationMatch) || right.score - left.score ||
+      Number(left.pointer.documentKind === 'PDF' || (!left.pointer.documentKind && /\.pdf(?:$|[?#])/i.test(left.pointer.url))) -
+        Number(right.pointer.documentKind === 'PDF' || (!right.pointer.documentKind && /\.pdf(?:$|[?#])/i.test(right.pointer.url))) ||
+      left.pointer.url.localeCompare(right.pointer.url)).slice(0, 2);
+    for (const candidate of seedCandidates) {
+      await tryFetch(scopedAuthorityTopic, candidate.pointer.url, undefined, 'MAPPED_SOURCE', candidate.pointer.title,
+        undefined, candidate.pointer);
+    }
+  }
   for (const topic of provisionalTopics.filter(candidate => !topicCovered(candidate))) {
     await discoverSitemapForTopic(topic, true);
   }
@@ -2509,7 +2672,7 @@ export async function resolveMappedOfficialSourceFallback(
       .filter((url): url is string => Boolean(url));
     const officialDomainSearchAdapter = options.officialDomainSearchAdapter || getDefaultOfficialDomainSearchAdapter(webRetriever, options.fetchOptions);
     const searchRequest: OfficialSourceDiscoveryRequest = {
-      query: options.semanticDiscoveryQuery || query,
+      query: scopedDiscoveryQuery,
       scopeQuery: query,
       authority: topic.authorities[0],
       topicId: topic.id,
@@ -2613,6 +2776,9 @@ export async function resolveMappedOfficialSourceFallback(
   return {
     records,
     provisionalTopics,
+    ...(admittedDocumentContexts.size > 0
+      ? { documentContexts: [...admittedDocumentContexts.values()] }
+      : {}),
     trace: {
       path,
       sourceMapIds: [...sourceMapIds],
@@ -3003,6 +3169,9 @@ export async function buildGroundedReasoningContext(
     primaryEvidence,
     officialGuidance,
     curatedSummaries,
+    ...(mappedFallback.documentContexts
+      ? { documentContexts: mappedFallback.documentContexts }
+      : {}),
     applicationRules,
     currentInformationRequired: classification.currentInformationRequired,
     semanticUnderstanding,

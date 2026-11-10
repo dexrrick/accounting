@@ -211,6 +211,7 @@ export class ControlledWebRetriever {
             status: 'SUCCESS',
             httpStatus: cached.httpStatus,
             content: cached.rawContent,
+            contentType: cached.contentType,
             contentHash: cached.contentHash,
             cached: true,
             retrievedAt: cached.retrievedAt,
@@ -250,6 +251,11 @@ export class ControlledWebRetriever {
           ? 'application/pdf, text/html, application/xhtml+xml, text/plain;q=0.9, */*;q=0.1'
           : 'text/plain, application/json, text/html, */*'
       };
+      // MAS serves a maintenance shell to its nonbrowser client profile.
+      const needsServerCompatibility = ['mas.gov.sg', 'www.mas.gov.sg'].includes(new URL(url).hostname);
+      if (typeof window === 'undefined' && needsServerCompatibility) {
+        headers['User-Agent'] = 'Mozilla/5.0 (compatible; AccountingEvidenceRetriever/1.0)';
+      }
       if (responseMode === 'DOCUMENT') headers['x-official-source-response-mode'] = 'document';
       if (useCache && cached) {
         const condHeaders = this.cache.getConditionalHeaders(url);
@@ -306,6 +312,7 @@ export class ControlledWebRetriever {
           status: 'SUCCESS',
           httpStatus: 304,
           content: cached.rawContent,
+          contentType: cached.contentType,
           contentHash: cached.contentHash,
           cached: true,
           retrievedAt,

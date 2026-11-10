@@ -1120,7 +1120,9 @@ async function processAccountingQueryCore(
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
     explicitIrasEvidenceRequest,
-    hasImages
+    hasImages,
+    questionUnderstanding,
+    rawQuery: userInput
   }) || unsupportedAccountingRuleExplanationRuntimeEnabled;
   if (authorityEvidenceRuntimeEnabled) {
     authorityEvidenceQueryIntent = classification.intent;

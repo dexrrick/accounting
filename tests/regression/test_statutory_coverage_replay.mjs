@@ -10,7 +10,7 @@ import { getCoverageTopicById } from '../../src/standards/coverageRegistry.ts';
 import { provesMomSalaryPaymentSource, supportMomSalaryPaymentIssue } from '../../src/retrieval/momSalaryPaymentRule.ts';
 import { supportMomAcraMasCoverageRule } from '../../src/retrieval/momAcraMasCoverageRules.ts';
 import { defaultExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
-import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
+import { STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES, STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { replayStatutoryCoverageCase } from '../../scripts/replay_statutory_coverage.mjs';
 import { STATUTORY_KNOWLEDGE_POINTERS_20261027B } from '../../src/retrieval/statutoryKnowledge20261027b.ts';
 
@@ -111,6 +111,38 @@ for (const testCase of representatives) {
   assert.ok(Array.isArray(result.issueMappedTopicIds), 'Reconciled production topic mapping is recorded.');
   assert.equal(typeof result.expectedTopicIdResolved, 'boolean');
   assert.ok(Array.isArray(result.retrievalTrace?.attempts), 'The detailed production evidence trace is retained.');
+  for (const miss of STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES) {
+    if (!result.fetches.includes(miss.sourceUrl)) continue;
+    assert.equal(miss.expectedStatus, 404, 'Declared discovery misses are explicit offline 404 responses.');
+    const missResponses = result.discoveryMissResponses.filter(item => item.url === miss.sourceUrl);
+    assert.ok(missResponses.length > 0, 'Each fetched declared miss records its response status.');
+    assert.ok(missResponses.every(item => item.status === miss.expectedStatus),
+      'The bounded replay transport returns the declared status for each known metadata candidate.');
+    assert.equal(result.citations.some(citation => citation.url === miss.sourceUrl), false,
+      'An offline discovery miss supplies no admitted or cited source record.');
+    assert.equal((result.retrievalTrace.finalVerifiedUrls || []).includes(miss.sourceUrl), false,
+      'An offline discovery miss never becomes a verified source URL.');
+    assert.equal(result.verifiedClaims.some(claim => claim.fetchedSourceBinding?.canonicalUrl === miss.sourceUrl ||
+      claim.sourceBinding?.canonicalUrl === miss.sourceUrl), false,
+      'No verified claim is bound to a declared discovery miss.');
+  }
+
+
+  if (testCase.id === 'cpf-cpf-aw-ceiling-01') {
+    const awPdfUrl = 'https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1';
+    assert.ok(result.fetches.includes(awPdfUrl), 'The AW-ceiling question fetches the retained native official PDF.');
+    assert.ok(result.citations.some(citation => citation.url === awPdfUrl),
+      'The retained native AW-ceiling PDF is cited for its complete formula and conditions.');
+    assert.equal(result.citationScopeAudit.unapprovedCitationUrls.length, 0,
+      'The retained native PDF is declared as an expected official source for this benchmark case.');
+  }
+  if (testCase.id === 'cpf-cpf-rate-factors-01') {
+    const rateFactorsUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+    assert.ok(result.fetches.includes(rateFactorsUrl),
+      'The qualitative rate-factor question fetches the canonical CPF rates page.');
+    assert.ok(result.citations.some(citation => citation.url === rateFactorsUrl),
+      'The qualitative rate-factor answer cites the canonical CPF rates page.');
+  }
   for (const attempt of result.retrievalTrace.attempts) {
     assert.ok(attempt.topicId && attempt.status);
     if (attempt.status === 'TOPIC_MISMATCH') assert.ok(attempt.error, 'Rejected attempts retain the actual validation reason.');
@@ -153,6 +185,7 @@ for (const testCase of representatives) {
   assert.deepEqual(result.citationScopeAudit.citedSourceUrls, result.citations.map(source => source.url));
   for (const url of result.fetches) {
     assert.ok(STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES.some(fixture => fixture.sourceUrl === url) ||
+      STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES.some(fixture => fixture.sourceUrl === url && fixture.expectedStatus === 404) ||
       // New retrieval pointers remain unavailable in this unchanged old source
       // set. customFetch blocks them; they supply no positive fixture evidence.
       STATUTORY_KNOWLEDGE_POINTERS_20261027B.some(pointer => pointer.url === url) ||

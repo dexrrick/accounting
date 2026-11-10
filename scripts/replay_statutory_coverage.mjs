@@ -18,7 +18,7 @@ import {
 import { buildAuthorityWorkstreams } from '../src/services/authorityWorkstreams.ts';
 import { createAuthorityEvidencePresentation } from '../src/utils/authorityEvidencePresentation.ts';
 import { renderAuthorityEvidenceResponseText } from '../src/services/authorityEvidenceResponse.ts';
-import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../tests/fixtures/statutoryCoverageOfficialPages.mjs';
+import { STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES, STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../tests/fixtures/statutoryCoverageOfficialPages.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const corpusPath = path.join(root, 'tests/evaluation/statutory_coverage_wave_2026-10-25.json');
@@ -31,6 +31,9 @@ const integrityPaths = Object.freeze({
   irasGstFilingExcerpt: 'tests/fixtures/statutoryCoverageSources/iras-gst-filing.html',
   cpfDueDateExcerpt: 'tests/fixtures/statutoryCoverageSources/cpf-due-date.txt',
   cpfRateFactorsExcerpt: 'tests/fixtures/statutoryCoverageSources/cpf-rate-factors.txt',
+  cpfAwCeilingNativePdf: 'tests/fixtures/statutoryKnowledge20261027b/cpf-aw-ceiling-native-2026.pdf',
+  cpfAwCeilingExtract: 'tests/fixtures/statutoryKnowledge20261027b/cpf-aw-ceiling-2026-extract.txt',
+  cpfSourceManifest: 'tests/fixtures/statutoryKnowledge20261027b/cpf-source-manifest.json',
   momFinalSalaryExcerpt: 'tests/fixtures/statutoryCoverageSources/mom-final-salary.html',
   acraAuditExemptionExcerpt: 'tests/fixtures/statutoryCoverageSources/acra-audit-exemption.txt',
   masFundManagementExcerpt: 'tests/fixtures/statutoryCoverageSources/mas-fund-management.html',
@@ -285,6 +288,7 @@ async function replayCase(testCase) {
   }
 
   const fetches = [];
+  const discoveryMissResponses = [];
   const authorityPages = pagesByAuthority.get(testCase.authority) || [];
   const provider = OFFICIAL_SOURCE_DISCOVERY_PROVIDERS[testCase.authority];
   const sitemap = '<urlset>' + authorityPages.map(page =>
@@ -298,6 +302,12 @@ async function replayCase(testCase) {
     const fixture = replayPages.find(page => page.sourceUrl === url);
     if (fixture) return new Response(fixture.body || fixture.html, { status: 200,
       headers: { 'content-type': fixture.contentType || 'text/html; charset=utf-8' } });
+    const expectedMiss = STATUTORY_COVERAGE_EXPECTED_DISCOVERY_MISSES.find(item => item.sourceUrl === url);
+    if (expectedMiss) {
+      const response = new Response(expectedMiss.provenanceNote, { status: expectedMiss.expectedStatus });
+      discoveryMissResponses.push({ url, status: response.status });
+      return response;
+    }
     if (url.endsWith('/robots.txt')) return new Response('not found', { status: 404 });
     if (url.startsWith('https://html.duckduckgo.com/') || url.startsWith('https://r.jina.ai/')) {
       return new Response('not found', { status: 404 });
@@ -324,7 +334,7 @@ async function replayCase(testCase) {
           subject: issue.subject, population: issue.population, authority: issue.governingAuthorities, domain: issue.domain,
           operation: issue.operation, status: issue.status, mappedTopicIds: issue.mappedTopicIds
         })),
-        explanation: '', citations: [], verifiedClaims: [], fetches,
+        explanation: '', citations: [], verifiedClaims: [], fetches, discoveryMissResponses,
         fixtureIds: attachedPages.map(page => page.id)
       };
     }
@@ -431,6 +441,7 @@ async function replayCase(testCase) {
         unapprovedCitationUrls
       },
       fetches,
+      discoveryMissResponses,
       retrievalAttempts: detailedAttempts,
       retrievalTrace,
       fixtureIds: attachedPages.map(page => page.id)
@@ -452,6 +463,7 @@ async function replayCase(testCase) {
       citations: [],
       verifiedClaims: [],
       fetches,
+      discoveryMissResponses,
       fixtureIds: attachedPages.map(page => page.id),
       error: error instanceof Error ? error.message : String(error)
     };

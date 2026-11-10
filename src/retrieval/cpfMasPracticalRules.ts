@@ -29,6 +29,47 @@ const CPF_ADDITIONAL_WAGES_URL =
 const MAS_FUND_MANAGEMENT_URL =
   'https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing';
 
+export interface CpfMasPracticalDiscoveryPointer {
+  authority: CpfMasPracticalAuthority;
+  topicIds: readonly string[];
+  url: string;
+  title: string;
+  expectedTitles?: readonly string[];
+  contentTerms?: readonly string[];
+  population?: string;
+  documentKind?: 'HTML' | 'PDF';
+  preserveNativeDisclosureProse?: boolean;
+}
+
+const CPF_EMPLOYER_OVERVIEW_POINTER: CpfMasPracticalDiscoveryPointer = {
+  authority: 'CPF', topicIds: ['cpf-contribution-computation'],
+  url: 'https://www.cpf.gov.sg/employer/employer-obligations',
+  title: 'Employer obligations', expectedTitles: ['Employer obligations'], population: 'Employer',
+  preserveNativeDisclosureProse: true,
+  contentTerms: [
+    'Obligations of an employer', 'total CPF contributions', 'recover the employee share'
+  ]
+};
+
+/** Candidate metadata only; fetched pages still use the normal source admission path. */
+export const CPF_MAS_PRACTICAL_DISCOVERY_POINTERS: readonly CpfMasPracticalDiscoveryPointer[] = Object.freeze([
+  {
+    authority: 'CPF', topicIds: ['cpf-additional-wages'], url: CPF_ADDITIONAL_WAGES_URL,
+    title: 'What constitutes wages for CPF contributions',
+    expectedTitles: ['What constitutes wages for CPF contributions'],
+    contentTerms: ['Ordinary Wages', 'Additional Wages']
+  },
+  CPF_EMPLOYER_OVERVIEW_POINTER,
+  { ...CPF_EMPLOYER_OVERVIEW_POINTER, population: 'Company' },
+  {
+    authority: 'MAS', topicIds: ['mas-lfmc'], url: MAS_FUND_MANAGEMENT_URL,
+    title: 'Fund Management Licensing',
+    expectedTitles: ['Fund Management Licensing', 'Licensed Fund Management Company'],
+    contentTerms: ['fund management activities', 'licensed fund management company', 'Capital Markets Services licence'],
+    population: 'Company'
+  }
+]);
+
 function visibleText(value: string): string {
   return value
     .replace(/<!--[\s\S]*?-->/g, ' ')

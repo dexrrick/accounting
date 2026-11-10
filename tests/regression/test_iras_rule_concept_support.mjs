@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
@@ -14,6 +15,7 @@ import { buildGroundedReasoningContext, completeScopedIrasConceptPassage, select
 import { renderIrasEvidenceResponse } from '../../src/services/irasEvidencePolicy.ts';
 import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding, validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks } from '../../src/utils/evidenceTextBoundaries.ts';
 import { irasResolverCases } from '../fixtures/irasResolverCases.mjs';
 
 const frozen = id => {
@@ -763,6 +765,391 @@ assert.equal(check({
 
 assert.ok(mapRecord, 'The approved foreign-income source-map fixture is present.');
 
+// These source blocks are the exact Motor Vehicles Expenses passage retained
+// in the 08 November 2026 private-car capture. Keep the introductory rule,
+// every visibly marked use case and the following qualification together.
+const capturedMotorCarRule = [
+  'Input tax claims on motor car expenses for cars used by you or your employees are disallowed under Regulation 27 of the GST (General) Regulations. Use of the motor car includes both:',
+  '• Physical use, such as when the motor car is driven by your staff or chauffeur to transport your company directors or business associates; and',
+  '• Economic use, where the motor car is used to generate income or make supplies (e.g. a consultancy firm uses its motor car to transport its preferred clients for a fee).',
+  'This input tax restriction applies regardless of whether the motor car is used wholly or partly for business purposes, unless the car is excluded from the definition of a ‘motor car’ under Regulation 25(1).'
+].join('\n\n');
+const capturedMotorCarQuery = 'Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.';
+const capturedMotorCarRecord = {
+  ...UNIFIED_SOURCE_REGISTRY.IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP,
+  id: 'captured-iras-motor-car-rule',
+  documentTitle: 'Motor Vehicles Expenses',
+  sourceText: capturedMotorCarRule,
+  sourceStatus: 'VERIFIED',
+  sourceType: 'OFFICIAL_GUIDANCE',
+  evidenceTier: 'OFFICIAL_GUIDANCE',
+  isVerbatimText: true,
+  provenance: 'LOCAL_STATIC',
+  lifecycleState: 'ACTIVE',
+  recordRole: 'EVIDENCE',
+  groundingEligible: true,
+  verificationMethod: 'CURATED_EDITORIAL_REVIEW',
+  reviewAuditCycleDays: 90,
+  lastVerifiedDate: '2026-11-08',
+  tags: motorCarTopicIds,
+  relatedTopicIds: motorCarTopicIds
+};
+const capturedRegulation25Exclusions = [
+  'A “motor car” is defined as a motor car which is constructed or adapted for the carriage of not more than 7 passengers exclusive of the driver and the weight of which unladen does not exceed 3,000 kilograms but does not include —',
+  '(a) a motor car registered before 1st April 1998 as a business service passenger vehicle for the purposes of the Road Traffic Act (Cap. 276);',
+  '(b) a taxi;',
+  '(c) a motor car registered as a private car (school transport);',
+  '(d) an unused motor car which has not been previously registered under the Road Traffic Act supplied or imported for the purpose of being let on hire or sold;',
+  '(e) a motor car supplied to a financial institution for the purposes of making a supply of that motor car by the financial institution under a hire purchase contract;',
+  '(f) a motor car supplied to or imported by a taxable person for the purposes of being let on hire or sold by that taxable person who is a dealer of motor cars;',
+  '(g) a used motor car supplied or imported for the purpose of being let on hire; and',
+  '(h) a motor car used for instructional purposes for reward and registered under paragraph 9(1) of the Second Schedule to the Road Traffic (Motor Vehicles, Registration and Licensing) Rules (R 5) by a person who holds a driving school licence issued under the Road Traffic Act.'
+].join('\n\n');
+const capturedRegulation25SourceText = [
+  'Motor cars excluded from restrictions',
+  capturedRegulation25Exclusions,
+  'Exceptions where input tax on motor car expenses may be claimed',
+  'Purchase of private hire car transportation services',
+  'Your purchases must be supported by valid tax invoices or simplified tax invoices with GST charged to you.'
+].join('\n\n');
+const capturedRegulation25Url = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses';
+const capturedRegulation25Hash = createHash('sha256').update(capturedRegulation25SourceText).digest('hex');
+const capturedRegulation25Record = {
+  ...UNIFIED_SOURCE_REGISTRY.IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP,
+// Portable excerpt fixture retaining the captured source identity and verification
+// provenance; its content hash is recomputed from the embedded passage.
+  id: 'LIVE_TOPIC_iras-gst-motor-vehicles_75ada356c6e8',
+  authority: 'IRAS',
+  sourceAuthority: 'IRAS',
+  domain: 'IRAS_GST',
+  documentTitle: 'Motor Vehicles Expenses',
+  sourceText: capturedRegulation25SourceText,
+  officialSourceUrl: capturedRegulation25Url,
+  canonicalSourceUrl: capturedRegulation25Url,
+  sourceStatus: 'NEEDS_REVIEW',
+  sourceType: 'OFFICIAL_GUIDANCE',
+  evidenceTier: 'OFFICIAL_GUIDANCE',
+  isVerbatimText: false,
+  provenance: 'LIVE_EXTERNAL',
+  lifecycleState: 'CANDIDATE',
+  recordRole: 'DISCOVERED_EVIDENCE',
+  groundingEligible: true,
+  verificationMethod: 'LIVE_OFFICIAL_TOPIC_VERIFIED',
+  urlVerificationStatus: 'VERIFIED',
+  urlVerifiedDate: '2026-11-09',
+  retrievedAt: '2026-11-09T12:49:15.909Z',
+  extractionStatus: 'PARTIAL',
+  documentHash: capturedRegulation25Hash,
+  contentHash: capturedRegulation25Hash,
+  lastVerifiedDate: '2026-11-09',
+  tags: ['iras-gst-motor-vehicles'],
+  relatedTopicIds: ['iras-gst-motor-vehicles']
+};
+const verifyCapturedRegulation25 = (sourceText = capturedRegulation25SourceText,
+  quote = capturedRegulation25Exclusions, completeListScope = {
+    authority: 'IRAS', domain: 'IRAS_GST'
+  }) => {
+  const record = {
+    ...capturedRegulation25Record,
+    sourceText,
+    documentHash: createHash('sha256').update(sourceText).digest('hex'),
+    contentHash: createHash('sha256').update(sourceText).digest('hex')
+  };
+  return verifyEvidenceClaims([{
+    kind: 'RULE', text: quote, quote, recordId: record.id
+  }], [record], {
+    targetDate: '2026-11-09',
+    expectedAuthority: 'IRAS',
+    expectedDomain: 'IRAS_GST',
+    completeListScope
+  });
+};
+const capturedRegulation25Accepted = verifyCapturedRegulation25();
+assert.equal(capturedRegulation25Accepted.accepted.length, 1,
+  'The complete captured Regulation 25(1) alphabetic exclusion list is accepted at the production quote-verification boundary.');
+assert.equal(capturedRegulation25Accepted.accepted[0].quote, capturedRegulation25Exclusions,
+  'The complete ordered-list quote remains text-identical to the source passage.');
+assert.equal(capturedRegulation25Accepted.accepted[0].recordId, 'LIVE_TOPIC_iras-gst-motor-vehicles_75ada356c6e8',
+  'The accepted quote retains the captured IRAS source record identity.');
+assert.equal(capturedRegulation25Accepted.accepted[0].canonicalUrl, capturedRegulation25Url,
+  'The accepted quote retains independently verified canonical IRAS URL provenance.');
+
+const capturedRegulation25Blocks = capturedRegulation25Exclusions.split('\n\n');
+const missingRegulation25MiddleItem = capturedRegulation25Blocks.filter((_, index) => index !== 4).join('\n\n');
+assert.equal(verifyCapturedRegulation25(undefined, missingRegulation25MiddleItem).accepted.length, 0,
+  'A quote that omits one ordered exclusion is rejected.');
+const missingRegulation25Source = capturedRegulation25SourceText.replace(
+  capturedRegulation25Exclusions, missingRegulation25MiddleItem
+);
+assert.equal(verifyCapturedRegulation25(missingRegulation25Source, missingRegulation25MiddleItem).accepted.length, 0,
+  'A source list with a missing marker in its sequence is not complete.');
+const reorderedRegulation25Blocks = [...capturedRegulation25Blocks];
+[reorderedRegulation25Blocks[2], reorderedRegulation25Blocks[3]] = [reorderedRegulation25Blocks[3], reorderedRegulation25Blocks[2]];
+const reorderedRegulation25 = reorderedRegulation25Blocks.join('\n\n');
+assert.equal(verifyCapturedRegulation25(
+  capturedRegulation25SourceText.replace(capturedRegulation25Exclusions, reorderedRegulation25),
+  reorderedRegulation25
+).accepted.length, 0, 'A source list with reordered alphabetic markers is not complete.');
+const regulation25WithoutFinalItem = capturedRegulation25Blocks.slice(0, -1).join('\n\n');
+assert.equal(verifyCapturedRegulation25(
+  capturedRegulation25SourceText.replace(capturedRegulation25Exclusions, regulation25WithoutFinalItem),
+  regulation25WithoutFinalItem
+).accepted.length, 0,
+  'A list ending with the prior item’s continuation marker is not complete without its final item.');
+assert.equal(verifyCapturedRegulation25(undefined, capturedRegulation25Blocks.slice(1).join('\n\n')).accepted.length, 0,
+  'List items without their source introduction are rejected as a whole-list quote.');
+assert.equal(verifyCapturedRegulation25(undefined,
+  capturedRegulation25Exclusions.replace('3,000 kilograms', '30,000 kilograms')).accepted.length, 0,
+  'An altered numeric fact cannot pass literal source quotation checks.');
+const regulation25PartialLastItem = capturedRegulation25Exclusions.replace(
+  /\n\n\(h\)[\s\S]*$/,
+  '\n\n(h) a motor car used for instructional purposes for reward'
+);
+assert.equal(verifyCapturedRegulation25(undefined, regulation25PartialLastItem).accepted.length, 0,
+  'A clipped final ordered item is rejected.');
+const wrongRegulation25Scope = verifyCapturedRegulation25(undefined, capturedRegulation25Exclusions,
+  { authority: 'IRAS', domain: 'IRAS_TAX' });
+assert.equal(wrongRegulation25Scope.accepted.length, 0,
+  'A complete ordered list cannot bypass mismatched requested source scope.');
+const regulation25Prefix = 'Motor cars excluded from restrictions';
+assert.equal(verifyCapturedRegulation25(undefined,
+  regulation25Prefix + '\n\n' + capturedRegulation25Exclusions
+).accepted.length, 0, 'A quote that adds a heading prefix is not the complete ordered-list span.');
+const regulation25Suffix = 'Exceptions where input tax on motor car expenses may be claimed';
+assert.equal(verifyCapturedRegulation25(undefined,
+  capturedRegulation25Exclusions + '\n\n' + regulation25Suffix
+).accepted.length, 0, 'A quote that adds a following heading is not the complete ordered-list span.');
+
+const regulation25HoweverQualification = [
+  capturedRegulation25Exclusions,
+  'However',
+  'Only certain employers',
+  'The restriction also applies.'
+].join('\n\n');
+const regulation25HoweverSource = capturedRegulation25SourceText.replace(
+  capturedRegulation25Exclusions, regulation25HoweverQualification
+);
+assert.equal(verifyCapturedRegulation25(regulation25HoweverSource, capturedRegulation25Exclusions).accepted.length, 0,
+  'A bare ordered list cannot omit prose introduced by an explicit no-colon qualification marker.');
+assert.equal(verifyCapturedRegulation25(regulation25HoweverSource, regulation25HoweverQualification).accepted.length, 1,
+  'The complete ordered list retains a no-colon qualification and its following prose.');
+
+const regulation25UnlessQualification = [
+  capturedRegulation25Exclusions,
+  'Unless',
+  'a motor car meets one of the listed exclusions'
+].join('\n\n');
+const regulation25UnlessSource = capturedRegulation25SourceText.replace(
+  capturedRegulation25Exclusions, regulation25UnlessQualification
+);
+assert.equal(verifyCapturedRegulation25(regulation25UnlessSource, capturedRegulation25Exclusions).accepted.length, 0,
+  'An unterminated no-colon Unless fragment cannot be omitted from an ordered-list quotation.');
+assert.equal(completeVisibleEvidenceListSpan(
+  splitEvidenceTextBlocks(regulation25UnlessSource), 1
+), undefined, 'A two-fragment no-colon Unless qualification keeps the source span incomplete.');
+
+const numericEvidenceList = 'The stated conditions are:\n\n1. The first condition applies;\n\n2. The second condition applies.';
+const numericEvidenceListSpan = completeVisibleEvidenceListSpan(splitEvidenceTextBlocks(numericEvidenceList), 0);
+assert.equal(numericEvidenceListSpan?.itemCount, 2,
+  'A complete contiguous numeric list remains recognized by the generic evidence-list helper.');
+const numericListWithQualification = [
+  'The stated conditions are:',
+  '1. The first condition applies;',
+  '2. The second condition applies.',
+  'However:',
+  'The conditions apply to this passage only.'
+].join('\n\n');
+assert.equal(
+  completeVisibleEvidenceListSpan(splitEvidenceTextBlocks(numericListWithQualification), 0)?.quote,
+  numericListWithQualification,
+  'A qualification label and its following prose remain attached to an ordered list.'
+);
+const numericListWithUnterminatedQualification = [
+  'The stated conditions are:',
+  '1. The first condition applies;',
+  '2. The second condition applies.',
+  'Unless the company satisfies the stated exception'
+].join('\n\n');
+assert.equal(completeVisibleEvidenceListSpan(
+  splitEvidenceTextBlocks(numericListWithUnterminatedQualification), 0
+), undefined, 'An unterminated attached qualification keeps the ordered evidence span incomplete.');
+const invalidNumericEvidenceList = splitEvidenceTextBlocks(
+  'The stated conditions are:\n\n1. The first condition applies;\n\n3. The third condition applies.'
+);
+assert.equal(completeVisibleEvidenceListSpan(invalidNumericEvidenceList, 0), undefined,
+  'A numeric list with a missing marker is not complete.');
+
+const capturedMotorCarClassification = {
+  ...classifyQuestion(capturedMotorCarQuery),
+  primaryDomain: 'GST', domains: ['IRAS_GST'], topicIds: motorCarTopicIds,
+  authorities: ['IRAS'], multiAuthority: false,
+  accountingAnalysisRequired: false, taxAnalysisRequired: true,
+  regulatoryAnalysisRequired: false, calculationRequired: false,
+  journalEntryRequired: false, intent: 'STATUTORY_ADVISORY', missingFacts: [], missingFactDomains: []
+};
+const capturedMotorCarContext = (sourceText = capturedMotorCarRule) => ({
+  classification: capturedMotorCarClassification,
+  evidenceQuality: {
+    status: 'RETRIEVED_SUFFICIENT',
+    eligibleRecords: [{ ...capturedMotorCarRecord, sourceText }],
+    rejectedRecords: [], coveredTopicIds: motorCarTopicIds, uncoveredTopicIds: [],
+    requestedConcepts: [], coveredConcepts: [], uncoveredConcepts: [],
+    missingFacts: [], targetDate: '2026-11-08', targetDateConfidence: 'HIGH'
+  },
+  userFacts: [], missingFacts: [], assumptions: [],
+  primaryEvidence: [], officialGuidance: [], curatedSummaries: [], applicationRules: [],
+  currentInformationRequired: false
+});
+const capturedRegulation25Context = capturedMotorCarContext();
+capturedRegulation25Context.evidenceQuality.eligibleRecords = [capturedRegulation25Record];
+capturedRegulation25Context.evidenceQuality.targetDate = '2026-11-09';
+const capturedRegulation25Answer = renderIrasEvidenceResponse({}, capturedRegulation25Context, capturedMotorCarQuery,
+  null, 'SFRS_I', 'LOCAL');
+const selectedCapturedRegulation25 = capturedRegulation25Answer.claimVerification.accepted.find(claim =>
+  claim.recordId === capturedRegulation25Record.id &&
+  claim.quote.replace(/\s+/g, ' ').trim() === capturedRegulation25Exclusions.replace(/\s+/g, ' ').trim());
+assert.ok(selectedCapturedRegulation25,
+  'The production IRAS selector offers and verifies the complete ordered Regulation 25(1) exclusion passage.');
+assert.equal(selectedCapturedRegulation25.canonicalUrl, capturedRegulation25Url,
+  'Production selection preserves the ordered-list quote’s verified IRAS source URL.');
+
+const unscopedCapturedMotorCarRule = verifyEvidenceClaims([{
+  kind: 'RULE', text: capturedMotorCarRule, quote: capturedMotorCarRule, recordId: capturedMotorCarRecord.id
+}], [capturedMotorCarRecord], { targetDate: '2026-11-08' });
+assert.equal(unscopedCapturedMotorCarRule.accepted.length, 0,
+  'A complete visible list cannot bypass source-scope checks when no request authority and domain are supplied.');
+const capturedMotorCarAnswer = renderIrasEvidenceResponse({}, capturedMotorCarContext(), capturedMotorCarQuery,
+  null, 'SFRS_I', 'LOCAL');
+const acceptedCapturedMotorCarRule = capturedMotorCarAnswer.claimVerification.accepted.find(claim =>
+  claim.recordId === capturedMotorCarRecord.id && claim.quote.replace(/\s+/g, ' ').trim() === capturedMotorCarRule.replace(/\s+/g, ' ').trim());
+assert.ok(acceptedCapturedMotorCarRule,
+  'Source-only IRAS selection includes and verifies the captured car restriction, both visible list items, and attached business-use qualification.');
+assert.match(capturedMotorCarAnswer.messageText, /disallowed under Regulation 27[\s\S]*Physical use[\s\S]*Economic use[\s\S]*applies regardless of whether the motor car is used wholly or partly for business purposes/,
+  'The rendered answer can present the complete central restriction without importing a connected-person fact.');
+
+for (const incompleteQuote of [
+  capturedMotorCarRule.replace('• Physical use, such as when the motor car is driven by your staff or chauffeur to transport your company directors or business associates; and\n\n', ''),
+  capturedMotorCarRule.replace('• Economic use, where the motor car is used to generate income or make supplies (e.g. a consultancy firm uses its motor car to transport its preferred clients for a fee).\n\n', ''),
+  capturedMotorCarRule.replace('\n\n' + capturedMotorCarRule.split('\n\n').at(-1), ''),
+  capturedMotorCarRule.split('\n\n').slice(0, 2).join('\n\n'),
+  [capturedMotorCarRule.split('\n\n')[0], capturedMotorCarRule.split('\n\n')[1], capturedMotorCarRule.split('\n\n')[3]].join('\n\n')
+]) {
+  const result = verifyEvidenceClaims([{
+    kind: 'RULE', text: incompleteQuote, quote: incompleteQuote, recordId: capturedMotorCarRecord.id
+  }], [capturedMotorCarRecord], { targetDate: '2026-11-08' });
+  assert.equal(result.accepted.length, 0, 'An isolated, partial, missing-item, or spliced list cannot pass source-span verification.');
+}
+const sentenceFragmentListRule = [
+  'The restriction applies in both cases:',
+  '•',
+  '• The first condition applies. The connected exception permits recovery.',
+  '•',
+  '• The second condition applies.',
+  'This restriction applies when the stated conditions are met.'
+].join('\n\n');
+const sentenceFragmentListRecord = {
+  ...capturedMotorCarRecord,
+  id: 'captured-iras-sentence-fragment-list',
+  sourceText: sentenceFragmentListRule
+};
+const sentenceFragmentListOptions = {
+  targetDate: '2026-11-08',
+  completeListScope: { authority: 'IRAS', domain: 'IRAS_GST' }
+};
+const unscopedSentenceFragmentList = verifyEvidenceClaims([{
+  kind: 'RULE', text: sentenceFragmentListRule, quote: sentenceFragmentListRule,
+  recordId: sentenceFragmentListRecord.id
+}], [sentenceFragmentListRecord], { targetDate: '2026-11-08' });
+assert.equal(unscopedSentenceFragmentList.accepted.length, 0,
+  'A marker-scaffolded complete list still requires explicit matching request scope.');
+const completeSentenceFragmentList = verifyEvidenceClaims([{
+  kind: 'RULE', text: sentenceFragmentListRule, quote: sentenceFragmentListRule,
+  recordId: sentenceFragmentListRecord.id
+}], [sentenceFragmentListRecord], sentenceFragmentListOptions);
+assert.equal(completeSentenceFragmentList.accepted.length, 1,
+  'A complete scoped visible list remains verifiable with its attached qualification.');
+for (const fragment of [
+  '• The first condition applies.',
+  'The connected exception permits recovery.',
+  '• The second condition applies.',
+  'This restriction applies when the stated conditions are met.'
+]) {
+  const result = verifyEvidenceClaims([{
+    kind: 'RULE', text: fragment, quote: fragment, recordId: sentenceFragmentListRecord.id
+  }], [sentenceFragmentListRecord], sentenceFragmentListOptions);
+  assert.equal(result.accepted.length, 0, 'A sentence fragment inside a protected list span is rejected: ' + fragment);
+  assert.equal(result.rejected[0]?.reason, 'QUOTE_OMITS_ATTACHED_QUALIFICATION');
+}
+for (const wrongScope of [
+  { authority: 'MOM', domain: 'IRAS_GST' },
+  { authority: 'IRAS', domain: 'IRAS_TAX' }
+]) {
+  const result = verifyEvidenceClaims([{
+    kind: 'RULE', text: sentenceFragmentListRule, quote: sentenceFragmentListRule,
+    recordId: sentenceFragmentListRecord.id
+  }], [sentenceFragmentListRecord], { targetDate: '2026-11-08', completeListScope: wrongScope });
+  assert.equal(result.accepted.length, 0, 'A complete list cannot pass a mismatched requested authority or domain.');
+}
+const ellipsisMotorCarQuote = capturedMotorCarRule.replace('Physical use', 'Physical … use');
+const ellipsisMotorCarCheck = verifyEvidenceClaims([{
+  kind: 'RULE', text: ellipsisMotorCarQuote, quote: ellipsisMotorCarQuote, recordId: capturedMotorCarRecord.id
+}], [capturedMotorCarRecord], { targetDate: '2026-11-08' });
+assert.equal(ellipsisMotorCarCheck.rejected[0]?.reason, 'ELLIPSIS_NOT_ALLOWED',
+  'A visibly complete list cannot be repaired by inserting an ellipsis.');
+const unmarkedMotorCarRule = capturedMotorCarRule.replaceAll('• ', '');
+const unmarkedMotorCarAnswer = renderIrasEvidenceResponse({}, capturedMotorCarContext(unmarkedMotorCarRule), capturedMotorCarQuery,
+  null, 'SFRS_I', 'LOCAL');
+assert.equal(unmarkedMotorCarAnswer.claimVerification.accepted.some(claim =>
+  claim.quote.replace(/\s+/g, ' ').trim() === unmarkedMotorCarRule.replace(/\s+/g, ' ').trim()), false,
+  'An unmarked sequence has no visible list boundary and is not assembled into a complete-list quotation.');
+
+const foreignTaxCreditListRule = [
+  'Foreign tax credit is the lower of:',
+  '• The actual amount of foreign tax paid; or',
+  '• The amount of Singapore tax attributable to the foreign income (net of expenses).'
+].join('\n\n');
+const foreignTaxCreditTopicIds = ['iras-foreign-tax-credit'];
+const foreignTaxCreditQuery = 'Explain the general foreign tax credit rule for a Singapore company.';
+const foreignTaxCreditRecord = {
+  ...UNIFIED_SOURCE_REGISTRY.IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP,
+  id: 'captured-iras-foreign-tax-credit-list',
+  sourceText: foreignTaxCreditListRule,
+  sourceStatus: 'VERIFIED',
+  sourceType: 'OFFICIAL_GUIDANCE',
+  evidenceTier: 'OFFICIAL_GUIDANCE',
+  isVerbatimText: true,
+  provenance: 'LOCAL_STATIC',
+  lifecycleState: 'ACTIVE',
+  recordRole: 'EVIDENCE',
+  groundingEligible: true,
+  verificationMethod: 'CURATED_EDITORIAL_REVIEW',
+  lastVerifiedDate: '2026-11-08',
+  tags: foreignTaxCreditTopicIds,
+  relatedTopicIds: foreignTaxCreditTopicIds
+};
+const foreignTaxCreditClassification = {
+  ...classifyQuestion(foreignTaxCreditQuery),
+  primaryDomain: 'TAX', domains: ['IRAS_CORPORATE_TAX'],
+  topicIds: foreignTaxCreditTopicIds, authorities: ['IRAS'], multiAuthority: false,
+  accountingAnalysisRequired: false, taxAnalysisRequired: true,
+  regulatoryAnalysisRequired: false, calculationRequired: false,
+  journalEntryRequired: false, intent: 'STATUTORY_ADVISORY', missingFacts: [], missingFactDomains: []
+};
+const foreignTaxCreditContext = {
+  classification: foreignTaxCreditClassification,
+  evidenceQuality: {
+    status: 'RETRIEVED_SUFFICIENT', eligibleRecords: [foreignTaxCreditRecord], rejectedRecords: [],
+    coveredTopicIds: foreignTaxCreditTopicIds, uncoveredTopicIds: [], requestedConcepts: [], coveredConcepts: [],
+    uncoveredConcepts: [], missingFacts: [], targetDate: '2026-11-08', targetDateConfidence: 'HIGH'
+  },
+  userFacts: [], missingFacts: [], assumptions: [], primaryEvidence: [], officialGuidance: [],
+  curatedSummaries: [], applicationRules: [], currentInformationRequired: false
+};
+const foreignTaxCreditAnswer = renderIrasEvidenceResponse({}, foreignTaxCreditContext, foreignTaxCreditQuery,
+  null, 'SFRS_I', 'LOCAL');
+assert.ok(foreignTaxCreditAnswer.claimVerification.accepted.some(claim =>
+  claim.recordId === foreignTaxCreditRecord.id && claim.quote === foreignTaxCreditListRule),
+  'A non-GST IRAS_TAX list uses the coarse legacy domain mapped from IRAS_CORPORATE_TAX.');
 const localFixtures = JSON.parse(await readFile(new URL(
   '../../docs/evaluation/multi-authority-workstreams/iras-first-local-2026-10-02-v4/local-evidence-fixtures.json', import.meta.url), 'utf8'));
 const endToEndCases = [

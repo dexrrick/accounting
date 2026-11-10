@@ -28,7 +28,8 @@ import {
   identifyAcraAnnualReturnCompanyFacts,
   isAcraAnnualReturnApplicationQuestion
 } from '../engine/acraAnnualReturnApplication';
-import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
+import { getCoverageTopicsByIds, SINGAPORE_DOMAIN_TAXONOMY, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks } from '../utils/evidenceTextBoundaries';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
@@ -78,6 +79,7 @@ import {
 } from '../verification/claimEvidenceVerifier';
 import {
   buildGroundedReasoningContext,
+  provisionalAuthorityIssueTopic,
   resolveMappedOfficialSourceFallback,
   type MappedFallbackOptions,
   type SourceMapFallbackTrace
@@ -883,11 +885,71 @@ function retrievalAuthority(authority: SemanticAuthority): StatutoryAuthority | 
   return undefined;
 }
 
+const AUTHORITY_ISSUE_SOURCE_DOMAINS: Partial<Record<OfficialDiscoveryAuthority, string>> = {
+  CPF: 'CPF_CONTRIBUTIONS', MOM: 'MOM_EMPLOYMENT', ACRA: 'ACRA_COMPANIES', MAS: 'MAS_FUND_MANAGEMENT'
+};
+
+function issueMatchesValidatedSemanticUnderstanding(
+  issue: ReconciledSemanticQuestionIssue,
+  understanding: SemanticQuestionUnderstanding,
+  query: string
+): boolean {
+  const interpretation = understanding.interpretation;
+  const rawIssues = interpretation?.issues;
+  if (!['SEMANTIC_INTERPRETATION', 'SEMANTIC_PLUS_RULES'].includes(understanding.mode) || understanding.assessmentStatus !== 'PASSED' ||
+      !interpretation || !rawIssues || !validateSemanticQuestionInterpretation(interpretation, query) ||
+      !Number.isFinite(issue.confidence) || issue.confidence < SEMANTIC_QUESTION_MIN_CONFIDENCE) return false;
+  const matchingIssues = rawIssues.filter(raw => raw.subject === issue.subject && raw.population === issue.population &&
+    raw.domain === issue.domain && raw.operation === issue.operation && raw.confidence === issue.confidence &&
+    raw.governingAuthorities.length === issue.governingAuthorities.length &&
+    raw.governingAuthorities.every((authority, index) => authority === issue.governingAuthorities[index]) &&
+    raw.contextualAuthorities.length === issue.contextualAuthorities.length &&
+    raw.contextualAuthorities.every((authority, index) => authority === issue.contextualAuthorities[index]));
+  return matchingIssues.length === 1;
+}
+
+export function hasValidatedUnmappedGovernedAdvisoryIssue(
+  issuePlan: SemanticIssueReconciliation,
+  understanding: SemanticQuestionUnderstanding,
+  query: string
+): boolean {
+  if (issuePlan.source !== 'SEMANTIC_ISSUES') return false;
+  const expectedDomains: Partial<Record<OfficialDiscoveryAuthority, AuthorityWorkstreamDomain>> = {
+    CPF: 'CPF_PAYROLL', MOM: 'MOM_EMPLOYMENT', ACRA: 'ACRA_CORPORATE', MAS: 'MAS_FUNDS'
+  };
+  return issuePlan.issues.some(issue => {
+    const authority = issue.governingAuthorities.length === 1 ? issue.governingAuthorities[0] : undefined;
+    return Boolean(authority && isOfficialDiscoveryAuthority(authority) &&
+      issue.status === 'UNRESOLVED' && issue.unresolvedReason === 'NO_COVERAGE_TOPIC' &&
+      issue.domain === expectedDomains[authority] && ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'CHECK_ELIGIBILITY', 'COMPARE', 'EXPLAIN_INTERACTION'].includes(issue.operation) &&
+      issueMatchesValidatedSemanticUnderstanding(issue, understanding, query));
+  });
+}
+
+function isUnmappedGovernedAdvisoryIssue(
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  domain: AuthorityWorkstreamDomain,
+  understanding: SemanticQuestionUnderstanding,
+  query: string
+): boolean {
+  const expectedDomain: Partial<Record<OfficialDiscoveryAuthority, AuthorityWorkstreamDomain>> = {
+    CPF: 'CPF_PAYROLL', MOM: 'MOM_EMPLOYMENT', ACRA: 'ACRA_CORPORATE', MAS: 'MAS_FUNDS'
+  };
+  return isOfficialDiscoveryAuthority(authority) && issue.status === 'UNRESOLVED' &&
+    issue.unresolvedReason === 'NO_COVERAGE_TOPIC' && issue.domain === expectedDomain[authority] &&
+    domain === expectedDomain[authority] && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === authority &&
+    ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'CHECK_ELIGIBILITY', 'COMPARE', 'EXPLAIN_INTERACTION'].includes(issue.operation) &&
+    issueMatchesValidatedSemanticUnderstanding(issue, understanding, query);
+}
+
 function issueScope(issue: ReconciledSemanticQuestionIssue, plan: InternalPlan, topicIds: string[], concepts: RequestedQuestionConcept[]): AuthorityEvidenceScope | undefined {
   const authority = plan.authority === 'IRAS' ? 'IRAS'
     : isOfficialDiscoveryAuthority(plan.authority) ? plan.authority : undefined;
   if (!authority) return undefined;
-  const sourceDomain = getCoverageTopicsByIds(topicIds)[0]?.domainId;
+  const sourceDomain = getCoverageTopicsByIds(topicIds).find(topic => topic.authorities.includes(authority as StatutoryAuthority))?.domainId ||
+    (authority !== 'IRAS' ? AUTHORITY_ISSUE_SOURCE_DOMAINS[authority] : undefined);
   if (!sourceDomain) return undefined;
   return {
     authority,
@@ -1068,7 +1130,8 @@ function defaultOfficialStatutoryProvider(
   plan: InternalPlan,
   options: AuthorityWorkstreamOptions,
   retriever: ISourceRetriever,
-  referenceDate: string
+  referenceDate: string,
+  understanding: SemanticQuestionUnderstanding
 ): AuthorityEvidenceProvider {
   const localProvider = defaultLocalProvider(authority, retriever, referenceDate);
   return {
@@ -1103,6 +1166,11 @@ function defaultOfficialStatutoryProvider(
         request.retrievalIntent.topicIds, request.originalQuery, retriever, {
           ...options.groundingOptions,
           referenceDate,
+          authorityLevelDiscovery: true,
+          allowTransientAuthorityIssueDiscovery: issueMatchesValidatedSemanticUnderstanding(
+            request.issue, understanding, request.originalQuery
+          ),
+          localEvidenceAdequate: false,
           evidenceScope: scope,
           // Injected first-party transports stay under the same shared allowlist.
           localOnly: false
@@ -1110,6 +1178,7 @@ function defaultOfficialStatutoryProvider(
       );
       return {
         candidates: [...local.candidates, ...fetched.records],
+        documentContexts: fetched.documentContexts,
         trace: mapSourceMapTrace(fetched.trace),
         evidenceQualityTrace: fetched.trace
       };
@@ -1151,6 +1220,7 @@ function defaultIrasProvider(
       const rendered = renderIrasEvidenceResponse({}, groundingContext, query, null, 'SFRS_I', 'LOCAL');
       return {
         candidates: quality.eligibleRecords,
+        documentContexts: groundingContext.documentContexts,
         claims: rendered.claimVerification.accepted,
         trace: mapSourceMapTrace(groundingContext.sourceMapFallbackTrace),
         evidenceQualityTrace: groundingContext.sourceMapFallbackTrace
@@ -1601,6 +1671,12 @@ function practicalRuleIssueTextSupport(
   return true;
 }
 
+function supportsTransientIssueTopicText(text: string, topic: SingaporeCoverageTopic): boolean {
+  const subject = topic.aliases?.[0] || topic.title.replace(/^[^:]+:\s*/, '');
+  const anchors = semanticOwnerAnchors(subject);
+  return anchors.length > 0 && anchors.filter(anchor => hasSemanticOwnerAnchor(text, anchor)).length >= Math.min(2, anchors.length);
+}
+
 function supportsIssueSubject(
   text: string,
   issue: ReconciledSemanticQuestionIssue,
@@ -1622,6 +1698,7 @@ function supportsIssueSubject(
   if (masRuleSupport !== undefined) return masRuleSupport;
   const generalRuleSupport = generalIrasRuleConceptSupport(text, issue, [topic], concepts, originalQuery);
   if (generalRuleSupport !== undefined) return generalRuleSupport;
+  if (topic.id.startsWith('iras-authority-query-issue-')) return supportsTransientIssueTopicText(text, topic);
   const companyTaxResidencyScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
     topic.id === 'iras-corporate-tax-residency' && topic.domainId === 'IRAS_CORPORATE_TAX';
   if (companyTaxResidencyScope && isGeneralCompanyTaxResidencySubject(issue.subject)) {
@@ -1676,6 +1753,7 @@ function passesBoundedStatutoryAdvisorySupport(
 }
 
 function textSupportsTopic(text: string, topic: SingaporeCoverageTopic, requireAcraDeadlineTable = false): boolean {
+  if (topic.id.startsWith('iras-authority-query-issue-')) return supportsTransientIssueTopicText(text, topic);
   if (topic.id === 'acra_annual-returns') {
     if (requireAcraDeadlineTable) return supportsAcraAnnualReturnDeadlineTable(text);
     if (!supportsAcraAnnualReturnFilingRule(text)) return false;
@@ -2006,6 +2084,7 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
   for (const record of records) {
     const quoteCandidates = [...new Set([record.sourceText.trim(), ...record.sourceText
       .split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean)])];
+    const sourceBlocks = splitEvidenceTextBlocks(record.sourceText);
     if (scope.includeAcraDutySentence) {
       for (const block of quoteCandidates) {
         const firstSentence = block.match(/^(.+?[.!?])\s+/)?.[1];
@@ -2022,6 +2101,10 @@ function ruleClaimsForRecords(records: AuthoritativeSourceRecord[], scope: RuleC
         );
         if (!topicAuthority || !topicBoundToRecord(record, topic) ||
             !recordMatchesGovernorAndDomain(record, topicAuthority, topic)) continue;
+        for (let blockIndex = 0; blockIndex < sourceBlocks.length; blockIndex += 1) {
+          const completeList = completeVisibleEvidenceListSpan(sourceBlocks, blockIndex);
+          if (completeList) quoteCandidates.push(completeList.quote);
+        }
         const request = {
           authority: topicAuthority, topicId: topic.id,
           query: scope.originalQuery, subject: issue.subject, sourceText: record.sourceText,
@@ -2460,8 +2543,9 @@ async function evaluateIssue(
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
-  const evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
-  const evidenceTopicIds = evidenceTopics.map(topic => topic.id);
+  let evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
+  const registeredEvidenceTopics = [...evidenceTopics];
+  let evidenceTopicIds = evidenceTopics.map(topic => topic.id);
   const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues,
     semanticOwnerCandidates, acraCandidateIssues);
   const acraAnnualReturnDutyScope = isAcraAnnualReturnFilingDutyIssue(query, plan.authority, issue, topics);
@@ -2469,6 +2553,12 @@ async function evaluateIssue(
     requiresAcraAnnualReturnDeadlineEvidence(query, plan.authority, issue);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
+  const transientScope = issueScope(issue, plan, topicIds, concepts);
+  const transientIssueTopic = transientScope ? provisionalAuthorityIssueTopic(transientScope) : undefined;
+  const transientIssueDiscoveryPermitted = Boolean(transientIssueTopic &&
+    issueMatchesValidatedSemanticUnderstanding(issue, understanding, query));
+  const canAttemptUnmappedAdvisory = !mapped && transientIssueDiscoveryPermitted &&
+    isUnmappedGovernedAdvisoryIssue(issue, plan.authority, plan.domain, understanding, query);
   const application = applicationForIssue(query, issue, plan.authority, acraCandidateIssues);
   let cpfRateScheduleUnverified = requiresUnverifiedCpfRateSchedule(query, issue, plan.authority, evidenceTopics);
   const base: Omit<AuthorityIssueEvidence, 'evidenceStatus' | 'verifiedClaims' | 'sources' | 'gaps'> = {
@@ -2487,8 +2577,8 @@ async function evaluateIssue(
   const gaps: AuthorityEvidenceGap[] = [];
   if (issue.status !== 'MAPPED' || !mapped) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'mapped', issue.unresolvedReason || (plan.domain === 'UNKNOWN' ? 'CANONICAL_AREA_UNRESOLVED' : 'ISSUE_UNMAPPED'),
-      'The issue has no resolved authority and topic mapping for this workstream.'));
-    return { ...base, evidenceStatus: 'INSUFFICIENT', verifiedClaims: [], sources: [], gaps };
+      'Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.'));
+    if (!canAttemptUnmappedAdvisory) return { ...base, evidenceStatus: 'INSUFFICIENT', verifiedClaims: [], sources: [], gaps };
   }
 
   const request: AuthorityEvidenceRequest = {
@@ -2499,7 +2589,7 @@ async function evaluateIssue(
   const provider = options.providers?.[plan.authority] || (plan.authority === 'IRAS'
     ? defaultIrasProvider(query, plan, options, retriever, understanding, referenceDate)
     : isOfficialDiscoveryAuthority(plan.authority)
-      ? defaultOfficialStatutoryProvider(plan.authority, plan, options, retriever, referenceDate)
+      ? defaultOfficialStatutoryProvider(plan.authority, plan, options, retriever, referenceDate, understanding)
       : SUPPORTED_LOCAL_AUTHORITIES.has(plan.authority) ? defaultLocalProvider(plan.authority, retriever, referenceDate) : undefined);
   if (!provider || plan.domain === 'UNKNOWN') {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_UNAVAILABLE',
@@ -2542,6 +2632,11 @@ async function evaluateIssue(
   const admissionTrace = admissionTraceAssessment(providerResult.evidenceQualityTrace);
   const officialRetrievalTrace = safeEvidenceQualityTrace(providerResult.evidenceQualityTrace);
   const uniqueCandidates = [...new Map(providerResult.candidates.map(record => [record.id, record])).values()];
+  if (transientIssueDiscoveryPermitted && transientIssueTopic && (providerResult.evidenceQualityTrace?.attempts.some(attempt => attempt.topicId === transientIssueTopic.id) ||
+      uniqueCandidates.some(record => topicBoundToRecord(record, transientIssueTopic)))) {
+    evidenceTopics = [...evidenceTopics, transientIssueTopic];
+    evidenceTopicIds = evidenceTopics.map(topic => topic.id);
+  }
   lifecycle.evidenceFound = uniqueCandidates.length > 0;
   if (providerResult.error) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_ERROR',
@@ -2595,7 +2690,7 @@ async function evaluateIssue(
     });
   } else {
     const versioningManager = versioningManagerFor(retriever);
-    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, query, targetDate, referenceDate,
+    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, evidenceTopics, concepts, query, targetDate, referenceDate,
       officialRetrievalTrace, versioningManager, requireAcraDeadlineEvidence);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
@@ -2645,12 +2740,30 @@ async function evaluateIssue(
     .filter((claim, index, all) => all.findIndex(candidate =>
       candidate.recordId === claim.recordId && candidate.quote === claim.quote
     ) === index);
+  const issueListAuthority = issue.governingAuthorities.length === 1
+    ? retrievalAuthority(issue.governingAuthorities[0]) : undefined;
+  const workstreamListAuthority = retrievalAuthority(plan.authority);
+  const issueListDomains = issueListAuthority && issueListAuthority === workstreamListAuthority
+    ? [...new Set(evidenceTopics.flatMap(topic => {
+      if (!topic.authorities.includes(issueListAuthority)) return [];
+      const domainDefinition = SINGAPORE_DOMAIN_TAXONOMY[topic.domainId];
+      return domainDefinition.authorities.some(authority => authority === issueListAuthority)
+        ? domainDefinition.legacyDomains : [];
+    }))]
+    : [];
+  const completeListScopePermitted = ((mapped && issue.status === 'MAPPED') || canAttemptUnmappedAdvisory) &&
+    issueListAuthority && issueListAuthority === workstreamListAuthority &&
+    (plan.authority !== 'IRAS' || issueMatchesValidatedSemanticUnderstanding(issue, understanding, query));
+  const completeListScope = completeListScopePermitted && issueListDomains.length === 1
+    ? { authority: issueListAuthority, domain: issueListDomains[0] }
+    : undefined;
   const verificationOptions: VerifyEvidenceClaimsOptions = {
     missingFacts: [], targetDate, referenceDate,
     expectedAuthority: plan.authority === 'MAS' ? 'MAS' :
       plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA' : undefined,
     expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' :
       plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_CORP' : undefined,
+    ...(completeListScope ? { completeListScope } : {}),
     ...(plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {}),
     versioningManager: versioningManagerFor(retriever)
   };
@@ -2754,8 +2867,14 @@ async function evaluateIssue(
   if (!lifecycle.verified) gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'NO_VERIFIED_CLAIM',
     'No complete source quotation passed claim verification for this issue.'));
 
-  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue,
-    plan.authority, query, requireAcraDeadlineEvidence);
+  const registeredCoverage = registeredEvidenceTopics.length > 0
+    ? issueClaimCoverage(verifiedClaims, admitted, registeredEvidenceTopics, concepts, issue,
+      plan.authority, query, requireAcraDeadlineEvidence)
+    : undefined;
+  const coverage = registeredCoverage?.covered
+    ? registeredCoverage
+    : issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue,
+      plan.authority, query, requireAcraDeadlineEvidence);
   lifecycle.covered = coverage.covered && !(plan.authority === 'IRAS' && irasQuality &&
     (evidenceTopicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) || (irasQuality.uncoveredConcepts?.length || 0) > 0));
   for (const missing of coverage.missing) gaps.push(makeGap(issue, plan.authority, plan.domain, 'covered', 'ISSUE_CONCEPT_UNCOVERED',
@@ -2774,6 +2893,18 @@ async function evaluateIssue(
     evidenceStatus: lifecycle.covered && gaps.length === 0 ? 'VERIFIED' : 'INSUFFICIENT',
     verifiedClaims,
     sources,
+    admittedDocumentSources: admitted,
+    // For an undated advisory, bind supplemental evidence to the request as-of date, not a user transaction date.
+    admittedDocumentTargetDate: targetDate || referenceDate,
+    // Supplemental context is retained only after the matching current-query record passes admission.
+    admittedDocumentContexts: Array.isArray(providerResult.documentContexts)
+      ? providerResult.documentContexts.filter(context => context && context.completeness === 'COMPLETE' &&
+        context.targetDate === (targetDate || referenceDate) && typeof context.sourceText === 'string' &&
+        context.sourceText.trim().length > 0 && context.sourceText.length <= 12_000 &&
+        admitted.some(record => record.id === context.recordId && record.provenance === 'LIVE_EXTERNAL' &&
+          record.documentHash === context.documentHash && record.canonicalSourceUrl === context.canonicalUrl &&
+          record.officialSourceUrl === context.canonicalUrl))
+      : [],
     gaps,
     retrievalTrace,
     admissionDiagnostics
