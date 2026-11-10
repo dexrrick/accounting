@@ -79,9 +79,20 @@ async function waitForPhysicalProviderStart(signal) {
   previousProviderStartAt = startAt;
 }
 
-async function readBoundedResponse(response, maximumBytes, signal) {
+function reportProviderResponseSnapshot(callback, status, bytes, options = {}) {
+  if (typeof callback !== 'function') return;
+  try {
+    callback(Object.freeze(providerEnvelopePartial(status, bytes, options)));
+  } catch {
+    // Diagnostic snapshots must never change the provider request outcome.
+  }
+}
+
+async function readBoundedResponse(response, maximumBytes, signal, onProviderResponseSnapshot) {
+  reportProviderResponseSnapshot(onProviderResponseSnapshot, response.status, Buffer.alloc(0));
   const length = Number(response.headers.get('content-length'));
   if (Number.isFinite(length) && length > maximumBytes) {
+    reportProviderResponseSnapshot(onProviderResponseSnapshot, response.status, Buffer.alloc(0), { truncated: true });
     void response.body?.cancel().catch(() => {});
     throw providerError('V4_SEMANTIC_HTTP_RESPONSE_TOO_LARGE', response.status, Buffer.alloc(0), { truncated: true });
   }
@@ -109,12 +120,14 @@ async function readBoundedResponse(response, maximumBytes, signal) {
       if (chunk.length > remaining) {
         if (remaining) chunks.push(chunk.subarray(0, remaining));
         total += remaining;
+        reportProviderResponseSnapshot(onProviderResponseSnapshot, response.status, Buffer.concat(chunks, total), { truncated: true });
         void reader.cancel().catch(() => {});
         throw providerError('V4_SEMANTIC_HTTP_RESPONSE_TOO_LARGE', response.status,
           Buffer.concat(chunks, total), { truncated: true });
       }
       chunks.push(chunk);
       total += chunk.length;
+      reportProviderResponseSnapshot(onProviderResponseSnapshot, response.status, Buffer.concat(chunks, total));
     }
   } catch (error) {
     if (!error?.partialProviderResponse) {
@@ -132,7 +145,8 @@ async function readBoundedResponse(response, maximumBytes, signal) {
 }
 
 /** One physical Gemini call, fixed model and JSON schema, no retries or redirects. */
-export async function sendV4SemanticRequest({ prompt, system, provider, options, caseId, signal }) {
+export async function sendV4SemanticRequest({ prompt, system, provider, options, caseId, signal,
+  onProviderResponseSnapshot }) {
   assertSemanticRequest({ prompt, system, provider, options, caseId });
   if (callCases.has(caseId)) throw new Error('V4_EXTRA_OR_RETRY_SEMANTIC_CALL_BLOCKED');
   callCases.add(caseId);
@@ -162,7 +176,8 @@ export async function sendV4SemanticRequest({ prompt, system, provider, options,
       body: JSON.stringify(body),
       signal: controller.signal
     });
-    const responseBytes = await readBoundedResponse(response, MAX_HTTP_RESPONSE_BYTES, controller.signal);
+    const responseBytes = await readBoundedResponse(response, MAX_HTTP_RESPONSE_BYTES, controller.signal,
+      onProviderResponseSnapshot);
     if (!response.ok) throw providerError(`V4_PROVIDER_HTTP_${response.status}`, response.status, responseBytes);
     let envelope;
     try { envelope = JSON.parse(responseBytes.toString('utf8')); }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { matchBasicTransaction } from '../../src/engine/basicTransactions.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 
@@ -30,6 +31,79 @@ const run = async (question, expectedDebit, expectedCredit, amount) => {
   assert.equal(displayed.scenarioState.directGroups?.[0]?.totalDebit, amount, question);
 };
 for (const row of cases) await run(...row);
+
+const officeEquipmentQuestion = 'On 22/10/2026, a business buys office equipment for SGD 10,000 and pays the full amount immediately from its bank account. No GST applies. Prepare the double-entry journal with debit and credit amounts.';
+const officeEquipment = await parseAccountingQuery(officeEquipmentQuestion, null);
+assert.equal(officeEquipment.scenarioType, 'BASIC_BOOKKEEPING');
+assert.equal(officeEquipment.authorityStatus, 'DETERMINISTIC');
+assert.equal(officeEquipment.missingFields.length, 0);
+assert.equal(officeEquipment.directGroups?.length, 1);
+const officeEquipmentGroup = officeEquipment.directGroups[0];
+assert.equal(officeEquipmentGroup.eventDate, '22/10/2026');
+assert.deepEqual(officeEquipmentGroup.lines.map(line => [line.accountName, line.debit, line.credit]), [
+  ['Office Equipment', 10000, 0],
+  ['Cash at Bank', 0, 10000]
+]);
+assert.equal(officeEquipmentGroup.totalDebit, 10000);
+assert.equal(officeEquipmentGroup.totalCredit, 10000);
+assert.equal(officeEquipmentGroup.authorityStatus, 'DETERMINISTIC');
+const cashEquipment = matchBasicTransaction('Buy office equipment for SGD 1,250 and pay the full amount immediately in cash. No GST applies.');
+assert.deepEqual(cashEquipment?.directGroups?.[0]?.lines.map(line => line.accountName), ['Office Equipment', 'Cash']);
+assert.equal(cashEquipment?.directGroups?.[0]?.totalDebit, 1250);
+for (const [question, expectedCredit] of [
+  ['Buy office equipment for SGD 10,000 from a supplier and pay the full amount immediately from the business bank account. No GST applies.', 'Cash at Bank'],
+  ['Buy office equipment for SGD 10,000 from a supplier and pay the full amount immediately in cash. No GST applies.', 'Cash']
+]) {
+  const supplierEquipment = matchBasicTransaction(question);
+  const supplierEquipmentGroup = supplierEquipment?.directGroups?.[0];
+  assert.equal(supplierEquipment?.scenarioType, 'BASIC_BOOKKEEPING', question);
+  assert.deepEqual(supplierEquipmentGroup?.lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Office Equipment', 10000, 0], [expectedCredit, 0, 10000]
+  ], question);
+  assert.equal(supplierEquipmentGroup?.totalDebit, 10000, question);
+  assert.equal(supplierEquipmentGroup?.totalCredit, 10000, question);
+  assert.equal(supplierEquipmentGroup?.isBalanced, true, question);
+}
+const isoDatedEquipment = matchBasicTransaction('Buy office equipment for SGD 1,250 and pay the full amount immediately from the bank account. No GST applies. Dated 2026-10-22.');
+assert.equal(isoDatedEquipment?.directGroups?.[0]?.eventDate, '22/10/2026', 'valid ISO dates are normalized to the Singapore date format');
+
+const originalFetch = globalThis.fetch;
+let equipmentFetchCalls = 0;
+globalThis.fetch = async () => {
+  equipmentFetchCalls++;
+  throw new Error('The offline deterministic journal must not make network requests.');
+};
+let officeEquipmentResponse;
+try {
+  officeEquipmentResponse = await processAccountingQuery(officeEquipmentQuestion, null, 'SFRS_I');
+} finally {
+  globalThis.fetch = originalFetch;
+}
+assert.equal(equipmentFetchCalls, 0);
+assert.deepEqual(officeEquipmentResponse.scenarioState.directGroups?.[0]?.lines.map(line => line.accountName), ['Office Equipment', 'Cash at Bank']);
+assert.equal(officeEquipmentResponse.scenarioState.directGroups?.[0]?.totalDebit, 10000);
+
+for (const wording of [
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, GST may apply.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies but the supplier charged GST.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies, using a loan financing plan.',
+  'Buy office equipment for SGD 10,000, pay a partial amount immediately from the business bank account, no GST applies.',
+  'Buy office equipment for SGD 10,000 with a trade-in, pay the full amount immediately from the business bank account, no GST applies.',
+  'Buy office equipment for SGD 10,000, do not pay the full amount immediately from the business bank account, no GST applies.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies; include the employer CPF payroll accrual.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies; this is under a lease.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies; classify it as an investment.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies, dated 31/02/2026.',
+  'Buy office equipment for SGD 10,000, pay the full amount immediately from the business bank account, no GST applies, dated 2026-02-31.'
+]) {
+  assert.equal(matchBasicTransaction(wording), undefined, wording);
+}
+const multipleAmountEquipment = matchBasicTransaction('Buy office equipment for SGD 10,000 and accessories for SGD 500, pay the full amount immediately from the business bank account, no GST applies.');
+assert.ok(multipleAmountEquipment);
+assert.equal(multipleAmountEquipment.isComplete, false);
+assert.equal(multipleAmountEquipment.directGroups?.length, 0);
+assert.ok(multipleAmountEquipment.missingFields.some(field => field.fieldKey === 'amount'));
+
 for (let i = 1; i <= 40; i++) {
   const cents = i * 7919;
   await run('Withdraw SGD ' + (cents / 100).toFixed(2) + ' from business bank into petty cash box', 'Petty Cash', 'Cash at Bank', cents / 100);

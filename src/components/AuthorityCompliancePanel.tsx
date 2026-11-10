@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ExternalLink, ShieldCheck } from 'lucide-react';
 import type { AuthorityEvidencePresentation, AuthorityPresentedClaim, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
 import { defaultSourceRetriever } from '../retrieval/sourceRetriever';
+import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { sameVerifiedDocumentBinding, verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { SOURCE_REGISTRY_CHANGE_EVENT } from '../retrieval/sourceRegistryEvents';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
 interface AuthorityCompliancePanelProps {
   presentation: AuthorityEvidencePresentation;
+  sourceRetriever?: ISourceRetriever;
 }
 
 function statusLabel(status: AuthorityEvidencePresentation['status']): string {
@@ -27,12 +29,14 @@ function workstreamStatus(stream: AuthorityPresentedWorkstream, staleBinding: bo
   return stream.applicationStatus === 'UNRESOLVED' ? 'Application unresolved' : 'Evidence verified';
 }
 
-function bindingStatus(claim: AuthorityPresentedClaim): { current: boolean; status: string } | undefined {
+function bindingStatus(claim: AuthorityPresentedClaim, sourceRetriever: ISourceRetriever): { current: boolean; status: string } | undefined {
   const binding = claim.sourceBinding;
   if (!binding) return undefined;
-  const source = defaultSourceRetriever.getSourceById(binding.recordId);
+  const admissionOptions = claim.sourceAdmissionOptions;
+  if (!admissionOptions) return { current: false, status: 'SOURCE_ADMISSION_CONTEXT_MISSING' };
+  const source = sourceRetriever.getSourceById(binding.recordId, admissionOptions);
   if (!source) return { current: false, status: 'SOURCE_NOT_FOUND' };
-  const admission = verifySharedDocumentAdmission(source);
+  const admission = verifySharedDocumentAdmission(source, sourceRetriever.getVersioningManager?.(), admissionOptions);
   if (!admission.required) return { current: false, status: 'ADMISSION_NOT_REQUIRED' };
   if (!admission.admitted) return { current: false, status: admission.reason };
   const matches = sameVerifiedDocumentBinding(binding, admission.binding);
@@ -42,7 +46,9 @@ function bindingStatus(claim: AuthorityPresentedClaim): { current: boolean; stat
   };
 }
 
-export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> = ({ presentation }) => {
+export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> = ({
+  presentation, sourceRetriever = defaultSourceRetriever
+}) => {
   const [, setRegistryRevision] = useState(0);
   useEffect(() => {
     const refresh = () => setRegistryRevision(revision => revision + 1);
@@ -53,7 +59,7 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
   const renderedStreams = presentation.workstreams.map(stream => {
     const claimStatuses = new Map(stream.sources.flatMap(source => source.claims)
       .flatMap(claim => {
-        const status = bindingStatus(claim);
+        const status = bindingStatus(claim, sourceRetriever);
         return status ? [[claim, status] as const] : [];
       }));
     const hasStaleBinding = [...claimStatuses.values()].some(status => !status.current);
@@ -100,7 +106,7 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
                 <div key={issue.id} className="rounded-lg bg-slate-50 dark:bg-[#111827] border border-slate-200 dark:border-[#2B374E] p-3">
                   {(() => {
                     const issueHasStaleBinding = issue.claims.some(claim => {
-                      const status = claimStatuses.get(claim) || bindingStatus(claim);
+                      const status = claimStatuses.get(claim) || bindingStatus(claim, sourceRetriever);
                       return status ? !status.current : false;
                     });
                     const issueInsufficient = issueHasStaleBinding || issue.evidenceStatus === 'INSUFFICIENT';

@@ -64,11 +64,14 @@ async function run() {
 
   const definitionIds = IRAS_SOURCE_MAP_DEFINITIONS.map(item => item.id);
   assert.equal(new Set(definitionIds).size, definitionIds.length, 'IRAS source-map identifiers must be unique.');
-  const reliefMapsReviewedOn29September = new Set([
+  const sourceMapsReviewedOn29September = new Set([
     'IRAS_PERSONAL_RELIEF_CAP_SOURCE_MAP', 'IRAS_CPF_EMPLOYEE_RELIEF_SOURCE_MAP',
     'IRAS_SRS_RELIEF_SOURCE_MAP', 'IRAS_PARENT_RELIEF_SOURCE_MAP',
     'IRAS_GRANDPARENT_CAREGIVER_RELIEF_SOURCE_MAP', 'IRAS_WMCR_SOURCE_MAP',
     'IRAS_QCR_SOURCE_MAP'
+  ]);
+  const sourceMapsReviewedOn22October = new Set([
+    'IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP', 'IRAS_CPF_CASH_TOP_UP_RELIEF_SOURCE_MAP'
   ]);
   for (const definition of IRAS_SOURCE_MAP_DEFINITIONS) {
     const canonical = new URL(definition.canonicalSourceUrl);
@@ -78,7 +81,8 @@ async function run() {
     assert.equal(canonical.hash, '', `${definition.id} must not contain a fragment.`);
     assert.ok(canonical.pathname.split('/').filter(Boolean).length >= 3, `${definition.id} must use a page-specific URL.`);
     assert.equal(definition.urlVerificationStatus, 'VERIFIED');
-    const expectedReviewDate = reliefMapsReviewedOn29September.has(definition.id) ? '2026-09-29' : '2026-09-26';
+    const expectedReviewDate = sourceMapsReviewedOn22October.has(definition.id) ? '2026-10-22' :
+      sourceMapsReviewedOn29September.has(definition.id) ? '2026-09-29' : '2026-09-26';
     assert.equal(definition.urlVerifiedDate, expectedReviewDate);
     assert.equal(definition.urlVerificationMethod, 'OFFICIAL_HTML_PAGE_TITLE_AND_TOPIC_CHECK');
     assert.match(definition.urlVerificationEvidence, /official IRAS page/i);
@@ -198,8 +202,8 @@ async function run() {
 
   assert.ok(motorVehiclesDefinition, 'A dedicated motor-vehicle map is registered.');
   assert.equal(motorVehiclesDefinition.canonicalSourceUrl,
-    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/purchase-and-sale-of-motor-vehicles');
-  assert.equal(motorVehiclesDefinition.pageTitle, 'Purchase and Sale of Motor Vehicles');
+    'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses');
+  assert.equal(motorVehiclesDefinition.pageTitle, 'Motor Vehicles Expenses');
   assert.deepEqual(motorVehiclesDefinition.topicIds, ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles']);
   const motorVehiclesTopic = getCoverageTopicById('iras-gst-motor-vehicles');
   assert.ok(motorVehiclesTopic.sourceRecordIds.includes('IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP'),
@@ -292,7 +296,7 @@ async function run() {
     ['iras-gst-motor-vehicles'],
     'Can the company claim GST on a passenger motor car?',
     motorVehiclesDefinition,
-    'IRAS | Purchase and Sale of Motor Vehicles',
+    'IRAS | Motor Vehicles Expenses',
     '<p>For GST, input tax for purchase and sale of motor vehicles depends on whether the vehicle is a motor car.</p><p>Motor car purchase and running costs are generally not claimable under Regulation 27; other vehicles may qualify subject to ordinary input-tax conditions.</p>'
   );
   assert.equal(motorVehicles.trace.path, 'MAPPED_SOURCE');

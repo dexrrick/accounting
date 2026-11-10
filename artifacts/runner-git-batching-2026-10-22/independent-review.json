@@ -1,0 +1,23 @@
+{
+  "status": "NO_MATERIAL_FINDINGS",
+  "reviewer": "/root/review_acra_main",
+  "scope": [
+    "scripts/iras_v4_capture_replay_runner.mjs",
+    "tests/regression/test_iras_v4_capture_replay_runner.mjs",
+    "artifacts/runner-git-batching-2026-10-22/benchmark.mjs"
+  ],
+  "productionModuleSha256": "7641e508ca072ce947c04dd04333974a45a836129561908f5e10cd32fe170a2d",
+  "conclusions": [
+    "Exact captured-byte hashing and Git attributes/CRLF semantics are preserved.",
+    "Fresh scans, verification boundaries, ownership checks, sorted rows and snapshot hashes are preserved.",
+    "Batch parsing fails closed on invalid framing, count, type, object ID and ownership.",
+    "Worker failures stop queued work and drain active children before rejection.",
+    "Benchmark compares identical 648 frozen file rows and inventory hash."
+  ],
+  "followUp": {
+    "initialGap": "Explicit hash-worker failure/drain regression was missing.",
+    "status": "CLOSED_AND_REVIEWED",
+    "conclusion": "The added controlled-child test proves a four-worker maximum, no queued work after failure, and rejection only after all active children close. A real filename with spaces and brackets also passes."
+  },
+  "reviewMethod": "Read-only diff and benchmark review; reviewer did not duplicate passed tests or perform live actions."
+}

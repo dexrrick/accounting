@@ -350,6 +350,50 @@ const customerReceiptDirection = (query: string): boolean =>
   /\b(?:(?:the|a|our|my)\s+)?(?:customer|client)\s+(?:(?:has|have|had)\s+)?(?:paid|pays|pay)\b/i.test(query) ||
   /\b(?:paid|pays|pay)\b.{0,80}\bby\s+(?:the\s+)?(?:customer|client)\b/i.test(query);
 
+const officeEquipmentPurchasePatterns = [
+  /\boffice\s+equipment\b/i,
+  /\b(?:buy|buys|bought|purchase|purchases|purchased|acquire|acquires|acquired)\b/i,
+  /\b(?:pay|pays|paid|paying)\b/i,
+  /\b(?:full|entire)\s+(?:purchase\s+)?amount\b/i,
+  /\bimmediately\b/i,
+  /\b(?:no\s+GST\s+(?:applies?|is\s+(?:applicable|charged))|GST\s+(?:does\s+not\s+apply|is\s+not\s+(?:applicable|charged)))\b/i
+];
+const officeEquipmentNoGstStatement = /\b(?:no\s+gst\s+(?:applies?|is\s+(?:applicable|charged|payable))|gst\s+(?:(?:does\s+not|doesn't|doesnt)\s+apply|(?:(?:is\s+not|isn't|isnt)\s+(?:applicable|charged|payable))))\b/i;
+const officeEquipmentPurchaseExclusions = /\b(?:partial(?:ly)?|deposit|instal(?:l)?ments?|financ\w*|loan|trade[-\s]?in|exchange|on\s+credit|credit\s+terms?|unpaid|payable|deferred\s+payment|remaining\s+(?:amount|balance)|pay\s+later)\b/i;
+const officeEquipmentBankPayment = /\b(?:from|using|via|through)\s+(?:(?:the|its|our)\s+)?(?:business\s+)?bank(?:\s+account|\s+transfer)?\b/i;
+const officeEquipmentCashPayment = /\b(?:in|with|using|by)\s+(?:physical\s+)?cash\b|\bphysical\s+cash\b|\bcash\s+on\s+hand\b/i;
+const officeEquipmentNegatedPayment = /\b(?:do|does|did|will|can)\s+not\s+pay\b|\b(?:don't|doesn't|didn't|won't|can't)\s+pay\b|\bnot\s+(?:paid|paying)\b|\bunpaid\b/i;
+const officeEquipmentSpecializedContext = /\b(?:CPF|central\s+provident\s+fund|payroll|salary|salaries|wages?|bonus|employee|employer|lease|leasing|tenancy|rental|share(?:s|holder)?|investment|invested|dividend|FVTPL|FVOCI|forex|foreign\s+exchange|FX|bond|GST)\b/i;
+const officeEquipmentConflictingGstContext = /\b(?:gst|goods\s+and\s+services\s+tax|input\s+tax|output\s+tax|taxable|exempt|zero[ -]?rated|out[ -]of[ -]scope|tax\s+invoice|invoic\w*|registration\s+threshold|taxable\s+turnover|reverse\s+charge)\b/i;
+const officeEquipmentExplicitDate = /\b(?:on|dated)\s+((?:\d{1,2}[/-]\d{1,2}[/-]\d{4}|\d{4}-\d{1,2}-\d{1,2}))\b/i;
+const officeEquipmentPurchaseCandidate = (query: string): boolean =>
+  officeEquipmentPurchasePatterns.slice(0, 5).every(pattern => pattern.test(query));
+
+function isCalendarDateToken(token: string): boolean {
+  const dmy = token.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  const ymd = token.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!dmy && !ymd) return false;
+  const year = Number(dmy?.[3] ?? ymd?.[1]);
+  const month = Number(dmy?.[2] ?? ymd?.[2]);
+  const day = Number(dmy?.[1] ?? ymd?.[3]);
+  if (year < 1 || year > 9999 || month < 1 || month > 12 || day < 1) return false;
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  return day <= daysInMonth;
+}
+
+const isSimpleOfficeEquipmentPurchase = (query: string): boolean => {
+  const hasBankPayment = officeEquipmentBankPayment.test(query);
+  const hasCashPayment = officeEquipmentCashPayment.test(query);
+  const remainingAfterNoGstStatement = query.replace(officeEquipmentNoGstStatement, ' ');
+  return officeEquipmentPurchasePatterns.every(pattern => pattern.test(query)) &&
+    hasBankPayment !== hasCashPayment &&
+    !officeEquipmentPurchaseExclusions.test(query) &&
+    !officeEquipmentNegatedPayment.test(query) &&
+    !officeEquipmentSpecializedContext.test(remainingAfterNoGstStatement) &&
+    !officeEquipmentConflictingGstContext.test(remainingAfterNoGstStatement);
+};
+
 const ownerDrawingsTemplate: Template = {
   id: 'SOLE_PROPRIETOR_DRAWINGS', title: 'Owner cash withdrawal for personal use',
   patterns: [],
@@ -592,6 +636,15 @@ const templates: Template[] = [
     rationale: 'Loan proceeds increase bank assets and create a loan liability; this is not revenue.'
   },
   {
+    id: 'OFFICE_EQUIPMENT_PURCHASE', title: 'Office equipment purchase',
+    patterns: officeEquipmentPurchasePatterns,
+    accounts: query => ({
+      debit: asset('Office Equipment', '1500'),
+      credit: officeEquipmentCashPayment.test(query) ? cash() : bank()
+    }),
+    rationale: 'Recognise office equipment at its purchase cost and credit the cash or bank account used for the full immediate payment; the query states that no GST applies.'
+  },
+  {
     id: 'EXPENSE_PAYMENT', title: 'Operating expense payment',
     patterns: [
       /\b(?:pay|paid|prepaid|purchase|purchased|bought|payment|record)\b/i,
@@ -620,7 +673,13 @@ const templates: Template[] = [
  */
 export function matchBasicTransaction(query: string): AccountingScenarioState | undefined {
   // Never override the specialized GST, salary, lease, investment or FX routes.
-  if (/\b(?:GST|CPF|payroll|salar(?:y|ies)|share(?:s|holder)?|FVTPL|FVOCI|forex|foreign exchange|FX|lease|tenancy)\b/i.test(query) ||
+  // The narrow equipment template is admitted only when the query explicitly
+  // rules out GST and states a single immediate payment source.
+  const existingSpecializedRouteContext = /\b(?:GST|CPF|payroll|salar(?:y|ies)|share(?:s|holder)?|FVTPL|FVOCI|forex|foreign exchange|FX|lease|tenancy)\b/i.test(query);
+  const additionalEquipmentSpecializedContext = officeEquipmentPurchaseCandidate(query) &&
+    officeEquipmentSpecializedContext.test(query.replace(officeEquipmentNoGstStatement, ' '));
+  if ((existingSpecializedRouteContext && !isSimpleOfficeEquipmentPurchase(query)) ||
+      (additionalEquipmentSpecializedContext && !isSimpleOfficeEquipmentPurchase(query)) ||
       /\brental agreement\b/i.test(query) ||
       /\b(?:USD|EUR|GBP|AUD|MYR|JPY|CNY)\b/i.test(query) ||
       /\btransaction\s*[12]\b/i.test(query) ||
@@ -637,7 +696,8 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
       (item.id !== 'UNEARNED_REVENUE_RECOGNITION' || isUnearnedRecognition(query)) &&
       (item.id !== 'UNEARNED_REVENUE_RECEIPT' || (customerReceiptAllowed && !isUnearnedRecognition(query))) &&
       (item.id !== 'BAD_DEBT_ALLOWANCE' || !/\b(?:writ(?:e|ten|ing)\s+off|write-off)\b/i.test(query)) &&
-      (item.id !== 'SUPPLIER_PAYMENT' || (!/\b(?:bought|purchased|purchase\s+of|acquired|incurred|return(?:ed|s)?|credit\s+note)\b/i.test(query))) &&
+      (item.id !== 'SUPPLIER_PAYMENT' || (!isSimpleOfficeEquipmentPurchase(query) &&
+        !/\b(?:bought|purchased|purchase\s+of|acquired|incurred|return(?:ed|s)?|credit\s+note)\b/i.test(query))) &&
       (item.id !== 'PROVISION_RECOGNITION' || (!/\b(?:doubtful|bad\s+debt|receivables?|ecl|income\s+tax|corporate\s+tax|deferred\s+tax|mom|employment\s+act|overtime)\b/i.test(query) && !(/^should\s+we\b/i.test(query.trim()) && getAllAmounts(query).length === 0 && !/\b(?:journal|double\s+entry|debit|credit)\b/i.test(query)))) &&
       (item.id !== 'ACCRUED_EXPENSE_RECOGNITION' || isExpenseAccrualRecognition(query)) &&
       item.patterns.every(pattern => pattern.test(query)));
@@ -697,7 +757,13 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
     (allAmounts.length === 1 && Boolean(pair.debit && pair.credit))
   );
 
-  const eventDate = formatSingaporeDate(new Date());
+  const explicitEquipmentDate = template.id === 'OFFICE_EQUIPMENT_PURCHASE'
+    ? query.match(officeEquipmentExplicitDate)?.[1]
+    : undefined;
+  if (explicitEquipmentDate && !isCalendarDateToken(explicitEquipmentDate)) return undefined;
+  const eventDate = explicitEquipmentDate
+    ? formatSingaporeDate(explicitEquipmentDate)
+    : formatSingaporeDate(new Date());
 
   // Branch A: Loan repayment with explicit principal and interest breakdown
   if (loanSplit) {
@@ -1081,8 +1147,9 @@ export function matchBasicTransaction(query: string): AccountingScenarioState | 
   // Branch D: Standard single-amount transaction
   const cents = amountCents(query);
   const amount = cents ? Number(cents) / 100 : undefined;
-  const rationale = template.rationale + (/\b(?:WITHDRAWAL|TRANSFER)\b/.test(template.id)
-    ? '' : ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.');
+  const rationale = template.id === 'OFFICE_EQUIPMENT_PURCHASE' || /\b(?:WITHDRAWAL|TRANSFER)\b/.test(template.id)
+    ? template.rationale
+    : template.rationale + ' No GST has been recorded because GST registration and tax treatment were not established; assess GST separately if applicable.';
 
   const lines: JournalLine[] = !isComplete || amount === undefined ? [] : [
     {

@@ -17,10 +17,16 @@ import type {
   PlannedAuthorityWorkstream
 } from '../types/authorityEvidence';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
+import {
+  applyAcraAnnualReturnDeadline,
+  identifyAcraAnnualReturnCompanyFacts,
+  isAcraAnnualReturnApplicationQuestion
+} from '../engine/acraAnnualReturnApplication';
 import { getCoverageTopicsByIds, type SingaporeCoverageTopic } from '../standards/coverageRegistry';
 import { defaultSourceVersioningManager, type SourceVersioningManager } from '../standards/sourceVersioning';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
+import { isBoundedAcraAnnualReturnMissingFactsQuestion } from '../retrieval/queryTopicResolver';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
 import {
@@ -29,6 +35,18 @@ import {
   matchesRequestedQuestionConcept
 } from '../retrieval/evidenceQualityGate';
 import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { supportBoundedStatutoryAdvisory } from '../retrieval/statutoryAdvisorySupport';
+import { supportMasCmsDefinition, supportMasCmsRule } from '../retrieval/masCmsRuleSupport';
+import {
+  isAcraAnnualReturnDeadlineIssue,
+  isAcraAnnualReturnDeadlineQuestion,
+  supportsAcraAnnualReturnDeadlineConcept,
+  supportsAcraAnnualReturnDeadlineEvidence,
+  supportsAcraAnnualReturnDeadlineTable,
+  supportsAcraAnnualReturnFilingRule,
+  requiresAcraAnnualReturnDeadlineEvidence,
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL
+} from '../retrieval/acraAnnualReturnFilingRule';
 import {
   findRecordEligibilityRejection,
   verifyEvidenceClaims,
@@ -46,6 +64,7 @@ import {
   canonicalAccountingWorkstreamAuthority,
   hasBoundedGstInputTaxRecoveryAnchors,
   getRequestedQuestionConcepts,
+  getSemanticQueryClauses,
   type ReconciledSemanticQuestionIssue,
   type SemanticAuthority,
   type SemanticIssueReconciliation,
@@ -59,7 +78,12 @@ const SUPPORTED_LOCAL_AUTHORITIES = new Set<SemanticAuthority>([
 ]);
 // IRAS retains its specialist quality gate. These authorities now share the
 // generic official-page discovery path and bounded evidence admission.
-const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set<SemanticAuthority>(['CPF', 'MOM', 'MAS']);
+const SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES = new Set(['ACRA', 'CPF', 'MOM', 'MAS'] as const);
+type OfficialDiscoveryAuthority = typeof SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES extends Set<infer Authority> ? Authority : never;
+
+function isOfficialDiscoveryAuthority(authority: SemanticAuthority): authority is OfficialDiscoveryAuthority {
+  return SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(authority as OfficialDiscoveryAuthority);
+}
 const MANAGED_MAS_DOCUMENT_RECORD_IDS = new Set([
   'MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK',
   'MAS_IID_04_2025_SUBSECTION_RECHECK'
@@ -436,17 +460,28 @@ function topiclessConceptBelongsToIssue(
   candidateIssues: ReconciledSemanticQuestionIssue[] = [],
   query = ''
 ): boolean {
-  if (authority !== 'IRAS') return false;
+  if (concept.id.startsWith('acra_annual_return_')) {
+    return isAcraAnnualReturnDeadlineIssue(query, authority, issue, candidateIssues);
+  }
   const normalizedLabel = normalizeEvidenceText(concept.label);
-  if (isRelatedSubsidiaryDescriptor(concept)) {
-    return boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query);
+  if (authority === 'IRAS') {
+    if (isRelatedSubsidiaryDescriptor(concept)) {
+      return boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query);
+    }
+    if (normalizedLabel === 'gst input tax' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
+      return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+    }
+    if (normalizedLabel === 'royalty payment' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
+      return soleMappedCompanyWhtRoyaltyIssue(issue, candidateIssues, query);
+    }
+    if (normalizedLabel === 'gst registration' && concept.role === 'RELATED') {
+      return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+    }
   }
-  if (normalizedLabel === 'gst input tax' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
-    return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+  if (authority !== 'IRAS' && concept.role && concept.role !== 'CONTEXT_ONLY') {
+    return topiclessSemanticConceptOwner(concept, query, candidateIssues)?.id === issue.id;
   }
-  if (normalizedLabel === 'royalty payment' && (concept.role === 'PRIMARY' || concept.role === 'RELATED')) {
-    return soleMappedCompanyWhtRoyaltyIssue(issue, candidateIssues, query);
-  }
+  if (authority !== 'IRAS') return false;
   if (normalizedLabel === 'input tax') {
     return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
   }
@@ -454,7 +489,7 @@ function topiclessConceptBelongsToIssue(
     return soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
   }
   if (normalizedLabel === 'gst registration') {
-    return concept.role === 'RELATED' && soleMappedCompanyGstInputTaxIssue(issue, candidateIssues, query);
+    return false;
   }
   if (issue.domain !== 'IRAS_INCOME_TAX') return false;
   if (concept.id === 'relief_claim_prioritization') {
@@ -506,20 +541,182 @@ function topiclessConceptBelongsToIssue(
   return uniqueTerms.length > 0 && uniqueTerms.filter(term => normalizedIssue.has(term)).length >= Math.min(2, uniqueTerms.length);
 }
 
-function topiclessSemanticConceptBelongsToIssue(
+function semanticOwnerToken(value: string): string {
+  const normalized = normalizeWord(value);
+  // Singapore sources use both "licence" and "license"; the related
+  // semantic concept often uses "licensing".
+  if (/^licen[cs](?:e|es|ing|ed)?$/.test(normalized)) return 'licens';
+  if (normalized.length > 4 && normalized.endsWith('ies')) return `${normalized.slice(0, -3)}y`;
+  if (/(?:ches|shes|xes|zes|sses)$/.test(normalized)) return normalized.slice(0, -2);
+  if (normalized.length > 3 && normalized.endsWith('s') && !normalized.endsWith('ss')) return normalized.slice(0, -1);
+  return normalized;
+}
+
+function semanticOwnerAnchors(value: string): string[] {
+  const normalized = normalizeEvidenceText(value);
+  const anchors = normalized.split(' ')
+    .map(semanticOwnerToken)
+    .filter(word => word.length >= 4 && !GENERIC_SUPPORT_WORDS.has(word) && !GENERIC_SUPPORT_WORDS.has(normalizeWord(word)));
+  // Keep short authority names as anchors so a contextual mention such as
+  // “CPF contributions” can be bound to the matching local payroll issue.
+  for (const authority of ['acra', 'cpf', 'iras', 'mas', 'mom']) {
+    if (new RegExp(`\\b${authority}\\b`).test(normalized)) anchors.push(authority);
+  }
+  // Preserve the legal subpart as a single anchor: "part" alone is too broad.
+  if (/\bpart\s+iv\b/.test(normalized)) anchors.push('part iv');
+  return [...new Set(anchors)];
+}
+
+function hasSemanticOwnerAnchor(text: string, anchor: string): boolean {
+  const normalized = normalizeEvidenceText(text);
+  if (anchor.includes(' ')) return normalized.includes(anchor);
+  return new Set(normalized.split(' ').map(semanticOwnerToken)).has(anchor);
+}
+
+function isGenericIrasRestrictionConcept(concept: RequestedQuestionConcept): boolean {
+  const allowed = new Set(['iras restriction', 'iras restrictions']);
+  return allowed.has(normalizeEvidenceText(concept.label)) &&
+    concept.terms.every(term => allowed.has(normalizeEvidenceText(term)));
+}
+
+function topiclessExactSemanticConceptCouldBelongToIssue(
   concept: RequestedQuestionConcept,
   issue: ReconciledSemanticQuestionIssue,
   query: string
 ): boolean {
-  if (!concept.role || issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') return false;
+  if (!concept.role || concept.role === 'CONTEXT_ONLY' || issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') return false;
   if (concept.semanticDomain && concept.semanticDomain !== 'UNKNOWN' && concept.semanticDomain !== issue.domain) return false;
   if (concept.semanticPopulation && concept.semanticPopulation !== 'UNKNOWN' && issue.population !== 'UNKNOWN' &&
       concept.semanticPopulation !== issue.population) return false;
   const requestedAuthorities = (concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN');
-  if (requestedAuthorities.length > 0 && !requestedAuthorities.some(authority => issue.governingAuthorities.includes(authority))) return false;
+  // Preserve exact phrase ownership for non-discovery standards authorities,
+  // while requiring an explicit authority so missing semantics cannot grant it.
+  const nonDiscoveryAuthorities = requestedAuthorities.filter(authority =>
+    authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'SSO');
+  if (nonDiscoveryAuthorities.length === 0 ||
+      !nonDiscoveryAuthorities.some(authority => issue.governingAuthorities.includes(authority))) return false;
   const phrase = normalizeEvidenceText(concept.label);
   return phrase.length >= 5 && normalizeEvidenceText(query).includes(phrase) &&
     normalizeEvidenceText(issue.subject).includes(phrase);
+}
+
+function genericIrasRestrictionFollowsIssueLocally(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  query: string,
+  issueAnchors: string[]
+): boolean {
+  if (!isGenericIrasRestrictionConcept(concept) || issue.domain !== 'IRAS_GST' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'IRAS') return false;
+  const clauses = getSemanticQueryClauses(query);
+  let searchFrom = 0;
+  for (let index = 0; index + 1 < clauses.length; index += 1) {
+    const subjectClause = clauses[index];
+    const followOn = clauses[index + 1];
+    const subjectMatches = issueAnchors.filter(anchor => hasSemanticOwnerAnchor(subjectClause, anchor)).length;
+    if (subjectMatches < Math.min(2, issueAnchors.length) ||
+        !/\b(?:explain|describe|outline|summari[sz]e)\b/i.test(followOn) ||
+        !/\biras\b/i.test(followOn) || !/\brestrictions?\b/i.test(followOn) ||
+        !/\bexceptions?\b/i.test(followOn) || /\b(?:acra|cpf|mas|mom)\b/i.test(followOn)) continue;
+    const subjectStart = query.indexOf(subjectClause, searchFrom);
+    if (subjectStart < 0) continue;
+    const subjectEnd = subjectStart + subjectClause.length;
+    const followOnStart = query.indexOf(followOn, subjectEnd);
+    if (followOnStart < 0) continue;
+    const transition = query.slice(subjectEnd, followOnStart);
+    if (/\b(?:separately|also|however|whereas|but also)\b/i.test(transition) ||
+        /\b(?:acra|cpf|mas|mom)\b/i.test(transition)) continue;
+    return true;
+  }
+  return false;
+}
+
+function topiclessSemanticConceptCouldBelongToIssue(
+  concept: RequestedQuestionConcept,
+  issue: ReconciledSemanticQuestionIssue,
+  query: string
+): boolean {
+  if (!concept.role || concept.role === 'CONTEXT_ONLY' || issue.unresolvedReason === 'UNASSIGNED_QUERY_TOPIC') return false;
+  const issueAuthorities = issue.governingAuthorities.filter(authority =>
+    SUPPORTED_LOCAL_AUTHORITIES.has(authority) || authority === 'IRAS');
+  if (issueAuthorities.length !== 1) {
+    return topiclessExactSemanticConceptCouldBelongToIssue(concept, issue, query);
+  }
+  const authority = issueAuthorities[0];
+  if (authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'SSO') {
+    return topiclessExactSemanticConceptCouldBelongToIssue(concept, issue, query);
+  }
+  const issueAuthorityScopeMatches = authority === 'ACRA'
+    ? issue.domain === 'ACRA_CORPORATE' && issue.population === 'COMPANY'
+    : authority === 'CPF'
+      ? issue.domain === 'CPF_PAYROLL' && ['EMPLOYER', 'EMPLOYEE'].includes(issue.population)
+      : authority === 'MOM'
+        ? issue.domain === 'MOM_EMPLOYMENT' && ['EMPLOYEE', 'EMPLOYER'].includes(issue.population)
+        : authority === 'MAS'
+          ? issue.domain === 'MAS_FUNDS' && ['COMPANY', 'FUND'].includes(issue.population)
+          : authority === 'IRAS' && issue.domain.startsWith('IRAS_') && issue.population !== 'UNKNOWN';
+  if (!issueAuthorityScopeMatches) return false;
+  const semanticAuthorities = (concept.semanticAuthorities || []).filter(candidate => candidate !== 'UNKNOWN');
+  if (semanticAuthorities.length > 0 && (semanticAuthorities.length !== 1 || semanticAuthorities[0] !== authority)) return false;
+  if (concept.semanticDomain && concept.semanticDomain !== 'UNKNOWN' && concept.semanticDomain !== issue.domain) return false;
+  if (concept.semanticPopulation && concept.semanticPopulation !== 'UNKNOWN' && concept.semanticPopulation !== issue.population) return false;
+  const conceptText = [concept.label, ...concept.terms].join(' ');
+  const conceptAnchors = semanticOwnerAnchors(conceptText);
+  // Support the standard acronym only when it is an alias of the full CMS
+  // identity in this concept; authority/domain still come from the issue.
+  if (/\bcapital\s+markets\s+services\s+licen[cs]e\b/i.test(conceptText)) conceptAnchors.push('cms');
+  const distinctConceptAnchors = [...new Set(conceptAnchors)];
+  const issueAnchors = semanticOwnerAnchors(issue.subject);
+  if (distinctConceptAnchors.length === 0 || issueAnchors.length === 0) return false;
+
+  const reviewedTopics = getCoverageTopicsByIds(issue.mappedTopicIds);
+  const compatibleTopics = reviewedTopics.filter(topic => sourceDomainMatchesAuthority(topic, authority) &&
+    (authority === 'ACRA' ? topic.domainId === 'ACRA_COMPANIES'
+      : authority === 'CPF' ? topic.domainId === 'CPF_CONTRIBUTIONS'
+        : authority === 'MOM' ? topic.domainId === 'MOM_EMPLOYMENT'
+          : authority === 'MAS' ? topic.domainId === 'MAS_FUND_MANAGEMENT'
+            : canonicalDomainForIssue(issue, 'IRAS', [topic]) !== 'UNKNOWN'));
+  if (compatibleTopics.length === 0 && issue.status !== 'UNRESOLVED') return false;
+  const issueTopicMatches = compatibleTopics.some(topic => {
+    const topicText = `${topic.title} ${topic.keywords.join(' ')} ${(topic.paragraphHints || []).join(' ')}`;
+    return issueAnchors.filter(anchor => hasSemanticOwnerAnchor(topicText, anchor)).length >= Math.min(2, issueAnchors.length);
+  });
+  if (!issueTopicMatches && issue.status !== 'UNRESOLVED') return false;
+
+  // Bind a semantic label to one punctuation/conjunction-bounded raw clause.
+  // Root-level authorities, populations and the union of mixed query words
+  // cannot establish ownership. Topic metadata is only a compatibility check.
+  const hasLocalFollowOn = issueTopicMatches && genericIrasRestrictionFollowsIssueLocally(
+    concept, issue, query, issueAnchors
+  );
+  return hasLocalFollowOn || getSemanticQueryClauses(query).some(clause => {
+    const conceptMatches = distinctConceptAnchors.filter(anchor => hasSemanticOwnerAnchor(clause, anchor));
+    const issueMatches = issueAnchors.filter(anchor => hasSemanticOwnerAnchor(clause, anchor));
+    // A validated paraphrase can contribute one distinctive content anchor
+    // (for example “overtime” for a working-hours concept); the raw clause
+    // must still match at least two anchors from the issue's local subject.
+    if (conceptMatches.length < Math.min(2, distinctConceptAnchors.length) ||
+        issueMatches.length < Math.min(2, issueAnchors.length)) return false;
+    if (compatibleTopics.length === 0) return issue.status === 'UNRESOLVED';
+    const conceptTopicMatches = compatibleTopics.some(topic => {
+      const topicText = `${topic.title} ${topic.keywords.join(' ')} ${(topic.paragraphHints || []).join(' ')}`;
+      return conceptMatches.some(anchor => hasSemanticOwnerAnchor(topicText, anchor));
+    });
+    // "IRAS restriction" is a generic continuation label, so its local issue
+    // subject and independently mapped topic establish the owner while the
+    // raw clause must still contain the label itself.
+    return conceptTopicMatches || isGenericIrasRestrictionConcept(concept);
+  });
+}
+
+function topiclessSemanticConceptOwner(
+  concept: RequestedQuestionConcept,
+  query: string,
+  candidateIssues: ReconciledSemanticQuestionIssue[]
+): ReconciledSemanticQuestionIssue | undefined {
+  const plausibleOwners = candidateIssues.filter(issue => topiclessSemanticConceptCouldBelongToIssue(concept, issue, query));
+  if (plausibleOwners.length !== 1 || plausibleOwners[0].status !== 'MAPPED') return undefined;
+  return plausibleOwners[0];
 }
 
 function topiclessConceptGapScope(concept: RequestedQuestionConcept): {
@@ -559,16 +756,35 @@ function requestedConceptsForIssue(
   authority: SemanticAuthority,
   topicIds: string[],
   understanding: SemanticQuestionUnderstanding | undefined,
-  candidateIssues: ReconciledSemanticQuestionIssue[]
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  semanticOwnerCandidates: ReconciledSemanticQuestionIssue[],
+  acraCandidateIssues: ReconciledSemanticQuestionIssue[] = candidateIssues
 ): RequestedQuestionConcept[] {
   const topicSet = new Set(topicIds);
-  return getRequestedQuestionConcepts(query, understanding).filter(concept =>
-    concept.topicIds.some(topicId => topicSet.has(topicId)) ||
+  return getRequestedQuestionConcepts(query, understanding).filter(concept => {
+    if (authority === 'ACRA' && concept.role && concept.role !== 'CONTEXT_ONLY' &&
+        isGenericAcraAnnualReturnDutyConcept(concept)) {
+      const plausibleOwners = acraCandidateIssues.filter(candidate =>
+        topiclessSemanticConceptCouldBelongToIssue(concept, candidate, query));
+      return topicSet.has('acra_annual-returns') && isAcraAnnualReturnFilingDutyIssue(query, 'ACRA', issue, getCoverageTopicsByIds(topicIds)) && plausibleOwners.length === 1 && plausibleOwners[0].id === issue.id;
+    }
+    if (authority !== 'IRAS' && concept.role && concept.role !== 'CONTEXT_ONLY') {
+      return topiclessSemanticConceptOwner(concept, query, semanticOwnerCandidates)?.id === issue.id;
+    }
+    if (concept.id.startsWith('acra_annual_return_')) {
+      return topicSet.has('acra_annual-returns') &&
+        !isAcraAnnualReturnFilingDutyIssue(query, authority, issue, getCoverageTopicsByIds(topicIds)) &&
+        isAcraAnnualReturnDeadlineIssue(query, authority, issue, acraCandidateIssues);
+    }
+    const topiclessOwner = authority === 'IRAS'
+      ? topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues, query)
+      : topiclessSemanticConceptOwner(concept, query, semanticOwnerCandidates)?.id === issue.id;
+    return concept.topicIds.some(topicId => topicSet.has(topicId)) ||
     concept.topicIds.length === 0 && !isCorporateIncomeTaxTreatmentConcept(concept) && !isGenericIncomeTaxConcept(concept) &&
       !isIssueDescriptorConcept(concept) &&
       !boundedForeignDividendSubsidiaryDescriptorBelongsToIssue(concept, issue, authority, candidateIssues, query) &&
-      topiclessConceptBelongsToIssue(concept, issue, authority, candidateIssues, query)
-  );
+      topiclessOwner
+  });
 }
 
 function sourceQueryDomain(topicIds: string[]): QueryDomain | undefined {
@@ -584,11 +800,13 @@ function retrievalAuthority(authority: SemanticAuthority): StatutoryAuthority | 
 }
 
 function issueScope(issue: ReconciledSemanticQuestionIssue, plan: InternalPlan, topicIds: string[], concepts: RequestedQuestionConcept[]): AuthorityEvidenceScope | undefined {
-  if (plan.authority !== 'IRAS' && !SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)) return undefined;
+  const authority = plan.authority === 'IRAS' ? 'IRAS'
+    : isOfficialDiscoveryAuthority(plan.authority) ? plan.authority : undefined;
+  if (!authority) return undefined;
   const sourceDomain = getCoverageTopicsByIds(topicIds)[0]?.domainId;
   if (!sourceDomain) return undefined;
   return {
-    authority: plan.authority === 'IRAS' ? 'IRAS' : plan.authority as 'CPF' | 'MOM' | 'MAS',
+    authority,
     domain: plan.domain,
     topicIds,
     requestedConcepts: concepts,
@@ -679,12 +897,23 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
       const domain = sourceQueryDomain(request.retrievalIntent.topicIds);
       if (!authority || !retrieverAuthority || topics.length === 0 || !domain) return { candidates: [], trace: getDefaultTrace(false) };
+      const acraFacts = authority === 'ACRA' ? identifyAcraAnnualReturnCompanyFacts(request.originalQuery) : undefined;
+      const resolvedTarget = authority === 'ACRA'
+        ? defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate)
+        : undefined;
+      const applicabilityTarget = authority === 'ACRA' &&
+        requiresAcraAnnualReturnDeadlineEvidence(request.originalQuery, authority, request.issue) &&
+        resolvedTarget?.source === 'EXPLICIT' && acraFacts?.financialYearEnd === resolvedTarget.targetDate
+        ? 'ACRA_FYE' as const
+        : undefined;
       const candidates = await retriever.retrieveSources({
         query: request.originalQuery,
         domain,
         authorities: [retrieverAuthority],
         topicIds: request.retrievalIntent.topicIds,
         requestedConcepts: request.retrievalIntent.requestedConcepts,
+        ...(resolvedTarget?.targetDate ? { targetDate: resolvedTarget.targetDate } : {}),
+        ...(applicabilityTarget ? { applicabilityTarget } : {}),
         maxResults: 40,
         referenceDate
       });
@@ -693,6 +922,8 @@ function defaultLocalProvider(authority: SemanticAuthority, retriever: ISourceRe
   };
 }
 
+export { defaultLocalProvider as createLocalAuthorityEvidenceProvider };
+
 function versioningManagerFor(retriever: ISourceRetriever): SourceVersioningManager {
   return retriever.getVersioningManager?.() || defaultSourceVersioningManager;
 }
@@ -700,12 +931,12 @@ function versioningManagerFor(retriever: ISourceRetriever): SourceVersioningMana
 
 /**
  * Apply the same official sitemap -> fetched page -> topic validator fallback to
- * CPF, MOM and MAS. Only the current request's missing evidence is fetched.
+ * ACRA, CPF, MOM and MAS. Only the current request's missing evidence is fetched.
  * Live candidate records remain CANDIDATE; the per-issue claim gate below must
  * independently admit them using the exact retrieval trace.
  */
 function defaultOfficialStatutoryProvider(
-  authority: 'CPF' | 'MOM' | 'MAS',
+  authority: OfficialDiscoveryAuthority,
   plan: InternalPlan,
   options: AuthorityWorkstreamOptions,
   retriever: ISourceRetriever,
@@ -718,15 +949,21 @@ function defaultOfficialStatutoryProvider(
       const local = await localProvider.retrieve(request);
       if (options.localOnly || options.groundingOptions?.localOnly) return local;
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
+      const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(
+        request.originalQuery, authority, request.issue
+      );
       const targetDate = defaultTargetDateResolver.resolveTargetDate(request.originalQuery, referenceDate).targetDate;
       const versioningManager = versioningManagerFor(retriever);
       const localAdmission = eligibleLocalRecords(
         local.candidates, request.issue, authority, topics,
-        request.retrievalIntent.requestedConcepts, targetDate, referenceDate, undefined, versioningManager
+        request.retrievalIntent.requestedConcepts, request.originalQuery, targetDate, referenceDate, undefined, versioningManager,
+        requireAcraDeadlineEvidence
       );
       const localCoverage = localAdmission.admitted.length > 0 && topics.every(topic =>
         localAdmission.admitted.some(record => topicBoundToRecord(record, topic))
-      ) && request.retrievalIntent.requestedConcepts.every(concept =>
+      ) && (!requireAcraDeadlineEvidence || localAdmission.admitted.some(record =>
+        supportsAcraAnnualReturnDeadlineEvidence(record.sourceText)
+      )) && request.retrievalIntent.requestedConcepts.every(concept =>
         localAdmission.admitted.some(record => [concept.label, ...concept.terms]
           .some(term => term.trim() && textSupportsPhrase(record.sourceText, term)))
       );
@@ -828,6 +1065,171 @@ function textSupportsPhrase(text: string, phrase: string): boolean {
   return matches >= Math.min(2, Math.ceil(terms.length * 0.6));
 }
 
+const GENERIC_ACRA_ANNUAL_RETURN_DUTY_CONCEPT_LABELS = new Set([
+  'annual return', 'annual returns',
+  'filing requirement', 'filing requirements', 'filing duty', 'filing duties', 'filing obligation', 'filing obligations',
+  'annual return filing requirement', 'annual return filing requirements',
+  'annual return filing duty', 'annual return filing duties',
+  'annual return filing obligation', 'annual return filing obligations'
+]);
+
+const GENERIC_MAS_CMS_RULE_CONCEPT_LABELS = new Set([
+  'licensing requirement', 'general licensing requirement', 'cms licensing requirement', 'cms licence requirement',
+  'capital markets services licence requirement', 'capital markets services license requirement',
+  'capital markets services licence and general requirement', 'capital markets services license and general requirement'
+]);
+
+const GENERIC_MOM_PART_IV_COVERAGE_CONCEPT_LABELS = new Set([
+  'part iv coverage', 'part 4 coverage', 'employee coverage',
+  'part iv employee coverage', 'part 4 employee coverage'
+]);
+
+function isGenericMasCmsRuleConcept(concept: RequestedQuestionConcept): boolean {
+  return GENERIC_MAS_CMS_RULE_CONCEPT_LABELS.has(normalizeEvidenceText(concept.label)) &&
+    concept.terms.every(term => GENERIC_MAS_CMS_RULE_CONCEPT_LABELS.has(normalizeEvidenceText(term)));
+}
+
+function isMasCmsDefinitionConcept(concept: RequestedQuestionConcept): boolean {
+  return concept.id === 'mas_cms_licence_definition';
+}
+
+function isGenericMomPartIvCoverageConcept(concept: RequestedQuestionConcept): boolean {
+  return concept.role !== 'CONTEXT_ONLY' &&
+    GENERIC_MOM_PART_IV_COVERAGE_CONCEPT_LABELS.has(normalizeEvidenceText(concept.label)) &&
+    concept.terms.every(term => GENERIC_MOM_PART_IV_COVERAGE_CONCEPT_LABELS.has(normalizeEvidenceText(term)));
+}
+
+/** Scope generic coverage labels to the mapped MOM Part IV employee coverage rule. */
+function momPartIvCoverageConceptSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[],
+  concept: RequestedQuestionConcept,
+  originalQuery: string
+): boolean {
+  const allowedTopicIds = new Set(['mom-part-iv-overtime', 'mom_overtime']);
+  const requestedAuthorities = (concept.semanticAuthorities || []).filter(authority => authority !== 'UNKNOWN');
+  const conceptTopicIdsAreCompatible = concept.topicIds.every(topicId => allowedTopicIds.has(topicId));
+  if (!isGenericMomPartIvCoverageConcept(concept) || issue.domain !== 'MOM_EMPLOYMENT' ||
+      issue.population !== 'EMPLOYEE' || issue.operation !== 'EXPLAIN_RULE' || issue.status !== 'MAPPED' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM' ||
+      !issue.mappedTopicIds.includes('mom-part-iv-overtime') || topics.length === 0 ||
+      !topics.some(topic => topic.id === 'mom-part-iv-overtime' && topic.domainId === 'MOM_EMPLOYMENT') ||
+      !topics.every(topic => allowedTopicIds.has(topic.id) && topic.domainId === 'MOM_EMPLOYMENT') ||
+      (concept.semanticDomain !== undefined && concept.semanticDomain !== 'UNKNOWN' && concept.semanticDomain !== 'MOM_EMPLOYMENT') ||
+      (concept.semanticPopulation !== undefined && concept.semanticPopulation !== 'UNKNOWN' && concept.semanticPopulation !== 'EMPLOYEE') ||
+      (requestedAuthorities.length > 0 && !requestedAuthorities.includes('MOM')) || !conceptTopicIdsAreCompatible) return false;
+
+  return supportBoundedStatutoryAdvisory({
+    authority: 'MOM',
+    topicId: 'mom-part-iv-overtime',
+    subject: issue.subject,
+    originalQuery,
+    sourceText: text
+  }) === true;
+}
+
+/** Scope acronym-based CMS support to the mapped MAS company general-rule issue. */
+function masCmsGeneralRuleSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[],
+  originalQuery: string
+): boolean | undefined {
+  if (issue.domain !== 'MAS_FUNDS' || issue.population !== 'COMPANY' || issue.operation !== 'EXPLAIN_RULE' ||
+      issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MAS' ||
+      !issue.mappedTopicIds.includes('mas-cms-licence') ||
+      !topics.some(topic => topic.id === 'mas-cms-licence' && topic.domainId === 'MAS_FUND_MANAGEMENT')) return undefined;
+  return supportMasCmsRule({
+    authority: 'MAS',
+    topicId: 'mas-cms-licence',
+    subject: issue.subject,
+    originalQuery,
+    sourceText: text
+  });
+}
+
+/** Keep the SFA definition request separate from the general licensing duty. */
+function masCmsDefinitionSupport(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[],
+  originalQuery: string
+): boolean | undefined {
+  if (issue.domain !== 'MAS_FUNDS' || issue.population !== 'COMPANY' || issue.operation !== 'EXPLAIN_RULE' ||
+      issue.status !== 'MAPPED' || issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MAS' ||
+      !issue.mappedTopicIds.includes('mas-cms-licence') ||
+      !topics.some(topic => topic.id === 'mas-cms-licence' && topic.domainId === 'MAS_FUND_MANAGEMENT')) return undefined;
+  return supportMasCmsDefinition({
+    authority: 'MAS',
+    topicId: 'mas-cms-licence',
+    subject: issue.subject,
+    originalQuery,
+    sourceText: text
+  });
+}
+
+function hasAnnualReturnFilingDutyAnchors(text: string): boolean {
+  const normalized = normalizeEvidenceText(text);
+  return /\bannual returns?\b/.test(normalized) &&
+    /\b(?:filing|file|filed|lodge|lodged|submit|submitted)\b/.test(normalized) &&
+    /\b(?:duty|duties|obligation|obligations|requirement|requirements|required|must|shall|need to|needs to|have to|has to)\b/.test(normalized);
+}
+
+function hasAcraAnnualReturnPenaltyOrFeeAsk(query: string, issue: ReconciledSemanticQuestionIssue): boolean {
+  const issueSubject = normalizeEvidenceText(issue.subject);
+  if (/\b(?:penalt(?:y|ies)|fine|fines|fee|fees|extension of time|enforcement action)\b/.test(issueSubject)) return true;
+  const clauses = query.replace(/,?\s+and\s+(?=(?:what|when|how|which|calculate|explain|determine|assess)\b)/gi, '\n')
+    .split(/[.!?;\n]+/).map(normalizeEvidenceText).filter(Boolean);
+  return clauses.some(clause => /\bannual returns?\b/.test(clause) &&
+    /\b(?:penalt(?:y|ies)|fine|fines|fee|fees|extension of time|enforcement action)\b/.test(clause));
+}
+
+function hasAffirmativeAcraAnnualReturnDeadlineAsk(query: string): boolean {
+  const queryWithoutExcludedTiming = query.replace(
+    /\b(?:do not|don't|never)\s+(?:calculate|compute|determine|provide|explain|state|give)\b[^.!?;]*\b(?:deadline|due date|filing date|filing time|timeframe|time frame|when|how many months?|how long|how soon|what date|by what date)\b[^.!?;]*/gi,
+    ' '
+  );
+  return isAcraAnnualReturnDeadlineQuestion(queryWithoutExcludedTiming);
+}
+
+/** Scope the general ACRA duty rule to its own mapped explanation issue. */
+function isAcraAnnualReturnFilingDutyIssue(
+  query: string,
+  authority: SemanticAuthority,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[]
+): boolean {
+  return authority === 'ACRA' && issue.domain === 'ACRA_CORPORATE' && issue.population === 'COMPANY' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'ACRA' &&
+    issue.mappedTopicIds.includes('acra_annual-returns') && topics.length === 1 &&
+    topics[0].id === 'acra_annual-returns' && !hasAffirmativeAcraAnnualReturnDeadlineAsk(query) &&
+    hasAnnualReturnFilingDutyAnchors(query) && /\bcompan(?:y|ies)\b/i.test(query) &&
+    hasAnnualReturnFilingDutyAnchors(issue.subject) && !hasAcraAnnualReturnPenaltyOrFeeAsk(query, issue);
+}
+
+function isGenericAcraAnnualReturnDutyConcept(concept: RequestedQuestionConcept): boolean {
+  return GENERIC_ACRA_ANNUAL_RETURN_DUTY_CONCEPT_LABELS.has(normalizeEvidenceText(concept.label));
+}
+
+function hasIrasTaxFilingContentInParagraph(text: string): boolean {
+  const normalized = normalizeEvidenceText(text);
+  const mentionsIras = /\b(?:iras|inland revenue authority of singapore)\b/.test(normalized);
+  const mentionsTaxFilingSubject = /\b(?:taxes|tax returns?|income tax|corporate income tax|tax filing)\b/.test(normalized);
+  const mentionsFilingAction = /\b(?:file|filed|filing|lodge|lodged|lodge|submit|submitted|submission)\b/.test(normalized);
+  return mentionsIras && mentionsTaxFilingSubject && mentionsFilingAction;
+}
+
+function isExactAcraAnnualReturnDutyParagraph(sourceText: string, quote: string): boolean {
+  const normalizedQuote = quote.trim();
+  const isIndividualSourceBlock = sourceText.split(/\r?\n[\t ]*\r?\n+/)
+    .map(block => block.trim()).filter(Boolean).includes(normalizedQuote);
+  const hasSeparateFilingSpecificity = /\b(?:deadlines?|due dates?|filing dates?|filing times?|on time|penalt(?:y|ies)|fines?|fees?|enforcement action|extension of time|within\s+(?:\d+|[a-z -]+)\s+months?|months?\s+after\s+fye|fye)\b/i.test(normalizedQuote);
+  return isIndividualSourceBlock && supportsAcraAnnualReturnFilingRule(normalizedQuote) &&
+    !hasSeparateFilingSpecificity && !hasIrasTaxFilingContentInParagraph(normalizedQuote);
+}
+
 function hasCompanyTaxResidencyAnchors(text: string): boolean {
   const normalized = normalizeEvidenceText(text);
   return /\b(?:company|companies|corporate|corporation)\b/.test(normalized) &&
@@ -883,8 +1285,14 @@ function supportsIssueSubject(
   text: string,
   issue: ReconciledSemanticQuestionIssue,
   topic: SingaporeCoverageTopic,
-  concepts: RequestedQuestionConcept[] = []
+  concepts: RequestedQuestionConcept[] = [],
+  originalQuery = ''
 ): boolean {
+  const requestedCmsDefinition = concepts.some(isMasCmsDefinitionConcept);
+  if (requestedCmsDefinition &&
+      masCmsDefinitionSupport(text, issue, [topic], originalQuery) === true) return true;
+  const masRuleSupport = masCmsGeneralRuleSupport(text, issue, [topic], originalQuery);
+  if (masRuleSupport !== undefined) return masRuleSupport;
   const generalRuleSupport = generalIrasRuleConceptSupport(text, issue, [topic], concepts);
   if (generalRuleSupport !== undefined) return generalRuleSupport;
   const companyTaxResidencyScope = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
@@ -895,12 +1303,48 @@ function supportsIssueSubject(
   return textSupportsPhrase(text, issue.subject);
 }
 
-function textSupportsTopic(text: string, topic: SingaporeCoverageTopic): boolean {
+function passesBoundedStatutoryAdvisorySupport(
+  text: string,
+  authority: SemanticAuthority,
+  issue: ReconciledSemanticQuestionIssue,
+  topics: SingaporeCoverageTopic[],
+  originalQuery: string
+): boolean {
+  return topics.every(topic => supportBoundedStatutoryAdvisory({
+    authority,
+    topicId: topic.id,
+    subject: issue.subject,
+    sourceText: text,
+    originalQuery
+  }) !== false);
+}
+
+function textSupportsTopic(text: string, topic: SingaporeCoverageTopic, requireAcraDeadlineTable = false): boolean {
+  if (topic.id === 'acra_annual-returns') {
+    if (requireAcraDeadlineTable) return supportsAcraAnnualReturnDeadlineTable(text);
+    if (!supportsAcraAnnualReturnFilingRule(text)) return false;
+  }
   const sourceFacingHints = topic.domainId.startsWith('IRAS_')
     ? [...(topic.paragraphHints || []), ...(topic.sectionHints || [])]
     : [];
   return [topic.title, ...(topic.aliases || []), ...topic.keywords, ...sourceFacingHints]
     .some(phrase => textSupportsPhrase(text, phrase));
+}
+
+function requiresUnverifiedCpfRateSchedule(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  topics: SingaporeCoverageTopic[]
+): boolean {
+  const hasTightlyBoundCpfRateAsk = (text: string) =>
+    /\bCPF(?:\s+(?:employer|employee|contribution|contributions|payroll)){0,3}\s+rates?\b|\brates?\s+(?:for\s+(?:the\s+)?CPF(?:\s+contributions?)?|apply\s+to\s+(?:the\s+)?CPF(?:\s+contributions?)?)\b/i.test(text);
+  const subjectRequestsRates = /\brates?\b|\bpercentages?\b/i.test(issue.subject);
+  const requestedByScopedText = subjectRequestsRates ||
+    query.split(/[.!?;\n]+/).some(clause => hasTightlyBoundCpfRateAsk(clause));
+  return authority === 'CPF' && issue.domain === 'CPF_PAYROLL' && issue.governingAuthorities.length === 1 &&
+    issue.governingAuthorities[0] === 'CPF' && topics.some(topic => topic.id === 'cpf_contribution_rates') &&
+    requestedByScopedText;
 }
 
 function topicBoundToRecord(record: AuthoritativeSourceRecord, topic: SingaporeCoverageTopic): boolean {
@@ -920,16 +1364,52 @@ function recordMatchesGovernorAndDomain(record: AuthoritativeSourceRecord, autho
   return record.authority === authority;
 }
 
+/** Lets only the bounded MOM Part IV issue count a canonical quote for its legacy alias topic. */
+function supportsMomPartIvCanonicalAliasClaim(
+  record: AuthoritativeSourceRecord,
+  aliasTopic: SingaporeCoverageTopic,
+  quote: string,
+  authority: SemanticAuthority,
+  issue: ReconciledSemanticQuestionIssue,
+  originalQuery: string
+): boolean {
+  const canonicalTopicId = aliasTopic.canonicalConceptId;
+  if (authority !== 'MOM' || issue.domain !== 'MOM_EMPLOYMENT' || issue.population !== 'EMPLOYEE' ||
+      issue.operation !== 'EXPLAIN_RULE' || issue.status !== 'MAPPED' ||
+      issue.governingAuthorities.length !== 1 || issue.governingAuthorities[0] !== 'MOM' ||
+      !issue.mappedTopicIds.includes('mom-part-iv-overtime') || aliasTopic.id !== 'mom_overtime' ||
+      canonicalTopicId !== 'mom-part-iv-overtime' || !issue.mappedTopicIds.includes(canonicalTopicId)) return false;
+
+  const canonicalTopic = getCoverageTopicsByIds([canonicalTopicId]).find(topic => topic.id === canonicalTopicId);
+  if (!canonicalTopic || canonicalTopic.canonicalConceptId !== canonicalTopicId ||
+      aliasTopic.domainId !== issue.domain || canonicalTopic.domainId !== issue.domain ||
+      aliasTopic.domainId !== canonicalTopic.domainId || !aliasTopic.authorities.includes('MOM') ||
+      !canonicalTopic.authorities.includes('MOM') || !topicBoundToRecord(record, canonicalTopic) ||
+      !recordMatchesGovernorAndDomain(record, authority, aliasTopic) ||
+      !recordMatchesGovernorAndDomain(record, authority, canonicalTopic)) return false;
+
+  const supportsCompleteCoverage = (sourceText: string) => supportBoundedStatutoryAdvisory({
+    authority: 'MOM',
+    topicId: canonicalTopicId,
+    subject: issue.subject,
+    originalQuery,
+    sourceText
+  }) === true;
+  return supportsCompleteCoverage(record.sourceText) && supportsCompleteCoverage(quote);
+}
+
 function eligibleLocalRecords(
   records: AuthoritativeSourceRecord[],
   issue: ReconciledSemanticQuestionIssue,
   authority: SemanticAuthority,
   topics: SingaporeCoverageTopic[],
   concepts: RequestedQuestionConcept[],
+  originalQuery: string,
   targetDate: string | undefined,
   referenceDate: string,
   officialRetrievalTrace?: SourceMapFallbackTrace,
-  versioningManager: SourceVersioningManager = defaultSourceVersioningManager
+  versioningManager: SourceVersioningManager = defaultSourceVersioningManager,
+  requireAcraDeadlineEvidence = false
 ): { admitted: AuthoritativeSourceRecord[]; rejectedCount: number } {
   const admitted: AuthoritativeSourceRecord[] = [];
   let rejectedCount = 0;
@@ -944,7 +1424,7 @@ function eligibleLocalRecords(
         topicBoundToRecord(record, topic))
     );
     const isValidatedLive = record.provenance === 'LIVE_EXTERNAL' &&
-      (authority === 'CPF' || authority === 'MOM' || authority === 'MAS') &&
+      isOfficialDiscoveryAuthority(authority) &&
       record.lifecycleState === 'CANDIDATE' && record.sourceStatus === 'NEEDS_REVIEW' &&
       record.extractionStatus === 'PARTIAL' && record.verificationMethod === 'LIVE_OFFICIAL_TOPIC_VERIFIED' &&
       (record.sourceAuthority === authority ||
@@ -956,27 +1436,38 @@ function eligibleLocalRecords(
       MANAGED_MAS_DOCUMENT_RECORD_IDS.has(record.id)
       ? topics.find(topic => topicBoundToRecord(record, topic) &&
         recordMatchesGovernorAndDomain(record, authority, topic))
-      : undefined;
+      : authority === 'ACRA' && record.provenance === 'LIVE_PATCH' && record.documentAdmissionRequired === true &&
+        record.authority === 'ACRA' && record.sourceAuthority === 'ACRA' && record.domain === 'ACRA_CORP' &&
+        record.officialSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        record.canonicalSourceUrl === ACRA_2022_ANNUAL_RETURN_TIMELINES_URL &&
+        record.relatedTopicIds?.includes('acra_annual-returns')
+        ? topics.find(topic => topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic) &&
+          recordMatchesGovernorAndDomain(record, authority, topic))
+        : undefined;
     const managedAdmission = exactManagedTopic
       ? verifySharedDocumentAdmission(record, versioningManager, {
         targetDate,
         referenceDate,
-        expectedAuthority: 'MAS',
-        expectedDomain: exactManagedTopic.legacyDomains[0]
+        expectedAuthority: authority === 'MAS' ? 'MAS' : 'ACRA',
+        expectedDomain: exactManagedTopic.legacyDomains[0],
+        ...(authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {})
       })
       : undefined;
     const isApprovedManagedDocument = Boolean(managedAdmission?.required && managedAdmission.admitted);
     if ((!isReviewedLocal && !isValidatedLive && !isApprovedManagedDocument) ||
         record.recordRole === 'SOURCE_MAP_POINTER' || record.groundingEligible === false ||
+        requireAcraDeadlineEvidence && !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
         !record.sourceText?.trim() || findRecordEligibilityRejection(record, targetDate, referenceDate,
-          versioningManager, authority === 'MAS' ? 'MAS' : undefined,
-          exactManagedTopic?.legacyDomains[0])) {
+          versioningManager, exactManagedTopic ? (authority === 'MAS' ? 'MAS' : 'ACRA') : undefined,
+          exactManagedTopic?.legacyDomains[0],
+          authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_FYE' : undefined)) {
       rejectedCount += 1;
       continue;
     }
     const matchingTopic = topics.find(topic => topicBoundToRecord(record, topic) &&
       recordMatchesGovernorAndDomain(record, authority, topic) && textSupportsTopic(record.sourceText, topic) &&
-      supportsIssueSubject(record.sourceText, issue, topic, concepts));
+      passesBoundedStatutoryAdvisorySupport(record.sourceText, authority, issue, topics, originalQuery) &&
+      supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery));
     if (!matchingTopic) {
       rejectedCount += 1;
       continue;
@@ -1003,27 +1494,57 @@ function issueClaimCoverage(
   records: AuthoritativeSourceRecord[],
   topics: SingaporeCoverageTopic[],
   concepts: RequestedQuestionConcept[],
-  issue: ReconciledSemanticQuestionIssue
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  originalQuery: string,
+  requireAcraDeadlineTable = false
 ): { covered: boolean; missing: string[] } {
   const missing: string[] = [];
   const recordById = new Map(records.map(record => [record.id, record]));
+  const acraAnnualReturnDutyScope = isAcraAnnualReturnFilingDutyIssue(originalQuery, authority, issue, topics);
   const residencySubjectClaim = issue.domain === 'IRAS_INCOME_TAX' && issue.population === 'COMPANY' &&
     topics.some(topic => topic.id === 'iras-corporate-tax-residency' && topic.domainId === 'IRAS_CORPORATE_TAX' &&
       claims.some(claim => {
         const record = recordById.get(claim.recordId);
         return Boolean(record && topicBoundToRecord(record, topic) && textSupportsTopic(claim.quote, topic) &&
-          supportsIssueSubject(claim.quote, issue, topic, concepts));
+          passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery) &&
+          supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery));
       }));
   for (const topic of topics) {
     const topicClaim = claims.some(claim => {
       const record = recordById.get(claim.recordId);
-      return Boolean(record && topicBoundToRecord(record, topic) &&
-        textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
+      const tableOwnsDeadlineIssue = requireAcraDeadlineTable && topic.id === 'acra_annual-returns' &&
+        supportsAcraAnnualReturnDeadlineTable(claim.quote);
+      const momCanonicalAliasClaim = Boolean(record && supportsMomPartIvCanonicalAliasClaim(
+        record, topic, claim.quote, authority, issue, originalQuery
+      ));
+      const supportsTopic = acraAnnualReturnDutyScope
+        ? isExactAcraAnnualReturnDutyParagraph(record?.sourceText || '', claim.quote)
+        : textSupportsTopic(claim.quote, topic, requireAcraDeadlineTable) &&
+          supportsIssueSubject(claim.quote, issue, topic, concepts, originalQuery);
+      return Boolean(record && passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery) &&
+        (topicBoundToRecord(record, topic) && (tableOwnsDeadlineIssue || supportsTopic) || momCanonicalAliasClaim));
     });
     if (!topicClaim) missing.push(`topic:${topic.id}`);
   }
   for (const concept of concepts) {
     const conceptClaim = claims.some(claim => {
+      if (!passesBoundedStatutoryAdvisorySupport(claim.quote, authority, issue, topics, originalQuery)) return false;
+      if (acraAnnualReturnDutyScope) {
+        const record = recordById.get(claim.recordId);
+        return isGenericAcraAnnualReturnDutyConcept(concept) && record !== undefined &&
+          isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote);
+      }
+      const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, topics, originalQuery);
+      if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;
+      const masRuleSupport = masCmsGeneralRuleSupport(claim.quote, issue, topics, originalQuery);
+      if (masRuleSupport !== undefined) return isGenericMasCmsRuleConcept(concept) && masRuleSupport;
+      if (isGenericMomPartIvCoverageConcept(concept)) {
+        return momPartIvCoverageConceptSupport(claim.quote, issue, topics, concept, originalQuery);
+      }
+      if (concept.id.startsWith('acra_annual_return_')) {
+        return supportsAcraAnnualReturnDeadlineConcept(claim.quote, concept.id);
+      }
       const ruleSupport = generalIrasRuleConceptSupport(claim.quote, issue, topics, [concept]);
       if (ruleSupport !== undefined) return ruleSupport;
       return issue.domain === 'IRAS_INCOME_TAX'
@@ -1048,7 +1569,23 @@ function initialLifecycle(issue: ReconciledSemanticQuestionIssue, mapped: boolea
   };
 }
 
-function applicationForIssue(issue: ReconciledSemanticQuestionIssue): { status: AuthorityApplicationStatus; reason?: string } {
+function isAcraAnnualReturnApplicationIntent(query: string, operation: string): boolean {
+  return ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATMENT', 'CALCULATE'].includes(operation) &&
+    (isAcraAnnualReturnApplicationQuestion(query, operation) ||
+      isBoundedAcraAnnualReturnMissingFactsQuestion(query));
+}
+
+function applicationForIssue(
+  query: string,
+  issue: ReconciledSemanticQuestionIssue,
+  authority: SemanticAuthority,
+  candidateIssues: ReconciledSemanticQuestionIssue[]
+): { status: AuthorityApplicationStatus; reason?: string } {
+  if (isAcraAnnualReturnDeadlineIssue(query, authority, issue, candidateIssues) &&
+      isAcraAnnualReturnApplicationIntent(query, issue.operation)) {
+    const application = applyAcraAnnualReturnDeadline(query);
+    return { status: application.applicationStatus, reason: application.applicationReason };
+  }
   const needsCaseFacts = issue.evidenceRequirement === 'CASE_FACTS' ||
     issue.evidenceRequirement === 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' ||
     issue.evidenceRequirement === 'UNRESOLVED' && ['DETERMINE_TREATMENT', 'CHECK_ELIGIBILITY', 'CALCULATE', 'PREPARE_JOURNAL'].includes(issue.operation);
@@ -1148,17 +1685,24 @@ async function evaluateIssue(
   retriever: ISourceRetriever,
   understanding: SemanticQuestionUnderstanding,
   referenceDate: string,
-  candidateIssues: ReconciledSemanticQuestionIssue[]
+  candidateIssues: ReconciledSemanticQuestionIssue[],
+  semanticOwnerCandidates: ReconciledSemanticQuestionIssue[],
+  acraCandidateIssues: ReconciledSemanticQuestionIssue[]
 ): Promise<AuthorityIssueEvidence> {
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
   const evidenceTopics = plan.authority === 'IRAS' ? topics.filter(topic => !topic.routingOnly) : topics;
   const evidenceTopicIds = evidenceTopics.map(topic => topic.id);
-  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues);
+  const concepts = requestedConceptsForIssue(query, issue, plan.authority, topicIds, understanding, candidateIssues,
+    semanticOwnerCandidates, acraCandidateIssues);
+  const acraAnnualReturnDutyScope = isAcraAnnualReturnFilingDutyIssue(query, plan.authority, issue, topics);
+  const requireAcraDeadlineEvidence = !acraAnnualReturnDutyScope &&
+    requiresAcraAnnualReturnDeadlineEvidence(query, plan.authority, issue);
   const mapped = topicIds.length > 0 && plan.domain !== 'UNKNOWN';
   const lifecycle = initialLifecycle(issue, mapped);
-  const application = applicationForIssue(issue);
+  const application = applicationForIssue(query, issue, plan.authority, acraCandidateIssues);
+  const cpfRateScheduleUnverified = requiresUnverifiedCpfRateSchedule(query, issue, plan.authority, evidenceTopics);
   const base: Omit<AuthorityIssueEvidence, 'evidenceStatus' | 'verifiedClaims' | 'sources' | 'gaps'> = {
     issueId: issue.id,
     subject: issue.subject,
@@ -1173,6 +1717,10 @@ async function evaluateIssue(
     ...(application.reason ? { applicationReason: application.reason } : {})
   };
   const gaps: AuthorityEvidenceGap[] = [];
+  if (cpfRateScheduleUnverified) {
+    gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'CPF_RATE_SCHEDULE_UNVERIFIED',
+      'This runtime has no independently validated CPF rate-schedule parser; numeric contribution rates remain insufficient.'));
+  }
   if (issue.status !== 'MAPPED' || !mapped) {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'mapped', issue.unresolvedReason || (plan.domain === 'UNKNOWN' ? 'CANONICAL_AREA_UNRESOLVED' : 'ISSUE_UNMAPPED'),
       'The issue has no resolved authority and topic mapping for this workstream.'));
@@ -1186,8 +1734,8 @@ async function evaluateIssue(
   };
   const provider = options.providers?.[plan.authority] || (plan.authority === 'IRAS'
     ? defaultIrasProvider(query, plan, options, retriever, understanding, referenceDate)
-    : SUPPORTED_OFFICIAL_DISCOVERY_AUTHORITIES.has(plan.authority)
-      ? defaultOfficialStatutoryProvider(plan.authority as 'CPF' | 'MOM' | 'MAS', plan, options, retriever, referenceDate)
+    : isOfficialDiscoveryAuthority(plan.authority)
+      ? defaultOfficialStatutoryProvider(plan.authority, plan, options, retriever, referenceDate)
       : SUPPORTED_LOCAL_AUTHORITIES.has(plan.authority) ? defaultLocalProvider(plan.authority, retriever, referenceDate) : undefined);
   if (!provider || plan.domain === 'UNKNOWN') {
     gaps.push(makeGap(issue, plan.authority, plan.domain, 'retrievalAttempted', 'PROVIDER_UNAVAILABLE',
@@ -1259,8 +1807,8 @@ async function evaluateIssue(
     localRejectedCount = irasQuality.rejectedRecords.length;
   } else {
     const versioningManager = versioningManagerFor(retriever);
-    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, targetDate, referenceDate,
-      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager);
+    const result = eligibleLocalRecords(uniqueCandidates, issue, plan.authority, topics, concepts, query, targetDate, referenceDate,
+      safeEvidenceQualityTrace(providerResult.evidenceQualityTrace), versioningManager, requireAcraDeadlineEvidence);
     admitted = result.admitted;
     localRejectedCount = result.rejectedCount;
   }
@@ -1276,19 +1824,43 @@ async function evaluateIssue(
   })) || ruleClaimsForRecords(admitted);
   const verification = verifyEvidenceClaims(suggestedClaims, admitted, {
     missingFacts: [], targetDate, referenceDate,
-    expectedAuthority: plan.authority === 'MAS' ? 'MAS' : undefined,
-    expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' : undefined,
+    expectedAuthority: plan.authority === 'MAS' ? 'MAS' :
+      plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA' : undefined,
+    expectedDomain: plan.authority === 'MAS' && plan.domain === 'MAS_FUNDS' ? 'MAS_FUNDS' :
+      plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? 'ACRA_CORP' : undefined,
+    ...(plan.authority === 'ACRA' && requireAcraDeadlineEvidence ? { applicabilityTarget: 'ACRA_FYE' as const } : {}),
     versioningManager: versioningManagerFor(retriever)
   });
   const acceptedClaims = plan.authority === 'IRAS'
     ? bindAcceptedIrasQuotesToSiblingPageRecords(verification.accepted, admitted, targetDate)
     : verification.accepted;
-  const verifiedClaims = acceptedClaims.filter(claim => {
+  const verifiedClaims = cpfRateScheduleUnverified ? [] : acceptedClaims.filter(claim => {
     const record = admitted.find(item => item.id === claim.recordId);
     if (!record) return false;
+    if (!passesBoundedStatutoryAdvisorySupport(claim.quote, plan.authority, issue, evidenceTopics, query)) return false;
+    if (acraAnnualReturnDutyScope && !isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote)) return false;
+    if (requireAcraDeadlineEvidence && (!supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) ||
+        !supportsAcraAnnualReturnDeadlineTable(claim.quote))) return false;
+    const tableOwnsDeadlineIssue = requireAcraDeadlineEvidence &&
+      supportsAcraAnnualReturnDeadlineTable(claim.quote) && evidenceTopics.some(topic =>
+        topic.id === 'acra_annual-returns' && topicBoundToRecord(record, topic));
+    if (tableOwnsDeadlineIssue) return true;
     const supportsTopic = evidenceTopics.some(topic => topicBoundToRecord(record, topic) &&
-      textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts));
+      (acraAnnualReturnDutyScope
+        ? isExactAcraAnnualReturnDutyParagraph(record.sourceText, claim.quote)
+        : textSupportsTopic(claim.quote, topic) && supportsIssueSubject(claim.quote, issue, topic, concepts, query)));
     const supportsConcept = concepts.some(concept => {
+      if (acraAnnualReturnDutyScope) {
+        return isGenericAcraAnnualReturnDutyConcept(concept) &&
+          supportsAcraAnnualReturnFilingRule(claim.quote);
+      }
+      const masDefinitionSupport = masCmsDefinitionSupport(claim.quote, issue, evidenceTopics, query);
+      if (isMasCmsDefinitionConcept(concept)) return masDefinitionSupport === true;
+      const masRuleSupport = masCmsGeneralRuleSupport(claim.quote, issue, evidenceTopics, query);
+      if (masRuleSupport !== undefined) return isGenericMasCmsRuleConcept(concept) && masRuleSupport;
+      if (isGenericMomPartIvCoverageConcept(concept)) {
+        return momPartIvCoverageConceptSupport(claim.quote, issue, evidenceTopics, concept, query);
+      }
       const ruleSupport = generalIrasRuleConceptSupport(claim.quote, issue, evidenceTopics, [concept]);
       if (ruleSupport !== undefined) return ruleSupport;
       return issue.domain === 'IRAS_INCOME_TAX'
@@ -1310,15 +1882,23 @@ async function evaluateIssue(
   if (!lifecycle.verified) gaps.push(makeGap(issue, plan.authority, plan.domain, 'verified', 'NO_VERIFIED_CLAIM',
     'No complete source quotation passed claim verification for this issue.'));
 
-  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue);
+  const coverage = issueClaimCoverage(verifiedClaims, admitted, evidenceTopics, concepts, issue,
+    plan.authority, query, requireAcraDeadlineEvidence);
   lifecycle.covered = coverage.covered && !(plan.authority === 'IRAS' && irasQuality &&
     (evidenceTopicIds.some(topicId => irasQuality!.uncoveredTopicIds.includes(topicId)) || (irasQuality.uncoveredConcepts?.length || 0) > 0));
   for (const missing of coverage.missing) gaps.push(makeGap(issue, plan.authority, plan.domain, 'covered', 'ISSUE_CONCEPT_UNCOVERED',
     `Verified quotations do not support the requested ${missing.replace(':', ' ')}.`));
   const sourceIds = new Set(verifiedClaims.map(claim => claim.recordId));
   const sources = admitted.filter(record => sourceIds.has(record.id));
+  const acraApplication = plan.authority === 'ACRA' &&
+    isAcraAnnualReturnDeadlineIssue(query, plan.authority, issue, acraCandidateIssues) &&
+    isAcraAnnualReturnApplicationIntent(query, issue.operation)
+    ? applyAcraAnnualReturnDeadline(query, { evidenceStatus: lifecycle.covered && lifecycle.verified && lifecycle.admitted && gaps.length === 0
+      ? 'VERIFIED' : 'INSUFFICIENT', targetDate, lifecycle, sources, verifiedClaims })
+    : undefined;
   return {
     ...base,
+    ...(acraApplication ? { applicationStatus: acraApplication.applicationStatus, applicationReason: acraApplication.applicationReason } : {}),
     evidenceStatus: lifecycle.covered && gaps.length === 0 ? 'VERIFIED' : 'INSUFFICIENT',
     verifiedClaims,
     sources,
@@ -1350,6 +1930,9 @@ export async function buildAuthorityWorkstreams(
     // validated semantic issues for ownership of a descriptive concept.
     .filter(issue => issue.governingAuthorities.includes('IRAS') && issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC')
     .map(issue => [issue.id, issue])).values()];
+  const acraCandidateIssues = [...new Map(issuePlan.issues
+    .filter(issue => issue.governingAuthorities.includes('ACRA') && issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC')
+    .map(issue => [issue.id, issue])).values()];
   const plannedIssueIds = new Set(internalPlans.flatMap(plan => plan.issueIds));
   const plannedIssueCount = internalPlans.reduce((count, plan) => count + plan.issuePlans.length, 0);
   const workstreams: AuthorityWorkstreamResult[] = [];
@@ -1367,7 +1950,8 @@ export async function buildAuthorityWorkstreams(
 
   for (const plan of internalPlans) {
     const results = await Promise.all(plan.issuePlans.map(issuePlanItem => evaluateIssue(
-      query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues
+      query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues,
+      issuePlan.issues, acraCandidateIssues
     )));
     const verifiedClaims = [...new Map(results.flatMap(item => item.verifiedClaims).map(claim =>
       [`${claim.recordId}\n${claim.quote}`, claim]
@@ -1383,7 +1967,8 @@ export async function buildAuthorityWorkstreams(
       populations: plan.populations,
       issues: results,
       evidenceStatus: results.length > 0 && results.every(item => item.evidenceStatus === 'VERIFIED') ? 'VERIFIED' : 'INSUFFICIENT',
-      applicationStatus: results.some(item => item.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED' : 'NOT_REQUIRED',
+      applicationStatus: results.some(item => item.applicationStatus === 'UNRESOLVED') ? 'UNRESOLVED'
+        : results.some(item => item.applicationStatus === 'VERIFIED') ? 'VERIFIED' : 'NOT_REQUIRED',
       verifiedClaims,
       sources,
       gaps
@@ -1399,10 +1984,13 @@ export async function buildAuthorityWorkstreams(
     }
   }
   for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.topicIds.length === 0)) {
-    const owners = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
-      (issue.governingAuthorities.includes('IRAS')
-        ? topiclessConceptBelongsToIssue(concept, issue, 'IRAS', candidateIssues, query)
-        : topiclessSemanticConceptBelongsToIssue(concept, issue, query)));
+    const irasOwners = issuePlan.issues.filter(issue => issue.governingAuthorities.includes('IRAS') &&
+      issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      topiclessConceptBelongsToIssue(concept, issue, 'IRAS', candidateIssues, query));
+    const semanticOwnerCandidates = issuePlan.issues.filter(issue => !issue.governingAuthorities.includes('IRAS'));
+    const semanticOwner = topiclessSemanticConceptOwner(concept, query, semanticOwnerCandidates);
+    const owners = [...new Map([...irasOwners, ...(semanticOwner ? [semanticOwner] : [])]
+      .map(owner => [owner.id, owner])).values()];
     if (owners.length !== 1) {
       const scope = topiclessConceptGapScope(concept);
       topLevelGaps.push({
@@ -1412,13 +2000,24 @@ export async function buildAuthorityWorkstreams(
       });
     }
   }
+  for (const concept of getRequestedQuestionConcepts(query, understanding).filter(item => item.id.startsWith('acra_annual_return_'))) {
+    const owners = issuePlan.issues.filter(issue => issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
+      isAcraAnnualReturnDeadlineIssue(query, 'ACRA', issue, acraCandidateIssues));
+    if (owners.length !== 1) {
+      topLevelGaps.push({
+        issueId: 'issue-plan', authority: 'ACRA', domain: 'ACRA_CORPORATE', subject: concept.label,
+        operation: 'OTHER', stage: 'mapped', code: 'UNROUTED_MATERIAL_CONCEPT',
+        reason: 'An ACRA annual-return deadline concept was not assigned to one uniquely matching company issue.'
+      });
+    }
+  }
 
   const allIssues = workstreams.flatMap(workstream => workstream.issues);
   const evidenceStatus: AuthorityEvidenceStatus = issuePlan.coverageEstablished && topLevelGaps.length === 0 &&
     allIssues.length > 0 && allIssues.length === plannedIssueCount && allIssues.every(issue => issue.evidenceStatus === 'VERIFIED')
     ? 'VERIFIED' : 'INSUFFICIENT';
   const applicationStatus: AuthorityApplicationStatus = allIssues.some(issue => issue.applicationStatus === 'UNRESOLVED')
-    ? 'UNRESOLVED' : 'NOT_REQUIRED';
+    ? 'UNRESOLVED' : allIssues.some(issue => issue.applicationStatus === 'VERIFIED') ? 'VERIFIED' : 'NOT_REQUIRED';
   const gaps = [...topLevelGaps, ...workstreams.flatMap(workstream => workstream.gaps)];
   const status: AuthorityOverallStatus = gaps.length > 0 || evidenceStatus !== 'VERIFIED'
     ? 'INSUFFICIENT'

@@ -23,6 +23,7 @@ export interface IrasEvidencePresentationInput {
   applicationConclusions: readonly IrasApplicationConclusion[];
   hasVerifiedCalculation: boolean;
   hasApplicationUncertainty: boolean;
+  isGeneralRuleRequest?: boolean;
   calculationLead?: string;
 }
 
@@ -164,11 +165,14 @@ function buildSourceGroups(
 }
 
 function statusFor(input: IrasEvidencePresentationInput): IrasEvidencePresentationStatus {
-  if (input.quality.status === 'INSUFFICIENT' || input.quality.uncoveredTopicIds.length > 0 || input.acceptedClaims.length === 0) {
+  if (input.quality.status === 'INSUFFICIENT' || input.quality.uncoveredTopicIds.length > 0 || input.acceptedClaims.length === 0 ||
+      (input.isGeneralRuleRequest &&
+        (input.quality.status !== 'LOCAL_SUFFICIENT' && input.quality.status !== 'RETRIEVED_SUFFICIENT' ||
+          Boolean(input.quality.uncoveredConcepts?.length)))) {
     return 'INSUFFICIENT';
   }
-  if (allKnownFacts(input).length > 0 || input.hasApplicationUncertainty ||
-      input.applicationConclusions.some(conclusion => conclusion.certainty === 'CONDITIONAL')) return 'CONDITIONAL';
+  if (!input.isGeneralRuleRequest && (allKnownFacts(input).length > 0 || input.hasApplicationUncertainty ||
+      input.applicationConclusions.some(conclusion => conclusion.certainty === 'CONDITIONAL'))) return 'CONDITIONAL';
   return 'VERIFIED';
 }
 
@@ -211,7 +215,8 @@ function isCompleteBlockOf(text: string, candidate: string): boolean {
 
 function safeChatCaveat(input: IrasEvidencePresentationInput, status: IrasEvidencePresentationStatus): string {
   const facts = allKnownFacts(input);
-  if (status === 'INSUFFICIENT') return applicationStatusText(status, facts);
+  if (status === 'INSUFFICIENT') return applicationStatusText(status, input.isGeneralRuleRequest ? [] : facts);
+  if (input.isGeneralRuleRequest) return applicationStatusText('VERIFIED', []);
   if (facts.length > 0) return `Conditional — Facts Required. ${facts.join('; ')}`;
   return applicationStatusText(status, facts);
 }
@@ -305,7 +310,7 @@ export function createIrasEvidencePresentation(input: IrasEvidencePresentationIn
     ...(calculationLead ? { calculationLead } : {}),
     overview,
     applicationStatus: safeChatCaveat(input, status),
-    factsToConfirm: allKnownFacts(input),
+    factsToConfirm: input.isGeneralRuleRequest ? [] : allKnownFacts(input),
     sourceGroups
   };
 }

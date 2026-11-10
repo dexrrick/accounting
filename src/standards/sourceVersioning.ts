@@ -1,4 +1,4 @@
-import type { AuthoritativeSourceRecord, SourceLocator } from './unifiedSourceModel';
+import type { AcraFyeCohortApplicability, AuthoritativeSourceRecord, SourceLocator } from './unifiedSourceModel';
 import {
   compareMasLicensingHtml,
   decodeMasDocumentBytes,
@@ -45,6 +45,7 @@ export interface SourceVersionMetadata {
   sourceLocator?: SourceLocator;
   /** Marks byte-backed extracted records that require shared document admission. */
   documentAdmissionRequired?: true;
+  acraFyeCohortApplicability?: AcraFyeCohortApplicability;
   documentAdmissionPackageId?: string;
   documentAdmissionPackageHash?: string;
   documentAdmissionComparisonRecordId?: string;
@@ -211,6 +212,7 @@ interface CandidateComparisonBinding {
   extractionStatus: AuthoritativeSourceRecord['extractionStatus'];
   isVerbatimText: AuthoritativeSourceRecord['isVerbatimText'];
   recordProvisionHash: AuthoritativeSourceRecord['provisionHash'];
+  acraFyeCohortApplicability: SourceVersionMetadata['acraFyeCohortApplicability'];
 }
 
 function candidateMatchesComparisonIdentity(
@@ -232,14 +234,42 @@ function candidateMatchesComparisonIdentity(
       metadata.sourceAuthority !== binding.sourceAuthority || metadata.governingAuthority !== binding.governingAuthority ||
       metadata.domain !== binding.domain || metadata.documentHash !== binding.documentHash ||
       metadata.httpStatus !== binding.httpStatus || metadata.provisionHash !== binding.provisionHash ||
+      JSON.stringify(metadata.acraFyeCohortApplicability) !== JSON.stringify(binding.acraFyeCohortApplicability) ||
       record.id !== binding.recordId || record.authority !== binding.recordAuthority ||
       record.sourceAuthority !== binding.recordSourceAuthority || record.domain !== binding.recordDomain ||
       record.officialSourceUrl !== binding.officialSourceUrl || record.documentHash !== binding.recordDocumentHash ||
       record.sourceLocator?.documentHash !== binding.locatorDocumentHash ||
       record.sourceLocator?.sourceType !== binding.sourceType || record.extractionStatus !== binding.extractionStatus ||
       record.isVerbatimText !== binding.isVerbatimText || record.provisionHash !== binding.recordProvisionHash) return false;
-  if (metadata.documentAdmissionRequired !== true ||
-      metadata.documentAdmissionComparisonProfileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION) return false;
+  if (metadata.documentAdmissionRequired !== true) return false;
+  if (!metadata.documentAdmissionComparisonProfileVersion) {
+    const exactAcraCohortSource = candidate.record.authority === 'ACRA' && candidate.record.sourceAuthority === 'ACRA' &&
+      candidate.record.domain === 'ACRA_CORP' && metadata.governingAuthority === 'ACRA' &&
+      metadata.sourceAuthority === 'ACRA' && metadata.domain === 'ACRA_CORP' &&
+      candidate.record.acraFyeCohortApplicability !== undefined &&
+      JSON.stringify(candidate.record.acraFyeCohortApplicability) === JSON.stringify(metadata.acraFyeCohortApplicability);
+    const masUrl = candidate.record.officialSourceUrl;
+    let isMasPublisherUrl = false;
+    try {
+      const parsed = new URL(masUrl);
+      isMasPublisherUrl = parsed.protocol === 'https:' && /(^|\.)mas\.gov\.sg$/i.test(parsed.hostname);
+    } catch { /* invalid URL is rejected below */ }
+    const exactMasDocument = candidate.record.authority === 'MAS' && candidate.record.sourceAuthority === 'MAS' &&
+      candidate.record.domain === 'MAS_FUNDS' && metadata.governingAuthority === 'MAS' &&
+      metadata.sourceAuthority === 'MAS' && metadata.domain === 'MAS_FUNDS' && isMasPublisherUrl &&
+      candidate.record.officialSourceUrl === metadata.sourceUrl &&
+      candidate.record.officialSourceUrl === metadata.canonicalSourceUrl &&
+      candidate.record.documentHash?.toLowerCase() === metadata.documentHash?.toLowerCase() &&
+      candidate.record.sourceLocator?.documentHash?.toLowerCase() === metadata.documentHash?.toLowerCase() &&
+      candidate.record.extractionStatus === 'EXACT' && candidate.record.isVerbatimText === true &&
+      candidate.record.provisionHash?.toLowerCase() === metadata.provisionHash?.toLowerCase() &&
+      candidate.record.provisionHash === computeProvisionHash(candidate.record.standardOrActCode,
+        candidate.record.paragraphOrSection, candidate.record.sourceText);
+    // ACRA's source-stated cohort has no comparison profile; MAS documents
+    // without dynamic-field policies retain the exact official-document path.
+    return exactAcraCohortSource || exactMasDocument;
+  }
+  if (metadata.documentAdmissionComparisonProfileVersion !== MAS_LICENSING_COMPARISON_PROFILE_VERSION) return false;
   return record.id === metadata.documentAdmissionComparisonRecordId &&
     record.authority === 'MAS' && record.sourceAuthority === 'MAS' && record.domain === 'MAS_FUNDS' &&
     record.officialSourceUrl === MAS_LICENSING_HTML_URL && metadata.sourceUrl === MAS_LICENSING_HTML_URL &&
@@ -514,7 +544,9 @@ export class SourceVersioningManager {
       record.sourceText.trim(),
       (record.validFrom || '').trim(),
       (record.validTo || '').trim()
-    ].join('||');
+    ].join('||') + (record.acraFyeCohortApplicability
+      ? `||acra-fye-cohort:${stableJson(record.acraFyeCohortApplicability)}`
+      : '');
 
     return computeSha256(canonicalPayload);
   }
@@ -541,7 +573,7 @@ export class SourceVersioningManager {
 
     const finalizedRecord = { ...record, contentHash: computedHash, versionId: metadata.versionId, lifecycleState: 'CANDIDATE' as const };
     this.candidates.set(metadata.versionId, { record: finalizedRecord, metadata: finalizedMetadata });
-    if (hasComparisonAdmissionFields(finalizedMetadata)) {
+    if (hasComparisonAdmissionFields(finalizedMetadata) || finalizedMetadata.documentAdmissionRequired === true) {
       this.candidateComparisonBindings.set(metadata.versionId, {
         recordSnapshot: structuredClone(finalizedRecord),
         documentAdmissionRequired: finalizedMetadata.documentAdmissionRequired,
@@ -569,7 +601,8 @@ export class SourceVersioningManager {
         sourceType: finalizedRecord.sourceLocator?.sourceType,
         extractionStatus: finalizedRecord.extractionStatus,
         isVerbatimText: finalizedRecord.isVerbatimText,
-        recordProvisionHash: finalizedRecord.provisionHash
+        recordProvisionHash: finalizedRecord.provisionHash,
+        acraFyeCohortApplicability: finalizedMetadata.acraFyeCohortApplicability
       });
     }
 

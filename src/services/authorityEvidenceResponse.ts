@@ -29,7 +29,7 @@ export function renderAuthorityEvidenceResponseText(
     lines.push('', `#### ${stream.authorityLabel} — ${stream.domainLabel}`, '', `**Status:** ${statusText(stream)}`);
     for (const issue of stream.issues) {
       lines.push('', `**${issue.subject}** (party in scope: ${issue.population})`);
-      if (issue.applicationReason) lines.push(`- **Application unresolved:** ${issue.applicationReason}`);
+      if (issue.applicationReason) lines.push(`- **Application${issue.applicationStatus === 'VERIFIED' ? '' : ' unresolved'}:** ${issue.applicationReason}`);
       for (const gap of issue.gaps) lines.push(`- **Evidence gap:** ${gap}`);
     }
     for (const gap of stream.gaps) lines.push(`- **Evidence gap:** ${gap}`);

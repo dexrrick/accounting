@@ -1,0 +1,12 @@
+{
+  "kind": "SAVED_OFFICIAL_SOURCE_TRANSPORT_CAPTURE",
+  "captureDate": "2026-10-17",
+  "officialUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+  "httpStatus": 200,
+  "contentType": "text/html",
+  "upstreamBytes": 501862,
+  "upstreamSha256": "5fd06ee290f617f161eb8da76bf704b5b15144a59eaf8f4ea5ee0824742c2436",
+  "requestSha256": "b24a973f8edde88b4a25ffc7f856d1af8ff189d405b4d275c5dbaf1d695a19f1",
+  "responseEnvelopeSha256": "19c6718f63935010c8b7d256b1561a169d4a6f9f33b36e517e46359acb1b2187",
+  "captureSet": "D:/Accounting/artifacts/acra-deadline-diagnostic-2026-10-17/live-3a2782f; saved transport diagnostic, retained here for regression replay only"
+}

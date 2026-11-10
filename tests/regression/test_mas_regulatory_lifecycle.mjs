@@ -247,7 +247,10 @@ async function testMasLifecycleAndRollback() {
   assert.equal(service.getStagedPackages()[0].updates.find(record => record.id === HTML_RECORD_ID).sourceText, expectedHtmlText);
   assert.equal(UNIFIED_SOURCE_REGISTRY[HTML_RECORD_ID], undefined);
 
-  assert.equal((await service.verifyUpdatePackage(template.packageId, rawDocumentsFor(template, retriever))).isValid, true);
+  const firstVerificationDocuments = rawDocumentsFor(template, retriever);
+  firstVerificationDocuments[PDF_RECORD_ID].retrievedAt = '2026-10-16T00:00:00.000Z';
+  assert.equal((await service.verifyUpdatePackage(template.packageId, firstVerificationDocuments)).isValid, true,
+    'A new exact-byte MAS retrieval may have a later capture receipt than the staged discovery');
   assert.equal(service.recordReviewDecision(template.packageId, 'reviewer@example.test', 'Audit-only review note'), true);
   assert.equal((await service.activateUpdatePackage(template.packageId)).success, false, 'Audit-only review notes do not grant activation approval');
   assert.equal(await service.approveUpdatePackage(template.packageId, 'reviewer@example.test', 'Verified exact source and applicability'), true);

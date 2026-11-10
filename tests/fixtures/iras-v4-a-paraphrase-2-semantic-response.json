@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 2,
+  "jurisdiction": ["Singapore"],
+  "authorityCandidates": ["UNKNOWN"],
+  "contextualAuthorities": [],
+  "domain": "UNKNOWN",
+  "population": "UNKNOWN",
+  "primarySubject": "employee personal CPF relief and employer CPF contributions",
+  "concepts": [
+    { "concept": "compulsory CPF", "role": "PRIMARY" },
+    { "concept": "personal tax relief", "role": "PRIMARY" },
+    { "concept": "employer CPF contribution", "role": "PRIMARY" },
+    { "concept": "monthly salary", "role": "RELATED" }
+  ],
+  "requestedOperation": "OTHER",
+  "factsExplicitlyProvided": ["earning SGD 6,000 a month"],
+  "confidence": 0.95,
+  "issues": [
+    {
+      "subject": "employee personal tax relief on compulsory CPF",
+      "population": "EMPLOYEE",
+      "domain": "IRAS_INCOME_TAX",
+      "governingAuthorities": ["IRAS"],
+      "contextualAuthorities": ["CPF"],
+      "operation": "CHECK_ELIGIBILITY",
+      "mappedTopicIds": [],
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+      "confidence": 0.95
+    },
+    {
+      "subject": "employer CPF contribution amount",
+      "population": "EMPLOYER",
+      "domain": "CPF_PAYROLL",
+      "governingAuthorities": ["CPF"],
+      "contextualAuthorities": [],
+      "operation": "CALCULATE",
+      "mappedTopicIds": [],
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+      "confidence": 0.95
+    }
+  ]
+}

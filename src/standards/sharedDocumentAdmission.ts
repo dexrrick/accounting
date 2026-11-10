@@ -10,12 +10,18 @@ import {
 import type { StatutoryAuthority } from '../types/accounting';
 import type { QueryDomain } from '../types/accounting';
 import { getSingaporeDateString } from '../utils/dateUtils';
+import {
+  ACRA_2022_ANNUAL_RETURN_TIMELINES_URL,
+  deriveAcraFyeCohortApplicability,
+  supportsAcraAnnualReturnDeadlineEvidence
+} from '../retrieval/acraAnnualReturnFilingRule';
 
 export interface SharedDocumentAdmissionOptions {
   targetDate?: string;
   referenceDate?: string;
   expectedAuthority?: StatutoryAuthority;
   expectedDomain?: QueryDomain;
+  applicabilityTarget?: 'ACRA_FYE';
 }
 
 export type SharedDocumentAdmissionResult =
@@ -152,7 +158,11 @@ function isApprovalBound(entry: ReturnType<SourceVersioningManager['getLedgerEnt
     typeof approval.reason === 'string' && approval.reason.trim() && isIsoTimestamp(approval.approvedAt));
 }
 
-function dateRejection(record: AuthoritativeSourceRecord, targetDate: string | undefined): string | undefined {
+function dateRejection(
+  record: AuthoritativeSourceRecord,
+  targetDate: string | undefined,
+  applicabilityTarget?: SharedDocumentAdmissionOptions['applicabilityTarget']
+): string | undefined {
   const validFrom = record.validFrom || record.effectiveDate;
   const validTo = record.validTo;
   if (targetDate !== undefined && !isIsoDate(targetDate)) return 'TARGET_DATE_INVALID';
@@ -161,6 +171,21 @@ function dateRejection(record: AuthoritativeSourceRecord, targetDate: string | u
 
   const capturedDate = record.retrievedAt ? getSingaporeDateString(new Date(record.retrievedAt)) : undefined;
   if (!isIsoDate(capturedDate)) return 'DOCUMENT_CAPTURE_DATE_INVALID';
+  if (applicabilityTarget === 'ACRA_FYE') {
+    const derivedCohort = deriveAcraFyeCohortApplicability(record.sourceText);
+    if (!targetDate) return 'ACRA_FYE_TARGET_REQUIRED';
+    if (record.authority !== 'ACRA' || record.sourceAuthority !== 'ACRA' || record.domain !== 'ACRA_CORP' ||
+        record.officialSourceUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        record.canonicalSourceUrl !== ACRA_2022_ANNUAL_RETURN_TIMELINES_URL ||
+        !record.relatedTopicIds?.includes('acra_annual-returns') || !derivedCohort ||
+        stableValue(record.acraFyeCohortApplicability) !== stableValue(derivedCohort) ||
+        !supportsAcraAnnualReturnDeadlineEvidence(record.sourceText) || validFrom || validTo) {
+      return 'ACRA_FYE_COHORT_EVIDENCE_INVALID';
+    }
+    if (targetDate < derivedCohort.fyeStartDate) return 'ACRA_FYE_COHORT_NOT_APPLICABLE';
+    if (targetDate > capturedDate) return 'DOCUMENT_FUTURE_SCOPE_UNVERIFIED';
+    return undefined;
+  }
   const requestedDate = targetDate || getSingaporeDateString();
   if (validFrom && requestedDate < validFrom) return 'SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE';
   if (validTo && requestedDate > validTo) return 'SOURCE_NOT_IN_EFFECT_ON_TARGET_DATE';
@@ -255,7 +280,7 @@ export function verifySharedDocumentAdmission(
   }
 
   const requestedDate = options.targetDate || options.referenceDate || getSingaporeDateString();
-  const dateError = dateRejection(record, requestedDate);
+  const dateError = dateRejection(record, requestedDate, options.applicabilityTarget);
   if (dateError) return { required: true, admitted: false, reason: dateError };
 
   if (options.referenceDate && isIsoDate(options.referenceDate) && options.targetDate && options.targetDate > options.referenceDate) {

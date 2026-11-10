@@ -36,6 +36,8 @@ import React from 'react';
 
 const INITIAL_ROOT = new URL('../fixtures/mas-reviewed/subsection-preview-20261016/', import.meta.url);
 const RECAPTURE_ROOT = new URL('../fixtures/mas-reviewed/subsection-preview-recapture-20261016/', import.meta.url);
+const CAPTURE_DAY = '2026-10-16';
+const POST_CAPTURE_DAY = '2026-10-17';
 const requestFixture = JSON.parse(await readFile(new URL('../fixtures/mas-reviewed/subsection-requests-20261016.json', import.meta.url), 'utf8'));
 const initialManifest = JSON.parse(await readFile(new URL('manifest.json', INITIAL_ROOT), 'utf8'));
 const recaptureManifest = JSON.parse(await readFile(new URL('manifest.json', RECAPTURE_ROOT), 'utf8'));
@@ -60,6 +62,7 @@ assert.equal(defaultLiveRegulatoryFeedService.getAdapters().some(adapter => adap
 const htmlId = recordIds[0];
 const pdfId = recordIds[1];
 const runtimeQuery = 'Using the approved MAS excerpts, what are the fund management licensing admission criteria, and what does MAS Circular IID 04/2025 say about substantive fund management activity for VCC managers?';
+
 assert.equal(defaultTargetDateResolver.resolveTargetDate('What does MAS Circular IID 04/2025 say?', '2026-06-26').targetDate, undefined,
   'the exact IID 04/2025 identifier alone is not treated as a historical target date');
 assert.equal(defaultTargetDateResolver.resolveTargetDate('What does MAS-IID-04-2025 say about substantive fund management activity?', '2026-06-26').targetDate, undefined,
@@ -131,6 +134,9 @@ const recapturedPdf = recaptureById.get(pdfId);
 const htmlDate = getSingaporeDateString(initialHtml.document.fetch.retrievedAt);
 const pdfDate = getSingaporeDateString(initialPdf.document.fetch.retrievedAt);
 const replacementHtmlDate = getSingaporeDateString(replacementHtml.document.fetch.retrievedAt);
+assert.equal(htmlDate, CAPTURE_DAY, 'the immutable HTML fixture timestamp remains on its declared capture day');
+assert.equal(pdfDate, CAPTURE_DAY, 'the immutable PDF fixture timestamp remains on its declared capture day');
+assert.equal(replacementHtmlDate, CAPTURE_DAY, 'the immutable recapture timestamp retains its declared fixture day');
 assert.notEqual(initialHtml.document.fetch.contentHash, replacementHtml.document.fetch.contentHash,
   'the later genuine HTML response must be a distinct byte snapshot; do not fabricate a replacement if its bytes are identical');
 assert.equal(initialPdf.document.fetch.contentHash, recapturedPdf.document.fetch.contentHash,
@@ -368,7 +374,7 @@ function evidenceProof(record, targetDate, retriever, versioning) {
     assert.equal(binding.provisionHash, ledgerEntry.recordSnapshot.provisionHash);
     assert.deepEqual(binding.sourceLocator, ledgerEntry.recordSnapshot.sourceLocator);
   }
-  return { quote: quotes[0], quotes, binding: bindings[0], citation: citations[0], citations, verifier };
+  return { quote: quotes[0], quotes, binding: bindings[0], verifiedClaim: checked.accepted[0], citation: citations[0], citations, verifier };
 }
 
 function withFixtureDate(targetDate, operation) {
@@ -413,13 +419,7 @@ function assembleBoundCitation(citation, record) {
 
 function renderAuthorityEvidenceFor(record, proof) {
   const issueId = `mas-${record.id}`;
-  const claim = {
-    text: proof.quote,
-    quote: proof.quote,
-    recordId: record.id,
-    supportKind: 'EXACT_SOURCE_QUOTE',
-    sourceBinding: proof.binding
-  };
+  const claim = proof.verifiedClaim;
   const issue = {
     issueId,
     subject: 'MAS reviewed-source requirement',
@@ -611,6 +611,14 @@ try {
   assert.ok(activeHtml && activePdf);
   assert.equal(activeHtml.effectiveDate, undefined);
   assert.equal(activePdf.effectiveDate, undefined);
+  assert.equal(answerRetriever.getSourceById(htmlId, { targetDate: '2026-10-15' }), undefined,
+    'the undated HTML capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(htmlId, { targetDate: POST_CAPTURE_DAY }), undefined,
+    'the active HTML source remains capture-day-only and is refused on the later current-day replay date');
+  assert.equal(answerRetriever.getSourceById(pdfId, { targetDate: '2026-10-15' }), undefined,
+    'the undated PDF capture is rejected before its capture day');
+  assert.equal(answerRetriever.getSourceById(pdfId, { targetDate: POST_CAPTURE_DAY }), undefined,
+    'the active PDF source remains capture-day-only and is refused on the later current-day replay date');
   const htmlResults = await answerRetriever.retrieveSources({
     query: 'MAS fund management licensing admission criteria Securities and Futures Act office controls',
     authorities: ['MAS'], domain: 'MAS_FUNDS', targetDate: htmlDate, referenceDate: htmlDate
@@ -661,9 +669,10 @@ try {
     `${recordId}: default authority runtime retrieves the activated source and retains its active ledger version binding`);
   }
   const runtimePresentation = createAuthorityEvidencePresentation(runtimeEvidence);
-  const runtimeAuthorityPanel = renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, {
-    presentation: runtimePresentation
-  }));
+  const runtimeAuthorityPanel = withFixtureDate(htmlDate,
+    () => renderToStaticMarkup(React.createElement(AuthorityCompliancePanel, {
+      presentation: runtimePresentation
+    })));
   for (const recordId of recordIds) {
     const activeVersionId = versioning.getActiveVersionId(recordId);
     assert.ok(runtimePresentation.workstreams.flatMap(workstream => workstream.issues)
@@ -739,7 +748,7 @@ try {
   assert.equal(shouldUseAuthorityEvidenceRuntime({
     issuePlan: unrelatedPlan, classification: unrelatedClassification,
     explicitIrasEvidenceRequest: false, hasImages: false
-  }), false, 'unreviewed AML/CFT scope does not use the focused-document route');
+  }), true, 'a mapped standalone MAS AML/CFT advisory uses the common statutory evidence runtime');
   const unrelatedRuntime = await buildAuthorityWorkstreams(unrelatedQuery, unrelatedPlan, {
     retriever: fixedCandidateRetriever([activeHtml, activePdf], versioning), localOnly: true, referenceDate: htmlDate,
     providers: { MAS: { authority: 'MAS', async retrieve() { return { candidates: [activeHtml, activePdf] }; } } }

@@ -27,6 +27,7 @@ export interface SourceRetrievalQuery {
   targetDate?: string;
   includeHistorical?: boolean;
   referenceDate?: string;
+  applicabilityTarget?: 'ACRA_FYE';
   enableLiveCheck?: boolean;
   semanticContext?: import('../services/transactionUnderstandingService').TransactionUnderstanding;
 }
@@ -198,7 +199,8 @@ export class InMemorySourceRetriever implements ISourceRetriever {
         targetDate: effectiveTargetDate,
         referenceDate: retrievalQuery.referenceDate,
         expectedAuthority: authorities?.length === 1 ? authorities[0] : undefined,
-        expectedDomain: domain
+        expectedDomain: domain,
+        applicabilityTarget: retrievalQuery.applicabilityTarget
       })) continue;
       if (renovationBasisPeriodUnclear && record.id.startsWith('ITA_SEC14N_RENOVATION_REFURBISHMENT')) continue;
       const managedDocument = verifySharedDocumentAdmission(record, this.versioningManager);
@@ -206,7 +208,8 @@ export class InMemorySourceRetriever implements ISourceRetriever {
         targetDate: effectiveTargetDate,
         referenceDate: retrievalQuery.referenceDate,
         expectedAuthority: authorities?.length === 1 ? authorities[0] : undefined,
-        expectedDomain: domain
+        expectedDomain: domain,
+        applicabilityTarget: retrievalQuery.applicabilityTarget
       }).admitted) continue;
       if (managedDocument.required && (
         (authorities && authorities.length > 0 && !authorities.includes(record.authority)) ||
