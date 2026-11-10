@@ -13,7 +13,8 @@ const records = {
   mom: UNIFIED_SOURCE_REGISTRY.MOM_SEC21_SALARY_TIMELINES,
   gstRate: UNIFIED_SOURCE_REGISTRY.GST_RATE_9_PERCENT,
   badDebt: UNIFIED_SOURCE_REGISTRY.GST_REG82_90_BAD_DEBT_RELIEF,
-  formCsLite: UNIFIED_SOURCE_REGISTRY.IRAS_FORM_CS_LITE_CRITERIA
+  formCsLite: UNIFIED_SOURCE_REGISTRY.IRAS_FORM_CS_LITE_CRITERIA,
+  citRate: UNIFIED_SOURCE_REGISTRY.ITA_SUTE_PTE_TAX_EXEMPTION
 };
 
 for (const [name, record] of Object.entries(records)) {
@@ -274,6 +275,51 @@ await reject(
   'MOM',
   'Salary is due on the first business day after the salary period ends.',
   'the first business day is not supported by the cited salary deadline'
+);
+
+const reversedRateRoleRecord = {
+  ...records.citRate,
+  sourceText: 'The employee contribution rate is 20%. The employer contribution rate is 17%.'
+};
+await reject(
+  reversedRateRoleRecord,
+  'What are the employee and employer contribution rates?',
+  'IRAS_CORPORATE_TAX',
+  'IRAS',
+  'The employer contribution rate is 20% for each employee.',
+  'an employee rate cannot be transferred to the employer'
+);
+const sameSentenceRateRoleRecord = {
+  ...records.citRate,
+  sourceText: 'The employee contribution rate is 20% and the employer contribution rate is 17%.'
+};
+await reject(
+  sameSentenceRateRoleRecord,
+  'What are the employee and employer contribution rates?',
+  'IRAS_CORPORATE_TAX',
+  'IRAS',
+  'The employer contribution rate is 20% for each employee.',
+  'a following employer role cannot be attributed to the preceding employee rate'
+);
+const reversedCurrencyRoleRecord = {
+  ...records.citRate,
+  sourceText: 'The employee contribution cap is SGD 500. The employer contribution cap is SGD 1,000.'
+};
+await reject(
+  reversedCurrencyRoleRecord,
+  'What are the employee and employer contribution caps?',
+  'IRAS_CORPORATE_TAX',
+  'IRAS',
+  'The employer contribution cap is SGD 500 per employee.',
+  'an employee currency cap cannot be transferred to the employer'
+);
+
+await accept(
+  records.citRate,
+  'What is the corporate income tax rate in Singapore?',
+  'IRAS_CORPORATE_TAX',
+  'IRAS',
+  'The headline corporate income tax rate is a flat 17% in Singapore.'
 );
 
 await accept(

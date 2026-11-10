@@ -1405,15 +1405,22 @@ function numericAssertionSignature(assertion: NumericAssertion): string {
 
 function numericAssertionContextMatches(claim: NumericAssertion, source: NumericAssertion): boolean {
   const matchingLabelAnchor = claim.labelAnchors.some(anchor => source.labelAnchors.includes(anchor));
-  const matchingTrailingLabelAnchor = claim.trailingLabelAnchors.length > 0 &&
+  // A qualifier can move across the number in a faithful paraphrase (for
+  // example, “17% in Singapore”). Leading subject anchors remain separately
+  // matched so a nearby number cannot inherit another assertion's role.
+  const matchingSameSideQualifier = claim.trailingLabelAnchors.length > 0 &&
     source.trailingLabelAnchors.some(anchor => claim.trailingLabelAnchors.includes(anchor));
+  const sourcePredicateAnchors = new Set([...source.labelAnchors, ...source.trailingLabelAnchors]);
+  const matchingRelocatedQualifier = claim.trailingLabelAnchors.length > 0 &&
+    claim.labelAnchors.every(anchor => source.labelAnchors.includes(anchor)) &&
+    claim.trailingLabelAnchors.every(anchor => sourcePredicateAnchors.has(anchor));
   const matchingTemporalTrigger = !claim.labelAnchors.length &&
     (claim.unit.startsWith('duration:') || claim.unit.startsWith('ordinal:')) &&
     Boolean(claim.temporalDirection && source.temporalDirection) &&
     claim.triggerAnchors.length > 0 &&
     claim.triggerAnchors.some(anchor => source.triggerAnchors.includes(anchor));
   return (matchingLabelAnchor || matchingTemporalTrigger) &&
-    (claim.trailingLabelAnchors.length === 0 || matchingTrailingLabelAnchor);
+    (claim.trailingLabelAnchors.length === 0 || matchingSameSideQualifier || matchingRelocatedQualifier);
 }
 
 function numericAssertionMeaningMatches(claim: NumericAssertion, source: NumericAssertion): boolean {

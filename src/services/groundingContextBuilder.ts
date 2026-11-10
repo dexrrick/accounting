@@ -90,6 +90,7 @@ import {
   readRequestCompletenessObservation,
   type RequestCompletenessContext
 } from './requestCompleteness';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -1356,71 +1357,147 @@ export function completeScopedIrasConceptPassage(
 export function selectRelevantFetchedText(pageText: string, terms: string[], maxChars = 5_000, query = '', preferredPassages: string[] = []): string {
   const text = pageText.trim();
   if (text.length <= maxChars) return text;
-  const pageBlocks = text.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
-  const preferred = preferredPassages.map(passage => passage.trim()).find(passage => {
-    if (!passage || passage.length > maxChars) return false;
-    const blocks = passage.split(/\r?\n[\t ]*\r?\n+/).map(block => block.trim()).filter(Boolean);
-    return blocks.length > 0 && pageBlocks.some((_, start) =>
-      pageBlocks.slice(start, start + blocks.length).join('\n\n') === blocks.join('\n\n'));
-  }) || '';
-  const prefixLength = preferred ? preferred.length + 2 : 0;
-  const sentences: Array<{ text: string; paragraphIndex: number }> = [];
-  let paragraphIndex = 0;
-  for (const part of text.split(/((?<=[.!?])\s+|\n+)/)) {
-    if (!part) continue;
-    if (/^\s+$/.test(part)) {
-      if (/\n/.test(part)) paragraphIndex++;
+  const pageBlocks = splitEvidenceTextBlocks(text);
+  const visibleLists: Array<{
+    start: number;
+    end: number;
+    complete: ReturnType<typeof completeVisibleEvidenceListSpan>;
+    quote: string;
+  }> = [];
+  for (let index = 0; index < pageBlocks.length;) {
+    const span = visibleEvidenceListSpan(pageBlocks, index);
+    if (!span) {
+      index += 1;
       continue;
     }
-    const sentence = part.trim();
-    if (sentence) sentences.push({ text: sentence, paragraphIndex });
+    visibleLists.push({
+      start: span.startIndex,
+      end: span.endIndex,
+      complete: completeVisibleEvidenceListSpan(pageBlocks, index),
+      quote: span.quote
+    });
+    // Nested list introductions can also look like list items to an enclosing
+    // bullet list. Keep only the maximal source span so its children cannot be
+    // selected separately if the complete parent does not fit.
+    index = span.endIndex + 1;
   }
+  let preferred = '';
+  let preferredStart = -1;
+  let preferredEnd = -1;
+  for (const passage of preferredPassages) {
+    const candidate = passage.trim();
+    if (!candidate || candidate.length > maxChars) continue;
+    const blocks = splitEvidenceTextBlocks(candidate);
+    const start = pageBlocks.findIndex((_, index) =>
+      pageBlocks.slice(index, index + blocks.length).join('\n\n') === blocks.join('\n\n'));
+    if (start < 0) continue;
+    const end = start + blocks.length - 1;
+    const overlapsList = visibleLists.some(list => start <= list.end && end >= list.start);
+    const preservesLists = visibleLists.every(list => start > list.end || end < list.start ||
+      Boolean(list.complete && start <= list.start && end >= list.end));
+    if (overlapsList && !preservesLists) continue;
+    preferred = candidate;
+    preferredStart = start;
+    preferredEnd = end;
+    break;
+  }
+
+  const sentences: Array<{ text: string; paragraphIndex: number }> = [];
+  for (let index = 0; index < pageBlocks.length; index += 1) {
+    const block = pageBlocks[index];
+    for (const part of block.split(/((?<=[.!?])\s+|\n+)/)) {
+      const sentence = part.trim();
+      if (sentence) sentences.push({ text: sentence, paragraphIndex: index });
+    }
+  }
+  const sentenceRanges = new Map<number, { start: number; end: number }>();
+  sentences.forEach((sentence, index) => {
+    const range = sentenceRanges.get(sentence.paragraphIndex);
+    if (range) range.end = index;
+    else sentenceRanges.set(sentence.paragraphIndex, { start: index, end: index });
+  });
+  type SelectionUnit = {
+    id: number;
+    startIndex: number;
+    endIndex: number;
+    startParagraph: number;
+    endParagraph: number;
+    text: string;
+    atomic: boolean;
+    topicMatches: number;
+    queryMatches: number;
+  };
   const normalizedTerms = terms.map(normalizeTopicTerm).filter(term => term.length > 2);
   const genericTerms = new Set(['the', 'and', 'for', 'can', 'with', 'from', 'what', 'which', 'under', 'this', 'that', 'are', 'our', 'claim', 'claimed', 'tax', 'gst', 'input', 'company', 'singapore']);
   const queryTerms = [...new Set(normalizeTopicTerm(query).split(/\s+/).filter(term => term.length >= 3 && !genericTerms.has(term)))];
-  const matches = sentences
-    .map(({ text: sentence, paragraphIndex }, index) => ({ sentence, paragraphIndex, index,
-      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0),
-      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence, term) ? 1 : 0), 0)
-    }))
-    .filter(item => item.topicMatches > 0 || item.queryMatches > 0)
+  const units: SelectionUnit[] = [];
+  const consumedParagraphs = new Set<number>();
+  for (const list of visibleLists) {
+    for (let paragraph = list.start; paragraph <= list.end; paragraph += 1) consumedParagraphs.add(paragraph);
+    if (!list.complete) continue;
+    const first = sentenceRanges.get(list.start);
+    const last = sentenceRanges.get(list.end);
+    if (!first || !last) continue;
+    units.push({
+      id: units.length,
+      startIndex: first.start,
+      endIndex: last.end,
+      startParagraph: list.start,
+      endParagraph: list.end,
+      text: list.quote,
+      atomic: true,
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(list.quote, term) ? 1 : 0), 0)
+    });
+  }
+  sentences.forEach((sentence, index) => {
+    if (consumedParagraphs.has(sentence.paragraphIndex)) return;
+    units.push({
+      id: units.length,
+      startIndex: index,
+      endIndex: index,
+      startParagraph: sentence.paragraphIndex,
+      endParagraph: sentence.paragraphIndex,
+      text: sentence.text,
+      atomic: false,
+      topicMatches: normalizedTerms.reduce((score, term) => score + (containsTopicTerm(sentence.text, term) ? 1 : 0), 0),
+      queryMatches: queryTerms.reduce((score, term) => score + (containsTopicTerm(sentence.text, term) ? 1 : 0), 0)
+    });
+  });
+  units.sort((a, b) => a.startIndex - b.startIndex);
+  units.forEach((unit, index) => { unit.id = index; });
+  const matches = units.filter(item => item.topicMatches > 0 || item.queryMatches > 0)
     // Keep at least one exact topic phrase in the excerpt even when generic
     // query terms occur more often elsewhere on a long page.
-    .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.index - b.index);
-  if (matches.length === 0) return preferred;
-
-  const chosen = new Map<number, { text: string; paragraphIndex: number }>();
-  const renderChosen = (segments: Map<number, { text: string; paragraphIndex: number }>): string => {
+    .sort((a, b) => b.topicMatches - a.topicMatches || b.queryMatches - a.queryMatches || a.startIndex - b.startIndex);
+  const prefixLength = preferred ? preferred.length + 2 : 0;
+  const chosen = new Map<number, SelectionUnit>();
+  const isCoveredByPreferred = (unit: SelectionUnit): boolean => Boolean(unit.atomic && preferred &&
+    preferredStart <= unit.startParagraph && preferredEnd >= unit.endParagraph);
+  const renderChosen = (segments: Map<number, SelectionUnit>): string => {
     let output = '';
-    let previousIndex: number | undefined;
-    let previousParagraph: number | undefined;
-    for (const [index, segment] of [...segments.entries()].sort((a, b) => a[0] - b[0])) {
-      const separator = output
-        ? index === previousIndex! + 1 && segment.paragraphIndex === previousParagraph ? ' ' : '\n\n'
-        : '';
-      output += `${separator}${segment.text}`;
-      previousIndex = index;
-      previousParagraph = segment.paragraphIndex;
+    let previous: SelectionUnit | undefined;
+    for (const unit of [...segments.values()].sort((a, b) => a.startIndex - b.startIndex)) {
+      const separator = !output ? '' : previous && !unit.atomic && !previous.atomic &&
+        unit.startIndex === previous.endIndex + 1 && unit.startParagraph === previous.endParagraph ? ' ' : '\n\n';
+      output += separator + unit.text;
+      previous = unit;
     }
     return output;
   };
-
   for (const match of matches) {
-    // Try the matched sentence first. Context is added only when it fits, so
-    // high-volume surrounding prose cannot crowd a topic phrase out.
-    const window = [match.index, match.index - 1, match.index + 1];
-    for (const index of window) {
-      const sentence = sentences[index];
-      if (!sentence || chosen.has(index)) continue;
+    const matchIndex = units.findIndex(unit => unit.id === match.id);
+    for (const index of [matchIndex, matchIndex - 1, matchIndex + 1]) {
+      const unit = units[index];
+      if (!unit || chosen.has(unit.id) || isCoveredByPreferred(unit)) continue;
       const proposed = new Map(chosen);
-      proposed.set(index, sentence);
-      if (prefixLength + renderChosen(proposed).length <= maxChars) chosen.set(index, sentence);
+      proposed.set(unit.id, unit);
+      if (prefixLength + renderChosen(proposed).length <= maxChars) chosen.set(unit.id, unit);
     }
   }
   const relevant = renderChosen(chosen);
-  return preferred ? `${preferred}${relevant ? `\n\n${relevant}` : ''}` : relevant;
+  return preferred ? preferred + (relevant ? '\n\n' + relevant : '') : relevant;
 }
-
 function approvedHostsForTopic(topic: MappedCoverageTopic): string[] {
   if (topic.domainId === 'ACCOUNTING_SFRS') return [...APPROVED_ACCOUNTING_DISCOVERY_HOSTS];
   if (topic.domainId.startsWith('IRAS_')) return [...APPROVED_IRAS_DISCOVERY_HOSTS];

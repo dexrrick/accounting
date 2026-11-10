@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import { cleanHtmlText } from '../../src/retrieval/sourceAdapters.ts';
 import { ExternalSourceValidator } from '../../src/retrieval/externalSourceValidator.ts';
-import { selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
+import { buildGroundedReasoningContext, selectRelevantFetchedText } from '../../src/services/groundingContextBuilder.ts';
+import { defaultSourceRetriever } from '../../src/retrieval/sourceRetriever.ts';
+import { ControlledWebRetriever } from '../../src/retrieval/controlledWebRetriever.ts';
+import { SourceCache } from '../../src/retrieval/sourceCache.ts';
+import { renderIrasEvidenceResponse } from '../../src/services/irasEvidencePolicy.ts';
 import { verifyEvidenceClaims } from '../../src/verification/claimEvidenceVerifier.ts';
 
 const sourceCases = [
@@ -122,5 +126,110 @@ const disconnectedQuote = verifyEvidenceClaims([{
 assert.equal(disconnectedQuote.accepted.length, 0,
   'A claim that joins separated HTML excerpts still fails strict source-span verification.');
 assert.equal(disconnectedQuote.rejected[0].reason, 'QUOTE_NOT_WHOLE_SENTENCE_OR_PARAGRAPH');
+
+const completeInputTaxConditions = [
+  'Conditions for claiming input tax are:',
+  '• The purchase is made for a real business purpose and supports the input tax claim.',
+  '• This category is expressly barred by the applicable statutory schedule. This multi-sentence middle item is deliberately long and includes context that relevance scoring might otherwise omit while preserving the first and final bullets.',
+  '• You hold the required invoice or import permit for the goods and services claimed.',
+  'Unless the claim is subject to a separate statutory restriction.'
+].join('\n\n');
+const longInputTaxPage = completeInputTaxConditions + '\n\n' + Array.from({ length: 12 }, (_, index) =>
+  'Unrelated filing information ' + index + ' does not describe the conditions for claiming input tax.').join('\n\n');
+const selectedCompleteList = selectRelevantFetchedText(
+  longInputTaxPage,
+  ['input tax claim', 'tax invoice', 'invoice or import permit'],
+  650,
+  'conditions for claiming input tax tax invoice import permit'
+);
+assert.match(selectedCompleteList, /• The purchase/);
+assert.match(selectedCompleteList, /• This category is expressly barred/);
+assert.match(selectedCompleteList, /• You hold/,
+  'Relevance selection keeps an unnumbered middle bullet and its second sentence when it selects a list.');
+assert.ok(selectedCompleteList.includes(completeInputTaxConditions),
+  'Selection preserves the full multi-sentence condition and its attached qualification as one source unit.');
+
+const nestedInputTaxBlocks = [
+  'Conditions for claiming input tax are:',
+  '• The business must satisfy ' + 'outer premise '.repeat(35) + '.',
+  '• For invoices:',
+  '◦ You hold the required invoice.',
+  '◦ You retain supporting documentation.',
+  '• The goods must support taxable supplies.'
+];
+const nestedInputTaxList = nestedInputTaxBlocks.join('\n\n');
+const nestedInputTaxPage = nestedInputTaxList + '\n\n' +
+  Array.from({ length: 100 }, () => 'Unrelated filing detail.').join('\n\n');
+const nestedInputTaxTerms = ['required invoice'];
+const nestedOverBudget = selectRelevantFetchedText(
+  nestedInputTaxPage, nestedInputTaxTerms, 220, 'required invoice'
+);
+assert.doesNotMatch(nestedOverBudget,
+  /For invoices:|You hold the required invoice|supporting documentation|goods must support taxable supplies/,
+  'When an enclosing conditions list is over budget, nested invoice fragments and later parent items are withheld too.');
+
+const nestedInnerPreferred = nestedInputTaxBlocks.slice(2).join('\n\n');
+const nestedUnderBudget = selectRelevantFetchedText(
+  nestedInputTaxPage, nestedInputTaxTerms, 1_200, 'required invoice', [nestedInnerPreferred]
+);
+assert.ok(nestedUnderBudget.includes(nestedInputTaxList),
+  'A nested preferred passage cannot split the enclosing list; when it fits, the complete outer list is retained.');
+
+const preferredPartialList = completeInputTaxConditions.split('\n\n').slice(0, 2).join('\n\n');
+const selectedWithPartialPreferred = selectRelevantFetchedText(
+  longInputTaxPage,
+  ['input tax claim', 'tax invoice', 'invoice or import permit'],
+  300,
+  'conditions for claiming input tax tax invoice import permit',
+  [preferredPartialList]
+);
+assert.doesNotMatch(selectedWithPartialPreferred, /Conditions for claiming input tax are:/,
+  'A preferred passage cannot preserve a partial source list when the complete list exceeds the excerpt budget.');
+assert.doesNotMatch(selectedWithPartialPreferred, /• The purchase|• This category|• You hold/,
+  'When the complete list does not fit, none of its items leaks into the selected excerpt.');
+
+const conditionHtml = '<html><head><title>Conditions for Claiming Input Tax</title></head><body><main>' +
+  '<h1>Conditions for Claiming Input Tax</h1>' +
+  '<p>When purchasing from GST-registered suppliers or importing goods into Singapore, a business may incur input tax.</p>' +
+  '<p>Conditions for claiming input tax are:</p><ul>' +
+  '<li>The purchase is made for a real business purpose and supports the input tax claim.</li>' +
+  '<li>This category is expressly barred by the applicable statutory schedule. ' + 'Detailed supporting context '.repeat(1_700) + 'This exclusion applies to the complete class of affected supplies.</li>' +
+  '<li>You hold the required invoice or import permit for the goods and services claimed.</li></ul>' +
+  '<p>Tax invoice information is relevant to input tax claims for business purchases.</p></main></body></html>';
+const inputTaxQuery = 'What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company?';
+const noLocalInputTaxEvidence = {
+  retrieveSources: async () => [],
+  getSourceById: id => defaultSourceRetriever.getSourceById(id),
+  findSourcesByStandardOrAct: (...args) => defaultSourceRetriever.findSourcesByStandardOrAct(...args)
+};
+const productionContext = await buildGroundedReasoningContext(
+  inputTaxQuery,
+  null,
+  noLocalInputTaxEvidence,
+  undefined,
+  {
+    webRetriever: new ControlledWebRetriever(undefined, new SourceCache()),
+    discoveryAdapter: { discoverOfficialSourceCandidates: async () => [] },
+    fetchOptions: {
+      useCache: false,
+      customFetch: async url => {
+        assert.match(String(url), /conditions-for-claiming-input-tax/,
+          'The mocked production retrieval requests the registered IRAS input-tax source URL.');
+        return new Response(conditionHtml, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+      }
+    }
+  }
+);
+assert.equal(productionContext.evidenceQuality.status, 'RETRIEVED_SUFFICIENT',
+  'Mocked registered-source retrieval reaches the production evidence-quality admission gate.');
+const retrievedInputTaxRecord = productionContext.evidenceQuality.eligibleRecords.find(record =>
+  record.provenance === 'LIVE_EXTERNAL' && record.officialSourceUrl?.includes('conditions-for-claiming-input-tax'));
+assert.ok(retrievedInputTaxRecord, 'The mapped IRAS document is admitted through production retrieval.');
+assert.doesNotMatch(retrievedInputTaxRecord.sourceText, /• The purchase|• This category|• You hold/,
+  'When the full conditions list exceeds the excerpt budget, production retrieval withholds the whole list.');
+const renderedInputTaxFallback = renderIrasEvidenceResponse({}, productionContext, inputTaxQuery,
+  null, 'SFRS_I', 'PROVIDER_NO_CLAIMS');
+assert.doesNotMatch(renderedInputTaxFallback.messageText, /• The purchase|• This category|• You hold/,
+  'IRAS no-claim fallback does not present a shortened retrieved list as complete official evidence.');
 
 console.log('PASS: IRAS HTML block boundaries and strict evidence verification');

@@ -288,11 +288,15 @@ try {
     .map(record => record.recordId ?? record.id));
   const fullRuleClaims = (missingRegistrationGeneral.finalIssue.verifiedClaims || [])
     .filter(claim => fullRuleRecordIds.has(claim.recordId));
-  assert.equal(fullRuleClaims.length, 9,
-    'The verified general answer is bound to the complete current page: its conditions lead-in and all eight numbered criteria.');
+  const numberedConditionClaims = fullRuleClaims.filter(claim => /^\s*[1-8]\.\s/.test(claim.quote));
+  assert.equal(numberedConditionClaims.length, 8,
+    'The verified general answer retains all eight individually source-bound IRAS criteria.');
+  const conditionsLeadIn = 'You can claim input tax incurred on your purchases only if all the following conditions are met:';
+  assert.ok(fullRuleClaims.some(claim => normalize(claim.quote).includes(normalize(conditionsLeadIn))),
+    'The verified general answer retains the lead-in bound to the same mapped IRAS source.');
   for (let condition = 1; condition <= 8; condition += 1) {
-    assert.ok(fullRuleClaims.some(claim => new RegExp(`^${condition}\\.\\s`).test(claim.quote)),
-      `The general answer retains exact IRAS input-tax condition ${condition}.`);
+    assert.ok(numberedConditionClaims.some(claim => new RegExp('^\\s*' + condition + '\\.\\s').test(claim.quote)),
+      'The general answer retains exact IRAS input-tax condition ' + condition + '.');
   }
 
   const complete = await runPipeline(generalCase, completeOpeningParagraph, 'complete-positive');
