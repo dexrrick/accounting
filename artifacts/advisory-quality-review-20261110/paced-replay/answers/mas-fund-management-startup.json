@@ -1,0 +1,2277 @@
+{
+  "schemaVersion": 1,
+  "expectedHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+  "sourceRevision": {
+    "head": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+    "uncommittedSourcePatchSha256": "324bcdede47a6fd851f18db02ed24c93a0a008e4a31356900c7de7648af84783",
+    "dirty": true,
+    "untrackedSourceFiles": []
+  },
+  "scope": "Headless real provider and retrieval; no browser or deployed acceptance.",
+  "caseId": "mas-fund-management-startup",
+  "question": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+  "reviewFocus": "Recognises regulatory perimeter, distinguishes checking licensing/exemptions from confirming eligibility, identifies missing facts and provides useful official sources.",
+  "authorities": [
+    "MAS"
+  ],
+  "model": "gemini-3.5-flash-lite",
+  "startedAt": "2026-11-10T05:21:42.815Z",
+  "status": "COMPLETED",
+  "stopRemainingCases": false,
+  "modelRequestCap": 3,
+  "modelRequests": [
+    {
+      "number": 1,
+      "requestStartedAt": "2026-11-10T05:21:43.288Z",
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "Interpret the user question only. Do not answer it or provide accounting, tax, or legal conclusions. Do not invent rules. Identify governing versus contextual authorities. Return only one JSON object matching the requested schema; no explanation or reasoning.",
+      "stage": "understanding-or-other",
+      "promptChars": 8893,
+      "status": 200,
+      "durationMs": 2235,
+      "candidateText": "{\n  \"schemaVersion\": 2,\n  \"jurisdiction\": [\n    \"Singapore\"\n  ],\n  \"authorityCandidates\": [\n    \"MAS\"\n  ],\n  \"contextualAuthorities\": [],\n  \"domain\": \"MAS_FUNDS\",\n  \"population\": \"FUND\",\n  \"primarySubject\": \"MAS licensing or exemptions for external portfolio management\",\n  \"concepts\": [\n    {\n      \"concept\": \"MAS licensing\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"regulatory exemptions\",\n      \"role\": \"PRIMARY\"\n    },\n    {\n      \"concept\": \"external portfolio management\",\n      \"role\": \"CONTEXT_ONLY\"\n    }\n  ],\n  \"requestedOperation\": \"CHECK_ELIGIBILITY\",\n  \"factsExplicitlyProvided\": [\n    \"planning to start managing external investors' portfolios from Singapore\"\n  ],\n  \"confidence\": 0.9,\n  \"issues\": [\n    {\n      \"subject\": \"MAS licensing or exemption eligibility for portfolio management\",\n      \"population\": \"FUND\",\n      \"domain\": \"MAS_FUNDS\",\n      \"governingAuthorities\": [\n        \"MAS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"CHECK_ELIGIBILITY\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE_AND_CASE_FACTS\",\n      \"confidence\": 0.9\n    },\n    {\n      \"subject\": \"facts needed to assess MAS licensing position\",\n      \"population\": \"FUND\",\n      \"domain\": \"MAS_FUNDS\",\n      \"governingAuthorities\": [\n        \"MAS\"\n      ],\n      \"contextualAuthorities\": [],\n      \"operation\": \"EXPLAIN_RULE\",\n      \"mappedTopicIds\": [],\n      \"evidenceRequirement\": \"AUTHORITATIVE_SOURCE\",\n      \"confidence\": 0.9\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1844,
+        "candidatesTokenCount": 439,
+        "totalTokenCount": 2283,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1844
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 2,
+      "requestStartedAt": "2026-11-10T05:21:48.397Z",
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "EVIDENCE_GROUNDED_SYNTHESIS",
+      "stage": "understanding-or-other",
+      "promptChars": 25499,
+      "status": 200,
+      "durationMs": 4038,
+      "candidateText": "{\"claims\":[{\"id\":\"c1\",\"kind\":\"RULE\",\"text\":\"If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 , it must apply to be a licensed fund management company that holds a capital markets services licence.\",\"supportIds\":[\"passage-1\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"issue_79935cfd\"},{\"id\":\"c2\",\"kind\":\"RULE\",\"text\":\"Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\",\"supportIds\":[\"passage-2\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"issue_79935cfd\"},{\"id\":\"c3\",\"kind\":\"RULE\",\"text\":\"If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that manage assets for related corporations or related family members, manage a pool of immovable assets for accredited and institutional investors, or manage a pool of non-capital markets products for accredited and institutional investors.\",\"supportIds\":[\"passage-12\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"issue_79935cfd\"},{\"id\":\"c4\",\"kind\":\"RULE\",\"text\":\"When MAS assesses your company to be a licensed fund management company or venture capital fund manager, MAS considers factors such as the credibility and substantiveness of the business model and plan and associated risks, effectiveness of risk management and compliance controls, fund management track record and expertise of an applicant's management parent company and major shareholders, fitness and propriety of the applicant its shareholders and directors, and ability to meet the relevant minimum financial requirements prescribed under the Securities and Futures Act.\",\"supportIds\":[\"passage-11\"],\"factRefs\":[\"fact-current-question\"],\"issueId\":\"issue_c73d276a\"},{\"id\":\"c5\",\"kind\":\"APPLICATION\",\"text\":\"To assess whether your company qualifies for an exemption or requires a capital markets services licence for managing external investors portfolios from Singapore, case-specific facts regarding your business model, asset types, investor categories, and corporate relationships must be established.\",\"supportIds\":[\"passage-1\",\"passage-11\",\"passage-12\"],\"factRefs\":[\"fact-current-question\",\"fact-scenario-1\"],\"issueId\":\"issue_79935cfd\"}]}",
+      "usageMetadata": {
+        "promptTokenCount": 5541,
+        "candidatesTokenCount": 510,
+        "totalTokenCount": 6051,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 5541
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    },
+    {
+      "number": 3,
+      "requestStartedAt": "2026-11-10T05:21:53.505Z",
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "model": "gemini-3.5-flash-lite",
+      "systemFirstLine": "EVIDENCE_GROUNDED_SUPPORT_VERIFICATION",
+      "stage": "understanding-or-other",
+      "promptChars": 8666,
+      "status": 200,
+      "durationMs": 1367,
+      "candidateText": "{\n  \"verdicts\": [\n    {\n      \"claimId\": \"c1\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"RULE\"\n    },\n    {\n      \"claimId\": \"c3\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"RULE\"\n    },\n    {\n      \"claimId\": \"c5\",\n      \"support\": \"SUPPORTED\",\n      \"claimType\": \"CONDITIONAL_APPLICATION\"\n    }\n  ]\n}",
+      "usageMetadata": {
+        "promptTokenCount": 1772,
+        "candidatesTokenCount": 118,
+        "totalTokenCount": 1890,
+        "promptTokensDetails": [
+          {
+            "modality": "TEXT",
+            "tokenCount": 1772
+          }
+        ],
+        "serviceTier": "standard"
+      }
+    }
+  ],
+  "network": [
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 2235,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 225,
+      "responseMetadata": {
+        "contentType": "text/html; charset=utf-8",
+        "contentLength": "266210"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 206,
+      "responseMetadata": {
+        "contentType": "text/html; charset=utf-8",
+        "contentLength": "266210"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 136,
+      "responseMetadata": {
+        "contentType": "application/pdf",
+        "contentLength": "507968",
+        "lastModified": "Fri, 29 May 2026 07:55:09 GMT"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "method": "GET",
+      "status": 200,
+      "durationMs": 99,
+      "responseMetadata": {
+        "contentType": "application/pdf",
+        "contentLength": "507968",
+        "lastModified": "Fri, 29 May 2026 07:55:09 GMT"
+      },
+      "modelRequest": false
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 4038,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    },
+    {
+      "originPath": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+      "method": "POST",
+      "status": 200,
+      "durationMs": 1367,
+      "responseMetadata": {
+        "contentType": "application/json; charset=UTF-8"
+      },
+      "modelRequest": true
+    }
+  ],
+  "authorityWorkstreams": {
+    "query": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+    "issuePlan": {
+      "source": "SEMANTIC_ISSUES",
+      "issues": [
+        {
+          "subject": "MAS licensing or exemption eligibility for portfolio management",
+          "population": "FUND",
+          "domain": "MAS_FUNDS",
+          "governingAuthorities": [
+            "MAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "CHECK_ELIGIBILITY",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+          "confidence": 0.9,
+          "id": "issue_79935cfd",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        },
+        {
+          "subject": "facts needed to assess MAS licensing position",
+          "population": "FUND",
+          "domain": "MAS_FUNDS",
+          "governingAuthorities": [
+            "MAS"
+          ],
+          "contextualAuthorities": [],
+          "operation": "EXPLAIN_RULE",
+          "mappedTopicIds": [],
+          "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+          "confidence": 0.9,
+          "id": "issue_c73d276a",
+          "status": "UNRESOLVED",
+          "unresolvedReason": "NO_COVERAGE_TOPIC"
+        }
+      ],
+      "coverageEstablished": false,
+      "hasUnmappedResidual": true
+    },
+    "requestCompletenessContext": {
+      "contractVersion": 1,
+      "identity": "[1,\"We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.\"]",
+      "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+      "inputLength": 276,
+      "inventory": {
+        "state": "UNCERTAIN",
+        "fullyConsumed": false,
+        "outcomes": [],
+        "facts": [],
+        "findings": [
+          {
+            "stage": "INVENTORY",
+            "code": "UNKNOWN_PREFIX_OR_REQUEST",
+            "span": {
+              "start": 0,
+              "end": 276
+            }
+          }
+        ],
+        "inputLength": 276
+      },
+      "declaredFacts": [],
+      "excludedSpans": [],
+      "observationSnapshot": {
+        "hasWrapper": true,
+        "mode": "SEMANTIC_INTERPRETATION",
+        "format": "STORED_NORMALIZED_OR_LEGACY",
+        "normalizedInterpretation": {
+          "jurisdiction": [
+            "Singapore"
+          ],
+          "authorityCandidates": [
+            "MAS"
+          ],
+          "contextualAuthorities": [],
+          "domain": "MAS_FUNDS",
+          "population": "FUND",
+          "primarySubject": "MAS licensing or exemptions for external portfolio management",
+          "concepts": [
+            {
+              "concept": "MAS licensing",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "regulatory exemptions",
+              "role": "PRIMARY"
+            },
+            {
+              "concept": "external portfolio management",
+              "role": "CONTEXT_ONLY"
+            }
+          ],
+          "requestedOperation": "CHECK_ELIGIBILITY",
+          "requiresUserSpecificFacts": true,
+          "calculationRequested": false,
+          "factsExplicitlyProvided": [
+            "planning to start managing external investors' portfolios from Singapore"
+          ],
+          "confidence": 0.9,
+          "issues": [
+            {
+              "subject": "MAS licensing or exemption eligibility for portfolio management",
+              "population": "FUND",
+              "domain": "MAS_FUNDS",
+              "governingAuthorities": [
+                "MAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "CHECK_ELIGIBILITY",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+              "confidence": 0.9
+            },
+            {
+              "subject": "facts needed to assess MAS licensing position",
+              "population": "FUND",
+              "domain": "MAS_FUNDS",
+              "governingAuthorities": [
+                "MAS"
+              ],
+              "contextualAuthorities": [],
+              "operation": "EXPLAIN_RULE",
+              "mappedTopicIds": [],
+              "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+              "confidence": 0.9
+            }
+          ]
+        },
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "observedConfidence": 0.9
+      },
+      "evaluation": {
+        "status": "UNCERTAIN",
+        "structuralAcceptance": "ACCEPTED",
+        "confidenceAcceptance": "ACCEPTED",
+        "minimumConfidence": 0.72,
+        "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+        "observedConfidence": 0.9,
+        "findings": [
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 0,
+            "subject": "MAS licensing or exemption eligibility for portfolio management"
+          },
+          {
+            "stage": "BRIDGE",
+            "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+            "issueIndex": 1,
+            "subject": "facts needed to assess MAS licensing position"
+          }
+        ],
+        "matches": [],
+        "issues": [
+          {
+            "subject": "MAS licensing or exemption eligibility for portfolio management",
+            "population": "FUND",
+            "operation": "CHECK_ELIGIBILITY"
+          },
+          {
+            "subject": "facts needed to assess MAS licensing position",
+            "population": "FUND",
+            "operation": "EXPLAIN_RULE"
+          }
+        ]
+      }
+    },
+    "workstreams": [
+      {
+        "id": "MAS:MAS_FUNDS",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "sourceSections": [],
+        "populations": [
+          "FUND"
+        ],
+        "issues": [
+          {
+            "issueId": "issue_79935cfd",
+            "subject": "MAS licensing or exemption eligibility for portfolio management",
+            "population": "FUND",
+            "domain": "MAS_FUNDS",
+            "operation": "CHECK_ELIGIBILITY",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+            "governingAuthority": "MAS",
+            "sourceSections": [],
+            "lifecycle": {
+              "requested": true,
+              "mapped": false,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": true,
+              "covered": true
+            },
+            "applicationStatus": "UNRESOLVED",
+            "applicationReason": "For MAS licensing or exemption eligibility for portfolio management, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.",
+            "evidenceStatus": "INSUFFICIENT",
+            "verifiedClaims": [
+              {
+                "text": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "quote": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              }
+            ],
+            "sources": [
+              {
+                "id": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "authority": "MAS",
+                "authorityName": "Monetary Authority of Singapore (MAS)",
+                "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+                "legalOrStandardInstrument": "MAS official guidance",
+                "documentTitle": "Fund Management Licensing",
+                "standardOrActCode": "MAS official guidance",
+                "paragraphOrSection": "MAS: MAS licensing or exemption eligibility for portfolio management",
+                "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nIf your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.\n\nType of fund manager  | LFMC | VCFM\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYour company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+                "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "domain": "MAS_FUNDS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-10",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "sourceAuthority": "MAS",
+                "retrievedAt": "2026-11-10T05:21:45.610Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                "contentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-10",
+                "sourceLocator": {
+                  "heading": "Fund Management Licensing",
+                  "document": "Fund Management Licensing",
+                  "sourceType": "HTML"
+                }
+              }
+            ],
+            "admittedDocumentSources": [
+              {
+                "id": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                "authority": "MAS",
+                "authorityName": "Monetary Authority of Singapore (MAS)",
+                "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+                "legalOrStandardInstrument": "MAS official guidance",
+                "documentTitle": "Fund Management Licensing",
+                "standardOrActCode": "MAS official guidance",
+                "paragraphOrSection": "MAS: MAS licensing or exemption eligibility for portfolio management",
+                "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nIf your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.\n\nType of fund manager  | LFMC | VCFM\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYour company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+                "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "domain": "MAS_FUNDS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-10",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "sourceAuthority": "MAS",
+                "retrievedAt": "2026-11-10T05:21:45.610Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                "contentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-10",
+                "sourceLocator": {
+                  "heading": "Fund Management Licensing",
+                  "document": "Fund Management Licensing",
+                  "sourceType": "HTML"
+                }
+              }
+            ],
+            "admittedDocumentTargetDate": "2026-11-10",
+            "admittedDocumentContexts": [],
+            "gaps": [
+              {
+                "issueId": "issue_79935cfd",
+                "authority": "MAS",
+                "domain": "MAS_FUNDS",
+                "subject": "MAS licensing or exemption eligibility for portfolio management",
+                "operation": "CHECK_ELIGIBILITY",
+                "stage": "mapped",
+                "code": "NO_COVERAGE_TOPIC",
+                "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+              }
+            ],
+            "retrievalTrace": {
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "EXHAUSTED",
+                  "reason": "The stage was exhausted without sufficient admitted evidence."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                }
+              ],
+              "attempts": [
+                {
+                  "topicId": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m",
+                  "fetchStatus": "SUCCESS",
+                  "pageTitle": "Fund Management Licensing"
+                },
+                {
+                  "topicId": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m",
+                  "fetchStatus": "INVALID_CONTENT"
+                }
+              ]
+            },
+            "admissionDiagnostics": {
+              "retrievalTraceStatus": "AVAILABLE",
+              "retrievalTraceOptionalMetadataStatus": "VALID",
+              "retrievalEvidenceQualityTrace": {
+                "path": "DISCOVERED_SOURCE",
+                "sourceMapIds": [],
+                "selectedRecordIds": [
+                  "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a"
+                ],
+                "finalVerifiedUrls": [
+                  "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+                ],
+                "candidateOnly": true,
+                "attempts": [
+                  {
+                    "topicId": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m",
+                    "candidateUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                    "pageTitle": "Fund Management Licensing",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "discoveryStage": "MAPPED_SOURCE"
+                  },
+                  {
+                    "topicId": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m",
+                    "candidateUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+                    "fetchStatus": "INVALID_CONTENT",
+                    "titleMatched": false,
+                    "contentMatched": false,
+                    "discoveryStage": "MAPPED_SOURCE",
+                    "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+                  }
+                ],
+                "discoveryFetchAttempts": [],
+                "coverageDecisions": [],
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "EXHAUSTED",
+                    "reason": "Local retrieval was insufficient for at least one routed topic."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "No applicable reviewed source-map pointer was available."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "Sitemap discovery was not attempted for this request."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "Official-domain search was not attempted for this request."
+                  }
+                ]
+              },
+              "candidates": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                  "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                  "admitted": true,
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "liveExternal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "officialDiscoveryAuthority",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "lifecycleState",
+                          "passed": true,
+                          "result": "CANDIDATE"
+                        },
+                        {
+                          "predicate": "sourceStatus",
+                          "passed": true,
+                          "result": "NEEDS_REVIEW"
+                        },
+                        {
+                          "predicate": "extractionStatus",
+                          "passed": true,
+                          "result": "PARTIAL"
+                        },
+                        {
+                          "predicate": "verificationMethod",
+                          "passed": true,
+                          "result": "LIVE_OFFICIAL_TOPIC_VERIFIED"
+                        },
+                        {
+                          "predicate": "sourceAuthority",
+                          "passed": true,
+                          "result": "MAS"
+                        },
+                        {
+                          "predicate": "selectedRecordId",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "finalVerifiedUrl",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "successfulTitleContentFetch",
+                          "passed": true,
+                          "result": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m"
+                        }
+                      ]
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "VALIDATED_CURRENT_FETCH"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": true
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "issueId": "issue_c73d276a",
+            "subject": "facts needed to assess MAS licensing position",
+            "population": "FUND",
+            "domain": "MAS_FUNDS",
+            "operation": "EXPLAIN_RULE",
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "governingAuthority": "MAS",
+            "sourceSections": [],
+            "lifecycle": {
+              "requested": true,
+              "mapped": false,
+              "retrievalAttempted": true,
+              "evidenceFound": true,
+              "admitted": true,
+              "verified": true,
+              "covered": true
+            },
+            "applicationStatus": "NOT_REQUIRED",
+            "evidenceStatus": "INSUFFICIENT",
+            "verifiedClaims": [
+              {
+                "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                "quote": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                "quote": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              },
+              {
+                "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                "quote": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "supportKind": "EXACT_SOURCE_QUOTE"
+              }
+            ],
+            "sources": [
+              {
+                "id": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                "authority": "MAS",
+                "authorityName": "Monetary Authority of Singapore (MAS)",
+                "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+                "legalOrStandardInstrument": "MAS official guidance",
+                "documentTitle": "Fund Management Licensing",
+                "standardOrActCode": "MAS official guidance",
+                "paragraphOrSection": "MAS: facts needed to assess MAS licensing position",
+                "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nRefer to the page Appointing a Representative for CMS Licensees or Exempt Financial Institutions for more information. | Identify your representatives and their intended roles in the organisation chart and business plan sections of Form 1. A separate form is not required.\n\nIf your company also intends to deal in capital markets products (e.g.\n\nType of fund manager  | LFMC | VCFM\n\nApplying to conduct additional regulated activity\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYou will also have to appoint individuals who conduct the additional regulated activity as your representatives. Your company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\nType of fund manager  | LFMC | VCFM\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+                "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "domain": "MAS_FUNDS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-10",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "sourceAuthority": "MAS",
+                "retrievedAt": "2026-11-10T05:21:45.613Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                "contentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-10",
+                "sourceLocator": {
+                  "heading": "Fund Management Licensing",
+                  "document": "Fund Management Licensing",
+                  "sourceType": "HTML"
+                }
+              }
+            ],
+            "admittedDocumentSources": [
+              {
+                "id": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                "authority": "MAS",
+                "authorityName": "Monetary Authority of Singapore (MAS)",
+                "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+                "legalOrStandardInstrument": "MAS official guidance",
+                "documentTitle": "Fund Management Licensing",
+                "standardOrActCode": "MAS official guidance",
+                "paragraphOrSection": "MAS: facts needed to assess MAS licensing position",
+                "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nRefer to the page Appointing a Representative for CMS Licensees or Exempt Financial Institutions for more information. | Identify your representatives and their intended roles in the organisation chart and business plan sections of Form 1. A separate form is not required.\n\nIf your company also intends to deal in capital markets products (e.g.\n\nType of fund manager  | LFMC | VCFM\n\nApplying to conduct additional regulated activity\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYou will also have to appoint individuals who conduct the additional regulated activity as your representatives. Your company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\nType of fund manager  | LFMC | VCFM\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+                "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "domain": "MAS_FUNDS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "OFFICIAL_GUIDANCE",
+                "evidenceTier": "OFFICIAL_GUIDANCE",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-11-10",
+                "provenance": "LIVE_EXTERNAL",
+                "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "sourceAuthority": "MAS",
+                "retrievedAt": "2026-11-10T05:21:45.613Z",
+                "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+                "extractionStatus": "PARTIAL",
+                "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                "contentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                "lifecycleState": "CANDIDATE",
+                "recordRole": "DISCOVERED_EVIDENCE",
+                "groundingEligible": true,
+                "urlVerificationStatus": "VERIFIED",
+                "urlVerifiedDate": "2026-11-10",
+                "sourceLocator": {
+                  "heading": "Fund Management Licensing",
+                  "document": "Fund Management Licensing",
+                  "sourceType": "HTML"
+                }
+              }
+            ],
+            "admittedDocumentTargetDate": "2026-11-10",
+            "admittedDocumentContexts": [],
+            "gaps": [
+              {
+                "issueId": "issue_c73d276a",
+                "authority": "MAS",
+                "domain": "MAS_FUNDS",
+                "subject": "facts needed to assess MAS licensing position",
+                "operation": "EXPLAIN_RULE",
+                "stage": "mapped",
+                "code": "NO_COVERAGE_TOPIC",
+                "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+              }
+            ],
+            "retrievalTrace": {
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "EXHAUSTED",
+                  "reason": "The stage was exhausted without sufficient admitted evidence."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "This retrieval stage was skipped by the configured scope."
+                }
+              ],
+              "attempts": [
+                {
+                  "topicId": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position",
+                  "fetchStatus": "SUCCESS",
+                  "pageTitle": "Fund Management Licensing"
+                },
+                {
+                  "topicId": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position",
+                  "fetchStatus": "INVALID_CONTENT"
+                }
+              ]
+            },
+            "admissionDiagnostics": {
+              "retrievalTraceStatus": "AVAILABLE",
+              "retrievalTraceOptionalMetadataStatus": "VALID",
+              "retrievalEvidenceQualityTrace": {
+                "path": "DISCOVERED_SOURCE",
+                "sourceMapIds": [],
+                "selectedRecordIds": [
+                  "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb"
+                ],
+                "finalVerifiedUrls": [
+                  "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+                ],
+                "candidateOnly": true,
+                "attempts": [
+                  {
+                    "topicId": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position",
+                    "candidateUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                    "fetchStatus": "SUCCESS",
+                    "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                    "pageTitle": "Fund Management Licensing",
+                    "titleMatched": true,
+                    "contentMatched": true,
+                    "discoveryStage": "MAPPED_SOURCE"
+                  },
+                  {
+                    "topicId": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position",
+                    "candidateUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+                    "fetchStatus": "INVALID_CONTENT",
+                    "titleMatched": false,
+                    "contentMatched": false,
+                    "discoveryStage": "MAPPED_SOURCE",
+                    "error": "Topic-verified source must return HTML or plain text; received 'application/pdf'"
+                  }
+                ],
+                "discoveryFetchAttempts": [],
+                "coverageDecisions": [],
+                "stages": [
+                  {
+                    "stage": "LOCAL_VERIFIED",
+                    "status": "EXHAUSTED",
+                    "reason": "Local retrieval was insufficient for at least one routed topic."
+                  },
+                  {
+                    "stage": "MAPPED_SOURCE",
+                    "status": "SKIPPED",
+                    "reason": "No applicable reviewed source-map pointer was available."
+                  },
+                  {
+                    "stage": "SITEMAP_DISCOVERY",
+                    "status": "SKIPPED",
+                    "reason": "Sitemap discovery was not attempted for this request."
+                  },
+                  {
+                    "stage": "OFFICIAL_DOMAIN_SEARCH",
+                    "status": "SKIPPED",
+                    "reason": "Official-domain search was not attempted for this request."
+                  }
+                ]
+              },
+              "candidates": [
+                {
+                  "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                  "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                  "admitted": true,
+                  "provenancePaths": {
+                    "reviewedLocal": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    },
+                    "liveExternal": {
+                      "attempted": true,
+                      "admitted": true,
+                      "predicates": [
+                        {
+                          "predicate": "officialDiscoveryAuthority",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "lifecycleState",
+                          "passed": true,
+                          "result": "CANDIDATE"
+                        },
+                        {
+                          "predicate": "sourceStatus",
+                          "passed": true,
+                          "result": "NEEDS_REVIEW"
+                        },
+                        {
+                          "predicate": "extractionStatus",
+                          "passed": true,
+                          "result": "PARTIAL"
+                        },
+                        {
+                          "predicate": "verificationMethod",
+                          "passed": true,
+                          "result": "LIVE_OFFICIAL_TOPIC_VERIFIED"
+                        },
+                        {
+                          "predicate": "sourceAuthority",
+                          "passed": true,
+                          "result": "MAS"
+                        },
+                        {
+                          "predicate": "selectedRecordId",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "finalVerifiedUrl",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "successfulTitleContentFetch",
+                          "passed": true,
+                          "result": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position"
+                        }
+                      ]
+                    },
+                    "managedDocument": {
+                      "attempted": false,
+                      "admitted": false,
+                      "predicates": []
+                    }
+                  },
+                  "predicates": [
+                    {
+                      "predicate": "provenance",
+                      "passed": true,
+                      "result": "VALIDATED_CURRENT_FETCH"
+                    },
+                    {
+                      "predicate": "recordRole",
+                      "passed": true,
+                      "result": "EVIDENCE"
+                    },
+                    {
+                      "predicate": "groundingEligible",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    },
+                    {
+                      "predicate": "requiredDeadlineEvidence",
+                      "passed": true,
+                      "result": "NOT_REQUIRED"
+                    },
+                    {
+                      "predicate": "sourceTextPresent",
+                      "passed": true,
+                      "result": "PRESENT"
+                    },
+                    {
+                      "predicate": "recordEligibility",
+                      "passed": true,
+                      "result": "ELIGIBLE"
+                    }
+                  ],
+                  "topics": [
+                    {
+                      "topicId": "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position",
+                      "predicates": [
+                        {
+                          "predicate": "topicBoundToRecord",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "governorAndDomain",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "ownedMasRuleSource",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "textSupportsTopic",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "boundedSubstantiveSupport",
+                          "passed": true
+                        },
+                        {
+                          "predicate": "issueSubjectSupport",
+                          "passed": true
+                        }
+                      ],
+                      "admitted": true
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "verifiedClaims": [
+          {
+            "text": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "quote": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+            "quote": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+            "quote": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          },
+          {
+            "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+            "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+            "quote": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+            "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "supportKind": "EXACT_SOURCE_QUOTE"
+          }
+        ],
+        "sources": [
+          {
+            "id": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+            "authority": "MAS",
+            "authorityName": "Monetary Authority of Singapore (MAS)",
+            "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+            "legalOrStandardInstrument": "MAS official guidance",
+            "documentTitle": "Fund Management Licensing",
+            "standardOrActCode": "MAS official guidance",
+            "paragraphOrSection": "MAS: MAS licensing or exemption eligibility for portfolio management",
+            "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nIf your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.\n\nType of fund manager  | LFMC | VCFM\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYour company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+            "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+            "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "domain": "MAS_FUNDS",
+            "jurisdiction": "Singapore",
+            "tags": [
+              "iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m"
+            ],
+            "sourceStatus": "NEEDS_REVIEW",
+            "sourceType": "OFFICIAL_GUIDANCE",
+            "evidenceTier": "OFFICIAL_GUIDANCE",
+            "isVerbatimText": false,
+            "lastVerifiedDate": "2026-11-10",
+            "provenance": "LIVE_EXTERNAL",
+            "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "sourceAuthority": "MAS",
+            "retrievedAt": "2026-11-10T05:21:45.610Z",
+            "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+            "extractionStatus": "PARTIAL",
+            "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+            "contentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+            "lifecycleState": "CANDIDATE",
+            "recordRole": "DISCOVERED_EVIDENCE",
+            "groundingEligible": true,
+            "urlVerificationStatus": "VERIFIED",
+            "urlVerifiedDate": "2026-11-10",
+            "sourceLocator": {
+              "heading": "Fund Management Licensing",
+              "document": "Fund Management Licensing",
+              "sourceType": "HTML"
+            }
+          },
+          {
+            "id": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+            "authority": "MAS",
+            "authorityName": "Monetary Authority of Singapore (MAS)",
+            "sourcePublisher": "Monetary Authority of Singapore (MAS)",
+            "legalOrStandardInstrument": "MAS official guidance",
+            "documentTitle": "Fund Management Licensing",
+            "standardOrActCode": "MAS official guidance",
+            "paragraphOrSection": "MAS: facts needed to assess MAS licensing position",
+            "sourceText": "•\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n\nIf your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.\n\nYou can find out more about fund management activity and the differences between an LFMC and VCFM here.\n\nWhen we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.\n\nIn addition, your company needs to operate from a dedicated and secure office space that is accessible only by your company’s directors and staff.\n\nFor more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.\n\nVCFMs are subject to a simplified set of admission criteria – please refer to Appendix 4 of the aforementioned guidelines.\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.\n\nYou can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .\n\nIf your company wishes to make an application, please submit Form 1 online, through the eLicensing system.\n\nWe no longer accept applications in the Corporate e-Lodgement System (CeL).\n\nIn addition, if your company hires or appoints individuals to conduct regulated activity under your licence, you have to appoint these individuals as your representatives for that regulated activity.\n\nType of fund manager  | LFMC | VCFM\n\nRefer to the page Appointing a Representative for CMS Licensees or Exempt Financial Institutions for more information. | Identify your representatives and their intended roles in the organisation chart and business plan sections of Form 1. A separate form is not required.\n\nIf your company also intends to deal in capital markets products (e.g.\n\nType of fund manager  | LFMC | VCFM\n\nApplying to conduct additional regulated activity\n\nPlease indicate the additional activity in section 1 of Form 1 if you are an LFMC applicant.\n\nIf you are an existing LFMC, submit Form 5 to your MAS officer-in-charge. There is a non-refundable application fee of S$500 payable via GIRO.\n\nYou will also have to appoint individuals who conduct the additional regulated activity as your representatives. Your company and such representatives will have to comply with relevant capital and conduct requirements applicable to this activity under the SFA .\n\nGenerally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.\n\nNot applicable\n\nMAS may require a fresh submission in such situations.\n\nAn in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.\n\nType of fund manager  | LFMC | VCFM\n\n• The licence lapses in accordance with section 95 of the SFA .\n\nAll entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.\n\nMAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).\n\nFor more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+            "principleSummary": "Transient issue-scoped retrieval terms from a validated interpretation; not reviewed knowledge.",
+            "officialSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "domain": "MAS_FUNDS",
+            "jurisdiction": "Singapore",
+            "tags": [
+              "iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position"
+            ],
+            "sourceStatus": "NEEDS_REVIEW",
+            "sourceType": "OFFICIAL_GUIDANCE",
+            "evidenceTier": "OFFICIAL_GUIDANCE",
+            "isVerbatimText": false,
+            "lastVerifiedDate": "2026-11-10",
+            "provenance": "LIVE_EXTERNAL",
+            "canonicalSourceUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+            "sourceAuthority": "MAS",
+            "retrievedAt": "2026-11-10T05:21:45.613Z",
+            "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+            "extractionStatus": "PARTIAL",
+            "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+            "contentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+            "lifecycleState": "CANDIDATE",
+            "recordRole": "DISCOVERED_EVIDENCE",
+            "groundingEligible": true,
+            "urlVerificationStatus": "VERIFIED",
+            "urlVerifiedDate": "2026-11-10",
+            "sourceLocator": {
+              "heading": "Fund Management Licensing",
+              "document": "Fund Management Licensing",
+              "sourceType": "HTML"
+            }
+          }
+        ],
+        "gaps": [
+          {
+            "issueId": "issue_79935cfd",
+            "authority": "MAS",
+            "domain": "MAS_FUNDS",
+            "subject": "MAS licensing or exemption eligibility for portfolio management",
+            "operation": "CHECK_ELIGIBILITY",
+            "stage": "mapped",
+            "code": "NO_COVERAGE_TOPIC",
+            "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+          },
+          {
+            "issueId": "issue_c73d276a",
+            "authority": "MAS",
+            "domain": "MAS_FUNDS",
+            "subject": "facts needed to assess MAS licensing position",
+            "operation": "EXPLAIN_RULE",
+            "stage": "mapped",
+            "code": "NO_COVERAGE_TOPIC",
+            "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+          }
+        ]
+      }
+    ],
+    "evidenceStatus": "INSUFFICIENT",
+    "applicationStatus": "UNRESOLVED",
+    "status": "INSUFFICIENT",
+    "gaps": [
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "Issue plan",
+        "operation": "OTHER",
+        "stage": "covered",
+        "code": "ISSUE_PLAN_HAS_UNMAPPED_RESIDUAL",
+        "reason": "The reconciled issue plan does not establish coverage of the complete question."
+      },
+      {
+        "issueId": "issue-plan",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "subject": "MAS licensing",
+        "operation": "OTHER",
+        "stage": "mapped",
+        "code": "UNROUTED_MATERIAL_CONCEPT",
+        "reason": "A material concept without a reviewed topic was not assigned to a uniquely matching requested issue."
+      },
+      {
+        "issueId": "issue-plan",
+        "authority": "UNKNOWN",
+        "domain": "UNKNOWN",
+        "subject": "regulatory exemptions",
+        "operation": "OTHER",
+        "stage": "mapped",
+        "code": "UNROUTED_MATERIAL_CONCEPT",
+        "reason": "A material concept without a reviewed topic was not assigned to a uniquely matching requested issue."
+      },
+      {
+        "issueId": "issue_79935cfd",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "subject": "MAS licensing or exemption eligibility for portfolio management",
+        "operation": "CHECK_ELIGIBILITY",
+        "stage": "mapped",
+        "code": "NO_COVERAGE_TOPIC",
+        "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+      },
+      {
+        "issueId": "issue_c73d276a",
+        "authority": "MAS",
+        "domain": "MAS_FUNDS",
+        "subject": "facts needed to assess MAS licensing position",
+        "operation": "EXPLAIN_RULE",
+        "stage": "mapped",
+        "code": "NO_COVERAGE_TOPIC",
+        "reason": "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+      }
+    ]
+  },
+  "finalResponse": {
+    "messageText": "# Answer\n\nIf your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 , it must apply to be a licensed fund management company that holds a capital markets services licence. [MAS: Fund Management Licensing](https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing)\n\nIndividuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives. [MAS: Fund Management Licensing](https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing)\n\nIf your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that manage assets for related corporations or related family members, manage a pool of immovable assets for accredited and institutional investors, or manage a pool of non-capital markets products for accredited and institutional investors. [MAS: Fund Management Licensing](https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing)\n\nTo assess whether your company qualifies for an exemption or requires a capital markets services licence for managing external investors portfolios from Singapore, case-specific facts regarding your business model, asset types, investor categories, and corporate relationships must be established. [MAS: Fund Management Licensing](https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing)\n\n### Conditions and unresolved points\n\nSome claims could not be established from the admitted evidence and stated facts, so they have been withheld.\n\n- The available admitted evidence does not establish a supported explanation of facts needed to assess MAS licensing position.",
+    "scenarioState": {
+      "scenarioType": "AUTHORITY_ADVISORY",
+      "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+      "transactionTitle": "Unresolved accounting and statutory obligations",
+      "functionalCurrency": "SGD",
+      "transactionCurrency": "SGD",
+      "directGroups": [],
+      "missingFields": [],
+      "isComplete": false,
+      "queryIntent": "STATUTORY_ADVISORY",
+      "primaryDomain": "MULTI_AUTHORITY",
+      "requestCompletenessContext": {
+        "contractVersion": 1,
+        "identity": "[1,\"We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.\"]",
+        "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+        "inputLength": 276,
+        "inventory": {
+          "state": "UNCERTAIN",
+          "fullyConsumed": false,
+          "outcomes": [],
+          "facts": [],
+          "findings": [
+            {
+              "stage": "INVENTORY",
+              "code": "UNKNOWN_PREFIX_OR_REQUEST",
+              "span": {
+                "start": 0,
+                "end": 276
+              }
+            }
+          ],
+          "inputLength": 276
+        },
+        "declaredFacts": [],
+        "excludedSpans": [],
+        "observationSnapshot": {
+          "hasWrapper": true,
+          "mode": "SEMANTIC_INTERPRETATION",
+          "format": "STORED_NORMALIZED_OR_LEGACY",
+          "normalizedInterpretation": {
+            "jurisdiction": [
+              "Singapore"
+            ],
+            "authorityCandidates": [
+              "MAS"
+            ],
+            "contextualAuthorities": [],
+            "domain": "MAS_FUNDS",
+            "population": "FUND",
+            "primarySubject": "MAS licensing or exemptions for external portfolio management",
+            "concepts": [
+              {
+                "concept": "MAS licensing",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "regulatory exemptions",
+                "role": "PRIMARY"
+              },
+              {
+                "concept": "external portfolio management",
+                "role": "CONTEXT_ONLY"
+              }
+            ],
+            "requestedOperation": "CHECK_ELIGIBILITY",
+            "requiresUserSpecificFacts": true,
+            "calculationRequested": false,
+            "factsExplicitlyProvided": [
+              "planning to start managing external investors' portfolios from Singapore"
+            ],
+            "confidence": 0.9,
+            "issues": [
+              {
+                "subject": "MAS licensing or exemption eligibility for portfolio management",
+                "population": "FUND",
+                "domain": "MAS_FUNDS",
+                "governingAuthorities": [
+                  "MAS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "CHECK_ELIGIBILITY",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                "confidence": 0.9
+              },
+              {
+                "subject": "facts needed to assess MAS licensing position",
+                "population": "FUND",
+                "domain": "MAS_FUNDS",
+                "governingAuthorities": [
+                  "MAS"
+                ],
+                "contextualAuthorities": [],
+                "operation": "EXPLAIN_RULE",
+                "mappedTopicIds": [],
+                "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                "confidence": 0.9
+              }
+            ]
+          },
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "observedConfidence": 0.9
+        },
+        "evaluation": {
+          "status": "UNCERTAIN",
+          "structuralAcceptance": "ACCEPTED",
+          "confidenceAcceptance": "ACCEPTED",
+          "minimumConfidence": 0.72,
+          "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+          "observedConfidence": 0.9,
+          "findings": [
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 0,
+              "subject": "MAS licensing or exemption eligibility for portfolio management"
+            },
+            {
+              "stage": "BRIDGE",
+              "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+              "issueIndex": 1,
+              "subject": "facts needed to assess MAS licensing position"
+            }
+          ],
+          "matches": [],
+          "issues": [
+            {
+              "subject": "MAS licensing or exemption eligibility for portfolio management",
+              "population": "FUND",
+              "operation": "CHECK_ELIGIBILITY"
+            },
+            {
+              "subject": "facts needed to assess MAS licensing position",
+              "population": "FUND",
+              "operation": "EXPLAIN_RULE"
+            }
+          ]
+        }
+      },
+      "authorityEvidencePresentation": {
+        "query": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+        "requestCompletenessContext": {
+          "contractVersion": 1,
+          "identity": "[1,\"We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.\"]",
+          "rawQuery": "We plan to start managing external investors' portfolios from Singapore. What should we establish about MAS licensing or exemptions before starting, and what facts would you need to assess our position? Do not assume we qualify for an exemption. I only need advisory guidance.",
+          "inputLength": 276,
+          "inventory": {
+            "state": "UNCERTAIN",
+            "fullyConsumed": false,
+            "outcomes": [],
+            "facts": [],
+            "findings": [
+              {
+                "stage": "INVENTORY",
+                "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                "span": {
+                  "start": 0,
+                  "end": 276
+                }
+              }
+            ],
+            "inputLength": 276
+          },
+          "declaredFacts": [],
+          "excludedSpans": [],
+          "observationSnapshot": {
+            "hasWrapper": true,
+            "mode": "SEMANTIC_INTERPRETATION",
+            "format": "STORED_NORMALIZED_OR_LEGACY",
+            "normalizedInterpretation": {
+              "jurisdiction": [
+                "Singapore"
+              ],
+              "authorityCandidates": [
+                "MAS"
+              ],
+              "contextualAuthorities": [],
+              "domain": "MAS_FUNDS",
+              "population": "FUND",
+              "primarySubject": "MAS licensing or exemptions for external portfolio management",
+              "concepts": [
+                {
+                  "concept": "MAS licensing",
+                  "role": "PRIMARY"
+                },
+                {
+                  "concept": "regulatory exemptions",
+                  "role": "PRIMARY"
+                },
+                {
+                  "concept": "external portfolio management",
+                  "role": "CONTEXT_ONLY"
+                }
+              ],
+              "requestedOperation": "CHECK_ELIGIBILITY",
+              "requiresUserSpecificFacts": true,
+              "calculationRequested": false,
+              "factsExplicitlyProvided": [
+                "planning to start managing external investors' portfolios from Singapore"
+              ],
+              "confidence": 0.9,
+              "issues": [
+                {
+                  "subject": "MAS licensing or exemption eligibility for portfolio management",
+                  "population": "FUND",
+                  "domain": "MAS_FUNDS",
+                  "governingAuthorities": [
+                    "MAS"
+                  ],
+                  "contextualAuthorities": [],
+                  "operation": "CHECK_ELIGIBILITY",
+                  "mappedTopicIds": [],
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                  "confidence": 0.9
+                },
+                {
+                  "subject": "facts needed to assess MAS licensing position",
+                  "population": "FUND",
+                  "domain": "MAS_FUNDS",
+                  "governingAuthorities": [
+                    "MAS"
+                  ],
+                  "contextualAuthorities": [],
+                  "operation": "EXPLAIN_RULE",
+                  "mappedTopicIds": [],
+                  "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+                  "confidence": 0.9
+                }
+              ]
+            },
+            "structuralAcceptance": "ACCEPTED",
+            "confidenceAcceptance": "ACCEPTED",
+            "observedConfidence": 0.9
+          },
+          "evaluation": {
+            "status": "UNCERTAIN",
+            "structuralAcceptance": "ACCEPTED",
+            "confidenceAcceptance": "ACCEPTED",
+            "minimumConfidence": 0.72,
+            "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+            "observedConfidence": 0.9,
+            "findings": [
+              {
+                "stage": "BRIDGE",
+                "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                "issueIndex": 0,
+                "subject": "MAS licensing or exemption eligibility for portfolio management"
+              },
+              {
+                "stage": "BRIDGE",
+                "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                "issueIndex": 1,
+                "subject": "facts needed to assess MAS licensing position"
+              }
+            ],
+            "matches": [],
+            "issues": [
+              {
+                "subject": "MAS licensing or exemption eligibility for portfolio management",
+                "population": "FUND",
+                "operation": "CHECK_ELIGIBILITY"
+              },
+              {
+                "subject": "facts needed to assess MAS licensing position",
+                "population": "FUND",
+                "operation": "EXPLAIN_RULE"
+              }
+            ]
+          }
+        },
+        "status": "INSUFFICIENT",
+        "evidenceStatus": "INSUFFICIENT",
+        "applicationStatus": "UNRESOLVED",
+        "workstreams": [
+          {
+            "id": "MAS:MAS_FUNDS",
+            "authority": "MAS",
+            "authorityLabel": "Monetary Authority of Singapore",
+            "domain": "MAS_FUNDS",
+            "domainLabel": "Financial regulation",
+            "evidenceStatus": "INSUFFICIENT",
+            "applicationStatus": "UNRESOLVED",
+            "issues": [
+              {
+                "id": "issue_79935cfd",
+                "subject": "MAS licensing or exemption eligibility for portfolio management",
+                "population": "Fund",
+                "operation": "CHECK_ELIGIBILITY",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "UNRESOLVED",
+                "applicationReason": "For MAS licensing or exemption eligibility for portfolio management, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.",
+                "claims": [
+                  {
+                    "text": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  }
+                ],
+                "gaps": [
+                  "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+                ]
+              },
+              {
+                "id": "issue_c73d276a",
+                "subject": "facts needed to assess MAS licensing position",
+                "population": "Fund",
+                "operation": "EXPLAIN_RULE",
+                "evidenceStatus": "INSUFFICIENT",
+                "applicationStatus": "NOT_REQUIRED",
+                "claims": [
+                  {
+                    "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  }
+                ],
+                "gaps": [
+                  "Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+                ]
+              }
+            ],
+            "sources": [
+              {
+                "key": "url:https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing|LIVE_EXTERNAL||",
+                "title": "Fund Management Licensing",
+                "publisher": "Monetary Authority of Singapore (MAS)",
+                "documentTitle": "Fund Management Licensing",
+                "officialUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                "provenance": "LIVE_EXTERNAL",
+                "claims": [
+                  {
+                    "text": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "Individuals performing key functions in a fund management company, such as portfolio construction and allocation, research and advisory, business development and marketing or client servicing are required to be representatives.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For more information on the admission criteria and applicable requirements, please refer to the Guidelines on Licensing and Conduct of Business for Fund Management Companies.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "You can find more information on exemptions under section 99 of the SFA and paragraph 5 of the Second Schedule to the Securities and Futures (Licensing and Conduct of Business) Regulations .",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If your company also intends to deal in capital markets products (e.g. to operate a central dealing desk for equities, fixed income and derivatives) for its related companies that is separate from its fund management mandates, it will need to apply to add to its CMS licence the regulated activity of dealing in capital markets products as below.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "Generally, you do not have to add dealing activity to your CMS licence if the activity is incidental to your fund management activity.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "All entities that are holding a CMS licence to conduct regulated fund management activities are listed on the Financial Institutions Directory. Fund managers that cease to be licensed will be removed from the directory.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "For more information on the common approvals, notifications and other regulatory submissions relevant to fund management companies, please refer to the Compliance Toolkit for Approvals, Notifications and Other Regulatory Submissions to MAS for Fund Managers.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Fund management track record and expertise of an LFMC applicant's management, parent company and major shareholders;\n\n• Fitness and propriety of the applicant, its shareholders and directors; and\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "If your company is able to operate under an existing class exemption, it does not require a licence. Examples of companies that may be eligible for exemption include those that:\n\n• Manage assets for related corporations or related family members;\n\n• Manage a pool of immovable assets for accredited and institutional investors; or\n\n• Manage a pool of non-capital markets products for accredited and institutional investors.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-mas-licensing-or-exemption-eligibility-for-portfolio-m_492e83b8016a",
+                      "documentHash": "492e83b8016a599588707d0f1fdf51c7776f8c048cf43e3c685d91eee35d88dc",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.610Z"
+                    },
+                    "issueIds": [
+                      "issue_79935cfd"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "An in-principle approval (IPA) is issued to successful applicants at the conclusion of our review process, and the applicant has up to 6 months to fulfil specified requirements for licensing. As soon as the applicant meets these requirements, MAS will grant the licence. MAS reserves the right to rescind the IPA if the applicant does not fulfil the requirements within the timeline, or if there are changes to the applicant’s business plan and/or key persons after IPA has been issued. At its discretion, MAS may extend the IPA by a further 3 months if there are strong reasons to do so.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "MAS also publishes a Licensing and Registration Report for Capital Markets Intermediaries (including fund management companies).",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  },
+                  {
+                    "text": "When we assess your company to be an LFMC or VCFM, MAS considers factors such as:\n\n• Credibility and substantiveness of the business model and plan, and the associated risks;\n\n• Effectiveness of risk management and compliance controls;\n\n• Ability to meet the relevant minimum financial requirements prescribed under the SFA.",
+                    "supportKind": "EXACT_SOURCE_QUOTE",
+                    "fetchedSourceBinding": {
+                      "recordId": "LIVE_TOPIC_iras-authority-query-issue-mas-facts-needed-to-assess-mas-licensing-position_a199d81481eb",
+                      "documentHash": "a199d81481ebd0928c6418681831e77c5925c7f8f34d1e095f03823ead08a088",
+                      "canonicalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+                      "retrievedAt": "2026-11-10T05:21:45.613Z"
+                    },
+                    "issueIds": [
+                      "issue_c73d276a"
+                    ],
+                    "provenance": "LIVE_EXTERNAL"
+                  }
+                ]
+              }
+            ],
+            "gaps": [
+              "MAS licensing or exemption eligibility for portfolio management: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.",
+              "facts needed to assess MAS licensing position: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable."
+            ]
+          }
+        ],
+        "gaps": [
+          "Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+          "MAS licensing: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.",
+          "regulatory exemptions: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.",
+          "MAS licensing or exemption eligibility for portfolio management: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.",
+          "facts needed to assess MAS licensing position: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.",
+          "MAS licensing or exemption eligibility for portfolio management: No reviewed topic was resolved for this issue",
+          "facts needed to assess MAS licensing position: No reviewed topic was resolved for this issue"
+        ]
+      },
+      "officialAnswerLinks": [
+        {
+          "title": "MAS: Fund Management Licensing",
+          "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"
+        }
+      ]
+    },
+    "displayFullAnswer": true,
+    "answerPath": "AI_GROUNDED_SYNTHESIS",
+    "synthesisVerification": {
+      "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+      "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+      "semanticVerificationCalls": 1,
+      "providerCalls": 2,
+      "providerAttempts": 2,
+      "providerElapsedMs": 8657,
+      "admittedClaimIds": [
+        "c1",
+        "c2",
+        "c3",
+        "c5"
+      ],
+      "withheldClaimIds": [
+        "c4"
+      ],
+      "claims": [
+        {
+          "claimId": "c1",
+          "kind": "RULE",
+          "outcome": "ADMITTED",
+          "admittedPassageIds": [
+            "passage-1"
+          ],
+          "semanticSupport": "SUPPORTED"
+        },
+        {
+          "claimId": "c2",
+          "kind": "RULE",
+          "outcome": "ADMITTED",
+          "admittedPassageIds": [
+            "passage-2"
+          ]
+        },
+        {
+          "claimId": "c3",
+          "kind": "RULE",
+          "outcome": "ADMITTED",
+          "admittedPassageIds": [
+            "passage-12"
+          ],
+          "semanticSupport": "SUPPORTED"
+        },
+        {
+          "claimId": "c5",
+          "kind": "APPLICATION",
+          "outcome": "ADMITTED",
+          "admittedPassageIds": [
+            "passage-1",
+            "passage-11",
+            "passage-12"
+          ],
+          "semanticSupport": "SUPPORTED"
+        },
+        {
+          "claimId": "c4",
+          "kind": "RULE",
+          "outcome": "WITHHELD",
+          "admittedPassageIds": []
+        }
+      ]
+    }
+  },
+  "noJournalCheck": {
+    "journalRequested": false,
+    "directGroupCount": 0,
+    "projectedGroupCount": 0,
+    "committedGroupCount": 0,
+    "noJournalProduced": true
+  },
+  "durationMs": 12061,
+  "completedAt": "2026-11-10T05:21:54.875Z",
+  "modelRequestCount": 3,
+  "sourceCount": 4
+}

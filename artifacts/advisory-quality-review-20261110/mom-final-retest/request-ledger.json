@@ -1,0 +1,16 @@
+{
+  "approvedTotal": 87,
+  "usedBeforeAttempt": 84,
+  "maximumThisAttempt": 3,
+  "status": "PROVIDER_STOP",
+  "scope": "Fresh understanding, official-source retrieval, generation and selective support verification.",
+  "requestsThisAttempt": 2,
+  "usedTotal": 86,
+  "remaining": 1,
+  "sourceRevision": {
+    "head": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+    "uncommittedSourcePatchSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+    "dirty": true,
+    "untrackedSourceFiles": []
+  }
+}

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "maintained-lint",
+    "exitCode": 0,
+    "elapsedSeconds": 0.14
+  },
+  {
+    "name": "vite-build",
+    "exitCode": 0,
+    "elapsedSeconds": 2.69
+  },
+  {
+    "name": "worker-build",
+    "exitCode": 0,
+    "elapsedSeconds": 0.75
+  }
+]

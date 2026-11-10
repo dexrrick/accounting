@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "status": "FOCUSED_CHECKS_PASS",
+  "repository": {
+    "path": "[LOCAL_REPOSITORY]",
+    "head": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+    "branch": "codex/project-charter-simplification-20261103",
+    "dirtyBeforeTask": true,
+    "note": "Preserved all pre-existing uncommitted work; this task changed only the two assigned production files and two assigned regression files."
+  },
+  "momPromptProfile": {
+    "mode": "CAPTURED_MOM_DUMMY_PROVIDER_NO_NETWORK",
+    "capture": "[LOCAL_WORKSPACE]\\advisory-quality-fixes-20261110\\paced-replay\\answers\\mom-salary-overtime.json",
+    "realProviderCalls": 0,
+    "realNetworkCalls": 0,
+    "passageCount": 103,
+    "bindingCount": 7,
+    "quoteDictionaryPresent": false,
+    "allExactQuotesInline": true,
+    "promptChars": 35886,
+    "generationSystemChars": 3370,
+    "promptTokenEstimate": 9003,
+    "generationSystemTokenEstimate": 843,
+    "totalTokenEstimate": 9846,
+    "budget": 15000,
+    "result": "PASS_WITHIN_BUDGET"
+  },
+  "old137Profile": {
+    "rawPacketAvailable": false,
+    "reprofiledWithInlineQuoteEncoding": false,
+    "savedSummaryPath": "[LOCAL_WORKSPACE]\\advisory-quality-fixes-20261110\\prompt-compaction-profile.json",
+    "savedSummary": {
+      "passageIds": 137,
+      "uniqueBindingRecords": 10,
+      "uniqueExactQuotes": 78,
+      "expandedChars": 125327,
+      "expandedTokensIncludingSystem": 32209,
+      "priorCompactChars": 35309,
+      "priorCompactTokensIncludingSystem": 9695,
+      "budget": 15000
+    },
+    "qualification": "The saved 137-passage summary predates this inline-quote encoding and is not a comparable current metadata-only profile."
+  },
+  "checks": [
+    {
+      "name": "evidence-grounded synthesis regression",
+      "command": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\tsx\\dist\\cli.mjs' tests/regression/test_evidence_grounded_synthesis.mjs",
+      "exitCode": 0,
+      "result": "PASS"
+    },
+    {
+      "name": "statutory source discovery regression",
+      "command": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\tsx\\dist\\cli.mjs' tests/regression/test_statutory_source_discovery.mjs",
+      "exitCode": 0,
+      "result": "PASS",
+      "coverage": "Captured MOM practical-payroll-steps / EMPLOYER / EXPLAIN_RULE / mapped-empty frame admits Paying salary as a candidate; a wrong page at that URL is rejected."
+    },
+    {
+      "name": "TypeScript build",
+      "command": "$env:NODE_OPTIONS='--require=[LOCAL_REPOSITORY]/.tmp/canonical-node22/userinfo-shim.cjs --import=file:///[LOCAL_REPOSITORY]/.tmp/canonical-node22/external-fetch-guard.mjs'; & '[LOCAL_REPOSITORY]\\.tmp\\canonical-node22\\node.exe' '[LOCAL_REPOSITORY]\\node_modules\\typescript\\bin\\tsc' --build --pretty false",
+      "exitCode": 0,
+      "result": "PASS",
+      "note": "Run with write escalation because tsc updates node_modules/.tmp incremental metadata."
+    },
+    {
+      "name": "targeted diff check",
+      "command": "git diff --check -- src/services/evidenceGroundedSynthesis.ts src/retrieval/practicalStatutoryExpansion.ts tests/regression/test_evidence_grounded_synthesis.mjs tests/regression/test_statutory_source_discovery.mjs",
+      "exitCode": 0,
+      "result": "PASS",
+      "note": "Git emitted only configured LF-to-CRLF working-tree notices."
+    }
+  ],
+  "independentReview": {
+    "status": "PASS_NO_MATERIAL_FINDINGS",
+    "scope": "Four assigned files; read-only review"
+  },
+  "environmentNote": "Initial Node invocations without inherited NODE_OPTIONS failed before product code with uv_os_get_passwd ENOMEM. Retrying with the retained userinfo shim and external-fetch guard succeeded."
+}

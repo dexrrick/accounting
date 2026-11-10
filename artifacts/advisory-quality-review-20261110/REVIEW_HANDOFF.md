@@ -1,5 +1,3 @@
-> Publication scope: code and this handoff only. Captured responses, source traces, validation reports/logs and the prepared evidence manifest remain local while exact-payload publication approval is pending. Local results below are reported results, not GitHub CI evidence.
-
 # Advisory routing and evidence synthesis review handoff
 
 ## Goal and status
@@ -16,9 +14,9 @@ Review the changes addressing the accepted eight-question diagnostic: negated jo
 - Base commit: `bef2cffbadbc8f4d7264a73b20f97b83dbecda78`
 - [Implementation diff](https://github.com/dexrrick/accounting/compare/bef2cffbadbc8f4d7264a73b20f97b83dbecda78...7e4f80ddf0b0fc30ad930c6ba385cd58a8ba3fb2)
 - Source-only pre-commit patch SHA-256: `abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e` (a diff hash, not a commit).
-- No pull request was created. A subsequent documentation commit publishes this handoff with identical implementation files. The publication commit SHA is supplied in the chat handoff.
+- No pull request was created. A subsequent evidence/documentation commit publishes this handoff with identical implementation files. The publication commit SHA is supplied in the chat handoff.
 
-The selected implementation consists of 31 tracked files under `src`, `tests` and `scripts`. Unrelated local artifacts and environment files are excluded. Prepared local evidence is listed in publication-manifest.json (`local-only: publication-manifest.json`); its original/published hashes distinguish sanitized artifacts from original local captures. JSON operator paths are replaced with placeholders. The diagnostic scripts retain their Windows operator paths and require adaptation on another machine.
+The selected implementation consists of 31 tracked files under `src`, `tests` and `scripts`. Unrelated local artifacts and environment files are excluded. Public evidence is listed in [publication-manifest.json](publication-manifest.json); its original/published hashes distinguish sanitized artifacts from original local captures. JSON operator paths are replaced with placeholders. The diagnostic scripts retain their Windows operator paths and require adaptation on another machine.
 
 ## Changes and purpose
 
@@ -45,7 +43,7 @@ Canonical local commands use Node 22.23.3. Windows runs inherited a retained `us
 
 ## Live findings and request ledger
 
-The ten retained local captures comprise the latest completed response for each fixed question plus the two final provider-failed MOM attempts. The case manifest (`local-only: latest-acceptance-summary.json`) identifies each capture's actual source diff hash. They are not a fresh eight-case sample at one revision.
+The ten published captures comprise the latest completed response for each fixed question plus the two final provider-failed MOM attempts. The [case manifest](latest-acceptance-summary.json) identifies each capture's actual source diff hash. They are not a fresh eight-case sample at one revision.
 
 | Case | Last completed assessment | Remaining concern |
 |---|---|---|
@@ -58,9 +56,9 @@ The ten retained local captures comprise the latest completed response for each 
 | MAS fund management | PARTIAL | Conditional licensing/exemption guidance appears, followed by a contradictory unresolved-facts notice. |
 | Mixed first employee | FAIL | MOM duties appear; CPF duties/comparison/facts coverage remains incomplete. |
 
-The last completed MOM replay (`local-only: mom-inline-retest/mom-salary-overtime.json`) made two HTTP-200 model requests and 16 source requests, then rendered governed fallback excerpts because both generated claims mixed issue scopes. Offline reproduction (`local-only: mom-inline-retest/offline-diagnosis.json`) confirms no support-verification call occurred: no generated claim survived deterministic checks.
+The [last completed MOM replay](mom-inline-retest/mom-salary-overtime.json) made two HTTP-200 model requests and 16 source requests, then rendered governed fallback excerpts because both generated claims mixed issue scopes. [Offline reproduction](mom-inline-retest/offline-diagnosis.json) confirms no support-verification call occurred: no generated claim survived deterministic checks.
 
-After the reviewed inline-issue correction, a retained-understanding attempt (`local-only: mom-cached-plan-retest/mom-salary-overtime.json`) received 503 at generation. After more than 120 seconds of backoff and explicit user approval of 87 total requests, the fresh attempt (`local-only: mom-final-retest/mom-salary-overtime.json`) received understanding HTTP 200 and generation HTTP 503. No 429 occurred in these three attempts. Earlier retained batches did include a 429 and separate 503 failures.
+After the reviewed inline-issue correction, a [retained-understanding attempt](mom-cached-plan-retest/mom-salary-overtime.json) received 503 at generation. After more than 120 seconds of backoff and explicit user approval of 87 total requests, the [fresh attempt](mom-final-retest/mom-salary-overtime.json) received understanding HTTP 200 and generation HTTP 503. No 429 occurred in these three attempts. Earlier retained batches did include a 429 and separate 503 failures.
 
 **86/87 real Gemini HTTP requests used; one remains approved.** Do not run additional live calls as part of this read-only review. The supplied dashboard limits were 15 RPM, 250,000 TPM and 500 RPD; its seven-day peak display does not establish the current remaining daily quota. Latest attempts preserved zero direct, projected and committed journal groups. This does not establish complete statutory correctness or faithful qualifications.
 
@@ -76,12 +74,12 @@ After the reviewed inline-issue correction, a retained-understanding attempt (`l
 
 ## Evidence
 
-- Publication manifest and hashes (`local-only: publication-manifest.json`)
-- Eight-case manifest and grades (`local-only: latest-acceptance-summary.json`), exact questions (`local-only: cases.json`)
-- Current local full-suite result (`local-only: review-publication/validation/full-result.json`), full log (`local-only: review-publication/validation/full.log`)
-- Final lint/build results (`local-only: mom-final-retest/validation/supervisor-checks.json`)
-- Focused test/type/profile report (`local-only: mom-inline-retest/validation/builder-issue-inline-checks.json`), actual final packet profile (`local-only: mom-inline-retest/issue-inline-offline-diagnosis.json`)
-- Live summary (`local-only: mom-final-retest/live-report.json`) and individual captures linked above
+- [Publication manifest and hashes](publication-manifest.json)
+- [Eight-case manifest and grades](latest-acceptance-summary.json), [exact questions](cases.json)
+- [Current local full-suite result](review-publication/validation/full-result.json), [full log](review-publication/validation/full.log)
+- [Final lint/build results](mom-final-retest/validation/supervisor-checks.json)
+- [Focused test/type/profile report](mom-inline-retest/validation/builder-issue-inline-checks.json), [actual final packet profile](mom-inline-retest/issue-inline-offline-diagnosis.json)
+- [Live summary](mom-final-retest/live-report.json) and individual captures linked above
 - [Original accepted diagnostic at the base commit](https://github.com/dexrrick/accounting/tree/bef2cffbadbc8f4d7264a73b20f97b83dbecda78/artifacts/answer-quality-20261108)
 
 The local working tree contains unrelated untracked artifacts not published here. They are outside this review target. No implementation file selected for this handoff remains local-only once the push is verified.
