@@ -1,0 +1,246 @@
+{
+  "reviewedProductHead": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+  "branch": "codex/project-charter-simplification-20261103",
+  "historicalTotals": {
+    "PASS": 2,
+    "PARTIAL": 4,
+    "FAIL": 2
+  },
+  "historicalStatutoryTotals": {
+    "PASS": 0,
+    "PARTIAL": 4,
+    "FAIL": 2
+  },
+  "historicalGradesAreNotCurrentAcceptance": true,
+  "currentRevisionSuccessfulAcceptanceCases": 0,
+  "crossCuttingAcceptance": {
+    "qualifications": "UNVERIFIED",
+    "materialMissingFacts": "UNVERIFIED",
+    "sameRevisionContextualFollowup": "NOT_RUN"
+  },
+  "offlineFullSuite": {
+    "file": "../phase2-acceptance-prep-20261111/full.log",
+    "passes": 189,
+    "finalPass": true,
+    "results": {
+      "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+      "requestedCommand": "npm test",
+      "execution": "Exact preflight and full-runner equivalent; npm executable unavailable",
+      "node": "22.23.3",
+      "offlineExternalFetchGuard": true,
+      "liveProviderCalls": 0,
+      "steps": [
+        {
+          "name": "preflight",
+          "arguments": [
+            "scripts/preflight.mjs"
+          ],
+          "exitCode": 0,
+          "startedUTC": "2026-11-11T12:50:34.7218355Z",
+          "elapsedSeconds": 0.76
+        },
+        {
+          "name": "full",
+          "arguments": [
+            "scripts/run_all_tests.mjs",
+            "--tier=full"
+          ],
+          "exitCode": 0,
+          "startedUTC": "2026-11-11T12:50:35.5216703Z",
+          "elapsedSeconds": 323.64
+        }
+      ]
+    }
+  },
+  "newlyExecutedChecks": {
+    "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+    "node": "22.23.3",
+    "externalFetchBlocked": true,
+    "liveProviderCalls": 0,
+    "steps": [
+      {
+        "name": "preflight",
+        "arguments": [
+          "scripts/preflight.mjs"
+        ],
+        "exitCode": 0,
+        "startedUTC": "2026-11-11T13:04:37.1043789Z",
+        "elapsedSeconds": 0.08
+      },
+      {
+        "name": "maintained-lint",
+        "arguments": [
+          "node_modules/oxlint/bin/oxlint",
+          "src",
+          "scripts",
+          "tests",
+          "vite.config.ts",
+          "tailwind.config.js",
+          "postcss.config.js"
+        ],
+        "exitCode": 0,
+        "startedUTC": "2026-11-11T13:04:37.2074838Z",
+        "elapsedSeconds": 1.16
+      },
+      {
+        "name": "typecheck",
+        "arguments": [
+          "node_modules/typescript/bin/tsc",
+          "-b"
+        ],
+        "exitCode": 0,
+        "startedUTC": "2026-11-11T13:04:38.3714192Z",
+        "elapsedSeconds": 9.31
+      },
+      {
+        "name": "vite-build",
+        "arguments": [
+          "node_modules/vite/bin/vite.js",
+          "build"
+        ],
+        "exitCode": 0,
+        "startedUTC": "2026-11-11T13:04:47.6811724Z",
+        "elapsedSeconds": 13.01
+      },
+      {
+        "name": "worker-build",
+        "arguments": [
+          "scripts/build_cloudflare_worker.mjs"
+        ],
+        "exitCode": 0,
+        "startedUTC": "2026-11-11T13:05:00.6976128Z",
+        "elapsedSeconds": 0.8
+      }
+    ]
+  },
+  "liveProviderCallsThisReview": 0,
+  "newProductCodeChanges": 0,
+  "proposedFutureProviderAttemptCap": 24,
+  "proposedPerCaseCap": 4,
+  "currentlyAuthorisedFutureProviderCalls": 0,
+  "merge": "HOLD",
+  "deployment": "HOLD",
+  "sourceActivation": "HOLD",
+  "cases": [
+    {
+      "id": "accounting-accrual",
+      "historical": {
+        "grade": "PASS",
+        "sourcePatchSha256": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/answers/accounting-accrual.json",
+        "note": "Practical timing, liability and asset caveat covered."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "accounting-asset-register",
+      "historical": {
+        "grade": "PASS",
+        "sourcePatchSha256": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/answers/accounting-asset-register.json",
+        "note": "Register/ledger/cost/reconciliation meaningfully explained."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "iras-private-car",
+      "historical": {
+        "grade": "PARTIAL",
+        "sourcePatchSha256": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/answers/iras-private-car.json",
+        "note": "Central restriction supported; exceptions/application wording incomplete."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "cpf-employer-responsibility",
+      "historical": {
+        "grade": "PARTIAL",
+        "sourcePatchSha256": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/answers/cpf-employer-responsibility.json",
+        "note": "Remittance responsibility covered; requested payroll checklist still incomplete."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "mom-salary-overtime",
+      "historical": {
+        "grade": "FAIL",
+        "sourcePatchSha256": "2496686a06fcd0ade7102b2005bdf5090cdce1f1fd8ff352abd2b4b05fdb5b5c",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/mom-inline-retest/mom-salary-overtime.json",
+        "note": "FAIL: both generated claims mixed issue scopes; deterministic checks rejected both; fallback official excerpts rendered."
+      },
+      "currentRevision": {
+        "grade": "INCONCLUSIVE",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+        "trackedSourceDirty": false,
+        "captureStatus": "COMPLETED",
+        "modelAttemptsRecorded": 3,
+        "reason": "Two HTTP200 model responses followed by support-call AbortError after harness pacing; fallback is not acceptance."
+      }
+    },
+    {
+      "id": "acra-sole-director-secretary",
+      "historical": {
+        "grade": "PARTIAL",
+        "sourcePatchSha256": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/answers/acra-sole-director-secretary.json",
+        "note": "Core prohibition and six-month rule survive; supported application withheld and stock applicability wording contradicts answer."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "mas-fund-management-startup",
+      "historical": {
+        "grade": "PARTIAL",
+        "sourcePatchSha256": "324bcdede47a6fd851f18db02ed24c93a0a008e4a31356900c7de7648af84783",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/paced-replay/answers/mas-fund-management-startup.json",
+        "note": "Licensing/exemptions/fact categories now visible, followed by contradictory unsupported-facts notice."
+      },
+      "currentRevision": {
+        "grade": "NOT_RUN",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9"
+      }
+    },
+    {
+      "id": "mixed-first-employee",
+      "historical": {
+        "grade": "FAIL",
+        "sourcePatchSha256": "324bcdede47a6fd851f18db02ed24c93a0a008e4a31356900c7de7648af84783",
+        "baseHead": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+        "capture": "https://github.com/dexrrick/accounting/blob/d1f9be1f46c780acfb01591f0f527e87cbd133a9/artifacts/advisory-quality-review-20261110/paced-replay/answers/mixed-first-employee.json",
+        "note": "MOM duties visible; CPF contribution/registration and comparative/facts guidance withheld."
+      },
+      "currentRevision": {
+        "grade": "INCONCLUSIVE",
+        "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+        "trackedSourceDirty": false,
+        "captureStatus": "PROVIDER_STOP",
+        "modelAttemptsRecorded": 1,
+        "reason": "Understanding HTTP503; no successful current end-to-end answer."
+      }
+    }
+  ]
+}

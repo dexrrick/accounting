@@ -1,0 +1,11 @@
+[
+  {
+    "id": "mom-contextual-followup",
+    "authorities": [
+      "MOM"
+    ],
+    "parentCaseId": "mom-salary-overtime",
+    "question": "Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.",
+    "reviewFocus": "Uses the preceding salary/overtime question and actual captured answer, respects the changed coverage fact, separates salary from overtime and leaves material contract facts unresolved."
+  }
+]

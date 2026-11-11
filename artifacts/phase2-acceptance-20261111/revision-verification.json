@@ -1,0 +1,41 @@
+{
+  "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+  "branch": "codex/project-charter-simplification-20261103",
+  "trackedStatus": "",
+  "priorFullSuite": {
+    "file": "../phase2-acceptance-prep-20261111/full.log",
+    "passes": 189,
+    "finalPass": true,
+    "results": {
+      "head": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+      "requestedCommand": "npm test",
+      "execution": "Exact preflight and full-runner equivalent; npm executable unavailable",
+      "node": "22.23.3",
+      "offlineExternalFetchGuard": true,
+      "liveProviderCalls": 0,
+      "steps": [
+        {
+          "name": "preflight",
+          "arguments": [
+            "scripts/preflight.mjs"
+          ],
+          "exitCode": 0,
+          "startedUTC": "2026-11-11T12:50:34.7218355Z",
+          "elapsedSeconds": 0.76
+        },
+        {
+          "name": "full",
+          "arguments": [
+            "scripts/run_all_tests.mjs",
+            "--tier=full"
+          ],
+          "exitCode": 0,
+          "startedUTC": "2026-11-11T12:50:35.5216703Z",
+          "elapsedSeconds": 323.64
+        }
+      ]
+    }
+  },
+  "historicalCaptureCount": 8,
+  "currentRevisionSuccessfulAcceptanceCases": 0
+}

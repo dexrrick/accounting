@@ -1,0 +1,31 @@
+{
+  "scope": "Acceptance harness only; no product code changes",
+  "runtime": "Node 22.23.3",
+  "builderChecks": {
+    "runnerSyntax": "PASS",
+    "testSyntax": "PASS",
+    "offlineBehavior": { "tests": 1, "passed": 1, "failed": 0 },
+    "powershellAstParse": "PASS",
+    "unauthorisedRunnerSmoke": { "result": "PASS", "expectedExitCode": 2, "providerRequests": 0, "captureCreated": false },
+    "readOnlyGitPreflight": "PASS",
+    "originalEightCasesByteIdentical": true,
+    "supplementalFollowupByteIdentical": true
+  },
+  "independentReviewerChecks": {
+    "offlineBehavior": "PASS",
+    "powershellAstParse": "PASS",
+    "readOnlyGitPreflight": "PASS",
+    "allFourFindingsFixed": true,
+    "remainingMaterialFindings": 0
+  },
+  "regressionEvidence": [
+    "Historical unguarded wait dispatches after application expiry; actual shared wait guard dispatches zero times",
+    "Expired queued acquisition releases reservation and leaves later acquisition usable",
+    "Concurrent reservations enforce the per-case cap",
+    "Recorded cap, pacing, provider and revision failures cannot remain COMPLETED",
+    "Parent case identity, question, source revision, stop state and journal result must match",
+    "Dirty, changed, untracked or missing revision metadata is rejected"
+  ],
+  "limitation": "Unit checks do not simulate the entire 5100ms interval or real provider/source transport; unchanged pacing arithmetic was inspected.",
+  "liveProviderCalls": 0
+}
