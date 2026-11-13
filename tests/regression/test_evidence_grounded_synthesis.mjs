@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { estimateAdvisoryTokens } from '../../src/services/aiFirstAdvisory.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
@@ -136,7 +137,7 @@ const supportedRule = quote;
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow input tax/);
   assert.match(result.messageText, /\[IRAS:/, 'the inline citation comes from the verified record, not generated text');
   assert.equal(result.officialAnswerLinks[0]?.url, record.canonicalSourceUrl);
-  assert.match(result.messageText, /general rule is supported above; whether input tax recovery applies to your circumstances remains unresolved/i);
+  assert.match(result.messageText, /general rule is supported above; for input tax recovery, a supported case-specific application was not established/i);
   assert.match(result.messageText, /purchase purpose was not provided/i);
   assert.equal(result.verification.claimValidation, 'DETERMINISTIC_PACKET_CHECKS');
   assert.equal(result.verification.sourceAdmission, 'EXISTING_PIPELINE_ADMITTED');
@@ -146,7 +147,7 @@ const supportedRule = quote;
   assert.ok(result.verification.providerElapsedMs >= 0);
   const generationPacket = packetFrom(scripted.calls[0].prompt);
   assert.equal(createHash('sha256').update(scripted.calls[0].prompt).digest('hex'),
-    'c7fc9c7c1693e8d8379e73eb6c61230f6e41306dc81f4012c0947b41602218e8',
+    '310e53eb0e634b29e1262475444ded7a9098e98983bc29fa80cab0c13e60c048',
     'An under-budget prompt retains the original byte serialization.');
   assert.equal(scripted.calls[0].prompt.includes('bindingRef'), false,
     'An under-budget prompt keeps its original expanded passage format.');
@@ -156,9 +157,127 @@ const supportedRule = quote;
   assert.equal(generationPacket.historyContext.turns[1].text,
     'Earlier guidance: the extent of business use is relevant to input tax treatment.',
     'the synthesis receives the previous assistant full answer as contextual history');
+  assert.deepEqual(generationPacket.facts.find(fact => fact.origin === 'PRIOR_USER_STATEMENT'), {
+    id: 'fact-history-1', origin: 'PRIOR_USER_STATEMENT', text: 'The office expense is used partly for business.'
+  }, 'only the selected prior user statement becomes a separately labeled citeable fact');
+  assert.doesNotMatch(JSON.stringify(generationPacket.facts), /Earlier guidance:/,
+    'assistant answer text remains context and is never promoted into a fact');
   assert.equal(generationPacket.historyContext.turns.filter(turn => turn.role === 'user' && turn.text === query).length, 0,
     'the current question is passed separately and is not duplicated in conversation history');
   assert.ok(!scripted.calls[0].prompt.includes(record.sourceText.slice(quote.length)), 'unrelated source body text is not duplicated into the prompt');
+}
+
+{
+  const priorCoverageStatement = 'Our employee is covered by the Employment Act and overtime provisions.';
+  const currentQuery = 'For this separate situation, the employee is not covered by the Employment Act or overtime provisions. Do the same deadlines apply?';
+  let supportPacket;
+  const scripted = scriptedCall(({ prompt, system }) => {
+    const packet = packetFrom(prompt);
+    assert.match(system, /the current question takes precedence/i);
+    return { claims: [
+      claim('supported-rule', supportedRule),
+      claim('stale-history-application', 'Because the employee is covered by the Employment Act and overtime provisions, the deadlines differ.', ['passage-1'], {
+        kind: 'APPLICATION', factRefs: ['fact-history-1'], issueId: 'issue-gst'
+      })
+    ] };
+  }, ({ prompt, system }) => {
+    supportPacket = packetFrom(prompt);
+    assert.match(system, /current-question facts take precedence/i);
+    assert.equal(supportPacket.factContext.currentQuestion.text, currentQuery);
+    assert.deepEqual(supportPacket.factContext.priorUserStatements.map(fact => fact.text), [priorCoverageStatement]);
+    assert.equal(supportPacket.claims[0].citedFacts[0].origin, 'PRIOR_USER_STATEMENT');
+    return { verdicts: [{ claimId: 'stale-history-application', support: 'UNSUPPORTED', claimType: 'CONDITIONAL_APPLICATION' }] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: currentQuery,
+    history: [
+      { id: 'prior-coverage', sender: 'user', timestamp: '', text: priorCoverageStatement },
+      { id: 'prior-assistant-coverage', sender: 'assistant', timestamp: '', text: 'The employee is covered.', fullText: 'The employee is covered.' }
+    ]
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(result.messageText.includes(supportedRule));
+  assert.doesNotMatch(result.messageText, /Because the employee is covered by the Employment Act/,
+    'a support verifier can withhold an application that relies on user history contradicted by the current question');
+  assert.equal(result.verification.claims.find(item => item.claimId === 'stale-history-application')?.semanticSupport, 'UNSUPPORTED');
+}
+
+{
+  const motorCarExceptionExcerpt = `A “motor car” is defined as a motor car which is constructed or adapted for the carriage of not more than 7 passengers exclusive of the driver and the weight of which unladen does not exceed 3,000 kilograms but does not include —
+
+(a) a motor car registered before 1st April 1998 as a business service passenger vehicle for the purposes of the Road Traffic Act (Cap. 276);
+
+(b) a taxi;
+
+(c) a motor car registered as a private car (school transport);
+
+(d) an unused motor car which has not been previously registered under the Road Traffic Act supplied or imported for the purpose of being let on hire or sold;
+
+(e) a motor car supplied to a financial institution for the purposes of making a supply of that motor car by the financial institution under a hire purchase contract;
+
+(f) a motor car supplied to or imported by a taxable person for the purposes of being let on hire or sold by that taxable person who is a dealer of motor cars;
+
+(g) a used motor car supplied or imported for the purpose of being let on hire; and
+
+(h) a motor car used for instructional purposes for reward and registered under paragraph 9(1) of the Second Schedule to the Road Traffic (Motor Vehicles, Registration and Licensing) Rules (R 5) by a person who holds a driving school licence issued under the Road Traffic Act.`;
+  const motorCarSource = makeCapturedOfficialSource({
+    id: 'IRAS_MOTOR_VEHICLES_TEST_SOURCE', authority: 'IRAS', title: 'Motor Vehicles Expenses',
+    url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses',
+    quote: motorCarExceptionExcerpt
+  });
+  motorCarSource.authorityName = 'Inland Revenue Authority of Singapore (IRAS)';
+  motorCarSource.sourcePublisher = 'Inland Revenue Authority of Singapore (IRAS)';
+  motorCarSource.sourceAuthority = 'IRAS';
+  motorCarSource.domain = 'IRAS_GST';
+  const motorCarIssue = {
+    ...makeIssue('issue-motor-car-exceptions', {
+      subject: 'specific exclusions from the definition of a motor car', applicationStatus: 'NOT_REQUIRED', withSource: false
+    }),
+    domain: 'IRAS_GST', operation: 'EXPLAIN_RULE', evidenceRequirement: 'AUTHORITATIVE_SOURCE',
+    governingAuthority: 'IRAS', evidenceStatus: 'VERIFIED', gaps: [], sources: [motorCarSource],
+    verifiedClaims: [{
+      recordId: motorCarSource.id, quote: motorCarExceptionExcerpt, text: motorCarExceptionExcerpt,
+      supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: motorCarSource.canonicalSourceUrl,
+      sourceAdmissionOptions: { targetDate: '2026-11-03' }
+    }]
+  };
+  let supportPacket;
+  const scripted = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const passageId = packet.requestedIssues[0].admittedPassageIds[0];
+    assert.equal(packet.evidencePassages.find(passage => passage.id === passageId).completeAdmittedPassage, motorCarExceptionExcerpt,
+      'generation receives the complete admitted list with item-specific conditions');
+    return { claims: [
+      claim('broad-dealer-exception', 'Any car sold by a dealer or supplied to a financial institution is excluded from the definition of a motor car.',
+        [passageId], { issueId: 'issue-motor-car-exceptions' }),
+      claim('qualified-motor-car-exceptions', 'The listed categories are conditional: an unused unregistered car must be supplied or imported to be let on hire or sold; a car supplied to a financial institution must be for that institution’s supply under a hire-purchase contract; and a car supplied to or imported by a taxable person must be for that dealer’s letting on hire or sale. A used car supplied or imported for letting on hire is listed separately.',
+        [passageId], { issueId: 'issue-motor-car-exceptions' })
+    ] };
+  }, ({ prompt, system }) => {
+    supportPacket = packetFrom(prompt);
+    assert.match(system, /transaction direction, qualifying purpose, time or registration limits/i);
+    assert.match(system, /cannot broaden a named exception/i);
+    const checks = supportPacket.claims;
+    assert.equal(checks.length, 2);
+    for (const check of checks) {
+      assert.equal(check.issue.admittedPassageIds[0], 'passage-1');
+      assert.equal(check.citedPassages[0].completeAdmittedPassage, motorCarExceptionExcerpt,
+        'the support check sees the full excerpt that carries each exception qualification');
+    }
+    return { verdicts: [
+      { claimId: 'broad-dealer-exception', support: 'UNSUPPORTED', claimType: 'RULE' },
+      { claimId: 'qualified-motor-car-exceptions', support: 'SUPPORTED', claimType: 'RULE' }
+    ] };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'Which specific categories are excluded from the definition of a motor car?', issues: [motorCarIssue],
+    evidenceQuality: { eligibleRecords: [], missingFacts: [], targetDate: '2026-11-03' }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(result.messageText.includes('The listed categories are conditional'));
+  assert.ok(!result.messageText.includes('Any car sold by a dealer or supplied to a financial institution'));
+  assert.equal(result.verification.claims.find(item => item.claimId === 'broad-dealer-exception')?.semanticSupport, 'UNSUPPORTED');
+  assert.equal(result.verification.claims.find(item => item.claimId === 'qualified-motor-car-exceptions')?.outcome, 'ADMITTED');
 }
 
 {
@@ -247,7 +366,6 @@ const supportedRule = quote;
     targetDate: sourceClaimValue.sourceAdmissionOptions.targetDate,
     supportKind: sourceClaimValue.supportKind,
     applicationStatus: issue.applicationStatus,
-    applicationReason: issue.applicationReason,
     completeAdmittedPassage: sourceClaimValue.quote
   })));
   assert.deepEqual(restoredPassages, expectedPassages,
@@ -469,7 +587,7 @@ const supportedRule = quote;
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow/);
   assert.match(result.messageText, /\[IRAS:/, 'the supported rule keeps its source citation');
   assert.match(result.messageText, /Some claims could not be established from the admitted evidence and stated facts/);
-  assert.match(result.messageText, /The general rule is supported above; whether input tax recovery applies to your circumstances remains unresolved on the facts available/);
+  assert.match(result.messageText, /The general rule is supported above; for input tax recovery, the issue-specific admitted evidence remains incomplete/);
   assert.doesNotMatch(result.messageText, /Verified evidence is still needed for|Issue plan|concept is not supported/i,
     'internal workstream diagnostics do not render as contradictory evidence gaps');
   assert.doesNotMatch(result.messageText, /A supported explanation of input tax recovery was not established/i,
@@ -735,12 +853,65 @@ const supportedRule = quote;
   });
   const result = await tryGenerateGroundedSynthesis(input, { call: scripted.call });
   assert.ok(result);
-  assert.match(result.messageText, /The general rule is supported above; whether input tax recovery eligibility applies to your circumstances remains unresolved/,
+  assert.match(result.messageText, /The general rule is supported above; for input tax recovery eligibility, a supported case-specific application was not established/,
     'a supported rule alone cannot answer a planned eligibility issue');
   assert.match(result.messageText, /available admitted evidence does not establish whether GST registration filing duty applies to your circumstances/,
     'an uncovered planned issue receives an explicit per-issue limitation');
   assert.match(scripted.calls[0].prompt, /planned-registration/,
     'planned issues without admitted passages remain visible to generation');
+}
+
+{
+  const evidenceReason = 'Verified quotations do not support the requested concept semantic_payment_deadline.';
+  const evidenceGap = {
+    issueId: 'issue-mom-deadline', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'ordinary salary and overtime deadlines', operation: 'COMPARE', stage: 'covered',
+    code: 'ISSUE_CONCEPT_UNCOVERED', reason: evidenceReason
+  };
+  const evidenceIssue = {
+    ...makeIssue('issue-mom-deadline', { subject: evidenceGap.subject, applicationStatus: 'UNRESOLVED', gaps: [evidenceGap] }),
+    domain: 'MOM_EMPLOYMENT', population: 'EMPLOYEE', governingAuthority: 'MOM',
+    operation: 'COMPARE', evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+  };
+  let evidencePacket;
+  const evidenceScript = scriptedCall(({ prompt }) => {
+    evidencePacket = packetFrom(prompt);
+    return { claims: [claim('mom-general-deadline-rule', supportedRule, ['passage-1'], { issueId: 'issue-mom-deadline' })] };
+  });
+  const evidenceResult = await tryGenerateGroundedSynthesis(makeInput({ issues: [evidenceIssue] }), { call: evidenceScript.call });
+  assert.ok(evidenceResult);
+  assert.deepEqual(evidencePacket.requestedIssues[0].factRequests, [],
+    'an uncovered evidence concept is not represented as a missing user fact');
+  assert.ok(evidencePacket.requestedIssues[0].evidenceGaps.some(gap => gap.includes(evidenceReason)),
+    'the actual issue-owned evidence gap remains available to generation');
+  assert.equal(evidencePacket.trustedDeterministicOutputs.find(output => output.kind === 'EVIDENCE_GAP').text.includes('stated facts'), false,
+    'an unresolved status marker does not claim that the facts are missing');
+  assert.match(evidenceResult.messageText, /issue-specific admitted evidence remains incomplete/);
+  assert.doesNotMatch(evidenceResult.messageText, /facts available|facts do not yet establish/i,
+    'the fallback identifies the evidence gap without inventing a factual gap');
+
+  const missingFact = 'The salary period is needed to determine the relevant payment dates.';
+  const factGap = { ...evidenceGap, code: 'MISSING_FACT', reason: missingFact };
+  const factIssue = { ...evidenceIssue, gaps: [factGap] };
+  let factPacket;
+  const factScript = scriptedCall(({ prompt }) => {
+    factPacket = packetFrom(prompt);
+    return { claims: [claim('mom-rule-with-fact-gap', supportedRule, ['passage-1'], { issueId: 'issue-mom-deadline' })] };
+  });
+  const factResult = await tryGenerateGroundedSynthesis(makeInput({
+    issues: [factIssue],
+    evidenceQuality: { eligibleRecords: [record], missingFacts: [], targetDate: '2026-11-03' }
+  }), { call: factScript.call });
+  assert.ok(factResult);
+  assert.deepEqual(factPacket.requestedIssues[0].factRequests, [missingFact],
+    'a genuine issue-owned MISSING_FACT gap is preserved as a fact request');
+  assert.deepEqual(factPacket.requestedIssues[0].evidenceGaps, [],
+    'the explicit missing fact is not mislabeled as an evidence gap');
+  const factStatus = factPacket.issueApplicationStatuses.find(status => status.issueId === 'issue-mom-deadline');
+  assert.deepEqual(factStatus.factRequests, [missingFact]);
+  assert.deepEqual(factStatus.evidenceGaps, [], 'the per-issue status view agrees that MISSING_FACT is not an evidence gap');
+  assert.match(factResult.messageText, /material issue-specific fact remains open; see the fact request below/);
+  assert.ok(factResult.messageText.includes(missingFact));
 }
 
 {
@@ -1024,6 +1195,28 @@ const supportedRule = quote;
   });
   await assert.rejects(tryGenerateGroundedSynthesis(makeInput({ issues }), { call: scripted.call }), /no supportable claims/);
   assert.equal(scripted.calls.length, 1, 'a claim cannot borrow an admitted quote from a different issue or date scope');
+}
+
+{
+  const alternateQuote = record.sourceText.match(/[^.!?]+[.!?]/g)?.[1]?.trim();
+  assert.ok(alternateQuote && alternateQuote !== quote, 'the second issue has its own distinct admitted source passage');
+  const issueOne = makeIssue('issue-cpf-responsibility');
+  const issueTwo = makeIssue('issue-cpf-rate-table');
+  issueTwo.verifiedClaims = [{ ...sourceClaim, quote: alternateQuote, text: alternateQuote,
+    sourceAdmissionOptions: { targetDate: '2026-11-03' } }];
+  let generationPacket;
+  const scripted = scriptedCall(({ prompt }) => {
+    generationPacket = packetFrom(prompt);
+    const issueOnePassage = generationPacket.evidencePassages.find(passage => passage.issueId === issueOne.issueId);
+    const issueTwoPassage = generationPacket.evidencePassages.find(passage => passage.issueId === issueTwo.issueId);
+    assert.deepEqual(generationPacket.requestedIssues.find(issue => issue.id === issueOne.issueId).admittedPassageIds, [issueOnePassage.id]);
+    assert.deepEqual(generationPacket.requestedIssues.find(issue => issue.id === issueTwo.issueId).admittedPassageIds, [issueTwoPassage.id]);
+    return { claims: [claim('mixed-cpf-issues', 'Combine the employer responsibility statement and the separate rate table.',
+      [issueOnePassage.id, issueTwoPassage.id], { issueId: issueTwo.issueId })] };
+  });
+  await assert.rejects(tryGenerateGroundedSynthesis(makeInput({ issues: [issueOne, issueTwo] }), { call: scripted.call }), /no supportable claims/);
+  assert.equal(scripted.calls.length, 1, 'an own-issue passage does not legitimize a claim that also cites a different issue passage');
+  assert.match(scripted.calls[0].system, /Do not combine passage IDs from separate issues/);
 }
 
 {
@@ -2104,6 +2297,92 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   }), { call: stale.call });
   assert.equal(result, undefined, 'a prior query’s document admission cannot augment the current packet');
   assert.equal(stale.calls.length, 0);
+}
+
+{
+  const captured = JSON.parse(readFileSync(new URL('../fixtures/statutory-answer-cpf-facts-20261113.json', import.meta.url), 'utf8'));
+  const relevantSourceBlocks = [
+    'As an employer, you’re required to pay CPF contributions',
+    'You need to pay total CPF contributions',
+    'Wages determine the amount of CPF contributions',
+    'CPF contributions are payable on wages.',
+    'The CPF contribution rate applicable depends',
+    'You need to have a CSN to submit CPF contributions.'
+  ].map(prefix => captured.record.sourceText.split(/\n\n+/).map(text => text.trim()).find(text => text.startsWith(prefix)));
+  assert.ok(relevantSourceBlocks.every(Boolean), 'the retained CPF capture contains the responsibility and payroll-detail excerpts');
+  const cpfSourceText = relevantSourceBlocks.join('\n\n');
+  const cpfSource = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_cpf_retained_checklist_test', authority: 'CPF', title: 'CPFB | Employer obligations',
+    url: captured.record.canonicalSourceUrl, domain: 'CPF_BOARD', topicId: 'cpf_contribution_rates', sourceText: cpfSourceText
+  });
+  const requestedPlans = captured.issuePlan.issues.filter(issue =>
+    issue.id === 'issue_77c1c9cd' || issue.id === captured.targetIssueId);
+  assert.equal(requestedPlans.length, 2, 'the retained CPF replay has distinct responsibility and payroll-detail issues');
+  const issues = requestedPlans.map(plan => {
+    const issue = makeCurrentAdmittedNarrativeIssue({
+      issueId: plan.id, authority: 'CPF', domain: 'CPF_PAYROLL', subject: plan.subject,
+      population: 'EMPLOYER', source: cpfSource, legacyQuote: undefined
+    });
+    issue.applicationStatus = 'NOT_REQUIRED';
+    return issue;
+  });
+  const issuePlan = { ...captured.issuePlan, issues: requestedPlans, coverageEstablished: true, hasUnmappedResidual: false };
+  const queryText = captured.query;
+  const input = makeInput({
+    query: queryText, issues, issuePlan,
+    evidenceQuality: { eligibleRecords: [], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  });
+  input.workstreams = {
+    query: queryText, issuePlan, requestCompletenessContext: {},
+    workstreams: [{
+      id: 'cpf-retained-replay', authority: 'CPF', domain: 'CPF_PAYROLL', sourceSections: [],
+      populations: ['EMPLOYER'], issues, evidenceStatus: 'VERIFIED', applicationStatus: 'VERIFIED',
+      verifiedClaims: [], sources: [cpfSource], gaps: []
+    }],
+    evidenceStatus: 'VERIFIED', applicationStatus: 'VERIFIED', status: 'VERIFIED', gaps: []
+  };
+  const responsibilityIssueId = 'issue_77c1c9cd';
+  const checklistIssueId = captured.targetIssueId;
+  let generationPacket;
+  let supportPacket;
+  const scripted = scriptedCall(({ prompt }) => {
+    generationPacket = packetFrom(prompt);
+    const passageFor = (issueId, predicate) => {
+      const passage = generationPacket.evidencePassages.find(item => item.issueId === issueId && predicate(item.completeAdmittedPassage));
+      assert.ok(passage, `the retained CPF source provides an own-issue passage for ${issueId}`);
+      return passage;
+    };
+    const responsibility = passageFor(responsibilityIssueId, text => text.includes('You need to pay total CPF contributions'));
+    const ratesAndWages = passageFor(checklistIssueId, text => text.includes('The CPF contribution rate applicable depends'));
+    const wageDeclaration = passageFor(checklistIssueId, text => text.includes('Wages determine the amount of CPF contributions'));
+    const csn = passageFor(checklistIssueId, text => text.includes('You need to have a CSN'));
+    const ownedIds = generationPacket.requestedIssues.find(issue => issue.id === checklistIssueId).admittedPassageIds;
+    assert.ok([ratesAndWages, wageDeclaration, csn].every(passage => ownedIds.includes(passage.id)));
+    return { claims: [
+      claim('cpf-employer-responsibility', 'The employer pays total monthly CPF contributions, comprising both employer and employee shares, to the CPF Board for covered employees.',
+        [responsibility.id], { issueId: responsibilityIssueId }),
+      claim('cpf-payroll-checklist', 'Before calculating, confirm the employee’s citizenship or permanent-resident status, age, total wages, and which payments are Ordinary Wages or Additional Wages; declare accurate wage information and have the employer’s CSN for submission.',
+        [ratesAndWages.id, wageDeclaration.id, csn.id], { issueId: checklistIssueId })
+    ] };
+  }, ({ prompt }) => {
+    supportPacket = packetFrom(prompt);
+    const checklist = supportPacket.claims.find(item => item.claimId === 'cpf-payroll-checklist');
+    assert.ok(checklist);
+    assert.equal(checklist.issue.issueId, checklistIssueId);
+    assert.ok(checklist.citedPassages.length >= 3);
+    assert.ok(checklist.citedPassages.every(passage =>
+      passage.issueId === checklistIssueId && checklist.issue.admittedPassageIds.includes(passage.id)),
+    'the payroll checklist support packet contains only passages owned by its requested issue');
+    return { verdicts: supportPacket.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE' })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(input, { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /Before calculating, confirm the employee’s citizenship or permanent-resident status, age, total wages/);
+  assert.match(result.messageText, /Ordinary Wages or Additional Wages/);
+  assert.deepEqual(result.verification.withheldClaimIds, []);
+  assert.equal(result.verification.providerCalls, 2);
+  assert.ok(generationPacket.requestedIssues.find(issue => issue.id === checklistIssueId).admittedPassageIds.length >= 3);
+  assert.equal(supportPacket.claims.find(item => item.claimId === 'cpf-payroll-checklist').citedPassages.length, 3);
 }
 
 console.log('PASS: evidence-grounded synthesis admission, deterministic guards, scoped gaps, and provider diagnostics');

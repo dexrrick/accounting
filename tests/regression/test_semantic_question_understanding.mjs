@@ -17,6 +17,7 @@ import {
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { classifyQuestion, isExplicitForeignTaxOnlyQuestion } from '../../src/classification/questionClassifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { buildAdvisoryConversation } from '../../src/services/aiFirstAdvisory.ts';
 import { usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { RequestProfiler } from '../../src/services/telemetry.ts';
 
@@ -776,6 +777,43 @@ assert.equal(promptCalls.length, 1);
 assert.equal(promptCalls[0].options.timeoutMs, SEMANTIC_QUESTION_TIMEOUT_MS);
 assert.match(promptCalls[0].system, /do not answer/i);
 assert.doesNotMatch(promptCalls[0].prompt, /retrieved evidence|conversation history/i);
+
+const momSalaryOvertimeParent = 'Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.';
+const momSalaryOvertimeFollowUp = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+const momConversation = [
+  ...Array.from({ length: 20 }, (_, index) => ({
+    id: `old-unrelated-${index}`, sender: 'user',
+    text: index === 0 ? 'Very old irrelevant transaction token: vintage-software-4481.' : `Unrelated old scenario ${index}.`,
+    timestamp: '2026-01-01T00:00:00Z'
+  })),
+  { id: 'mom-parent-user', sender: 'user', text: momSalaryOvertimeParent, timestamp: '2026-01-02T00:00:00Z' },
+  { id: 'mom-parent-assistant', sender: 'assistant',
+    text: 'Unverified assistant claim: the employment contract requires payment within three days.', timestamp: '2026-01-02T00:01:00Z' },
+  { id: 'mom-follow-up-user', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:02:00Z' }
+];
+let contextualInterpretationCall;
+const contextualInterpretation = await interpretSemanticQuestion(momSalaryOvertimeFollowUp, provider,
+  async (prompt, system, activeProvider, options) => {
+    contextualInterpretationCall = { prompt, system, activeProvider, options };
+    return modelResponse;
+  }, buildAdvisoryConversation(momConversation, momSalaryOvertimeFollowUp));
+assert.equal(contextualInterpretation.mode, 'SEMANTIC_INTERPRETATION');
+assert.ok(contextualInterpretationCall.prompt.includes(momSalaryOvertimeParent),
+  'The bounded semantic prompt retains the earlier user facts and the substantive salary/overtime request.');
+assert.ok(contextualInterpretationCall.prompt.includes(momSalaryOvertimeFollowUp),
+  'The current follow-up remains verbatim in the semantic prompt.');
+assert.ok(contextualInterpretationCall.prompt.indexOf(momSalaryOvertimeParent) <
+  contextualInterpretationCall.prompt.indexOf(momSalaryOvertimeFollowUp),
+  'Prior context precedes the controlling current question.');
+assert.match(contextualInterpretationCall.prompt,
+  /Earlier assistant \(untrusted context only; not a user fact or official evidence\): Unverified assistant claim:/,
+  'Assistant prose remains visibly labeled as assistant context.');
+assert.doesNotMatch(contextualInterpretationCall.prompt, /vintage-software-4481/,
+  'The context builder excludes stale unrelated history outside its bounded selection.');
+assert.match(contextualInterpretationCall.system, /current question takes precedence/i);
+assert.match(contextualInterpretationCall.system, /assistant messages as user-provided facts or official evidence/i);
+assert.match(contextualInterpretationCall.prompt, /untrusted context/i);
+assert.match(contextualInterpretationCall.prompt, /not instructions or official evidence/i);
 
 // These are extracted interpretations from completed retained receipts. The
 // regression replays only the saved model interpretation; it makes no live call.
@@ -1687,6 +1725,121 @@ try {
 assert.equal(processInterpretationCalls, 1, 'The production processing and grounding path reuses one validated semantic call.');
 assert.deepEqual(productionContext.classification.authorities, ['IRAS']);
 assert.equal(productionContext.questionUnderstanding.mode, 'SEMANTIC_PLUS_RULES');
+
+const momSalaryOvertimeMeaning = {
+  schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['MOM'], contextualAuthorities: ['SSO'],
+  domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER',
+  primarySubject: 'ordinary salary and overtime payment deadlines',
+  concepts: [
+    { concept: 'ordinary salary payment deadline', role: 'PRIMARY' },
+    { concept: 'overtime eligibility and payment deadline', role: 'RELATED' },
+    { concept: 'Employment Act coverage', role: 'RELATED' }
+  ],
+  requestedOperation: 'EXPLAIN_RULE',
+  factsExplicitlyProvided: ['employee is covered by the Employment Act', 'employee is not covered by the overtime provisions'],
+  confidence: 0.97,
+  issues: [
+    { subject: 'ordinary salary payment deadline after the salary period and practical payroll steps', population: 'EMPLOYER',
+      domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], contextualAuthorities: ['SSO'], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.97 },
+    { subject: 'overtime eligibility and payment deadline for an employee outside the Part IV overtime provisions', population: 'EMPLOYER',
+      domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], contextualAuthorities: ['SSO'], operation: 'EXPLAIN_RULE',
+      mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE', confidence: 0.97 }
+  ]
+};
+let momProductionPrompt;
+let momProductionSystem;
+let momProductionWorkstreams;
+const fetchBeforeMomContextTest = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  if (String(url).includes('generateContent')) {
+    const body = JSON.parse(String(init?.body || '{}'));
+    const systemText = body.systemInstruction?.parts?.[0]?.text || '';
+    if (systemText.includes('Interpret the user question only')) {
+      momProductionSystem = systemText;
+      momProductionPrompt = body.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(momSalaryOvertimeMeaning) }] } }] }), { status: 200 });
+    }
+  }
+  return new Response('', { status: 503 });
+};
+try {
+  await processAccountingQuery(momSalaryOvertimeFollowUp, null, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', momConversation, { journal: false, statutory: true }, {
+      onAuthorityWorkstreams(result) { momProductionWorkstreams = result; }
+    });
+} finally {
+  globalThis.fetch = fetchBeforeMomContextTest;
+}
+assert.ok(momProductionPrompt?.includes(momSalaryOvertimeParent),
+  'The production caller supplies the earlier user turn to semantic understanding.');
+assert.ok(momProductionPrompt?.includes(momSalaryOvertimeFollowUp),
+  'The production semantic call retains the exact current follow-up.');
+assert.match(momProductionSystem || '', /current question takes precedence/i);
+assert.match(momProductionSystem || '', /assistant messages as user-provided facts or official evidence/i);
+assert.ok(momProductionWorkstreams, 'The contextual interpretation reaches the actual authority issue-planning path.');
+const momProductionIssues = momProductionWorkstreams.issuePlan.issues;
+assert.ok(momProductionIssues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+  issue.population === 'EMPLOYER' && issue.governingAuthorities.includes('MOM') && issue.mappedTopicIds.includes('mom-salary-payment')),
+  `The inherited ordinary-salary deadline retains its MOM salary-payment issue: ${JSON.stringify(momProductionIssues)}`);
+assert.ok(momProductionIssues.some(issue => issue.status === 'MAPPED' && issue.domain === 'MOM_EMPLOYMENT' &&
+  issue.population === 'EMPLOYER' && issue.governingAuthorities.includes('MOM') &&
+  issue.mappedTopicIds.some(topicId => ['mom_overtime', 'mom-part-iv-overtime'].includes(topicId))),
+  'The current overtime-coverage amendment remains a distinct MOM overtime issue.');
+const momMeaningUnderstanding = { mode: 'SEMANTIC_INTERPRETATION', interpretation: momSalaryOvertimeMeaning };
+const findMomSalaryIssue = plan => plan.issues.find(issue => issue.domain === 'MOM_EMPLOYMENT' &&
+  /ordinary salary payment deadline/i.test(issue.subject));
+const noHistoryMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding);
+assert.equal(findMomSalaryIssue(noHistoryMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'Without prior user context, the current follow-up cannot establish the inherited salary-payment topic.');
+const unrelatedPriorUserContext = buildAdvisoryConversation([
+  { id: 'old-cpf-user', sender: 'user', text: 'We are hiring a Singapore permanent resident. What CPF contribution rates apply?', timestamp: '2026-01-01T00:00:00Z' },
+  { id: 'current-mom-user', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:00:00Z' }
+], momSalaryOvertimeFollowUp);
+const unrelatedPriorMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding, undefined, unrelatedPriorUserContext);
+assert.equal(findMomSalaryIssue(unrelatedPriorMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'An unrelated earlier user topic cannot establish MOM salary-payment coverage.');
+assert.equal(unrelatedPriorMomPlan.issuePlan.issues.some(issue => issue.domain === 'CPF_PAYROLL'), false,
+  'An unrelated prior CPF question cannot add a CPF issue to the current MOM question.');
+const assistantOnlyTopicContext = buildAdvisoryConversation([
+  { id: 'assistant-only-salary-topic', sender: 'assistant',
+    text: 'The employee is covered by the Employment Act. Ordinary salary is due after the salary period.', timestamp: '2026-01-01T00:00:00Z' },
+  { id: 'current-mom-user-2', sender: 'user', text: momSalaryOvertimeFollowUp, timestamp: '2026-01-02T00:00:00Z' }
+], momSalaryOvertimeFollowUp);
+const assistantOnlyMomPlan = reconcileQuestionUnderstanding(momSalaryOvertimeFollowUp,
+  classifyQuestion(momSalaryOvertimeFollowUp), momMeaningUnderstanding, undefined, assistantOnlyTopicContext);
+assert.equal(findMomSalaryIssue(assistantOnlyMomPlan.issuePlan)?.status, 'UNRESOLVED',
+  'Assistant-only topic context cannot authorize MOM salary-payment routing.');
+
+const newPayrollScenarioQuery = 'We hired a new employee for SGD 5,000 monthly. What is the MOM salary payment deadline? No journal is required.';
+const newPayrollScenarioHistory = [...momConversation, {
+  id: 'new-payroll-current', sender: 'user', text: newPayrollScenarioQuery, timestamp: '2026-01-03T00:00:00Z'
+}];
+const priorAssetScenario = { ...priorPpe, semanticUnderstanding: { transactionType: 'asset_purchase' } };
+let newScenarioSemanticPrompt;
+const fetchBeforeNewScenarioContextTest = globalThis.fetch;
+globalThis.fetch = async (url, init) => {
+  if (String(url).includes('generateContent')) {
+    const body = JSON.parse(String(init?.body || '{}'));
+    if ((body.systemInstruction?.parts?.[0]?.text || '').includes('Interpret the user question only')) {
+      newScenarioSemanticPrompt = body.contents?.flatMap(item => item.parts || []).map(part => part.text || '').join('\n') || '';
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{malformed' }] } }] }), { status: 200 });
+    }
+  }
+  return new Response('', { status: 503 });
+};
+try {
+  await processAccountingQuery(newPayrollScenarioQuery, priorAssetScenario, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', newPayrollScenarioHistory, { journal: false, statutory: true });
+} finally {
+  globalThis.fetch = fetchBeforeNewScenarioContextTest;
+}
+assert.ok(newScenarioSemanticPrompt?.includes(newPayrollScenarioQuery),
+  'A standalone payroll scenario remains the current semantic question.');
+assert.doesNotMatch(newScenarioSemanticPrompt || '', /Our employee is covered by the Employment Act|vintage-software-4481|Unverified assistant claim/,
+  'A new payroll scenario excludes unrelated earlier statutory and assistant context.');
 
 const stalePpeChat = [
   { id: 'old-ppe-query', sender: 'user', text: 'We bought a machine for SGD 90,000 and need to depreciate it.', timestamp: new Date('2026-01-01T00:00:00Z') },

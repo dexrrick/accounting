@@ -65,12 +65,18 @@ for (const [index, example] of cases.entries()) {
       assert.equal(packet.claims[0].text, example.answer);
       assert.equal(packet.claims[0].citedPassages.length, 1);
       assert.equal(packet.claims[0].issue.applicationStatus, 'VERIFIED');
+      assert.deepEqual(packet.claims[0].issue.admittedPassageIds, [packet.claims[0].citedPassages[0].id],
+        'support verification receives the exact passage IDs admitted to this issue');
       return JSON.stringify({verdicts:[{claimId:`answer-${index}`,support:'SUPPORTED',claimType:'DEFINITIVE_APPLICATION'}]});
     }
     generationCount += 1;
     assert.match(system, /State verified conclusions confidently/);
     assert.match(system, /practical next steps/);
+    assert.match(system, /Handle every requested issue separately/);
     assert.equal(packet.requestedIssues[0].id, issueId);
+    assert.deepEqual(packet.requestedIssues[0].admittedPassageIds,
+      packet.evidencePassages.filter(passage => passage.issueId === issueId).map(passage => passage.id),
+      'generation receives each practical issue with only its own admitted support IDs');
     return JSON.stringify({claims:[{id:`answer-${index}`,kind:'APPLICATION',text:example.answer,
       supportIds:[packet.evidencePassages[0].id],factRefs:['fact-current-question'],issueId}]});
   }});

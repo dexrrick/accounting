@@ -50,7 +50,7 @@ import {
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
-import { classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
+import { buildAdvisoryConversation, classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
   isHighRiskStatutoryClaim } from './aiFirstAdvisory';
 import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
@@ -1087,7 +1087,12 @@ async function processAccountingQueryCore(
   }
   const questionUnderstandingStarted = performance.now();
   requestCompletenessContext = createRequestCompletenessContext(userInput);
-  const rawQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+  const semanticConversation = relevantChatHistory.length
+    ? buildAdvisoryConversation(relevantChatHistory, userInput)
+    : undefined;
+  const rawQuestionUnderstanding = await interpretSemanticQuestion(
+    userInput, providerOrApiKey, undefined, semanticConversation
+  );
   if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
     profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
   }
@@ -1096,7 +1101,7 @@ async function processAccountingQueryCore(
   const classificationStarted = performance.now();
   const deterministicClassification = classifyQuestion(userInput);
   const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(
-    userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext
+    userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext, semanticConversation
   );
   requestCompletenessContext = reconciledQuestionUnderstanding.requestCompletenessContext;
   const classification = reconciledQuestionUnderstanding.classification;

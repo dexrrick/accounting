@@ -1757,4 +1757,63 @@ assert.doesNotMatch(mixedResponse, /\bjournal\b/i);
 
 assert.deepEqual(metadataOnlyAdmissionFailures, [],
   `Metadata-only fetched pages must be rejected at workstream admission: ${JSON.stringify(metadataOnlyAdmissionFailures)}`);
+// Replay the first incorrect result in the live payroll-steps capture: the
+// current fetch validated Paying salary, but a second lexical gate demanded
+// that the source repeat the user's workflow label verbatim.
+const payrollStepsReplay = JSON.parse(await readFile(new URL('../fixtures/statutory-answer-payroll-steps-20261113.json', import.meta.url), 'utf8'));
+async function replayPayrollStepAdmission(mutate = () => {}, replay = payrollStepsReplay) {
+  const retained = structuredClone(replay);
+  mutate(retained);
+  const result = await buildAuthorityWorkstreams(retained.query, retained.issuePlan, {
+    referenceDate: retained.referenceDate,
+    questionUnderstanding: retained.understanding,
+    providers: { [retained.record.authority]: { authority: retained.record.authority, async retrieve(request) {
+      if (request.issue.id !== retained.targetIssueId) return { candidates: [] };
+      return { candidates: [retained.record], evidenceQualityTrace: retained.trace,
+        documentContexts: [retained.documentContext] };
+    } } }
+  });
+  return result.workstreams.flatMap(stream => stream.issues).find(issue => issue.issueId === retained.targetIssueId);
+}
+const payrollStepsAdmitted = await replayPayrollStepAdmission();
+assert.ok(payrollStepsAdmitted.admittedDocumentSources.some(record => record.id === payrollStepsReplay.record.id),
+  'A same-topic current official fetch retains the substantive payroll document even when it does not repeat practical payroll steps.');
+assert.ok(payrollStepsAdmitted.admittedDocumentContexts.some(context => context.sourceText === payrollStepsReplay.documentContext.sourceText),
+  'The complete same-fetch document and its qualifications stay attached to the issue.');
+assert.equal(payrollStepsAdmitted.admittedDocumentSources[0].lifecycleState, 'CANDIDATE', 'Admission does not activate a source.');
+assert.notEqual(payrollStepsAdmitted.evidenceStatus, 'VERIFIED', 'Document admission alone does not establish requested-issue completeness.');
+for (const mutate of [
+  retained => { retained.trace.attempts[0].contentMatched = false; },
+  retained => { retained.trace.attempts[0].topicId = 'unrelated-transient-topic'; },
+  retained => { retained.trace.selectedRecordIds = []; },
+  retained => { retained.record.sourceAuthority = 'CPF'; },
+  retained => { retained.record.domain = 'CPF_BOARD'; }
+]) {
+  const rejected = await replayPayrollStepAdmission(mutate);
+  assert.deepEqual(rejected.admittedDocumentSources || [], [],
+    'The relevance correction cannot bypass current-fetch, topic, authority or domain admission.');
+}
+const cpfFactCollectionReplay = JSON.parse(await readFile(new URL('../fixtures/statutory-answer-cpf-facts-20261113.json', import.meta.url), 'utf8'));
+const cpfFactCollectionPlan = reconcileQuestionUnderstanding(cpfFactCollectionReplay.query,
+  classifyQuestion(cpfFactCollectionReplay.query), cpfFactCollectionReplay.understanding).issuePlan;
+assert.ok(!cpfFactCollectionPlan.issues.some(issue => issue.mappedTopicIds.includes('cpf-contribution-due-dates')),
+  'Asking which pay details to collect does not request a CPF payment deadline.');
+for (const timingQuestion of ['What is the CPF payment deadline?', 'When to pay CPF contributions?',
+  'By which date must employers pay monthly CPF?', 'CPF contributions: what is the last day to pay?']) {
+  const timingPlan = reconcileQuestionUnderstanding(timingQuestion, classifyQuestion(timingQuestion),
+    { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' }).issuePlan;
+  assert.ok(timingPlan.issues.some(issue => issue.mappedTopicIds.includes('cpf-contribution-due-dates')),
+    'An actual payment-timing request retains its deadline evidence route.');
+}
+const cpfFactCollectionAdmitted = await replayPayrollStepAdmission(() => {}, cpfFactCollectionReplay);
+assert.ok(cpfFactCollectionAdmitted.admittedDocumentSources.some(record => record.id === cpfFactCollectionReplay.record.id),
+  'The fact-collection issue independently admits its own current CPF employer-obligations document rather than borrowing a responsibility-issue citation.');
+assert.ok(cpfFactCollectionAdmitted.admittedDocumentContexts.some(context => /age, and total wages/.test(context.sourceText)),
+  'The own-issue source retains the substantive factors needed for a payroll checklist.');
+const cpfSiblingFetchFirst = await replayPayrollStepAdmission(retained => {
+  const exactAttempt = retained.trace.attempts.find(attempt => attempt.topicId.startsWith('iras-authority-query-issue-cpf-'));
+  retained.trace.attempts.unshift({ ...exactAttempt, topicId: 'cpf_contribution_rates' });
+}, cpfFactCollectionReplay);
+assert.ok(cpfSiblingFetchFirst.admittedDocumentSources.some(record => record.id === cpfFactCollectionReplay.record.id),
+  'A prior successful sibling-topic fetch for the same URL cannot hide the exact transient-topic validation.');
 console.log('ACRA/CPF/MOM/MAS official discovery, workstream provenance, exact quotes and negative evidence guards: passed.');

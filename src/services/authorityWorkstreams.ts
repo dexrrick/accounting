@@ -2020,6 +2020,16 @@ function eligibleLocalRecords(
     if (!firstSharedFailure) {
       const substantiveSupport = passesBoundedStatutoryAdvisorySupport(record.sourceText, authority, issue, topics, originalQuery);
       for (const topic of topics) {
+        // Transient topics name the user's requested outcome, which need not
+        // occur verbatim in the official guidance (for example, workflow
+        // requests). Reuse the existing substantive title/body validation of
+        // this exact current fetch rather than imposing a second lexical
+        // interpretation. This admits a document, not an application or claim.
+        const validatedTransientFetch = topic.id.startsWith('iras-authority-query-issue-') &&
+          isValidatedLive && officialRetrievalTrace?.attempts.some(attempt =>
+            attempt.topicId === topic.id && attempt.fetchStatus === 'SUCCESS' &&
+            attempt.titleMatched && attempt.contentMatched && attempt.finalUrl === record.officialSourceUrl
+          ) === true;
         const ownedMasSource = authority === 'MAS' ? expectedMasVcfmExpansionSource({
           authority, topicId: topic.id, query: originalQuery, subject: issue.subject, sourceText: record.sourceText
         }) : undefined;
@@ -2031,9 +2041,9 @@ function eligibleLocalRecords(
           { predicate: 'textSupportsTopic', passed: supportPracticalExpansionRule({
             authority: authority, topicId: topic.id, query: originalQuery, subject: issue.subject,
             sourceText: record.sourceText, officialUrl: record.officialSourceUrl
-          }) === true || textSupportsTopic(record.sourceText, topic) },
+          }) === true || textSupportsTopic(record.sourceText, topic) || validatedTransientFetch },
           { predicate: 'boundedSubstantiveSupport', passed: substantiveSupport },
-          { predicate: 'issueSubjectSupport', passed: supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery) }
+          { predicate: 'issueSubjectSupport', passed: supportsIssueSubject(record.sourceText, issue, topic, concepts, originalQuery) || validatedTransientFetch }
         ];
         const topicFailure = topicPredicates.find(predicate => !predicate.passed)?.predicate;
         const topicAdmitted = topicFailure === undefined;
