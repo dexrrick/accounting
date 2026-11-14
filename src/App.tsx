@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type {
   AccountingStandard,
   AccountingScenarioState,
@@ -12,6 +12,7 @@ import { JournalTable } from './components/JournalTable';
 import { ComplianceRationale } from './components/ComplianceRationale';
 import { calculateDoubleEntries } from './engine/accountingEngine';
 import { processAccountingQuery, type OutputPreference } from './services/geminiService';
+import type { AnswerProgressStage } from './utils/answerProgress';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { WorkspaceEmptyState } from './components/WorkspaceEmptyState';
@@ -77,6 +78,8 @@ export const App: React.FC = () => {
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
+  const [answerProgress, setAnswerProgress] = useState<AnswerProgressStage | null>(null);
+  const progressRequestIdRef = useRef(0);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [appliedOutputPreference, setAppliedOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [pendingRelation, setPendingRelation] = useState<{ text: string; userMessage: ChatMessage } | null>(null);
@@ -91,7 +94,9 @@ export const App: React.FC = () => {
   ]);
 
   const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage, retryHistory?: ChatMessage[]) => {
+    const progressRequestId = ++progressRequestIdRef.current;
     setIsLoading(true);
+    setAnswerProgress('preparing');
     setAppliedOutputPreference(outputPreference);
     try {
       const response = await processAccountingQuery(
@@ -103,7 +108,12 @@ export const App: React.FC = () => {
         retryHistory || (messages.some(message => message.id === userMsg.id)
           ? [...messages.filter(message => message.id !== userMsg.id), userMsg]
           : [...messages, userMsg]),
-        outputPreference
+        outputPreference,
+        {
+          onProgress: stage => {
+            if (progressRequestId === progressRequestIdRef.current) setAnswerProgress(stage);
+          }
+        }
       );
 
       const answerState: AccountingScenarioState = {
@@ -136,7 +146,11 @@ export const App: React.FC = () => {
     } catch (err: any) {
       setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}` }]);
     } finally {
-      setIsLoading(false);
+      if (progressRequestId === progressRequestIdRef.current) {
+        setAnswerProgress(null);
+        setIsLoading(false);
+        progressRequestIdRef.current += 1;
+      }
     }
   };
 
@@ -230,6 +244,7 @@ export const App: React.FC = () => {
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
               isLoading={isLoading}
+              progressStage={answerProgress || 'preparing'}
               isAwaitingRelation={Boolean(pendingRelation)}
               outputPreference={outputPreference}
               onOutputPreferenceChange={setOutputPreference}

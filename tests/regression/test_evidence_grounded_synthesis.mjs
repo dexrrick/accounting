@@ -98,7 +98,7 @@ function scriptedCall(handler, verificationHandler) {
   const calls = [];
   const call = async (prompt, system, activeProvider, options) => {
     calls.push({ prompt, system, provider: activeProvider, options });
-    const context = { prompt, system, provider: activeProvider, index: calls.length };
+    const context = { prompt, system, provider: activeProvider, options, index: calls.length };
     const value = system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')
       ? verificationHandler ? await verificationHandler(context) : defaultVerification(prompt)
       : await handler(context);
@@ -145,6 +145,8 @@ const supportedRule = quote;
   assert.equal(result.verification.providerAttempts, 1);
   assert.equal(result.verification.admittedClaimIds[0], 'rule-1');
   assert.ok(result.verification.providerElapsedMs >= 0);
+  assert.equal(scripted.calls[0].options.onProgress, undefined,
+    'without an observer, generation receives no progress callback and stays buffered');
   const generationPacket = packetFrom(scripted.calls[0].prompt);
   assert.equal(createHash('sha256').update(scripted.calls[0].prompt).digest('hex'),
     '310e53eb0e634b29e1262475444ded7a9098e98983bc29fa80cab0c13e60c048',
@@ -165,6 +167,88 @@ const supportedRule = quote;
   assert.equal(generationPacket.historyContext.turns.filter(turn => turn.role === 'user' && turn.text === query).length, 0,
     'the current question is passed separately and is not duplicated in conversation history');
   assert.ok(!scripted.calls[0].prompt.includes(record.sourceText.slice(quote.length)), 'unrelated source body text is not duplicated into the prompt');
+}
+
+{
+  const exactRule = claim('progress-exact-rule', supportedRule);
+  const unsupportedLimitation = claim('progress-unsupported-limitation',
+    'Input GST on a blocked private motor car purchase is always recoverable.', ['passage-1'], {
+      kind: 'LIMITATION', issueId: 'issue-gst'
+    });
+  const observerEvents = [];
+  let resolveVerification;
+  let verificationStartedResolve;
+  const verificationGate = new Promise(resolve => { resolveVerification = resolve; });
+  const verificationStarted = new Promise(resolve => { verificationStartedResolve = resolve; });
+  let observerEventsAtVerificationStart;
+  const scripted = scriptedCall(({ options }) => {
+    assert.equal(typeof options?.onProgress, 'function', 'the generation call receives the optional progress callback');
+    options.onProgress('receiving');
+    return { claims: [exactRule, unsupportedLimitation] };
+  }, async ({ options, prompt }) => {
+    assert.equal(options?.onProgress, undefined, 'support verification does not receive generation progress callbacks');
+    const packet = packetFrom(prompt);
+    assert.deepEqual(packet.claims.map(item => item.claimId), [unsupportedLimitation.id],
+      'only the claim requiring semantic support enters the existing batched support check');
+    observerEventsAtVerificationStart = [...observerEvents];
+    verificationStartedResolve();
+    await verificationGate;
+    return { verdicts: [{ claimId: unsupportedLimitation.id, support: 'UNSUPPORTED', claimType: 'RULE' }] };
+  });
+  let resultSettled = false;
+  const resultPromise = tryGenerateGroundedSynthesis(makeInput(), {
+    call: scripted.call,
+    onProgress: stage => observerEvents.push(stage)
+  }).finally(() => { resultSettled = true; });
+  await verificationStarted;
+  assert.deepEqual(observerEventsAtVerificationStart, ['receiving', 'checking'],
+    'the generation checking stage is reported before claim validation and support verification');
+  assert.equal(resultSettled, false, 'the result remains pending while selected-claim support verification is pending');
+  assert.equal(scripted.calls.length, 2, 'the pending answer uses one generation call and one existing batched support call');
+  resolveVerification();
+  const result = await resultPromise;
+  assert.ok(result.messageText.includes(supportedRule), 'the supported source rule remains available');
+  assert.ok(!result.messageText.includes(unsupportedLimitation.text), 'the unsupported selected claim is withheld');
+  assert.ok(result.verification.withheldClaimIds.includes(unsupportedLimitation.id));
+  assert.equal(result.verification.providerCalls, 2, 'the progress observer adds no model call');
+  assert.deepEqual(scripted.calls.map(call => call.system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')), [false, true]);
+  assert.deepEqual(observerEventsAtVerificationStart, ['receiving', 'checking']);
+  assert.ok(observerEvents.length >= 2 && observerEvents.every(stage => stage === 'receiving' || stage === 'checking'),
+    'the observer receives only progress stages, never generated claim text');
+  assert.ok(!observerEvents.includes(supportedRule) && !observerEvents.includes(unsupportedLimitation.text));
+
+  const invalidResponseEvents = [];
+  const invalidResponse = scriptedCall(({ options }) => {
+    options.onProgress('receiving');
+    return '{"claims":[';
+  });
+  await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), {
+    call: invalidResponse.call,
+    onProgress: stage => invalidResponseEvents.push(stage)
+  }), /response contract/);
+  assert.deepEqual(invalidResponseEvents, ['receiving', 'checking'],
+    'checking is reported before the generated response contract is fully validated');
+  assert.equal(invalidResponse.calls.length, 1, 'response validation does not add a provider call');
+}
+
+{
+  for (const observerCase of [
+    { name: 'throwing', observer: () => { throw new Error('progress observer error'); } },
+    { name: 'rejecting', observer: () => Promise.reject(new Error('progress observer rejection')) }
+  ]) {
+    const scripted = scriptedCall(({ options }) => {
+      assert.equal(typeof options?.onProgress, 'function', `${observerCase.name} observer is forwarded to generation`);
+      options.onProgress('receiving');
+      return { claims: [claim(`observer-safe-${observerCase.name}`, supportedRule)] };
+    });
+    const result = await tryGenerateGroundedSynthesis(makeInput(), {
+      call: scripted.call,
+      onProgress: observerCase.observer
+    });
+    assert.ok(result.messageText.includes(supportedRule), `${observerCase.name} observer does not change the accepted result`);
+    assert.equal(scripted.calls.length, 1, `${observerCase.name} observer does not change provider call count`);
+    assert.equal(result.verification.providerCalls, 1);
+  }
 }
 
 {

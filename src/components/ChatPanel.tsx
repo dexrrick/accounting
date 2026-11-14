@@ -5,8 +5,9 @@ import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
 import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
 import { ImageAttachmentPreview } from './ImageAttachmentPreview';
-import { SafeChatAnswer } from './SafeChatAnswer';
+import { AnswerPresentation } from './AnswerPresentation';
 import { canRetryFailedAnswer } from '../services/conversationBoundary';
+import { ANSWER_PROGRESS_LABELS, type AnswerProgressStage } from '../utils/answerProgress';
 
 function advisoryFailureMessage(status: AdvisoryFailureStatus): string {
   const messages: Record<AdvisoryFailureStatus, string> = {
@@ -21,6 +22,10 @@ function advisoryFailureMessage(status: AdvisoryFailureStatus): string {
   return messages[status];
 }
 
+function isLegacyEvidenceCatalog(text: string): boolean {
+  return /^### Statutory Compliance & Legal Authority(?:\r?\n|$)/.test(text.trimStart());
+}
+
 interface ChatPanelProps {
   messages: ChatMessage[];
   onSendMessage: (text: string, images?: ChatImageAttachment[]) => void;
@@ -29,6 +34,7 @@ interface ChatPanelProps {
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
   isLoading: boolean;
+  progressStage: AnswerProgressStage;
   isAwaitingRelation: boolean;
   outputPreference: OutputPreference;
   onOutputPreferenceChange: (preference: OutputPreference) => void;
@@ -42,6 +48,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onSelectSuggestion,
   onResolveRelation,
   isLoading,
+  progressStage,
   isAwaitingRelation,
   outputPreference,
   onOutputPreferenceChange
@@ -185,9 +192,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   <span className="font-semibold">AI answer could not be completed.</span> {advisoryFailureMessage(msg.advisoryFailureStatus)} The available response is shown below.
                 </div>
               )}
-              {msg.displayFullAnswer
-                ? <div className="font-normal"><SafeChatAnswer text={msg.fullText || msg.text} trustedLinks={msg.scenarioSnapshot?.officialAnswerLinks || []} /></div>
-                : <div className="whitespace-pre-line font-normal">{msg.text}</div>}
+              {msg.sender === 'assistant' ? (
+                msg.displayFullAnswer ? (
+                  <AnswerPresentation
+                    text={msg.fullText || msg.text}
+                    scenario={msg.scenarioSnapshot}
+                    bodyDisclosureLabel={msg.advisoryFailureStatus && isLegacyEvidenceCatalog(msg.fullText || msg.text)
+                      ? 'Available source evidence' : undefined}
+                  />
+                ) : (
+                  <>
+                    <AnswerPresentation
+                      text={msg.text}
+                      scenario={msg.scenarioSnapshot}
+                      compact={Boolean(msg.fullText && msg.fullText.trim() !== msg.text.trim())}
+                    />
+                    {msg.fullText && msg.fullText.trim() !== msg.text.trim() && (
+                      <details className="mt-3 border-t border-workspace-border pt-3">
+                        <summary className="cursor-pointer rounded-md text-xs font-semibold text-workspace-accent-text underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                          Open full response and source evidence
+                        </summary>
+                        <div className="mt-3">
+                          <AnswerPresentation text={msg.fullText} scenario={msg.scenarioSnapshot} />
+                        </div>
+                      </details>
+                    )}
+                  </>
+                )
+              ) : (
+                <div className="whitespace-pre-line font-normal">{msg.text}</div>
+              )}
               {msg.advisoryRetryPayload && msg.advisoryFailureStatus !== 'CONTEXT_LIMIT' &&
                 canRetryFailedAnswer(messages, msg.advisoryRetryPayload.originalUserMessageId) && (
                 <button type="button" onClick={() => onRetryAiAnswer(msg.advisoryRetryPayload!.text, msg.advisoryRetryPayload!.scenarioSnapshot, msg.advisoryRetryPayload!.originalUserMessageId)} disabled={isLoading || isAwaitingRelation} className="mt-3 rounded-lg border border-workspace-accent px-3 py-1.5 text-[11px] font-semibold text-workspace-accent-text hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-blue-950/30">
@@ -275,11 +309,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <div className="w-8 h-8 rounded-xl bg-workspace-raised dark:bg-workspace-raised border border-slate-700/40 dark:border-workspace-border text-white flex items-center justify-center shrink-0">
               <Sparkles className="w-4 h-4 text-workspace-accent-text dark:text-workspace-accent-text" />
             </div>
-            <div className="bg-workspace-raised dark:bg-workspace-raised px-4 py-2.5 rounded-2xl rounded-bl-none text-slate-800 dark:text-workspace-secondary flex items-center gap-2 border border-workspace-border dark:border-workspace-border shadow-xs">
+            <div role="status" aria-live="polite" className="bg-workspace-raised dark:bg-workspace-raised px-4 py-2.5 rounded-2xl rounded-bl-none text-slate-800 dark:text-workspace-secondary flex items-center gap-2 border border-workspace-border dark:border-workspace-border shadow-xs">
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>
               <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]"></span>
-              <span className="text-[11px] font-medium ml-1">{messages.at(-1)?.images?.length ? 'Analysing screenshot and applying accounting treatment...' : 'Analyzing statutory citations under IRAS, ACRA & SFRS...'}</span>
+              <span className="text-[11px] font-medium ml-1">{ANSWER_PROGRESS_LABELS[progressStage]}</span>
             </div>
           </div>
         )}

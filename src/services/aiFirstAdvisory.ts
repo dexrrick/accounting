@@ -1,5 +1,6 @@
 import type { AccountingScenarioState, AccountingStandard, AdvisoryFailureStatus, ChatMessage, QueryDomain } from '../types/accounting';
 import type { ProviderSettings } from '../types/provider';
+import { notifyAnswerProgress, type AnswerProgressObserver } from '../utils/answerProgress';
 import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import { isAnswerGroundingEligibleSource } from '../retrieval/sourceRetriever';
@@ -479,6 +480,7 @@ export interface AiFirstAdvisoryDependencies {
   buildContext?: typeof buildGroundedReasoningContext;
   call?: typeof executeStructuredLlmCall;
   onGroundedContext?: (context: GroundedReasoningContext) => void;
+  onProgress?: AnswerProgressObserver;
 }
 
 export async function generateAiFirstAdvisory(
@@ -514,8 +516,10 @@ export async function generateAiFirstAdvisory(
     temperature: 0.2,
     model: typeof provider === 'object'
       ? provider.activeProvider === 'azure' ? provider.azure.deploymentName : provider.activeProvider === 'openai' ? provider.openai.model : provider.gemini.model
-      : undefined
+      : undefined,
+    ...(dependencies.onProgress ? { onProgress: stage => notifyAnswerProgress(dependencies.onProgress, stage) } : {})
   });
+  notifyAnswerProgress(dependencies.onProgress, 'checking');
   const answer = parseAdvisoryPayload(raw, selected.records);
   if (!answer) throw new Error('The AI returned an advisory answer that did not meet the response contract.');
   const baseScenario: AccountingScenarioState = scenario || {

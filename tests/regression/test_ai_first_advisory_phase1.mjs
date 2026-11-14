@@ -560,20 +560,26 @@ try {
   }).outputText;
   const stateSlots = [];
   let stateCursor = 0;
+  const refSlots = [];
+  let refCursor = 0;
   let nextTimestamp = 1;
   let chatProps;
   let inputProps;
+  let journalProps;
   const nextUserMessageIdTime = class extends Date { static now() { return nextTimestamp++; } };
   const chatPanelComponent = function ChatPanelStub() {};
   const inputPanelComponent = function InputHandlerPanelStub() {};
+  const journalTableComponent = function JournalTableStub() {};
   const components = new Map([
     ['./components/ChatPanel', { ChatPanel: chatPanelComponent }],
-    ['./components/InputHandlerPanel', { InputHandlerPanel: inputPanelComponent }]
+    ['./components/InputHandlerPanel', { InputHandlerPanel: inputPanelComponent }],
+    ['./components/JournalTable', { JournalTable: journalTableComponent }]
   ]);
   const fakeReact = {
     createElement(type, props, ...children) {
       if (type === chatPanelComponent) chatProps = props;
       if (type === inputPanelComponent) inputProps = props;
+      if (type === journalTableComponent) journalProps = props;
       return { type, props, children };
     },
     useState(initial) {
@@ -583,18 +589,26 @@ try {
         stateSlots[index] = typeof value === 'function' ? value(stateSlots[index]) : value;
       }];
     },
+    useRef(initial) {
+      const index = refCursor++;
+      if (!(index in refSlots)) refSlots[index] = { current: initial };
+      return refSlots[index];
+    },
     useEffect() {}
   };
-  const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useEffect: fakeReact.useEffect };
+  const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useRef: fakeReact.useRef, useEffect: fakeReact.useEffect };
   const appCalls = [];
+  const serviceResponses = [];
   const scenarioA = { scenarioType: 'EXPENSE', rawQuery: offlineQuestion, transactionTitle: 'Transaction A', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
   const scenarioB = { ...scenarioA, rawQuery: laterTransactionText, transactionTitle: 'Transaction B' };
   const serviceStub = {
-    processAccountingQuery: async (...args) => {
+    processAccountingQuery: (...args) => {
       appCalls.push(args);
+      const response = serviceResponses.shift();
+      if (response) return response(args);
       return appCalls.length === 1
-        ? { messageText: 'Offline answer for transaction A.', scenarioState: scenarioA, advisoryFailureStatus: 'NETWORK' }
-        : { messageText: 'Completed answer for transaction B.', scenarioState: scenarioB };
+        ? Promise.resolve({ messageText: 'Offline answer for transaction A.', scenarioState: scenarioA, advisoryFailureStatus: 'NETWORK' })
+        : Promise.resolve({ messageText: 'Completed answer for transaction B.', scenarioState: scenarioB });
     }
   };
   const boundarySource = await readFile(new URL('../../src/services/conversationBoundary.ts', import.meta.url), 'utf8');
@@ -609,7 +623,7 @@ try {
     './services/geminiService': serviceStub,
     './services/conversationBoundary': boundaryModule.exports,
     './types/provider': { loadProviderSettings: () => ({ activeProvider: 'openai', openai: {}, azure: {}, gemini: { model: 'test' } }), saveProviderSettings() {} },
-    './engine/accountingEngine': { calculateDoubleEntries: () => ({ groups: [] }) },
+    './engine/accountingEngine': { calculateDoubleEntries: scenario => ({ groups: scenario?.directGroups || [] }) },
     './utils/dateUtils': { getSingaporeTimestamp: () => '' },
     './utils/chatPresentation': { createChatPreview: text => text, extractOfficialAnswerLinks: () => [] },
     './utils/irasEvidencePresentation': { hasCurrentIrasEvidencePresentation: () => false },
@@ -617,6 +631,7 @@ try {
     './retrieval/regulatoryUpdateScheduler': { runDueRegulatoryChecks() {} },
     './components/ChatPanel': components.get('./components/ChatPanel'),
     './components/InputHandlerPanel': components.get('./components/InputHandlerPanel'),
+    './components/JournalTable': components.get('./components/JournalTable'),
     'lucide-react': componentStub
   };
   const appRequire = id => moduleStubs[id] || componentStub;
@@ -627,7 +642,15 @@ try {
     setInterval() { return 0; }, clearInterval() {}, console
   };
   vm.runInNewContext(appJavaScript, appContext);
-  const renderApp = () => { stateCursor = 0; appModule.exports.App(); return { chatProps, inputProps }; };
+  const renderApp = () => {
+    stateCursor = 0;
+    refCursor = 0;
+    chatProps = null;
+    inputProps = null;
+    journalProps = null;
+    appModule.exports.App();
+    return { chatProps, inputProps, journalProps };
+  };
   let appUi = renderApp();
   await appUi.chatProps.onSendMessage(offlineQuestion);
   appUi = renderApp();
@@ -635,14 +658,154 @@ try {
   assert.ok(failedTurn, 'App retains a retry action for transaction A while it is current');
   await appUi.chatProps.onSendMessage(`New question: ${laterTransactionText}`);
   appUi = renderApp();
+  assert.ok(appUi.inputProps, 'the accepted scenario renders its input panel');
   const messagesBeforeHistoricalRetry = appUi.chatProps.messages;
   const activeScenarioBeforeHistoricalRetry = appUi.inputProps.scenario;
   appUi.chatProps.onRetryAiAnswer(failedTurn.text, failedTurn.scenarioSnapshot, failedTurn.originalUserMessageId);
   appUi = renderApp();
   assert.equal(appCalls.length, 2, 'App refuses the historical retry before it can call the accounting service');
+  assert.ok(appUi.inputProps, 'the current scenario input panel remains rendered after the historical retry');
   assert.equal(appUi.inputProps.scenario.transactionTitle, 'Transaction B', 'the latest transaction remains the active accounting scenario');
   assert.strictEqual(appUi.inputProps.scenario, activeScenarioBeforeHistoricalRetry, 'the retry does not replace current scenario state');
   assert.strictEqual(appUi.chatProps.messages, messagesBeforeHistoricalRetry, 'the retry does not append a stale assistant answer');
+
+  const makeDeferred = () => {
+    let resolve;
+    let reject;
+    const promise = new Promise((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  };
+  const makeJournalScenario = (rawQuery, transactionTitle, account) => ({
+    ...scenarioB,
+    rawQuery,
+    transactionTitle,
+    directGroups: [{
+      id: `journal-${transactionTitle}`,
+      title: `${transactionTitle} journal`,
+      lines: [
+        { id: `debit-${transactionTitle}`, account, debit: 100, credit: 0 },
+        { id: `credit-${transactionTitle}`, account: 'Cash', debit: 0, credit: 100 }
+      ],
+      citations: []
+    }]
+  });
+  const progressQueryC = 'New question: progress fixture transaction C';
+  const progressQueryD = 'New question: progress fixture transaction D';
+  const progressFailureQuery = 'New question: progress fixture failure';
+  const answerC = 'Final answer for progress fixture transaction C.';
+  const scenarioC = makeJournalScenario(progressQueryC, 'Transaction C', 'Office supplies');
+  const scenarioD = makeJournalScenario(progressQueryD, 'Transaction D', 'Equipment');
+  const acceptedScenarioBeforeProgress = appUi.inputProps.scenario;
+  const acceptedFullTextsBeforeProgress = appUi.chatProps.messages
+    .filter(message => message.fullText !== undefined)
+    .map(message => message.fullText);
+  const responseC = makeDeferred();
+  let callbackC;
+  serviceResponses.push(args => {
+    callbackC = args[7]?.onProgress;
+    return responseC.promise;
+  });
+  const requestC = appUi.chatProps.onSendMessage(progressQueryC);
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, true, 'the active request exposes loading while the service is pending');
+  assert.equal(appUi.chatProps.progressStage, 'preparing', 'a pending request starts in the preparing state');
+  assert.equal(typeof callbackC, 'function', 'App passes a progress observer to the accounting service');
+  callbackC('receiving');
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.progressStage, 'receiving', 'progress updates the visible status while the answer is pending');
+  assert.ok(appUi.inputProps, 'the previously accepted scenario input panel remains rendered while pending');
+  assert.strictEqual(appUi.inputProps.scenario, acceptedScenarioBeforeProgress,
+    'the previously accepted scenario remains active while a new answer is pending');
+  assert.equal(appUi.inputProps.scenario.transactionTitle, 'Transaction B');
+  assert.equal(appUi.journalProps, null, 'no journal is published while the new service result is pending');
+  assert.equal(appUi.chatProps.messages.filter(message => message.id.startsWith('asst-') && message.fullText === undefined).length, 0,
+    'progress does not append a draft assistant message');
+  assert.deepEqual(appUi.chatProps.messages.filter(message => message.fullText !== undefined).map(message => message.fullText),
+    acceptedFullTextsBeforeProgress, 'progress does not add or replace full answer text in chat history');
+  assert.doesNotMatch(JSON.stringify({ messages: appUi.chatProps.messages, scenario: appUi.inputProps.scenario }),
+    /Final answer for progress fixture transaction C|Draft-only output|receiving|checking|preparing/i,
+    'progress status and unreturned answer text stay out of message and scenario state');
+
+  responseC.resolve({ messageText: answerC, scenarioState: scenarioC });
+  await requestC;
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, false, 'the accepted answer clears loading');
+  assert.equal(appUi.chatProps.progressStage, 'preparing', 'the accepted answer clears progress back to its idle display');
+  assert.ok(appUi.inputProps, 'the completed response renders its scenario input panel');
+  assert.ok(appUi.journalProps, 'the completed response renders its journal table');
+  assert.equal(appUi.inputProps.scenario.rawQuery, progressQueryC, 'the completed service result becomes the active scenario');
+  assert.deepEqual(appUi.journalProps.groups, scenarioC.directGroups, 'the result journal appears after the service result settles');
+  assert.equal(appUi.chatProps.messages.filter(message => message.fullText === answerC).length, 1,
+    'the completed answer is appended to chat history exactly once');
+  callbackC('receiving');
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.progressStage, 'preparing', 'a callback arriving after settlement is ignored');
+  assert.equal(appUi.chatProps.isLoading, false);
+
+  const responseD = makeDeferred();
+  let callbackD;
+  serviceResponses.push(args => {
+    callbackD = args[7]?.onProgress;
+    return responseD.promise;
+  });
+  const requestD = appUi.chatProps.onSendMessage(progressQueryD);
+  callbackD('checking');
+  callbackC('receiving');
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, true, 'the newer request remains active');
+  assert.equal(appUi.chatProps.progressStage, 'checking', 'an earlier request callback cannot overwrite the active request progress');
+  assert.ok(appUi.inputProps, 'the accepted scenario input panel remains rendered during the newer request');
+  assert.ok(appUi.journalProps, 'the previously accepted journal remains rendered during the newer request');
+  assert.strictEqual(appUi.inputProps.scenario.rawQuery, progressQueryC,
+    'a pending newer request retains the most recently accepted scenario');
+  assert.deepEqual(appUi.journalProps.groups, scenarioC.directGroups,
+    'a pending newer request retains the previously accepted journal');
+  responseD.resolve({ messageText: 'Final answer for progress fixture transaction D.', scenarioState: scenarioD });
+  await requestD;
+  appUi = renderApp();
+
+  assert.ok(appUi.inputProps, 'the completed newer request renders its accepted scenario panel');
+  assert.ok(appUi.journalProps, 'the completed newer request renders its journal table');
+  const acceptedScenarioBeforeFailure = appUi.inputProps.scenario;
+  const failedResponse = makeDeferred();
+  let failureCallback;
+  serviceResponses.push(args => {
+    failureCallback = args[7]?.onProgress;
+    return failedResponse.promise;
+  });
+  const failedRequest = appUi.chatProps.onSendMessage(progressFailureQuery);
+  failureCallback('receiving');
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.progressStage, 'receiving', 'a request that later fails still reports progress while pending');
+  assert.ok(appUi.inputProps, 'the latest accepted scenario input panel remains rendered during the failing request');
+  assert.ok(appUi.journalProps, 'the latest accepted journal remains rendered during the failing request');
+  assert.strictEqual(appUi.inputProps.scenario, acceptedScenarioBeforeFailure,
+    'the latest accepted scenario remains active while a later request is pending');
+  assert.deepEqual(appUi.journalProps.groups, acceptedScenarioBeforeFailure.directGroups,
+    'the latest accepted journal remains visible while a later request is pending');
+  failedResponse.reject(new Error('mock transport failure'));
+  await failedRequest;
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, false, 'a failed request clears loading');
+  assert.equal(appUi.chatProps.progressStage, 'preparing', 'a failed request clears progress');
+  assert.ok(appUi.inputProps, 'a failed request keeps the latest accepted scenario input panel rendered');
+  assert.ok(appUi.journalProps, 'a failed request keeps the latest accepted journal rendered');
+  assert.strictEqual(appUi.inputProps.scenario, acceptedScenarioBeforeFailure,
+    'a failed request preserves the latest accepted scenario');
+  assert.deepEqual(appUi.journalProps.groups, acceptedScenarioBeforeFailure.directGroups,
+    'a failed request preserves the latest accepted journal');
+  const processingError = appUi.chatProps.messages.find(message => message.text?.includes('Processing Error'));
+  assert.ok(processingError, 'the failed request exposes its processing error');
+  assert.equal(processingError.fullText, undefined, 'the failed request does not expose a draft as full answer text');
+  assert.doesNotMatch(JSON.stringify({ messages: appUi.chatProps.messages, scenario: appUi.inputProps.scenario }),
+    /Draft-only output for progress fixture failure|receiving|checking|preparing/i,
+    'the failed request exposes no generated draft or progress status in chat or scenario state');
+  failureCallback('receiving');
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.progressStage, 'preparing', 'a callback arriving after failure is ignored');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;

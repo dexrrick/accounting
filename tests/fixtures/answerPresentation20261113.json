@@ -1,0 +1,71 @@
+{
+  "fixtureNote": "Captured excerpts are retained UI samples only. Their hashes identify the originating files; they do not establish current legal correctness or evidence verification.",
+  "captures": [
+    {
+      "caseId": "mom-salary-overtime",
+      "origin": "review-corrections-20261113/acceptance-retry-01/answers/mom-salary-overtime.json",
+      "originalCaptureSha256": "f359152c0c413f08331c3a11b3ef51e43e2ed18ff5752cfe103162b1a8f909a3",
+      "captureStatus": "COMPLETED",
+      "capturedTextSha256": "ce4cf2404cc6f3d44ceae8168e709b1968dda9abeb035fb79c7c34c736b3ddc2",
+      "capturedText": "# Answer\n\nOrdinary salary and overtime do not have the same payment deadline"
+    },
+    {
+      "caseId": "mixed-first-employee",
+      "origin": "review-corrections-20261113/acceptance-remaining-04/answers/mixed-first-employee.json",
+      "originalCaptureSha256": "12c9019380ea32b9e1603ba507e8babd95835bba2a9c0d9f0ca5508d6f870a33",
+      "captureStatus": "COMPLETED",
+      "capturedTextSha256": "08fed981412edee183778f6905a16fe9ce92cc40e2e53782858116179a1f1f85",
+      "capturedText": "# Answer\n\nUnder the CPF Act, an employer is defined as any person, company, association, or body of persons"
+    },
+    {
+      "caseId": "mas-fund-management-startup",
+      "origin": "review-corrections-20261113/acceptance-remaining-03/answers/mas-fund-management-startup.json",
+      "originalCaptureSha256": "81a794b595c8e223fc80b4662f15635183fd6003c02ee2baba034770688ae636",
+      "captureStatus": "COMPLETED",
+      "failureStatus": "INVALID_RESPONSE",
+      "capturedTextSha256": "2f5faf237eab5cba3ef3ba5b5abc743b0fc71f42f1a7567749af70ae4c311746",
+      "capturedText": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues."
+    },
+    {
+      "caseId": "acra-sole-director-secretary",
+      "origin": "review-corrections-20261113/acceptance-remaining-05/answers/acra-sole-director-secretary.json",
+      "originalCaptureSha256": "0557390b56f4f121e4058c9efb154b88bd95a6ee452896d6ad5d382d3a5956c0",
+      "captureStatus": "INCONCLUSIVE_PROVIDER_FAILURE",
+      "failureStatus": "OTHER",
+      "capturedTextSha256": "ff14d8ce71d7adccc673f868cb93fbe1f58f2a64c87d035a2c6b6a6c069548b7",
+      "capturedText": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question."
+    }
+  ],
+  "syntheticStructuredAnswer": {
+    "text": "Opening context remains visible.\n\n### Practical steps\n1. Record the scope already supplied.\n3. Confirm any fact that could change the outcome.\n\n### Direct Answer\nThis is the existing direct response. It remains conditional if the stated condition is not met. **Keep that limitation visible.** [IRAS guidance](https://www.iras.gov.sg/taxes) [Unlisted source](https://attacker.example/source) [Unsafe scheme](http://www.mas.gov.sg/regulation) <img src=x onerror=alert(1)>\n\n### Explanation\nRetain the supporting detail and the source reference.\n\n| Item | Status |\n| --- | --- |\n| Scope | Provided |\n| Condition | To confirm |",
+    "links": [
+      { "title": "IRAS guidance", "url": "https://www.iras.gov.sg/taxes" },
+      { "title": "CPF guidance", "url": "https://www.cpf.gov.sg/employer/employer-obligations" },
+      { "title": "MOM guidance", "url": "https://www.mom.gov.sg/employment-practices" },
+      { "title": "ACRA guidance", "url": "https://www.acra.gov.sg/how-to-guides" },
+      { "title": "MAS guidance", "url": "https://www.mas.gov.sg/regulation" },
+      { "title": "IRAS duplicate", "url": "https://www.iras.gov.sg/taxes" },
+      { "title": "Unsafe scheme", "url": "http://www.mas.gov.sg/regulation" }
+    ]
+  },
+  "syntheticJournal": {
+    "functionalCurrency": "SGD",
+    "group": {
+      "id": "presentation-only",
+      "eventDate": "2026-01-02",
+      "title": "Presentation-only journal fixture",
+      "summary": "Synthetic UI amounts",
+      "assumedValue": "",
+      "basisOrRationale": "Synthetic fixture",
+      "materiality": "LOW",
+      "isBalanced": true,
+      "totalDebit": 1234.5,
+      "totalCredit": 1234.5,
+      "rationalePoints": ["Synthetic fixture; no accounting result is asserted."],
+      "lines": [
+        { "id": "debit", "accountCode": "1000", "accountName": "Cash", "category": "ASSET", "debit": 1234.5, "credit": 0, "lineExplanation": "Synthetic debit" },
+        { "id": "credit", "accountCode": "3000", "accountName": "Equity", "category": "EQUITY", "debit": 0, "credit": 1234.5, "lineExplanation": "Synthetic credit" }
+      ]
+    }
+  }
+}

@@ -53,6 +53,7 @@ import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, 
 import { buildAdvisoryConversation, classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
   isHighRiskStatutoryClaim } from './aiFirstAdvisory';
 import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
+import { notifyAnswerProgress, type AnswerProgressObserver } from '../utils/answerProgress';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
@@ -89,6 +90,7 @@ export interface OutputPreference {
 export interface AccountingQueryDiagnostics {
   onGroundedContext?: (context: GroundedReasoningContext) => void;
   onAuthorityWorkstreams?: (result: AuthorityWorkstreamsResult) => void;
+  onProgress?: AnswerProgressObserver;
 }
 
 /** AI may identify factual events only; strict normalization blocks journals and invented schema. */
@@ -488,7 +490,8 @@ export async function processAccountingQuery(
       onAuthorityWorkstreams: result => {
         authorityWorkstreams = result;
         diagnostics?.onAuthorityWorkstreams?.(result);
-      }
+      },
+      ...(diagnostics?.onProgress ? { onProgress: stage => notifyAnswerProgress(diagnostics.onProgress, stage) } : {})
     },
     history => { synthesisHistory = history; },
     scenario => { deterministicScenario = structuredClone(scenario); }
@@ -533,7 +536,9 @@ export async function processAccountingQuery(
     const synthesis = await tryGenerateGroundedSynthesis({
       query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
       response, context: groundedContext, workstreams: authorityWorkstreams
-    });
+    }, diagnostics?.onProgress
+      ? { onProgress: stage => notifyAnswerProgress(diagnostics.onProgress, stage) }
+      : {});
     if (!synthesis) {
       const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
       const responseContainsStatutoryClaim = hasUnverifiedStatutoryClaim(response, deterministicScenario);
@@ -998,7 +1003,12 @@ async function processAccountingQueryCore(
     try {
       const advisory = await generateAiFirstAdvisory(
         userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,
-        { onGroundedContext: context => diagnostics?.onGroundedContext?.(context) }
+        {
+          onGroundedContext: context => diagnostics?.onGroundedContext?.(context),
+          ...(diagnostics?.onProgress
+            ? { onProgress: stage => notifyAnswerProgress(diagnostics.onProgress, stage) }
+            : {})
+        }
       );
       profiler.setQueryMode('AI_FIRST_ADVISORY');
       profiler.recordFirstVisibleResponse();

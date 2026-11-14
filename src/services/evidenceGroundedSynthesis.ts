@@ -18,6 +18,7 @@ import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluat
 import { validateJournalGroups } from '../verification/journalIntegrity';
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import { executeStructuredLlmCall } from './aiTransport';
+import { notifyAnswerProgress, type AnswerProgressObserver } from '../utils/answerProgress';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { buildAdvisoryConversation, classifyAdvisoryFailure, estimateAdvisoryTokens, hasConfiguredProvider, normalizeAdvisoryText } from './aiFirstAdvisory';
 import type { AdvisoryConversation } from './aiFirstAdvisory';
@@ -75,6 +76,7 @@ export interface GroundedSynthesisResult {
 
 export interface GroundedSynthesisDependencies {
   call?: typeof executeStructuredLlmCall;
+  onProgress?: AnswerProgressObserver;
 }
 
 interface EvidencePassage {
@@ -1751,12 +1753,18 @@ async function callForJson(
   diagnostics.calls += 1;
   diagnostics.attempts += 1;
   try {
-    raw = await call(prompt, system, provider, { jsonMode: true, temperature: 0.2, model: providerModel(provider) });
+    raw = await call(prompt, system, provider, {
+      jsonMode: true, temperature: 0.2, model: providerModel(provider),
+      ...(stage === 'generation' && dependencies.onProgress
+        ? { onProgress: progressStage => notifyAnswerProgress(dependencies.onProgress, progressStage) }
+        : {})
+    });
   } catch (error) {
     throw providerSafeError(stage, error);
   } finally {
     diagnostics.elapsedMs += Math.max(0, Date.now() - startedAt);
   }
+  notifyAnswerProgress(dependencies.onProgress, 'checking');
   try {
     return parseJsonResponse(raw, stage);
   } catch {

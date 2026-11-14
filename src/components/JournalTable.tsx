@@ -3,6 +3,10 @@ import type { JournalEntryGroup, AccountingStandard, ExplicitAssumption } from '
 import { AlertOctagon, Calendar, BookOpen, Info, AlertTriangle, CheckCircle2, Cpu } from 'lucide-react';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
+function formatAmount(amount: number): string {
+  return amount.toLocaleString('en-SG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 interface JournalTableProps {
   groups: JournalEntryGroup[];
   standard: AccountingStandard;
@@ -49,6 +53,7 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                     <Calendar className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-workspace-muted" />
                     {formatSingaporeDate(group.eventDate)}
                   </span>
+                  <span className="font-medium">Amounts in {functionalCurrency}</span>
                   <span className="hidden xs:inline">•</span>
                   <span className="hidden xs:inline">{group.summary}</span>
                 </div>
@@ -129,14 +134,15 @@ export const JournalTable: React.FC<JournalTableProps> = ({
           {/* Journal Entries Table - Clean ledger styling with tabular-nums */}
           <div className="w-full overflow-x-auto">
             <table className="w-full text-left text-xs sm:text-sm border-collapse table-auto sm:table-fixed">
+              <caption className="sr-only">{group.title}; debit and credit amounts are in {functionalCurrency}.</caption>
               <thead>
                 <tr className="border-b border-workspace-border dark:border-workspace-border bg-workspace-raised/60 dark:bg-workspace-panel text-[10px] sm:text-xs font-semibold text-workspace-muted dark:text-workspace-muted uppercase tracking-wider">
-                  <th className="py-2.5 sm:py-3 px-2 sm:px-4">Account Title</th>
-                  <th className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right w-24 sm:w-32 md:w-36">
+                  <th scope="col" className="py-2.5 sm:py-3 px-2 sm:px-4">Account Title</th>
+                  <th scope="col" aria-label={`Debit in ${functionalCurrency}`} className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right w-24 sm:w-32 md:w-36">
                     <span className="sm:hidden">Dr</span>
                     <span className="hidden sm:inline">Debit ({functionalCurrency})</span>
                   </th>
-                  <th className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right w-24 sm:w-32 md:w-36">
+                  <th scope="col" aria-label={`Credit in ${functionalCurrency}`} className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right w-24 sm:w-32 md:w-36">
                     <span className="sm:hidden">Cr</span>
                     <span className="hidden sm:inline">Credit ({functionalCurrency})</span>
                   </th>
@@ -197,14 +203,14 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                       {/* Debit */}
                       <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-4 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white align-top text-xs sm:text-sm whitespace-nowrap">
                         {line.debit > 0
-                          ? line.debit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          ? formatAmount(line.debit)
                           : '-'}
                       </td>
 
                       {/* Credit */}
                       <td className="py-2.5 sm:py-3.5 px-1.5 sm:px-4 text-right font-mono tabular-nums font-bold text-slate-900 dark:text-white align-top text-xs sm:text-sm whitespace-nowrap">
                         {line.credit > 0
-                          ? line.credit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                          ? formatAmount(line.credit)
                           : '-'}
                       </td>
                     </tr>
@@ -217,10 +223,10 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                     Totals
                   </td>
                   <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono tabular-nums text-xs sm:text-sm text-slate-900 dark:text-white border-b-2 border-double border-slate-400 dark:border-slate-500 whitespace-nowrap">
-                    {group.totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatAmount(group.totalDebit)}
                   </td>
                   <td className="py-2.5 sm:py-3 px-1.5 sm:px-4 text-right font-mono tabular-nums text-xs sm:text-sm text-slate-900 dark:text-white border-b-2 border-double border-slate-400 dark:border-slate-500 whitespace-nowrap">
-                    {group.totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatAmount(group.totalCredit)}
                   </td>
                 </tr>
               </tbody>

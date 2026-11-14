@@ -8,7 +8,10 @@
  */
 
 import type { ProviderSettings } from '../types/provider';
+import { notifyAnswerProgress, type AnswerProgressObserver } from '../utils/answerProgress';
 import { fetchGemini } from './geminiProxyTransport';
+
+export type StructuredLlmProgressCallback = AnswerProgressObserver;
 
 export const MAX_STRUCTURED_LLM_INPUT_CHARS = 100_000;
 const MAX_GEMINI_ERROR_BODY_BYTES = 8_192;
@@ -160,6 +163,8 @@ export interface StructuredLlmOptions {
   captureTransportAttemptDiagnostics?: TransportAttemptDiagnostic[];
   /** Optional, redacted diagnostics for failed Gemini HTTP requests. Callback failures are ignored. */
   onGeminiErrorDiagnostic?: GeminiProviderDiagnosticCallback;
+  /** Opts Gemini into SSE transport; emits only a non-content receiving stage. */
+  onProgress?: StructuredLlmProgressCallback;
 }
 
 /**
@@ -307,7 +312,7 @@ async function executeStructuredLlmCallOnce(
     if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       const apiKey = providerOrApiKey.trim();
       const model = options.model || 'gemini-3.5-flash-lite';
-      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic);
+      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic, options.onProgress);
     }
 
     // 2. Structured ProviderSettings
@@ -320,7 +325,7 @@ async function executeStructuredLlmCallOnce(
           throw new Error('Gemini API key is not configured or too short.');
         }
         const model = options.model || providerOrApiKey.gemini?.model || 'gemini-3.5-flash-lite';
-        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic);
+        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic, options.onProgress);
       }
 
       if (active === 'azure') {
@@ -478,9 +483,11 @@ async function callGeminiDirect(
   temperature: number = 0.1,
   jsonMode: boolean = true,
   responseJsonSchema?: Readonly<Record<string, unknown>>,
-  onGeminiDiagnostic?: GeminiProviderDiagnosticCallback
+  onGeminiDiagnostic?: GeminiProviderDiagnosticCallback,
+  onProgress?: StructuredLlmProgressCallback
 ): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const method = onProgress ? 'streamGenerateContent?alt=sse' : 'generateContent';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${method}`;
 
   const requestBody: any = {
     contents: [
@@ -522,12 +529,139 @@ async function callGeminiDirect(
     throw toSafeProviderError('Gemini API', res.status);
   }
 
+  if (onProgress && /(?:^|\s|;)text\/event-stream(?:\s|;|$)/i.test(res.headers.get('content-type') || '')) {
+    return readGeminiEventStream(res, signal, onProgress);
+  }
+
   const data = await res.json();
+  if (onProgress) notifyAnswerProgress(onProgress, 'receiving');
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) {
     throw new Error('Empty response from Gemini API');
   }
   return text;
+}
+
+async function readGeminiEventStream(
+  response: Response,
+  signal: AbortSignal,
+  onProgress: StructuredLlmProgressCallback
+): Promise<string> {
+  if (!response.body) throw new Error('Gemini returned an unreadable streamed response.');
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const cancelOnAbort = () => { void reader.cancel().catch(() => undefined); };
+  const textParts: string[] = [];
+  let lineBuffer = '';
+  let eventData: string[] = [];
+  let sawStop = false;
+  let sawDone = false;
+  let emittedReceiving = false;
+  const notifyReceiving = () => {
+    if (emittedReceiving) return;
+    emittedReceiving = true;
+    notifyAnswerProgress(onProgress, 'receiving');
+  };
+
+  const dispatchEvent = () => {
+    if (eventData.length === 0) return;
+    const payload = eventData.join('\n');
+    eventData = [];
+    if (payload === '[DONE]') {
+      if (!sawStop) throw new Error('Gemini streamed response did not finish successfully.');
+      sawDone = true;
+      return;
+    }
+    if (sawDone) throw new Error('Gemini streamed response contained data after its terminal frame.');
+
+    let frame: any;
+    try {
+      frame = JSON.parse(payload);
+    } catch {
+      throw new Error('Gemini returned a malformed streamed response.');
+    }
+    if (!frame || typeof frame !== 'object' || frame.error) {
+      throw new Error('Gemini returned an incomplete streamed response.');
+    }
+    if (!Object.prototype.hasOwnProperty.call(frame, 'candidates')) {
+      const metadataKeys = ['usageMetadata', 'modelVersion', 'responseId'];
+      if (Object.keys(frame).length === 0 || Object.keys(frame).some(key => !metadataKeys.includes(key))) {
+        throw new Error('Gemini returned an incomplete streamed response.');
+      }
+      return;
+    }
+    if (!Array.isArray(frame.candidates) || !frame.candidates[0]) {
+      throw new Error('Gemini returned an incomplete streamed response.');
+    }
+    if (sawStop) throw new Error('Gemini streamed response contained content after its terminal candidate.');
+
+    const candidate = frame.candidates[0];
+    if (candidate.finishReason !== undefined && candidate.finishReason !== null && candidate.finishReason !== 'STOP') {
+      throw new Error('Gemini did not finish the structured response.');
+    }
+    const parts = candidate.content?.parts;
+    if (parts !== undefined && !Array.isArray(parts)) {
+      throw new Error('Gemini returned a malformed streamed response.');
+    }
+    for (const part of parts || []) {
+      if (part?.thought === true) continue;
+      if (typeof part?.text === 'string') {
+        if (part.text.length > 0) notifyReceiving();
+        textParts.push(part.text);
+      }
+      else if (part?.text !== undefined) throw new Error('Gemini returned a malformed streamed response.');
+    }
+    if (candidate.finishReason === 'STOP') sawStop = true;
+  };
+
+  const processLine = (rawLine: string) => {
+    const line = rawLine.endsWith('\r') ? rawLine.slice(0, -1) : rawLine;
+    if (line === '') {
+      dispatchEvent();
+      return;
+    }
+    if (line.startsWith(':')) return;
+    const colon = line.indexOf(':');
+    const field = colon === -1 ? line : line.slice(0, colon);
+    if (field !== 'data') return;
+    let value = colon === -1 ? '' : line.slice(colon + 1);
+    if (value.startsWith(' ')) value = value.slice(1);
+    eventData.push(value);
+  };
+
+  signal.addEventListener('abort', cancelOnAbort, { once: true });
+  if (signal.aborted) cancelOnAbort();
+  try {
+    while (true) {
+      if (signal.aborted) throw createCancellationError();
+      const { done, value } = await reader.read();
+      if (done) break;
+      lineBuffer += decoder.decode(value, { stream: true });
+      let newline = lineBuffer.indexOf('\n');
+      while (newline !== -1) {
+        processLine(lineBuffer.slice(0, newline));
+        lineBuffer = lineBuffer.slice(newline + 1);
+        newline = lineBuffer.indexOf('\n');
+      }
+    }
+    lineBuffer += decoder.decode();
+    if (lineBuffer.length > 0) processLine(lineBuffer);
+    dispatchEvent();
+    if (signal.aborted) throw createCancellationError();
+    if (!sawStop || textParts.length === 0) {
+      throw new Error('Gemini streamed response did not finish successfully.');
+    }
+    return textParts.join('');
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    if (signal.aborted) throw createCancellationError();
+    if (error instanceof Error && /^Gemini (?:did not finish|returned|streamed response)/.test(error.message)) throw error;
+    throw new Error('Gemini streamed response could not be read.');
+  } finally {
+    signal.removeEventListener('abort', cancelOnAbort);
+    reader.releaseLock();
+  }
 }
 
 async function emitGeminiDiagnostic(
