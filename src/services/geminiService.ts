@@ -14,6 +14,7 @@ import { toSafeProviderError } from './aiTransport';
 import { fetchGemini } from './geminiProxyTransport';
 import {
   buildGroundedReasoningContext,
+  extractNormalizedDocRefs,
   formatGroundedSystemPrompt,
   hasClearRevisionIntent,
   isNonCommittedOrHypotheticalGroup,
@@ -161,15 +162,27 @@ export function extractDateFromText(text: string): string {
   return '';
 }
 
+export const docRefKeyPattern = /^(?:invoiceno|invoicenumber|receiptno|receiptnumber|voucherno|vouchernumber|paymentvoucherno|paymentvouchernumber|billno|billnumber|refno|referenceno|referencenumber|documentno|documentnumber|docno|transactionid|txid)$/;
+
 export function extractDateFromImageFields(fields: ExtractedEvidence[] | Record<string, any>): string {
   if (!fields) return '';
   const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
 
-  const fieldList: Array<{ field?: string; value?: unknown; rawText?: unknown }> = Array.isArray(fields)
+  const fieldList: Array<{ field?: string; value?: unknown; rawText?: unknown; originalValue?: unknown; source?: string }> = Array.isArray(fields)
     ? fields
     : typeof fields === 'object'
       ? Object.entries(fields).map(([field, value]) => ({ field, value }))
       : [];
+
+  // When scanning date fields, prefer any date field that was explicitly corrected or supplied by the user
+  for (const field of fieldList) {
+    if (!field || field.value === undefined || field.value === null) continue;
+    const cleanKey = String(field.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (dateKeyPattern.test(cleanKey) && (field.originalValue !== undefined || field.source === 'user_text')) {
+      const formatted = formatSingaporeDate(String(field.value));
+      if (formatted) return formatted;
+    }
+  }
 
   for (const field of fieldList) {
     if (!field || field.value === undefined || field.value === null) continue;
@@ -180,9 +193,18 @@ export function extractDateFromImageFields(fields: ExtractedEvidence[] | Record<
     }
   }
 
-  // Fallback: check if any field value or rawText contains a date
+  // Fallback: check if any non-docref field value or rawText contains a date
   for (const field of fieldList) {
     if (!field) continue;
+    const rawKey = String(field.field || '');
+    const cleanKey = rawKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isDocRefOrNonDateKey =
+      docRefKeyPattern.test(cleanKey) ||
+      /(?:ref|id|no|number|code|amount|total|subtotal|tax|gst|price|rate|qty|quantity)$/i.test(cleanKey) ||
+      /(?:invoice\s*no|invoice\s*number|inv\s*no|voucher\s*no|voucher\s*number|receipt\s*no|receipt\s*number|ref(?:erence)?\s*(?:no|number|id)?|doc(?:ument)?\s*(?:no|number|id)|bill\s*no|cheque\s*no|check\s*no|po\s*no|order\s*no|serial|account\s*no|amount|total|subtotal|tax|gst|price|rate|qty|quantity)/i.test(rawKey);
+
+    if (isDocRefOrNonDateKey) continue;
+
     if (field.value !== undefined && field.value !== null) {
       const fromVal = extractDateFromText(String(field.value));
       if (fromVal) return fromVal;
@@ -239,7 +261,10 @@ export function hasInvalidCalendarDateInImageFields(fields: ExtractedEvidence[] 
     if (!f) continue;
     const rawKey = String(f.field || '');
     const cleanKey = rawKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const isDocRefOrNonDateKey = /(?:invoice\s*no|invoice\s*number|inv\s*no|voucher\s*no|voucher\s*number|receipt\s*no|receipt\s*number|ref(?:erence)?\s*(?:no|number|id)?|doc(?:ument)?\s*(?:no|number|id)|bill\s*no|cheque\s*no|check\s*no|po\s*no|order\s*no|serial|account\s*no|amount|total|subtotal|tax|gst|price|rate|qty|quantity)/i.test(rawKey);
+    const isDocRefOrNonDateKey =
+      docRefKeyPattern.test(cleanKey) ||
+      /(?:ref|id|no|number|code|amount|total|subtotal|tax|gst|price|rate|qty|quantity)$/i.test(cleanKey) ||
+      /(?:invoice\s*no|invoice\s*number|inv\s*no|voucher\s*no|voucher\s*number|receipt\s*no|receipt\s*number|ref(?:erence)?\s*(?:no|number|id)?|doc(?:ument)?\s*(?:no|number|id)|bill\s*no|cheque\s*no|check\s*no|po\s*no|order\s*no|serial|account\s*no|amount|total|subtotal|tax|gst|price|rate|qty|quantity)/i.test(rawKey);
 
     if (f.value !== undefined && f.value !== null) {
       const valStr = String(f.value).trim();
@@ -268,15 +293,62 @@ export function mergeImageEvidence(
   for (const cur of (currentImages || [])) {
     const existingIdx = merged.findIndex(p => p.imageId === cur.imageId);
     if (existingIdx !== -1) {
-      merged[existingIdx] = cur;
+      const prev = merged[existingIdx];
+      let mergedFields: any;
+      if (Array.isArray(cur.fields)) {
+        const curFieldList = [...cur.fields];
+        const curKeys = new Set(curFieldList.map(f => String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '')));
+        if (Array.isArray(prev.fields)) {
+          for (const pf of prev.fields) {
+            const pKey = String(pf.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (pKey && !curKeys.has(pKey)) {
+              curFieldList.push(pf);
+            }
+          }
+        } else if (typeof prev.fields === 'object' && prev.fields !== null) {
+          for (const [key, val] of Object.entries(prev.fields)) {
+            const pKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (pKey && !curKeys.has(pKey)) {
+              curFieldList.push({ source: 'image', imageId: cur.imageId, field: key, value: val as string | number });
+            }
+          }
+        }
+        mergedFields = curFieldList;
+      } else if (typeof cur.fields === 'object' && cur.fields !== null) {
+        const curObj: Record<string, any> = { ...(cur.fields as Record<string, any>) };
+        const curKeys = new Set(Object.keys(curObj).map(k => k.toLowerCase().replace(/[^a-z0-9]/g, '')));
+        if (typeof prev.fields === 'object' && prev.fields !== null && !Array.isArray(prev.fields)) {
+          for (const [key, val] of Object.entries(prev.fields)) {
+            const pKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (pKey && !curKeys.has(pKey)) {
+              curObj[key] = val;
+            }
+          }
+        } else if (Array.isArray(prev.fields)) {
+          for (const pf of prev.fields) {
+            const pKey = String(pf.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (pKey && !curKeys.has(pKey)) {
+              curObj[pf.field || pKey] = pf.value;
+            }
+          }
+        }
+        mergedFields = curObj;
+      } else {
+        mergedFields = cur.fields || prev.fields;
+      }
+
+      merged[existingIdx] = {
+        ...prev,
+        ...cur,
+        fields: mergedFields,
+        journalLines: (cur.journalLines && cur.journalLines.length > 0) ? cur.journalLines : prev.journalLines
+      };
     } else {
       merged.push(cur);
     }
   }
   return merged;
 }
-
-const docRefKeyPattern = /^(?:invoiceno|invoicenumber|receiptno|receiptnumber|voucherno|vouchernumber|paymentvoucherno|paymentvouchernumber|billno|billnumber|refno|referenceno|referencenumber|documentno|documentnumber|docno|transactionid|txid)$/;
 
 export function extractDocRefsFromImages(images: ExtractedImageEvidence[]): Set<string> {
   const refs = new Set<string>();
@@ -289,8 +361,19 @@ export function extractDocRefsFromImages(images: ExtractedImageEvidence[]): Set<
     for (const f of fields) {
       const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
       if (docRefKeyPattern.test(cleanKey)) {
-        const val = String(f.value || '').trim().toLowerCase();
-        if (val) refs.add(val);
+        const val = String(f.value || '').trim();
+        if (val) {
+          const fromHelper = extractNormalizedDocRefs(`doc: ${val}`);
+          if (fromHelper.size > 0) {
+            for (const r of fromHelper) refs.add(r);
+          } else {
+            const rawNorm = val.replace(/[^a-z0-9]/gi, '').toLowerCase();
+            if (rawNorm && /\d/.test(rawNorm)) {
+              const stripped = rawNorm.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+              refs.add(stripped && /\d/.test(stripped) ? stripped : rawNorm);
+            }
+          }
+        }
       }
     }
   }
@@ -311,7 +394,11 @@ export function findIdempotentPriorMatch(
   }
 
   const rawCurrentDocRefs = extractDocRefsFromImages(currentImageEvidence);
-  const currentDocRefs = new Set(Array.from(rawCurrentDocRefs).map(r => r.replace(/[^a-z0-9]/gi, '').toLowerCase()));
+  const currentDocRefs = new Set<string>(rawCurrentDocRefs);
+  const extSources = `${extGrp.title || ''} ${extGrp.summary || ''} ${extGrp.narration || ''} ${(extGrp.lines || []).map(l => (l as any).lineExplanation || '').join(' ')}`;
+  for (const r of extractNormalizedDocRefs(extSources)) {
+    currentDocRefs.add(r);
+  }
   const currentImageIds = new Set((currentImageEvidence || []).map(img => img.imageId).filter(Boolean));
 
   const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
@@ -392,23 +479,29 @@ export function findIdempotentPriorMatch(
       )) {
         const cleanKey = String(ev.field).toLowerCase().replace(/[^a-z0-9]/g, '');
         if (docRefKeyPattern.test(cleanKey)) {
-          const val = String(ev.value || '').trim().toLowerCase();
-          if (val) basePriorDocRefs.add(val);
+          const val = String(ev.value || '').trim();
+          if (val) {
+            const fromHelper = extractNormalizedDocRefs(`doc: ${val}`);
+            if (fromHelper.size > 0) {
+              for (const r of fromHelper) basePriorDocRefs.add(r);
+            } else {
+              const rawNorm = val.replace(/[^a-z0-9]/gi, '').toLowerCase();
+              if (rawNorm && /\d/.test(rawNorm)) {
+                const stripped = rawNorm.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+                basePriorDocRefs.add(stripped && /\d/.test(stripped) ? stripped : rawNorm);
+              }
+            }
+          }
         }
       }
     }
 
-    const priorSources = `${prior.title || ''} ${prior.summary || ''} ${prior.narration || ''} ${prior.lines.map(l => l.lineExplanation || '').join(' ')}`.toLowerCase();
+    const priorSources = `${prior.title || ''} ${prior.summary || ''} ${prior.narration || ''} ${prior.lines.map(l => l.lineExplanation || '').join(' ')}`;
 
     // Prior document references extraction:
-    const priorDocRefs = new Set(Array.from(basePriorDocRefs).map(r => r.replace(/[^a-z0-9]/gi, '').toLowerCase()));
-    const docPattern = /\b(?:inv|rcp|pv|bill|ref)[-#\s]*[a-z0-9]+(?:[-][a-z0-9]+)*\b/gi;
-    const priorTokens = priorSources.match(docPattern);
-    if (priorTokens) {
-      for (const t of priorTokens) {
-        const clean = t.replace(/[^a-z0-9]/gi, '').toLowerCase();
-        if (clean) priorDocRefs.add(clean);
-      }
+    const priorDocRefs = new Set<string>(basePriorDocRefs);
+    for (const r of extractNormalizedDocRefs(priorSources)) {
+      priorDocRefs.add(r);
     }
 
     // Check for conflicting document references:
@@ -422,7 +515,7 @@ export function findIdempotentPriorMatch(
     // Check for positive identity confirmation:
     const hasConfirmedDocRefMatch = currentDocRefs.size > 0 && priorDocRefs.size > 0 && Array.from(currentDocRefs).every(curRef => priorDocRefs.has(curRef));
     const hasConfirmedImageIdMatch = currentImageIds.size > 0 &&
-      (currentDocRefs.size === 0 && priorDocRefs.size === 0 || (currentDocRefs.size > 0 && priorDocRefs.size > 0 && hasConfirmedDocRefMatch)) &&
+      (currentDocRefs.size === 0 || priorDocRefs.size === 0 || hasConfirmedDocRefMatch) &&
       Array.from(currentImageIds).every(cid =>
         (prior.sourceImageIds?.includes(cid) ?? false) ||
         relatedPriorImageIds.has(cid) ||
@@ -2820,7 +2913,14 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     }
   }
 
-  const isExplanatoryQuery = /\b(?:why\b|what\s+(?:was|is)\s+(?:wrong|the\s+issue|the\s+error|the\s+conflict|the\s+problem|rejected)|how\s+come|explain)\b/i.test(userInput);
+  const hasExplicitProceedDirective = /\b(?:please\s+(?:post|record|commit|proceed|apply|use)|go\s+ahead|(?:post|record|commit|apply|accept|approve|confirm)\s+(?:the\s+|this\s+|that\s+)?(?:screenshot|image|entry|journal|invoice|transaction)|proceed\s+with\s+(?:the\s+|this\s+)?(?:screenshot|image|entry|journal|invoice|transaction)|use\s+(?:the\s+)?(?:screenshot|image)(?:\s+(?:amount|figures?|values?|journal|entry))?|(?:the\s+)?(?:screenshot|image)\s+(?:amount|journal|entry|figures?)\s+is\s+correct)\b/i.test(userInput);
+  const isQuestionWithoutDirective = !hasExplicitProceedDirective && (
+    /\?\s*$/.test(userInput.trim()) ||
+    /^\s*(?:is|are|was|were|do|does|did|can|could|should|would|will|what|which|why|how|where|when|who)\b/i.test(userInput)
+  );
+  const isExplanatoryQuery = isQuestionWithoutDirective || /\b(?:why\b|what\s+(?:was|is)\s+(?:wrong|the\s+issue|the\s+error|the\s+conflict|the\s+problem|rejected)|how\s+come|explain)\b/i.test(userInput);
+
+  let hasExplicitUserConflictResolution = false;
 
   if (imageEvidence.length > 0) {
     effectiveImageEvidence = imageEvidence;
@@ -2858,12 +2958,20 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
     }
     const hasNoConflictingAmount = userAmounts.length === 0 || userAmounts.every(a => pendingAmounts.has(a));
+    const userCorrectedDateEarly = extractDateFromText(userInput);
+    const hasConfirmedPendingFact =
+      (userAmounts.length > 0 && userAmounts.every(a => pendingAmounts.has(a))) ||
+      (Boolean(userCorrectedDateEarly) && !hasInvalidCalendarDateToken(userInput));
+    hasExplicitUserConflictResolution =
+      !isExplanatoryQuery && (hasConfirmedPendingFact || hasExplicitProceedDirective);
+    const hasPriorImageConflict = priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT');
+
     const rawAiGroupsForPending = Array.isArray(parsed?.directGroups) ? parsed.directGroups : [];
     const isNonPostingFollowUp =
       isExplanatoryQuery ||
       parsed?.responseKind === 'ACCOUNTING_ADVISORY' ||
       parsed?.responseKind === 'CLARIFICATION_REQUIRED' ||
-      (priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT') && rawAiGroupsForPending.length === 0);
+      (hasPriorImageConflict && (!hasExplicitUserConflictResolution || rawAiGroupsForPending.length === 0));
 
     if (hasNoConflictingAmount && !isNonPostingFollowUp) {
       effectiveImageEvidence = currentScenario.pendingImageEvidence;
@@ -2877,6 +2985,10 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
   const hasValidUserDateCorrection = Boolean(userCorrectedDate) && !hasInvalidCalendarDateToken(userInput);
   if (usingPendingImageEvidence && hasValidUserDateCorrection) {
     const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
+    const userTargetMatch = userInput.match(/\b(invoice|payment|receipt|document|commencement|adjustment|posting|event|transaction)\s+date\b/i);
+    const explicitTargetKey = userTargetMatch ? `${userTargetMatch[1].toLowerCase()}date` : '';
+    const dateFieldProperName = userTargetMatch ? `${userTargetMatch[1].toLowerCase()}Date` : 'transactionDate';
+
     effectiveImageEvidence = effectiveImageEvidence.map(img => {
       const normalizedFields: ExtractedEvidence[] = Array.isArray(img.fields)
         ? img.fields.map(f => ({ ...f }))
@@ -2891,13 +3003,54 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       const originalFields = img.originalFields
         ? img.originalFields.map(f => ({ ...f }))
         : normalizedFields.map(f => ({ ...f }));
-      let updatedAnyDateField = false;
-      const updatedFields = normalizedFields.map(f => {
+
+      const dateFieldIndices: number[] = [];
+      const invalidDateFieldIndices: number[] = [];
+
+      for (let i = 0; i < normalizedFields.length; i++) {
+        const f = normalizedFields[i];
         const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        const valStr = f.value !== undefined && f.value !== null ? String(f.value).trim() : '';
-        const rawStr = (f as any).rawText || (f as any).raw_text ? String((f as any).rawText || (f as any).raw_text) : '';
-        if (dateKeyPattern.test(cleanKey) || (valStr && hasInvalidCalendarDateToken(valStr)) || (rawStr && hasInvalidCalendarDateToken(rawStr))) {
-          updatedAnyDateField = true;
+        if (dateKeyPattern.test(cleanKey) && !docRefKeyPattern.test(cleanKey)) {
+          dateFieldIndices.push(i);
+          const valStr = f.value !== undefined && f.value !== null ? String(f.value).trim() : '';
+          const rawStr = (f as any).rawText || (f as any).raw_text ? String((f as any).rawText || (f as any).raw_text) : '';
+          if (!valStr || !formatSingaporeDate(valStr) || hasInvalidCalendarDateToken(valStr) || (rawStr && hasInvalidCalendarDateToken(rawStr))) {
+            invalidDateFieldIndices.push(i);
+          }
+        }
+      }
+
+      let indicesToUpdate: number[] = [];
+      let appendNewField = false;
+
+      if (explicitTargetKey) {
+        const matchingIndices = dateFieldIndices.filter(i => {
+          const cleanKey = String(normalizedFields[i].field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          return cleanKey === explicitTargetKey;
+        });
+        if (matchingIndices.length > 0) {
+          indicesToUpdate = matchingIndices;
+        } else if (
+          invalidDateFieldIndices.length > 0 &&
+          (explicitTargetKey === 'transactiondate' || explicitTargetKey === 'eventdate' || dateFieldIndices.length === 1)
+        ) {
+          indicesToUpdate = invalidDateFieldIndices;
+        } else {
+          appendNewField = true;
+        }
+      } else {
+        if (invalidDateFieldIndices.length > 0) {
+          indicesToUpdate = invalidDateFieldIndices;
+        } else if (dateFieldIndices.length === 1) {
+          indicesToUpdate = dateFieldIndices;
+        } else if (dateFieldIndices.length === 0) {
+          appendNewField = true;
+        }
+      }
+
+      const indicesToUpdateSet = new Set(indicesToUpdate);
+      const updatedFields = normalizedFields.map((f, idx) => {
+        if (indicesToUpdateSet.has(idx)) {
           const cleaned: ExtractedEvidence = {
             ...f,
             originalValue: f.originalValue ?? f.value,
@@ -2909,14 +3062,16 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         }
         return f;
       });
-      if (!updatedAnyDateField) {
+
+      if (appendNewField) {
         updatedFields.push({
           source: 'user_text',
           imageId: img.imageId,
-          field: 'transactionDate',
+          field: dateFieldProperName,
           value: userCorrectedDate
         });
       }
+
       return {
         ...img,
         fields: updatedFields,
@@ -3041,7 +3196,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
 
       if (usingPendingImageEvidence && priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT')) {
-        const isConflictResolved = currentTurnAiGroups.length === extractedGroups.length && !conflictExists && !isExplanatoryQuery;
+        const isConflictResolved = hasExplicitUserConflictResolution && currentTurnAiGroups.length === extractedGroups.length && !conflictExists && !isExplanatoryQuery;
         if (!isConflictResolved) {
           if (!imageErrors.some(e => e.code === 'IMAGE_JOURNAL_CONFLICT')) {
             imageErrors.push({
@@ -3456,55 +3611,313 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
     } else {
       // effectiveImageEvidence.length > 0 and extractedGroups.length === 0
-      const currentImageIds = effectiveImageEvidence.map(img => img.imageId).filter(Boolean);
+      const fieldsOnlyErrors: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }> = [];
       const existingGroups = result.scenarioState.directGroups || [];
-      if (existingGroups.length > 0) {
-        const updatedGroups: JournalEntryGroup[] = [];
-        for (const grp of existingGroups) {
-          const isPrior = priorCommittedForImage.some(p => p.id === grp.id || (Boolean(p.transactionId) && p.transactionId === grp.transactionId));
-          if (!isPrior) {
-            const grpWithImages: JournalEntryGroup = {
-              ...grp,
-              ...(currentImageIds.length > 0 ? {
-                sourceImageIds: Array.from(new Set([...(grp.sourceImageIds || []), ...currentImageIds]))
-              } : {})
-            };
-            if (isFollowUpForImage && priorCommittedForImage.length > 0) {
-              const matchedPrior = findIdempotentPriorMatch(
-                grpWithImages,
-                priorCommittedForImage,
-                userInput,
-                effectiveImageEvidence,
-                currentScenario?.imageEvidence || [],
-                currentScenario?.evidence || []
-              );
-              if (matchedPrior) {
-                continue;
+      const newGroups = existingGroups.filter(grp => !priorCommittedForImage.some(p => p.id === grp.id || (Boolean(p.transactionId) && p.transactionId === grp.transactionId)));
+      const groupsToReconcile = newGroups.length > 0 ? newGroups : existingGroups;
+
+      const imageAnalysisList = effectiveImageEvidence.map(img => {
+        const imgDate = extractDateFromImageFields(img.fields);
+        const hasInvalidDate = hasInvalidCalendarDateInImageFields(img.fields);
+        const imgAmountCents = new Set<number>();
+        const imgTotalCents = new Set<number>();
+
+        const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
+          ? img.fields
+          : typeof img.fields === 'object' && img.fields !== null
+            ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
+            : [];
+
+        const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
+        for (const f of fields) {
+          if (!f || f.value === undefined || f.value === null) continue;
+          const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (docRefKeyPattern.test(cleanKey)) continue;
+          if (dateKeyPattern.test(cleanKey)) continue;
+          if (/(?:id|number|no|code|index|year|days|months|qty|quantity|rate|percent|confidence)$/i.test(cleanKey)) continue;
+
+          if (/(?:amount|total|subtotal|net|tax|gst|price|cost|payment|payable|receivable|paid|consideration|proceeds|fee|charge|value|balance|debit|credit)/i.test(cleanKey)) {
+            let val: number | null = null;
+            if (typeof f.value === 'number' && Number.isFinite(f.value)) {
+              val = f.value;
+            } else if (typeof f.value === 'string') {
+              const cleaned = f.value.replace(/[^0-9.]/g, '');
+              const parsedNum = parseFloat(cleaned);
+              if (Number.isFinite(parsedNum)) val = parsedNum;
+            }
+            if (val !== null && val > 0) {
+              const cents = Math.round(val * 100);
+              imgAmountCents.add(cents);
+              if (/^(?:total|totalamount|amount|invoiceamount|grossamount|purchaseprice|paymentamount|receiptamount|netamount)$/i.test(cleanKey)) {
+                imgTotalCents.add(cents);
               }
             }
-            updatedGroups.push(grpWithImages);
-          } else {
-            updatedGroups.push(grp);
           }
         }
-        result.scenarioState.directGroups = updatedGroups;
-        result.scenarioState = synchronizeCommittedScenarioState(
-          result.scenarioState,
-          updatedGroups,
-          currentScenario?.actualEvents
-        );
+
+        const imgDocRefs = extractDocRefsFromImages([img]);
+
+        return {
+          img,
+          imgDate,
+          hasInvalidDate,
+          imgAmountCents,
+          imgTotalCents,
+          imgDocRefs
+        };
+      });
+
+      // Check for invalid calendar dates across effectiveImageEvidence, userInput, and new AI groups
+      let hasInvalidCalendarDate = false;
+      for (const info of imageAnalysisList) {
+        if (info.hasInvalidDate) {
+          hasInvalidCalendarDate = true;
+          break;
+        }
       }
-      if (result.scenarioState.isComplete !== false) {
-        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
-        const existingEvidence = currentScenario?.evidence || [];
-        const newFlat = flattenImageEvidence(effectiveImageEvidence);
-        result.scenarioState.evidence = [
-          ...existingEvidence,
-          ...newFlat.filter(n => !existingEvidence.some(e => e.source === 'image' && e.imageId === n.imageId && e.field === n.field))
+      if (!hasInvalidCalendarDate && hasInvalidCalendarDateToken(userInput)) {
+        hasInvalidCalendarDate = true;
+      }
+      if (!hasInvalidCalendarDate) {
+        for (const grp of groupsToReconcile) {
+          const rawGrpDate = typeof grp.eventDate === 'string' ? grp.eventDate.trim() : '';
+          if (rawGrpDate && (!formatSingaporeDate(rawGrpDate) || hasInvalidCalendarDateToken(rawGrpDate))) {
+            hasInvalidCalendarDate = true;
+            break;
+          }
+        }
+      }
+      if (hasInvalidCalendarDate) {
+        fieldsOnlyErrors.push({
+          code: 'IMAGE_INVALID_TRANSACTION_DATE',
+          message: 'The transaction date extracted from the screenshot or provided query is invalid.',
+          severity: 'ERROR'
+        });
+      }
+
+      // Check for missing transaction date
+      for (const info of imageAnalysisList) {
+        if (!info.imgDate && !extractDateFromText(userInput)) {
+          const allHaveDate = groupsToReconcile.length > 0 && groupsToReconcile.every(g => Boolean(typeof g.eventDate === 'string' && g.eventDate.trim() && formatSingaporeDate(g.eventDate.trim())));
+          if (!allHaveDate) {
+            fieldsOnlyErrors.push({
+              code: 'IMAGE_MISSING_TRANSACTION_DATE',
+              message: 'The screenshot does not clearly display a valid transaction date. Please confirm the transaction date before this journal entry is recorded.',
+              severity: 'ERROR'
+            });
+            break;
+          }
+        }
+      }
+
+      // Match each group in groupsToReconcile with effectiveImageEvidence
+      const matchedImagesByGrp = new Map<JournalEntryGroup, ExtractedImageEvidence[]>();
+      const userQueryDate = extractDateFromText(userInput);
+
+      for (const grp of groupsToReconcile) {
+        const rawGrpDate = typeof grp.eventDate === 'string' ? grp.eventDate.trim() : '';
+        const grpDate = rawGrpDate ? formatSingaporeDate(rawGrpDate) : '';
+        const grpDrCents = Math.round((grp.totalDebit || 0) * 100);
+        const grpCrCents = Math.round((grp.totalCredit || 0) * 100);
+        const grpCents = new Set<number>([grpDrCents, grpCrCents]);
+        for (const l of (grp.lines || [])) {
+          grpCents.add(Math.round((Number(l.debit) || 0) * 100));
+          grpCents.add(Math.round((Number(l.credit) || 0) * 100));
+        }
+
+        const grpDocSources = `${grp.id || ''} ${grp.transactionId || ''} ${grp.title || ''} ${grp.summary || ''} ${grp.narration || ''}`;
+        const grpDocRefs = extractNormalizedDocRefs(grpDocSources);
+
+        const matchedImagesForGrp: ExtractedImageEvidence[] = [];
+
+        for (const info of imageAnalysisList) {
+          // Date compatibility
+          let dateCompatible = true;
+          if (info.imgDate) {
+            if (!grpDate || grpDate !== info.imgDate) {
+              dateCompatible = false;
+            } else if (userQueryDate && info.imgDate !== userQueryDate) {
+              dateCompatible = false;
+            }
+          }
+
+          // Amount compatibility
+          let amountCompatible = true;
+          if (info.imgTotalCents.size > 0) {
+            const totalMatches = Array.from(info.imgTotalCents).some(c => grpCents.has(c));
+            const sumAmounts = Array.from(info.imgAmountCents).reduce((a, b) => a + b, 0);
+            const drMatches = info.imgAmountCents.has(grpDrCents) || grpDrCents === sumAmounts;
+            if (!totalMatches || !drMatches) {
+              amountCompatible = false;
+            }
+          } else if (info.imgAmountCents.size > 0) {
+            const allAmountsPresent = Array.from(info.imgAmountCents).every(c => grpCents.has(c));
+            const sumAmounts = Array.from(info.imgAmountCents).reduce((a, b) => a + b, 0);
+            const drMatches = info.imgAmountCents.has(grpDrCents) || grpDrCents === sumAmounts;
+            if (!allAmountsPresent || !drMatches) {
+              amountCompatible = false;
+            }
+          }
+
+          // Document reference compatibility
+          let docRefCompatible = true;
+          if (info.imgDocRefs.size > 0 && grpDocRefs.size > 0) {
+            const allGrpMatchImg = Array.from(grpDocRefs).every(r => info.imgDocRefs.has(r));
+            if (!allGrpMatchImg) {
+              docRefCompatible = false;
+            }
+          }
+
+          if (dateCompatible && amountCompatible && docRefCompatible) {
+            matchedImagesForGrp.push(info.img);
+          }
+        }
+
+        matchedImagesByGrp.set(grp, matchedImagesForGrp);
+      }
+
+      // Check for conflict:
+      let conflictExists = false;
+      if (groupsToReconcile.length === 0 && effectiveImageEvidence.some(img => {
+        const info = imageAnalysisList.find(i => i.img === img);
+        return info && (info.imgAmountCents.size > 0 || Boolean(info.imgDate));
+      })) {
+        conflictExists = true;
+      } else {
+        for (const info of imageAnalysisList) {
+          if (info.imgAmountCents.size > 0 || Boolean(info.imgDate)) {
+            const anyGrpMatched = Array.from(matchedImagesByGrp.values()).some(imgs => imgs.includes(info.img));
+            if (!anyGrpMatched) {
+              conflictExists = true;
+              break;
+            }
+          }
+        }
+        if (!conflictExists) {
+          for (const grp of groupsToReconcile) {
+            const matched = matchedImagesByGrp.get(grp) || [];
+            if (matched.length === 0) {
+              conflictExists = true;
+              break;
+            }
+          }
+        }
+      }
+
+      if (conflictExists) {
+        fieldsOnlyErrors.push({
+          code: 'IMAGE_JOURNAL_CONFLICT',
+          message: 'The AI-structured journal entry conflicts with the document facts extracted from the screenshot.',
+          severity: 'ERROR'
+        });
+      } else if (usingPendingImageEvidence && priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT') && !hasExplicitUserConflictResolution) {
+        fieldsOnlyErrors.push({
+          code: 'IMAGE_JOURNAL_CONFLICT',
+          message: 'The AI-structured journal entry conflicts with the document facts extracted from the screenshot.',
+          severity: 'ERROR'
+        });
+      }
+
+      if (fieldsOnlyErrors.length > 0) {
+        result.messageText += `\n\n${buildGuardrailValidationMessage(fieldsOnlyErrors)}\n\nImage-derived journal was not applied because it failed accounting validation.`;
+        const imageErrorFields: MissingFieldInfo[] = fieldsOnlyErrors.map((v) => ({
+          fieldKey: `imageGuardrail-${v.code}`,
+          fieldName: 'Image-derived journal validation',
+          prompt: `${v.code}: ${v.message}`,
+          whyNeeded: 'The screenshot-derived journal violates an accounting guardrail and cannot be posted automatically.'
+        }));
+        result.scenarioState = rollbackRejectedScenarioState(
+          result.scenarioState,
+          currentScenario,
+          isFollowUpForImage,
+          [...(result.scenarioState.missingFields || []), ...imageErrorFields]
+        );
+        result.scenarioState.imageEvidence = currentScenario?.imageEvidence || [];
+        result.scenarioState.evidence = currentScenario?.evidence || [];
+        result.scenarioState.pendingImageEvidence = mergeImageEvidence(currentScenario?.pendingImageEvidence, effectiveImageEvidence);
+        result.scenarioState.pendingEvidence = [
+          ...(currentScenario?.pendingEvidence || []),
+          ...flattenImageEvidence(effectiveImageEvidence)
         ];
-        result.scenarioState.pendingImageEvidence = undefined;
-        result.scenarioState.pendingEvidence = undefined;
-        result.scenarioState.pendingImageRejectionReasons = undefined;
+        result.scenarioState.pendingImageRejectionReasons = fieldsOnlyErrors;
+      } else {
+        if (existingGroups.length > 0) {
+          const updatedGroups: JournalEntryGroup[] = [];
+          for (const grp of existingGroups) {
+            const isPrior = priorCommittedForImage.some(p => p.id === grp.id || (Boolean(p.transactionId) && p.transactionId === grp.transactionId));
+            if (!isPrior) {
+              const matchedImages = matchedImagesByGrp.get(grp) || [];
+              const matchedImageIds = matchedImages.map(img => img.imageId).filter(Boolean);
+              const grpWithImages: JournalEntryGroup = {
+                ...grp,
+                ...(matchedImageIds.length > 0 ? {
+                  sourceImageIds: Array.from(new Set([...(grp.sourceImageIds || []), ...matchedImageIds]))
+                } : {})
+              };
+              if (isFollowUpForImage && priorCommittedForImage.length > 0) {
+                const matchedPrior = findIdempotentPriorMatch(
+                  grpWithImages,
+                  priorCommittedForImage,
+                  userInput,
+                  matchedImages,
+                  currentScenario?.imageEvidence || [],
+                  currentScenario?.evidence || []
+                );
+                if (matchedPrior) {
+                  continue;
+                }
+              }
+              updatedGroups.push(grpWithImages);
+            } else {
+              const matchedImages = matchedImagesByGrp.get(grp) || [];
+              const matchedImageIds = matchedImages.map(img => img.imageId).filter(Boolean);
+              const grpWithMergedImages: JournalEntryGroup = {
+                ...grp,
+                ...(matchedImageIds.length > 0 ? {
+                  sourceImageIds: Array.from(new Set([...(grp.sourceImageIds || []), ...matchedImageIds]))
+                } : {})
+              };
+              updatedGroups.push(grpWithMergedImages);
+            }
+          }
+          result.scenarioState.directGroups = updatedGroups;
+          result.scenarioState = synchronizeCommittedScenarioState(
+            result.scenarioState,
+            updatedGroups,
+            currentScenario?.actualEvents
+          );
+        }
+
+        const allNewGroupsHypothetical = (result.scenarioState.directGroups || []).length > 0 && (result.scenarioState.directGroups || []).every(g => g.isHypothetical);
+        const hasCommittedGroups = (result.scenarioState.committedDirectGroups?.length || 0) > 0;
+        const isEntryCommitted = !allNewGroupsHypothetical && hasCommittedGroups;
+
+        if (result.scenarioState.isComplete !== false) {
+          result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
+          const existingEvidence = currentScenario?.evidence || [];
+          const newFlat = flattenImageEvidence(effectiveImageEvidence);
+          result.scenarioState.evidence = [
+            ...existingEvidence,
+            ...newFlat.filter(n => !existingEvidence.some(e => e.source === 'image' && e.imageId === n.imageId && e.field === n.field))
+          ];
+          result.scenarioState.pendingImageEvidence = undefined;
+          result.scenarioState.pendingEvidence = undefined;
+          result.scenarioState.pendingImageRejectionReasons = undefined;
+
+          if (usingPendingImageEvidence) {
+            result.clarifications = undefined;
+            result.scenarioState.missingFields = [];
+            if (isEntryCommitted) {
+              result.scenarioState.isComplete = true;
+              result.messageText = '### Journal Entry Confirmed\n\nThe transaction details have been verified against the screenshot evidence, and the balanced journal entry has been posted.';
+            } else {
+              result.scenarioState.isComplete = false;
+              result.scenarioState.isHypothetical = true;
+              result.scenarioState.authorityStatus = 'CONDITIONAL';
+              result.messageText = '### Illustrative / Conditional Journal Entry\n\nThe updated details have been verified against the screenshot evidence. Because this transaction remains planned, conditional, or hypothetical, the journal entry is shown for illustrative purposes only and has not been posted.';
+            }
+          }
+        }
       }
     }
   } else if (currentScenario?.imageEvidence?.length) {

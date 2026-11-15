@@ -2797,6 +2797,25 @@ export function rollbackRejectedScenarioState(
   }
 }
 
+export function extractNormalizedDocRefs(text: string): Set<string> {
+  const refs = new Set<string>();
+  if (!text || typeof text !== 'string') return refs;
+  const regex = /(?:^|[^a-z0-9])(inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)(?:[-#:_]+\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+#\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*)|([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*))(?=$|[^a-z0-9/])/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(text)) !== null) {
+    const rawBody = match[2] || match[3] || match[4] || match[5];
+    if (!rawBody) continue;
+    if (!/\d/.test(rawBody)) continue;
+    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(rawBody) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(rawBody)) continue;
+    const strippedBody = rawBody.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+    const cleanBody = (strippedBody || rawBody).replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (cleanBody && /\d/.test(cleanBody)) {
+      refs.add(cleanBody);
+    }
+  }
+  return refs;
+}
+
 export function resolveAndApplyJournalRevisions(
   priorCommitted: JournalEntryGroup[],
   newActualGroups: JournalEntryGroup[],
@@ -2809,9 +2828,49 @@ export function resolveAndApplyJournalRevisions(
   let unidentifiedRevision = false;
   const isCashOrBank = (name: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(name || '');
   const isGenericControlOrBank = (name: string) => /\b(?:cash|bank|checking|current\s*account|payables?|receivables?|creditors?|debtors?)\b/i.test(name || '');
+  const isGenericIdStr = (id?: string) => !id || /^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+(?:[-_]turn[-_]\d+)?$/i.test(id) || /^image-(?:journal|transaction)-/i.test(id);
 
   for (const newGrp of newActualGroups) {
     let matchIdx = -1;
+
+    const userExplicitRefs = extractNormalizedDocRefs(userInput);
+    const isGenericId = isGenericIdStr(newGrp.id);
+    const newGrpExplicitRefs = extractNormalizedDocRefs([
+      newGrp.title || '',
+      newGrp.summary || '',
+      newGrp.narration || '',
+      (!isGenericId ? (newGrp.id || '') : ''),
+      (newGrp.transactionId || '')
+    ].join(' '));
+    const requiredRefs = userExplicitRefs.size > 0 ? userExplicitRefs : newGrpExplicitRefs;
+
+    const candidateMatchesExplicitRefs = (c: JournalEntryGroup): boolean => {
+      if (requiredRefs.size === 0) return true;
+      const cIdNonGeneric = c.id && !isGenericIdStr(c.id) ? c.id : '';
+      const cTxIdNonGeneric = c.transactionId && !isGenericIdStr(c.transactionId) ? c.transactionId : '';
+      const cText = [
+        cIdNonGeneric,
+        cTxIdNonGeneric,
+        c.title || '',
+        c.summary || '',
+        c.narration || '',
+        (c.lines || []).map(l => l.lineExplanation || '').join(' ')
+      ].join(' ');
+      const cRefs = extractNormalizedDocRefs(cText);
+      if (cIdNonGeneric) {
+        const normId = cIdNonGeneric.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        cRefs.add(normId);
+        const strippedId = normId.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+        if (strippedId && /\d/.test(strippedId)) cRefs.add(strippedId);
+      }
+      if (cTxIdNonGeneric) {
+        const normTxId = cTxIdNonGeneric.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        cRefs.add(normTxId);
+        const strippedTxId = normTxId.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+        if (strippedTxId && /\d/.test(strippedTxId)) cRefs.add(strippedTxId);
+      }
+      return Array.from(requiredRefs).every(r => cRefs.has(r));
+    };
 
     // 1. Explicit targetTransactionId check (never falls through)
     if (newGrp.targetTransactionId) {
@@ -2823,15 +2882,24 @@ export function resolveAndApplyJournalRevisions(
         unidentifiedRevision = true;
         break;
       }
+      if (userExplicitRefs.size > 0 && !candidateMatchesExplicitRefs(updated[matchIdx])) {
+        matchIdx = -1;
+        unidentifiedRevision = true;
+        break;
+      }
     } else {
       // 2. When newGrp.targetTransactionId is NOT provided
-      const isGenericId = !newGrp.id || /^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+(?:[-_]turn[-_]\d+)?$/i.test(newGrp.id) || /^image-(?:journal|transaction)-/i.test(newGrp.id);
       const idMatchIdx = updated.findIndex(p =>
         p.id === newGrp.id ||
         (Boolean(newGrp.transactionId) && p.transactionId === newGrp.transactionId)
       );
       if (!isGenericId && idMatchIdx !== -1) {
         matchIdx = idMatchIdx;
+        if (userExplicitRefs.size > 0 && !candidateMatchesExplicitRefs(updated[matchIdx])) {
+          matchIdx = -1;
+          unidentifiedRevision = true;
+          break;
+        }
       } else {
         const candidates: number[] = [];
         const userLower = userInput.toLowerCase();
@@ -2870,47 +2938,28 @@ export function resolveAndApplyJournalRevisions(
           }
         }
 
-        if (candidates.length === 1) {
+        if (requiredRefs.size > 0) {
+          const narrowed = candidates.filter(idx => candidateMatchesExplicitRefs(updated[idx]));
+          if (narrowed.length === 1) {
+            matchIdx = narrowed[0];
+          } else {
+            matchIdx = -1;
+            unidentifiedRevision = true;
+            break;
+          }
+        } else if (candidates.length === 1) {
           matchIdx = candidates[0];
         } else if (candidates.length > 1) {
-          const docRefPattern = /\b(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)[-#\s]*[a-z0-9]*\d[a-z0-9-]*\b/gi;
-          const normalizeRef = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
-          const explicitRefs = new Set<string>();
-          for (const src of [userInput, newGrp.title || '', newGrp.summary || '', newGrp.narration || '']) {
-            const matches = src.match(docRefPattern);
-            if (matches) {
-              for (const m of matches) {
-                const norm = normalizeRef(m);
-                if (norm && /\d/.test(norm)) {
-                  explicitRefs.add(norm);
-                  const stripped = norm.replace(/^(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)+/i, '');
-                  if (stripped) explicitRefs.add(stripped);
-                }
-              }
-            }
-          }
           const narrowed = candidates.filter(idx => {
             const c = updated[idx];
             const cIdLower = (c.id || '').toLowerCase();
             const cTxIdLower = (c.transactionId || '').toLowerCase();
-            const hasExplicitIdInQuery = (cIdLower && !/^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+$/i.test(cIdLower) && userLower.includes(cIdLower)) ||
-              (cTxIdLower && !/^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+$/i.test(cTxIdLower) && userLower.includes(cTxIdLower));
-            if (hasExplicitIdInQuery) return true;
-            if (explicitRefs.size > 0) {
-              const cText = `${c.id || ''} ${c.transactionId || ''} ${c.title || ''} ${c.summary || ''} ${c.narration || ''} ${(c.lines || []).map(l => l.lineExplanation || '').join(' ')}`;
-              const cMatches = cText.match(docRefPattern) || [];
-              const cRefs = new Set<string>();
-              for (const cm of cMatches) {
-                const cNorm = normalizeRef(cm);
-                if (cNorm && /\d/.test(cNorm)) {
-                  cRefs.add(cNorm);
-                  const cStripped = cNorm.replace(/^(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)+/i, '');
-                  if (cStripped) cRefs.add(cStripped);
-                }
-              }
-              if (Array.from(explicitRefs).some(r => cRefs.has(r) || (r.length >= 3 && normalizeRef(cText).includes(r)))) return true;
-            }
-            return false;
+            const matchesExactBoundary = (idStr: string) => {
+              if (isGenericIdStr(idStr)) return false;
+              const esc = idStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              return new RegExp('(?:^|[^a-z0-9])' + esc + '(?=$|[^a-z0-9])', 'i').test(userLower);
+            };
+            return matchesExactBoundary(cIdLower) || matchesExactBoundary(cTxIdLower);
           });
           if (narrowed.length === 1) {
             matchIdx = narrowed[0];
