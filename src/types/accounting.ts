@@ -364,6 +364,7 @@ export interface ExtractedImageEvidence {
   originalFields?: ExtractedEvidence[];
   confidence?: number;
   journalLines?: ExtractedJournalLine[];
+  originalJournalLines?: ExtractedJournalLine[];
 }
 
 export interface ExtractedJournalLine {
@@ -371,4 +372,6 @@ export interface ExtractedJournalLine {
   accountCode?: string;
   debit?: number;
   credit?: number;
+  originalDebit?: number;
+  originalCredit?: number;
 }
