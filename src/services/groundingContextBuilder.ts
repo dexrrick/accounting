@@ -2825,42 +2825,14 @@ export function resolveAndApplyJournalRevisions(
       }
     } else {
       // 2. When newGrp.targetTransactionId is NOT provided
+      const isGenericId = !newGrp.id || /^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+(?:[-_]turn[-_]\d+)?$/i.test(newGrp.id) || /^image-(?:journal|transaction)-/i.test(newGrp.id);
       const idMatchIdx = updated.findIndex(p =>
         p.id === newGrp.id ||
         (Boolean(newGrp.transactionId) && p.transactionId === newGrp.transactionId)
       );
-      if (idMatchIdx !== -1) {
-        const isGenericId = /^grp-\d+$/i.test(newGrp.id || '') || /^image-(?:journal|transaction)-/i.test(newGrp.id || '');
-        if (!isGenericId) {
-          matchIdx = idMatchIdx;
-        } else {
-          const targetGrp = updated[idMatchIdx];
-          const newPrimary = (newGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
-          const targetPrimary = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
-          const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
-          const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
-          const hasAccountOverlap = (newPrimary.length > 0 && targetPrimary.length > 0)
-            ? newPrimary.some(n => targetPrimary.some(tn =>
-                areAccountNamesCanonicallyEquivalent(n, tn) ||
-                tn.toLowerCase().includes(n.toLowerCase().trim()) ||
-                n.toLowerCase().includes(tn.toLowerCase().trim())
-              ))
-            : newNonCash.some(n => targetNonCash.some(tn =>
-                areAccountNamesCanonicallyEquivalent(n, tn) ||
-                tn.toLowerCase().includes(n.toLowerCase().trim()) ||
-                n.toLowerCase().includes(tn.toLowerCase().trim())
-              ));
-          const genericWords = ['entry', 'group', 'journal', 'invoice', 'revised', 'amended', 'transaction'];
-          const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
-          const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
-          const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
-          if (hasAccountOverlap || hasTitleOverlap) {
-            matchIdx = idMatchIdx;
-          }
-        }
-      }
-
-      if (matchIdx === -1) {
+      if (!isGenericId && idMatchIdx !== -1) {
+        matchIdx = idMatchIdx;
+      } else {
         const candidates: number[] = [];
         const userLower = userInput.toLowerCase();
         const newPrimary = (newGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
@@ -2900,6 +2872,53 @@ export function resolveAndApplyJournalRevisions(
 
         if (candidates.length === 1) {
           matchIdx = candidates[0];
+        } else if (candidates.length > 1) {
+          const docRefPattern = /\b(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)[-#\s]*[a-z0-9]*\d[a-z0-9-]*\b/gi;
+          const normalizeRef = (s: string) => s.replace(/[^a-z0-9]/gi, '').toLowerCase();
+          const explicitRefs = new Set<string>();
+          for (const src of [userInput, newGrp.title || '', newGrp.summary || '', newGrp.narration || '']) {
+            const matches = src.match(docRefPattern);
+            if (matches) {
+              for (const m of matches) {
+                const norm = normalizeRef(m);
+                if (norm && /\d/.test(norm)) {
+                  explicitRefs.add(norm);
+                  const stripped = norm.replace(/^(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)+/i, '');
+                  if (stripped) explicitRefs.add(stripped);
+                }
+              }
+            }
+          }
+          const narrowed = candidates.filter(idx => {
+            const c = updated[idx];
+            const cIdLower = (c.id || '').toLowerCase();
+            const cTxIdLower = (c.transactionId || '').toLowerCase();
+            const hasExplicitIdInQuery = (cIdLower && !/^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+$/i.test(cIdLower) && userLower.includes(cIdLower)) ||
+              (cTxIdLower && !/^(?:grp|group|entry|journal|tx|txn|trans|doc|item)[-_]?\d+$/i.test(cTxIdLower) && userLower.includes(cTxIdLower));
+            if (hasExplicitIdInQuery) return true;
+            if (explicitRefs.size > 0) {
+              const cText = `${c.id || ''} ${c.transactionId || ''} ${c.title || ''} ${c.summary || ''} ${c.narration || ''} ${(c.lines || []).map(l => l.lineExplanation || '').join(' ')}`;
+              const cMatches = cText.match(docRefPattern) || [];
+              const cRefs = new Set<string>();
+              for (const cm of cMatches) {
+                const cNorm = normalizeRef(cm);
+                if (cNorm && /\d/.test(cNorm)) {
+                  cRefs.add(cNorm);
+                  const cStripped = cNorm.replace(/^(?:inv|invoice|rcp|receipt|pv|bill|ref|doc)+/i, '');
+                  if (cStripped) cRefs.add(cStripped);
+                }
+              }
+              if (Array.from(explicitRefs).some(r => cRefs.has(r) || (r.length >= 3 && normalizeRef(cText).includes(r)))) return true;
+            }
+            return false;
+          });
+          if (narrowed.length === 1) {
+            matchIdx = narrowed[0];
+          } else {
+            matchIdx = -1;
+            unidentifiedRevision = true;
+            break;
+          }
         } else {
           matchIdx = -1;
           unidentifiedRevision = true;
@@ -2918,7 +2937,8 @@ export function resolveAndApplyJournalRevisions(
         transactionId: stableTxId,
         targetTransactionId: newGrp.targetTransactionId || stableTxId,
         journalAction: 'revised',
-        revisedFromId: newGrp.id && newGrp.id !== stableId ? newGrp.id : originalGrp.revisedFromId
+        revisedFromId: newGrp.id && newGrp.id !== stableId ? newGrp.id : originalGrp.revisedFromId,
+        ...(newGrp.sourceImageIds?.length ? { sourceImageIds: newGrp.sourceImageIds } : (originalGrp.sourceImageIds?.length ? { sourceImageIds: originalGrp.sourceImageIds } : {}))
       };
     } else {
       unidentifiedRevision = true;
@@ -3343,7 +3363,7 @@ export function postProcessAIResponse(
             const revisionClarification: MissingFieldInfo = {
               fieldKey: 'revisionTarget',
               fieldName: 'Transaction to revise',
-              prompt: 'Which earlier transaction would you like to revise? Please specify the transaction or journal entry (for example, by title, account, or transaction reference).',
+              prompt: 'Which earlier transaction would you like to revise? Please specify the invoice reference or explicit transaction identity (for example, by invoice number, transaction ID, or title).',
               whyNeeded: 'Multiple committed transactions exist in this conversation, and the revision target could not be uniquely identified.'
             };
             const baseState: AccountingScenarioState = {

@@ -150,6 +150,7 @@ export interface JournalEntryGroup {
   transactionStatus?: 'actual' | 'hypothetical' | 'planned' | 'conditional';
   journalAction?: 'new' | 'revised' | 'restatement' | 'illustrative';
   revisedFromId?: string;
+  sourceImageIds?: string[];
   accountingPeriod?: string;
   currency?: string;
   narration?: string;
@@ -317,6 +318,7 @@ export interface AccountingScenarioState {
   /** Pending uncommitted evidence retained when an image-derived entry fails validation or awaits clarification. */
   pendingEvidence?: ExtractedEvidence[];
   pendingImageEvidence?: ExtractedImageEvidence[];
+  pendingImageRejectionReasons?: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }>;
   eventSequence?: AccountingEventSequence;
 }
 
@@ -351,6 +353,7 @@ export interface ExtractedEvidence {
   imageId?: string;
   field: string;
   value: string | number;
+  originalValue?: string | number;
   confidence?: number;
 }
 
@@ -358,6 +361,7 @@ export interface ExtractedImageEvidence {
   imageId: string;
   documentType?: string;
   fields: ExtractedEvidence[];
+  originalFields?: ExtractedEvidence[];
   confidence?: number;
   journalLines?: ExtractedJournalLine[];
 }

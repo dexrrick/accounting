@@ -362,6 +362,7 @@ export function findIdempotentPriorMatch(
 
     // Only collect prior image evidence belonging to this prior group
     const relatedPriorImages = (priorImageEvidence || []).filter(ev => {
+      if (ev.imageId && Array.isArray(prior.sourceImageIds) && prior.sourceImageIds.includes(ev.imageId)) return true;
       if (ev.imageId && (
         (prior.id && prior.id.includes(ev.imageId)) ||
         (prior.revisedFromId && prior.revisedFromId.includes(ev.imageId))
@@ -381,7 +382,7 @@ export function findIdempotentPriorMatch(
       return false;
     });
 
-    const relatedPriorImageIds = new Set(relatedPriorImages.map(img => img.imageId).filter(Boolean));
+    const relatedPriorImageIds = new Set<string>([...(prior.sourceImageIds || []), ...relatedPriorImages.map(img => img.imageId).filter(Boolean)]);
     const basePriorDocRefs = extractDocRefsFromImages(relatedPriorImages);
 
     // Also check priorGeneralEvidence for this prior group
@@ -423,6 +424,7 @@ export function findIdempotentPriorMatch(
     const hasConfirmedImageIdMatch = currentImageIds.size > 0 &&
       (currentDocRefs.size === 0 && priorDocRefs.size === 0 || (currentDocRefs.size > 0 && priorDocRefs.size > 0 && hasConfirmedDocRefMatch)) &&
       Array.from(currentImageIds).every(cid =>
+        (prior.sourceImageIds?.includes(cid) ?? false) ||
         relatedPriorImageIds.has(cid) ||
         prior.id === `image-journal-${cid}` ||
         prior.id === `image-transaction-${cid}` ||
@@ -543,6 +545,7 @@ export function buildJournalGroupsFromImageEvidence(imageEvidence: ExtractedImag
     return [{
       id: grpId,
       transactionId: grpId,
+      sourceImageIds: image.imageId ? [image.imageId] : undefined,
       eventDate: extractDateFromImageFields(image.fields),
       title: `Journal extracted from image ${imageIndex + 1}`,
       summary: 'Visible journal lines from the supplied screenshot; confirm the transaction date and context before posting.',
@@ -579,6 +582,7 @@ export function buildTransactionGroupsFromImageEvidence(imageEvidence: Extracted
     return [{
       id: grpId,
       transactionId: grpId,
+      sourceImageIds: image.imageId ? [image.imageId] : undefined,
       eventDate: extractDateFromImageFields(image.fields),
       title: `Transaction extracted from image ${imageIndex + 1}`,
       summary: 'Journal deterministically built from visible transaction facts; confirm GST treatment separately.',
@@ -2798,6 +2802,25 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
   let effectiveImageEvidence: ExtractedImageEvidence[] = imageEvidence;
   let usingPendingImageEvidence = false;
+  let retainUnresolvedPendingImage = false;
+
+  const priorRejectionReasons: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }> = [
+    ...(currentScenario?.pendingImageRejectionReasons || [])
+  ];
+  for (const mf of (currentScenario?.missingFields || [])) {
+    if (mf.fieldKey.startsWith('imageGuardrail-')) {
+      const code = mf.fieldKey.slice('imageGuardrail-'.length);
+      if (!priorRejectionReasons.some(r => r.code === code)) {
+        priorRejectionReasons.push({ code, message: mf.prompt.replace(new RegExp(`^${code}:\\s*`), ''), severity: 'ERROR' });
+      }
+    } else if (mf.fieldKey === 'imageVerification' && !priorRejectionReasons.some(r => r.code === 'IMAGE_UNCERTAIN_FIELD')) {
+      priorRejectionReasons.push({ code: 'IMAGE_UNCERTAIN_FIELD', message: mf.prompt, severity: 'ERROR' });
+    } else if (mf.fieldKey === 'revisionTarget' && !priorRejectionReasons.some(r => r.code === 'AMBIGUOUS_REVISION_TARGET')) {
+      priorRejectionReasons.push({ code: 'AMBIGUOUS_REVISION_TARGET', message: mf.prompt, severity: 'ERROR' });
+    }
+  }
+
+  const isExplanatoryQuery = /\b(?:why\b|what\s+(?:was|is)\s+(?:wrong|the\s+issue|the\s+error|the\s+conflict|the\s+problem|rejected)|how\s+come|explain)\b/i.test(userInput);
 
   if (imageEvidence.length > 0) {
     effectiveImageEvidence = imageEvidence;
@@ -2835,10 +2858,71 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
     }
     const hasNoConflictingAmount = userAmounts.length === 0 || userAmounts.every(a => pendingAmounts.has(a));
-    if (hasNoConflictingAmount) {
+    const rawAiGroupsForPending = Array.isArray(parsed?.directGroups) ? parsed.directGroups : [];
+    const isNonPostingFollowUp =
+      isExplanatoryQuery ||
+      parsed?.responseKind === 'ACCOUNTING_ADVISORY' ||
+      parsed?.responseKind === 'CLARIFICATION_REQUIRED' ||
+      (priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT') && rawAiGroupsForPending.length === 0);
+
+    if (hasNoConflictingAmount && !isNonPostingFollowUp) {
       effectiveImageEvidence = currentScenario.pendingImageEvidence;
       usingPendingImageEvidence = true;
+    } else if (hasNoConflictingAmount && isNonPostingFollowUp) {
+      retainUnresolvedPendingImage = true;
     }
+  }
+
+  const userCorrectedDate = extractDateFromText(userInput);
+  const hasValidUserDateCorrection = Boolean(userCorrectedDate) && !hasInvalidCalendarDateToken(userInput);
+  if (usingPendingImageEvidence && hasValidUserDateCorrection) {
+    const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
+    effectiveImageEvidence = effectiveImageEvidence.map(img => {
+      const normalizedFields: ExtractedEvidence[] = Array.isArray(img.fields)
+        ? img.fields.map(f => ({ ...f }))
+        : typeof img.fields === 'object' && img.fields !== null
+          ? Object.entries(img.fields).map(([field, value]) => ({
+              source: 'image' as const,
+              imageId: img.imageId,
+              field,
+              value: value as string | number
+            }))
+          : [];
+      const originalFields = img.originalFields
+        ? img.originalFields.map(f => ({ ...f }))
+        : normalizedFields.map(f => ({ ...f }));
+      let updatedAnyDateField = false;
+      const updatedFields = normalizedFields.map(f => {
+        const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const valStr = f.value !== undefined && f.value !== null ? String(f.value).trim() : '';
+        const rawStr = (f as any).rawText || (f as any).raw_text ? String((f as any).rawText || (f as any).raw_text) : '';
+        if (dateKeyPattern.test(cleanKey) || (valStr && hasInvalidCalendarDateToken(valStr)) || (rawStr && hasInvalidCalendarDateToken(rawStr))) {
+          updatedAnyDateField = true;
+          const cleaned: ExtractedEvidence = {
+            ...f,
+            originalValue: f.originalValue ?? f.value,
+            value: userCorrectedDate
+          };
+          delete (cleaned as any).rawText;
+          delete (cleaned as any).raw_text;
+          return cleaned;
+        }
+        return f;
+      });
+      if (!updatedAnyDateField) {
+        updatedFields.push({
+          source: 'user_text',
+          imageId: img.imageId,
+          field: 'transactionDate',
+          value: userCorrectedDate
+        });
+      }
+      return {
+        ...img,
+        fields: updatedFields,
+        originalFields
+      };
+    });
   }
 
   if (effectiveImageEvidence.length > 0) {
@@ -2956,6 +3040,19 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         }
       }
 
+      if (usingPendingImageEvidence && priorRejectionReasons.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT')) {
+        const isConflictResolved = currentTurnAiGroups.length === extractedGroups.length && !conflictExists && !isExplanatoryQuery;
+        if (!isConflictResolved) {
+          if (!imageErrors.some(e => e.code === 'IMAGE_JOURNAL_CONFLICT')) {
+            imageErrors.push({
+              code: 'IMAGE_JOURNAL_CONFLICT',
+              message: 'The earlier conflict between the AI-structured journal entry and the screenshot has not been resolved.',
+              severity: 'ERROR' as const
+            });
+          }
+        }
+      }
+
       // Check for invalid calendar dates in image fields, user query, or AI group eventDate
       let hasInvalidCalendarDate = false;
       for (const img of effectiveImageEvidence) {
@@ -3041,6 +3138,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           txId = grpId;
         }
 
+        const sourceImageIds = Array.from(new Set([
+          ...(extGrp.sourceImageIds || []),
+          ...(aiGrp?.sourceImageIds || []),
+          ...(effectiveImageEvidence[i]?.imageId ? [effectiveImageEvidence[i].imageId] : effectiveImageEvidence.map(img => img.imageId).filter(Boolean))
+        ]));
+
         const aiLines = Array.isArray(aiGrp?.lines) ? aiGrp.lines : [];
         const usedAiIndices = new Set<number>();
 
@@ -3094,7 +3197,16 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         const aiJAction = aiGrp?.journalAction || parsed?.journalAction;
         const isQueryHypothetical = /\b(?:hypothetical|illustrative|what\s+if|suppose|assuming|pro\s*forma|quotation|quote\s+only|example\s+journal|proposed\s+quote)\b/i.test(userInput);
         const isDocQuotation = effectiveImageEvidence.some(img => /\b(?:quote|quotation|pro\s*forma|estimate|proposal)\b/i.test(img.documentType || ''));
+        const isPriorScenarioHypothetical = Boolean(
+          usingPendingImageEvidence && (
+            currentScenario?.isHypothetical ||
+            /\b(?:illustrative|hypothetical|pro\s*forma|planned|proposed|conditional|quotation|quote\s+only)\b/i.test(
+              `${currentScenario?.rawQuery || ''} ${currentScenario?.transactionTitle || ''}`
+            )
+          ) && !/\b(?:completed|executed|paid|invoiced|billed|posted|actual\s+transaction|now\s+confirmed)\b/i.test(userInput)
+        );
         const isHypo = Boolean(
+          isPriorScenarioHypothetical ||
           isNonCommittedOrHypotheticalGroup(aiGrp) ||
           isNonCommittedOrHypotheticalGroup(extGrp) ||
           isNonCommittedOrHypotheticalGroup(parsed) ||
@@ -3138,7 +3250,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           totalCredit: extGrp.totalCredit,
           isBalanced: extGrp.isBalanced,
           citations: extGrp.citations || aiGrp?.citations || [],
-          rationalePoints: extGrp.rationalePoints || aiGrp?.rationalePoints
+          rationalePoints: extGrp.rationalePoints || aiGrp?.rationalePoints,
+          ...(sourceImageIds.length > 0 ? { sourceImageIds } : {})
         };
       });
 
@@ -3154,7 +3267,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           const revisionClarification: MissingFieldInfo = {
             fieldKey: 'revisionTarget',
             fieldName: 'Transaction to revise',
-            prompt: 'Which earlier transaction would you like to revise? Please specify the transaction or journal entry (for example, by title, account, or transaction reference).',
+            prompt: 'Which earlier transaction would you like to revise? Please specify the invoice reference or explicit transaction identity (for example, by invoice number, transaction ID, or title).',
             whyNeeded: 'Multiple committed transactions exist in this conversation, and the revision target could not be uniquely identified.'
           };
           const rolledBackState = rollbackRejectedScenarioState(
@@ -3179,6 +3292,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           rolledBackState.pendingEvidence = [
             ...(currentScenario?.pendingEvidence || []),
             ...flattenImageEvidence(effectiveImageEvidence)
+          ];
+          rolledBackState.pendingImageRejectionReasons = [
+            { code: 'AMBIGUOUS_REVISION_TARGET', message: revisionClarification.prompt, severity: 'ERROR' }
           ];
           return {
             messageText: '### Clarification Required — Ambiguous Revision Target\n\n' + revisionClarification.prompt,
@@ -3255,6 +3371,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           ...(currentScenario?.pendingEvidence || []),
           ...flattenImageEvidence(effectiveImageEvidence)
         ];
+        result.scenarioState.pendingImageRejectionReasons = imageErrors;
       } else if (deterministicFallback && deterministicFallback.length > 0) {
         // Preserve deterministic/committed journals; do not clear committedDirectGroups
         result.scenarioState.directGroups = [...deterministicFallback];
@@ -3272,6 +3389,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         ];
         result.scenarioState.pendingImageEvidence = undefined;
         result.scenarioState.pendingEvidence = undefined;
+        result.scenarioState.pendingImageRejectionReasons = undefined;
         result.messageText += `\n\n### Journal visible in screenshot\n\nA balanced journal was extracted from the screenshot, but the existing deterministic journal has been preserved. Review the image evidence before overriding it.`;
       } else {
         // No deterministic output available; merge validated image-derived groups
@@ -3299,9 +3417,11 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           nextGroups,
           currentScenario?.actualEvents
         );
-        if (nextGroups.length > 0 && nextGroups.every(g => g.isHypothetical)) {
-          result.scenarioState.isComplete = false;
-        }
+        const allNewGroupsHypothetical = reconciledExtractedGroups.length > 0 && reconciledExtractedGroups.every(g => g.isHypothetical);
+        const allNextGroupsHypothetical = nextGroups.length > 0 && nextGroups.every(g => g.isHypothetical);
+        const hasCommittedGroups = (result.scenarioState.committedDirectGroups?.length || 0) > 0;
+        const isEntryCommitted = !allNewGroupsHypothetical && !allNextGroupsHypothetical && hasCommittedGroups;
+
         result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
         const existingEvidence = currentScenario?.evidence || [];
         const newFlat = flattenImageEvidence(effectiveImageEvidence);
@@ -3311,14 +3431,80 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         ];
         result.scenarioState.pendingImageEvidence = undefined;
         result.scenarioState.pendingEvidence = undefined;
+        result.scenarioState.pendingImageRejectionReasons = undefined;
+
         if (usingPendingImageEvidence) {
           result.clarifications = undefined;
           result.scenarioState.missingFields = [];
-          result.scenarioState.isComplete = true;
-          result.messageText = '### Journal Entry Confirmed\n\nThe transaction date has been applied to the pending invoice evidence, and the balanced journal entry has been posted.';
+          if (isEntryCommitted) {
+            result.scenarioState.isComplete = true;
+            result.messageText = '### Journal Entry Confirmed\n\nThe transaction date has been applied to the pending invoice evidence, and the balanced journal entry has been posted.';
+          } else {
+            result.scenarioState.isComplete = false;
+            result.scenarioState.isHypothetical = true;
+            result.scenarioState.authorityStatus = 'CONDITIONAL';
+            result.messageText = '### Illustrative / Conditional Journal Entry\n\nThe updated details have been applied to the pending screenshot evidence. Because this transaction remains planned, conditional, or hypothetical, the journal entry is shown for illustrative purposes only and has not been posted.';
+          }
         } else {
+          if (!isEntryCommitted) {
+            result.scenarioState.isComplete = false;
+            result.scenarioState.isHypothetical = true;
+            result.scenarioState.authorityStatus = 'CONDITIONAL';
+          }
           result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
         }
+      }
+    } else {
+      // effectiveImageEvidence.length > 0 and extractedGroups.length === 0
+      const currentImageIds = effectiveImageEvidence.map(img => img.imageId).filter(Boolean);
+      const existingGroups = result.scenarioState.directGroups || [];
+      if (existingGroups.length > 0) {
+        const updatedGroups: JournalEntryGroup[] = [];
+        for (const grp of existingGroups) {
+          const isPrior = priorCommittedForImage.some(p => p.id === grp.id || (Boolean(p.transactionId) && p.transactionId === grp.transactionId));
+          if (!isPrior) {
+            const grpWithImages: JournalEntryGroup = {
+              ...grp,
+              ...(currentImageIds.length > 0 ? {
+                sourceImageIds: Array.from(new Set([...(grp.sourceImageIds || []), ...currentImageIds]))
+              } : {})
+            };
+            if (isFollowUpForImage && priorCommittedForImage.length > 0) {
+              const matchedPrior = findIdempotentPriorMatch(
+                grpWithImages,
+                priorCommittedForImage,
+                userInput,
+                effectiveImageEvidence,
+                currentScenario?.imageEvidence || [],
+                currentScenario?.evidence || []
+              );
+              if (matchedPrior) {
+                continue;
+              }
+            }
+            updatedGroups.push(grpWithImages);
+          } else {
+            updatedGroups.push(grp);
+          }
+        }
+        result.scenarioState.directGroups = updatedGroups;
+        result.scenarioState = synchronizeCommittedScenarioState(
+          result.scenarioState,
+          updatedGroups,
+          currentScenario?.actualEvents
+        );
+      }
+      if (result.scenarioState.isComplete !== false) {
+        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
+        const existingEvidence = currentScenario?.evidence || [];
+        const newFlat = flattenImageEvidence(effectiveImageEvidence);
+        result.scenarioState.evidence = [
+          ...existingEvidence,
+          ...newFlat.filter(n => !existingEvidence.some(e => e.source === 'image' && e.imageId === n.imageId && e.field === n.field))
+        ];
+        result.scenarioState.pendingImageEvidence = undefined;
+        result.scenarioState.pendingEvidence = undefined;
+        result.scenarioState.pendingImageRejectionReasons = undefined;
       }
     }
   } else if (currentScenario?.imageEvidence?.length) {
@@ -3327,7 +3513,22 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     if (result.scenarioState.isComplete !== false && (!result.scenarioState.missingFields || result.scenarioState.missingFields.length === 0)) {
       result.scenarioState.pendingImageEvidence = undefined;
       result.scenarioState.pendingEvidence = undefined;
+      result.scenarioState.pendingImageRejectionReasons = undefined;
     }
+  }
+
+  if (retainUnresolvedPendingImage) {
+    result.scenarioState = rollbackRejectedScenarioState(
+      result.scenarioState,
+      currentScenario,
+      true,
+      currentScenario?.missingFields || []
+    );
+    result.scenarioState.imageEvidence = currentScenario?.imageEvidence || [];
+    result.scenarioState.evidence = currentScenario?.evidence || [];
+    result.scenarioState.pendingImageEvidence = currentScenario?.pendingImageEvidence;
+    result.scenarioState.pendingEvidence = currentScenario?.pendingEvidence;
+    result.scenarioState.pendingImageRejectionReasons = priorRejectionReasons;
   }
   const uncertainMaterialFields = getMaterialImageUncertainties(effectiveImageEvidence);
   if (uncertainMaterialFields.length > 0) {
@@ -3351,6 +3552,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     result.scenarioState.pendingEvidence = [
       ...(currentScenario?.pendingEvidence || []),
       ...flattenImageEvidence(effectiveImageEvidence)
+    ];
+    result.scenarioState.pendingImageRejectionReasons = [
+      { code: 'IMAGE_UNCERTAIN_FIELD', message: prompt, severity: 'ERROR' }
     ];
     result.scenarioState.missingFacts = [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])];
     result.scenarioState.uncertaintyDisclaimer = `Possible value detected from screenshot. ${prompt}`;
