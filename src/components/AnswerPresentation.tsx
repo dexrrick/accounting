@@ -42,6 +42,21 @@ function authorityConditions(presentation: NonNullable<AccountingScenarioState['
   return conditions;
 }
 
+function currentVisibleConditions(
+  authority: AccountingScenarioState['authorityEvidencePresentation'],
+  irasFacts: readonly string[]
+): VisibleCondition[] {
+  const conditions = authority ? authorityConditions(authority) : [];
+  const seenText = new Set(conditions.map(condition => condition.text.trim()));
+  for (const fact of irasFacts) {
+    const text = fact.trim();
+    if (!text || seenText.has(text)) continue;
+    seenText.add(text);
+    conditions.push({ text });
+  }
+  return conditions;
+}
+
 function currentEvidenceSummary(scenario: AccountingScenarioState | null | undefined): {
   summary?: EvidenceSummary['summary'];
   gaps: EvidenceSummary['gaps'];
@@ -51,12 +66,19 @@ function currentEvidenceSummary(scenario: AccountingScenarioState | null | undef
   if (!scenario) return { gaps: [], visibleConditions: [] };
 
   const authority = scenario.authorityEvidencePresentation;
+  const iras = scenario.irasEvidencePresentation;
+  const requestCompletenessContext = scenario.requestCompletenessContext;
+  const currentIras = hasCurrentIrasEvidencePresentation(iras, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) &&
+      requestCompletenessContext && isCurrentRequestCompletenessContext(requestCompletenessContext, scenario.rawQuery)
+    ? iras
+    : undefined;
+  const irasFacts = currentIras?.factsToConfirm || [];
   if (hasCurrentAuthorityEvidencePresentation(authority, scenario.rawQuery)) {
     const requestComplete = hasCompleteRequestRepresentation(authority);
     if (authority.evidenceStatus === 'INSUFFICIENT' || authority.status === 'INSUFFICIENT') {
       return {
         summary: 'Evidence is incomplete for some parts of the question.', gaps: authority.gaps,
-        visibleConditions: authorityConditions(authority), conditionsLabel: 'Conditions and evidence still needed'
+        visibleConditions: currentVisibleConditions(authority, irasFacts), conditionsLabel: 'Conditions and evidence still needed'
       };
     }
     if (!requestComplete) {
@@ -64,31 +86,28 @@ function currentEvidenceSummary(scenario: AccountingScenarioState | null | undef
       return {
         summary: `Evidence is verified for the identified issues, but coverage of the entire question is unconfirmed.${application}`,
         gaps: authority.gaps,
-        visibleConditions: authorityConditions(authority),
+        visibleConditions: currentVisibleConditions(authority, irasFacts),
         conditionsLabel: 'Conditions and evidence still needed'
       };
     }
     if (authority.applicationStatus === 'UNRESOLVED' || authority.status === 'CONDITIONAL') {
       return {
         summary: 'Evidence is available, but whether it applies to this case has not been established.', gaps: authority.gaps,
-        visibleConditions: authorityConditions(authority), conditionsLabel: 'Conditions and evidence still needed'
+        visibleConditions: currentVisibleConditions(authority, irasFacts), conditionsLabel: 'Conditions and evidence still needed'
       };
     }
     return {
       summary: 'Evidence is verified for all identified issues, and the entire question has been covered.', gaps: authority.gaps,
-      visibleConditions: authorityConditions(authority), conditionsLabel: 'Conditions and evidence still needed'
+      visibleConditions: currentVisibleConditions(authority, irasFacts), conditionsLabel: 'Conditions and evidence still needed'
     };
   }
 
-  const iras = scenario.irasEvidencePresentation;
-  const requestCompletenessContext = scenario.requestCompletenessContext;
-  if (hasCurrentIrasEvidencePresentation(iras, scenario.rawQuery, scenario.primaryDomain, scenario.queryIntent) &&
-      requestCompletenessContext && isCurrentRequestCompletenessContext(requestCompletenessContext, scenario.rawQuery)) {
+  if (currentIras) {
     // This legacy IRAS projection is query-bound but has no identity brand. Keep
     // its material fact prompts visible without promoting its scalar status.
     return {
       gaps: [],
-      visibleConditions: (iras.factsToConfirm || []).map(text => ({ text })),
+      visibleConditions: currentVisibleConditions(undefined, irasFacts),
       conditionsLabel: 'Facts to confirm'
     };
   }

@@ -631,22 +631,33 @@ async function readGeminiEventStream(
 
   signal.addEventListener('abort', cancelOnAbort, { once: true });
   if (signal.aborted) cancelOnAbort();
+  const processAvailableLines = (finalChunk = false) => {
+    while (true) {
+      let separator = -1;
+      for (let index = 0; index < lineBuffer.length; index += 1) {
+        if (lineBuffer[index] === '\n' || lineBuffer[index] === '\r') {
+          separator = index;
+          break;
+        }
+      }
+      if (separator === -1 || (lineBuffer[separator] === '\r' && separator === lineBuffer.length - 1 && !finalChunk)) break;
+
+      const isCrLf = lineBuffer[separator] === '\r' && lineBuffer[separator + 1] === '\n';
+      processLine(lineBuffer.slice(0, separator));
+      lineBuffer = lineBuffer.slice(separator + (isCrLf ? 2 : 1));
+    }
+  };
+
   try {
     while (true) {
       if (signal.aborted) throw createCancellationError();
       const { done, value } = await reader.read();
       if (done) break;
       lineBuffer += decoder.decode(value, { stream: true });
-      let newline = lineBuffer.indexOf('\n');
-      while (newline !== -1) {
-        processLine(lineBuffer.slice(0, newline));
-        lineBuffer = lineBuffer.slice(newline + 1);
-        newline = lineBuffer.indexOf('\n');
-      }
+      processAvailableLines();
     }
     lineBuffer += decoder.decode();
-    if (lineBuffer.length > 0) processLine(lineBuffer);
-    dispatchEvent();
+    processAvailableLines(true);
     if (signal.aborted) throw createCancellationError();
     if (!sawStop || textParts.length === 0) {
       throw new Error('Gemini streamed response did not finish successfully.');

@@ -135,6 +135,34 @@ try {
     assert.equal(requests.length, 1, 'observer failures cannot add a retry');
   }
 
+  for (const [label, frame] of [
+    ['standalone CR line separators', `data: ${candidateFrame('{"answer":"CR lines"}', 'STOP')}\r\r`],
+    ['split CRLF line separators', `data: ${candidateFrame('{"answer":"split CRLF"}', 'STOP')}\r\n\r\n`],
+    ['mixed CRLF and CR line separators', `data: ${candidateFrame('{"answer":"mixed lines"}', 'STOP')}\r\n\r`]
+  ]) {
+    const chunks = label === 'split CRLF line separators'
+      ? [frame.slice(0, -4) + '\r', '\n', '\r', '\n']
+      : label === 'standalone CR line separators' ? [frame.slice(0, -2) + '\r', '\r'] : [frame];
+    installFetch(() => responseWithSse(chunks));
+    const answer = label === 'standalone CR line separators' ? '{"answer":"CR lines"}'
+      : label === 'split CRLF line separators' ? '{"answer":"split CRLF"}' : '{"answer":"mixed lines"}';
+    assert.equal(await executeStructuredLlmCall(PROMPT, SYSTEM, API_KEY, streamingOptions(() => undefined)), answer, label);
+  }
+
+  for (const trailingFrame of [
+    `data: ${candidateFrame('{"answer":"unfinished"}', 'STOP')}`,
+    `data: ${candidateFrame('{"answer":"unfinished line"}', 'STOP')}\n`
+  ]) {
+    installFetch(() => responseWithSse([
+      `data: ${candidateFrame('{"answer":"partial"}')}\n\n`, trailingFrame
+    ]));
+    await assert.rejects(
+      executeStructuredLlmCall(PROMPT, SYSTEM, API_KEY, streamingOptions(() => undefined)),
+      undefined,
+      'an EOF-discarded STOP event cannot complete the response'
+    );
+  }
+
   for (const [label, payload] of [
     ['malformed SSE JSON', '{not json}'],
     ['provider error frame', JSON.stringify({ error: { message: 'private response text' } })],

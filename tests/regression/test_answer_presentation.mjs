@@ -54,6 +54,18 @@ assert.doesNotMatch(answerMarkup, /<a[^>]+href="https:\/\/attacker\.example/,
 assert.match(answerMarkup, /<a[^>]+href="https:\/\/www\.iras\.gov\.sg\/taxes"/,
   'a canonical citation link matching the source list stays clickable');
 
+const conditionalBranches = `## If the company meets all eligibility conditions\n### Answer\nThe relief is available.\n\n## Otherwise\n### Answer\nThe relief is unavailable.`;
+const conditionalBranchesMarkup = renderToStaticMarkup(React.createElement(SafeChatAnswer, {
+  text: conditionalBranches, trustedLinks: []
+}));
+assert.ok(conditionalBranchesMarkup.indexOf('If the company meets all eligibility conditions') <
+  conditionalBranchesMarkup.indexOf('The relief is available.'),
+  'a nested answer stays with its governing eligibility condition');
+assert.ok(conditionalBranchesMarkup.indexOf('Otherwise') < conditionalBranchesMarkup.indexOf('The relief is unavailable.'),
+  'the alternate nested answer stays with its governing branch');
+assert.ok(conditionalBranchesMarkup.indexOf('If the company meets all eligibility conditions') <
+  conditionalBranchesMarkup.indexOf('Otherwise'), 'conditional branches keep their original order');
+
 const footerMarkup = renderToStaticMarkup(React.createElement(AnswerPresentation, {
   text: fixture.syntheticStructuredAnswer.text,
   scenario: { officialAnswerLinks: fixture.syntheticStructuredAnswer.links, rawQuery: 'Synthetic presentation question' }
@@ -148,6 +160,83 @@ assert.equal((conditionalCpfMarkup.match(/Employer registration evidence has not
   'duplicate material conditions are deduplicated within their issue scope');
 assert.ok(conditionalCpfMarkup.indexOf('Conditions and evidence still needed') < conditionalCpfMarkup.indexOf('<details'),
   'CPF application conditions remain visible outside collapsed technical gaps');
+
+const combinedFact = 'Confirm the relevant financial year before applying the IRAS guidance.';
+const combinedIras = {
+  query: cpfQuery, domainLabel: 'IRAS Income Tax', status: 'CONDITIONAL',
+  chatAnswer: 'Synthetic IRAS answer.', overview: 'Synthetic scope.', applicationStatus: 'UNRESOLVED',
+  factsToConfirm: [combinedFact, combinedFact, 'Confirm the employee contribution category before applying this rule.'], sourceGroups: []
+};
+const combinedScenario = {
+  rawQuery: cpfQuery, primaryDomain: 'IRAS_TAX', queryIntent: 'STATUTORY_ADVISORY',
+  requestCompletenessContext: createRequestCompletenessContext(cpfQuery),
+  authorityEvidencePresentation: conditionalCpfEvidence,
+  irasEvidencePresentation: combinedIras
+};
+const combinedMarkup = renderToStaticMarkup(React.createElement(AnswerPresentation, {
+  text: 'The current answer remains visible.', scenario: combinedScenario
+}));
+assert.match(combinedMarkup, /Confirm the relevant financial year before applying the IRAS guidance/,
+  'current IRAS facts remain visible alongside current CPF authority conditions');
+assert.equal((combinedMarkup.match(/Confirm the relevant financial year before applying the IRAS guidance/g) || []).length, 1,
+  'duplicate IRAS facts are deduplicated');
+assert.match(combinedMarkup, /Confirm the employee contribution category before applying this rule/,
+  'current CPF conditions remain present when the IRAS projection is also current');
+assert.equal((combinedMarkup.match(/Confirm the employee contribution category before applying this rule/g) || []).length, 1,
+  'a condition repeated in the IRAS projection is deduplicated against the CPF projection');
+
+const previousLocalStorage = globalThis.localStorage;
+globalThis.localStorage = { getItem: () => null, setItem: () => undefined };
+let combinedFailureMarkup;
+try {
+  combinedFailureMarkup = renderToStaticMarkup(React.createElement(ChatPanel, {
+  messages: [
+    { id: 'combined-user', sender: 'user', timestamp: '', text: cpfQuery },
+    {
+      id: 'combined-failure', sender: 'assistant', timestamp: '', text: 'The current answer remains visible.',
+      fullText: `### Statutory Compliance & Legal Authority\n${combinedFact}\n\n#### Additional IRAS details\nThe complete legacy IRAS response remains available in this disclosure.`,
+      displayFullAnswer: true, advisoryFailureStatus: 'OTHER', scenarioSnapshot: combinedScenario
+    }
+  ],
+  onSendMessage: () => undefined, onRetryMessage: () => undefined, onRetryAiAnswer: () => undefined,
+  onSelectSuggestion: () => undefined, onResolveRelation: () => undefined,
+  isLoading: false, isAwaitingRelation: false,
+  outputPreference: { journal: false, statutory: false }, onOutputPreferenceChange: () => undefined
+  }));
+} finally {
+  if (previousLocalStorage === undefined) delete globalThis.localStorage;
+  else globalThis.localStorage = previousLocalStorage;
+}
+const combinedDisclosureIndex = combinedFailureMarkup.indexOf('<details');
+assert.match(combinedFailureMarkup, /<details[^>]*><summary[^>]*>Available source evidence<\/summary>/,
+  'the legacy response remains in its collapsed disclosure');
+const combinedDisclosureEnd = combinedFailureMarkup.indexOf('</details>', combinedDisclosureIndex);
+assert.ok(combinedDisclosureEnd > combinedDisclosureIndex, 'the legacy response disclosure is closed');
+assert.ok(combinedFailureMarkup.indexOf('Confirm the relevant financial year before applying the IRAS guidance', combinedDisclosureEnd) > combinedDisclosureEnd,
+  'IRAS application facts remain outside the collapsed legacy response');
+
+const incompleteCombinedMarkup = renderToStaticMarkup(React.createElement(AnswerPresentation, {
+  text: 'The current CPF conditions remain visible.',
+  scenario: {
+    ...combinedScenario,
+    requestCompletenessContext: createRequestCompletenessContext('A different current question')
+  }
+}));
+assert.doesNotMatch(incompleteCombinedMarkup, /Confirm the relevant financial year before applying the IRAS guidance/,
+  'IRAS facts are not surfaced when the request-completeness context is stale');
+assert.match(incompleteCombinedMarkup, /Confirm the employee contribution category before applying this rule/,
+  'a valid CPF projection remains visible when the IRAS completeness guard fails');
+const staleCombinedMarkup = renderToStaticMarkup(React.createElement(AnswerPresentation, {
+  text: 'The current CPF conditions remain visible.',
+  scenario: {
+    ...combinedScenario,
+    irasEvidencePresentation: { ...combinedIras, query: 'A prior IRAS question' }
+  }
+}));
+assert.doesNotMatch(staleCombinedMarkup, /Confirm the relevant financial year before applying the IRAS guidance/,
+  'IRAS facts are not surfaced when the projection belongs to an earlier query');
+assert.match(staleCombinedMarkup, /Confirm the employee contribution category before applying this rule/,
+  'a valid CPF projection remains visible when the IRAS projection is stale');
 
 const irasQuery = 'Synthetic IRAS question';
 const currentIras = {

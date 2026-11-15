@@ -56,6 +56,18 @@ export function prioritizeExplicitAnswerSection(text: string): string {
   const heading = lines[headingAt].match(/^\s*(#{1,6})/);
   if (!heading) return text;
   const level = heading[1].length;
+  const headingAncestors: number[] = [];
+  for (let index = 0; index < headingAt; index += 1) {
+    const previousHeading = lines[index].match(/^\s*(#{1,6})\s+/);
+    if (!previousHeading) continue;
+    const previousLevel = previousHeading[1].length;
+    while (headingAncestors.length > 0 && headingAncestors[headingAncestors.length - 1] >= previousLevel) {
+      headingAncestors.pop();
+    }
+    headingAncestors.push(previousLevel);
+  }
+  if (headingAncestors.some(ancestorLevel => ancestorLevel < level)) return text;
+
   let end = lines.length;
   for (let index = headingAt + 1; index < lines.length; index += 1) {
     const nextHeading = lines[index].match(/^\s*(#{1,6})\s+/);
