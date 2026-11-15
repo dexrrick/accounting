@@ -2612,6 +2612,44 @@ export function journalGroupFingerprint(g: JournalEntryGroup): string {
   return `${eventDate}#${txId}#${title}#${dr}#${cr}#${linesSig}`;
 }
 
+export function isNonCommittedOrHypotheticalGroup(
+  g: Partial<JournalEntryGroup> | null | undefined
+): boolean {
+  if (!g) return false;
+  return Boolean(
+    g.isHypothetical ||
+    g.transactionStatus === 'hypothetical' ||
+    g.transactionStatus === 'planned' ||
+    g.transactionStatus === 'conditional' ||
+    g.journalAction === 'illustrative'
+  );
+}
+
+export function hasClearRevisionIntent(
+  userInput: string,
+  groups?: Array<Partial<JournalEntryGroup>>,
+  parsedJournalAction?: string
+): boolean {
+  const cleanInput = (userInput || '').replace(/\n\n\[Correction Notice:[\s\S]*\]$/i, '').trim();
+
+  const isAdditiveNewTransaction =
+    /\b(?:another|second|third|fourth|additional|separate|new|also\s+(?:received|paid|bought|purchased|issued|have)|here\s+is\s+(?:another|a\s+second|a\s+new|an\s+additional))\s+(?:invoice|bill|receipt|payment|voucher|transaction|entry|purchase|sale|expense)\b/i.test(cleanInput) &&
+    !/\b(?:instead\s+of|replace|revis(?:e|ing)|amend(?:ing)?)\s+(?:the\s+)?(?:earlier|previous|prior|first|original)\b/i.test(cleanInput);
+
+  if (isAdditiveNewTransaction) {
+    return false;
+  }
+
+  const hasRevisionPhrase =
+    /\b(?:correction\b|mistake\b|amend(?:ed|ment)?\b|instead\s+of\b|change\s+(?:it|that|the\s+(?:amount|invoice|bill|payment|entry|journal|total|date|figure))\s+to\b|update\s+(?:it|that|the\s+(?:amount|invoice|bill|payment|entry|journal|total|date|figure))\s+to\b|revised?\b|it\s+was\s+(?:actually\s+|for\s+)?S?\$|should\s+(?:have\s+been|be)\s+S?\$|was\s+actually\s+(?:for\s+)?S?\$|actually[,:\s]+(?:the\s+(?:invoice|bill|payment|receipt|entry|journal|amount|total|purchase|expense|salary|rent)\s+(?:was|is|should\s+be)|it\s+(?:was|is|should\s+be))\b|correct\s+the\s+(?:earlier|previous|prior|above|original|invoice|entry|journal|amount))\b/i.test(cleanInput);
+
+  return Boolean(
+    parsedJournalAction === 'revised' ||
+    groups?.some(g => g?.journalAction === 'revised') ||
+    hasRevisionPhrase
+  );
+}
+
 export function buildSynchronizedEventsFromGroups(
   committedGroups: JournalEntryGroup[],
   defaultCurrency: string = 'SGD',
@@ -2628,7 +2666,7 @@ export function buildSynchronizedEventsFromGroups(
   }
 
   return committedGroups
-    .filter(g => !g.isHypothetical)
+    .filter(g => !isNonCommittedOrHypotheticalGroup(g))
     .map((grp, idx) => {
       const id = grp.id || `evt-init-${idx + 1}`;
       const txId = grp.transactionId || grp.id || `tx-init-${idx + 1}`;
@@ -2658,13 +2696,23 @@ export function synchronizeCommittedScenarioState(
   committedGroups: JournalEntryGroup[],
   existingEvents?: AccountingEvent[]
 ): AccountingScenarioState {
-  const committed = (committedGroups || []).filter(g => !g.isHypothetical);
+  const committed = (committedGroups || []).filter(g => !isNonCommittedOrHypotheticalGroup(g));
+  const normalizedDirectGroups = (state.directGroups || []).map(g => {
+    if (isNonCommittedOrHypotheticalGroup(g)) {
+      return {
+        ...g,
+        isHypothetical: true,
+        authorityStatus: 'CONDITIONAL' as const
+      };
+    }
+    return g;
+  });
   const defaultCurr = state.transactionCurrency || state.functionalCurrency || 'SGD';
   const syncedEvents = buildSynchronizedEventsFromGroups(committed, defaultCurr, existingEvents ?? state.actualEvents);
   const tempScenario: AccountingScenarioState = {
     ...state,
     committedDirectGroups: committed,
-    directGroups: state.directGroups && state.directGroups.length > 0 ? state.directGroups : committed,
+    directGroups: normalizedDirectGroups.length > 0 ? normalizedDirectGroups : committed,
     actualEvents: syncedEvents,
     accountingEvents: syncedEvents
   };
@@ -2677,6 +2725,7 @@ export function synchronizeCommittedScenarioState(
     : (derivedBalances.length > 0 ? derivedBalances : undefined);
   return {
     ...state,
+    directGroups: normalizedDirectGroups.length > 0 ? normalizedDirectGroups : committed,
     committedDirectGroups: committed,
     actualEvents: syncedEvents,
     accountingEvents: syncedEvents,
@@ -2693,10 +2742,13 @@ export function rollbackRejectedScenarioState(
   const priorCommitted: JournalEntryGroup[] = (isFollowUp && priorScenario)
     ? (Array.isArray(priorScenario.committedDirectGroups)
         ? (priorScenario.committedDirectGroups.length > 0 || priorScenario.isComplete === false
-            ? [...priorScenario.committedDirectGroups]
-            : (priorScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
-        : (priorScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
+            ? [...priorScenario.committedDirectGroups].filter(g => !isNonCommittedOrHypotheticalGroup(g))
+            : (priorScenario.directGroups || []).filter(g => !isNonCommittedOrHypotheticalGroup(g) && g.isBalanced && g.totalDebit > 0))
+        : (priorScenario.directGroups || []).filter(g => !isNonCommittedOrHypotheticalGroup(g) && g.isBalanced && g.totalDebit > 0))
     : [];
+
+  const pendingImageEvidence = state.pendingImageEvidence ?? priorScenario?.pendingImageEvidence;
+  const pendingEvidence = state.pendingEvidence ?? priorScenario?.pendingEvidence;
 
   if (isFollowUp && priorScenario && priorCommitted.length > 0) {
     const baseState: AccountingScenarioState = {
@@ -2717,6 +2769,8 @@ export function rollbackRejectedScenarioState(
       directGroups: [...priorCommitted],
       committedDirectGroups: [...priorCommitted],
       projectedGroups: [],
+      pendingImageEvidence,
+      pendingEvidence,
       isComplete: false,
       missingFields
     };
@@ -2735,6 +2789,8 @@ export function rollbackRejectedScenarioState(
       regulatoryMandatesSummary: undefined,
       keyParameters: [],
       amount: undefined,
+      pendingImageEvidence,
+      pendingEvidence,
       isComplete: false,
       missingFields
     };
@@ -2752,77 +2808,91 @@ export function resolveAndApplyJournalRevisions(
   const updated = [...priorCommitted];
   let unidentifiedRevision = false;
   const isCashOrBank = (name: string) => /\b(?:cash|bank|bank\s*transfer|cheque|check|current\s*account)\b/i.test(name || '');
+  const isGenericControlOrBank = (name: string) => /\b(?:cash|bank|checking|current\s*account|payables?|receivables?|creditors?|debtors?)\b/i.test(name || '');
 
   for (const newGrp of newActualGroups) {
     let matchIdx = -1;
 
-    if (priorCommitted.length === 1) {
-      if (
-        newGrp.targetTransactionId &&
-        newGrp.targetTransactionId !== priorCommitted[0].id &&
-        newGrp.targetTransactionId !== priorCommitted[0].transactionId
-      ) {
-        matchIdx = -1;
-      } else {
-        matchIdx = 0;
+    // 1. Explicit targetTransactionId check (never falls through)
+    if (newGrp.targetTransactionId) {
+      matchIdx = updated.findIndex(p =>
+        p.id === newGrp.targetTransactionId ||
+        (p.transactionId && p.transactionId === newGrp.targetTransactionId)
+      );
+      if (matchIdx === -1) {
+        unidentifiedRevision = true;
+        break;
       }
     } else {
-      // priorCommitted.length > 1
-      // a) Check explicit targetTransactionId
-      if (newGrp.targetTransactionId) {
-        matchIdx = updated.findIndex(p =>
-          p.id === newGrp.targetTransactionId ||
-          (p.transactionId && p.transactionId === newGrp.targetTransactionId)
-        );
-      }
-
-      // b) Check id or transactionId
-      if (matchIdx === -1) {
-        const idMatchIdx = updated.findIndex(p =>
-          p.id === newGrp.id ||
-          (newGrp.transactionId && p.transactionId === newGrp.transactionId)
-        );
-        if (idMatchIdx !== -1) {
-          if (newGrp.id !== 'grp-1') {
+      // 2. When newGrp.targetTransactionId is NOT provided
+      const idMatchIdx = updated.findIndex(p =>
+        p.id === newGrp.id ||
+        (Boolean(newGrp.transactionId) && p.transactionId === newGrp.transactionId)
+      );
+      if (idMatchIdx !== -1) {
+        const isGenericId = /^grp-\d+$/i.test(newGrp.id || '') || /^image-(?:journal|transaction)-/i.test(newGrp.id || '');
+        if (!isGenericId) {
+          matchIdx = idMatchIdx;
+        } else {
+          const targetGrp = updated[idMatchIdx];
+          const newPrimary = (newGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
+          const targetPrimary = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
+          const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+          const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+          const hasAccountOverlap = (newPrimary.length > 0 && targetPrimary.length > 0)
+            ? newPrimary.some(n => targetPrimary.some(tn =>
+                areAccountNamesCanonicallyEquivalent(n, tn) ||
+                tn.toLowerCase().includes(n.toLowerCase().trim()) ||
+                n.toLowerCase().includes(tn.toLowerCase().trim())
+              ))
+            : newNonCash.some(n => targetNonCash.some(tn =>
+                areAccountNamesCanonicallyEquivalent(n, tn) ||
+                tn.toLowerCase().includes(n.toLowerCase().trim()) ||
+                n.toLowerCase().includes(tn.toLowerCase().trim())
+              ));
+          const genericWords = ['entry', 'group', 'journal', 'invoice', 'revised', 'amended', 'transaction'];
+          const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
+          const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
+          const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
+          if (hasAccountOverlap || hasTitleOverlap) {
             matchIdx = idMatchIdx;
-          } else {
-            const targetGrp = updated[idMatchIdx];
-            const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
-            const targetNonCash = (targetGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
-            const hasAccountOverlap = newNonCash.some(n => targetNonCash.some(tn =>
-              areAccountNamesCanonicallyEquivalent(n, tn) ||
-              tn.toLowerCase().includes(n.toLowerCase().trim()) ||
-              n.toLowerCase().includes(tn.toLowerCase().trim())
-            ));
-            const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
-            const targetTitleTokens = (targetGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !['entry', 'group', 'journal'].includes(w));
-            const hasTitleOverlap = newTitleTokens.some(t => targetTitleTokens.includes(t));
-            if (hasAccountOverlap || hasTitleOverlap) {
-              matchIdx = idMatchIdx;
-            }
           }
         }
       }
 
-      // c) Check unique candidate match by non-cash accounts or title
       if (matchIdx === -1) {
         const candidates: number[] = [];
         const userLower = userInput.toLowerCase();
+        const newPrimary = (newGrp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
         const newNonCash = (newGrp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
+        const genericWords = ['entry', 'group', 'journal', 'invoice', 'revised', 'amended', 'transaction'];
+        const newTitleTokens = (newGrp.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
 
         for (let i = 0; i < updated.length; i++) {
           const grp = updated[i];
+          const grpPrimary = (grp.lines || []).map(l => l.accountName).filter(n => !isGenericControlOrBank(n));
           const grpNonCash = (grp.lines || []).map(l => l.accountName).filter(n => !isCashOrBank(n));
           const grpTitle = (grp.title || '').toLowerCase();
+          const targetTitleTokens = grpTitle.split(/\W+/).filter(w => w.length > 3 && !genericWords.includes(w));
+
           const matchesUserInput = grpNonCash.some(n => {
             const clean = n.toLowerCase().trim();
             return clean.length > 3 && userLower.includes(clean);
           }) || (grpTitle.length > 4 && userLower.includes(grpTitle));
-          const matchesNewGrp = newNonCash.some(n => grpNonCash.some(gn =>
-            areAccountNamesCanonicallyEquivalent(n, gn) ||
-            gn.toLowerCase().includes(n.toLowerCase().trim()) ||
-            n.toLowerCase().includes(gn.toLowerCase().trim())
-          ));
+
+          const matchesNewGrp = ((newPrimary.length > 0 && grpPrimary.length > 0)
+            ? newPrimary.some(n => grpPrimary.some(gn =>
+                areAccountNamesCanonicallyEquivalent(n, gn) ||
+                gn.toLowerCase().includes(n.toLowerCase().trim()) ||
+                n.toLowerCase().includes(gn.toLowerCase().trim())
+              ))
+            : newNonCash.some(n => grpNonCash.some(gn =>
+                areAccountNamesCanonicallyEquivalent(n, gn) ||
+                gn.toLowerCase().includes(n.toLowerCase().trim()) ||
+                n.toLowerCase().includes(gn.toLowerCase().trim())
+              ))
+          ) || newTitleTokens.some(t => targetTitleTokens.includes(t));
+
           if (matchesUserInput || matchesNewGrp) {
             candidates.push(i);
           }
@@ -2830,6 +2900,10 @@ export function resolveAndApplyJournalRevisions(
 
         if (candidates.length === 1) {
           matchIdx = candidates[0];
+        } else {
+          matchIdx = -1;
+          unidentifiedRevision = true;
+          break;
         }
       }
     }
@@ -3180,7 +3254,7 @@ export function postProcessAIResponse(
           // Only move to accountingPeriod if it matches genuine period formats (e.g., "February 2025", "FY2025", "Q1 2025")
           // and does NOT contain an invalid day-month-year calendar date token (e.g., 31/02/2025, 29/02/2025, 31 April 2025)
           const isCalendarDateToken =
-            /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}\b|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/i.test(rawDateStr);
+            /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/i.test(rawDateStr);
           if (!isCalendarDateToken && !accountingPeriod) {
             accountingPeriod = rawDateStr;
           }
@@ -3189,7 +3263,7 @@ export function postProcessAIResponse(
       if (!normalizedEventDate) {
         // Only extract fallback from userInput when userInput contains a complete calendar date (day + month + year)
         const completeDateMatch =
-          userInput.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+          userInput.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?)\b/)?.[0] ||
           userInput.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4})\b/i)?.[0] ||
           userInput.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4})\b/i)?.[0];
         if (completeDateMatch) {
@@ -3198,14 +3272,15 @@ export function postProcessAIResponse(
       }
 
       // Hypothetical / Conditional / Illustrative status:
-      const txStatus = (grp.transactionStatus as any) || (grp.isHypothetical ? 'hypothetical' : 'actual');
-      const jAction = (grp.journalAction as any) || (txStatus !== 'actual' ? 'illustrative' : 'new');
+      const txStatus = (grp.transactionStatus as any) || (parsed.transactionStatus as any) || (grp.isHypothetical || parsed.isHypothetical ? 'hypothetical' : 'actual');
+      const jAction = (grp.journalAction as any) || (parsed.journalAction as any) || (txStatus !== 'actual' ? 'illustrative' : 'new');
       const isHypo = Boolean(
-        grp.isHypothetical ||
-        txStatus === 'hypothetical' ||
-        txStatus === 'conditional' ||
-        txStatus === 'planned' ||
-        jAction === 'illustrative'
+        isNonCommittedOrHypotheticalGroup({
+          isHypothetical: Boolean(grp.isHypothetical || parsed.isHypothetical),
+          transactionStatus: txStatus,
+          journalAction: jAction
+        }) ||
+        /\b(?:illustrative|hypothetical|pro\s*forma|planned|proposed|conditional)\b/i.test(grp.title || parsed.transactionTitle || '')
       );
       const authStatus = isHypo ? 'CONDITIONAL' : (grp.authorityStatus || 'AI_PROPOSED');
 
@@ -3250,8 +3325,11 @@ export function postProcessAIResponse(
       const cleanInputForAction = userInput.replace(/\n\n\[Correction Notice:[\s\S]*\]$/i, '').trim();
       const isRestatement = directGroups.some(g => g.journalAction === 'restatement') ||
         /\b(?:show|display|view|see|print|repeat)\b[\s\S]*\b(?:journal|entry|entries)\b[\s\S]*\b(?:again|earlier|previous|above)\b/i.test(cleanInputForAction);
-      const isRevision = directGroups.some(g => g.journalAction === 'revised') ||
-        /\b(?:actually|correction|correct|mistake|amend|amendment|instead of|change to|update to|revised?|it was S?\$|should be S?\$)\b/i.test(cleanInputForAction);
+      const isRevision = hasClearRevisionIntent(cleanInputForAction, directGroups, parsed.journalAction);
+
+      if (!isRevision) {
+        directGroups = directGroups.map(g => (g.journalAction === 'revised' ? { ...g, journalAction: 'new' as const } : g));
+      }
 
       if (isRestatement) {
         committedDirectGroups = [...priorCommitted];

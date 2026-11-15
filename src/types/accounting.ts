@@ -314,6 +314,9 @@ export interface AccountingScenarioState {
   /** Additive provenance for facts extracted from user text or image evidence. */
   evidence?: ExtractedEvidence[];
   imageEvidence?: ExtractedImageEvidence[];
+  /** Pending uncommitted evidence retained when an image-derived entry fails validation or awaits clarification. */
+  pendingEvidence?: ExtractedEvidence[];
+  pendingImageEvidence?: ExtractedImageEvidence[];
   eventSequence?: AccountingEventSequence;
 }
 

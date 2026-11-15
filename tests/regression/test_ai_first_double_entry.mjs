@@ -14,8 +14,10 @@ import {
   normalizeAccountCategory,
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
-  journalGroupFingerprint
+  journalGroupFingerprint,
+  resolveAndApplyJournalRevisions
 } from '../../src/services/groundingContextBuilder.ts';
+import { formatSingaporeDate, getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 
 console.log('================================================================');
 console.log('🧪 RUNNING AI-FIRST DOUBLE-ENTRY ARCHITECTURE REGRESSION SUITE');
@@ -4802,6 +4804,584 @@ try {
       'Must reject 31 April 2025 with IMAGE_INVALID_TRANSACTION_DATE'
     );
     console.log('✓ 10K-4. Invalid calendar dates rejection verified across non-existent days and leap years');
+    passed++;
+  }
+
+  // --- 10L. Review Findings Verification (5 Review Fixes) ---
+  console.log('\n--- 10L. Review Findings Verification (5 Review Fixes) ---');
+
+  // 10L-1 (P1 — Planned or conditional image-derived and AI entries cannot be committed)
+  {
+    // Planned status:
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Planned Equipment Purchase',
+                directGroups: [{
+                  id: 'grp-planned-1',
+                  eventDate: '15/01/2025',
+                  title: 'Planned Equipment Purchase',
+                  totalDebit: 5000,
+                  totalCredit: 5000,
+                  isBalanced: true,
+                  transactionStatus: 'planned',
+                  lines: [
+                    { accountName: 'Equipment', category: 'ASSET', debit: 5000, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 5000 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-planned-1',
+                  fields: { invoiceDate: '15/01/2025' },
+                  journalLines: [
+                    { accountName: 'Equipment', debit: 5000, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 5000 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const resPlanned = await processAccountingQuery(
+      'Planned equipment purchase attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Planned equipment purchase attached.', images: [{ id: 'img-planned-1', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(resPlanned.scenarioState.directGroups?.[0]?.isHypothetical, true, 'Planned group must be marked isHypothetical: true');
+    assert.equal(resPlanned.scenarioState.directGroups?.[0]?.authorityStatus, 'CONDITIONAL', 'Planned group must have CONDITIONAL authority');
+    assert.equal(resPlanned.scenarioState.committedDirectGroups?.length, 0, 'Planned group must NOT be in committedDirectGroups');
+    assert.equal((resPlanned.scenarioState.actualEvents || []).length, 0, 'Planned group must NOT generate actualEvents');
+    assert.equal(resPlanned.scenarioState.remainingBalances, undefined, 'Planned group must NOT generate remaining balances');
+    assert.equal(resPlanned.scenarioState.isComplete, false, 'Planned group scenario must have isComplete: false');
+
+    // Conditional status:
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Conditional Purchase',
+                directGroups: [{
+                  id: 'grp-cond-1',
+                  eventDate: '15/01/2025',
+                  title: 'Conditional Purchase',
+                  totalDebit: 3000,
+                  totalCredit: 3000,
+                  isBalanced: true,
+                  transactionStatus: 'conditional',
+                  lines: [
+                    { accountName: 'Inventory', category: 'ASSET', debit: 3000, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 3000 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-cond-1',
+                  fields: { invoiceDate: '15/01/2025' },
+                  journalLines: [
+                    { accountName: 'Inventory', debit: 3000, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 3000 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const resCond = await processAccountingQuery(
+      'Conditional purchase attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Conditional purchase attached.', images: [{ id: 'img-cond-1', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(resCond.scenarioState.directGroups?.[0]?.isHypothetical, true, 'Conditional group must be marked isHypothetical: true');
+    assert.equal(resCond.scenarioState.directGroups?.[0]?.authorityStatus, 'CONDITIONAL', 'Conditional group must have CONDITIONAL authority');
+    assert.equal(resCond.scenarioState.committedDirectGroups?.length, 0, 'Conditional group must NOT be in committedDirectGroups');
+    assert.equal((resCond.scenarioState.actualEvents || []).length, 0, 'Conditional group must NOT generate actualEvents');
+    assert.equal(resCond.scenarioState.remainingBalances, undefined, 'Conditional group must NOT generate remaining balances');
+    assert.equal(resCond.scenarioState.isComplete, false, 'Conditional group scenario must have isComplete: false');
+
+    console.log('✓ 10L-1. Planned and conditional entries cannot be committed');
+    passed++;
+  }
+
+  // 10L-2 (P1 — Two separate S$500 bank payments on the same day without voucher numbers are both preserved)
+  {
+    // Turn 1: Committed S$2,000 invoice on credit
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Inventory Purchase on Credit',
+                directGroups: [{
+                  id: 'grp-inv-2000',
+                  eventDate: '10/01/2025',
+                  title: 'Inventory Purchase',
+                  totalDebit: 2000,
+                  totalCredit: 2000,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Inventory', category: 'ASSET', debit: 2000, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 2000 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1 = await processAccountingQuery(
+      'Purchased inventory for S$2,000 on credit.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(turn1.scenarioState.committedDirectGroups?.length, 1);
+    assert.equal(turn1.scenarioState.remainingBalances?.[0]?.amount, 2000);
+
+    // Turn 2: First S$500 bank payment screenshot (no voucher number)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Bank Payment',
+                directGroups: [{
+                  id: 'grp-pay-1',
+                  eventDate: '15/01/2025',
+                  title: 'Bank Payment',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-bank-pay-1',
+                  fields: { paymentDate: '15/01/2025', amount: 500 },
+                  journalLines: [
+                    { accountName: 'Trade Payables', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2 = await processAccountingQuery(
+      'Payment screenshot attached.',
+      turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Payment screenshot attached.', images: [{ id: 'img-bank-pay-1', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+    assert.equal(turn2.scenarioState.committedDirectGroups?.length, 2, 'Turn 2 must commit second group');
+    assert.equal(turn2.scenarioState.remainingBalances?.[0]?.amount, 1500, 'Remaining balance must be S$1,500');
+
+    // Turn 3: Second S$500 bank payment screenshot on same day (no voucher number, neutral prompt)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Bank Payment',
+                directGroups: [{
+                  id: 'grp-pay-2',
+                  eventDate: '15/01/2025',
+                  title: 'Bank Payment',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-bank-pay-2',
+                  fields: { paymentDate: '15/01/2025', amount: 500 },
+                  journalLines: [
+                    { accountName: 'Trade Payables', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn3 = await processAccountingQuery(
+      'Payment screenshot attached.',
+      turn2.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Payment screenshot attached.', images: [{ id: 'img-bank-pay-2', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(turn3.scenarioState.committedDirectGroups?.length, 3, 'Turn 3 must NOT be suppressed as duplicate');
+    assert.equal(turn3.scenarioState.remainingBalances?.[0]?.amount, 1000, 'Remaining balance must be S$1,000');
+    console.log('✓ 10L-2. Two separate bank payments on the same day without voucher numbers are both preserved');
+    passed++;
+  }
+
+  // 10L-3 (P1 — Preventing unintended journal replacement on new invoice & explicit wrong targetTransactionId)
+  {
+    // Subcase A: Existing S$500 invoice followed by "Actually, here is another invoice for S$700"
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice 1',
+                directGroups: [{
+                  id: 'grp-inv-500',
+                  eventDate: '10/01/2025',
+                  title: 'First Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const inv1 = await processAccountingQuery(
+      'Received invoice for office supplies of S$500.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(inv1.scenarioState.committedDirectGroups?.length, 1);
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Second Invoice',
+                journalAction: 'revised',
+                directGroups: [{
+                  id: 'grp-inv-700',
+                  eventDate: '12/01/2025',
+                  title: 'Second Invoice',
+                  journalAction: 'revised',
+                  totalDebit: 700,
+                  totalCredit: 700,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 700, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 700 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const inv2 = await processAccountingQuery(
+      'Actually, here is another invoice for S$700.',
+      inv1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(inv2.scenarioState.committedDirectGroups?.length, 2, 'Must add second invoice instead of replacing');
+    const totalPayables = (inv2.scenarioState.remainingBalances || []).reduce((s, b) => s + b.amount, 0);
+    assert.equal(totalPayables, 1200, 'Total payables must be S$1,200');
+
+    // Subcase B: Revision with explicitly incorrect targetTransactionId
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Amended Invoice',
+                journalAction: 'revised',
+                directGroups: [{
+                  id: 'grp-rev-1',
+                  targetTransactionId: 'grp-wrong-id',
+                  eventDate: '10/01/2025',
+                  title: 'Amended Invoice',
+                  journalAction: 'revised',
+                  totalDebit: 600,
+                  totalCredit: 600,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 600, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 600 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const revWrongTarget = await processAccountingQuery(
+      'Actually, amend the invoice to S$600.',
+      inv1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.ok(
+      revWrongTarget.scenarioState.missingFields?.some(f => f.fieldKey === 'revisionTarget'),
+      'Must reject with revisionTarget clarification when targetTransactionId is wrong'
+    );
+    assert.equal(revWrongTarget.scenarioState.committedDirectGroups?.length, 1, 'Prior committed group preserved untouched');
+    assert.equal(revWrongTarget.scenarioState.committedDirectGroups?.[0]?.totalDebit, 500, 'Original amount preserved');
+
+    // Direct check on resolveAndApplyJournalRevisions with 1 prior transaction
+    const directRev1 = resolveAndApplyJournalRevisions(
+      inv1.scenarioState.committedDirectGroups,
+      [{ id: 'grp-rev-test', targetTransactionId: 'grp-wrong-id', totalDebit: 600, totalCredit: 600, lines: [] }],
+      'amend invoice'
+    );
+    assert.equal(directRev1.unidentifiedRevision, true, 'Explicitly wrong targetTransactionId must fail with 1 prior transaction');
+
+    // Direct check on resolveAndApplyJournalRevisions with 2 prior transactions
+    const directRev2 = resolveAndApplyJournalRevisions(
+      inv2.scenarioState.committedDirectGroups,
+      [{ id: 'grp-rev-test', targetTransactionId: 'grp-wrong-id', totalDebit: 600, totalCredit: 600, lines: [] }],
+      'amend invoice'
+    );
+    assert.equal(directRev2.unidentifiedRevision, true, 'Explicitly wrong targetTransactionId must fail with 2 prior transactions');
+
+    console.log('✓ 10L-3. Unintended journal replacement prevented on new invoice & explicit wrong targetTransactionId rejected');
+    passed++;
+  }
+
+  // 10L-4 (P2 — Rejected screenshot retained as pendingImageEvidence and completed on follow-up turn without re-upload)
+  {
+    // Turn 1: Invoice screenshot with missing transaction date
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice',
+                directGroups: [{
+                  id: 'grp-pending-1',
+                  title: 'Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-pending-inv',
+                  fields: { invoiceNo: 'INV-888' },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1Pending = await processAccountingQuery(
+      'Invoice attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice attached.', images: [{ id: 'img-pending-inv', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.ok(
+      turn1Pending.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Must reject with IMAGE_MISSING_TRANSACTION_DATE'
+    );
+    assert.equal(turn1Pending.scenarioState.imageEvidence?.length, 0, 'imageEvidence must not be committed');
+    assert.equal(turn1Pending.scenarioState.committedDirectGroups?.length, 0, 'committedDirectGroups must be empty');
+    assert.equal(turn1Pending.scenarioState.pendingImageEvidence?.length, 1, 'pendingImageEvidence must retain screenshot');
+    assert.equal(turn1Pending.scenarioState.pendingImageEvidence?.[0]?.imageId, 'img-pending-inv');
+
+    // Turn 2: User provides transaction date WITHOUT re-uploading the image
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice',
+                directGroups: [{
+                  id: 'grp-pending-1',
+                  eventDate: '15/03/2025',
+                  title: 'Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2Completed = await processAccountingQuery(
+      'The transaction date was 15/03/2025.',
+      turn1Pending.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2Completed.scenarioState.committedDirectGroups?.length, 1, 'Turn 2 must commit the journal entry');
+    assert.equal(turn2Completed.scenarioState.committedDirectGroups?.[0]?.eventDate, '15/03/2025', 'Must have resolved eventDate 15/03/2025');
+    assert.equal(turn2Completed.scenarioState.committedDirectGroups?.[0]?.totalDebit, 500, 'Must have totalDebit 500');
+    assert.equal(turn2Completed.scenarioState.imageEvidence?.length, 1, 'imageEvidence must now be committed');
+    assert.equal(turn2Completed.scenarioState.pendingImageEvidence, undefined, 'pendingImageEvidence must be cleared');
+    console.log('✓ 10L-4. Rejected screenshot retained as pendingImageEvidence and completed on follow-up turn without re-upload');
+    passed++;
+  }
+
+  // 10L-5 (P2 — ISO datetime validation rejects invalid calendar dates like 2025-02-29T12:00:00)
+  {
+    assert.equal(formatSingaporeDate('2025-02-29T12:00:00'), '', 'formatSingaporeDate must return empty for non-leap year 2025-02-29 ISO datetime');
+    assert.equal(getSingaporeDateString('2025-02-29T12:00:00'), '', 'getSingaporeDateString must return empty for non-leap year 2025-02-29 ISO datetime');
+    assert.equal(formatSingaporeDate('2024-02-29T12:00:00'), '29/02/2024', 'formatSingaporeDate must format valid leap year 2024-02-29 ISO datetime');
+    assert.equal(formatSingaporeDate('2025-04-31T10:00:00Z'), '', 'formatSingaporeDate must return empty for non-existent 31 April ISO datetime');
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice',
+                directGroups: [{
+                  id: 'grp-iso-bad-date',
+                  eventDate: '2025-02-29T12:00:00',
+                  title: 'Invoice',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-iso-bad-date',
+                  fields: { invoiceDate: '2025-02-29T12:00:00' },
+                  journalLines: [
+                    { accountName: 'Office Supplies', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const resIsoBadDate = await processAccountingQuery(
+      'Invoice dated 2025-02-29T12:00:00 attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Invoice dated 2025-02-29T12:00:00 attached.', images: [{ id: 'img-iso-bad-date', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.ok(
+      resIsoBadDate.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_INVALID_TRANSACTION_DATE'),
+      'Must reject 2025-02-29T12:00:00 with IMAGE_INVALID_TRANSACTION_DATE'
+    );
+    console.log('✓ 10L-5. ISO datetime validation rejects invalid calendar dates like 2025-02-29T12:00:00');
     passed++;
   }
 

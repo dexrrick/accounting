@@ -15,6 +15,8 @@ import { fetchGemini } from './geminiProxyTransport';
 import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
+  hasClearRevisionIntent,
+  isNonCommittedOrHypotheticalGroup,
   isStandaloneOutputGstCalculationRequest,
   journalGroupFingerprint,
   normalizeAccountCategory,
@@ -150,7 +152,7 @@ function normaliseImageEvidence(rawEvidence: unknown, attachments: ChatImageAtta
 export function extractDateFromText(text: string): string {
   if (!text || typeof text !== 'string') return '';
   const completeDateMatch =
-    text.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/)?.[0] ||
+    text.match(/\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b|\b(\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?)\b/)?.[0] ||
     text.match(/\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4})\b/i)?.[0] ||
     text.match(/\b((?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4})\b/i)?.[0];
   if (completeDateMatch) {
@@ -197,7 +199,7 @@ export function extractDateFromImageFields(fields: ExtractedEvidence[] | Record<
 
 export function hasInvalidCalendarDateToken(text: string): boolean {
   if (!text || typeof text !== 'string') return false;
-  const numericMatches = text.match(/\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2})\b/g);
+  const numericMatches = text.match(/\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?)\b/g);
   if (numericMatches) {
     for (const token of numericMatches) {
       if (!formatSingaporeDate(token)) {
@@ -235,20 +237,23 @@ export function hasInvalidCalendarDateInImageFields(fields: ExtractedEvidence[] 
 
   for (const f of fieldList) {
     if (!f) continue;
-    const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const rawKey = String(f.field || '');
+    const cleanKey = rawKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const isDocRefOrNonDateKey = /(?:invoice\s*no|invoice\s*number|inv\s*no|voucher\s*no|voucher\s*number|receipt\s*no|receipt\s*number|ref(?:erence)?\s*(?:no|number|id)?|doc(?:ument)?\s*(?:no|number|id)|bill\s*no|cheque\s*no|check\s*no|po\s*no|order\s*no|serial|account\s*no|amount|total|subtotal|tax|gst|price|rate|qty|quantity)/i.test(rawKey);
+
     if (f.value !== undefined && f.value !== null) {
       const valStr = String(f.value).trim();
       if (valStr) {
         if (dateKeyPattern.test(cleanKey) && !formatSingaporeDate(valStr)) {
           return true;
         }
-        if (hasInvalidCalendarDateToken(valStr)) {
+        if (!isDocRefOrNonDateKey && hasInvalidCalendarDateToken(valStr)) {
           return true;
         }
       }
     }
     const raw = (f as any).rawText || (f as any).raw_text;
-    if (raw && hasInvalidCalendarDateToken(String(raw))) {
+    if (raw && !isDocRefOrNonDateKey && hasInvalidCalendarDateToken(String(raw))) {
       return true;
     }
   }
@@ -271,6 +276,27 @@ export function mergeImageEvidence(
   return merged;
 }
 
+const docRefKeyPattern = /^(?:invoiceno|invoicenumber|receiptno|receiptnumber|voucherno|vouchernumber|paymentvoucherno|paymentvouchernumber|billno|billnumber|refno|referenceno|referencenumber|documentno|documentnumber|docno|transactionid|txid)$/;
+
+export function extractDocRefsFromImages(images: ExtractedImageEvidence[]): Set<string> {
+  const refs = new Set<string>();
+  for (const img of (images || [])) {
+    const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
+      ? img.fields
+      : typeof img.fields === 'object' && img.fields !== null
+        ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
+        : [];
+    for (const f of fields) {
+      const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (docRefKeyPattern.test(cleanKey)) {
+        const val = String(f.value || '').trim().toLowerCase();
+        if (val) refs.add(val);
+      }
+    }
+  }
+  return refs;
+}
+
 export function findIdempotentPriorMatch(
   extGrp: JournalEntryGroup,
   priorCommitted: JournalEntryGroup[],
@@ -284,41 +310,9 @@ export function findIdempotentPriorMatch(
     return null;
   }
 
-  const docRefKeyPattern = /^(?:invoiceno|invoicenumber|receiptno|receiptnumber|voucherno|vouchernumber|paymentvoucherno|paymentvouchernumber|billno|billnumber|refno|referenceno|referencenumber|documentno|documentnumber|docno|transactionid|txid)$/;
-
-  const extractDocRefsFromImages = (images: ExtractedImageEvidence[]): Set<string> => {
-    const refs = new Set<string>();
-    for (const img of images) {
-      const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
-        ? img.fields
-        : typeof img.fields === 'object' && img.fields !== null
-          ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
-          : [];
-      for (const f of fields) {
-        const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        if (docRefKeyPattern.test(cleanKey)) {
-          const val = String(f.value || '').trim().toLowerCase();
-          if (val) refs.add(val);
-        }
-      }
-    }
-    return refs;
-  };
-
-  const currentDocRefs = extractDocRefsFromImages(currentImageEvidence);
-  const priorDocRefs = extractDocRefsFromImages(priorImageEvidence);
-  for (const ev of priorGeneralEvidence) {
-    if (ev.source === 'image' && ev.field) {
-      const cleanKey = String(ev.field).toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (docRefKeyPattern.test(cleanKey)) {
-        const val = String(ev.value || '').trim().toLowerCase();
-        if (val) priorDocRefs.add(val);
-      }
-    }
-  }
-
+  const rawCurrentDocRefs = extractDocRefsFromImages(currentImageEvidence);
+  const currentDocRefs = new Set(Array.from(rawCurrentDocRefs).map(r => r.replace(/[^a-z0-9]/gi, '').toLowerCase()));
   const currentImageIds = new Set((currentImageEvidence || []).map(img => img.imageId).filter(Boolean));
-  const priorImageIds = new Set((priorImageEvidence || []).map(img => img.imageId).filter(Boolean));
 
   const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
   const extDrCents = Math.round((extGrp.totalDebit || 0) * 100);
@@ -366,54 +360,77 @@ export function findIdempotentPriorMatch(
       continue;
     }
 
+    // Only collect prior image evidence belonging to this prior group
+    const relatedPriorImages = (priorImageEvidence || []).filter(ev => {
+      if (ev.imageId && (
+        (prior.id && prior.id.includes(ev.imageId)) ||
+        (prior.revisedFromId && prior.revisedFromId.includes(ev.imageId))
+      )) {
+        return true;
+      }
+      if (Array.isArray(ev.journalLines) && ev.journalLines.length === prior.lines.length) {
+        const matchesLines = ev.journalLines.every((l, idx) => {
+          const pl = prior.lines[idx];
+          return pl &&
+            Math.round((Number(l.debit) || 0) * 100) === Math.round(pl.debit * 100) &&
+            Math.round((Number(l.credit) || 0) * 100) === Math.round(pl.credit * 100) &&
+            areImageAccountsCompatible(l, pl);
+        });
+        if (matchesLines) return true;
+      }
+      return false;
+    });
+
+    const relatedPriorImageIds = new Set(relatedPriorImages.map(img => img.imageId).filter(Boolean));
+    const basePriorDocRefs = extractDocRefsFromImages(relatedPriorImages);
+
+    // Also check priorGeneralEvidence for this prior group
+    for (const ev of priorGeneralEvidence) {
+      if (ev.source === 'image' && ev.field && (
+        (ev as any).imageId ? relatedPriorImageIds.has((ev as any).imageId) : true
+      )) {
+        const cleanKey = String(ev.field).toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (docRefKeyPattern.test(cleanKey)) {
+          const val = String(ev.value || '').trim().toLowerCase();
+          if (val) basePriorDocRefs.add(val);
+        }
+      }
+    }
+
     const priorSources = `${prior.title || ''} ${prior.summary || ''} ${prior.narration || ''} ${prior.lines.map(l => l.lineExplanation || '').join(' ')}`.toLowerCase();
 
-    // Document reference comparison:
-    if (currentDocRefs.size > 0) {
-      if (priorDocRefs.size > 0) {
-        let hasConflict = false;
-        for (const curRef of currentDocRefs) {
-          const cleanCur = curRef.replace(/[^a-z0-9]/gi, '').toLowerCase();
-          const matchesPriorRef = Array.from(priorDocRefs).some(pRef => {
-            const cleanP = pRef.replace(/[^a-z0-9]/gi, '').toLowerCase();
-            return cleanP === cleanCur || cleanP.includes(cleanCur) || cleanCur.includes(cleanP);
-          });
-          const matchesPriorSources = priorSources.includes(cleanCur);
-          if (!matchesPriorRef && !matchesPriorSources) {
-            hasConflict = true;
-            break;
-          }
-        }
-        if (hasConflict) {
-          continue;
-        }
-      } else {
-        const docPattern = /\b(?:inv|rcp|pv|bill|ref)[-#\s]*[a-z0-9]+\b/gi;
-        const priorDocs = priorSources.match(docPattern);
-        if (priorDocs && priorDocs.length > 0) {
-          const cleanPriorDocs = priorDocs.map(d => d.replace(/[^a-z0-9]/gi, '').toLowerCase());
-          let hasConflict = false;
-          for (const curRef of currentDocRefs) {
-            const cleanCur = curRef.replace(/[^a-z0-9]/gi, '').toLowerCase();
-            if (!cleanPriorDocs.some(d => d.includes(cleanCur) || cleanCur.includes(d))) {
-              hasConflict = true;
-              break;
-            }
-          }
-          if (hasConflict) {
-            continue;
-          }
-        }
+    // Prior document references extraction:
+    const priorDocRefs = new Set(Array.from(basePriorDocRefs).map(r => r.replace(/[^a-z0-9]/gi, '').toLowerCase()));
+    const docPattern = /\b(?:inv|rcp|pv|bill|ref)[-#\s]*[a-z0-9]+(?:[-][a-z0-9]+)*\b/gi;
+    const priorTokens = priorSources.match(docPattern);
+    if (priorTokens) {
+      for (const t of priorTokens) {
+        const clean = t.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        if (clean) priorDocRefs.add(clean);
       }
-    } else {
-      if (priorDocRefs.size > 0) {
-        const hasMatchingImageId = Array.from(currentImageIds).some(cid =>
-          priorImageIds.has(cid) || (prior.id && prior.id.includes(cid)) || (prior.revisedFromId && prior.revisedFromId.includes(cid))
-        );
-        if (!hasMatchingImageId && currentImageIds.size > 0) {
-          continue;
-        }
+    }
+
+    // Check for conflicting document references:
+    if (currentDocRefs.size > 0 && priorDocRefs.size > 0) {
+      const allCurrentMatchPrior = Array.from(currentDocRefs).every(curRef => priorDocRefs.has(curRef));
+      if (!allCurrentMatchPrior) {
+        continue;
       }
+    }
+
+    // Check for positive identity confirmation:
+    const hasConfirmedDocRefMatch = currentDocRefs.size > 0 && priorDocRefs.size > 0 && Array.from(currentDocRefs).every(curRef => priorDocRefs.has(curRef));
+    const hasConfirmedImageIdMatch = currentImageIds.size > 0 &&
+      (currentDocRefs.size === 0 && priorDocRefs.size === 0 || (currentDocRefs.size > 0 && priorDocRefs.size > 0 && hasConfirmedDocRefMatch)) &&
+      Array.from(currentImageIds).every(cid =>
+        relatedPriorImageIds.has(cid) ||
+        prior.id === `image-journal-${cid}` ||
+        prior.id === `image-transaction-${cid}` ||
+        (prior.revisedFromId?.includes(cid) ?? false)
+      );
+
+    if (!hasConfirmedDocRefMatch && !hasConfirmedImageIdMatch) {
+      continue;
     }
 
     return prior;
@@ -1147,6 +1164,30 @@ export async function processAccountingQuery(
         if (typeof l.credit === 'number' && l.credit > 0) priorAmountsSet.add(l.credit);
       }
     }
+    const candidateEvidences: ExtractedImageEvidence[] = [
+      ...(activeScenario?.pendingImageEvidence || []),
+      ...(activeScenario?.imageEvidence || []),
+      ...(response.scenarioState?.imageEvidence || [])
+    ];
+    for (const img of candidateEvidences) {
+      for (const line of (img.journalLines || [])) {
+        if (typeof line.debit === 'number' && line.debit > 0) priorAmountsSet.add(line.debit);
+        if (typeof line.credit === 'number' && line.credit > 0) priorAmountsSet.add(line.credit);
+      }
+      const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
+        ? img.fields
+        : typeof img.fields === 'object' && img.fields !== null
+          ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
+          : [];
+      for (const f of fields) {
+        if (typeof f.value === 'number' && Number.isFinite(f.value) && f.value > 0) {
+          priorAmountsSet.add(f.value);
+        } else if (typeof f.value === 'string') {
+          const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
+          if (Number.isFinite(num) && num > 0) priorAmountsSet.add(num);
+        }
+      }
+    }
     const priorContextAmounts: number[] = Array.from(priorAmountsSet);
 
     const priorById = new Map((priorCommitted || []).map(g => [g.id, g]));
@@ -1198,7 +1239,7 @@ export async function processAccountingQuery(
     const changedOrNewIntegrity = (changedOrNewGroups.length > 0)
       ? validateJournalGroups(changedOrNewGroups, {
           rawQuery: userInput,
-          hasPriorContextAmount: isFollowUp && Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length || hasImages),
+          hasPriorContextAmount: isFollowUp && Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length || activeScenario?.pendingImageEvidence?.length || hasImages),
           enforceAmountProvenance: liveProviderConfigured && !isFixture && !hasImages,
           priorContextTexts: isFollowUp ? priorContextTexts : [],
           priorContextAmounts: isFollowUp ? priorContextAmounts : [],
@@ -2515,6 +2556,7 @@ ${JSON.stringify(context.evidenceQuality ? [] : currentScenario.keyParameters ||
 Committed / Active Double Entry Journal Groups:
 ${(currentScenario.committedDirectGroups?.length ? currentScenario.committedDirectGroups : currentScenario.directGroups)?.map((g, idx) => `Group #${idx + 1} (${g.eventDate}) - ${g.title}:\n` + g.lines.map(l => `  ${l.debit > 0 ? `Debit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.debit}` : `Credit: ${l.accountName} (${l.accountCode || ''}) - SGD ${l.credit}`}`).join('\n')).join('\n') || 'None'}
 ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (do not re-examine an image unless the user asks):\n${formatImageEvidenceForAccounting(currentScenario.imageEvidence)}` : ''}
+${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evidence from prior clarification turn:\n${formatImageEvidenceForAccounting(currentScenario.pendingImageEvidence)}` : ''}
 ` : '';
 
   const currentTurnText = `${activeScenarioSummary}\n[USER QUERY / FOLLOW-UP]:\n${userInput}${imageAttachments.length ? `\n\n[EXTRACTED IMAGE EVIDENCE — NOT ACCOUNTING JUDGMENT]\n${imageEvidenceSummary}` : ''}`.trim();
@@ -2754,9 +2796,54 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         : (currentScenario.directGroups || []).filter(g => !g.isHypothetical && g.isBalanced && g.totalDebit > 0))
     : [];
 
+  let effectiveImageEvidence: ExtractedImageEvidence[] = imageEvidence;
+  let usingPendingImageEvidence = false;
+
   if (imageEvidence.length > 0) {
-    const extractedJournalGroups = buildJournalGroupsFromImageEvidence(imageEvidence);
-    const extractedTransactionGroups = buildTransactionGroupsFromImageEvidence(imageEvidence);
+    effectiveImageEvidence = imageEvidence;
+  } else if (isFollowUpForImage && currentScenario?.pendingImageEvidence?.length) {
+    // Check if the current turn is a follow-up that can complete the pending image evidence rather than a conflicting standalone text transaction:
+    const amountRegex = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b/gi;
+    const userAmounts: number[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = amountRegex.exec(userInput)) !== null) {
+      const valStr = (match[1] || match[2] || '').replace(/,/g, '');
+      const val = parseFloat(valStr);
+      if (Number.isFinite(val) && val > 0) {
+        userAmounts.push(Math.round(val * 100));
+      }
+    }
+
+    const pendingAmounts = new Set<number>();
+    for (const img of currentScenario.pendingImageEvidence) {
+      for (const line of (img.journalLines || [])) {
+        if (typeof line.debit === 'number' && line.debit > 0) pendingAmounts.add(Math.round(line.debit * 100));
+        if (typeof line.credit === 'number' && line.credit > 0) pendingAmounts.add(Math.round(line.credit * 100));
+      }
+      const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
+        ? img.fields
+        : typeof img.fields === 'object' && img.fields !== null
+          ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
+          : [];
+      for (const f of fields) {
+        if (typeof f.value === 'number' && Number.isFinite(f.value) && f.value > 0) {
+          pendingAmounts.add(Math.round(f.value * 100));
+        } else if (typeof f.value === 'string') {
+          const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
+          if (Number.isFinite(num) && num > 0) pendingAmounts.add(Math.round(num * 100));
+        }
+      }
+    }
+    const hasNoConflictingAmount = userAmounts.length === 0 || userAmounts.every(a => pendingAmounts.has(a));
+    if (hasNoConflictingAmount) {
+      effectiveImageEvidence = currentScenario.pendingImageEvidence;
+      usingPendingImageEvidence = true;
+    }
+  }
+
+  if (effectiveImageEvidence.length > 0) {
+    const extractedJournalGroups = buildJournalGroupsFromImageEvidence(effectiveImageEvidence);
+    const extractedTransactionGroups = buildTransactionGroupsFromImageEvidence(effectiveImageEvidence);
     const extractedGroups = extractedJournalGroups.length > 0 ? extractedJournalGroups : extractedTransactionGroups;
     if (extractedGroups.length > 0) {
       const guardrailErrors = getGuardrailErrorViolations(extractedGroups, context.semanticUnderstanding);
@@ -2871,7 +2958,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
 
       // Check for invalid calendar dates in image fields, user query, or AI group eventDate
       let hasInvalidCalendarDate = false;
-      for (const img of imageEvidence) {
+      for (const img of effectiveImageEvidence) {
         if (hasInvalidCalendarDateInImageFields(img.fields)) {
           hasInvalidCalendarDate = true;
           break;
@@ -2883,7 +2970,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       if (!hasInvalidCalendarDate) {
         for (const aiGrp of currentTurnAiGroups) {
           const rawAiDate = typeof aiGrp?.eventDate === 'string' ? aiGrp.eventDate.trim() : '';
-          if (rawAiDate && !/^(?:FY|YA|CY|Q[1-4]|H[12]|\d{4})\b/i.test(rawAiDate) && hasInvalidCalendarDateToken(rawAiDate)) {
+          if (rawAiDate && !/^(?:(?:FY|YA|CY|Q[1-4]|H[12])\b|\d{4}$)/i.test(rawAiDate) && hasInvalidCalendarDateToken(rawAiDate)) {
             hasInvalidCalendarDate = true;
             break;
           }
@@ -2916,11 +3003,31 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         ? extractAccountingContext(currentScenario).outstandingBalances
         : [];
 
-      const isImageRevision = Boolean(
-        parsed.journalAction === 'revised' ||
-        rawAiGroups.some((g: any) => g?.journalAction === 'revised') ||
-        /\b(?:actually|correction|correct|mistake|amend|amendment|instead of|change to|update to|revised?|it was S?\$|should be S?\$)\b/i.test(userInput)
-      );
+      let isImageRevision = hasClearRevisionIntent(userInput, rawAiGroups, parsed.journalAction);
+      if (isImageRevision && isFollowUpForImage && priorCommittedForImage.length > 0) {
+        const curRefs = extractDocRefsFromImages(effectiveImageEvidence);
+        const pRefs = extractDocRefsFromImages(currentScenario?.imageEvidence || []);
+        if (curRefs.size > 0 && pRefs.size > 0) {
+          const userExplicitlyRevises = /\b(?:instead\s+of|replace|revis(?:e|ing)|amend(?:ing)?|correct(?:ing)?)\s+(?:the\s+)?(?:earlier|previous|prior|first|original)\b/i.test(userInput);
+          const hasTargetIdMatch = rawAiGroups.some((g: any) =>
+            g?.targetTransactionId && priorCommittedForImage.some(p => p.id === g.targetTransactionId || p.transactionId === g.targetTransactionId)
+          );
+          if (!userExplicitlyRevises && !hasTargetIdMatch) {
+            const hasAnyMatchingDocRef = Array.from(curRefs).some(curRef => {
+              const cleanCur = curRef.replace(/[^a-z0-9]/gi, '').toLowerCase();
+              return Array.from(pRefs).some(pRef => {
+                const cleanP = pRef.replace(/[^a-z0-9]/gi, '').toLowerCase();
+                if (cleanP === cleanCur) return true;
+                const isSuffix = cleanCur.startsWith(cleanP) && /(?:rev|amend|r|corr)\d*$/.test(cleanCur.slice(cleanP.length));
+                return isSuffix;
+              });
+            });
+            if (!hasAnyMatchingDocRef) {
+              isImageRevision = false;
+            }
+          }
+        }
+      }
 
       const reconciledExtractedGroups: JournalEntryGroup[] = extractedGroups.map((extGrp, i) => {
         const aiGrp = currentTurnAiGroups[i];
@@ -2983,22 +3090,32 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
           };
         });
 
-        const aiTxStatus = aiGrp?.transactionStatus;
-        const aiJAction = aiGrp?.journalAction;
+        const aiTxStatus = aiGrp?.transactionStatus || parsed?.transactionStatus;
+        const aiJAction = aiGrp?.journalAction || parsed?.journalAction;
         const isQueryHypothetical = /\b(?:hypothetical|illustrative|what\s+if|suppose|assuming|pro\s*forma|quotation|quote\s+only|example\s+journal|proposed\s+quote)\b/i.test(userInput);
-        const isDocQuotation = imageEvidence.some(img => /\b(?:quote|quotation|pro\s*forma|estimate|proposal)\b/i.test(img.documentType || ''));
-        const isHypo = Boolean(aiGrp?.isHypothetical) || aiTxStatus === 'hypothetical' || aiJAction === 'illustrative' || isQueryHypothetical || isDocQuotation || /\b(?:illustrative|hypothetical|pro\s*forma)\b/i.test(aiGrp?.title || '');
+        const isDocQuotation = effectiveImageEvidence.some(img => /\b(?:quote|quotation|pro\s*forma|estimate|proposal)\b/i.test(img.documentType || ''));
+        const isHypo = Boolean(
+          isNonCommittedOrHypotheticalGroup(aiGrp) ||
+          isNonCommittedOrHypotheticalGroup(extGrp) ||
+          isNonCommittedOrHypotheticalGroup(parsed) ||
+          isQueryHypothetical ||
+          isDocQuotation ||
+          /\b(?:illustrative|hypothetical|pro\s*forma|planned|proposed|conditional)\b/i.test(aiGrp?.title || extGrp.title || '')
+        );
         const txStatus: JournalEntryGroup['transactionStatus'] = isHypo
-          ? (aiTxStatus && ['hypothetical', 'planned', 'conditional'].includes(aiTxStatus) ? aiTxStatus : 'hypothetical')
-          : ((aiTxStatus && ['actual', 'hypothetical', 'planned', 'conditional'].includes(aiTxStatus))
+          ? (aiTxStatus && ['hypothetical', 'planned', 'conditional'].includes(aiTxStatus)
               ? aiTxStatus
-              : ((extGrp.transactionStatus && extGrp.transactionStatus !== 'actual')
+              : (extGrp.transactionStatus && ['hypothetical', 'planned', 'conditional'].includes(extGrp.transactionStatus)
                   ? extGrp.transactionStatus
-                  : 'actual'));
-        const jAction: JournalEntryGroup['journalAction'] = isHypo
+                  : 'hypothetical'))
+          : 'actual';
+        let jAction: JournalEntryGroup['journalAction'] = isHypo
           ? (aiJAction && aiJAction !== 'new' ? aiJAction : 'illustrative')
           : (aiJAction || extGrp.journalAction || 'new');
-        const authStatus: JournalAuthorityStatus = (isHypo || txStatus === 'hypothetical' || txStatus === 'conditional')
+        if (!isImageRevision && jAction === 'revised') {
+          jAction = 'new';
+        }
+        const authStatus: JournalAuthorityStatus = isHypo
           ? 'CONDITIONAL'
           : (extGrp.authorityStatus || aiGrp?.authorityStatus || 'AI_PROPOSED');
 
@@ -3058,6 +3175,11 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
           );
           rolledBackState.imageEvidence = currentScenario?.imageEvidence || [];
           rolledBackState.evidence = currentScenario?.evidence || [];
+          rolledBackState.pendingImageEvidence = mergeImageEvidence(currentScenario?.pendingImageEvidence, effectiveImageEvidence);
+          rolledBackState.pendingEvidence = [
+            ...(currentScenario?.pendingEvidence || []),
+            ...flattenImageEvidence(effectiveImageEvidence)
+          ];
           return {
             messageText: '### Clarification Required — Ambiguous Revision Target\n\n' + revisionClarification.prompt,
             scenarioState: rolledBackState
@@ -3074,7 +3196,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
             reconciledExtractedGroups[i],
             priorCommittedForImage,
             userInput,
-            imageEvidence,
+            effectiveImageEvidence,
             currentScenario?.imageEvidence || [],
             currentScenario?.evidence || []
           );
@@ -3128,6 +3250,11 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         );
         result.scenarioState.imageEvidence = currentScenario?.imageEvidence || [];
         result.scenarioState.evidence = currentScenario?.evidence || [];
+        result.scenarioState.pendingImageEvidence = mergeImageEvidence(currentScenario?.pendingImageEvidence, effectiveImageEvidence);
+        result.scenarioState.pendingEvidence = [
+          ...(currentScenario?.pendingEvidence || []),
+          ...flattenImageEvidence(effectiveImageEvidence)
+        ];
       } else if (deterministicFallback && deterministicFallback.length > 0) {
         // Preserve deterministic/committed journals; do not clear committedDirectGroups
         result.scenarioState.directGroups = [...deterministicFallback];
@@ -3136,13 +3263,15 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
           deterministicFallback,
           currentScenario?.actualEvents
         );
-        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, imageEvidence);
+        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
         const existingEvidence = currentScenario?.evidence || [];
-        const newFlat = flattenImageEvidence(imageEvidence);
+        const newFlat = flattenImageEvidence(effectiveImageEvidence);
         result.scenarioState.evidence = [
           ...existingEvidence,
           ...newFlat.filter(n => !existingEvidence.some(e => e.source === 'image' && e.imageId === n.imageId && e.field === n.field))
         ];
+        result.scenarioState.pendingImageEvidence = undefined;
+        result.scenarioState.pendingEvidence = undefined;
         result.messageText += `\n\n### Journal visible in screenshot\n\nA balanced journal was extracted from the screenshot, but the existing deterministic journal has been preserved. Review the image evidence before overriding it.`;
       } else {
         // No deterministic output available; merge validated image-derived groups
@@ -3173,21 +3302,34 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         if (nextGroups.length > 0 && nextGroups.every(g => g.isHypothetical)) {
           result.scenarioState.isComplete = false;
         }
-        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, imageEvidence);
+        result.scenarioState.imageEvidence = mergeImageEvidence(currentScenario?.imageEvidence, effectiveImageEvidence);
         const existingEvidence = currentScenario?.evidence || [];
-        const newFlat = flattenImageEvidence(imageEvidence);
+        const newFlat = flattenImageEvidence(effectiveImageEvidence);
         result.scenarioState.evidence = [
           ...existingEvidence,
           ...newFlat.filter(n => !existingEvidence.some(e => e.source === 'image' && e.imageId === n.imageId && e.field === n.field))
         ];
-        result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
+        result.scenarioState.pendingImageEvidence = undefined;
+        result.scenarioState.pendingEvidence = undefined;
+        if (usingPendingImageEvidence) {
+          result.clarifications = undefined;
+          result.scenarioState.missingFields = [];
+          result.scenarioState.isComplete = true;
+          result.messageText = '### Journal Entry Confirmed\n\nThe transaction date has been applied to the pending invoice evidence, and the balanced journal entry has been posted.';
+        } else {
+          result.messageText += `\n\n### Journal visible in screenshot\n\nThe extracted journal is balanced and has passed validation. It remains image-derived evidence and should be confirmed against the underlying transaction before posting.`;
+        }
       }
     }
   } else if (currentScenario?.imageEvidence?.length) {
     result.scenarioState.imageEvidence = currentScenario.imageEvidence;
     result.scenarioState.evidence = currentScenario.evidence;
+    if (result.scenarioState.isComplete !== false && (!result.scenarioState.missingFields || result.scenarioState.missingFields.length === 0)) {
+      result.scenarioState.pendingImageEvidence = undefined;
+      result.scenarioState.pendingEvidence = undefined;
+    }
   }
-  const uncertainMaterialFields = getMaterialImageUncertainties(imageEvidence);
+  const uncertainMaterialFields = getMaterialImageUncertainties(effectiveImageEvidence);
   if (uncertainMaterialFields.length > 0) {
     const fieldNames = [...new Set(uncertainMaterialFields.map((field) => field.field.replace(/([A-Z])/g, ' $1').toLowerCase()))];
     const prompt = `Please verify the screenshot ${fieldNames.join(', ')} before I prepare a definitive journal entry.`;
@@ -3205,6 +3347,11 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     );
     result.scenarioState.imageEvidence = currentScenario?.imageEvidence || [];
     result.scenarioState.evidence = currentScenario?.evidence || [];
+    result.scenarioState.pendingImageEvidence = mergeImageEvidence(currentScenario?.pendingImageEvidence, effectiveImageEvidence);
+    result.scenarioState.pendingEvidence = [
+      ...(currentScenario?.pendingEvidence || []),
+      ...flattenImageEvidence(effectiveImageEvidence)
+    ];
     result.scenarioState.missingFacts = [...new Set([...(result.scenarioState.missingFacts || []), ...fieldNames])];
     result.scenarioState.uncertaintyDisclaimer = `Possible value detected from screenshot. ${prompt}`;
     result.messageText = `${result.messageText}\n\n### Screenshot verification required\n\n${prompt}`;

@@ -119,17 +119,24 @@ export function formatSingaporeDate(dateInput: string | Date | undefined | null)
     }
   }
 
-  // If ISO datetime YYYY-MM-DDTHH:mm
-  if (/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(str)) {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) {
-      const day = d.getDate();
-      const month = d.getMonth() + 1;
-      const year = d.getFullYear();
-      if (isValidCalendarDate(day, month, year)) {
-        return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-      }
+  // If ISO datetime YYYY-MM-DDTHH:mm(:ss.sssZ/+HH:mm)
+  const isoDateTimeMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[T\s](\d{1,2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+  if (isoDateTimeMatch) {
+    const year = parseInt(isoDateTimeMatch[1], 10);
+    const month = parseInt(isoDateTimeMatch[2], 10);
+    const day = parseInt(isoDateTimeMatch[3], 10);
+    const hour = parseInt(isoDateTimeMatch[4], 10);
+    const minute = parseInt(isoDateTimeMatch[5], 10);
+    const second = isoDateTimeMatch[6] !== undefined ? parseInt(isoDateTimeMatch[6], 10) : 0;
+    if (
+      isValidCalendarDate(day, month, year) &&
+      hour >= 0 && hour <= 23 &&
+      minute >= 0 && minute <= 59 &&
+      second >= 0 && second <= 59
+    ) {
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
     }
+    return '';
   }
 
   return '';
@@ -160,6 +167,20 @@ export function getSingaporeNow(): Date {
  * date is returned.
  */
 export function getSingaporeDateString(dateInput?: Date | string): string {
+  if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (!trimmed) return '';
+    const isoMatch = trimmed.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s]|$)/i);
+    if (isoMatch) {
+      const year = parseInt(isoMatch[1], 10);
+      const month = parseInt(isoMatch[2], 10);
+      const day = parseInt(isoMatch[3], 10);
+      if (!isValidCalendarDate(day, month, year)) {
+        return '';
+      }
+    }
+  }
+
   const date =
     dateInput instanceof Date
       ? dateInput
