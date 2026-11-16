@@ -9031,6 +9031,452 @@ try {
     passed++;
   }
 
+  // 10Q-4 (P1 — Multiple pending screenshots with no committed groups cannot inherit another document's date or amount from scenario or query)
+  {
+    // Subcase A:
+    // Turn 1: Two screenshots submitted:
+    //   - INV-101: invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500
+    //   - INV-202: invoiceNo: 'INV-202' (date and amount unknown / omitted)
+    // Query mentions both references and INV-101's facts:
+    //   "Here are INV-101 for S$500 dated 15 January 2025 and INV-202."
+    // AI proposes two balanced S$500 journals dated 15/01/2025 for INV-101 and INV-202.
+    // Turn 1 must NOT commit, holds both in pendingImageEvidence, and flags both missing date and missing amount for INV-202.
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-inv101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-inv202',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10q4-inv101',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-10q4-inv202',
+                    fields: { invoiceNo: 'INV-202' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1Res = await processAccountingQuery(
+      'Here are INV-101 for S$500 dated 15 January 2025 and INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Here are INV-101 for S$500 dated 15 January 2025 and INV-202.',
+          images: [
+            { id: 'img-10q4-inv101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-10q4-inv202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+
+    assert.equal(turn1Res.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 1 must NOT commit without verified date and amount for INV-202');
+    assert.equal(turn1Res.scenarioState.pendingImageEvidence?.length, 2, 'Turn 1 must hold both screenshots in pendingImageEvidence');
+    const hasMissingDate1 = turn1Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn1Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE');
+    assert.ok(hasMissingDate1, 'Turn 1 must reject with IMAGE_MISSING_TRANSACTION_DATE');
+    const hasMissingAmt1 = turn1Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT') ||
+      turn1Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT');
+    assert.ok(hasMissingAmt1, 'Turn 1 must reject with IMAGE_MISSING_AMOUNT');
+
+    // Turn 2 (later posting request with no committed groups):
+    // User sends "Please post the pending screenshots". AI proposes same two balanced S$500 journals.
+    // Turn 2 must still NOT commit and reject with missing date and amount.
+    const turn2Res = await processAccountingQuery(
+      'Please post the pending screenshots',
+      turn1Res.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2Res.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 2 must NOT commit without verified date and amount for INV-202');
+    assert.equal(turn2Res.scenarioState.pendingImageEvidence?.length, 2, 'Turn 2 must keep both screenshots in pendingImageEvidence');
+    const hasMissingDate2 = turn2Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE');
+    assert.ok(hasMissingDate2, 'Turn 2 must still reject with IMAGE_MISSING_TRANSACTION_DATE');
+    const hasMissingAmt2 = turn2Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT') ||
+      turn2Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT');
+    assert.ok(hasMissingAmt2, 'Turn 2 must still reject with IMAGE_MISSING_AMOUNT');
+
+    // Turn 2b alternative: user says "Please use the screenshot and record both INV-101 and INV-202"
+    const turn2bRes = await processAccountingQuery(
+      'Please use the screenshot and record both INV-101 and INV-202',
+      turn1Res.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2bRes.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 2b must NOT commit without verified date and amount for INV-202');
+    assert.equal(turn2bRes.scenarioState.pendingImageEvidence?.length, 2, 'Turn 2b must keep both screenshots in pendingImageEvidence');
+    const hasMissingDate2b = turn2bRes.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2bRes.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE');
+    assert.ok(hasMissingDate2b, 'Turn 2b must still reject with IMAGE_MISSING_TRANSACTION_DATE');
+    const hasMissingAmt2b = turn2bRes.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT') ||
+      turn2bRes.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT');
+    assert.ok(hasMissingAmt2b, 'Turn 2b must still reject with IMAGE_MISSING_AMOUNT');
+
+    // Subcase A3: Stated query facts for INV-101 do not leak to INV-202 even when INV-101 has no date/amount in image fields
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Bare Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-inv101-a3',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-inv202-a3',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10q4-inv101-a3',
+                    fields: { invoiceNo: 'INV-101' },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-10q4-inv202-a3',
+                    fields: { invoiceNo: 'INV-202' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1ResA3 = await processAccountingQuery(
+      'INV-101: S$500, dated 15 January 2025. INV-202: please record both.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'INV-101: S$500, dated 15 January 2025. INV-202: please record both.',
+          images: [
+            { id: 'img-10q4-inv101-a3', dataUrl: 'data:image/png;base64,mock101a3', mimeType: 'image/png' },
+            { id: 'img-10q4-inv202-a3', dataUrl: 'data:image/png;base64,mock202a3', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+
+    assert.equal(turn1ResA3.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 1 A3 must not commit without verified facts for INV-202');
+    assert.equal(turn1ResA3.scenarioState.pendingImageEvidence?.length, 2, 'Turn 1 A3 must hold both in pendingImageEvidence');
+    assert.ok(
+      turn1ResA3.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn1ResA3.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Turn 1 A3 must reject with IMAGE_MISSING_TRANSACTION_DATE'
+    );
+    assert.ok(
+      turn1ResA3.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT') ||
+      turn1ResA3.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT'),
+      'Turn 1 A3 must reject with IMAGE_MISSING_AMOUNT'
+    );
+
+    const turn2ResA3 = await processAccountingQuery(
+      'Please post the pending screenshots',
+      turn1ResA3.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2ResA3.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 2 A3 must not commit without verified facts for INV-202');
+    assert.equal(turn2ResA3.scenarioState.pendingImageEvidence?.length, 2, 'Turn 2 A3 must keep both in pendingImageEvidence');
+    assert.ok(
+      turn2ResA3.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2ResA3.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Turn 2 A3 must still reject with IMAGE_MISSING_TRANSACTION_DATE'
+    );
+    assert.ok(
+      turn2ResA3.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT') ||
+      turn2ResA3.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT'),
+      'Turn 2 A3 must still reject with IMAGE_MISSING_AMOUNT'
+    );
+
+    // Subcase B1: Single pending screenshot positively linked to its own prior scenario facts works
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Single Invoice INV-888',
+                directGroups: [
+                  {
+                    id: 'grp-inv888',
+                    eventDate: '10/01/2025',
+                    title: 'Invoice INV-888',
+                    totalDebit: 400,
+                    totalCredit: 400,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 400, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 400 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10q4-inv888',
+                    fields: { invoiceNo: 'INV-888' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const singleTurn1 = await processAccountingQuery(
+      'Here is invoice INV-888 for S$400 dated 10/01/2025.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Here is invoice INV-888 for S$400 dated 10/01/2025.',
+          images: [{ id: 'img-10q4-inv888', dataUrl: 'data:image/png;base64,mock888', mimeType: 'image/png' }]
+        }
+      ]
+    );
+    assert.equal(singleTurn1.scenarioState.committedDirectGroups?.length, 1, 'Single document scenario inherits query date and amount');
+
+    // Subcase B2: When user explicitly supplies the date and amount attributed to INV-202:
+    // "For INV-202, the date is 20/01/2025 and the total amount is S$300"
+    // INV-202 updates its fields and both INV-101 (S$500 on 15/01/2025) and INV-202 (S$300 on 20/01/2025) post cleanly!
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Documented Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-inv101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-inv202',
+                    eventDate: '20/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 300,
+                    totalCredit: 300,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn3Res = await processAccountingQuery(
+      'For INV-202, the date is 20/01/2025 and the total amount is S$300.',
+      turn1Res.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn3Res.scenarioState.committedDirectGroups?.length, 2, 'Both invoices must be committed');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[0].totalDebit, 500, 'INV-101 total must be 500');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[1].totalDebit, 300, 'INV-202 total must be 300');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[0].eventDate, '15/01/2025', 'INV-101 eventDate must be 15/01/2025');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 eventDate must be 20/01/2025');
+
+    // Subcase C: Journal-lines path (journalLines non-empty on both INV-101 and INV-202, where INV-202 has no invoiceDate field)
+    // with query "Here are INV-101 dated 15/01/2025 and INV-202." — verify INV-202 does NOT inherit 15/01/2025 and is rejected with IMAGE_MISSING_TRANSACTION_DATE
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Documented Journal-Line Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-inv101-c',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-inv202-c',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 300,
+                    totalCredit: 300,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10q4-c1',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    imageId: 'img-10q4-c2',
+                    fields: { invoiceNo: 'INV-202', totalAmount: 300 },
+                    journalLines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const resC = await processAccountingQuery(
+      'Here are INV-101 dated 15/01/2025 and INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Here are INV-101 dated 15/01/2025 and INV-202.',
+          images: [
+            { id: 'img-10q4-c1', dataUrl: 'data:image/png;base64,mockC1', mimeType: 'image/png' },
+            { id: 'img-10q4-c2', dataUrl: 'data:image/png;base64,mockC2', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+
+    assert.equal(resC.scenarioState.committedDirectGroups?.length || 0, 0, 'Subcase C must not commit without verified date for INV-202');
+    assert.equal(resC.scenarioState.pendingImageEvidence?.length, 2, 'Subcase C must hold both in pendingImageEvidence');
+    assert.ok(
+      resC.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE') ||
+      resC.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Subcase C must reject with IMAGE_MISSING_TRANSACTION_DATE'
+    );
+
+    console.log('✓ 10Q-4 (P1). Multiple pending screenshots with no committed groups cannot inherit another document\'s date or amount from scenario or query');
+    passed++;
+  }
+
 } finally {
   globalThis.fetch = origFetch;
 }

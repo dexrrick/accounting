@@ -421,6 +421,117 @@ export function extractDocRefsFromImages(images: ExtractedImageEvidence[]): Set<
   return refs;
 }
 
+export function extractAmountsCentsFromText(text: string): Set<number> {
+  const amounts = new Set<number>();
+  if (!text || typeof text !== 'string') return amounts;
+  const amtRegex = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b/gi;
+  let aMatch: RegExpExecArray | null;
+  while ((aMatch = amtRegex.exec(text)) !== null) {
+    const valStr = (aMatch[1] || aMatch[2] || '').replace(/,/g, '');
+    const val = parseFloat(valStr);
+    if (Number.isFinite(val) && val > 0) {
+      amounts.add(Math.round(val * 100));
+    }
+  }
+  return amounts;
+}
+
+export function extractDocAttributedTextFacts(
+  text: string,
+  targetDocRefs: Set<string>,
+  isSingleDocumentScenario: boolean
+): { date: string; amountsCents: Set<number> } {
+  if (!text || typeof text !== 'string') {
+    return { date: '', amountsCents: new Set<number>() };
+  }
+
+  const allTextDocRefs = extractNormalizedDocRefs(text);
+
+  if (allTextDocRefs.size === 0) {
+    if (isSingleDocumentScenario) {
+      return {
+        date: extractDateFromText(text),
+        amountsCents: extractAmountsCentsFromText(text)
+      };
+    }
+    return { date: '', amountsCents: new Set<number>() };
+  }
+
+  if (allTextDocRefs.size === 1) {
+    const isTargeted =
+      (targetDocRefs.size > 0 && Array.from(allTextDocRefs).every(r => targetDocRefs.has(r))) ||
+      (targetDocRefs.size === 0 && isSingleDocumentScenario);
+    if (isTargeted) {
+      return {
+        date: extractDateFromText(text),
+        amountsCents: extractAmountsCentsFromText(text)
+      };
+    }
+    return { date: '', amountsCents: new Set<number>() };
+  }
+
+  if (targetDocRefs.size === 0) {
+    return { date: '', amountsCents: new Set<number>() };
+  }
+
+  const docRefRegex = /(?:^|[^a-z0-9])(inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)(?:[-#:_]+\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+#\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*)|([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*))(?=$|[^a-z0-9/])/gi;
+  const docOccurrences: Array<{ startIndex: number; cleanBody: string }> = [];
+  let m: RegExpExecArray | null;
+  while ((m = docRefRegex.exec(text)) !== null) {
+    const rawBody = m[2] || m[3] || m[4] || m[5];
+    if (!rawBody || !/\d/.test(rawBody)) continue;
+    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(rawBody) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(rawBody)) continue;
+    const strippedBody = rawBody.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
+    const cleanBody = (strippedBody || rawBody).replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (cleanBody && /\d/.test(cleanBody)) {
+      const prefixOffset = m[0].match(/^[^a-z0-9]/i) ? 1 : 0;
+      docOccurrences.push({
+        startIndex: m.index + prefixOffset,
+        cleanBody
+      });
+    }
+  }
+
+  if (docOccurrences.length === 0) {
+    return { date: '', amountsCents: new Set<number>() };
+  }
+
+  const segments: Array<{ docRef: string; text: string }> = [];
+  for (let i = 0; i < docOccurrences.length; i++) {
+    const occ = docOccurrences[i];
+    let segStart = occ.startIndex;
+    if (i === 0) {
+      const prefix = text.slice(0, occ.startIndex);
+      const lastDelim = Math.max(prefix.lastIndexOf('.'), prefix.lastIndexOf(';'), prefix.lastIndexOf('\n'));
+      segStart = lastDelim >= 0 ? lastDelim + 1 : 0;
+    }
+    const segEnd = (i + 1 < docOccurrences.length) ? docOccurrences[i + 1].startIndex : text.length;
+    segments.push({
+      docRef: occ.cleanBody,
+      text: text.slice(segStart, segEnd)
+    });
+  }
+
+  let attributedDate = '';
+  const attributedAmountsCents = new Set<number>();
+
+  for (const seg of segments) {
+    if (targetDocRefs.has(seg.docRef)) {
+      if (!attributedDate) {
+        attributedDate = extractDateFromText(seg.text);
+      }
+      for (const amt of extractAmountsCentsFromText(seg.text)) {
+        attributedAmountsCents.add(amt);
+      }
+    }
+  }
+
+  return {
+    date: attributedDate,
+    amountsCents: attributedAmountsCents
+  };
+}
+
 export function resolveTargetPendingImageIndices(
   images: ExtractedImageEvidence[],
   userInput: string,
@@ -3855,8 +3966,6 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         });
       }
 
-      const userQueryDate = extractDateFromText(userInput);
-
       let conflictExists = false;
       let ambiguousMatchExists = false;
       let ambiguousMatchMessage = '';
@@ -3916,11 +4025,23 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
               const aiDate = rawAiDateStr ? formatSingaporeDate(rawAiDateStr) : '';
               const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
 
+              const srcImg = effectiveImageEvidence.find(im => extGrp.sourceImageIds?.includes(im.imageId)) || effectiveImageEvidence[i];
+              const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
+              if (srcImg?.imageId) {
+                extImgRefs.add(srcImg.imageId.toLowerCase());
+                for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+              }
+              const groupAttributedUserDate = extractDocAttributedTextFacts(
+                userInput,
+                extImgRefs,
+                effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+              ).date;
+
               if ((rawAiDateStr && !aiDate) ||
                   (extDate && aiDate && extDate !== aiDate) ||
                   (extDate && !aiDate) ||
-                  (extDate && userQueryDate && extDate !== userQueryDate) ||
-                  (aiDate && userQueryDate && aiDate !== userQueryDate)) {
+                  (extDate && groupAttributedUserDate && extDate !== groupAttributedUserDate) ||
+                  (aiDate && groupAttributedUserDate && aiDate !== groupAttributedUserDate)) {
                 conflictExists = true;
                 conflictFieldSet.add('date');
               }
@@ -4063,7 +4184,18 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         for (let i = 0; i < extractedGroups.length; i++) {
           const extGrp = extractedGroups[i];
           const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
-          const resolvedDate = extDate || userQueryDate || '';
+          const srcImg = effectiveImageEvidence.find(im => extGrp.sourceImageIds?.includes(im.imageId)) || effectiveImageEvidence[i];
+          const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
+          if (srcImg?.imageId) {
+            extImgRefs.add(srcImg.imageId.toLowerCase());
+            for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+          }
+          const groupAttributedUserDate = extractDocAttributedTextFacts(
+            userInput,
+            extImgRefs,
+            effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+          ).date;
+          const resolvedDate = extDate || groupAttributedUserDate || '';
           if (!resolvedDate) {
             imageErrors.push({
               code: 'IMAGE_MISSING_TRANSACTION_DATE',
@@ -4108,7 +4240,18 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       const reconciledExtractedGroups: JournalEntryGroup[] = extractedGroups.map((extGrp, i) => {
         const aiGrp = currentTurnAiGroups[i];
         const extDate = extGrp.eventDate ? formatSingaporeDate(String(extGrp.eventDate)) : '';
-        const resolvedDate = extDate || userQueryDate || '';
+        const srcImg = effectiveImageEvidence.find(im => extGrp.sourceImageIds?.includes(im.imageId)) || effectiveImageEvidence[i];
+        const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
+        if (srcImg?.imageId) {
+          extImgRefs.add(srcImg.imageId.toLowerCase());
+          for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+        }
+        const groupAttributedUserDate = extractDocAttributedTextFacts(
+          userInput,
+          extImgRefs,
+          effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+        ).date;
+        const resolvedDate = extDate || groupAttributedUserDate || '';
 
         let grpId = aiGrp?.id || extGrp.id;
         let txId = aiGrp?.transactionId || grpId;
@@ -4517,7 +4660,50 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
 
       // Collect verified date & amount sources linked to prior transaction
-      const userQueryDate = extractDateFromText(userInput);
+      const userInputDocRefs = extractNormalizedDocRefs(userInput);
+
+      const allScenarioDocRefs = new Set<string>();
+      if (currentScenario) {
+        for (const ref of extractDocRefsFromImages(currentScenario.imageEvidence || [])) allScenarioDocRefs.add(ref);
+        for (const ref of extractDocRefsFromImages(currentScenario.pendingImageEvidence || [])) allScenarioDocRefs.add(ref);
+        for (const ref of extractNormalizedDocRefs(currentScenario.rawQuery || '')) allScenarioDocRefs.add(ref);
+        for (const e of (currentScenario.evidence || [])) {
+          const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (docRefKeyPattern.test(cleanKey) && e.value) {
+            for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
+          }
+        }
+        for (const e of (currentScenario.pendingEvidence || [])) {
+          const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (docRefKeyPattern.test(cleanKey) && e.value) {
+            for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
+          }
+        }
+        for (const p of priorCommittedForImage) {
+          const pRefs = extractNormalizedDocRefs(`${p.id || ''} ${p.transactionId || ''} ${p.title || ''} ${p.summary || ''} ${p.narration || ''}`);
+          for (const ref of pRefs) allScenarioDocRefs.add(ref);
+          const imgInP = (currentScenario.imageEvidence || []).filter(im => p.sourceImageIds && p.sourceImageIds.includes(im.imageId));
+          for (const ref of extractDocRefsFromImages(imgInP)) allScenarioDocRefs.add(ref);
+        }
+      }
+      for (const ref of extractDocRefsFromImages(effectiveImageEvidence)) allScenarioDocRefs.add(ref);
+      for (const ref of userInputDocRefs) allScenarioDocRefs.add(ref);
+
+      const totalScenarioImages = new Set<string>();
+      for (const img of (currentScenario?.imageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
+      for (const img of (currentScenario?.pendingImageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
+      for (const img of effectiveImageEvidence) if (img.imageId) totalScenarioImages.add(img.imageId);
+
+      const hasMultipleImagesInScenario =
+        imageAnalysisList.length > 1 ||
+        (currentScenario?.pendingImageEvidence?.length || 0) > 1 ||
+        (currentScenario?.imageEvidence?.length || 0) > 1 ||
+        totalScenarioImages.size > 1;
+
+      const isSingleDocumentScenario =
+        !hasMultipleImagesInScenario &&
+        priorCommittedForImage.length <= 1 &&
+        allScenarioDocRefs.size <= 1;
 
       const priorImgIds = new Set<string>();
       const allPriorDocRefs = new Set<string>();
@@ -4541,18 +4727,6 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         }
       }
 
-      // Collect verified amount sources
-      const userInputAmountsCents = new Set<number>();
-      const amtRegex = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b/gi;
-      let aMatch: RegExpExecArray | null;
-      while ((aMatch = amtRegex.exec(userInput)) !== null) {
-        const valStr = (aMatch[1] || aMatch[2] || '').replace(/,/g, '');
-        const val = parseFloat(valStr);
-        if (Number.isFinite(val) && val > 0) {
-          userInputAmountsCents.add(Math.round(val * 100));
-        }
-      }
-
       interface AnalyzedImageInfo {
         img: ExtractedImageEvidence;
         imgDate: string;
@@ -4562,11 +4736,28 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         imgDocRefs: Set<string>;
         verifiedPriorDate: string;
         verifiedPriorAmountsCents: Set<number>;
+        attributableUserQueryDate: string;
+        attributableUserInputAmountsCents: Set<number>;
       }
 
       const analyzedImages: AnalyzedImageInfo[] = imageAnalysisList.map(info => {
         let infoVerifiedPriorDate = '';
         const infoVerifiedPriorAmountsCents = new Set<number>();
+
+        const infoRefs = new Set<string>();
+        for (const r of info.imgDocRefs) infoRefs.add(r);
+        if (info.img.imageId) {
+          infoRefs.add(info.img.imageId.toLowerCase());
+          for (const r of extractNormalizedDocRefs(`doc: ${info.img.imageId}`)) infoRefs.add(r);
+        }
+
+        const userAttributed = extractDocAttributedTextFacts(
+          userInput,
+          infoRefs,
+          imageAnalysisList.length === 1 && isSingleDocumentScenario
+        );
+        const attributableUserQueryDate = userAttributed.date;
+        const attributableUserInputAmountsCents = userAttributed.amountsCents;
 
         const isIdLinked = info.img.imageId ? priorImgIds.has(info.img.imageId) : false;
         const isDocRefLinked = info.imgDocRefs.size > 0 && Array.from(info.imgDocRefs).every(r => allPriorDocRefs.has(r));
@@ -4598,26 +4789,40 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             }
           }
 
-          const canUseScenarioFallbacks =
-            (priorCommittedForImage.length === 0 || matchingPriorGroups.length > 0) &&
-            (priorCommittedForImage.length <= 1 && groupsToUse.length <= 1);
+          const rawQueryAttributed = currentScenario.rawQuery
+            ? extractDocAttributedTextFacts(currentScenario.rawQuery, infoRefs, isSingleDocumentScenario)
+            : { date: '', amountsCents: new Set<number>() };
 
-          if (canUseScenarioFallbacks && !infoVerifiedPriorDate) {
-            infoVerifiedPriorDate =
-              extractDateFromText(currentScenario.rawQuery || '') ||
-              (currentScenario.purchaseDate ? formatSingaporeDate(currentScenario.purchaseDate) : '') ||
-              (currentScenario.saleDate ? formatSingaporeDate(currentScenario.saleDate) : '') ||
-              (currentScenario.leaseCommencementDate ? formatSingaporeDate(currentScenario.leaseCommencementDate) : '') ||
-              '';
-            if (!infoVerifiedPriorDate && Array.isArray(currentScenario.evidence)) {
-              const dateEv = currentScenario.evidence.find(e => {
-                const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-                return /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate)$/.test(cleanKey);
-              });
-              if (dateEv && typeof dateEv.value === 'string') {
-                infoVerifiedPriorDate = formatSingaporeDate(dateEv.value);
+          const canUseScenarioFallbacks =
+            isSingleDocumentScenario &&
+            (priorCommittedForImage.length === 0 || matchingPriorGroups.length === 1) &&
+            groupsToUse.length <= 1 &&
+            (allScenarioDocRefs.size <= 1 && (info.imgDocRefs.size === 0 || Array.from(info.imgDocRefs).every(r => allScenarioDocRefs.has(r))));
+
+          if (!infoVerifiedPriorDate) {
+            if (rawQueryAttributed.date) {
+              infoVerifiedPriorDate = rawQueryAttributed.date;
+            } else if (canUseScenarioFallbacks) {
+              infoVerifiedPriorDate =
+                (currentScenario.purchaseDate ? formatSingaporeDate(currentScenario.purchaseDate) : '') ||
+                (currentScenario.saleDate ? formatSingaporeDate(currentScenario.saleDate) : '') ||
+                (currentScenario.leaseCommencementDate ? formatSingaporeDate(currentScenario.leaseCommencementDate) : '') ||
+                '';
+              if (!infoVerifiedPriorDate && Array.isArray(currentScenario.evidence)) {
+                const dateEv = currentScenario.evidence.find(e => {
+                  if (e.imageId && info.img.imageId && e.imageId !== info.img.imageId) return false;
+                  const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+                  return /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate)$/.test(cleanKey);
+                });
+                if (dateEv && typeof dateEv.value === 'string') {
+                  infoVerifiedPriorDate = formatSingaporeDate(dateEv.value);
+                }
               }
             }
+          }
+
+          for (const cents of rawQueryAttributed.amountsCents) {
+            infoVerifiedPriorAmountsCents.add(cents);
           }
 
           if (canUseScenarioFallbacks) {
@@ -4625,21 +4830,11 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
               infoVerifiedPriorAmountsCents.add(Math.round(currentScenario.amount * 100));
             }
             for (const e of (currentScenario.evidence || [])) {
+              if (e.imageId && info.img.imageId && e.imageId !== info.img.imageId) continue;
               if (e.source === 'user_text' || e.source === 'image') {
                 const cents = extractMonetaryFieldCents(e);
                 if (cents !== null && cents > 0) {
                   infoVerifiedPriorAmountsCents.add(cents);
-                }
-              }
-            }
-            if (currentScenario.rawQuery) {
-              let rqMatch: RegExpExecArray | null;
-              const rqRegex = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b/gi;
-              while ((rqMatch = rqRegex.exec(currentScenario.rawQuery)) !== null) {
-                const valStr = (rqMatch[1] || rqMatch[2] || '').replace(/,/g, '');
-                const val = parseFloat(valStr);
-                if (Number.isFinite(val) && val > 0) {
-                  infoVerifiedPriorAmountsCents.add(Math.round(val * 100));
                 }
               }
             }
@@ -4649,13 +4844,15 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         return {
           ...info,
           verifiedPriorDate: infoVerifiedPriorDate,
-          verifiedPriorAmountsCents: infoVerifiedPriorAmountsCents
+          verifiedPriorAmountsCents: infoVerifiedPriorAmountsCents,
+          attributableUserQueryDate,
+          attributableUserInputAmountsCents
         };
       });
 
       // Check for missing transaction date across analyzedImages
       for (const info of analyzedImages) {
-        const hasVerifiedDate = Boolean(info.imgDate || userQueryDate || info.verifiedPriorDate);
+        const hasVerifiedDate = Boolean(info.imgDate || info.attributableUserQueryDate || info.verifiedPriorDate);
         if (!hasVerifiedDate) {
           if (!fieldsOnlyErrors.some(e => e.code === 'IMAGE_MISSING_TRANSACTION_DATE')) {
             fieldsOnlyErrors.push({
@@ -4670,7 +4867,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
       // Check for missing transaction amount across analyzedImages
       for (const info of analyzedImages) {
-        if (info.imgAmountCents.size === 0 && userInputAmountsCents.size === 0 && info.verifiedPriorAmountsCents.size === 0) {
+        if (info.imgAmountCents.size === 0 && info.attributableUserInputAmountsCents.size === 0 && info.verifiedPriorAmountsCents.size === 0) {
           if (!fieldsOnlyErrors.some(e => e.code === 'IMAGE_MISSING_AMOUNT')) {
             fieldsOnlyErrors.push({
               code: 'IMAGE_MISSING_AMOUNT',
@@ -4703,14 +4900,14 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
         for (const info of analyzedImages) {
           // Date compatibility
-          const expectedDate = info.imgDate || userQueryDate || info.verifiedPriorDate || '';
+          const expectedDate = info.imgDate || info.attributableUserQueryDate || info.verifiedPriorDate || '';
           let dateCompatible = true;
           if (!expectedDate) {
             dateCompatible = false;
           } else if (info.imgDate) {
             if (!grpDate || grpDate !== info.imgDate) {
               dateCompatible = false;
-            } else if (userQueryDate && info.imgDate !== userQueryDate) {
+            } else if (info.attributableUserQueryDate && info.imgDate !== info.attributableUserQueryDate) {
               dateCompatible = false;
             }
           } else if (expectedDate) {
@@ -4736,8 +4933,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
               amountCompatible = false;
             }
           } else {
-            const fallbackVerifiedCents = userInputAmountsCents.size > 0
-              ? userInputAmountsCents
+            const fallbackVerifiedCents = info.attributableUserInputAmountsCents.size > 0
+              ? info.attributableUserInputAmountsCents
               : info.verifiedPriorAmountsCents;
             if (fallbackVerifiedCents.size === 0) {
               amountCompatible = false;
@@ -4771,7 +4968,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
             const sharesDateAndAmountWithOtherImage = analyzedImages.some(otherInfo => {
               if (otherInfo === info) return false;
-              const otherDate = otherInfo.imgDate || userQueryDate || otherInfo.verifiedPriorDate || '';
+              const otherDate = otherInfo.imgDate || otherInfo.attributableUserQueryDate || otherInfo.verifiedPriorDate || '';
               if (!expectedDate || expectedDate !== otherDate) return false;
 
               const thisAmounts = [...Array.from(info.imgTotalCents), ...Array.from(info.imgAmountCents)];
@@ -4863,7 +5060,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             for (const grp of groupsToReconcile) {
               const rawGrpDate = typeof grp.eventDate === 'string' ? grp.eventDate.trim() : '';
               const grpDate = rawGrpDate ? formatSingaporeDate(rawGrpDate) : '';
-              const expectedDate = info.imgDate || userQueryDate || info.verifiedPriorDate || '';
+              const expectedDate = info.imgDate || info.attributableUserQueryDate || info.verifiedPriorDate || '';
               if (!expectedDate || grpDate !== expectedDate) {
                 conflictFieldSet.add('date');
               }

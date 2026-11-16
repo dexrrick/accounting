@@ -3349,9 +3349,9 @@ export function postProcessAIResponse(
           transactionStatus: txStatus,
           journalAction: jAction
         }) ||
-        /\b(?:illustrative|hypothetical|pro\s*forma|planned|proposed|conditional)\b/i.test(grp.title || parsed.transactionTitle || '')
+        (isAiFirstSchema && /\b(?:illustrative|hypothetical|pro\s*forma|planned|proposed|conditional)\b/i.test(grp.title || parsed.transactionTitle || ''))
       );
-      const authStatus = isHypo ? 'CONDITIONAL' : (grp.authorityStatus || 'AI_PROPOSED');
+      const authStatus = isHypo ? 'CONDITIONAL' : (grp.authorityStatus || computedAuthorityStatus);
 
       return {
         id: grp.id || `grp-${gIdx + 1}`,
