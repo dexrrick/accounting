@@ -76,6 +76,13 @@ export const JournalTable: React.FC<JournalTableProps> = ({
                 </span>
               )}
 
+              {group.isHypothetical && (
+                <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800">
+                  <AlertTriangle className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                  <span>Hypothetical projection</span>
+                </span>
+              )}
+
               {/* Mobile Line Notes Toggle */}
               <button
                 onClick={() => setShowMobileNotes(!showMobileNotes)}

@@ -24,7 +24,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
-import { startsNewAccountingScenario } from './conversationBoundary';
+import { isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -496,7 +496,7 @@ export async function processAccountingQuery(
   // Reuse the governed result and its evidence; never restart a failed provider
   // request or let synthesis produce accounting state or image-derived facts.
   if (response.displayFullAnswer || response.advisoryFailureStatus || response.providerStatus === 'FAILED' ||
-      getCurrentImageAttachments(chatHistory).length > 0) return response;
+      getCurrentImageAttachments(chatHistory).length > 0 || isJournalDisplayRequest(userInput)) return response;
   if (response.calculation && isStandaloneOutputGstCalculationRequest(userInput)) return response;
   try {
     // An unmapped issue is an answer-completeness gap, not proof that the
@@ -948,8 +948,7 @@ async function processAccountingQueryCore(
   // reclassified as a new transaction and sent to a model.  Preserve the last
   // committed journal exactly; if none exists, say so rather than inventing
   // one from generic expense defaults.
-  const isJournalDisplayRequest = /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(userInput);
-  if (isJournalDisplayRequest) {
+  if (isJournalDisplayRequest(userInput)) {
     const candidateGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
       ? currentScenario.committedDirectGroups
       : currentScenario?.directGroups || [];

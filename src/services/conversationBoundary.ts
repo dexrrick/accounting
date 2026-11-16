@@ -4,6 +4,11 @@ import type { ConversationAccountingContext } from '../types/conversationState';
 
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
+/** A journal-display request reads an existing result and should not be routed as a transaction. */
+export function isJournalDisplayRequest(query: string): boolean {
+  return /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(query);
+}
+
 /** Rebuilds the history that existed when a failed user turn was first sent. */
 export function buildRetryConversationHistory(history: ChatMessage[], originalUserMessageId: string): ChatMessage[] {
   const originalTurnIndex = history.findIndex(message => message.id === originalUserMessageId && message.sender === 'user');
@@ -38,7 +43,7 @@ export function assessConversationRelation(
   const wordCount = q.split(/\s+/).filter(Boolean).length;
   const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
   const continuationSignal = /\b(what if|instead|then|also|same|previous|above|that|this|it|they|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
-  const explicitNewSignal = /\b(new question|unrelated|separate (?:question|transaction)|different (?:question|transaction))\b/i.test(q);
+  const explicitNewSignal = /\b(new (?:question|transaction|analysis)|unrelated|separate (?:analysis|question|transaction)|different (?:analysis|question|transaction))\b/i.test(q);
 
   if (explicitNewSignal) return 'NEW';
   if (currentScenario.missingFields?.length || isShortFactReply || continuationSignal) return 'RELATED';

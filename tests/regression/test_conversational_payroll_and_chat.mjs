@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
@@ -38,12 +39,20 @@ assert.equal(state.projectedGroups?.[0]?.isBalanced, true);
 assert.equal(state.directGroups?.length, 2);
 assert.equal(state.committedDirectGroups?.[0]?.totalDebit, initial.directGroups?.[0]?.totalDebit,
   'original payroll journal remains unchanged');
-const projectedJournalSnapshot = updateCommittedJournalScenario(null, state, 'SFRS_I');
-assert.ok(projectedJournalSnapshot, 'a balanced payroll projection can replace the workspace journal snapshot');
-assert.deepEqual(projectedJournalSnapshot.directGroups, state.directGroups,
-  'the snapshot preserves both the committed payroll group and the hypothetical projection');
-assert.equal(projectedJournalSnapshot.directGroups?.some(group => group.isHypothetical), true,
-  'the workspace journal retains its hypothetical projection marker');
+const committedJournal = updateCommittedJournalScenario(null, initial, 'SFRS_I');
+assert.ok(committedJournal, 'the completed payroll produces a committed journal snapshot');
+const journalAfterProjection = updateCommittedJournalScenario(committedJournal, state, 'SFRS_I');
+assert.equal(journalAfterProjection?.amount, initial.amount,
+  'a what-if result cannot replace actual payroll facts in the committed snapshot');
+assert.deepEqual(journalAfterProjection?.directGroups, committedJournal.directGroups,
+  'a what-if result cannot replace the committed journal lines');
+assert.equal(journalAfterProjection?.directGroups?.some(group => group.isHypothetical), false,
+  'the committed journal contains actual groups only');
+const projectedJournalMarkup = renderToStaticMarkup(React.createElement(JournalTable, {
+  groups: state.directGroups || [], standard: 'SFRS_I', functionalCurrency: state.functionalCurrency
+}));
+assert.match(projectedJournalMarkup, /Hypothetical projection/,
+  'the current what-if journal visibly identifies its projected group as hypothetical');
 
 const missingDate = await processAccountingQuery(
   'what if the employee resigned; can you calculate prorated payroll and CPF?', initial, 'SFRS_I'

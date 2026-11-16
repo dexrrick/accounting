@@ -19,7 +19,8 @@ import { classifyQuestion, isExplicitForeignTaxOnlyQuestion } from '../../src/cl
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
-import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
+import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
+import { assessConversationRelation } from '../../src/services/conversationBoundary.ts';
 import { buildAdvisoryConversation } from '../../src/services/aiFirstAdvisory.ts';
 import { usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { RequestProfiler } from '../../src/services/telemetry.ts';
@@ -1778,6 +1779,11 @@ assert.ok(initialJournalSnapshot, 'the initial payroll scenario produces a valid
 const initialJournalGroups = calculateDoubleEntries(initialJournalSnapshot, 'SFRS_I').groups;
 assert.equal(initialJournalGroups.length, 1);
 assert.equal(initialJournalGroups[0].isBalanced, true);
+const journalFollowUpContext = selectAccountingScenarioForRequest(
+  momSalaryOvertimeFollowUp, existingPayrollScenario, initialJournalSnapshot
+);
+assert.equal(journalFollowUpContext, existingPayrollScenario,
+  'a statutory follow-up continues with its active conversation context, not the separately preserved journal snapshot');
 globalThis.fetch = async (url, init) => {
   if (String(url).includes('generateContent')) {
     const body = JSON.parse(String(init?.body || '{}'));
@@ -1792,7 +1798,7 @@ globalThis.fetch = async (url, init) => {
 };
 let momFollowUpResponse;
 try {
-  momFollowUpResponse = await processAccountingQuery(momSalaryOvertimeFollowUp, existingPayrollScenario, 'SFRS_I', provider,
+  momFollowUpResponse = await processAccountingQuery(momSalaryOvertimeFollowUp, journalFollowUpContext, 'SFRS_I', provider,
     'gemini-3.5-flash-lite', momConversation, { journal: false, statutory: true }, {
       onAuthorityWorkstreams(result) { momProductionWorkstreams = result; }
     });
@@ -1808,6 +1814,60 @@ assert.deepEqual(calculateDoubleEntries(journalAfterAdvisory, 'SFRS_I').groups, 
   'the last balanced payroll journal, including its date, currency and line amounts, remains available separately');
 assert.equal(journalAfterAdvisory.functionalCurrency, initialJournalSnapshot.functionalCurrency,
   'the preserved journal retains its functional currency');
+const journalRecallContext = selectAccountingScenarioForRequest(
+  'Show last journal', momFollowUpResponse.scenarioState, journalAfterAdvisory
+);
+assert.equal(journalRecallContext, initialJournalSnapshot,
+  'after the advisory turn, the third turn retrieves the first payroll scenario for journal display');
+let journalRecallResponse;
+let journalRecallTransportCalls = 0;
+const fetchBeforeJournalRecall = globalThis.fetch;
+globalThis.fetch = async () => {
+  journalRecallTransportCalls++;
+  throw new Error('journal display must not call a model');
+};
+try {
+  journalRecallResponse = await processAccountingQuery('Show last journal', journalRecallContext, 'SFRS_I', provider,
+    'gemini-3.5-flash-lite', [], { journal: false, statutory: true });
+} finally {
+  globalThis.fetch = fetchBeforeJournalRecall;
+}
+assert.equal(journalRecallTransportCalls, 0,
+  'public journal recall bypasses advisory synthesis even when a provider is configured');
+assert.match(journalRecallResponse.messageText, /most recent committed journal/i);
+assert.doesNotMatch(journalRecallResponse.messageText, /No Double Entry Available Yet/i);
+assert.deepEqual(journalRecallResponse.scenarioState.directGroups, initialJournalGroups,
+  'the recalled journal matches the first turn’s balanced payroll groups');
+const correctionQuery = 'Actually the monthly salary for CPF is 72k a month';
+const correctionContext = selectAccountingScenarioForRequest(
+  correctionQuery, momFollowUpResponse.scenarioState, journalAfterAdvisory
+);
+assert.equal(correctionContext?.scenarioType, 'PAYROLL_CPF_SALARY',
+  'an affirmative CPF salary correction after an advisory recovers the payroll context');
+const correctedPayrollResponse = await processAccountingQuery(correctionQuery, correctionContext, 'SFRS_I');
+const correctedPayroll = correctedPayrollResponse.scenarioState;
+assert.equal(correctedPayroll.scenarioType, 'PAYROLL_CPF_SALARY',
+  'public offline processing retains the original payroll scenario for the correction');
+assert.equal(correctedPayroll.amount, 72000,
+  'public offline processing applies the correction to the existing salary');
+for (const query of [
+  'Actually the CPF contribution rate is 17%',
+  'Actually the CPF monthly salary ceiling is 8k',
+  'Actually employees earning 72k qualify for CPF',
+  'Actually the monthly salary for CPF is 72k a month and employees earning 72k qualify for CPF'
+]) {
+  assert.equal(selectAccountingScenarioForRequest(
+    query, momFollowUpResponse.scenarioState, journalAfterAdvisory
+  ), momFollowUpResponse.scenarioState,
+  `statutory rate, ceiling, eligibility and compound claims do not inherit payroll facts: ${query}`);
+}
+const correctedJournal = updateCommittedJournalScenario(journalAfterAdvisory, {
+  ...correctedPayroll,
+  committedDirectGroups: initialJournalGroups
+}, 'SFRS_I');
+assert.equal(correctedJournal?.amount, 72000);
+assert.notDeepEqual(correctedJournal?.directGroups, initialJournalGroups,
+  'the recalculated corrected payroll replaces stale committed journal groups');
 const editedPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState.replace('60k a month', '72k a month'));
 const replacedJournalSnapshot = updateCommittedJournalScenario(initialJournalSnapshot, editedPayrollScenario, 'SFRS_I');
 assert.equal(replacedJournalSnapshot?.amount, 72000,
@@ -1819,6 +1879,25 @@ const incompleteScenario = {
 };
 assert.equal(updateCommittedJournalScenario(replacedJournalSnapshot, incompleteScenario, 'SFRS_I'), replacedJournalSnapshot,
   'an incomplete new answer leaves the last valid journal snapshot intact');
+const separateEquipmentQuery = 'New transaction: The company purchased equipment, but its cost is not yet known. Please prepare its journal.';
+assert.equal(assessConversationRelation(separateEquipmentQuery, momFollowUpResponse.scenarioState), 'NEW',
+  'an explicit new incomplete equipment transaction starts a new accounting scope');
+const separateEquipmentScenario = await parseAccountingQuery(separateEquipmentQuery);
+assert.equal(separateEquipmentScenario.isComplete, false,
+  'the separate equipment case remains incomplete while its cost is unknown');
+const clearedJournalSnapshot = updateCommittedJournalScenario(
+  journalAfterAdvisory, separateEquipmentScenario, 'SFRS_I', true
+);
+assert.equal(clearedJournalSnapshot, null,
+  'the NEW scope clears the old payroll journal even when the new scenario has no entries');
+const separateRecallContext = selectAccountingScenarioForRequest(
+  'Show last journal', separateEquipmentScenario, clearedJournalSnapshot
+);
+const noOldJournalResponse = await processAccountingQuery('Show last journal', separateRecallContext, 'SFRS_I');
+assert.match(noOldJournalResponse.messageText, /No Double Entry Available Yet/i,
+  'journal recall in the separate incomplete case cannot resurrect the old payroll entries');
+assert.equal(updateCommittedJournalScenario(journalAfterAdvisory, separateEquipmentScenario, 'SFRS_I', true), null,
+  'the forced separate-analysis decision uses the same journal reset path');
 assert.ok(momProductionPrompt?.includes(momSalaryOvertimeParent),
   'The production caller supplies the earlier user turn to semantic understanding.');
 assert.ok(momProductionPrompt?.includes(momSalaryOvertimeFollowUp),

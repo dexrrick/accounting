@@ -12,7 +12,6 @@ import { JournalTable } from './components/JournalTable';
 import { ComplianceRationale } from './components/ComplianceRationale';
 import { calculateDoubleEntries } from './engine/accountingEngine';
 import { processAccountingQuery, type OutputPreference } from './services/geminiService';
-import { updateCommittedJournalScenario } from './services/committedJournal';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { WorkspaceEmptyState } from './components/WorkspaceEmptyState';
@@ -22,7 +21,8 @@ import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresenta
 import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { assessConversationRelation, buildRetryConversationHistory, canRetryFailedAnswer } from './services/conversationBoundary';
+import { assessConversationRelation, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
+import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -92,19 +92,31 @@ export const App: React.FC = () => {
     }
   ]);
 
-  const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage, retryHistory?: ChatMessage[]) => {
+  const processMessage = async (
+    text: string,
+    activeScenario: AccountingScenarioState | null,
+    userMsg: ChatMessage,
+    retryHistory?: ChatMessage[],
+    options?: { startNewScenario?: boolean; useProvidedScenario?: boolean }
+  ) => {
     setIsLoading(true);
-    setAppliedOutputPreference(outputPreference);
+    const isJournalRecall = isJournalDisplayRequest(text);
+    setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
     try {
+      const requestScenario = options?.useProvidedScenario
+        ? activeScenario
+        : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
       const response = await processAccountingQuery(
         text,
-        activeScenario,
+        requestScenario,
         standard,
         providerSettings,
         providerSettings.gemini.model,
-        retryHistory || (messages.some(message => message.id === userMsg.id)
-          ? [...messages.filter(message => message.id !== userMsg.id), userMsg]
-          : [...messages, userMsg]),
+        retryHistory || (options?.startNewScenario
+          ? [userMsg]
+          : messages.some(message => message.id === userMsg.id)
+            ? [...messages.filter(message => message.id !== userMsg.id), userMsg]
+            : [...messages, userMsg]),
         outputPreference
       );
 
@@ -113,9 +125,12 @@ export const App: React.FC = () => {
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
       setScenario(answerState);
-      setCommittedJournalScenario(previous => updateCommittedJournalScenario(previous, answerState, standard));
+      setCommittedJournalScenario(previous => updateCommittedJournalScenario(
+        previous, answerState, standard, options?.startNewScenario
+      ));
 
-      if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
+      if (isJournalRecall) setActiveTab('entries');
+      else if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
       else if (outputPreference.statutory && !outputPreference.journal) setActiveTab('compliance');
       else if (
         answerState.queryIntent === 'STATUTORY_ADVISORY' ||
@@ -132,7 +147,7 @@ export const App: React.FC = () => {
         displayFullAnswer: response.displayFullAnswer,
         advisoryFailureStatus: response.advisoryFailureStatus,
         advisoryRetryPayload: response.advisoryFailureStatus
-          ? { text, scenarioSnapshot: activeScenario, originalUserMessageId: userMsg.id }
+          ? { text, scenarioSnapshot: requestScenario, originalUserMessageId: userMsg.id }
           : undefined,
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
@@ -149,7 +164,7 @@ export const App: React.FC = () => {
     const originalUserMessage = retryHistory.at(-1);
     if (!originalUserMessage) return;
     // Restore the scenario and conversation prefix captured before the failed turn.
-    void processMessage(text, scenarioSnapshot, originalUserMessage, retryHistory);
+    void processMessage(text, scenarioSnapshot, originalUserMessage, retryHistory, { useProvidedScenario: true });
   };
 
   const handleSendMessage = async (text: string, images: ChatImageAttachment[] = []) => {
@@ -162,7 +177,8 @@ export const App: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    if (assessConversationRelation(text, scenario) === 'AMBIGUOUS') {
+    const relation = assessConversationRelation(text, scenario);
+    if (relation === 'AMBIGUOUS') {
       setPendingRelation({ text, userMessage: userMsg });
       setMessages((prev) => [...prev, {
         id: `relation-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), relationPrompt: true,
@@ -170,14 +186,23 @@ export const App: React.FC = () => {
       }]);
       return;
     }
-    await processMessage(text, scenario, userMsg);
+    const startNewScenario = relation === 'NEW';
+    if (startNewScenario) {
+      setScenario(null);
+      setCommittedJournalScenario(null);
+    }
+    await processMessage(text, scenario, userMsg, undefined, { startNewScenario });
   };
 
   const handleResolveRelation = (isRelated: boolean) => {
     if (!pendingRelation || isLoading) return;
     const pending = pendingRelation;
     setPendingRelation(null);
-    void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage);
+    if (!isRelated) {
+      setScenario(null);
+      setCommittedJournalScenario(null);
+    }
+    void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage, undefined, { startNewScenario: !isRelated });
   };
 
   const handleSelectSuggestion = (fieldKey: string, value: number | string) => {
@@ -202,7 +227,8 @@ export const App: React.FC = () => {
   const committedJournal = committedJournalScenario
     ? calculateDoubleEntries(committedJournalScenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
-  const hasJournal = committedJournal.groups.some((group) => group.lines.length > 0);
+  const displayedJournal = scenario?.isHypothetical ? computed : committedJournal;
+  const hasJournal = displayedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
   const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(
@@ -297,10 +323,10 @@ export const App: React.FC = () => {
                     {/* Tab Content */}
                     {activeTab === 'entries' && showJournal && (
                       <JournalTable
-                        groups={committedJournal.groups}
+                        groups={displayedJournal.groups}
                         standard={standard}
-                        functionalCurrency={committedJournalScenario?.functionalCurrency || 'SGD'}
-                        assumptions={committedJournalScenario?.assumptions}
+                        functionalCurrency={(scenario?.isHypothetical ? scenario.functionalCurrency : committedJournalScenario?.functionalCurrency) || 'SGD'}
+                        assumptions={scenario?.isHypothetical ? scenario.assumptions : committedJournalScenario?.assumptions}
                       />
                     )}
 
