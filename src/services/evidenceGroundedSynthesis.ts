@@ -1151,9 +1151,11 @@ const ORDINAL_WORD = `(?:${Object.keys(ORDINAL_VALUES).join('|')})`;
 const ORDINAL_WORD_PHRASE = `(?:(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[\\s-]+(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)|${ORDINAL_WORD})`;
 const NUMBER_TOKEN = `(?:\\d[\\d,]*(?:\\.\\d+)?|\\.\\d+|${CARDINAL_PHRASE})`;
 const ORDINAL_TOKEN = `(?:\\d+(?:st|nd|rd|th)|${ORDINAL_WORD_PHRASE})`;
-// A numbered Part is a legal provision; ordinary phrases such as "part of"
-// must not acquire provision provenance requirements.
-const PROVISION_PREFIX = `(?:regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?|parts?(?=\\s+(?:\\d|${CARDINAL_WORD}\\b)))`;
+// Numbered or Roman-numbered Parts are legal provisions; phrases such as
+// "part of" must not acquire provision provenance requirements.
+const PROVISION_PREFIX = '(?:regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?|parts?(?=\\s+(?:\\d|' + CARDINAL_WORD + '\\b|[ivxlcdm]+\\b)))';
+const PROVISION_COMPONENT = '(?:(?:\\d+(?:\\.\\d+)?[a-z]*(?:\\([\\da-z]+\\))*|[ivxlcdm]+|[a-z]+|' + CARDINAL_PHRASE + '))(?![a-z0-9(])';
+const PROVISION_LIST = PROVISION_COMPONENT + '(?:(?:\\s*(?:and|&|,)\\s*)' + PROVISION_COMPONENT + ')*';
 const SIGN_TOKEN = '(?:negative|minus|positive|plus|[+\\-−])';
 const NUMERIC_GENERIC_ANCHORS = new Set([
   'a', 'an', 'and', 'after', 'amount', 'apply', 'applies', 'at', 'before', 'by', 'calendar', 'day', 'days',
@@ -1308,9 +1310,8 @@ function numericAssertions(text: string, sourceContext = ''): NumericAssertion[]
     return value ? { unit: 'date', value } : undefined;
   });
 
-  const provisionAtom = `(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|${CARDINAL_PHRASE})`;
   const provisionSpans: Array<{ start: number; end: number }> = [];
-  const provisionPattern = new RegExp(`\\b${PROVISION_PREFIX}\\s+${provisionAtom}(?:(?:\\s*(?:and|&|,)\\s*)${provisionAtom})*`, 'gi');
+  const provisionPattern = new RegExp('\\b' + PROVISION_PREFIX + '\\s+' + PROVISION_LIST, 'gi');
   let provisionMatch: RegExpExecArray | null;
   while ((provisionMatch = provisionPattern.exec(normalized))) {
     provisionSpans.push({ start: provisionMatch.index, end: provisionMatch.index + provisionMatch[0].length });
@@ -1636,23 +1637,34 @@ function normalizeNumericClause(text: string): string {
 
 function provisionReferences(text: string): string[] {
   const references: string[] = [];
-  const component = '(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|[a-z]+)';
-  const pattern = new RegExp(`\\b(${PROVISION_PREFIX})\\s+(${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*)`, 'gi');
+  const pattern = new RegExp('\\b(' + PROVISION_PREFIX + ')\\s+(' + PROVISION_LIST + ')', 'gi');
   for (const match of text.matchAll(pattern)) {
     const type = /regulation/i.test(match[1]) ? 'regulation' : match[1].toLowerCase().replace(/s$/, '');
-    const referencesInMatch = [...match[2].matchAll(new RegExp(component, 'gi'))]
-      .map(item => item[0].toLowerCase().replace(/\s+/g, ''));
+    const referencesInMatch = [...match[2].matchAll(new RegExp(PROVISION_COMPONENT, 'gi'))]
+      .map(item => normalizeProvisionIdentifier(type, item[0]));
     references.push(type + ':' + referencesInMatch.join(','));
   }
   return references;
 }
 
-function removeProvisionReferenceSpans(text: string): string {
-  const component = '(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|[a-z]+)';
-  const pattern = new RegExp(`\\b${PROVISION_PREFIX}\\s+${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*`, 'gi');
-  return text.replace(pattern, ' ');
+function normalizeProvisionIdentifier(type: string, identifier: string): string {
+  const normalized = identifier.toLowerCase().replace(/\s+/g, '');
+  if (type !== 'part' || !/^[ivxlcdm]+$/i.test(normalized)) return normalized;
+  const roman = normalized.toUpperCase();
+  if (!/^(?=.+$)M{0,3}(?:CM|CD|D?C{0,3})(?:XC|XL|L?X{0,3})(?:IX|IV|V?I{0,3})$/i.test(roman)) return normalized;
+  const values: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+  let total = 0;
+  for (let index = 0; index < roman.length; index++) {
+    const value = values[roman[index]];
+    total += value < (values[roman[index + 1]] || 0) ? -value : value;
+  }
+  return String(total);
 }
 
+function removeProvisionReferenceSpans(text: string): string {
+  const pattern = new RegExp('\\b' + PROVISION_PREFIX + '\\s+' + PROVISION_LIST, 'gi');
+  return text.replace(pattern, ' ');
+}
 function deterministicFieldForClaim(clause: string): string | undefined {
   if (/^\s*(?:the\s+)?output tax is\s+(?:(?:SGD|USD|EUR|GBP|S\$)\s*)?-?\d[\d,]*(?:\.\d+)?\s*[.!?]?\s*$/i.test(clause)) return 'outputTax';
   if (/^\s*outputTax\s*=\s*(?:(?:SGD|USD|EUR|GBP|S\$)\s*)?-?\d[\d,]*(?:\.\d+)?\s*$/i.test(clause)) return 'outputTax';

@@ -3,6 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { extractAccountingContext } from '../../src/services/conversationAccountingState.ts';
 import { defaultTransactionUnderstandingService, validateAndNormalizeUnderstanding } from '../../src/services/transactionUnderstandingService.ts';
 import { createChatPreview, extractOfficialAnswerLinks } from '../../src/utils/chatPresentation.ts';
@@ -37,6 +38,12 @@ assert.equal(state.projectedGroups?.[0]?.isBalanced, true);
 assert.equal(state.directGroups?.length, 2);
 assert.equal(state.committedDirectGroups?.[0]?.totalDebit, initial.directGroups?.[0]?.totalDebit,
   'original payroll journal remains unchanged');
+const projectedJournalSnapshot = updateCommittedJournalScenario(null, state, 'SFRS_I');
+assert.ok(projectedJournalSnapshot, 'a balanced payroll projection can replace the workspace journal snapshot');
+assert.deepEqual(projectedJournalSnapshot.directGroups, state.directGroups,
+  'the snapshot preserves both the committed payroll group and the hypothetical projection');
+assert.equal(projectedJournalSnapshot.directGroups?.some(group => group.isHypothetical), true,
+  'the workspace journal retains its hypothetical projection marker');
 
 const missingDate = await processAccountingQuery(
   'what if the employee resigned; can you calculate prorated payroll and CPF?', initial, 'SFRS_I'

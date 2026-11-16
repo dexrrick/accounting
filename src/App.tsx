@@ -12,6 +12,7 @@ import { JournalTable } from './components/JournalTable';
 import { ComplianceRationale } from './components/ComplianceRationale';
 import { calculateDoubleEntries } from './engine/accountingEngine';
 import { processAccountingQuery, type OutputPreference } from './services/geminiService';
+import { updateCommittedJournalScenario } from './services/committedJournal';
 import { loadProviderSettings, saveProviderSettings, type ProviderSettings } from './types/provider';
 import { FileSpreadsheet, BookCheck } from 'lucide-react';
 import { WorkspaceEmptyState } from './components/WorkspaceEmptyState';
@@ -75,6 +76,7 @@ export const App: React.FC = () => {
   };
 
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
+  const [committedJournalScenario, setCommittedJournalScenario] = useState<AccountingScenarioState | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
@@ -111,6 +113,7 @@ export const App: React.FC = () => {
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
       setScenario(answerState);
+      setCommittedJournalScenario(previous => updateCommittedJournalScenario(previous, answerState, standard));
 
       if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
       else if (outputPreference.statutory && !outputPreference.journal) setActiveTab('compliance');
@@ -185,16 +188,21 @@ export const App: React.FC = () => {
 
   const handleScenarioChange = (updated: AccountingScenarioState) => {
     setScenario(updated);
+    setCommittedJournalScenario(previous => updateCommittedJournalScenario(previous, updated, standard));
   };
 
   const handleResetToDefaults = () => {
     setScenario(null);
+    setCommittedJournalScenario(null);
   };
 
   const computed = scenario
     ? calculateDoubleEntries(scenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
-  const hasJournal = computed.groups.some((group) => group.lines.length > 0);
+  const committedJournal = committedJournalScenario
+    ? calculateDoubleEntries(committedJournalScenario, standard)
+    : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
+  const hasJournal = committedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
   const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(
@@ -276,7 +284,7 @@ export const App: React.FC = () => {
                       {showStatutory && <button
                         onClick={() => setActiveTab('compliance')}
                         className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
-                          activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
+                          activeTab === 'compliance' || !hasJournal
                             ? 'border-workspace-accent text-workspace-accent-text dark:border-workspace-accent dark:text-workspace-accent-text'
                             : 'border-transparent text-workspace-muted dark:text-workspace-muted hover:text-slate-800 dark:hover:text-slate-200'
                         }`}
@@ -289,10 +297,10 @@ export const App: React.FC = () => {
                     {/* Tab Content */}
                     {activeTab === 'entries' && showJournal && (
                       <JournalTable
-                        groups={computed.groups}
+                        groups={committedJournal.groups}
                         standard={standard}
-                        functionalCurrency={scenario.functionalCurrency}
-                        assumptions={scenario.assumptions}
+                        functionalCurrency={committedJournalScenario?.functionalCurrency || 'SGD'}
+                        assumptions={committedJournalScenario?.assumptions}
                       />
                     )}
 

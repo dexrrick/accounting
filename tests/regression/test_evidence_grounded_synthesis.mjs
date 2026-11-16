@@ -1893,6 +1893,58 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
 }
 
 {
+  const createPartIssue = (quote, issueId) => {
+    const source = makeCapturedOfficialSource({
+      id: 'mom-provision-' + issueId, authority: 'MOM',
+      title: 'Employment Act coverage', url: 'https://www.mom.gov.sg/',
+      quote
+    });
+    return makeNumericSourceIssue({
+      issueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+      subject: 'Employment Act coverage', sourceQuotes: [{ source, quote }]
+    });
+  };
+  for (const [index, sourcePart, claimPart] of [['roman-to-arabic', 'IV', '4'], ['arabic-to-roman', '4', 'IV']]) {
+    const issue = createPartIssue('Part ' + sourcePart + ' of the Employment Act covers these employees.', 'issue-part-' + index);
+    const claimText = 'Part ' + claimPart + ' of the Employment Act covers these employees.';
+    const { result } = await runNumericProductionClaims({
+      query: 'Explain the employees covered by the Employment Act.',
+      issues: [issue],
+      candidates: [{ id: 'equivalent-part-' + index, text: claimText, issueId: issue.issueId }]
+    });
+    assert.ok(result.verification.admittedClaimIds.includes('equivalent-part-' + index),
+      'equivalent Roman and Arabic Part identifiers support a production synthesis claim: ' + index);
+  }
+
+  const preciseSource = 'Part 4 applies under Section 26 and paragraph 26(a) of the Employment Act.';
+  const issue = createPartIssue(preciseSource, 'issue-part-specificity');
+  let verifiedIds = [];
+  const { result } = await runNumericProductionClaims({
+    query: 'Explain the relevant Employment Act provisions.',
+    issues: [issue],
+    candidates: [
+      { id: 'part-suffix-mismatch', text: 'Part 4A applies to these employees.', issueId: issue.issueId },
+      { id: 'section-suffix-mismatch', text: 'Section 26A applies to these employees.', issueId: issue.issueId },
+      { id: 'multi-letter-suffix-mismatch', text: 'Section 26AB applies to these employees.', issueId: issue.issueId },
+      { id: 'nested-paragraph-mismatch', text: 'Paragraph 26(b) applies to these employees.', issueId: issue.issueId },
+      { id: 'matching-complete-identifiers', text: 'Part 4 applies under Section 26 and paragraph 26(a).', issueId: issue.issueId }
+    ],
+    verificationHandler: ({ prompt }) => {
+      const verification = defaultVerification(prompt);
+      verifiedIds = JSON.parse(prompt).claims.map(item => item.claimId);
+      return verification;
+    }
+  });
+  assert.ok(result.verification.admittedClaimIds.includes('matching-complete-identifiers'));
+  for (const claimId of ['part-suffix-mismatch', 'section-suffix-mismatch', 'multi-letter-suffix-mismatch', 'nested-paragraph-mismatch']) {
+    assert.ok(result.verification.withheldClaimIds.includes(claimId),
+      'a complete provision identifier must not truncate to its parent: ' + claimId);
+    assert.ok(!verifiedIds.includes(claimId),
+      'provision mismatches are rejected before semantic support verification: ' + claimId);
+  }
+}
+
+{
   const momUrl = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
   const payslipUrl = 'https://www.mom.gov.sg/employment-practices/salary/itemised-payslips';
   const monthlyQuote = 'If you are covered by the Employment Act, your employer must pay your salary at least once a month.';

@@ -2594,6 +2594,7 @@ export function buildSemanticDiscoveryQuery(query: string, interpretation?: Sema
 
 export function isShortSemanticFollowUp(query: string): boolean {
   const shortQuery = query.trim();
+  if (shortQuery.length > 260 || /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b|\b(?:new|different|separate|unrelated)\s+(?:case|scenario|situation|question)\b/i.test(shortQuery)) return false;
   const continuationPrefix = shortQuery.length <= 140 && /^\s*(?:and|also|so|then|what about|how about|would that|is that|does that|can i for that|why is that|how does that)\b/i.test(shortQuery);
   const leadingQuestion = shortQuery.split('?')[0].trim();
   const questionWithExplicitAnaphora = /^\s*(?:can|could|would|should|do|does|is|are|what|how)\b[^?]{0,110}\b(?:it|that|this\s+(?:transaction|purchase|expense|supply|asset|invoice|amount|case)|the same (?:transaction|purchase|expense|supply))\b[^?]*\??\s*$/i.test(leadingQuestion);

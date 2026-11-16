@@ -17,6 +17,9 @@ import {
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { classifyQuestion, isExplicitForeignTaxOnlyQuestion } from '../../src/classification/questionClassifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
+import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { buildAdvisoryConversation } from '../../src/services/aiFirstAdvisory.ts';
 import { usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { RequestProfiler } from '../../src/services/telemetry.ts';
@@ -1627,6 +1630,15 @@ assert.equal(isShortSemanticFollowUp(shortAnaphoricFollowUp), true,
   'A short question with explicit transaction anaphora continues the active case.');
 assert.equal(isShortSemanticFollowUp(momSalaryOvertimeFollowUp), true,
   'A long explicit-anaphora question remains a follow-up when later text adds response instructions.');
+const longUnrelatedRequest = 'Does that apply? Please disregard the earlier case and explain a new situation. ' +
+  'The employee has different facts and duties. '.repeat(9);
+assert.ok(longUnrelatedRequest.length > 400, 'the unrelated multi-question control exceeds the full-message follow-up limit');
+assert.equal(isShortSemanticFollowUp(longUnrelatedRequest), false,
+  'explicitly replacing the earlier case prevents a long request from retaining its history');
+assert.equal(isShortSemanticFollowUp('Does that apply? Ignore the earlier case and explain a new situation. Please use bullet points.'), false,
+  'a short request to disregard prior facts starts a separate analysis');
+assert.equal(isShortSemanticFollowUp(momSalaryOvertimeFollowUp + ' Please answer in bullet points.'), true,
+  'a legitimate follow-up retains context when it adds response-formatting instructions');
 assert.equal(isShortSemanticFollowUp('Can I claim Parent Relief for my mother? Please answer in bullet points and include a citation.'), false,
   'Output instructions after a standalone question do not make it a follow-up.');
 assert.equal(isShortSemanticFollowUp('What is the reporting deadline? Does that change if the employee is not covered? Please answer briefly.'), false,
@@ -1759,6 +1771,13 @@ let momProductionPrompt;
 let momProductionSystem;
 let momProductionWorkstreams;
 const fetchBeforeMomContextTest = globalThis.fetch;
+const payrollQueryForJournalState = 'currently the company has one singaporean employees earning 60k a month he is 60 years old show me the relevant double entries';
+const existingPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState);
+const initialJournalSnapshot = updateCommittedJournalScenario(null, existingPayrollScenario, 'SFRS_I');
+assert.ok(initialJournalSnapshot, 'the initial payroll scenario produces a validated journal snapshot');
+const initialJournalGroups = calculateDoubleEntries(initialJournalSnapshot, 'SFRS_I').groups;
+assert.equal(initialJournalGroups.length, 1);
+assert.equal(initialJournalGroups[0].isBalanced, true);
 globalThis.fetch = async (url, init) => {
   if (String(url).includes('generateContent')) {
     const body = JSON.parse(String(init?.body || '{}'));
@@ -1771,14 +1790,35 @@ globalThis.fetch = async (url, init) => {
   }
   return new Response('', { status: 503 });
 };
+let momFollowUpResponse;
 try {
-  await processAccountingQuery(momSalaryOvertimeFollowUp, null, 'SFRS_I', provider,
+  momFollowUpResponse = await processAccountingQuery(momSalaryOvertimeFollowUp, existingPayrollScenario, 'SFRS_I', provider,
     'gemini-3.5-flash-lite', momConversation, { journal: false, statutory: true }, {
       onAuthorityWorkstreams(result) { momProductionWorkstreams = result; }
     });
 } finally {
   globalThis.fetch = fetchBeforeMomContextTest;
 }
+assert.deepEqual(momFollowUpResponse.scenarioState.directGroups, [],
+  'the authority-only response carries no payroll journal into the advisory state');
+const journalAfterAdvisory = updateCommittedJournalScenario(
+  initialJournalSnapshot, momFollowUpResponse.scenarioState, 'SFRS_I'
+);
+assert.deepEqual(calculateDoubleEntries(journalAfterAdvisory, 'SFRS_I').groups, initialJournalGroups,
+  'the last balanced payroll journal, including its date, currency and line amounts, remains available separately');
+assert.equal(journalAfterAdvisory.functionalCurrency, initialJournalSnapshot.functionalCurrency,
+  'the preserved journal retains its functional currency');
+const editedPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState.replace('60k a month', '72k a month'));
+const replacedJournalSnapshot = updateCommittedJournalScenario(initialJournalSnapshot, editedPayrollScenario, 'SFRS_I');
+assert.equal(replacedJournalSnapshot?.amount, 72000,
+  'a new balanced payroll input replaces the displayed journal snapshot');
+assert.notDeepEqual(calculateDoubleEntries(replacedJournalSnapshot, 'SFRS_I').groups, initialJournalGroups);
+const incompleteScenario = {
+  ...editedPayrollScenario, scenarioType: 'UNRECOGNIZED', directGroups: [], amount: undefined,
+  isComplete: false, missingFields: [{ fieldKey: 'salary', fieldName: 'Salary', prompt: 'Please confirm salary.', whyNeeded: 'Salary is needed.' }]
+};
+assert.equal(updateCommittedJournalScenario(replacedJournalSnapshot, incompleteScenario, 'SFRS_I'), replacedJournalSnapshot,
+  'an incomplete new answer leaves the last valid journal snapshot intact');
 assert.ok(momProductionPrompt?.includes(momSalaryOvertimeParent),
   'The production caller supplies the earlier user turn to semantic understanding.');
 assert.ok(momProductionPrompt?.includes(momSalaryOvertimeFollowUp),
