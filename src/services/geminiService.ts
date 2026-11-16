@@ -164,6 +164,45 @@ export function extractDateFromText(text: string): string {
 
 export const docRefKeyPattern = /^(?:invoiceno|invoicenumber|receiptno|receiptnumber|voucherno|vouchernumber|paymentvoucherno|paymentvouchernumber|billno|billnumber|refno|referenceno|referencenumber|documentno|documentnumber|docno|transactionid|txid)$/;
 
+const evidenceDateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
+
+export function isMonetaryEvidenceField(fieldName: unknown): boolean {
+  const cleanKey = String(fieldName || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  if (
+    !cleanKey ||
+    docRefKeyPattern.test(cleanKey) ||
+    evidenceDateKeyPattern.test(cleanKey) ||
+    /(?:id|number|no|code|index|year|days|months|qty|quantity|rate|percent|confidence|date|time|ref|reference|currency|unit|period|term|terms)$/i.test(cleanKey)
+  ) {
+    return false;
+  }
+  return /(?:amount|total|subtotal|subamount|net|tax|gst|vat|price|cost|payment|payable|receivable|paid|consideration|proceeds|fee|charge|value|balance|debit|credit|discount|deposit|refund|salary|wage|rent|revenue|income|expense|interest|principal|premium|dividend|commission|bonus|allowance)/i.test(cleanKey);
+}
+
+export function extractMonetaryFieldCents(field: { field?: unknown; value?: unknown } | null | undefined): number | null {
+  if (!field || field.value === undefined || field.value === null || !isMonetaryEvidenceField(field.field)) {
+    return null;
+  }
+  let val: number | null = null;
+  if (typeof field.value === 'number' && Number.isFinite(field.value)) {
+    val = field.value;
+  } else if (typeof field.value === 'string') {
+    const trimmed = field.value.trim();
+    if (!trimmed || /^\d{1,4}[\/\-]\d{1,2}[\/\-]\d{1,4}$/.test(trimmed)) {
+      return null;
+    }
+    const cleaned = trimmed.replace(/[^0-9.\-]/g, '');
+    if (!/^-?\d+(?:\.\d+)?$/.test(cleaned)) {
+      return null;
+    }
+    const parsedNum = parseFloat(cleaned);
+    if (Number.isFinite(parsedNum)) {
+      val = parsedNum;
+    }
+  }
+  return val !== null && val > 0 ? Math.round(val * 100) : null;
+}
+
 export function extractDateFromImageFields(fields: ExtractedEvidence[] | Record<string, any>): string {
   if (!fields) return '';
   const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
@@ -512,11 +551,8 @@ export function resolveTargetPendingImageIndices(
             ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
             : [];
         for (const f of fields) {
-          if (typeof f.value === 'number' && oldCents.has(Math.round(f.value * 100))) hasOld = true;
-          else if (typeof f.value === 'string') {
-            const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
-            if (Number.isFinite(num) && oldCents.has(Math.round(num * 100))) hasOld = true;
-          }
+          const cents = extractMonetaryFieldCents(f);
+          if (cents !== null && oldCents.has(cents)) hasOld = true;
         }
         if (hasOld) candidateIndices.push(idx);
       });
@@ -1429,11 +1465,9 @@ export async function processAccountingQuery(
           ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
           : [];
       for (const f of fields) {
-        if (typeof f.value === 'number' && Number.isFinite(f.value) && f.value > 0) {
-          priorAmountsSet.add(f.value);
-        } else if (typeof f.value === 'string') {
-          const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
-          if (Number.isFinite(num) && num > 0) priorAmountsSet.add(num);
+        const cents = extractMonetaryFieldCents(f);
+        if (cents !== null && cents > 0) {
+          priorAmountsSet.add(cents / 100);
         }
       }
     }
@@ -3168,18 +3202,16 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
           : [];
       for (const f of fields) {
-        if (typeof f.value === 'number' && Number.isFinite(f.value) && f.value > 0) {
-          pendingAmounts.add(Math.round(f.value * 100));
-        } else if (typeof f.value === 'string') {
-          const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
-          if (Number.isFinite(num) && num > 0) pendingAmounts.add(Math.round(num * 100));
+        const cents = extractMonetaryFieldCents(f);
+        if (cents !== null && cents > 0) {
+          pendingAmounts.add(cents);
         }
       }
     }
     userAmountsForCorrection = userAmounts;
     pendingAmountsForCorrection = pendingAmounts;
 
-    const hasExplicitAmountCorrectionIntent = /\b(?:correct(?:\s+amount|\s+total|\s+figure|\s+value)?\s+(?:is|was)|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))?|(?:the\s+)?(?:actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)|should\s+be|not\s+(?:S\$|\$|SGD)?\s*\d|(?:change|update|amend|revise|correct)\s+(?:the\s+)?(?:amount|total|invoice|entry|journal|figure)\s+to|(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD)\s*\d|(?:the\s+)?(?:subtotal|net\s+amount|pre[\s-]*tax\s+amount|total(?:\s+amount)?|gst(?:\s+amount)?|tax(?:\s+amount)?|invoice\s+(?:amount|total))\s*(?:is|was|=|:)?\s*(?:S\$|\$|SGD)?\s*\d)/i.test(userInput);
+    const hasExplicitAmountCorrectionIntent = /\b(?:correct(?:\s+amount|\s+total|\s+figure|\s+value)?\s+(?:is|was)|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))?|(?:the\s+)?(?:actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)|should\s+be|not\s+(?:S\$|\$|SGD)?\s*\d|(?:change|update|amend|revise|correct)\s+(?:the\s+)?(?:amount|total|invoice|entry|journal|figure)\s+to|(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD)\s*\d|(?:the\s+)?(?:subtotal|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|total(?:\s+amount)?|gst(?:\s+amount)?|tax(?:\s+amount)?|invoice\s+(?:amount|total))\s*(?:is|was|=|:)?\s*(?:S\$|\$|SGD)?\s*\d)/i.test(userInput);
     const isNewStandaloneTransactionWhilePending = /\b(?:another\s+(?:invoice|bill|receipt|payment|transaction|purchase|entry)|separate\s+(?:invoice|bill|receipt|payment|transaction|entry)|different\s+(?:invoice|bill|receipt|payment|transaction)|new\s+(?:invoice|bill|receipt|payment|transaction|question)|second\s+(?:invoice|bill|receipt|payment|transaction)|also\s+(?:purchased|bought|paid|received|invoiced))\b/i.test(userInput);
 
     const hasNoConflictingAmount = userAmounts.length === 0 || pendingAmounts.size === 0 || userAmounts.every(a => pendingAmounts.has(a));
@@ -3413,17 +3445,19 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         const isGenericTotalKey = (k: string) => /^(?:amount|purchaseprice|paymentamount|receiptamount|price|cost|value)$/.test(k);
         const isTotalKey = (k: string) => isExplicitTotalKey(k) || isGenericTotalKey(k);
 
-        const mentionsSubtotal = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax\s+amount|amount\s+before\s+(?:gst|tax))\b/i.test(userInput);
-        const mentionsTax = /\b(?:gst|tax|vat)(?:\s+amount)?\b/i.test(userInput);
+        const maskNonStandaloneTaxPhrases = (text: string): string =>
+          text.replace(
+            /\b(?:pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|ex(?:cl(?:uding)?)?[\s.-]*(?:gst|tax|vat)|without\s+(?:gst|tax|vat)|net\s+of\s+(?:gst|tax|vat)|tax\s+invoice)\b/gi,
+            (m) => ' '.repeat(m.length)
+          );
+        const taxDetectionInput = maskNonStandaloneTaxPhrases(userInput);
+
+        const mentionsSubtotal = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount)\b/i.test(userInput);
+        const mentionsTax = /\b(?:gst|tax|vat)(?:\s+amount)?\b/i.test(taxDetectionInput);
         const mentionsTotal = /\b(?:total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due)\b/i.test(userInput);
 
         const getFieldCents = (f: ExtractedEvidence): number | null => {
-          if (typeof f.value === 'number' && Number.isFinite(f.value)) return Math.round(f.value * 100);
-          if (typeof f.value === 'string') {
-            const num = parseFloat(f.value.replace(/[^0-9.]/g, ''));
-            if (Number.isFinite(num)) return Math.round(num * 100);
-          }
-          return null;
+          return extractMonetaryFieldCents(f);
         };
 
         const isMultiFieldCorrection = [mentionsSubtotal, mentionsTax, mentionsTotal].filter(Boolean).length > 1;
@@ -3437,20 +3471,22 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           let catRegex: RegExp;
           let boundaryRegex: RegExp;
           if (category === 'subtotal') {
-            catRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax\s+amount|amount\s+before\s+(?:gst|tax))\b/i;
+            catRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount)\b/i;
             boundaryRegex = /\b(?:total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due|gst|tax|vat|date|dated)\b/i;
           } else if (category === 'tax') {
             catRegex = /\b(?:gst|tax|vat)(?:\s+amount)?\b/i;
-            boundaryRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax\s+amount|amount\s+before\s+(?:gst|tax)|total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due|date|dated)\b/i;
+            boundaryRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due|date|dated)\b/i;
           } else {
             catRegex = /\b(?:total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due)\b/i;
-            boundaryRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax\s+amount|amount\s+before\s+(?:gst|tax)|gst|tax|vat|date|dated)\b/i;
+            boundaryRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|gst|tax|vat|date|dated)\b/i;
           }
 
-          const match = catRegex.exec(userInput);
+          const match = category === 'tax' ? catRegex.exec(taxDetectionInput) : catRegex.exec(userInput);
           if (!match) return null;
           const afterKeyword = userInput.slice(match.index + match[0].length);
-          const nextBoundary = boundaryRegex.exec(afterKeyword);
+          const nextBoundary = category === 'subtotal'
+            ? boundaryRegex.exec(taxDetectionInput.slice(match.index + match[0].length))
+            : boundaryRegex.exec(afterKeyword);
           const segment = nextBoundary ? afterKeyword.slice(0, nextBoundary.index) : afterKeyword;
 
           const amountRegex = /(?:(\bnot\s+)?(?:(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|(?:\b(?:is|was|to|=|:)\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*(\d[\d,]*(?:\.\d+)?)(?!\s*[\/\-]\s*\d))|(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b))/gi;
@@ -4425,29 +4461,13 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
             : [];
 
-        const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
         for (const f of fields) {
-          if (!f || f.value === undefined || f.value === null) continue;
-          const cleanKey = String(f.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (docRefKeyPattern.test(cleanKey)) continue;
-          if (dateKeyPattern.test(cleanKey)) continue;
-          if (/(?:id|number|no|code|index|year|days|months|qty|quantity|rate|percent|confidence)$/i.test(cleanKey)) continue;
-
-          if (/(?:amount|total|subtotal|net|tax|gst|price|cost|payment|payable|receivable|paid|consideration|proceeds|fee|charge|value|balance|debit|credit)/i.test(cleanKey)) {
-            let val: number | null = null;
-            if (typeof f.value === 'number' && Number.isFinite(f.value)) {
-              val = f.value;
-            } else if (typeof f.value === 'string') {
-              const cleaned = f.value.replace(/[^0-9.]/g, '');
-              const parsedNum = parseFloat(cleaned);
-              if (Number.isFinite(parsedNum)) val = parsedNum;
-            }
-            if (val !== null && val > 0) {
-              const cents = Math.round(val * 100);
-              imgAmountCents.add(cents);
-              if (/^(?:total|totalamount|amount|invoiceamount|grossamount|purchaseprice|paymentamount|receiptamount|netamount)$/i.test(cleanKey)) {
-                imgTotalCents.add(cents);
-              }
+          const cents = extractMonetaryFieldCents(f);
+          if (cents !== null && cents > 0) {
+            imgAmountCents.add(cents);
+            const cleanKey = String(f?.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (/^(?:total|totalamount|amount|invoiceamount|grossamount|purchaseprice|paymentamount|receiptamount|netamount)$/i.test(cleanKey)) {
+              imgTotalCents.add(cents);
             }
           }
         }
@@ -4503,11 +4523,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       const allPriorDocRefs = new Set<string>();
       if (isFollowUpForImage && currentScenario) {
         for (const img of (currentScenario.imageEvidence || [])) if (img.imageId) priorImgIds.add(img.imageId);
-        for (const img of (currentScenario.pendingImageEvidence || [])) if (img.imageId) priorImgIds.add(img.imageId);
         for (const p of priorCommittedForImage) for (const sId of (p.sourceImageIds || [])) priorImgIds.add(sId);
 
         for (const ref of extractDocRefsFromImages(currentScenario.imageEvidence || [])) allPriorDocRefs.add(ref);
-        for (const ref of extractDocRefsFromImages(currentScenario.pendingImageEvidence || [])) allPriorDocRefs.add(ref);
         for (const ref of extractNormalizedDocRefs(currentScenario.rawQuery || '')) allPriorDocRefs.add(ref);
         for (const e of (currentScenario.evidence || [])) {
           const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -4556,19 +4574,17 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
         if (isPositivelyLinked && currentScenario) {
           const matchingPriorGroups = priorCommittedForImage.filter(p => {
-            if (info.img.imageId && p.sourceImageIds && p.sourceImageIds.includes(info.img.imageId)) return true;
+            if (info.img.imageId && p.sourceImageIds?.includes(info.img.imageId)) return true;
             if (info.imgDocRefs.size > 0) {
               const pRefs = extractNormalizedDocRefs(`${p.id || ''} ${p.transactionId || ''} ${p.title || ''} ${p.summary || ''} ${p.narration || ''}`);
               const imgInP = (currentScenario.imageEvidence || []).filter(im => p.sourceImageIds && p.sourceImageIds.includes(im.imageId));
               for (const ref of extractDocRefsFromImages(imgInP)) pRefs.add(ref);
-              if (Array.from(info.imgDocRefs).some(r => pRefs.has(r))) return true;
+              if (Array.from(info.imgDocRefs).every(r => pRefs.has(r))) return true;
             }
             return false;
           });
 
-          const groupsToUse = matchingPriorGroups.length > 0
-            ? matchingPriorGroups
-            : (priorCommittedForImage.length <= 1 ? priorCommittedForImage : []);
+          const groupsToUse = matchingPriorGroups;
 
           for (const p of groupsToUse) {
             if (!infoVerifiedPriorDate && p.eventDate) {
@@ -4582,7 +4598,11 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             }
           }
 
-          if (!infoVerifiedPriorDate) {
+          const canUseScenarioFallbacks =
+            (priorCommittedForImage.length === 0 || matchingPriorGroups.length > 0) &&
+            (priorCommittedForImage.length <= 1 && groupsToUse.length <= 1);
+
+          if (canUseScenarioFallbacks && !infoVerifiedPriorDate) {
             infoVerifiedPriorDate =
               extractDateFromText(currentScenario.rawQuery || '') ||
               (currentScenario.purchaseDate ? formatSingaporeDate(currentScenario.purchaseDate) : '') ||
@@ -4600,16 +4620,16 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             }
           }
 
-          if (groupsToUse.length <= 1) {
+          if (canUseScenarioFallbacks) {
             if (typeof currentScenario.amount === 'number' && currentScenario.amount > 0) {
               infoVerifiedPriorAmountsCents.add(Math.round(currentScenario.amount * 100));
             }
             for (const e of (currentScenario.evidence || [])) {
-              if ((e.source === 'user_text' || e.source === 'image') && typeof e.value === 'number' && e.value > 0) {
-                infoVerifiedPriorAmountsCents.add(Math.round(e.value * 100));
-              } else if ((e.source === 'user_text' || e.source === 'image') && typeof e.value === 'string') {
-                const num = parseFloat(e.value.replace(/[^0-9.]/g, ''));
-                if (Number.isFinite(num) && num > 0) infoVerifiedPriorAmountsCents.add(Math.round(num * 100));
+              if (e.source === 'user_text' || e.source === 'image') {
+                const cents = extractMonetaryFieldCents(e);
+                if (cents !== null && cents > 0) {
+                  infoVerifiedPriorAmountsCents.add(cents);
+                }
               }
             }
             if (currentScenario.rawQuery) {
