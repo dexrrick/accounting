@@ -7538,6 +7538,870 @@ try {
     passed++;
   }
 
+  // 10P-1 (P1 — Correcting a date must not clear an unresolved amount or account conflict)
+  {
+    // Turn 1: Screenshot shows S$500, but Gemini proposes S$600 -> IMAGE_JOURNAL_CONFLICT
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Purchase',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '15/01/2025',
+                  title: 'Office Supplies Purchase',
+                  totalDebit: 600,
+                  totalCredit: 600,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 600, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 600 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-10p1',
+                  fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-501', totalAmount: 500 },
+                  journalLines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1Res = await processAccountingQuery(
+      'Attached invoice screenshot for office supplies.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Attached invoice screenshot for office supplies.', images: [{ id: 'img-10p1', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(turn1Res.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 1 conflicting amount must not commit');
+    assert.equal(turn1Res.scenarioState.pendingImageEvidence?.length, 1, 'Turn 1 must hold 1 pending image');
+    const hasConflictTurn1 = turn1Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT') ||
+      turn1Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT');
+    assert.ok(hasConflictTurn1, 'Turn 1 must reject with IMAGE_JOURNAL_CONFLICT');
+
+    // Turn 2: User corrects only the transaction date ("The invoice date is 20/01/2025.")
+    // Gemini now proposes S$500 on 20/01/2025
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Purchase',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '20/01/2025',
+                  title: 'Office Supplies Purchase',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2Res = await processAccountingQuery(
+      'The invoice date is 20/01/2025.',
+      turn1Res.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2Res.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 2 original amount conflict must NOT be cleared by date-only correction');
+    assert.equal(turn2Res.scenarioState.isComplete, false, 'Turn 2 isComplete must be false');
+    const hasConflictTurn2 = turn2Res.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT') ||
+      turn2Res.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT');
+    assert.ok(hasConflictTurn2, 'Turn 2 IMAGE_JOURNAL_CONFLICT must remain in missingFields / pendingImageRejectionReasons');
+    assert.equal(turn2Res.scenarioState.pendingImageEvidence?.length, 1, 'Turn 2 must retain pending screenshot');
+    const pendingImgTurn2 = turn2Res.scenarioState.pendingImageEvidence[0];
+    const pendingDateTurn2 = (Array.isArray(pendingImgTurn2.fields) ? pendingImgTurn2.fields : []).find(f => /date/i.test(String(f.field || '')));
+    assert.equal(pendingDateTurn2?.value, '20/01/2025', 'Pending image must have updated date 20/01/2025');
+
+    // Turn 3: User explicitly resolves the amount discrepancy ("Yes, use the screenshot amount of S$500.")
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Purchase',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '20/01/2025',
+                  title: 'Office Supplies Purchase',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn3Res = await processAccountingQuery(
+      'Yes, use the screenshot amount of S$500.',
+      turn2Res.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn3Res.scenarioState.committedDirectGroups?.length, 1, 'Turn 3 must commit entry after amount conflict resolution');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[0].totalDebit, 500, 'Committed totalDebit must be 500');
+    assert.equal(turn3Res.scenarioState.committedDirectGroups[0].eventDate, '20/01/2025', 'Committed eventDate must be 20/01/2025');
+
+    // Subcase B: Amount-only correction with proceed directive cannot clear an unresolved date conflict
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Date Conflict',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '25/01/2025',
+                  title: 'Supplies Date Conflict',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-10p1-b',
+                  fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-502', totalAmount: 500 },
+                  journalLines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const subBInit = await processAccountingQuery(
+      'Attached invoice.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Attached invoice.', images: [{ id: 'img-10p1-b', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+    assert.equal(subBInit.scenarioState.committedDirectGroups?.length || 0, 0, 'Date conflict must hold in pending');
+    const hasDateConflict = subBInit.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT') ||
+      subBInit.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT');
+    assert.ok(hasDateConflict, 'Must reject with date IMAGE_JOURNAL_CONFLICT');
+
+    // User provides an amount correction with proceed directive: "Please proceed with the amount of S$500."
+    // Date conflict remains unresolved, so it must NOT commit!
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Date Conflict',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '25/01/2025',
+                  title: 'Supplies Date Conflict',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const subBTurn2 = await processAccountingQuery(
+      'Please proceed with the amount of S$500.',
+      subBInit.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(subBTurn2.scenarioState.committedDirectGroups?.length || 0, 0, 'Amount-only correction with proceed directive must NOT clear unresolved date conflict');
+    const hasDateConflictTurn2 = subBTurn2.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_JOURNAL_CONFLICT') ||
+      subBTurn2.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_JOURNAL_CONFLICT');
+    assert.ok(hasDateConflictTurn2, 'IMAGE_JOURNAL_CONFLICT must remain after amount-only proceed');
+
+    console.log('✓ 10P-1 (P1). Correcting a date must not clear an unresolved amount or account conflict');
+    passed++;
+  }
+
+  // 10P-2 (P1 — Correction with unmatched explicit invoice reference is rejected even with one pending image)
+  {
+    // Subcase A: Single pending image INV-101 (invalid date 29/02/2025, totalAmount: 500)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Office Supplies Purchase',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '29/02/2025',
+                  title: 'Office Supplies Purchase',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-10p2-a',
+                  fields: { invoiceDate: '29/02/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                  journalLines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const initA = await processAccountingQuery(
+      'Attached invoice.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Attached invoice.', images: [{ id: 'img-10p2-a', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(initA.scenarioState.committedDirectGroups?.length || 0, 0, 'Invalid date must hold in pending');
+
+    // Date correction targeting unmatched INV-999
+    const dateCorrA = await processAccountingQuery(
+      'For invoice INV-999, the date is 15/03/2025.',
+      initA.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(dateCorrA.scenarioState.committedDirectGroups?.length || 0, 0, 'Must NOT commit');
+    const hasAmbigDateA = dateCorrA.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-AMBIGUOUS_DOCUMENT_CORRECTION') ||
+      dateCorrA.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'AMBIGUOUS_DOCUMENT_CORRECTION');
+    assert.ok(hasAmbigDateA, 'Date correction on unmatched doc ref must report AMBIGUOUS_DOCUMENT_CORRECTION');
+    const imgDateA = dateCorrA.scenarioState.pendingImageEvidence?.[0]?.fields?.find((f) => f.field === 'invoiceDate');
+    assert.equal(imgDateA?.value, '29/02/2025', 'INV-101 invoiceDate must NOT be modified');
+
+    // Amount correction targeting unmatched INV-999
+    const amtCorrA = await processAccountingQuery(
+      'For invoice INV-999, the correct amount is S$600, not S$500.',
+      initA.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(amtCorrA.scenarioState.committedDirectGroups?.length || 0, 0, 'Must NOT commit');
+    const hasAmbigAmtA = amtCorrA.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-AMBIGUOUS_DOCUMENT_CORRECTION') ||
+      amtCorrA.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'AMBIGUOUS_DOCUMENT_CORRECTION');
+    assert.ok(hasAmbigAmtA, 'Amount correction on unmatched doc ref must report AMBIGUOUS_DOCUMENT_CORRECTION');
+    const imgAmtA = amtCorrA.scenarioState.pendingImageEvidence?.[0]?.fields?.find((f) => f.field === 'totalAmount');
+    assert.equal(imgAmtA?.value, 500, 'INV-101 totalAmount must NOT be modified');
+
+    // Subcase B: Multiple pending images INV-101 and INV-102
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-1',
+                    eventDate: '29/02/2025',
+                    title: 'Invoice 101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-2',
+                    eventDate: '30/02/2025',
+                    title: 'Invoice 102',
+                    totalDebit: 700,
+                    totalCredit: 700,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Equipment Expense', category: 'EXPENSE', debit: 700, credit: 0 },
+                      { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 700 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10p2-b1',
+                    fields: { invoiceDate: '29/02/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-10p2-b2',
+                    fields: { invoiceDate: '30/02/2025', invoiceNo: 'INV-102', totalAmount: 700 },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const initB = await processAccountingQuery(
+      'Two invoices attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Two invoices attached.',
+          images: [
+            { id: 'img-10p2-b1', dataUrl: 'data:image/png;base64,mock1', mimeType: 'image/png' },
+            { id: 'img-10p2-b2', dataUrl: 'data:image/png;base64,mock2', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+
+    assert.equal(initB.scenarioState.pendingImageEvidence?.length, 2, 'Must hold 2 pending images');
+
+    // User specifies "For first invoice INV-999, the date is 15/03/2025."
+    const dateCorrB = await processAccountingQuery(
+      'For first invoice INV-999, the date is 15/03/2025.',
+      initB.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(dateCorrB.scenarioState.committedDirectGroups?.length || 0, 0, 'Must NOT commit');
+    const hasAmbigDateB = dateCorrB.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-AMBIGUOUS_DOCUMENT_CORRECTION') ||
+      dateCorrB.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'AMBIGUOUS_DOCUMENT_CORRECTION');
+    assert.ok(hasAmbigDateB, 'Must report AMBIGUOUS_DOCUMENT_CORRECTION when explicit doc ref matches none, without falling back to ordinal');
+    const b1Date = dateCorrB.scenarioState.pendingImageEvidence?.[0]?.fields?.find((f) => f.field === 'invoiceDate');
+    const b2Date = dateCorrB.scenarioState.pendingImageEvidence?.[1]?.fields?.find((f) => f.field === 'invoiceDate');
+    assert.equal(b1Date?.value, '29/02/2025', 'Neither image 1 nor image 2 must be modified');
+    assert.equal(b2Date?.value, '30/02/2025', 'Neither image 1 nor image 2 must be modified');
+
+    console.log('✓ 10P-2 (P1). Correction with unmatched explicit invoice reference is rejected even with one pending image');
+    passed++;
+  }
+
+  // 10P-3 (P1 — Amount corrections update only the identified field and preserve subtotal, GST, and other values)
+  {
+    // Pending invoice has subtotal: 100, gst: 9, totalAmount: 109 (held in pending due to invalid date 29/02/2025)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Invoice',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '29/02/2025',
+                  title: 'Supplies Invoice',
+                  totalDebit: 109,
+                  totalCredit: 109,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 100, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 109 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-10p3',
+                  fields: [
+                    { field: 'invoiceDate', value: '29/02/2025' },
+                    { field: 'invoiceNo', value: 'INV-109' },
+                    { field: 'subtotal', value: 100 },
+                    { field: 'gst', value: 9 },
+                    { field: 'totalAmount', value: 109 }
+                  ],
+                  journalLines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 100, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 109 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const initRes = await processAccountingQuery(
+      'Attached invoice.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Attached invoice.', images: [{ id: 'img-10p3', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(initRes.scenarioState.pendingImageEvidence?.length, 1, 'Must hold 1 pending image');
+
+    // User corrects only the total to S$119
+    // "The correct total amount is S$119, not S$109, and the date is 15/01/2025."
+    // AI proposes matching S$119 total
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Invoice',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '15/01/2025',
+                  title: 'Supplies Invoice',
+                  totalDebit: 119,
+                  totalCredit: 119,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 100, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 119 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const corrRes = await processAccountingQuery(
+      'The correct total amount is S$119, not S$109, and the date is 15/01/2025.',
+      initRes.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    // Verify fields on updated image evidence: totalAmount is 119 (with originalValue: 109), subtotal is 100 (originalValue undefined), gst is 9 (originalValue undefined)
+    const updatedImg = corrRes.scenarioState.pendingImageEvidence?.[0] || corrRes.scenarioState.imageEvidence?.[0];
+    assert.ok(updatedImg, 'Updated image evidence must exist');
+    const fTotal = updatedImg.fields.find(f => f.field === 'totalAmount');
+    const fSubtotal = updatedImg.fields.find(f => f.field === 'subtotal');
+    const fGst = updatedImg.fields.find(f => f.field === 'gst');
+
+    assert.equal(fTotal?.value, 119, 'totalAmount must be updated to 119');
+    assert.equal(fTotal?.originalValue, 109, 'totalAmount originalValue must be 109');
+    assert.equal(fSubtotal?.value, 100, 'subtotal must remain 100');
+    assert.equal(fSubtotal?.originalValue, undefined, 'subtotal originalValue must remain undefined');
+    assert.equal(fGst?.value, 9, 'gst must remain 9');
+    assert.equal(fGst?.originalValue, undefined, 'gst originalValue must remain undefined');
+
+    // And verify that resulting unbalanced journal (100 + 9 != 119) is NOT committed
+    assert.equal(corrRes.scenarioState.committedDirectGroups?.length || 0, 0, 'Unbalanced journal with 100 + 9 != 119 must NOT be committed');
+
+    // Subcase B: Multi-field amount correction (subtotal S$110 and total S$119, while gst remains 9 untouched)
+    // Starting again from a pending invoice with subtotal: 100, gst: 9, totalAmount: 109 and invalid date 29/02/2025
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Invoice B',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '29/02/2025',
+                  title: 'Supplies Invoice B',
+                  totalDebit: 109,
+                  totalCredit: 109,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 100, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 109 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-10p3-b',
+                  fields: [
+                    { field: 'invoiceDate', value: '29/02/2025' },
+                    { field: 'subtotal', value: 100 },
+                    { field: 'gst', value: 9 },
+                    { field: 'totalAmount', value: 109 }
+                  ],
+                  journalLines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 100, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 109 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const initB = await processAccountingQuery(
+      'Attached invoice.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Attached invoice.', images: [{ id: 'img-10p3-b', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+    assert.equal(initB.scenarioState.committedDirectGroups?.length || 0, 0, 'Invalid date must hold in pending');
+
+    // Turn 2: User corrects both subtotal and total in the same turn:
+    // "The subtotal is S$110 and the total is S$119, and the date is 15/01/2025."
+    // AI proposes matching balanced journal: 110 + 9 == 119
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Supplies Invoice B',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '15/01/2025',
+                  title: 'Supplies Invoice B',
+                  totalDebit: 119,
+                  totalCredit: 119,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 110, credit: 0 },
+                    { accountName: 'GST Input Tax', category: 'ASSET', debit: 9, credit: 0 },
+                    { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 119 }
+                  ]
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const multiCorrRes = await processAccountingQuery(
+      'The subtotal is S$110 and the total is S$119, and the date is 15/01/2025.',
+      initB.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    // Verify fields on updated image evidence:
+    const multiUpdatedImg = multiCorrRes.scenarioState.imageEvidence?.[0] || multiCorrRes.scenarioState.pendingImageEvidence?.[0];
+    assert.ok(multiUpdatedImg, 'Updated image evidence must exist');
+    const bSubtotal = multiUpdatedImg.fields.find(f => f.field === 'subtotal');
+    const bTotal = multiUpdatedImg.fields.find(f => f.field === 'totalAmount');
+    const bGst = multiUpdatedImg.fields.find(f => f.field === 'gst');
+
+    assert.equal(bSubtotal?.value, 110, 'subtotal must be updated to 110');
+    assert.equal(bSubtotal?.originalValue, 100, 'subtotal originalValue must be 100');
+    assert.equal(bTotal?.value, 119, 'totalAmount must be updated to 119');
+    assert.equal(bTotal?.originalValue, 109, 'totalAmount originalValue must be 109');
+    assert.equal(bGst?.value, 9, 'gst must remain 9 untouched');
+    assert.equal(bGst?.originalValue, undefined, 'gst originalValue must remain undefined');
+
+    // And verify that the balanced journal (110 + 9 == 119) commits successfully!
+    assert.equal(multiCorrRes.scenarioState.committedDirectGroups?.length, 1, 'Balanced journal (110 + 9 == 119) must be committed');
+    assert.equal(multiCorrRes.scenarioState.committedDirectGroups[0].totalDebit, 119, 'Committed totalDebit must be 119');
+    assert.equal(multiCorrRes.scenarioState.committedDirectGroups[0].lines[0].debit, 110, 'Line 0 debit must be 110');
+    assert.equal(multiCorrRes.scenarioState.committedDirectGroups[0].lines[1].debit, 9, 'Line 1 debit must be 9');
+    assert.equal(multiCorrRes.scenarioState.committedDirectGroups[0].lines[2].credit, 119, 'Line 2 credit must be 119');
+
+    console.log('✓ 10P-3 (P1). Amount corrections update only the identified field and preserve subtotal, GST, and other values');
+    passed++;
+  }
+
+  // 10P-4 (P2 — Prior transaction facts cannot validate an unrelated follow-up screenshot missing date or amount)
+  {
+    // Turn 1: Commit a valid transaction (INV-101, 15/01/2025, S$500)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice 101',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '15/01/2025',
+                  title: 'Office Supplies',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-inv101',
+                  fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                  journalLines: []
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1 = await processAccountingQuery(
+      'Here is invoice INV-101 for S$500 on 15/01/2025.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Here is invoice INV-101 for S$500 on 15/01/2025.', images: [{ id: 'img-inv101', dataUrl: 'data:image/png;base64,mock', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(turn1.scenarioState.committedDirectGroups?.length, 1, 'Turn 1 must commit INV-101');
+
+    // Turn 2a: Unrelated screenshot missing date (img-unrelated-date, invoiceNo: 'INV-202', totalAmount: 500, no date in screenshot or message)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice 202',
+                directGroups: [{
+                  id: 'grp-2',
+                  eventDate: '15/01/2025',
+                  title: 'Invoice 202',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-unrelated-date',
+                  fields: { invoiceNo: 'INV-202', totalAmount: 500 },
+                  journalLines: []
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2a = await processAccountingQuery(
+      'Here is another receipt.',
+      turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Here is another receipt.', images: [{ id: 'img-unrelated-date', dataUrl: 'data:image/png;base64,mock2', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(turn2a.scenarioState.committedDirectGroups?.length, 1, 'Turn 2a must NOT commit unrelated invoice with missing date');
+    const hasMissingDate = turn2a.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2a.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE');
+    assert.ok(hasMissingDate, 'Turn 2a must reject with IMAGE_MISSING_TRANSACTION_DATE without reusing Turn 1 date');
+
+    // Turn 2b: Unrelated screenshot missing amount (img-unrelated-amt, invoiceNo: 'INV-203', invoiceDate: '20/01/2025', no amount in screenshot or message)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice 203',
+                directGroups: [{
+                  id: 'grp-3',
+                  eventDate: '20/01/2025',
+                  title: 'Invoice 203',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-unrelated-amt',
+                  fields: { invoiceNo: 'INV-203', invoiceDate: '20/01/2025' },
+                  journalLines: []
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2b = await processAccountingQuery(
+      'Here is another document.',
+      turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Here is another document.', images: [{ id: 'img-unrelated-amt', dataUrl: 'data:image/png;base64,mock3', mimeType: 'image/png' }] }]
+    );
+
+    assert.equal(turn2b.scenarioState.committedDirectGroups?.length, 1, 'Turn 2b must NOT commit unrelated invoice with missing amount');
+    const hasMissingAmt = turn2b.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT') ||
+      turn2b.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT');
+    assert.ok(hasMissingAmt, 'Turn 2b must reject with IMAGE_MISSING_AMOUNT without reusing Turn 1 amount');
+
+    // Turn 2c: Positively linked screenshot (invoiceNo: 'INV-101', totalAmount: 500, omitting date)
+    // Should successfully reuse Turn 1's date
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Invoice 101 Followup',
+                directGroups: [{
+                  id: 'grp-1',
+                  eventDate: '15/01/2025',
+                  title: 'Office Supplies Followup',
+                  totalDebit: 500,
+                  totalCredit: 500,
+                  isBalanced: true,
+                  lines: [
+                    { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                    { accountName: 'Cash at Bank', category: 'ASSET', debit: 0, credit: 500 }
+                  ]
+                }],
+                imageEvidence: [{
+                  imageId: 'img-linked',
+                  fields: { invoiceNo: 'INV-101', totalAmount: 500 },
+                  journalLines: []
+                }]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn2c = await processAccountingQuery(
+      'Followup on INV-101.',
+      turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [{ sender: 'user', text: 'Followup on INV-101.', images: [{ id: 'img-linked', dataUrl: 'data:image/png;base64,mock4', mimeType: 'image/png' }] }]
+    );
+
+    const hasMissingDate2c = turn2c.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2c.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE');
+    assert.ok(!hasMissingDate2c, 'Turn 2c positively linked screenshot must not fail with IMAGE_MISSING_TRANSACTION_DATE');
+
+    console.log('✓ 10P-4 (P2). Prior transaction facts cannot validate an unrelated follow-up screenshot missing date or amount');
+    passed++;
+  }
+
 } finally {
   globalThis.fetch = origFetch;
 }

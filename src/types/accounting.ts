@@ -318,7 +318,12 @@ export interface AccountingScenarioState {
   /** Pending uncommitted evidence retained when an image-derived entry fails validation or awaits clarification. */
   pendingEvidence?: ExtractedEvidence[];
   pendingImageEvidence?: ExtractedImageEvidence[];
-  pendingImageRejectionReasons?: Array<{ code: string; message: string; severity: 'ERROR' | 'WARNING' }>;
+  pendingImageRejectionReasons?: Array<{
+    code: string;
+    message: string;
+    severity: 'ERROR' | 'WARNING';
+    conflictFields?: Array<'date' | 'amount' | 'account'>;
+  }>;
   eventSequence?: AccountingEventSequence;
 }
 
