@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import React from 'react';
+import { readFileSync } from 'node:fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { SafeChatAnswer } from '../../src/components/SafeChatAnswer.tsx';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
@@ -58,6 +59,8 @@ let accountingOnlyStatutoryClaimMode = false;
 let accountingOnlyStatutoryClaimText = '';
 let accountingOnlyMetadataMode = false;
 let mockFailure;
+let phase2Case;
+const phase2OfficialFetches = [];
 const modelReply = value => new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(value) } }] }),
   { headers: { 'content-type': 'application/json' } });
 
@@ -67,6 +70,31 @@ globalThis.fetch = async (input, init) => {
     const request = JSON.parse(init.body);
     const system = request.messages[0].content;
     const user = request.messages.at(-1).content;
+    if (phase2Case && system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')) {
+      providerStages.push('support-check');
+      const packet = JSON.parse(user);
+      try { return modelReply(phase2Case.verify(packet)); }
+      catch (error) { mockFailure = error; throw error; }
+    }
+    if (phase2Case && system.startsWith('EVIDENCE_GROUNDED_SYNTHESIS')) {
+      providerStages.push('synthesis');
+      const requestPacket = JSON.parse(user);
+      draftPacket = requestPacket.packet || requestPacket;
+      // The real model can follow compact binding references; fixtures resolve
+      // the same metadata without changing any admitted IDs or source text.
+      draftPacket = { ...draftPacket, evidencePassages: draftPacket.evidencePassages.map(passage => ({
+        ...(draftPacket.evidenceBindings?.find(binding => binding.id === passage.bindingRef) || {}), ...passage
+      })) };
+      let claims;
+      try { claims = phase2Case.generate(draftPacket); }
+      catch (error) { mockFailure = error; throw error; }
+      lastClaims = claims;
+      return modelReply({ claims });
+    }
+    if (phase2Case && user.includes('Interpret this question:')) {
+      providerStages.push('existing-pipeline');
+      return modelReply(phase2Case.interpretation);
+    }
     if (system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')) {
       try {
       providerStages.push('support-check');
@@ -147,14 +175,59 @@ globalThis.fetch = async (input, init) => {
     providerStages.push('existing-pipeline');
     return modelReply(interpretation);
   }
+  if (phase2Case?.pages?.has(url)) {
+    phase2OfficialFetches.push(url);
+    const page = phase2Case.pages.get(url);
+    return new Response(typeof page === 'function' ? page(phase2OfficialFetches.filter(item => item === url).length) : page,
+      { headers: { 'content-type': 'text/html; charset=utf-8' } });
+  }
   const page = pages.get(url);
   if (page) return new Response(page, { headers: { 'content-type': 'text/html; charset=utf-8' } });
   if (/sitemap/i.test(url)) {
-    return new Response(`<urlset>${[...pages.keys()].filter(value => value.includes('iras.gov.sg')).map(value => `<url><loc>${value}</loc></url>`).join('')}</urlset>`,
+    const sitemapPages = phase2Case
+      ? [...phase2Case.pages.keys()].filter(value => new URL(value).hostname === new URL(url).hostname)
+      : [...pages.keys()].filter(value => value.includes('iras.gov.sg'));
+    return new Response(`<urlset>${sitemapPages.map(value => `<url><loc>${value}</loc></url>`).join('')}</urlset>`,
       { headers: { 'content-type': 'application/xml' } });
   }
   return new Response('Unavailable in this offline fixture set', { status: 404 });
 };
+
+function makePhase2Interpretation({ domain, population, authorities, subject, operation, issues }) {
+  return {
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: authorities,
+    contextualAuthorities: [], domain, population, primarySubject: subject,
+    concepts: issues.map((issue, index) => ({ concept: issue.subject, role: index === 0 ? 'PRIMARY' : 'RELATED' })),
+    requestedOperation: operation, factsExplicitlyProvided: [], confidence: 0.99,
+    issues: issues.map(issue => ({ ...issue, contextualAuthorities: [], mappedTopicIds: issue.mappedTopicIds || [],
+      evidenceRequirement: issue.evidenceRequirement || 'AUTHORITATIVE_SOURCE', confidence: 0.99 }))
+  };
+}
+
+const escapeHtml = text => text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+function officialFixturePage(title, publisher, text, nonce = '') {
+  const paragraphs = text.trim().split(/\n\s*\n/).map(value => `<p>${escapeHtml(value).replaceAll('\n', '<br>')}</p>`).join('');
+  return `<!doctype html><html lang="en"><head><title>${title} | ${publisher}</title><meta name="site_name" content="${publisher}"><meta name="capture-run" content="${nonce}"></head><body><main><h1>${title}</h1><article>${paragraphs}</article><footer>${publisher}</footer></main></body></html>`;
+}
+
+async function runPhase2ApplicationCase(testCase, queryText, history = []) {
+  mockFailure = undefined;
+  defaultSourceCache.clear();
+  providerStages.length = 0;
+  phase2OfficialFetches.length = 0;
+  phase2Case = testCase;
+  let authorityWorkstreams;
+  try {
+    const result = await processAccountingQuery(queryText, null, 'SFRS_I', provider, 'unused', history, undefined, {
+      onAuthorityWorkstreams: value => { authorityWorkstreams = value; }
+    });
+    if (mockFailure) throw mockFailure;
+    return { result, authorityWorkstreams, stages: [...providerStages], officialFetches: [...phase2OfficialFetches] };
+  } finally {
+    phase2Case = undefined;
+    defaultSourceCache.clear();
+  }
+}
 
 try {
   defaultSourceCache.clear();
@@ -753,6 +826,265 @@ try {
   accountingOnlyStatutoryClaimMode = false;
   accountingOnlyStatutoryClaimText = '';
   accountingOnlyMode = false;
+
+  const motorCarQuery = 'Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.';
+  const motorCarList = readFileSync(new URL('../fixtures/iras-motor-car-qualified-list.txt', import.meta.url), 'utf8').trim();
+  const motorCarUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses';
+  const irasConditionsUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
+  const motorCarEligibilityIssue = {
+    subject: 'input GST recovery eligibility on private motor car',
+    population: 'COMPANY', domain: 'IRAS_GST', governingAuthorities: ['IRAS'], operation: 'CHECK_ELIGIBILITY',
+    mappedTopicIds: ['iras-gst-blocked-input-tax', 'iras-gst-input-tax', 'iras-gst-motor-vehicles'],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+  };
+  const motorCarIssue = {
+    subject: 'restrictions and exceptions on private motor car GST',
+    population: 'COMPANY', domain: 'IRAS_GST', governingAuthorities: ['IRAS'], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['iras-gst-blocked-input-tax', 'iras-gst-motor-vehicles'], evidenceRequirement: 'AUTHORITATIVE_SOURCE'
+  };
+  const motorCarInterpretation = makePhase2Interpretation({
+    domain: 'IRAS_GST', population: 'COMPANY', authorities: ['IRAS'],
+    subject: motorCarEligibilityIssue.subject, operation: 'OTHER', issues: [motorCarEligibilityIssue, motorCarIssue]
+  });
+  assert.ok(validateSemanticQuestionInterpretation(motorCarInterpretation, motorCarQuery));
+  let motorCarSupportIssueId;
+  const motorCarRun = await runPhase2ApplicationCase({
+    interpretation: motorCarInterpretation,
+    pages: new Map([
+      [motorCarUrl, officialFixturePage('Motor Vehicles Expenses', 'Inland Revenue Authority of Singapore',
+        'Input tax claims on motor car expenses for cars used by you or your employees are disallowed under Regulation 27 of the GST (General) Regulations. This input tax restriction applies regardless of whether the motor car is used wholly or partly for business purposes, unless the car is excluded from the definition of a motor car under Regulation 25(1).\n\n' + motorCarList)],
+      [irasConditionsUrl, readFileSync(new URL('../fixtures/statutoryKnowledge20261027b/iras-mas-input-tax-native.html', import.meta.url), 'utf8')]
+    ]),
+    generate: packet => {
+      assert.equal(packet.query, motorCarQuery);
+      const requestedIssue = packet.requestedIssues.find(issue => /restrictions and exceptions/i.test(issue.subject));
+      const passage = packet.evidencePassages.find(item => item.issueId === requestedIssue?.id && item.domain === 'IRAS_GST' &&
+        item.completeAdmittedPassage.includes('(a)') && item.completeAdmittedPassage.includes('(h)'));
+      assert.ok(passage, 'the production packet admits the complete qualified official motor-car list');
+      motorCarSupportIssueId = passage.issueId;
+      return [{ id: 'captured-motor-car-summary', kind: 'RULE',
+        text: 'The motor-car list includes dealer vehicles, financial-institution hire-purchase vehicles, and licensed driving-school vehicles.',
+        supportIds: [passage.id], factRefs: [], issueId: passage.issueId }];
+    },
+    verify: packet => {
+      const claim = packet.claims.find(item => item.claimId === 'captured-motor-car-summary');
+      assert.ok(claim);
+      assert.equal(claim.issue.issueId, motorCarSupportIssueId);
+      assert.ok(claim.citedPassages[0].completeAdmittedPassage.includes('(d)') &&
+        claim.citedPassages[0].completeAdmittedPassage.includes('(h)'),
+      'the positive verdict is based on the complete source list, including its item-specific conditions');
+      return { verdicts: [{ claimId: claim.claimId, support: 'SUPPORTED', claimType: 'RULE' }] };
+    }
+  }, motorCarQuery);
+  assert.equal(motorCarRun.result.answerPath, 'AI_GROUNDED_SYNTHESIS');
+  assert.ok(motorCarRun.result.messageText.includes(motorCarList),
+    'a supported shortened list summary renders the complete list through the production entry point');
+  assert.doesNotMatch(motorCarRun.result.messageText, /The motor-car list includes dealer vehicles/);
+  assert.deepEqual(motorCarRun.result.scenarioState.directGroups, [], 'the exact IRAS question creates no journal');
+  assert.ok(motorCarRun.officialFetches.includes(motorCarUrl), 'the mocked official IRAS source page was retrieved');
+  assert.deepEqual(motorCarRun.stages.filter(stage => ['existing-pipeline', 'synthesis', 'support-check'].includes(stage)),
+    ['existing-pipeline', 'synthesis', 'support-check']);
+
+  const mixedFirstEmployeeQuery = 'We are hiring our first employee in Singapore. Explain how CPF registration and contribution duties differ from MOM salary-payment duties, and what facts you need from us before applying the rules. Please cover both authorities. Do not calculate payroll or create journal entries.';
+  const cpfIssue = {
+    subject: 'CPF registration and contribution duties',
+    population: 'EMPLOYER', domain: 'CPF_PAYROLL', governingAuthorities: ['CPF'], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['cpf_contribution_rates'], evidenceRequirement: 'AUTHORITATIVE_SOURCE'
+  };
+  const momIssue = {
+    subject: 'MOM salary-payment duties',
+    population: 'EMPLOYER', domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE',
+    mappedTopicIds: ['mom-salary-payment'], evidenceRequirement: 'AUTHORITATIVE_SOURCE'
+  };
+  const mixedFirstEmployeeInterpretation = makePhase2Interpretation({
+    domain: 'UNKNOWN', population: 'UNKNOWN', authorities: ['CPF', 'MOM'],
+    subject: 'CPF employer contributions and MOM salary duties for a first employee', operation: 'OTHER',
+    issues: [cpfIssue, momIssue]
+  });
+  assert.ok(validateSemanticQuestionInterpretation(mixedFirstEmployeeInterpretation, mixedFirstEmployeeQuery));
+  const payrollCapture = JSON.parse(readFileSync(new URL('../fixtures/statutory-answer-payroll-steps-20261113.json', import.meta.url), 'utf8'));
+  const momSalaryUrl = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
+  const momPayslipUrl = 'https://www.mom.gov.sg/employment-practices/salary/itemised-payslips';
+  let mixedCpfIssueId;
+  let mixedMomIssueId;
+  const mixedFirstEmployeeRun = await runPhase2ApplicationCase({
+    interpretation: mixedFirstEmployeeInterpretation,
+    pages: new Map([
+      ['https://www.cpf.gov.sg/employer/employer-obligations', officialFixturePage('Employer obligations', 'Central Provident Fund Board',
+        readFileSync(new URL('../fixtures/cpf-employer-obligations-admitted-context.txt', import.meta.url), 'utf8').replace(/\r\n?/g, '\n'))],
+      [momSalaryUrl, officialFixturePage('Paying salary', 'Ministry of Manpower', payrollCapture.record.sourceText)],
+      [momPayslipUrl, readFileSync(new URL('../fixtures/statutoryWorkflows20261029/mom-payslips.html', import.meta.url), 'utf8')]
+    ]),
+    generate: packet => {
+      assert.equal(packet.query, mixedFirstEmployeeQuery);
+      const cpfEvidence = packet.evidencePassages.find(item => item.authority === 'CPF' &&
+        /contribution rate.*depends/i.test(item.completeAdmittedPassage));
+      const wageEvidence = packet.evidencePassages.find(item => item.authority === 'CPF' &&
+        /Ordinary Wages or Additional Wages/i.test(item.completeAdmittedPassage));
+      const cpfRequested = packet.requestedIssues.find(issue => /CPF/i.test(issue.subject));
+      const momRequested = packet.requestedIssues.find(issue => /salary|payslip|employment record/i.test(issue.subject));
+      assert.ok(cpfEvidence && wageEvidence && cpfRequested && momRequested, 'each authority issue and its own source-backed facts reach synthesis');
+      assert.equal(cpfEvidence.issueId, cpfRequested.id);
+      const cpfDuties = packet.evidencePassages.filter(item => item.issueId === cpfRequested.id && item.authority === 'CPF' &&
+        /total CPF contributions|need to have a CSN/i.test(item.completeAdmittedPassage));
+      assert.ok(cpfDuties.some(item => /CPF Board/.test(item.completeAdmittedPassage)) &&
+        cpfDuties.some(item => /CSN/.test(item.completeAdmittedPassage)), 'CPF employer remittance and registration have their own admitted support');
+      mixedCpfIssueId = cpfRequested.id;
+      mixedMomIssueId = momRequested.id;
+      const momEvidence = packet.evidencePassages.filter(item => item.issueId === mixedMomIssueId && item.authority === 'MOM');
+      const c4Passages = momEvidence.filter(item => /at least once a month|shorter intervals|within 7 days|exceptions for overtime/i.test(item.completeAdmittedPassage));
+      const c5Passages = momEvidence.filter(item => /1 April 2016/i.test(item.completeAdmittedPassage) && /payslip|employment record/i.test(item.completeAdmittedPassage));
+      const momCoverageFacts = momEvidence.filter(item => /covered by the Employment Act/i.test(item.completeAdmittedPassage));
+      const momSalaryPeriodFacts = momEvidence.filter(item => /within 7 days after the end of the salary period/i.test(item.completeAdmittedPassage));
+      assert.ok(c4Passages.length && c5Passages.length && momCoverageFacts.length && momSalaryPeriodFacts.length,
+        'the complete MOM c4/c5 clauses and their coverage and salary-period context are admitted to the MOM issue');
+      return [
+        { id: 'mixed-cpf-employer-duties', kind: 'RULE',
+          text: 'When CPF applies, the employer needs a CPF Submission Number (CSN) to submit contributions and pays the total employer and employee shares to the CPF Board.',
+          supportIds: cpfDuties.map(item => item.id), factRefs: [], issueId: mixedCpfIssueId },
+        { id: 'mixed-cpf-fact-guidance', kind: 'RULE',
+          text: 'CPF contribution rates depend on employee citizenship or permanent-resident status, age and total wages; confirm those facts and classify wages as Ordinary Wages or Additional Wages before calculating contributions.',
+          supportIds: [cpfEvidence.id, wageEvidence.id], factRefs: [], issueId: mixedCpfIssueId },
+        { id: 'mixed-mom-c4-salary', kind: 'RULE',
+          text: 'By contrast, MOM salary-payment duties concern paying the employee. Under the Employment Act, employers must pay salary at least once a month (or at shorter intervals) and within 7 days after the end of the salary period, with specific exceptions applying to overtime, resignation, and other situations.',
+          supportIds: c4Passages.map(item => item.id), factRefs: [], issueId: mixedMomIssueId },
+        { id: 'mixed-mom-c5-records', kind: 'RULE',
+          text: 'From 1 April 2016, employers must issue itemised payslips and keep detailed employment records, including salary records, for employees covered by the Employment Act.',
+          supportIds: c5Passages.map(item => item.id), factRefs: [], issueId: mixedMomIssueId },
+        { id: 'mixed-mom-facts-to-confirm', kind: 'RULE',
+          text: 'Before applying the salary deadline, establish whether the employee is covered by the Employment Act and when the salary period ends.',
+          supportIds: [...new Set([...momCoverageFacts, ...momSalaryPeriodFacts].map(item => item.id))], factRefs: [], issueId: mixedMomIssueId }
+      ];
+    },
+    verify: packet => {
+      const byId = new Map(packet.claims.map(item => [item.claimId, item]));
+      assert.deepEqual([...byId.keys()], ['mixed-cpf-employer-duties', 'mixed-cpf-fact-guidance', 'mixed-mom-c4-salary', 'mixed-mom-c5-records', 'mixed-mom-facts-to-confirm']);
+      assert.equal(byId.get('mixed-cpf-employer-duties').issue.issueId, mixedCpfIssueId);
+      assert.ok(byId.get('mixed-cpf-employer-duties').citedPassages.every(passage => passage.authority === 'CPF'));
+      assert.equal(byId.get('mixed-cpf-fact-guidance').issue.issueId, mixedCpfIssueId);
+      assert.ok(byId.get('mixed-cpf-fact-guidance').citedPassages.every(passage => passage.authority === 'CPF'));
+      for (const id of ['mixed-mom-c4-salary', 'mixed-mom-c5-records', 'mixed-mom-facts-to-confirm']) {
+        assert.equal(byId.get(id).issue.issueId, mixedMomIssueId);
+        assert.ok(byId.get(id).citedPassages.every(passage => passage.authority === 'MOM'));
+      }
+      return { verdicts: packet.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE' })) };
+    }
+  }, mixedFirstEmployeeQuery);
+  assert.equal(mixedFirstEmployeeRun.result.answerPath, 'AI_GROUNDED_SYNTHESIS');
+  assert.match(mixedFirstEmployeeRun.result.messageText, /CPF Submission Number \(CSN\).*CPF Board/);
+  assert.match(mixedFirstEmployeeRun.result.messageText, /By contrast, MOM salary-payment duties concern paying the employee/);
+  assert.ok(mixedFirstEmployeeRun.result.messageText.includes('CPF contribution rates depend'));
+  assert.ok(mixedFirstEmployeeRun.result.messageText.includes('within 7 days after the end of the salary period'));
+  assert.ok(mixedFirstEmployeeRun.result.messageText.includes('From 1 April 2016'));
+  assert.ok(mixedFirstEmployeeRun.result.messageText.includes('establish whether the employee is covered by the Employment Act'));
+  assert.ok(!/your employee is covered by the Employment Act/i.test(mixedFirstEmployeeRun.result.messageText),
+    'the general salary rule remains conditional and does not assume the first employee is covered');
+  assert.ok(mixedFirstEmployeeRun.authorityWorkstreams.workstreams.some(stream => stream.authority === 'CPF'));
+  assert.ok(mixedFirstEmployeeRun.authorityWorkstreams.workstreams.some(stream => stream.authority === 'MOM'));
+  assert.ok(!mixedFirstEmployeeRun.authorityWorkstreams.issuePlan.issues.some(issue => issue.domain === 'UNKNOWN'),
+    'separate CPF and MOM duties do not create an unsupported third-law issue');
+  assert.deepEqual(mixedFirstEmployeeRun.result.scenarioState.directGroups, [], 'the exact mixed-authority question creates no journal');
+  assert.deepEqual(mixedFirstEmployeeRun.stages.filter(stage => ['existing-pipeline', 'synthesis', 'support-check'].includes(stage)),
+    ['existing-pipeline', 'synthesis', 'support-check']);
+
+  const followupQuery = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+  const capturedHistory = JSON.parse(readFileSync(new URL('../fixtures/mom-salary-overtime-history.json', import.meta.url), 'utf8'));
+  const priorCoveredQuestion = capturedHistory.parentQuestion;
+  const priorSalaryAnswer = capturedHistory.assistantAnswer;
+  const followupInterpretation = makePhase2Interpretation({
+    domain: 'MOM_EMPLOYMENT', population: 'EMPLOYER', authorities: ['MOM'],
+    subject: 'ordinary salary and overtime rules for the current employee', operation: 'OTHER',
+    issues: [
+      { subject: 'ordinary salary payment frequency and deadline under the Employment Act', population: 'EMPLOYER',
+        domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE' },
+      { subject: 'Part 4 hours-of-work guideline scope for an employee not covered by overtime provisions', population: 'EMPLOYER',
+        domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE' }
+    ]
+  });
+  assert.ok(validateSemanticQuestionInterpretation(followupInterpretation, followupQuery));
+  const overtimeUrl = 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days';
+  const overtimeSourceText = readFileSync(new URL('../fixtures/mom-hours-of-work-captured-source.txt', import.meta.url), 'utf8')
+    .replace(/\r\n?/g, '\n').trim();
+  const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
+  const exclusionQuote = 'Note: Part 4 of the Employment Act does not cover managers and executives.';
+  let followupSalaryIssueId;
+  let followupOvertimeIssueId;
+  let followupUsedAlias = false;
+  const followupHistory = [
+    { id: 'prior-covered-user', sender: 'user', timestamp: '', text: priorCoveredQuestion },
+    { id: 'prior-assistant-salary-overtime', sender: 'ai', timestamp: '', text: priorSalaryAnswer }
+  ];
+  const followupRun = await runPhase2ApplicationCase({
+    interpretation: followupInterpretation,
+    pages: new Map([
+      [momSalaryUrl, officialFixturePage('Paying salary', 'Ministry of Manpower', payrollCapture.record.sourceText)],
+      [overtimeUrl, count => officialFixturePage('Hours of work, overtime and rest days', 'Ministry of Manpower', overtimeSourceText, String(count))]
+    ]),
+    generate: packet => {
+      assert.equal(packet.query, followupQuery, 'the exact current question remains the synthesis request');
+      assert.ok(packet.historyContext.turns.some(turn => turn.role === 'user' && turn.text === priorCoveredQuestion));
+      assert.ok(packet.historyContext.turns.some(turn => turn.role === 'assistant' && turn.text === priorSalaryAnswer));
+      assert.ok(!packet.facts.some(fact => fact.text === priorSalaryAnswer), 'assistant history remains context, never a current fact');
+      const salaryIssue = packet.requestedIssues.find(issue => /ordinary salary/i.test(issue.subject));
+      const overtimeIssue = packet.requestedIssues.find(issue => /Part 4|overtime/i.test(issue.subject));
+      assert.ok(salaryIssue && overtimeIssue && salaryIssue.id !== overtimeIssue.id,
+        'ordinary salary and overtime remain independently owned requested issues');
+      followupSalaryIssueId = salaryIssue.id;
+      followupOvertimeIssueId = overtimeIssue.id;
+      const passages = packet.evidencePassages;
+      const ownCoverage = passages.find(item => item.issueId === overtimeIssue.id && item.completeAdmittedPassage === coverageQuote);
+      const ownExclusion = passages.find(item => item.issueId === overtimeIssue.id && item.completeAdmittedPassage === exclusionQuote);
+      const foreignCoverage = passages.find(item => item.issueId === salaryIssue.id && item.completeAdmittedPassage === coverageQuote);
+      const foreignExclusion = passages.find(item => item.issueId === salaryIssue.id && item.completeAdmittedPassage === exclusionQuote);
+      assert.ok(ownCoverage && ownExclusion, 'the overtime issue has its own admitted literal scope and exclusion passages');
+      followupUsedAlias = Boolean(foreignCoverage && foreignExclusion);
+      const overtimeSupportIds = followupUsedAlias
+        ? [foreignCoverage.id, foreignExclusion.id]
+        : [ownCoverage.id, ownExclusion.id];
+      const salaryPassage = passages.find(item => item.issueId === salaryIssue.id &&
+        /salary.*at least once a month/i.test(item.completeAdmittedPassage) && /within 7 days/i.test(item.completeAdmittedPassage));
+      assert.ok(salaryPassage, 'the ordinary-salary issue has its own explicit Employment Act salary source');
+      return [
+        { id: 'followup-overtime-scope', kind: 'RULE',
+          text: 'The hours-of-work guidelines apply only to those covered under Part 4 of the Employment Act; Part 4 does not cover managers and executives.',
+          supportIds: overtimeSupportIds, factRefs: [], issueId: overtimeIssue.id },
+        { id: 'followup-ordinary-salary', kind: 'RULE',
+          text: 'For employees covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.',
+          supportIds: [salaryPassage.id], factRefs: [], issueId: salaryIssue.id },
+        { id: 'followup-overbroad-contract-conclusion', kind: 'RULE',
+          text: 'Employees not covered by overtime rules are never entitled to overtime pay under any contract.',
+          supportIds: overtimeSupportIds, factRefs: [], issueId: overtimeIssue.id }
+      ];
+    },
+    verify: packet => {
+      const scopeClaim = packet.claims.find(item => item.claimId === 'followup-overtime-scope');
+      const salaryClaim = packet.claims.find(item => item.claimId === 'followup-ordinary-salary');
+      const overbroadClaim = packet.claims.find(item => item.claimId === 'followup-overbroad-contract-conclusion');
+      assert.equal(scopeClaim?.issue?.issueId, followupOvertimeIssueId);
+      assert.ok(scopeClaim?.citedPassages.every(passage => passage.issueId === followupOvertimeIssueId),
+        'support review sees the overtime scope only under its own issue, whether direct or narrowly rebound');
+      assert.equal(salaryClaim?.issue?.issueId, followupSalaryIssueId);
+      assert.ok(salaryClaim?.citedPassages.every(passage => passage.issueId === followupSalaryIssueId));
+      assert.ok(overbroadClaim, 'the support stage explicitly reviews the broader unsupported contract claim');
+      return { verdicts: packet.claims.map(item => ({
+        claimId: item.claimId, support: item.claimId === 'followup-overbroad-contract-conclusion' ? 'UNSUPPORTED' : 'SUPPORTED',
+        claimType: 'RULE'
+      })) };
+    }
+  }, followupQuery, followupHistory);
+  assert.equal(followupRun.result.answerPath, 'AI_GROUNDED_SYNTHESIS');
+  assert.ok(followupRun.result.messageText.includes('The hours-of-work guidelines apply only to those covered under Part 4 of the Employment Act; Part 4 does not cover managers and executives.'));
+  assert.ok(followupRun.result.messageText.includes('ordinary salary at least once a month and within 7 days'));
+  assert.doesNotMatch(followupRun.result.messageText, /never entitled to overtime pay under any contract/,
+    'the captured overbroad follow-up interpretation stays unresolved without foreign-only evidence');
+  assert.deepEqual(followupRun.result.scenarioState.directGroups, [], 'the exact follow-up question creates no journal');
+  assert.ok(followupRun.authorityWorkstreams.workstreams.some(stream => stream.authority === 'MOM'));
+  if (followupUsedAlias) {
+    assert.ok(followupRun.officialFetches.filter(url => url === overtimeUrl).length >= 2,
+      'the duplicate source path is built only from repeated mocked official-page retrievals');
+  }
+  assert.deepEqual(followupRun.stages.filter(stage => ['existing-pipeline', 'synthesis', 'support-check'].includes(stage)),
+    ['existing-pipeline', 'synthesis', 'support-check']);
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);

@@ -28,6 +28,7 @@ const sourceClaim = {
   canonicalUrl: record.canonicalSourceUrl
 };
 const query = 'Can this expense qualify for input tax recovery?';
+const ADMITTED_DOCUMENT_TEST_DATE = '2026-11-09';
 
 function makeIssue(issueId = 'issue-gst', options = {}) {
   const withSource = options.withSource !== false;
@@ -220,64 +221,226 @@ const supportedRule = quote;
 (g) a used motor car supplied or imported for the purpose of being let on hire; and
 
 (h) a motor car used for instructional purposes for reward and registered under paragraph 9(1) of the Second Schedule to the Road Traffic (Motor Vehicles, Registration and Licensing) Rules (R 5) by a person who holds a driving school licence issued under the Road Traffic Act.`;
-  const motorCarSource = makeCapturedOfficialSource({
-    id: 'IRAS_MOTOR_VEHICLES_TEST_SOURCE', authority: 'IRAS', title: 'Motor Vehicles Expenses',
+  const ordinaryParagraph = 'This guidance explains how GST input tax rules apply to motor vehicle expenses.';
+  const motorCarSource = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_iras_motor_vehicle_complete_list_test', authority: 'IRAS', title: 'Motor Vehicles Expenses',
     url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses',
-    quote: motorCarExceptionExcerpt
+    domain: 'IRAS_GST', topicId: 'iras-gst-motor-vehicles',
+    sourceText: `${motorCarExceptionExcerpt}\n\n${ordinaryParagraph}`
   });
   motorCarSource.authorityName = 'Inland Revenue Authority of Singapore (IRAS)';
-  motorCarSource.sourcePublisher = 'Inland Revenue Authority of Singapore (IRAS)';
   motorCarSource.sourceAuthority = 'IRAS';
-  motorCarSource.domain = 'IRAS_GST';
-  const motorCarIssue = {
-    ...makeIssue('issue-motor-car-exceptions', {
-      subject: 'specific exclusions from the definition of a motor car', applicationStatus: 'NOT_REQUIRED', withSource: false
-    }),
-    domain: 'IRAS_GST', operation: 'EXPLAIN_RULE', evidenceRequirement: 'AUTHORITATIVE_SOURCE',
-    governingAuthority: 'IRAS', evidenceStatus: 'VERIFIED', gaps: [], sources: [motorCarSource],
-    verifiedClaims: [{
-      recordId: motorCarSource.id, quote: motorCarExceptionExcerpt, text: motorCarExceptionExcerpt,
-      supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: motorCarSource.canonicalSourceUrl,
-      sourceAdmissionOptions: { targetDate: '2026-11-03' }
-    }]
-  };
+  const motorCarIssue = makeCurrentAdmittedNarrativeIssue({
+    issueId: 'issue-motor-car-exceptions', authority: 'IRAS', domain: 'IRAS_GST',
+    subject: 'specific exclusions from the definition of a motor car', population: 'COMPANY',
+    source: motorCarSource
+  });
   let supportPacket;
   const scripted = scriptedCall(({ prompt }) => {
     const packet = packetFrom(prompt);
-    const passageId = packet.requestedIssues[0].admittedPassageIds[0];
-    assert.equal(packet.evidencePassages.find(passage => passage.id === passageId).completeAdmittedPassage, motorCarExceptionExcerpt,
+    const passage = packet.evidencePassages.find(item => item.completeAdmittedPassage === motorCarExceptionExcerpt);
+    const prosePassage = packet.evidencePassages.find(item => item.completeAdmittedPassage === ordinaryParagraph);
+    assert.ok(passage && prosePassage, 'both the complete atomic list and adjacent standalone prose are admitted separately');
+    assert.equal(passage.completeAdmittedPassage, motorCarExceptionExcerpt,
       'generation receives the complete admitted list with item-specific conditions');
     return { claims: [
       claim('broad-dealer-exception', 'Any car sold by a dealer or supplied to a financial institution is excluded from the definition of a motor car.',
-        [passageId], { issueId: 'issue-motor-car-exceptions' }),
+        [passage.id], { issueId: 'issue-motor-car-exceptions' }),
       claim('qualified-motor-car-exceptions', 'The listed categories are conditional: an unused unregistered car must be supplied or imported to be let on hire or sold; a car supplied to a financial institution must be for that institution’s supply under a hire-purchase contract; and a car supplied to or imported by a taxable person must be for that dealer’s letting on hire or sale. A used car supplied or imported for letting on hire is listed separately.',
-        [passageId], { issueId: 'issue-motor-car-exceptions' })
+        [passage.id], { issueId: 'issue-motor-car-exceptions' }),
+      claim('standalone-motor-vehicle-guidance', 'The guidance describes GST input-tax treatment for motor-vehicle expenses.',
+        [prosePassage.id], { issueId: 'issue-motor-car-exceptions' })
     ] };
   }, ({ prompt, system }) => {
     supportPacket = packetFrom(prompt);
     assert.match(system, /transaction direction, qualifying purpose, time or registration limits/i);
     assert.match(system, /cannot broaden a named exception/i);
     const checks = supportPacket.claims;
-    assert.equal(checks.length, 2);
+    assert.equal(checks.length, 3);
     for (const check of checks) {
-      assert.equal(check.issue.admittedPassageIds[0], 'passage-1');
-      assert.equal(check.citedPassages[0].completeAdmittedPassage, motorCarExceptionExcerpt,
-        'the support check sees the full excerpt that carries each exception qualification');
+      if (check.claimId === 'standalone-motor-vehicle-guidance') {
+        assert.equal(check.citedPassages[0].completeAdmittedPassage, ordinaryParagraph,
+          'a standalone paragraph beside the list remains independently citeable');
+      } else {
+        assert.equal(check.citedPassages[0].completeAdmittedPassage, motorCarExceptionExcerpt,
+          'the support check sees the full excerpt that carries each exception qualification');
+      }
     }
     return { verdicts: [
       { claimId: 'broad-dealer-exception', support: 'UNSUPPORTED', claimType: 'RULE' },
-      { claimId: 'qualified-motor-car-exceptions', support: 'SUPPORTED', claimType: 'RULE' }
+      { claimId: 'qualified-motor-car-exceptions', support: 'SUPPORTED', claimType: 'RULE' },
+      { claimId: 'standalone-motor-vehicle-guidance', support: 'SUPPORTED', claimType: 'RULE' }
     ] };
   });
   const result = await tryGenerateGroundedSynthesis(makeInput({
     query: 'Which specific categories are excluded from the definition of a motor car?', issues: [motorCarIssue],
-    evidenceQuality: { eligibleRecords: [], missingFacts: [], targetDate: '2026-11-03' }
+    issuePlanIssues: [plannedNarrativeIssue(motorCarIssue)],
+    evidenceQuality: { eligibleRecords: [motorCarSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
   }), { call: scripted.call });
   assert.ok(result);
-  assert.ok(result.messageText.includes('The listed categories are conditional'));
+  assert.ok(result.messageText.includes(motorCarExceptionExcerpt),
+    'a SUPPORTED summary of one atomic exception list renders the complete admitted wording');
+  assert.ok(!result.messageText.includes('The listed categories are conditional'),
+    'a shortened paraphrase cannot drop an item-specific exception qualification');
+  assert.ok(result.messageText.includes('The guidance describes GST input-tax treatment for motor-vehicle expenses.'),
+    'ordinary supported prose beside the list remains in its own wording');
   assert.ok(!result.messageText.includes('Any car sold by a dealer or supplied to a financial institution'));
   assert.equal(result.verification.claims.find(item => item.claimId === 'broad-dealer-exception')?.semanticSupport, 'UNSUPPORTED');
   assert.equal(result.verification.claims.find(item => item.claimId === 'qualified-motor-car-exceptions')?.outcome, 'ADMITTED');
+  assert.equal(result.verification.claims.find(item => item.claimId === 'standalone-motor-vehicle-guidance')?.outcome, 'ADMITTED');
+}
+
+{
+  const queryText = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+  const salaryIssueId = 'issue-captured-ordinary-salary';
+  const overtimeIssueId = 'issue-captured-overtime';
+  const momUrl = 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days';
+  const momSourceText = readFileSync(new URL('../fixtures/mom-hours-of-work-captured-source.txt', import.meta.url), 'utf8')
+    .replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+  const momDocumentContext = readFileSync(new URL('../fixtures/mom-hours-of-work-admitted-context.txt', import.meta.url), 'utf8')
+    .replace(/\r\n?/g, '\n').replace(/\n+$/, '');
+  const capturedHistory = JSON.parse(readFileSync(new URL('../fixtures/mom-salary-overtime-history.json', import.meta.url), 'utf8'));
+  const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
+  const exclusionQuote = 'Note: Part 4 of the Employment Act does not cover managers and executives.';
+  const salaryQuote = 'For employees covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.';
+  assert.ok(momSourceText.includes(coverageQuote) && momSourceText.includes(exclusionQuote));
+  assert.equal(momDocumentContext.length, 9283);
+
+  const makeSource = (id, hash, section) => {
+    const source = makeAdmittedNarrativeSource({
+      id, authority: 'MOM', title: 'Hours of work, overtime and rest day', url: momUrl,
+      domain: 'MOM_EMPLOYMENT', topicId: 'mom_overtime', sourceText: momSourceText
+    });
+    source.documentHash = hash;
+    source.contentHash = hash;
+    source.paragraphOrSection = section;
+    return source;
+  };
+  const ordinarySource = makeSource('LIVE_TOPIC_mom_overtime_93a3e5aa9811',
+    '93a3e5aa9811c14312db58199ead0137098794908a4ff1586d5b4792c30ff296', 'Overtime & Working Hours (Part IV)');
+  const overtimeSource = makeSource('LIVE_TOPIC_mom_overtime_13d4b677f853',
+    '13d4b677f85396932e042d4aea1642ccec4291ae44f2d6a4b46bdb33a10d45c2', 'Overtime & Working Hours (Part IV)');
+  assert.notEqual(ordinarySource.documentHash, overtimeSource.documentHash,
+    'the captured per-issue records retain their distinct authenticated hashes');
+
+  const makeNarrativeIssue = (issueId, subject, population, source, quotes) => {
+    const issue = makeCurrentAdmittedNarrativeIssue({
+      issueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT', subject, population, source
+    });
+    issue.admittedDocumentContexts = [{
+      recordId: source.id, documentHash: source.documentHash, canonicalUrl: source.canonicalSourceUrl,
+      targetDate: ADMITTED_DOCUMENT_TEST_DATE, completeness: 'COMPLETE', sourceText: momDocumentContext
+    }];
+    issue.sources = [source];
+    issue.verifiedClaims = [];
+    return issue;
+  };
+  const salarySource = makeCapturedOfficialSource({
+    id: 'LIVE_TOPIC_mom_salary_payment_control', authority: 'MOM', title: 'Paying salary',
+    url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary', quote: salaryQuote
+  });
+  const salaryIssue = makeNarrativeIssue(salaryIssueId, 'ordinary salary payment deadline for employee not covered by overtime provisions',
+    'EMPLOYEE', ordinarySource);
+  salaryIssue.sources.push(salarySource);
+  salaryIssue.verifiedClaims.push({
+    kind: 'RULE', text: salaryQuote, quote: salaryQuote, recordId: salarySource.id,
+    supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: salarySource.canonicalSourceUrl,
+    sourceAdmissionOptions: { targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  });
+  const overtimeIssue = makeNarrativeIssue(overtimeIssueId, 'overtime payment deadline for employee not covered by overtime provisions',
+    'EMPLOYEE', overtimeSource);
+  const issues = [salaryIssue, overtimeIssue];
+  let generationPacket;
+  let supportPacket;
+  let reboundPassageIds;
+  const scripted = scriptedCall(({ prompt }) => {
+    generationPacket = packetFrom(prompt);
+    const foreignCoverage = generationPacket.evidencePassages.find(item =>
+      item.issueId === salaryIssueId && item.completeAdmittedPassage === coverageQuote);
+    const foreignExclusion = generationPacket.evidencePassages.find(item =>
+      item.issueId === salaryIssueId && item.completeAdmittedPassage === exclusionQuote);
+    const salaryRule = generationPacket.evidencePassages.find(item =>
+      item.issueId === salaryIssueId && item.completeAdmittedPassage === salaryQuote);
+    assert.ok(foreignCoverage && foreignExclusion && salaryRule, 'the captured source passages are available under their original issue');
+    return { claims: [
+      claim('captured-overtime-scope', 'The hours-of-work guidelines apply only to employees covered under Part 4 of the Employment Act; Part 4 does not cover managers and executives.',
+        [foreignCoverage.id, foreignExclusion.id], { issueId: overtimeIssueId, kind: 'RULE' }),
+      claim('captured-ordinary-salary', 'For an employee covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.',
+        [salaryRule.id], { issueId: salaryIssueId, kind: 'RULE' })
+    ] };
+  }, ({ prompt }) => {
+    supportPacket = packetFrom(prompt);
+    const overtimeClaim = supportPacket.claims.find(item => item.claimId === 'captured-overtime-scope');
+    const ownPassages = overtimeClaim?.citedPassages || [];
+    assert.equal(overtimeClaim?.issue?.issueId, overtimeIssueId);
+    assert.equal(ownPassages.length, 2, 'both already-admitted quote passages are rebound independently');
+    assert.ok(ownPassages.every(passage => passage.issueId === overtimeIssueId),
+      'the cross-issue draft is rebound only to an already-admitted passage owned by its target issue');
+    assert.deepEqual(ownPassages.map(passage => passage.completeAdmittedPassage), [coverageQuote, exclusionQuote]);
+    reboundPassageIds = ownPassages.map(passage => passage.id);
+    assert.ok(!JSON.stringify(generationPacket.evidencePassages).includes(momDocumentContext),
+      'the full document identity used for rebinding is not copied into the generation packet');
+    assert.equal(supportPacket.documentContexts.length, 1,
+      'only the target issue’s independently admitted source context is sent to support review');
+    assert.equal(supportPacket.documentContexts[0].sourceRecordId, overtimeSource.id,
+      'the verifier receives the target issue record with its own captured hash binding');
+    assert.equal(supportPacket.documentContexts[0].fullSameDocumentContext, momDocumentContext,
+      'the existing support stage uses the target issue’s complete admitted document context for the narrowly scoped alias');
+    return { verdicts: supportPacket.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE'
+    })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: queryText,
+    history: [
+      { id: 'covered-parent-user', sender: 'user', timestamp: '', text: capturedHistory.parentQuestion },
+      { id: 'covered-parent-assistant', sender: 'ai', timestamp: '', text: capturedHistory.assistantAnswer }
+    ],
+    issues,
+    issuePlanIssues: issues.map(plannedNarrativeIssue),
+    evidenceQuality: { eligibleRecords: issues.flatMap(issue => issue.sources), missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.ok(result.messageText.includes('The hours-of-work guidelines apply only to employees covered under Part 4 of the Employment Act'));
+  assert.ok(result.messageText.includes('ordinary salary at least once a month and within 7 days'));
+  assert.deepEqual(result.verification.admittedClaimIds, ['captured-overtime-scope', 'captured-ordinary-salary']);
+  assert.deepEqual(result.verification.claims.find(item => item.claimId === 'captured-overtime-scope')?.admittedPassageIds,
+    reboundPassageIds);
+  assert.equal(result.verification.providerCalls, 2, 'the unique rebind reuses the existing generation and support-verification calls');
+  assert.equal(scripted.calls.length, 2, 'no new generation or repair call is added for issue-owned canonicalization');
+
+  const changedContext = `${momDocumentContext}\nAdditional extracted official paragraph outside the selected excerpt.`;
+  const changedContextHash = createHash('sha256').update(changedContext).digest('hex');
+  const mismatchedTargetSource = makeSource('LIVE_TOPIC_mom_overtime_context_mismatch', changedContextHash,
+    'Overtime & Working Hours (Part IV)');
+  mismatchedTargetSource.contentHash = changedContextHash;
+  const mismatchedTargetIssue = makeNarrativeIssue(overtimeIssueId,
+    'overtime payment deadline for employee not covered by overtime provisions', 'EMPLOYEE', mismatchedTargetSource);
+  mismatchedTargetIssue.admittedDocumentContexts[0].sourceText = changedContext;
+  mismatchedTargetIssue.admissionDiagnostics.candidates[0].documentHash = changedContextHash;
+  let mismatchSupportClaims;
+  const mismatchScript = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const foreignCoverage = packet.evidencePassages.find(item => item.issueId === salaryIssueId && item.completeAdmittedPassage === coverageQuote);
+    const foreignExclusion = packet.evidencePassages.find(item => item.issueId === salaryIssueId && item.completeAdmittedPassage === exclusionQuote);
+    assert.ok(foreignCoverage && foreignExclusion);
+    return { claims: [claim('changed-full-context-alias',
+      'The hours-of-work guidelines apply only to those covered under Part 4 of the Employment Act; Part 4 does not cover managers and executives.',
+      [foreignCoverage.id, foreignExclusion.id], { issueId: overtimeIssueId, kind: 'RULE' })] };
+  }, ({ prompt }) => {
+    const packet = packetFrom(prompt);
+    mismatchSupportClaims = packet.claims;
+    assert.ok(!packet.claims.some(item => item.claimId === 'changed-full-context-alias'),
+      'an identical quote is not rebound when the complete admitted document context differs');
+    return { verdicts: packet.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE' })) };
+  });
+  await assert.rejects(tryGenerateGroundedSynthesis(makeInput({
+    query: queryText, history: [], issues: [salaryIssue, mismatchedTargetIssue],
+    issuePlanIssues: [salaryIssue, mismatchedTargetIssue].map(plannedNarrativeIssue),
+    evidenceQuality: { eligibleRecords: [...salaryIssue.sources, mismatchedTargetSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: mismatchScript.call }), /no supportable claims/);
+  assert.equal(mismatchSupportClaims, undefined, 'a rejected foreign reference never reaches semantic review');
+  assert.equal(mismatchScript.calls.length, 1, 'a complete-context mismatch requires no support or repair call');
 }
 
 {
@@ -1642,8 +1805,6 @@ function makeNumericSourceIssue({ issueId, authority, domain, subject, sourceQuo
   };
 }
 
-const ADMITTED_DOCUMENT_TEST_DATE = '2026-11-09';
-
 function makeAdmittedNarrativeSource({ id, authority, title, url, domain, topicId, sourceText }) {
   const documentHash = createHash('sha256').update(sourceText).digest('hex');
   return {
@@ -1708,7 +1869,7 @@ function plannedNarrativeIssue(issue) {
   };
 }
 
-async function runNumericProductionClaims({ query: queryText, issues, candidates }) {
+async function runNumericProductionClaims({ query: queryText, issues, candidates, verificationHandler }) {
   let admittedPassages;
   const scripted = scriptedCall(({ prompt }) => {
     const packet = packetFrom(prompt);
@@ -1721,7 +1882,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
         return claim(id, text, passageIds, { issueId, kind: 'RULE' });
       })
     };
-  });
+  }, verificationHandler);
   const sources = issues.flatMap(issue => issue.sources);
   const result = await tryGenerateGroundedSynthesis(makeInput({
     query: queryText,
@@ -1729,6 +1890,68 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     evidenceQuality: { eligibleRecords: sources, missingFacts: [], targetDate: '2026-11-08' }
   }), { call: scripted.call });
   return { result, scripted, admittedPassages };
+}
+
+{
+  const momUrl = 'https://www.mom.gov.sg/employment-practices/salary/paying-salary';
+  const payslipUrl = 'https://www.mom.gov.sg/employment-practices/salary/itemised-payslips';
+  const monthlyQuote = 'If you are covered by the Employment Act, your employer must pay your salary at least once a month.';
+  const shorterQuote = 'They can also pay it at shorter intervals if they choose.';
+  const sevenDayQuote = 'If you are covered by the Employment Act, your employer must pay your salary at least once a month.\n\nThey can also pay it at shorter intervals if they choose.\n\nSalary must be paid:\n\n• Within 7 days after the end of the salary period';
+  const exceptionQuote = 'There are exceptions for overtime, resignation without notice and other situations.';
+  const payslipQuote = 'From 1 April 2016, all employers must issue itemised pay slips to employees covered by the Employment Act.';
+  const recordsQuote = 'From 1 April 2016, employers must keep detailed employment records, including salary records, of employees covered by the Employment Act.';
+  const sources = [
+    { source: makeCapturedOfficialSource({ id: 'mom-monthly-salary', authority: 'MOM', title: 'Paying salary', url: momUrl, quote: monthlyQuote }), quote: monthlyQuote },
+    { source: makeCapturedOfficialSource({ id: 'mom-shorter-salary-interval', authority: 'MOM', title: 'Paying salary', url: momUrl, quote: shorterQuote }), quote: shorterQuote },
+    { source: makeCapturedOfficialSource({ id: 'mom-seven-day-salary', authority: 'MOM', title: 'Paying salary', url: momUrl, quote: sevenDayQuote }), quote: sevenDayQuote },
+    { source: makeCapturedOfficialSource({ id: 'mom-salary-exceptions', authority: 'MOM', title: 'Paying salary', url: momUrl, quote: exceptionQuote }), quote: exceptionQuote },
+    { source: makeCapturedOfficialSource({ id: 'mom-itemised-payslips-2016', authority: 'MOM', title: 'Itemised pay slips', url: payslipUrl, quote: payslipQuote }), quote: payslipQuote },
+    { source: makeCapturedOfficialSource({ id: 'mom-employment-records-2016', authority: 'MOM', title: 'Itemised pay slips', url: payslipUrl, quote: recordsQuote }), quote: recordsQuote }
+  ];
+  const issue = makeNumericSourceIssue({
+    issueId: 'issue-mom-first-employee-duties', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'employer salary payment, payslip and employment record duties', sourceQuotes: sources
+  });
+  const salaryClaim = 'Under the Employment Act, employers must pay salary at least once a month (or at shorter intervals) and within 7 days after the end of the salary period, with specific exceptions applying to overtime, resignation, and other situations.';
+  const recordsClaim = 'From 1 April 2016, employers must issue itemised payslips and keep detailed employment records, including salary records, for employees covered by the Employment Act.';
+  const supportSeen = [];
+  const { result, scripted } = await runNumericProductionClaims({
+    query: 'We are hiring our first employee in Singapore. Explain MOM salary-payment, payslip and employment-record duties and the facts to check.',
+    issues: [issue],
+    candidates: [
+      { id: 'mom-c4-faithful', text: salaryClaim, issueId: issue.issueId, supportPassageIds: ['passage-1', 'passage-2', 'passage-3', 'passage-4'] },
+      { id: 'mom-c4-changed-seven-to-fourteen', text: salaryClaim.replace('within 7 days', 'within 14 days'), issueId: issue.issueId, supportPassageIds: ['passage-1', 'passage-2', 'passage-3', 'passage-4'] },
+      { id: 'mom-c5-faithful', text: recordsClaim, issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] },
+      { id: 'mom-c5-changed-effective-year', text: recordsClaim.replace('1 April 2016', '1 April 2017'), issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] },
+      { id: 'mom-c5-reversed-effective-direction', text: recordsClaim.replace('From 1 April 2016', 'Until 1 April 2016'), issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] },
+      { id: 'mom-c5-reversed-employee-employer', text: recordsClaim.replace('employers must issue', 'employees must issue').replace('to employees covered', 'to employers covered'), issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] },
+      { id: 'mom-c5-negated-duty', text: recordsClaim.replace('employers must issue', 'employers are not required to issue'), issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] },
+      { id: 'mom-c5-unrelated-cpf-duty', text: 'From 1 April 2016, employers must remit CPF contributions.', issueId: issue.issueId, supportPassageIds: ['passage-5', 'passage-6'] }
+    ],
+    verificationHandler: ({ prompt }) => {
+      const packet = packetFrom(prompt);
+      supportSeen.push(...packet.claims.map(item => item.claimId));
+      return { verdicts: packet.claims.map(item => ({
+        claimId: item.claimId,
+        support: item.claimId.endsWith('faithful') ? 'SUPPORTED' : 'UNSUPPORTED',
+        claimType: 'RULE'
+      })) };
+    }
+  });
+  assert.ok(supportSeen.includes('mom-c4-faithful'), 'the monthly, shorter-interval and 7-day clauses reach support review');
+  assert.ok(supportSeen.includes('mom-c5-faithful'), 'the 1 April 2016 payslip and record clauses reach support review');
+  assert.ok(!supportSeen.includes('mom-c5-unrelated-cpf-duty'),
+    'the same date and employer actor cannot be borrowed to support a CPF remittance predicate from payslip or record sources');
+  assert.deepEqual(result.verification.admittedClaimIds, ['mom-c4-faithful', 'mom-c5-faithful']);
+  for (const id of [
+    'mom-c4-changed-seven-to-fourteen', 'mom-c5-changed-effective-year',
+    'mom-c5-reversed-effective-direction', 'mom-c5-reversed-employee-employer', 'mom-c5-negated-duty', 'mom-c5-unrelated-cpf-duty'
+  ]) assert.ok(result.verification.withheldClaimIds.includes(id), `${id} is withheld`);
+  assert.ok(result.messageText.includes('within 7 days after the end of the salary period'));
+  assert.ok(result.messageText.includes('From 1 April 2016'));
+  assert.equal(scripted.calls.filter(call => call.system.startsWith('EVIDENCE_GROUNDED_SUPPORT_VERIFICATION')).length, 1,
+    'the accepted and rejected MOM clauses use one batched support check');
 }
 
 {

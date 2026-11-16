@@ -1625,6 +1625,14 @@ assert.ok(boundaryContext.missingFacts.some(fact => /individual eligibility/i.te
 const shortAnaphoricFollowUp = 'Can I claim input tax on it?';
 assert.equal(isShortSemanticFollowUp(shortAnaphoricFollowUp), true,
   'A short question with explicit transaction anaphora continues the active case.');
+assert.equal(isShortSemanticFollowUp(momSalaryOvertimeFollowUp), true,
+  'A long explicit-anaphora question remains a follow-up when later text adds response instructions.');
+assert.equal(isShortSemanticFollowUp('Can I claim Parent Relief for my mother? Please answer in bullet points and include a citation.'), false,
+  'Output instructions after a standalone question do not make it a follow-up.');
+assert.equal(isShortSemanticFollowUp('What is the reporting deadline? Does that change if the employee is not covered? Please answer briefly.'), false,
+  'Anaphora in a later question does not reattach a preceding standalone question to the prior case.');
+assert.equal(isShortSemanticFollowUp(`And what about it? ${'Please explain this further. '.repeat(6)}`), false,
+  'The existing length limit still applies to additive continuation prefixes.');
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {

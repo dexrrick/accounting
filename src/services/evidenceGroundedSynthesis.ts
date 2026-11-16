@@ -12,7 +12,7 @@ import type { AuthorityWorkstreamsResult, AuthorityIssueEvidence, AuthorityAdmit
 import type { GroundedReasoningContext } from './groundingContextBuilder';
 import { isCurrentRequestCompletenessContext } from './requestCompleteness';
 import { verifyEvidenceClaims, type VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
-import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
+import { completeVisibleEvidenceListSpan, normalizeEvidenceText, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { validateJournalGroups } from '../verification/journalIntegrity';
@@ -873,6 +873,27 @@ function sameProvenanceValue(left: unknown, right: unknown): boolean {
 }
 
 function equivalentAdmittedPassage(source: EvidencePassage, target: EvidencePassage): boolean {
+  // Separate captures can have different raw HTML hashes while carrying exactly
+  // the same complete admitted text. Resolve only to evidence already owned by
+  // the target issue, and keep its full-document semantic completeness check.
+  if (source.needsSemanticSupport === true && target.needsSemanticSupport === true &&
+      source.documentContextText && source.documentContextText === target.documentContextText &&
+      source.verifiedQuote === target.verifiedQuote && source.supportKind === target.supportKind &&
+      source.canonicalUrl && source.canonicalUrl === source.officialSourceUrl &&
+      source.canonicalUrl === source.recordCanonicalSourceUrl && source.canonicalUrl === target.canonicalUrl &&
+      target.canonicalUrl === target.officialSourceUrl && target.canonicalUrl === target.recordCanonicalSourceUrl &&
+      source.urlVerificationStatus === 'VERIFIED' && target.urlVerificationStatus === 'VERIFIED' &&
+      source.authority === target.authority && source.domain === target.domain &&
+      source.population === target.population && source.operation === target.operation &&
+      source.sourceProvenance === target.sourceProvenance && source.sourceTitle === target.sourceTitle &&
+      source.publisher === target.publisher && source.instrument === target.instrument &&
+      source.recordAuthority === target.recordAuthority && source.recordSourceAuthority === target.recordSourceAuthority &&
+      source.recordDomain === target.recordDomain && source.recordRevisionDate === target.recordRevisionDate &&
+      (!source.sourceBinding || source.sourceBinding.documentHash === source.documentHash) &&
+      (!target.sourceBinding || target.sourceBinding.documentHash === target.documentHash) &&
+      source.effectiveDate === target.effectiveDate && source.validFrom === target.validFrom &&
+      source.validTo === target.validTo && source.targetDate === target.targetDate &&
+      sameProvenanceValue(source.sourceAdmissionOptions, target.sourceAdmissionOptions)) return true;
   const documentHash = source.documentHash || source.sourceBinding?.documentHash;
   const hasStableDocumentIdentity = source.sourceProvenance === 'LOCAL_STATIC' ||
     Boolean(documentHash && /^[a-f\d]{64}$/i.test(documentHash));
@@ -1102,6 +1123,7 @@ interface NumericAssertion {
   end: number;
   labelAnchors: string[];
   trailingLabelAnchors: string[];
+  datePrefixContext?: { subject: string[]; predicate: string[] };
   triggerAnchors: string[];
   temporalDirection?: string;
   relativeAfterPeriodBoundary: boolean;
@@ -1129,6 +1151,9 @@ const ORDINAL_WORD = `(?:${Object.keys(ORDINAL_VALUES).join('|')})`;
 const ORDINAL_WORD_PHRASE = `(?:(?:twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)[\\s-]+(?:first|second|third|fourth|fifth|sixth|seventh|eighth|ninth)|${ORDINAL_WORD})`;
 const NUMBER_TOKEN = `(?:\\d[\\d,]*(?:\\.\\d+)?|\\.\\d+|${CARDINAL_PHRASE})`;
 const ORDINAL_TOKEN = `(?:\\d+(?:st|nd|rd|th)|${ORDINAL_WORD_PHRASE})`;
+// A numbered Part is a legal provision; ordinary phrases such as "part of"
+// must not acquire provision provenance requirements.
+const PROVISION_PREFIX = `(?:regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?|parts?(?=\\s+(?:\\d|${CARDINAL_WORD}\\b)))`;
 const SIGN_TOKEN = '(?:negative|minus|positive|plus|[+\\-−])';
 const NUMERIC_GENERIC_ANCHORS = new Set([
   'a', 'an', 'and', 'after', 'amount', 'apply', 'applies', 'at', 'before', 'by', 'calendar', 'day', 'days',
@@ -1182,6 +1207,15 @@ function numericAnchors(text: string): string[] {
   return [...text.toLowerCase().matchAll(/[a-z]+/g)]
     .map(match => normalizeAnchor(match[0]))
     .filter(word => word.length > 2 && !NUMERIC_GENERIC_ANCHORS.has(word) && !NUMERIC_WORD_TOKENS.has(word));
+}
+
+function numericContextText(text: string): string {
+  // These alternatives modify the preceding frequency, not the numeric
+  // assertion's subject. The complete claim still goes to support verification.
+  return text.replace(/\(\s*(?:or|and)\s+(?:at|in|within|for|by|on)\b[^()]*\)/gi, alternative =>
+    /\d|\b(?:am|is|are|was|were|must|shall|will|would|should|can|could|may|not|no|without)\b/i.test(alternative) ||
+    [...alternative.matchAll(/[a-z]+/gi)].some(match => NUMERIC_WORD_TOKENS.has(match[0].toLowerCase()))
+      ? alternative : ' ');
 }
 
 function numericAssertions(text: string, sourceContext = ''): NumericAssertion[] {
@@ -1276,7 +1310,7 @@ function numericAssertions(text: string, sourceContext = ''): NumericAssertion[]
 
   const provisionAtom = `(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|${CARDINAL_PHRASE})`;
   const provisionSpans: Array<{ start: number; end: number }> = [];
-  const provisionPattern = new RegExp(`\\b(?:regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?)\\s+${provisionAtom}(?:(?:\\s*(?:and|&|,)\\s*)${provisionAtom})*`, 'gi');
+  const provisionPattern = new RegExp(`\\b${PROVISION_PREFIX}\\s+${provisionAtom}(?:(?:\\s*(?:and|&|,)\\s*)${provisionAtom})*`, 'gi');
   let provisionMatch: RegExpExecArray | null;
   while ((provisionMatch = provisionPattern.exec(normalized))) {
     provisionSpans.push({ start: provisionMatch.index, end: provisionMatch.index + provisionMatch[0].length });
@@ -1377,7 +1411,9 @@ function numericAssertions(text: string, sourceContext = ''): NumericAssertion[]
     );
     const previousNumericEnd = index > 0 ? sorted[index - 1].end : 0;
     const prefixStart = Math.max(previousNumericEnd, delimiter + 1);
-    const localLabels = numericAnchors(normalized.slice(prefixStart, assertion.start)).slice(-8);
+    const prefixText = normalized.slice(prefixStart, assertion.start);
+    const labelText = numericContextText(prefixText);
+    const localLabels = numericAnchors(labelText).slice(-8);
     const previousAssertion = index > 0 ? sorted[index - 1] : undefined;
     const sameNumericContext = previousAssertion !== undefined && delimiter < previousAssertion.end;
     assertion.labelAnchors = localLabels.length ? localLabels :
@@ -1386,11 +1422,24 @@ function numericAssertions(text: string, sourceContext = ''): NumericAssertion[]
         : numericAnchors(sourceContext);
     const nextAssertion = sorted[index + 1];
     const nextBoundary = nextAssertion?.start ?? normalized.length;
-    const trailingText = normalized.slice(assertion.end, nextBoundary);
+    const trailingText = numericContextText(normalized.slice(assertion.end, nextBoundary));
     const trailingDelimiter = trailingText.search(/[,.!?;\n]/);
     assertion.trailingLabelAnchors = numericAnchors(
       trailingDelimiter >= 0 ? trailingText.slice(0, trailingDelimiter) : trailingText
     );
+    if (assertion.unit === 'date' && numericAnchors(prefixText).length === 0 && /^\s*,/.test(trailingText)) {
+      const predicateText = trailingText.replace(/^\s*,\s*/, '').split(/[,.!?;\n]/, 1)[0];
+      const modal = /\b(?:must|shall|will|would|should|can|could|may|is|are|was|were)\b/i.exec(predicateText);
+      const subject = modal ? numericAnchors(predicateText.slice(0, modal.index))
+        .filter(anchor => !['all', 'any', 'each', 'every', 'your', 'our', 'their'].includes(anchor)) : [];
+      const predicate = modal ? numericAnchors(predicateText.slice(modal.index + modal[0].length)) : [];
+      // Dates without an explicit following subject/predicate remain unbound.
+      if (subject.length && predicate.length) {
+        assertion.datePrefixContext = { subject, predicate };
+        assertion.labelAnchors = [...subject, ...predicate].slice(0, 8);
+        assertion.trailingLabelAnchors = [];
+      }
+    }
   }
   return sorted;
 }
@@ -1449,6 +1498,10 @@ function numericAssertionSignature(assertion: NumericAssertion): string {
 }
 
 function numericAssertionContextMatches(claim: NumericAssertion, source: NumericAssertion): boolean {
+  if (claim.datePrefixContext && source.datePrefixContext) {
+    return claim.datePrefixContext.subject.some(anchor => source.datePrefixContext!.subject.includes(anchor)) &&
+      claim.datePrefixContext.predicate.some(anchor => source.datePrefixContext!.predicate.includes(anchor));
+  }
   const matchingLabelAnchor = claim.labelAnchors.some(anchor => source.labelAnchors.includes(anchor));
   // A qualifier can move across the number in a faithful paraphrase (for
   // example, “17% in Singapore”). Leading subject anchors remain separately
@@ -1584,7 +1637,7 @@ function normalizeNumericClause(text: string): string {
 function provisionReferences(text: string): string[] {
   const references: string[] = [];
   const component = '(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|[a-z]+)';
-  const pattern = new RegExp(`\\b(regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?)\\s+(${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*)`, 'gi');
+  const pattern = new RegExp(`\\b(${PROVISION_PREFIX})\\s+(${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*)`, 'gi');
   for (const match of text.matchAll(pattern)) {
     const type = /regulation/i.test(match[1]) ? 'regulation' : match[1].toLowerCase().replace(/s$/, '');
     const referencesInMatch = [...match[2].matchAll(new RegExp(component, 'gi'))]
@@ -1596,7 +1649,7 @@ function provisionReferences(text: string): string[] {
 
 function removeProvisionReferenceSpans(text: string): string {
   const component = '(?:\\d+(?:\\.\\d+)?(?:\\([\\dA-Za-z]+\\))*|[a-z]+)';
-  const pattern = new RegExp(`\\b(?:regulations?|sections?|paragraphs?|articles?|forms?|items?|schedules?)\\s+${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*`, 'gi');
+  const pattern = new RegExp(`\\b${PROVISION_PREFIX}\\s+${component}(?:(?:\\s*(?:and|&|,)\\s*)${component})*`, 'gi');
   return text.replace(pattern, ' ');
 }
 
@@ -1930,6 +1983,24 @@ function supportLabels(
   return [...new Set(sourceLinks)];
 }
 
+/** Keep indivisible list conditions intact even when a semantic verdict misses an omission. */
+function retainAtomicListSource(
+  claim: SynthesisClaim,
+  packet: ReturnType<typeof buildPacket>
+): SynthesisClaim | undefined {
+  if (claim.kind !== 'RULE' || claim.supportIds.length !== 1) return claim;
+  const passage = packet.passages.find(item => item.id === claim.supportIds[0]);
+  if (!passage || normalizeEvidenceText(claim.text) === normalizeEvidenceText(passage.verifiedQuote)) return claim;
+  const blocks = splitEvidenceTextBlocks(passage.verifiedQuote);
+  const list = visibleEvidenceListSpan(blocks, 0);
+  if (!list || list.itemCount < 2 || list.startIndex !== 0 || list.endIndex !== blocks.length - 1 ||
+      normalizeEvidenceText(list.quote) !== normalizeEvidenceText(passage.verifiedQuote)) return claim;
+  const complete = completeVisibleEvidenceListSpan(blocks, 0);
+  const completeQuote = complete?.contextQuote || complete?.quote;
+  if (!completeQuote || completeQuote.length > MAX_CLAIM_LENGTH || !passage.canonicalUrl || unsupportedText(completeQuote)) return undefined;
+  return { ...claim, text: completeQuote };
+}
+
 function renderSynthesis(
   claims: SynthesisClaim[],
   packet: ReturnType<typeof buildPacket>,
@@ -2036,8 +2107,14 @@ export async function tryGenerateGroundedSynthesis(
       semanticRejected.add(claim.id);
     }
   }
-  const finalClaims = initial.claims.filter(claim => !semanticRejected.has(claim.id));
-  const withheldCount = initial.invalidClaims.length + semanticRejected.size;
+  let incompleteListClaims = 0;
+  const finalClaims = initial.claims.filter(claim => !semanticRejected.has(claim.id)).flatMap(claim => {
+    const retained = retainAtomicListSource(claim, packet);
+    if (retained) return [retained];
+    incompleteListClaims += 1;
+    return [];
+  });
+  const withheldCount = initial.invalidClaims.length + semanticRejected.size + incompleteListClaims;
   if (!finalClaims.length) {
     throw new Error('Evidence-grounded synthesis produced no supportable claims.');
   }

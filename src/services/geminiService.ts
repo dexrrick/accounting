@@ -1146,21 +1146,25 @@ async function processAccountingQueryCore(
       issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
       (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
     );
-    const standaloneAuthorityQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
-      (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested && !isShortSemanticFollowUp(userInput));
+    const authorityOnlyQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
+      (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested);
     // No supported accounting application has been established for this mixed
     // plan. Parsing its combined amounts as payroll would misattribute sale
     // proceeds as salary and invent employee/CPF facts.
     const unresolvedMixedJournal = hasMomRulesAndUnresolvedAccountingJournal(
       reconciledQuestionUnderstanding.issuePlan, classification
     );
-    if (standaloneAuthorityQuestion || unresolvedMixedJournal) {
+    if (authorityOnlyQuestion || unresolvedMixedJournal) {
       activeScenario = null;
       amendmentResolution = resolveFactAmendment(userInput, null);
-      const currentUserTurn = [...chatHistory].reverse().find(message =>
-        message.sender === 'user' && message.text.trim() === userInput.trim());
-      relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
-      onConversationScope?.(relevantChatHistory);
+      // Advisory continuations need labeled history, not transaction parsing.
+      // A standalone question or unresolved mixed journal still clears it.
+      if (unsupportedAccountingRuleExplanationRuntimeEnabled || unresolvedMixedJournal || !isShortSemanticFollowUp(userInput)) {
+        const currentUserTurn = [...chatHistory].reverse().find(message =>
+          message.sender === 'user' && message.text.trim() === userInput.trim());
+        relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+        onConversationScope?.(relevantChatHistory);
+      }
       const authorityScenario: AccountingScenarioState = {
         scenarioType: unresolvedMixedJournal ? 'UNRECOGNIZED' : 'AUTHORITY_ADVISORY',
         rawQuery: userInput,
