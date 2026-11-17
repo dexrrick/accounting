@@ -17,7 +17,10 @@ import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.
 import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetriever.ts';
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
 import { ChatPanel } from '../../src/components/ChatPanel.tsx';
-import { buildRetryConversationHistory, canRetryFailedAnswer } from '../../src/services/conversationBoundary.ts';
+import { JournalTable } from '../../src/components/JournalTable.tsx';
+import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer } from '../../src/services/conversationBoundary.ts';
+import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
+import { resolveFactAmendment, isSingleMonthlySalaryAmendment } from '../../src/services/factAmendmentService.ts';
 
 const cases = [
   {
@@ -563,17 +566,21 @@ try {
   let nextTimestamp = 1;
   let chatProps;
   let inputProps;
+  let journalProps;
   const nextUserMessageIdTime = class extends Date { static now() { return nextTimestamp++; } };
   const chatPanelComponent = function ChatPanelStub() {};
   const inputPanelComponent = function InputHandlerPanelStub() {};
+  const journalTableComponent = function JournalTableStub() {};
   const components = new Map([
     ['./components/ChatPanel', { ChatPanel: chatPanelComponent }],
-    ['./components/InputHandlerPanel', { InputHandlerPanel: inputPanelComponent }]
+    ['./components/InputHandlerPanel', { InputHandlerPanel: inputPanelComponent }],
+    ['./components/JournalTable', { JournalTable: journalTableComponent }]
   ]);
   const fakeReact = {
     createElement(type, props, ...children) {
       if (type === chatPanelComponent) chatProps = props;
       if (type === inputPanelComponent) inputProps = props;
+      if (type === journalTableComponent) journalProps = props;
       return { type, props, children };
     },
     useState(initial) {
@@ -587,19 +594,59 @@ try {
   };
   const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useEffect: fakeReact.useEffect };
   const appCalls = [];
+  let resolveDeferredProcessing;
   const scenarioA = { scenarioType: 'EXPENSE', rawQuery: offlineQuestion, transactionTitle: 'Transaction A', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
   const scenarioB = { ...scenarioA, rawQuery: laterTransactionText, transactionTitle: 'Transaction B' };
+  const emptyScenario = { scenarioType: 'UNRECOGNIZED', rawQuery: '', transactionTitle: 'No current scenario', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: false };
+  const makeGroup = (id, title, authorityStatus, amount) => ({
+    id, eventDate: '2026-10-01', title, summary: title,
+    lines: [
+      { id: id + '-debit', accountCode: '6000', accountName: 'Salary expense', category: 'EXPENSE', debit: amount, credit: 0, lineExplanation: title },
+      { id: id + '-credit', accountCode: '2100', accountName: 'Salary payable', category: 'LIABILITY', debit: 0, credit: amount, lineExplanation: title }
+    ],
+    totalDebit: amount, totalCredit: amount, isBalanced: true, citations: [], rationalePoints: [], authorityStatus
+  });
+  const proposalScenario = {
+    scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'Proposal', transactionTitle: 'Proposed payroll', amount: 72000,
+    functionalCurrency: 'USD', transactionCurrency: 'USD', isComplete: true, missingFields: [],
+    assumptions: [{ id: 'assumption-usd', field: 'currency', assumedValue: 'USD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
+    directGroups: [
+      makeGroup('trusted-companion', 'Current trusted companion', 'DETERMINISTIC', 72000),
+      makeGroup('collision', 'Proposed payroll entry', 'AI_PROPOSED', 72000)
+    ]
+  };
+  const deterministicScenario = {
+    ...proposalScenario, rawQuery: 'Confirmed payroll', transactionTitle: 'Confirmed payroll', amount: 60000, functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+    assumptions: [{ id: 'assumption-sgd', field: 'currency', assumedValue: 'SGD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
+    directGroups: [makeGroup('collision', 'Committed payroll entry', 'DETERMINISTIC', 60000)]
+  };
   const serviceStub = {
     processAccountingQuery: async (...args) => {
       appCalls.push(args);
-      return appCalls.length === 1
-        ? { messageText: 'Offline answer for transaction A.', scenarioState: scenarioA, advisoryFailureStatus: 'NETWORK' }
-        : { messageText: 'Completed answer for transaction B.', scenarioState: scenarioB };
+      const [query, requestScenario] = args;
+      if (query === 'retry scoped question') {
+        return appCalls.filter(call => call[0] === query).length === 1
+          ? { messageText: 'Retryable answer.', scenarioState: scenarioB, advisoryFailureStatus: 'NETWORK' }
+          : { messageText: 'Retried answer.', scenarioState: scenarioB };
+      }
+      if (query === 'deferred follow-up while processing') {
+        return new Promise(resolve => { resolveDeferredProcessing = resolve; });
+      }
+      if (/^(?:show|where is) the double entry$/i.test(query.trim())) {
+        return { messageText: requestScenario ? 'Committed journal recalled.' : 'No confirmed journal.', scenarioState: requestScenario || emptyScenario };
+      }
+      if (query === 'Actually the monthly salary for CPF is 72k a month') {
+        return { messageText: 'Corrected payroll.', scenarioState: { ...deterministicScenario, amount: 72000, directGroups: [makeGroup('collision', 'Corrected payroll entry', 'DETERMINISTIC', 72000)] } };
+      }
+      if (appCalls.length === 1) return { messageText: 'Offline answer for transaction A.', scenarioState: scenarioA, advisoryFailureStatus: 'NETWORK' };
+      return { messageText: 'Completed answer for transaction B.', scenarioState: scenarioB };
     }
   };
   const boundarySource = await readFile(new URL('../../src/services/conversationBoundary.ts', import.meta.url), 'utf8');
   const boundaryModule = { exports: {} };
-  const boundaryRequire = id => ({})[id];
+  const boundaryRequire = id => id === './factAmendmentService'
+    ? { resolveFactAmendment, isSingleMonthlySalaryAmendment }
+    : ({})[id];
   vm.runInNewContext(ts.transpileModule(boundarySource, {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText, { module: boundaryModule, exports: boundaryModule.exports, require: boundaryRequire });
@@ -608,8 +655,9 @@ try {
     react: reactExports,
     './services/geminiService': serviceStub,
     './services/conversationBoundary': boundaryModule.exports,
+    './services/committedJournal': { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario },
     './types/provider': { loadProviderSettings: () => ({ activeProvider: 'openai', openai: {}, azure: {}, gemini: { model: 'test' } }), saveProviderSettings() {} },
-    './engine/accountingEngine': { calculateDoubleEntries: () => ({ groups: [] }) },
+    './engine/accountingEngine': { calculateDoubleEntries: scenario => ({ groups: scenario.directGroups || [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: scenario.functionalCurrency || 'SGD' } }) },
     './utils/dateUtils': { getSingaporeTimestamp: () => '' },
     './utils/chatPresentation': { createChatPreview: text => text, extractOfficialAnswerLinks: () => [] },
     './utils/irasEvidencePresentation': { hasCurrentIrasEvidencePresentation: () => false },
@@ -617,6 +665,7 @@ try {
     './retrieval/regulatoryUpdateScheduler': { runDueRegulatoryChecks() {} },
     './components/ChatPanel': components.get('./components/ChatPanel'),
     './components/InputHandlerPanel': components.get('./components/InputHandlerPanel'),
+    './components/JournalTable': components.get('./components/JournalTable'),
     'lucide-react': componentStub
   };
   const appRequire = id => moduleStubs[id] || componentStub;
@@ -627,25 +676,159 @@ try {
     setInterval() { return 0; }, clearInterval() {}, console
   };
   vm.runInNewContext(appJavaScript, appContext);
-  const renderApp = () => { stateCursor = 0; appModule.exports.App(); return { chatProps, inputProps }; };
+  const renderApp = () => { stateCursor = 0; appModule.exports.App(); return { chatProps, inputProps, journalProps }; };
   let appUi = renderApp();
   await appUi.chatProps.onSendMessage(offlineQuestion);
   appUi = renderApp();
   const failedTurn = appUi.chatProps.messages.find(message => message.advisoryRetryPayload)?.advisoryRetryPayload;
   assert.ok(failedTurn, 'App retains a retry action for transaction A while it is current');
+  assert.deepEqual(Array.from(appCalls[0][5], message => message.text), [offlineQuestion],
+    'the first request in an analysis contains only its own question');
   await appUi.chatProps.onSendMessage(`New question: ${laterTransactionText}`);
   appUi = renderApp();
+  const newAnalysisQuestion = `New question: ${laterTransactionText}`;
+  assert.deepEqual(Array.from(appCalls[1][5], message => message.text), [newAnalysisQuestion],
+    'an explicit new analysis starts a fresh model history');
+  await appUi.chatProps.onSendMessage('What did we discuss above?');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls[2][5], message => message.text), [
+    newAnalysisQuestion, 'Completed answer for transaction B.', 'What did we discuss above?'
+  ], 'follow-ups retain messages from the current analysis and exclude older analysis history');
+  const unrelatedNarrative = 'We paid a supplier $5,000 for consulting services';
+  await appUi.chatProps.onSendMessage(unrelatedNarrative);
+  appUi = renderApp();
+  assert.ok(appUi.chatProps.messages.some(message => message.relationPrompt), 'an unrelated complete transaction still asks whether it is related');
+  await appUi.chatProps.onResolveRelation(false);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls[3][5], message => message.text), [unrelatedNarrative],
+    'choosing a separate analysis sends only the pending question and excludes the relation prompt');
+  await appUi.chatProps.onSendMessage('Could you explain that?');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls[4][5], message => message.text), [
+    unrelatedNarrative, 'Completed answer for transaction B.', 'Could you explain that?'
+  ], 'follow-ups after a separate-analysis choice stay within that new analysis');
+  await appUi.chatProps.onSendMessage('retry scoped question');
+  appUi = renderApp();
+  const scopedFailure = appUi.chatProps.messages.find(message => message.advisoryRetryPayload && message.advisoryRetryPayload.text === 'retry scoped question')?.advisoryRetryPayload;
+  assert.ok(scopedFailure, 'the current analysis retains its own retryable failure');
+  const beforeScopedRetry = appCalls.length;
+  appUi.chatProps.onRetryAiAnswer(scopedFailure.text, scopedFailure.scenarioSnapshot, scopedFailure.originalUserMessageId);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(appCalls.length, beforeScopedRetry + 1, 'a current-analysis retry still reaches the service');
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    unrelatedNarrative, 'Completed answer for transaction B.', 'Could you explain that?',
+    'Completed answer for transaction B.', 'retry scoped question'
+  ], 'a retry includes only the current analysis prefix');
+  appUi = renderApp();
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  const beforeResetRetry = appCalls.length;
+  appUi.chatProps.onRetryAiAnswer(scopedFailure.text, scopedFailure.scenarioSnapshot, scopedFailure.originalUserMessageId);
+  assert.equal(appCalls.length, beforeResetRetry, 'reset invalidates retries from the prior analysis');
+  await appUi.chatProps.onSendMessage('A new question after reset');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), ['A new question after reset'],
+    'the first post-reset request excludes earlier analysis messages');
+  assert.ok(appUi.chatProps.messages.length > 8, 'reset preserves the visible chat transcript');
   const messagesBeforeHistoricalRetry = appUi.chatProps.messages;
   const activeScenarioBeforeHistoricalRetry = appUi.inputProps.scenario;
   appUi.chatProps.onRetryAiAnswer(failedTurn.text, failedTurn.scenarioSnapshot, failedTurn.originalUserMessageId);
   appUi = renderApp();
-  assert.equal(appCalls.length, 2, 'App refuses the historical retry before it can call the accounting service');
+  assert.equal(appCalls.length, beforeResetRetry + 1, 'App refuses a historical retry before calling the accounting service');
   assert.equal(appUi.inputProps.scenario.transactionTitle, 'Transaction B', 'the latest transaction remains the active accounting scenario');
   assert.strictEqual(appUi.inputProps.scenario, activeScenarioBeforeHistoricalRetry, 'the retry does not replace current scenario state');
   assert.strictEqual(appUi.chatProps.messages, messagesBeforeHistoricalRetry, 'the retry does not append a stale assistant answer');
+
+  await appUi.chatProps.onSendMessage('We paid a customer $3,000 for a separate service');
+  appUi = renderApp();
+  assert.ok(appUi.chatProps.isAwaitingRelation, 'the ambiguous transaction awaits a relation choice');
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  const callsBeforeCancelledRelation = appCalls.length;
+  appUi.chatProps.onResolveRelation(true);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(appCalls.length, callsBeforeCancelledRelation, 'reset cancels a pending relation choice before it can send stale context');
+  assert.equal(appUi.chatProps.isAwaitingRelation, false, 'reset clears the pending relation prompt');
+  await appUi.chatProps.onSendMessage('A fresh analysis after pending reset');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), ['A fresh analysis after pending reset'],
+    'the first question after cancelling a pending relation starts a clean history');
+  await appUi.chatProps.onSendMessage('Can you expand on that?');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    'A fresh analysis after pending reset', 'Completed answer for transaction B.', 'Can you expand on that?'
+  ], 'a follow-up after the cancelled relation remains scoped to the fresh analysis');
+  const deferredRequest = appUi.chatProps.onSendMessage('deferred follow-up while processing');
+  appUi = renderApp();
+  assert.equal(appUi.inputProps.resetDisabled, true, 'the reset control is disabled while processing');
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  assert.equal(appUi.inputProps.scenario.transactionTitle, 'Transaction B',
+    'the reset handler also ignores a reset while a request is in flight');
+  resolveDeferredProcessing({ messageText: 'Deferred answer completed.', scenarioState: scenarioB });
+  await deferredRequest;
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage('Follow up after deferred response');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    'A fresh analysis after pending reset', 'Completed answer for transaction B.', 'Can you expand on that?',
+    'Completed answer for transaction B.', 'deferred follow-up while processing', 'Deferred answer completed.',
+    'Follow up after deferred response'
+  ], 'the next follow-up retains current-analysis history after a response completes');
+
+  assert.equal(updateCommittedJournalScenario(null, proposalScenario, 'SFRS_I'), null,
+    'a balanced AI proposal is excluded from the committed snapshot');
+  assert.equal(selectAccountingScenarioForRequest('show the double entry', proposalScenario, null), null,
+    'pure journal recall does not promote an AI proposal when no committed snapshot exists');
+  assert.equal(getDisplayableUncommittedJournalGroups(proposalScenario, 'SFRS_I').length, 2,
+    'a complete mixed result displays all valid current groups when it includes an AI proposal');
+  appUi.inputProps.onScenarioChange(proposalScenario);
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
+    'the App displays both the trusted companion and current proposal when no committed journal exists');
+  assert.equal(appUi.journalProps.functionalCurrency, 'USD', 'proposal display uses its own currency');
+  assert.equal(appUi.journalProps.assumptions[0].id, 'assumption-usd', 'proposal display uses its own assumptions');
+  const proposalMarkup = renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps));
+  assert.match(proposalMarkup, /AI Proposed/, 'the UI keeps the existing AI Proposed warning visible');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1], null, 'recalling a journal with no committed snapshot sends no proposal as accounting context');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
+    'a pure recall keeps the active AI proposal visibly marked as proposed');
+
+  appUi.inputProps.onScenarioChange(deterministicScenario);
+  appUi = renderApp();
+  appUi.inputProps.onScenarioChange(proposalScenario);
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
+    'all current groups are displayed separately when the proposal shares an ID with an older committed journal');
+  assert.equal(appUi.journalProps.functionalCurrency, 'USD', 'proposal display preserves its currency when IDs collide');
+  assert.equal(appUi.journalProps.assumptions[0].id, 'assumption-usd', 'proposal display preserves its assumptions when IDs collide');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll entry'],
+    'pure recall displays the separately retained deterministic journal');
+  assert.equal(appUi.journalProps.functionalCurrency, 'SGD', 'committed recall uses committed journal currency');
+
+  const correctionPromptCount = appUi.chatProps.messages.filter(message => message.relationPrompt).length;
+  const salaryCorrection = 'Actually the monthly salary for CPF is 72k a month';
+  assert.equal(assessConversationRelation(salaryCorrection, deterministicScenario, deterministicScenario), 'RELATED',
+    'the exact salary correction is identified as related to the existing payroll');
+  assert.equal(assessConversationRelation('New analysis: ' + salaryCorrection, deterministicScenario, deterministicScenario), 'NEW',
+    'an explicit request for a new analysis takes priority over the correction wording');
+  await appUi.chatProps.onSendMessage(salaryCorrection);
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.messages.filter(message => message.relationPrompt).length, correctionPromptCount,
+    'the salary correction proceeds without a new relation confirmation after payroll recall');
+  assert.equal(appUi.inputProps.scenario.amount, 72000, 'the App applies the corrected salary value');
+  assert.equal(appCalls.at(-1)[1].amount, 60000, 'the correction request uses the previously committed salary facts');
+  assert.equal(appCalls.at(-1)[1].scenarioType, 'PAYROLL_CPF_SALARY', 'the correction is routed with payroll context');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [72000],
+    'the corrected App journal balances at the corrected amount');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;
 }
 
-console.log('AI-first advisory regression passed: statutory routing, provider-safe failures, offline fallback, explicit retry and chat status.');
+console.log('AI-first advisory regression passed: scoped analysis history, proposal display, salary correction, provider-safe failures, offline fallback and retry.');

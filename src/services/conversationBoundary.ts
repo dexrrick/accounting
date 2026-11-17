@@ -1,6 +1,7 @@
 import type { AccountingScenarioState } from '../types/accounting';
 import type { ChatMessage } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
+import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
@@ -13,6 +14,13 @@ export function isJournalDisplayRequest(query: string): boolean {
 export function buildRetryConversationHistory(history: ChatMessage[], originalUserMessageId: string): ChatMessage[] {
   const originalTurnIndex = history.findIndex(message => message.id === originalUserMessageId && message.sender === 'user');
   return originalTurnIndex < 0 ? [] : history.slice(0, originalTurnIndex + 1);
+}
+
+/** Restricts model history to the current analysis; a missing boundary fails closed. */
+export function buildAnalysisConversationHistory(history: ChatMessage[], boundaryMessageId: string | null): ChatMessage[] {
+  if (!boundaryMessageId) return [];
+  const boundaryIndex = history.findIndex(message => message.id === boundaryMessageId && message.sender === 'user');
+  return boundaryIndex < 0 ? [] : history.slice(boundaryIndex).filter(message => !message.relationPrompt);
 }
 
 /** A failed turn can only be retried while it is still the latest user request. */
@@ -34,10 +42,12 @@ export function isDeferredTaxInquiry(query: string): boolean {
  */
 export function assessConversationRelation(
   query: string,
-  currentScenario?: AccountingScenarioState | null
+  currentScenario?: AccountingScenarioState | null,
+  committedScenario?: AccountingScenarioState | null
 ): ConversationRelation {
-  if (!currentScenario) return 'NEW';
-  if (startsNewAccountingScenario(query, currentScenario)) return 'NEW';
+  const relationScenario = currentScenario || committedScenario;
+  if (!relationScenario) return 'NEW';
+  if (startsNewAccountingScenario(query, relationScenario)) return 'NEW';
 
   const q = query.toLowerCase().trim();
   const wordCount = q.split(/\s+/).filter(Boolean).length;
@@ -46,13 +56,20 @@ export function assessConversationRelation(
   const explicitNewSignal = /\b(new (?:question|transaction|analysis)|unrelated|separate (?:analysis|question|transaction)|different (?:analysis|question|transaction))\b/i.test(q);
 
   if (explicitNewSignal) return 'NEW';
-  if (currentScenario.missingFields?.length || isShortFactReply || continuationSignal) return 'RELATED';
+  const payrollScenario = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
+    ? currentScenario
+    : committedScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? committedScenario : null;
+  const salaryCorrection = payrollScenario && isSingleMonthlySalaryAmendment(query)
+    ? resolveFactAmendment(query, payrollScenario).amendments
+    : undefined;
+  if (salaryCorrection?.length === 1 && salaryCorrection[0].field === 'monthlySalary') return 'RELATED';
+  if (relationScenario.missingFields?.length || isShortFactReply || continuationSignal) return 'RELATED';
 
   // Only ask where a complete existing scenario is followed by another
   // sufficiently detailed accounting-looking narrative. General questions
   // and short replies remain automatic to avoid unnecessary interruptions.
   const transactionLike = /\b(paid|pay|received|invoice|expense|fine|salary|wage|supplier|customer|director|shareholder|loan|lease|asset|equipment|bank|cash|gst|cpf)\b/i.test(q);
-  return currentScenario.isComplete && transactionLike && wordCount >= 5
+  return relationScenario.isComplete && transactionLike && wordCount >= 5
     ? 'AMBIGUOUS'
     : 'RELATED';
 }

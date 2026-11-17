@@ -2,14 +2,8 @@ import type { AccountingScenarioState, AccountingStandard } from '../types/accou
 import { calculateDoubleEntries } from '../engine/accountingEngine';
 import { validateJournalGroups } from '../verification/journalIntegrity';
 import { classifyQuestion } from '../classification/questionClassifier';
-import { resolveFactAmendment } from './factAmendmentService';
+import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 import { isJournalDisplayRequest } from './conversationBoundary';
-
-const SINGLE_MONTHLY_SALARY_DECLARATION = /^\s*(?:(?:actually|i mean|correction|correct(?:ion|ed)?|rather|instead)\s*,?\s*)?(?:(?:the|my|our|employee['’]s|worker['’]s)\s+)?(?:(?:monthly|basic|gross)\s+)?(?:salary|wages?|pay)(?:\s+for\s+cpf)?\s+(?:is|was|should\s+be)\s+(?:(?:sgd|s\$|usd|eur|gbp|\$)\s*)?\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|thousand|million))?(?:\s+(?:per\s+month|a\s+month|monthly))?[.!?]?\s*$/i;
-
-function isSinglePayrollSalaryAmendment(query: string): boolean {
-  return SINGLE_MONTHLY_SALARY_DECLARATION.test(query);
-}
 
 /** Keep the last complete, balanced journal available while an advisory answer is displayed. */
 export function updateCommittedJournalScenario(
@@ -37,6 +31,23 @@ export function updateCommittedJournalScenario(
   };
 }
 
+/** Returns the complete current result for display when it contains a valid AI proposal. */
+export function getDisplayableUncommittedJournalGroups(
+  candidate: AccountingScenarioState | null,
+  standard: AccountingStandard
+) {
+  if (!candidate?.isComplete || candidate.isHypothetical) return [];
+  const groups = calculateDoubleEntries(candidate, standard).groups;
+  const validProposalExists = groups.some(group =>
+    group.authorityStatus === 'AI_PROPOSED' &&
+    !group.isHypothetical &&
+    validateJournalGroups([group]).isValid
+  );
+  return validProposalExists
+    ? groups.filter(group => !group.isHypothetical && validateJournalGroups([group]).isValid)
+    : [];
+}
+
 /** Select prior accounting context only for an accounting operation that needs it. */
 export function selectAccountingScenarioForRequest(
   query: string,
@@ -45,14 +56,14 @@ export function selectAccountingScenarioForRequest(
   separateAnalysis = false
 ): AccountingScenarioState | null {
   if (separateAnalysis) return null;
-  if (!committedScenario) return activeScenario;
   if (isJournalDisplayRequest(query)) return committedScenario;
+  if (!committedScenario) return activeScenario;
 
   const classification = classifyQuestion(query);
   const explicitJournalRequest = classification.journalEntryRequired;
   const amendments = resolveFactAmendment(query, committedScenario).amendments || [];
   const isNarrowPayrollSalaryAmendment = committedScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
-    amendments.length === 1 && amendments[0].field === 'monthlySalary' && isSinglePayrollSalaryAmendment(query);
+    amendments.length === 1 && amendments[0].field === 'monthlySalary' && isSingleMonthlySalaryAmendment(query);
   const requestsSupportedAmendment = Boolean(amendments.length) &&
     ((!classification.taxAnalysisRequired && !classification.regulatoryAnalysisRequired) || isNarrowPayrollSalaryAmendment);
   if (!explicitJournalRequest && !requestsSupportedAmendment) return activeScenario;

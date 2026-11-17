@@ -21,8 +21,8 @@ import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresenta
 import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { assessConversationRelation, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
-import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
+import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
+import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -77,6 +77,7 @@ export const App: React.FC = () => {
 
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
   const [committedJournalScenario, setCommittedJournalScenario] = useState<AccountingScenarioState | null>(null);
+  const [analysisStartMessageId, setAnalysisStartMessageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
@@ -106,22 +107,31 @@ export const App: React.FC = () => {
       const requestScenario = options?.useProvidedScenario
         ? activeScenario
         : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
+      const history = retryHistory || (options?.startNewScenario
+        ? [userMsg]
+        : messages.some(message => message.id === userMsg.id)
+          ? messages
+          : [...messages, userMsg]);
+      const relevantChatHistory = buildAnalysisConversationHistory(
+        history,
+        options?.startNewScenario ? userMsg.id : analysisStartMessageId
+      );
       const response = await processAccountingQuery(
         text,
         requestScenario,
         standard,
         providerSettings,
         providerSettings.gemini.model,
-        retryHistory || (options?.startNewScenario
-          ? [userMsg]
-          : messages.some(message => message.id === userMsg.id)
-            ? [...messages.filter(message => message.id !== userMsg.id), userMsg]
-            : [...messages, userMsg]),
+        relevantChatHistory,
         outputPreference
       );
 
+      const displayedScenario = isJournalRecall && activeScenario && !committedJournalScenario &&
+        getDisplayableUncommittedJournalGroups(activeScenario, standard).length > 0
+        ? activeScenario
+        : response.scenarioState;
       const answerState: AccountingScenarioState = {
-        ...response.scenarioState,
+        ...displayedScenario,
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
       setScenario(answerState);
@@ -160,6 +170,8 @@ export const App: React.FC = () => {
 
   const handleRetryAiAnswer = (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => {
     if (isLoading || !canRetryFailedAnswer(messages, originalUserMessageId)) return;
+    const currentAnalysisHistory = buildAnalysisConversationHistory(messages, analysisStartMessageId);
+    if (!currentAnalysisHistory.some(message => message.id === originalUserMessageId && message.sender === 'user')) return;
     const retryHistory = buildRetryConversationHistory(messages, originalUserMessageId);
     const originalUserMessage = retryHistory.at(-1);
     if (!originalUserMessage) return;
@@ -177,7 +189,7 @@ export const App: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    const relation = assessConversationRelation(text, scenario);
+    const relation = assessConversationRelation(text, scenario, committedJournalScenario);
     if (relation === 'AMBIGUOUS') {
       setPendingRelation({ text, userMessage: userMsg });
       setMessages((prev) => [...prev, {
@@ -188,6 +200,7 @@ export const App: React.FC = () => {
     }
     const startNewScenario = relation === 'NEW';
     if (startNewScenario) {
+      setAnalysisStartMessageId(userMsg.id);
       setScenario(null);
       setCommittedJournalScenario(null);
     }
@@ -199,6 +212,7 @@ export const App: React.FC = () => {
     const pending = pendingRelation;
     setPendingRelation(null);
     if (!isRelated) {
+      setAnalysisStartMessageId(pending.userMessage.id);
       setScenario(null);
       setCommittedJournalScenario(null);
     }
@@ -217,8 +231,11 @@ export const App: React.FC = () => {
   };
 
   const handleResetToDefaults = () => {
+    if (isLoading) return;
     setScenario(null);
     setCommittedJournalScenario(null);
+    setAnalysisStartMessageId(null);
+    setPendingRelation(null);
   };
 
   const computed = scenario
@@ -227,7 +244,15 @@ export const App: React.FC = () => {
   const committedJournal = committedJournalScenario
     ? calculateDoubleEntries(committedJournalScenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
-  const displayedJournal = scenario?.isHypothetical ? computed : committedJournal;
+  const currentUncommittedGroups = getDisplayableUncommittedJournalGroups(scenario, standard);
+  const displayedJournalScenario = scenario?.isHypothetical || currentUncommittedGroups.length > 0
+    ? scenario
+    : committedJournalScenario;
+  const displayedJournal = scenario?.isHypothetical
+    ? computed
+    : currentUncommittedGroups.length > 0
+      ? { ...computed, groups: currentUncommittedGroups }
+      : committedJournal;
   const hasJournal = displayedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
@@ -278,6 +303,7 @@ export const App: React.FC = () => {
                   scenario={scenario}
                   onScenarioChange={handleScenarioChange}
                   onResetToDefaults={handleResetToDefaults}
+                  resetDisabled={isLoading}
                 />
                 {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
 
@@ -325,8 +351,8 @@ export const App: React.FC = () => {
                       <JournalTable
                         groups={displayedJournal.groups}
                         standard={standard}
-                        functionalCurrency={(scenario?.isHypothetical ? scenario.functionalCurrency : committedJournalScenario?.functionalCurrency) || 'SGD'}
-                        assumptions={scenario?.isHypothetical ? scenario.assumptions : committedJournalScenario?.assumptions}
+                        functionalCurrency={displayedJournalScenario?.functionalCurrency || 'SGD'}
+                        assumptions={displayedJournalScenario?.assumptions}
                       />
                     )}
 
