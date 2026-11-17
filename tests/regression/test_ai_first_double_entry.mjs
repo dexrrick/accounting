@@ -1,5 +1,11 @@
 import assert from 'node:assert/strict';
-import { processAccountingQuery, isMeaningfulAIJsonPayload } from '../../src/services/geminiService.ts';
+import {
+  processAccountingQuery,
+  isMeaningfulAIJsonPayload,
+  extractDocAttributedTextFacts,
+  extractDocRefsFromImages,
+  resolveTargetPendingImageIndices
+} from '../../src/services/geminiService.ts';
 import { repairAndParseAIJson } from '../../src/utils/jsonRepair.ts';
 import {
   validateJournalGroups,
@@ -15,7 +21,9 @@ import {
   buildGroundedReasoningContext,
   formatGroundedSystemPrompt,
   journalGroupFingerprint,
-  resolveAndApplyJournalRevisions
+  resolveAndApplyJournalRevisions,
+  extractDocRefOccurrences,
+  extractNormalizedDocRefs
 } from '../../src/services/groundingContextBuilder.ts';
 import { formatSingaporeDate, getSingaporeDateString } from '../../src/utils/dateUtils.ts';
 
@@ -9474,6 +9482,629 @@ try {
     );
 
     console.log('✓ 10Q-4 (P1). Multiple pending screenshots with no committed groups cannot inherit another document\'s date or amount from scenario or query');
+    passed++;
+  }
+
+  // 10R-1. extractDocRefOccurrences & extractNormalizedDocRefs format coverage and stopword/date filtering
+  {
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs('INV-101, INV_ABC123, INV: 101, INV #101, Invoice 101, Invoice ABC123, Invoice AB-123')),
+      ['101', 'abc123', 'ab123'],
+      'Standard numeric and alphanumeric doc ref formats must normalize cleanly'
+    );
+
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs('Invoice No. ABC123, Invoice No: 101, Invoice Number ABC123, Receipt No. RCP-55, Voucher No. 88, Ref No. A1, Bill No. 12, Document No. DOC99, Payment Voucher No. PV10')),
+      ['abc123', '101', '55', '88', 'a1', '12', '99', 'pv10'].map(v => v === 'pv10' ? '10' : v),
+      'No./Number prefix formats must extract and normalize doc bodies'
+    );
+
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs('INV-ALPHA, Invoice #BETA, Invoice: GAMMA, Invoice No. DELTA, Invoice Number EPSILON')),
+      ['alpha', 'beta', 'gamma', 'delta', 'epsilon'],
+      'Explicitly introduced alphabetic code identifiers must be recognized'
+    );
+
+    // Stopwords, currency codes, month names, and date-shaped tokens must NOT be treated as doc refs
+    const nonRefText = 'This invoice is missing. The invoice amount is S$500, invoice total S$500, invoice date 15-01-2025, invoice 2025-01-15, invoice 15-01-25, invoice pending, invoice alpha, Invoice: SGD 500, Receipt: USD 200, invoice 15 Jan 2025.';
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs(nonRefText)),
+      [],
+      'Stopwords, currency codes, day-before-month dates, date-shaped tokens, and non-indicated lowercase words must not match as doc refs'
+    );
+
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs('invoice ref 101, Invoice number is ABC123, invoice: receipt 55')),
+      ['101', 'abc123', '55'],
+      'Stopword rewind and "number is" patterns must still extract adjacent doc refs'
+    );
+
+    assert.deepEqual(
+      Array.from(extractDocRefsFromImages([{ imageId: 'img-alpha-mixed', fields: [{ field: 'invoiceNo', value: 'Alpha' }] }])),
+      ['alpha'],
+      'Mixed-case alphabetic invoiceNo in image fields must normalize consistently with "Invoice No. Alpha"'
+    );
+    assert.deepEqual(
+      Array.from(extractNormalizedDocRefs('Invoice No. Alpha')),
+      ['alpha'],
+      'Mixed-case alphabetic Invoice No. Alpha must extract "alpha"'
+    );
+
+    const occs = extractDocRefOccurrences('See Invoice No. ABC123 and INV-ALPHA.');
+    assert.equal(occs.length, 2, 'Must locate two occurrences');
+    assert.equal(occs[0].cleanBody, 'abc123');
+    assert.equal('See Invoice No. ABC123 and INV-ALPHA.'.slice(occs[0].startIndex, occs[0].endIndex), 'Invoice No. ABC123');
+    assert.equal(occs[1].cleanBody, 'alpha');
+    assert.equal('See Invoice No. ABC123 and INV-ALPHA.'.slice(occs[1].startIndex, occs[1].endIndex), 'INV-ALPHA');
+
+    console.log('✓ 10R-1. extractDocRefOccurrences & extractNormalizedDocRefs handle alphanumeric/alphabetic formats and exclude stopwords/dates');
+    passed++;
+  }
+
+  // 10R-2 (P1 — Single doc ref in multi-document scenario cannot inherit another document's facts)
+  {
+    const p1Msg = 'INV-202 is still missing its date and amount. The first screenshot was dated 15 January 2025 and totals S$500.';
+    const p1Facts = extractDocAttributedTextFacts(p1Msg, new Set(['202']), false);
+    assert.equal(p1Facts.date, '', 'P1 multi-doc must NOT attribute first screenshot date to INV-202');
+    assert.equal(p1Facts.amountsCents.size, 0, 'P1 multi-doc must NOT attribute first screenshot amount to INV-202');
+
+    const p1SameSentence = 'INV-202 is still missing its date and amount, while the first screenshot was dated 15 January 2025 and totals S$500.';
+    const p1SameFacts = extractDocAttributedTextFacts(p1SameSentence, new Set(['202']), false);
+    assert.equal(p1SameFacts.date, '', 'P1 single-sentence while-clause must NOT attribute first screenshot date to INV-202');
+    assert.equal(p1SameFacts.amountsCents.size, 0, 'P1 single-sentence while-clause must NOT attribute first screenshot amount to INV-202');
+
+    const p1PrefixOrdinal = 'Unlike the first screenshot (15 January 2025, S$500), INV-202 is still missing its date and amount.';
+    const p1PrefixFacts = extractDocAttributedTextFacts(p1PrefixOrdinal, new Set(['202']), false);
+    assert.equal(p1PrefixFacts.date, '', 'P1 prefix ordinal clause must NOT attribute first screenshot date to INV-202');
+    assert.equal(p1PrefixFacts.amountsCents.size, 0, 'P1 prefix ordinal clause must NOT attribute first screenshot amount to INV-202');
+
+    for (const ordinalLeakCase of [
+      'INV-202 is missing its date: the first screenshot was dated 15/01/2025 and totals S$500',
+      'INV-202 is still missing its date and the first screenshot was dated 15/01/2025 and totals S$500',
+      'INV-202 is missing its date, while Screenshot 1 was dated 15/01/2025 and totals S$500'
+    ]) {
+      const f = extractDocAttributedTextFacts(ordinalLeakCase, new Set(['202']), false);
+      assert.equal(f.date, '', `Must not leak date in "${ordinalLeakCase}"`);
+      assert.equal(f.amountsCents.size, 0, `Must not leak amount in "${ordinalLeakCase}"`);
+    }
+
+    const singleDocMultiSent = extractDocAttributedTextFacts(
+      'Here is INV-101. The amount is S$500 and the date is 15 January 2025.',
+      new Set(['101']),
+      true
+    );
+    assert.equal(singleDocMultiSent.date, '15/01/2025', 'Single-document scenario continues to inherit follow-up sentence date');
+    assert.ok(singleDocMultiSent.amountsCents.has(50000), 'Single-document scenario continues to inherit follow-up sentence amount');
+
+    // End-to-end check: two pending screenshots (INV-101 complete, INV-202 missing date and amount)
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-r2-101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-r2-202',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10r2-101',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-10r2-202',
+                    fields: { invoiceNo: 'INV-202' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const turn1 = await processAccountingQuery(
+      'Attached two invoices.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached two invoices.',
+          images: [
+            { id: 'img-10r2-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-10r2-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+
+    assert.equal(turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 1 must hold in pending');
+
+    const turn2 = await processAccountingQuery(
+      'INV-202 is still missing its date and amount. The first screenshot was dated 15 January 2025 and totals S$500.',
+      turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(turn2.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 2 must NOT commit INV-202 using first screenshot facts');
+    assert.equal(turn2.scenarioState.pendingImageEvidence?.length, 2, 'Turn 2 must retain both screenshots in pendingImageEvidence');
+    const pending202Fields = turn2.scenarioState.pendingImageEvidence?.[1]?.fields || [];
+    const pending202FieldList = Array.isArray(pending202Fields) ? pending202Fields : Object.entries(pending202Fields).map(([field, value]) => ({ field, value }));
+    assert.equal(
+      pending202FieldList.some(f => /date/i.test(String(f.field || '')) && f.value),
+      false,
+      'INV-202 must NOT have a date injected from the first screenshot'
+    );
+    assert.equal(
+      pending202FieldList.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) > 0),
+      false,
+      'INV-202 must NOT have an amount injected from the first screenshot'
+    );
+    assert.ok(
+      turn2.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_TRANSACTION_DATE') ||
+      turn2.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_TRANSACTION_DATE'),
+      'Turn 2 must report IMAGE_MISSING_TRANSACTION_DATE'
+    );
+    assert.ok(
+      turn2.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'IMAGE_MISSING_AMOUNT') ||
+      turn2.scenarioState.missingFields?.some(f => f.fieldKey === 'imageGuardrail-IMAGE_MISSING_AMOUNT'),
+      'Turn 2 must report IMAGE_MISSING_AMOUNT'
+    );
+
+    console.log('✓ 10R-2 (P1). Multi-document follow-up with ordinal facts cannot leak into a named missing document');
+    passed++;
+  }
+
+  // 10R-3 (P2 — Pre-reference fact attribution, sentence boundaries, fail-closed ambiguity, and end-to-end follow-up)
+  {
+    const p2TwoSent = 'INV-101 is unchanged. The amount S$300 and date 20/01/2025 are for INV-202.';
+    const f101 = extractDocAttributedTextFacts(p2TwoSent, new Set(['101']), false);
+    const f202 = extractDocAttributedTextFacts(p2TwoSent, new Set(['202']), false);
+    assert.equal(f101.date, '', 'INV-101 must NOT steal INV-202 date across sentence boundary');
+    assert.equal(f101.amountsCents.size, 0, 'INV-101 must NOT steal INV-202 amount across sentence boundary');
+    assert.equal(f202.date, '20/01/2025', 'INV-202 must receive its preceding date 20/01/2025');
+    assert.deepEqual(Array.from(f202.amountsCents), [30000], 'INV-202 must receive its preceding amount S$300');
+
+    const p2OneSent = 'INV-101 is unchanged, and the amount S$300 and date 20/01/2025 are for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(p2OneSent, new Set(['101']), false).amountsCents.size, 0);
+    assert.equal(extractDocAttributedTextFacts(p2OneSent, new Set(['202']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2OneSent, new Set(['202']), false).amountsCents), [30000]);
+
+    const p2AppositiveComma = 'INV-101 is unchanged, and the amount S$300, dated 20/01/2025, is for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(p2AppositiveComma, new Set(['101']), false).date, '');
+    assert.equal(extractDocAttributedTextFacts(p2AppositiveComma, new Set(['101']), false).amountsCents.size, 0);
+    assert.equal(extractDocAttributedTextFacts(p2AppositiveComma, new Set(['202']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2AppositiveComma, new Set(['202']), false).amountsCents), [30000]);
+
+    const p2BothPre = 'S$500 on 15/01/2025 is for INV-101, and S$300 on 20/01/2025 is for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(p2BothPre, new Set(['101']), false).date, '15/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2BothPre, new Set(['101']), false).amountsCents), [50000]);
+    assert.equal(extractDocAttributedTextFacts(p2BothPre, new Set(['202']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2BothPre, new Set(['202']), false).amountsCents), [30000]);
+
+    const p2WhileFor = 'For INV-101, the date is 15/01/2025 and the amount is S$500, while for INV-202 the date is 20/01/2025 and the amount is S$300.';
+    assert.equal(extractDocAttributedTextFacts(p2WhileFor, new Set(['101']), false).date, '15/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2WhileFor, new Set(['101']), false).amountsCents), [50000]);
+    assert.equal(extractDocAttributedTextFacts(p2WhileFor, new Set(['202']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2WhileFor, new Set(['202']), false).amountsCents), [30000]);
+
+    const p2NoAbbr = 'Invoice No. ABC123 is S$500 on 15/01/2025. The amount S$300 and date 20/01/2025 are for Invoice No. DEF456.';
+    assert.equal(extractDocAttributedTextFacts(p2NoAbbr, new Set(['abc123']), false).date, '15/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2NoAbbr, new Set(['abc123']), false).amountsCents), [50000]);
+    assert.equal(extractDocAttributedTextFacts(p2NoAbbr, new Set(['def456']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(p2NoAbbr, new Set(['def456']), false).amountsCents), [30000]);
+
+    // Ambiguous conjoined pairings must fail closed
+    for (const ambigText of [
+      'Here are INV-101 and INV-202 dated 15/01/2025 for S$500.',
+      'S$300 on 20/01/2025 is for INV-101 and INV-202.',
+      'INV-101 S$300 for INV-202'
+    ]) {
+      const a1 = extractDocAttributedTextFacts(ambigText, new Set(['101']), false);
+      const a2 = extractDocAttributedTextFacts(ambigText, new Set(['202']), false);
+      assert.equal(a1.date, '', `Ambiguous "${ambigText}" must fail closed for INV-101 date`);
+      assert.equal(a1.amountsCents.size, 0, `Ambiguous "${ambigText}" must fail closed for INV-101 amount`);
+      assert.equal(a2.date, '', `Ambiguous "${ambigText}" must fail closed for INV-202 date`);
+      assert.equal(a2.amountsCents.size, 0, `Ambiguous "${ambigText}" must fail closed for INV-202 amount`);
+    }
+
+    // resolveTargetPendingImageIndices unit check on P2 phrasing
+    const pendingPair = [
+      { imageId: 'img-a', fields: [{ field: 'invoiceNo', value: 'INV-101' }, { field: 'invoiceDate', value: '15/01/2025' }, { field: 'totalAmount', value: 500 }] },
+      { imageId: 'img-b', fields: [{ field: 'invoiceNo', value: 'INV-202' }] }
+    ];
+    assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, p2TwoSent, 'date'), [1], 'Date target must resolve only to INV-202');
+    assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, p2TwoSent, 'amount'), [1], 'Amount target must resolve only to INV-202');
+
+    // End-to-end Turn 1 -> Turn 2 with "INV-101 is unchanged. The amount S$300 and date 20/01/2025 are for INV-202."
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Pending Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-r3-101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-r3-202',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-10r3-101',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-10r3-202',
+                    fields: { invoiceNo: 'INV-202' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const r3Turn1 = await processAccountingQuery(
+      'Two invoices attached.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Two invoices attached.',
+          images: [
+            { id: 'img-10r3-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-10r3-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(r3Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'Turn 1 must hold in pending');
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Resolved Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-r3-101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-r3-202',
+                    eventDate: '20/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 300,
+                    totalCredit: 300,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const r3Turn2 = await processAccountingQuery(
+      'INV-101 is unchanged. The amount S$300 and date 20/01/2025 are for INV-202.',
+      r3Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+
+    assert.equal(r3Turn2.scenarioState.committedDirectGroups?.length, 2, 'Turn 2 must commit both INV-101 and INV-202');
+    assert.equal(r3Turn2.scenarioState.committedDirectGroups[0].eventDate, '15/01/2025', 'INV-101 date must stay 15/01/2025');
+    assert.equal(r3Turn2.scenarioState.committedDirectGroups[0].totalDebit, 500, 'INV-101 amount must stay 500');
+    assert.equal(r3Turn2.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 date must become 20/01/2025');
+    assert.equal(r3Turn2.scenarioState.committedDirectGroups[1].totalDebit, 300, 'INV-202 amount must become 300');
+
+    // End-to-end alphabetic document reference ("Invoice No. ALPHA")
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Alphabetic & Alphanumeric Invoices',
+                directGroups: [
+                  {
+                    id: 'grp-r3-abc123',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice No. ABC123',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-r3-alpha',
+                    eventDate: '20/01/2025',
+                    title: 'Invoice No. ALPHA',
+                    totalDebit: 300,
+                    totalCredit: 300,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-r3-abc123',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'ABC123', totalAmount: 500 },
+                    journalLines: []
+                  },
+                  {
+                    imageId: 'img-r3-alpha',
+                    fields: { invoiceNo: 'ALPHA' },
+                    journalLines: []
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const alphaTurn1 = await processAccountingQuery(
+      'Attached Invoice No. ABC123 and Invoice No. ALPHA.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached Invoice No. ABC123 and Invoice No. ALPHA.',
+          images: [
+            { id: 'img-r3-abc123', dataUrl: 'data:image/png;base64,mockabc', mimeType: 'image/png' },
+            { id: 'img-r3-alpha', dataUrl: 'data:image/png;base64,mockalpha', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(alphaTurn1.scenarioState.committedDirectGroups?.length || 0, 0, 'Alpha Turn 1 must hold pending');
+
+    const alphaTurn2 = await processAccountingQuery(
+      'Invoice No. ABC123 is unchanged. The amount S$300 and date 20/01/2025 are for Invoice No. ALPHA.',
+      alphaTurn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(alphaTurn2.scenarioState.committedDirectGroups?.length, 2, 'Alpha Turn 2 must commit both Invoice No. ABC123 and Invoice No. ALPHA');
+    assert.equal(alphaTurn2.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'Invoice No. ALPHA must receive 20/01/2025');
+    assert.equal(alphaTurn2.scenarioState.committedDirectGroups[1].totalDebit, 300, 'Invoice No. ALPHA must receive S$300');
+
+    // Cross-document amount collision: INV-101 is S$500, INV-202 is S$300 (with invalid date),
+    // and user updates INV-202 to S$500 (same as INV-101's amount) and date 20/01/2025
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Pending Invoices Collision',
+                directGroups: [
+                  {
+                    id: 'grp-col-101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-col-202',
+                    eventDate: '29/02/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 300,
+                    totalCredit: 300,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+                    ]
+                  }
+                ],
+                imageEvidence: [
+                  {
+                    imageId: 'img-col-101',
+                    fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 },
+                    journalLines: [
+                      { accountName: 'Office Supplies Expense', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    imageId: 'img-col-202',
+                    fields: { invoiceDate: '29/02/2025', invoiceNo: 'INV-202', totalAmount: 300 },
+                    journalLines: [
+                      { accountName: 'Maintenance Expense', debit: 300, credit: 0 },
+                      { accountName: 'Trade Payables', debit: 0, credit: 300 }
+                    ]
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const colTurn1 = await processAccountingQuery(
+      'Attached INV-101 and INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached INV-101 and INV-202.',
+          images: [
+            { id: 'img-col-101', dataUrl: 'data:image/png;base64,mockc1', mimeType: 'image/png' },
+            { id: 'img-col-202', dataUrl: 'data:image/png;base64,mockc2', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(colTurn1.scenarioState.committedDirectGroups?.length || 0, 0, 'Collision Turn 1 must hold in pending');
+
+    globalThis.fetch = async () => ({
+      ok: true,
+      json: async () => ({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify({
+                responseKind: 'JOURNAL_ENTRY',
+                transactionTitle: 'Two Resolved Invoices Collision',
+                directGroups: [
+                  {
+                    id: 'grp-col-101',
+                    eventDate: '15/01/2025',
+                    title: 'Invoice INV-101',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  },
+                  {
+                    id: 'grp-col-202',
+                    eventDate: '20/01/2025',
+                    title: 'Invoice INV-202',
+                    totalDebit: 500,
+                    totalCredit: 500,
+                    isBalanced: true,
+                    lines: [
+                      { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+                      { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+                    ]
+                  }
+                ]
+              })
+            }]
+          }
+        }],
+        usageMetadata: { promptTokenCount: 150, candidatesTokenCount: 200 }
+      })
+    });
+
+    const colTurn2 = await processAccountingQuery(
+      'For INV-202, the correct amount is S$500 and date is 20/01/2025.',
+      colTurn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(colTurn2.scenarioState.committedDirectGroups?.length, 2, 'Cross-doc amount collision Turn 2 must commit both invoices');
+    assert.equal(colTurn2.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 must update to 20/01/2025');
+    assert.equal(colTurn2.scenarioState.committedDirectGroups[1].totalDebit, 500, 'INV-202 must update from S$300 to S$500 even though INV-101 already had S$500');
+
+    console.log('✓ 10R-3 (P2). Pre-reference facts ("for INV-202"), sentence boundaries, fail-closed ambiguity, and alphabetic doc refs verified');
     passed++;
   }
 

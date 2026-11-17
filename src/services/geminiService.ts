@@ -14,6 +14,7 @@ import { toSafeProviderError } from './aiTransport';
 import { fetchGemini } from './geminiProxyTransport';
 import {
   buildGroundedReasoningContext,
+  extractDocRefOccurrences,
   extractNormalizedDocRefs,
   formatGroundedSystemPrompt,
   hasClearRevisionIntent,
@@ -404,7 +405,7 @@ export function extractDocRefsFromImages(images: ExtractedImageEvidence[]): Set<
       if (docRefKeyPattern.test(cleanKey)) {
         const val = String(f.value || '').trim();
         if (val) {
-          const fromHelper = extractNormalizedDocRefs(`doc: ${val}`);
+          const fromHelper = extractNormalizedDocRefs(`doc no. ${val}`);
           if (fromHelper.size > 0) {
             for (const r of fromHelper) refs.add(r);
           } else {
@@ -436,93 +437,287 @@ export function extractAmountsCentsFromText(text: string): Set<number> {
   return amounts;
 }
 
+const OTHER_DOC_ORDINAL_REGEX = /\b(?:(?:first|second|third|1st|2nd|3rd|other|another|previous|earlier|prior)\s+(?:screenshot|image|invoice|document|receipt|bill|voucher|one|item)|(?:screenshot|image|item)\s*#?\s*\d+)\b/i;
+const ABBR_BEFORE_DOT_REGEX = /(?:^|[\s(])(?:no|num|dr|cr|mr|mrs|ms|st|ltd|pte|inc|co|corp|ref|doc|inv|rcp|pv|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|e\.g|i\.e|etc|vs)$/i;
+const TRAILING_LINKER_REGEX = /(?:^|\s)(?:(?:is|are|was|were|be)\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to|attributed\s+to|assigned\s+to)\s*$/i;
+const TRAILING_COPULA_REGEX = /\s+(?:is|are|was|were)\s*$/i;
+const FORWARD_CLAUSE_INTRODUCER_REGEX = /^(?:for|to|of|on|in|under|from|regarding|concerning|re:)\s*$/i;
+const CONJOINING_GAP_REGEX = /^\s*(?:,|&|\/|\band\b|\bor\b|,\s*(?:and|or))\s*$/i;
+
+function splitIntoSentenceSpans(text: string): Array<{ start: number; end: number; text: string }> {
+  const spans: Array<{ start: number; end: number; text: string }> = [];
+  const delimRegex = /[;\n]+|\.(?=\s|$)/g;
+  let start = 0;
+  let m: RegExpExecArray | null;
+  while ((m = delimRegex.exec(text)) !== null) {
+    if (m[0] === '.') {
+      const prevChar = m.index > 0 ? text[m.index - 1] : '';
+      const nextChar = m.index + 1 < text.length ? text[m.index + 1] : '';
+      if (/\d/.test(prevChar) && /\d/.test(nextChar)) continue;
+      if (ABBR_BEFORE_DOT_REGEX.test(text.slice(0, m.index))) continue;
+    }
+    spans.push({ start, end: m.index, text: text.slice(start, m.index) });
+    start = m.index + m[0].length;
+  }
+  if (start <= text.length) {
+    spans.push({ start, end: text.length, text: text.slice(start) });
+  }
+  return spans;
+}
+
+function isTopLevelIndex(text: string, idx: number): boolean {
+  let depth = 0;
+  for (let i = 0; i < idx; i++) {
+    if (text[i] === '(') depth++;
+    else if (text[i] === ')' && depth > 0) depth--;
+  }
+  return depth === 0;
+}
+
+function filterOutOtherDocumentSubClauses(clause: string): string {
+  if (!clause || !OTHER_DOC_ORDINAL_REGEX.test(clause)) return clause;
+  const subClauseSplitRegex = /,\s*(?:while|whereas|but|and|however|though|although)\b\s*|,\s+(?!(?:\d{3}|\d{4})\b)|\s*:\s+|\s+\b(?:while|whereas|but|however|though|although)\b\s+|\s*[—–]\s*/gi;
+  const parts: string[] = [];
+  let start = 0;
+  let m: RegExpExecArray | null;
+  while ((m = subClauseSplitRegex.exec(clause)) !== null) {
+    if (!isTopLevelIndex(clause, m.index)) continue;
+    parts.push(clause.slice(start, m.index));
+    start = m.index + m[0].length;
+  }
+  parts.push(clause.slice(start));
+
+  // If a part still mixes a doc ref and an ordinal via bare "and", split only at that separating "and"
+  const refinedParts: string[] = [];
+  for (const part of parts) {
+    if (OTHER_DOC_ORDINAL_REGEX.test(part) && extractDocRefOccurrences(part).length > 0) {
+      const andRegex = /\s+\band\b\s+/gi;
+      let splitAt: { index: number; end: number } | null = null;
+      let am: RegExpExecArray | null;
+      while ((am = andRegex.exec(part)) !== null) {
+        if (!isTopLevelIndex(part, am.index)) continue;
+        const left = part.slice(0, am.index);
+        const right = part.slice(am.index + am[0].length);
+        const leftHasDoc = extractDocRefOccurrences(left).length > 0;
+        const rightHasDoc = extractDocRefOccurrences(right).length > 0;
+        const leftHasOrd = OTHER_DOC_ORDINAL_REGEX.test(left);
+        const rightHasOrd = OTHER_DOC_ORDINAL_REGEX.test(right);
+        if ((leftHasDoc && !leftHasOrd && rightHasOrd && !rightHasDoc) ||
+            (leftHasOrd && !leftHasDoc && rightHasDoc && !rightHasOrd)) {
+          splitAt = { index: am.index, end: am.index + am[0].length };
+          break;
+        }
+      }
+      if (splitAt) {
+        refinedParts.push(part.slice(0, splitAt.index), part.slice(splitAt.end));
+        continue;
+      }
+    }
+    refinedParts.push(part);
+  }
+
+  const kept = refinedParts.filter(part => !OTHER_DOC_ORDINAL_REGEX.test(part) || extractDocRefOccurrences(part).length > 0);
+  return kept.join(' ');
+}
+
+function collectClauseBoundaries(text: string): {
+  all: Array<{ index: number; end: number; kind: 'strong' | 'comma' | 'and' }>;
+} {
+  const all: Array<{ index: number; end: number; kind: 'strong' | 'comma' | 'and' }> = [];
+  const strongRegex = /,\s*(?:and|but|while|whereas|however|yet)\b\s*|\s*[—–]\s*|\s+\b(?:but|while|whereas|however)\b\s+/gi;
+  const commaRegex = /,\s+(?!\d{4}\b)/g;
+  const andRegex = /\s+\band\b\s+/gi;
+
+  const overlaps = (idx: number, end: number) =>
+    all.some(b => (idx >= b.index && idx < b.end) || (end > b.index && end <= b.end) || (idx <= b.index && end >= b.end));
+
+  let m: RegExpExecArray | null;
+  while ((m = strongRegex.exec(text)) !== null) {
+    if (isTopLevelIndex(text, m.index)) {
+      all.push({ index: m.index, end: m.index + m[0].length, kind: 'strong' });
+    }
+  }
+  while ((m = commaRegex.exec(text)) !== null) {
+    if (!isTopLevelIndex(text, m.index) || overlaps(m.index, m.index + m[0].length)) continue;
+    const afterComma = text.slice(m.index + m[0].length);
+    // Skip appositive / predicate continuation commas such as ", dated 20/01/2025," or ", is for"
+    if (/^(?:is|are|was|were|dated)\b/i.test(afterComma)) continue;
+    all.push({ index: m.index, end: m.index + m[0].length, kind: 'comma' });
+  }
+  while ((m = andRegex.exec(text)) !== null) {
+    if (isTopLevelIndex(text, m.index) && !overlaps(m.index, m.index + m[0].length)) {
+      all.push({ index: m.index, end: m.index + m[0].length, kind: 'and' });
+    }
+  }
+  all.sort((a, b) => a.index - b.index);
+  return { all };
+}
+
+function hasMonetaryOrDateFact(text: string): boolean {
+  return Boolean(extractDateFromText(text)) || extractAmountsCentsFromText(text).size > 0;
+}
+
+function splitBetweenDocRefs(between: string): { left: string; right: string } {
+  if (!between) return { left: '', right: '' };
+  const { all } = collectClauseBoundaries(between);
+  const hasTrailingLinker = TRAILING_LINKER_REGEX.test(between) || TRAILING_COPULA_REGEX.test(between);
+
+  if (hasTrailingLinker) {
+    for (let i = all.length - 1; i >= 0; i--) {
+      const b = all[i];
+      const afterB = between.slice(b.end);
+      if (afterB.trim() === '' || FORWARD_CLAUSE_INTRODUCER_REGEX.test(afterB)) {
+        return { left: between.slice(0, b.index), right: afterB };
+      }
+    }
+    const strongWithFacts = all.filter(b => b.kind === 'strong' && hasMonetaryOrDateFact(between.slice(b.end)));
+    if (strongWithFacts.length > 0) {
+      const b = strongWithFacts[strongWithFacts.length - 1];
+      return { left: between.slice(0, b.index), right: between.slice(b.end) };
+    }
+    const commaWithFacts = all.filter(b => b.kind === 'comma' && hasMonetaryOrDateFact(between.slice(b.end)));
+    if (commaWithFacts.length > 0) {
+      const firstEmptyLeft = commaWithFacts.find(b => !hasMonetaryOrDateFact(between.slice(0, b.index)));
+      const b = firstEmptyLeft || commaWithFacts[commaWithFacts.length - 1];
+      return { left: between.slice(0, b.index), right: between.slice(b.end) };
+    }
+    const andWithFacts = all.filter(b => b.kind === 'and' && hasMonetaryOrDateFact(between.slice(b.end)));
+    if (andWithFacts.length > 0) {
+      const separatingAnd = andWithFacts.filter(
+        b => !(hasMonetaryOrDateFact(between.slice(0, b.index)) && /^(?:dated?|on)\b/i.test(between.slice(b.end)))
+      );
+      const b = (separatingAnd.length > 0 ? separatingAnd : andWithFacts)[0];
+      return { left: between.slice(0, b.index), right: between.slice(b.end) };
+    }
+    return { left: '', right: '' };
+  }
+
+  if (all.length > 0) {
+    const b = all[all.length - 1];
+    return { left: between.slice(0, b.index), right: between.slice(b.end) };
+  }
+
+  return { left: '', right: '' };
+}
+
+function extractDocAttributedTextSegments(
+  text: string,
+  targetDocRefs: Set<string>,
+  isSingleDocumentScenario: boolean
+): string[] {
+  if (!text || typeof text !== 'string') return [];
+
+  const docOccurrences = extractDocRefOccurrences(text);
+  const allTextDocRefs = new Set<string>(docOccurrences.map(o => o.cleanBody));
+
+  if (allTextDocRefs.size === 0) {
+    return isSingleDocumentScenario ? [text] : [];
+  }
+
+  if (targetDocRefs.size === 0) {
+    return isSingleDocumentScenario && allTextDocRefs.size === 1 ? [text] : [];
+  }
+
+  if (!Array.from(allTextDocRefs).some(r => targetDocRefs.has(r))) {
+    return [];
+  }
+
+  const segments: Array<{ docRef: string; text: string }> = [];
+  const sentenceSpans = splitIntoSentenceSpans(text);
+
+  for (const span of sentenceSpans) {
+    const sentOccs = docOccurrences
+      .filter(o => o.startIndex >= span.start && o.endIndex <= span.end)
+      .map(o => ({
+        startIndex: o.startIndex - span.start,
+        endIndex: o.endIndex - span.start,
+        cleanBody: o.cleanBody
+      }));
+
+    if (sentOccs.length === 0) {
+      if (isSingleDocumentScenario && allTextDocRefs.size === 1 && !OTHER_DOC_ORDINAL_REGEX.test(span.text)) {
+        const soleRef = Array.from(allTextDocRefs)[0];
+        segments.push({ docRef: soleRef, text: span.text });
+      }
+      continue;
+    }
+
+    if (sentOccs.length === 1) {
+      const cleanedClause = filterOutOtherDocumentSubClauses(span.text);
+      if (cleanedClause) {
+        segments.push({ docRef: sentOccs[0].cleanBody, text: cleanedClause });
+      }
+      continue;
+    }
+
+    const prefix = span.text.slice(0, sentOccs[0].startIndex);
+    const suffix = span.text.slice(sentOccs[sentOccs.length - 1].endIndex);
+    const pieces: string[] = sentOccs.map(() => '');
+    const conjoinedLeft: boolean[] = sentOccs.map(() => false);
+    const conjoinedRight: boolean[] = sentOccs.map(() => false);
+
+    for (let i = 0; i < sentOccs.length - 1; i++) {
+      const between = span.text.slice(sentOccs[i].endIndex, sentOccs[i + 1].startIndex);
+      if (sentOccs[i].cleanBody !== sentOccs[i + 1].cleanBody && CONJOINING_GAP_REGEX.test(between)) {
+        conjoinedRight[i] = true;
+        conjoinedLeft[i + 1] = true;
+      } else {
+        const { left, right } = splitBetweenDocRefs(between);
+        pieces[i] += left;
+        pieces[i + 1] += right;
+      }
+    }
+
+    pieces[0] = prefix + pieces[0];
+    pieces[sentOccs.length - 1] = pieces[sentOccs.length - 1] + suffix;
+
+    // Fail closed on any conjoined run of distinct doc refs where facts appear asymmetrically
+    let idx = 0;
+    while (idx < sentOccs.length) {
+      if (!conjoinedRight[idx]) {
+        idx++;
+        continue;
+      }
+      let runEnd = idx;
+      while (runEnd + 1 < sentOccs.length && conjoinedLeft[runEnd + 1]) {
+        runEnd++;
+      }
+      const leftFacts = hasMonetaryOrDateFact(pieces[idx]);
+      const rightFacts = hasMonetaryOrDateFact(pieces[runEnd]);
+      if (leftFacts !== rightFacts) {
+        for (let k = idx; k <= runEnd; k++) {
+          pieces[k] = '';
+        }
+      }
+      idx = runEnd + 1;
+    }
+
+    for (let i = 0; i < sentOccs.length; i++) {
+      const cleaned = filterOutOtherDocumentSubClauses(pieces[i]);
+      if (cleaned) {
+        segments.push({ docRef: sentOccs[i].cleanBody, text: cleaned });
+      }
+    }
+  }
+
+  return segments.filter(seg => targetDocRefs.has(seg.docRef)).map(seg => seg.text);
+}
+
 export function extractDocAttributedTextFacts(
   text: string,
   targetDocRefs: Set<string>,
   isSingleDocumentScenario: boolean
 ): { date: string; amountsCents: Set<number> } {
-  if (!text || typeof text !== 'string') {
-    return { date: '', amountsCents: new Set<number>() };
-  }
-
-  const allTextDocRefs = extractNormalizedDocRefs(text);
-
-  if (allTextDocRefs.size === 0) {
-    if (isSingleDocumentScenario) {
-      return {
-        date: extractDateFromText(text),
-        amountsCents: extractAmountsCentsFromText(text)
-      };
-    }
-    return { date: '', amountsCents: new Set<number>() };
-  }
-
-  if (allTextDocRefs.size === 1) {
-    const isTargeted =
-      (targetDocRefs.size > 0 && Array.from(allTextDocRefs).every(r => targetDocRefs.has(r))) ||
-      (targetDocRefs.size === 0 && isSingleDocumentScenario);
-    if (isTargeted) {
-      return {
-        date: extractDateFromText(text),
-        amountsCents: extractAmountsCentsFromText(text)
-      };
-    }
-    return { date: '', amountsCents: new Set<number>() };
-  }
-
-  if (targetDocRefs.size === 0) {
-    return { date: '', amountsCents: new Set<number>() };
-  }
-
-  const docRefRegex = /(?:^|[^a-z0-9])(inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)(?:[-#:_]+\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+#\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*)|([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*))(?=$|[^a-z0-9/])/gi;
-  const docOccurrences: Array<{ startIndex: number; cleanBody: string }> = [];
-  let m: RegExpExecArray | null;
-  while ((m = docRefRegex.exec(text)) !== null) {
-    const rawBody = m[2] || m[3] || m[4] || m[5];
-    if (!rawBody || !/\d/.test(rawBody)) continue;
-    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(rawBody) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(rawBody)) continue;
-    const strippedBody = rawBody.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
-    const cleanBody = (strippedBody || rawBody).replace(/[^a-z0-9]/gi, '').toLowerCase();
-    if (cleanBody && /\d/.test(cleanBody)) {
-      const prefixOffset = m[0].match(/^[^a-z0-9]/i) ? 1 : 0;
-      docOccurrences.push({
-        startIndex: m.index + prefixOffset,
-        cleanBody
-      });
-    }
-  }
-
-  if (docOccurrences.length === 0) {
-    return { date: '', amountsCents: new Set<number>() };
-  }
-
-  const segments: Array<{ docRef: string; text: string }> = [];
-  for (let i = 0; i < docOccurrences.length; i++) {
-    const occ = docOccurrences[i];
-    let segStart = occ.startIndex;
-    if (i === 0) {
-      const prefix = text.slice(0, occ.startIndex);
-      const lastDelim = Math.max(prefix.lastIndexOf('.'), prefix.lastIndexOf(';'), prefix.lastIndexOf('\n'));
-      segStart = lastDelim >= 0 ? lastDelim + 1 : 0;
-    }
-    const segEnd = (i + 1 < docOccurrences.length) ? docOccurrences[i + 1].startIndex : text.length;
-    segments.push({
-      docRef: occ.cleanBody,
-      text: text.slice(segStart, segEnd)
-    });
-  }
-
+  const targetTexts = extractDocAttributedTextSegments(text, targetDocRefs, isSingleDocumentScenario);
   let attributedDate = '';
   const attributedAmountsCents = new Set<number>();
 
-  for (const seg of segments) {
-    if (targetDocRefs.has(seg.docRef)) {
-      if (!attributedDate) {
-        attributedDate = extractDateFromText(seg.text);
-      }
-      for (const amt of extractAmountsCentsFromText(seg.text)) {
-        attributedAmountsCents.add(amt);
-      }
+  for (const segText of targetTexts) {
+    if (!attributedDate) {
+      attributedDate = extractDateFromText(segText);
+    }
+    for (const amt of extractAmountsCentsFromText(segText)) {
+      attributedAmountsCents.add(amt);
     }
   }
 
@@ -539,21 +734,30 @@ export function resolveTargetPendingImageIndices(
   options?: {
     explicitTargetKey?: string;
     oldAmountCents?: Set<number>;
+    isSingleDocumentScenario?: boolean;
   }
 ): number[] {
   if (!images || images.length === 0) return [];
 
-  // 1. Doc ref match in userInput against extractDocRefsFromImages([img]) or img.imageId
+  // 1. Doc ref match in userInput via attributed facts so non-targeted or unattributed facts never match
   const userDocRefs = extractNormalizedDocRefs(userInput);
   if (userDocRefs.size > 0) {
+    const effectiveIsSingle = images.length === 1 && (options?.isSingleDocumentScenario ?? true);
     const matchedIndices: number[] = [];
     images.forEach((img, idx) => {
       const imgRefs = extractDocRefsFromImages([img]);
-      const imgIdRefs = img.imageId ? extractNormalizedDocRefs(`doc: ${img.imageId}`) : new Set<string>();
-      const hasMatch = Array.from(userDocRefs).every(r =>
-        imgRefs.has(r) || (imgRefs.size === 0 && (imgIdRefs.has(r) || (img.imageId && r === img.imageId.toLowerCase())))
-      );
-      if (hasMatch) {
+      const allImgRefs = new Set<string>(imgRefs);
+      if (img.imageId) {
+        allImgRefs.add(img.imageId.toLowerCase());
+        for (const r of extractNormalizedDocRefs(`doc no. ${img.imageId}`)) allImgRefs.add(r);
+      }
+      if (allImgRefs.size === 0) return;
+
+      const attributed = extractDocAttributedTextFacts(userInput, allImgRefs, effectiveIsSingle);
+      const hasKindFact = kind === 'date'
+        ? Boolean(attributed.date)
+        : attributed.amountsCents.size > 0;
+      if (hasKindFact) {
         matchedIndices.push(idx);
       }
     });
@@ -780,7 +984,7 @@ export function findIdempotentPriorMatch(
         if (docRefKeyPattern.test(cleanKey)) {
           const val = String(ev.value || '').trim();
           if (val) {
-            const fromHelper = extractNormalizedDocRefs(`doc: ${val}`);
+            const fromHelper = extractNormalizedDocRefs(`doc no. ${val}`);
             if (fromHelper.size > 0) {
               for (const r of fromHelper) basePriorDocRefs.add(r);
             } else {
@@ -3301,11 +3505,11 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
     }
 
-    const pendingAmounts = new Set<number>();
-    for (const img of currentScenario.pendingImageEvidence) {
+    const getImageAmountCentsSet = (img: ExtractedImageEvidence): Set<number> => {
+      const set = new Set<number>();
       for (const line of (img.journalLines || [])) {
-        if (typeof line.debit === 'number' && line.debit > 0) pendingAmounts.add(Math.round(line.debit * 100));
-        if (typeof line.credit === 'number' && line.credit > 0) pendingAmounts.add(Math.round(line.credit * 100));
+        if (typeof line.debit === 'number' && line.debit > 0) set.add(Math.round(line.debit * 100));
+        if (typeof line.credit === 'number' && line.credit > 0) set.add(Math.round(line.credit * 100));
       }
       const fields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
         ? img.fields
@@ -3315,18 +3519,46 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       for (const f of fields) {
         const cents = extractMonetaryFieldCents(f);
         if (cents !== null && cents > 0) {
-          pendingAmounts.add(cents);
+          set.add(cents);
         }
+      }
+      return set;
+    };
+
+    const pendingAmounts = new Set<number>();
+    for (const img of currentScenario.pendingImageEvidence) {
+      for (const cents of getImageAmountCentsSet(img)) {
+        pendingAmounts.add(cents);
       }
     }
     userAmountsForCorrection = userAmounts;
     pendingAmountsForCorrection = pendingAmounts;
 
-    const hasExplicitAmountCorrectionIntent = /\b(?:correct(?:\s+amount|\s+total|\s+figure|\s+value)?\s+(?:is|was)|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))?|(?:the\s+)?(?:actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)|should\s+be|not\s+(?:S\$|\$|SGD)?\s*\d|(?:change|update|amend|revise|correct)\s+(?:the\s+)?(?:amount|total|invoice|entry|journal|figure)\s+to|(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD)\s*\d|(?:the\s+)?(?:subtotal|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|total(?:\s+amount)?|gst(?:\s+amount)?|tax(?:\s+amount)?|invoice\s+(?:amount|total))\s*(?:is|was|=|:)?\s*(?:S\$|\$|SGD)?\s*\d)/i.test(userInput);
+    const hasExplicitAmountCorrectionIntent = /\b(?:correct(?:\s+amount|\s+total|\s+figure|\s+value)?\s+(?:is|was)|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))?|(?:the\s+)?(?:actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)|should\s+be|not\s+(?:S\$|\$|SGD)?\s*\d|(?:change|update|amend|revise|correct)\s+(?:the\s+)?(?:amount|total|invoice|entry|journal|figure)\s+to|(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD)\s*\d|(?:the\s+)?(?:subtotal|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|total(?:\s+amount)?|gst(?:\s+amount)?|tax(?:\s+amount)?|invoice\s+(?:amount|total)|amount)\s*(?:is|was|=|:)?\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*\d)|(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?\s+(?:[^.;\n]*?\b(?:is|are|was|were)\s+)?(?:for|to|on|in|under)\s+(?:inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)\b|(?:inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)\b[^.;\n]*?(?:\b(?:is|was|are|were|totals?)|[:=])\s*(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d/i.test(userInput);
     const isNewStandaloneTransactionWhilePending = /\b(?:another\s+(?:invoice|bill|receipt|payment|transaction|purchase|entry)|separate\s+(?:invoice|bill|receipt|payment|transaction|entry)|different\s+(?:invoice|bill|receipt|payment|transaction)|new\s+(?:invoice|bill|receipt|payment|transaction|question)|second\s+(?:invoice|bill|receipt|payment|transaction)|also\s+(?:purchased|bought|paid|received|invoiced))\b/i.test(userInput);
 
     const hasNoConflictingAmount = userAmounts.length === 0 || pendingAmounts.size === 0 || userAmounts.every(a => pendingAmounts.has(a));
-    hasConflictingUserAmount = userAmounts.length > 0 && !hasNoConflictingAmount;
+    const earlyUserDocRefs = extractNormalizedDocRefs(userInput);
+    let hasTargetedNewAmountForDoc = false;
+    if (currentScenario.pendingImageEvidence.length > 1 && earlyUserDocRefs.size > 0 && userAmounts.length > 0) {
+      for (const img of currentScenario.pendingImageEvidence) {
+        const allImgRefs = new Set<string>(extractDocRefsFromImages([img]));
+        if (img.imageId) {
+          allImgRefs.add(img.imageId.toLowerCase());
+          for (const r of extractNormalizedDocRefs(`doc no. ${img.imageId}`)) allImgRefs.add(r);
+        }
+        if (allImgRefs.size === 0) continue;
+        const attributed = extractDocAttributedTextFacts(userInput, allImgRefs, false);
+        if (attributed.amountsCents.size > 0) {
+          const imgExistingAmounts = getImageAmountCentsSet(img);
+          if (Array.from(attributed.amountsCents).some(a => !imgExistingAmounts.has(a))) {
+            hasTargetedNewAmountForDoc = true;
+            break;
+          }
+        }
+      }
+    }
+    hasConflictingUserAmount = userAmounts.length > 0 && (!hasNoConflictingAmount || hasTargetedNewAmountForDoc);
     isValidUserAmountCorrection = hasConflictingUserAmount && !isExplanatoryQuery && !isNewStandaloneTransactionWhilePending && (hasExplicitAmountCorrectionIntent || hasExplicitProceedDirective);
 
     const userCorrectedDateEarly = extractDateFromText(userInput);
@@ -3383,6 +3615,60 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     }
   }
 
+  const userInputDocRefs = extractNormalizedDocRefs(userInput);
+  const allScenarioDocRefs = new Set<string>();
+  if (currentScenario) {
+    for (const ref of extractDocRefsFromImages(currentScenario.imageEvidence || [])) allScenarioDocRefs.add(ref);
+    for (const ref of extractDocRefsFromImages(currentScenario.pendingImageEvidence || [])) allScenarioDocRefs.add(ref);
+    for (const ref of extractNormalizedDocRefs(currentScenario.rawQuery || '')) allScenarioDocRefs.add(ref);
+    for (const e of (currentScenario.evidence || [])) {
+      const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (docRefKeyPattern.test(cleanKey) && e.value) {
+        for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
+      }
+    }
+    for (const e of (currentScenario.pendingEvidence || [])) {
+      const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (docRefKeyPattern.test(cleanKey) && e.value) {
+        for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
+      }
+    }
+    for (const p of priorCommittedForImage) {
+      const pRefs = extractNormalizedDocRefs(`${p.id || ''} ${p.transactionId || ''} ${p.title || ''} ${p.summary || ''} ${p.narration || ''}`);
+      for (const ref of pRefs) allScenarioDocRefs.add(ref);
+      const imgInP = (currentScenario.imageEvidence || []).filter(im => p.sourceImageIds && p.sourceImageIds.includes(im.imageId));
+      for (const ref of extractDocRefsFromImages(imgInP)) allScenarioDocRefs.add(ref);
+    }
+  }
+  for (const ref of extractDocRefsFromImages(effectiveImageEvidence)) allScenarioDocRefs.add(ref);
+  for (const ref of userInputDocRefs) allScenarioDocRefs.add(ref);
+
+  const totalScenarioImages = new Set<string>();
+  for (const img of (currentScenario?.imageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
+  for (const img of (currentScenario?.pendingImageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
+  for (const img of effectiveImageEvidence) if (img.imageId) totalScenarioImages.add(img.imageId);
+
+  const hasMultipleImagesInScenario =
+    effectiveImageEvidence.length > 1 ||
+    (currentScenario?.pendingImageEvidence?.length || 0) > 1 ||
+    (currentScenario?.imageEvidence?.length || 0) > 1 ||
+    totalScenarioImages.size > 1;
+
+  const isSingleDocumentScenario =
+    !hasMultipleImagesInScenario &&
+    priorCommittedForImage.length <= 1 &&
+    allScenarioDocRefs.size <= 1;
+
+  const getAllRefsForImage = (img: ExtractedImageEvidence): Set<string> => {
+    const imgRefs = extractDocRefsFromImages([img]);
+    const allImgRefs = new Set<string>(imgRefs);
+    if (img.imageId) {
+      allImgRefs.add(img.imageId.toLowerCase());
+      for (const r of extractNormalizedDocRefs(`doc no. ${img.imageId}`)) allImgRefs.add(r);
+    }
+    return allImgRefs;
+  };
+
   let pendingCorrectionAmbiguousError: { code: string; message: string; severity: 'ERROR' } | null = null;
 
   const userCorrectedDate = extractDateFromText(userInput);
@@ -3397,13 +3683,21 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       effectiveImageEvidence,
       userInput,
       'date',
-      { explicitTargetKey }
+      { explicitTargetKey, isSingleDocumentScenario }
     );
 
-    if (targetIndices.length !== 1) {
-      const userDocRefs = extractNormalizedDocRefs(userInput);
-      const message = targetIndices.length === 0 && userDocRefs.size > 0
-        ? 'The specified document reference does not match any pending screenshot. Please verify the invoice or document number.'
+    const isResolvedDateTargets =
+      targetIndices.length === 1 ||
+      (targetIndices.length > 1 && userInputDocRefs.size > 0);
+
+    if (!isResolvedDateTargets) {
+      const anyUserDocRefMatchesPending = Array.from(userInputDocRefs).some(r =>
+        effectiveImageEvidence.some(img => getAllRefsForImage(img).has(r))
+      );
+      const message = targetIndices.length === 0 && userInputDocRefs.size > 0
+        ? (anyUserDocRefMatchesPending
+            ? 'Could not unambiguously match the provided date to a pending document. Please state the date directly for the target invoice or document number.'
+            : 'The specified document reference does not match any pending screenshot. Please verify the invoice or document number.')
         : 'Multiple pending documents match this date correction. Please specify which document (for example, by invoice/receipt number or document reference) should be updated.';
       pendingCorrectionAmbiguousError = {
         code: 'AMBIGUOUS_DOCUMENT_CORRECTION',
@@ -3416,6 +3710,10 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         if (!targetIndexSet.has(imgIdx)) {
           return img;
         }
+        const imgAllRefs = getAllRefsForImage(img);
+        const dateToApply = (userInputDocRefs.size > 0 && imgAllRefs.size > 0)
+          ? (extractDocAttributedTextFacts(userInput, imgAllRefs, effectiveImageEvidence.length === 1 && isSingleDocumentScenario).date || userCorrectedDate)
+          : userCorrectedDate;
         const normalizedFields: ExtractedEvidence[] = Array.isArray(img.fields)
           ? img.fields.map(f => ({ ...f }))
           : typeof img.fields === 'object' && img.fields !== null
@@ -3480,7 +3778,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             const cleaned: ExtractedEvidence = {
               ...f,
               originalValue: f.originalValue ?? f.value,
-              value: userCorrectedDate,
+              value: dateToApply,
               confidence: 1
             };
             delete (cleaned as any).rawText;
@@ -3495,7 +3793,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             source: 'user_text',
             imageId: img.imageId,
             field: dateFieldProperName,
-            value: userCorrectedDate,
+            value: dateToApply,
             confidence: 1
           });
         }
@@ -3510,22 +3808,30 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
   }
 
   if (usingPendingImageEvidence && isValidUserAmountCorrection) {
-    const newAmounts = userAmountsForCorrection.filter(a => !pendingAmountsForCorrection.has(a));
-    const correctedCents = newAmounts.length > 0 ? newAmounts[newAmounts.length - 1] : userAmountsForCorrection[userAmountsForCorrection.length - 1];
-    const correctedAmount = correctedCents / 100;
     const oldAmountsFromUser = new Set<number>(userAmountsForCorrection.filter(a => pendingAmountsForCorrection.has(a)));
 
     const targetIndices = resolveTargetPendingImageIndices(
       effectiveImageEvidence,
       userInput,
       'amount',
-      { oldAmountCents: oldAmountsFromUser.size > 0 ? oldAmountsFromUser : pendingAmountsForCorrection }
+      {
+        oldAmountCents: oldAmountsFromUser.size > 0 ? oldAmountsFromUser : pendingAmountsForCorrection,
+        isSingleDocumentScenario
+      }
     );
 
-    if (targetIndices.length !== 1) {
-      const userDocRefs = extractNormalizedDocRefs(userInput);
-      const message = targetIndices.length === 0 && userDocRefs.size > 0
-        ? 'The specified document reference does not match any pending screenshot. Please verify the invoice or document number.'
+    const isResolvedAmountTargets =
+      targetIndices.length === 1 ||
+      (targetIndices.length > 1 && userInputDocRefs.size > 0);
+
+    if (!isResolvedAmountTargets) {
+      const anyUserDocRefMatchesPending = Array.from(userInputDocRefs).some(r =>
+        effectiveImageEvidence.some(img => getAllRefsForImage(img).has(r))
+      );
+      const message = targetIndices.length === 0 && userInputDocRefs.size > 0
+        ? (anyUserDocRefMatchesPending
+            ? 'Could not unambiguously match the provided amount to a pending document. Please state the amount directly for the target invoice or document number.'
+            : 'The specified document reference does not match any pending screenshot. Please verify the invoice or document number.')
         : 'Multiple pending documents exist. Please specify which document (for example, by invoice/receipt number) this amount correction applies to.';
       pendingCorrectionAmbiguousError = {
         code: 'AMBIGUOUS_DOCUMENT_CORRECTION',
@@ -3533,9 +3839,40 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         severity: 'ERROR'
       };
     } else {
-      const targetIdx = targetIndices[0];
-      const img = effectiveImageEvidence[targetIdx];
-      if (img) {
+      for (const targetIdx of targetIndices) {
+        const img = effectiveImageEvidence[targetIdx];
+        if (!img) continue;
+
+        const imgAllRefs = getAllRefsForImage(img);
+        const imgPendingAmounts = new Set<number>();
+        for (const line of (img.journalLines || [])) {
+          if (typeof line.debit === 'number' && line.debit > 0) imgPendingAmounts.add(Math.round(line.debit * 100));
+          if (typeof line.credit === 'number' && line.credit > 0) imgPendingAmounts.add(Math.round(line.credit * 100));
+        }
+        const rawImgFields: Array<{ field?: string; value?: unknown }> = Array.isArray(img.fields)
+          ? img.fields
+          : typeof img.fields === 'object' && img.fields !== null
+            ? Object.entries(img.fields).map(([field, value]) => ({ field, value }))
+            : [];
+        for (const f of rawImgFields) {
+          const cents = extractMonetaryFieldCents(f);
+          if (cents !== null && cents > 0) imgPendingAmounts.add(cents);
+        }
+
+        const isSingleDocInput = effectiveImageEvidence.length === 1 && isSingleDocumentScenario;
+        const targetSegments = (userInputDocRefs.size > 0 && imgAllRefs.size > 0)
+          ? extractDocAttributedTextSegments(userInput, imgAllRefs, isSingleDocInput)
+          : [userInput];
+        const targetInputText = targetSegments.length > 0 ? targetSegments.join('. ') : userInput;
+
+        const imgAttributedAmounts = (userInputDocRefs.size > 0 && imgAllRefs.size > 0)
+          ? Array.from(extractDocAttributedTextFacts(userInput, imgAllRefs, isSingleDocInput).amountsCents)
+          : [];
+        const effectiveUserAmounts = imgAttributedAmounts.length > 0 ? imgAttributedAmounts : userAmountsForCorrection;
+        const newAmounts = effectiveUserAmounts.filter(a => !imgPendingAmounts.has(a));
+        const correctedCents = newAmounts.length > 0 ? newAmounts[newAmounts.length - 1] : effectiveUserAmounts[effectiveUserAmounts.length - 1];
+        const correctedAmount = correctedCents / 100;
+        const imgOldAmountsFromUser = new Set<number>(effectiveUserAmounts.filter(a => imgPendingAmounts.has(a)));
         const normalizedFields: ExtractedEvidence[] = Array.isArray(img.fields)
           ? img.fields.map(f => ({ ...f }))
           : typeof img.fields === 'object' && img.fields !== null
@@ -3561,11 +3898,11 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             /\b(?:pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|ex(?:cl(?:uding)?)?[\s.-]*(?:gst|tax|vat)|without\s+(?:gst|tax|vat)|net\s+of\s+(?:gst|tax|vat)|tax\s+invoice)\b/gi,
             (m) => ' '.repeat(m.length)
           );
-        const taxDetectionInput = maskNonStandaloneTaxPhrases(userInput);
+        const taxDetectionInput = maskNonStandaloneTaxPhrases(targetInputText);
 
-        const mentionsSubtotal = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount)\b/i.test(userInput);
+        const mentionsSubtotal = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount)\b/i.test(targetInputText);
         const mentionsTax = /\b(?:gst|tax|vat)(?:\s+amount)?\b/i.test(taxDetectionInput);
-        const mentionsTotal = /\b(?:total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due)\b/i.test(userInput);
+        const mentionsTotal = /\b(?:total(?:\s+amount)?|invoice\s+(?:amount|total)|gross\s+(?:amount|total)|amount\s+due)\b/i.test(targetInputText);
 
         const getFieldCents = (f: ExtractedEvidence): number | null => {
           return extractMonetaryFieldCents(f);
@@ -3592,9 +3929,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             boundaryRegex = /\b(?:sub[\s-]*total|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|gst|tax|vat|date|dated)\b/i;
           }
 
-          const match = category === 'tax' ? catRegex.exec(taxDetectionInput) : catRegex.exec(userInput);
+          const match = category === 'tax' ? catRegex.exec(taxDetectionInput) : catRegex.exec(targetInputText);
           if (!match) return null;
-          const afterKeyword = userInput.slice(match.index + match[0].length);
+          const afterKeyword = targetInputText.slice(match.index + match[0].length);
           const nextBoundary = category === 'subtotal'
             ? boundaryRegex.exec(taxDetectionInput.slice(match.index + match[0].length))
             : boundaryRegex.exec(afterKeyword);
@@ -3614,9 +3951,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           }
           const positive = candidates.filter(c => !c.isNot);
           if (positive.length === 0) return null;
-          const matchingUserAmounts = positive.filter(c => userAmountsForCorrection.includes(Math.round(c.val * 100)));
+          const matchingUserAmounts = positive.filter(c => effectiveUserAmounts.includes(Math.round(c.val * 100)));
+          if (imgAttributedAmounts.length > 0 && matchingUserAmounts.length === 0) {
+            return null;
+          }
           const candidatesToUse = matchingUserAmounts.length > 0 ? matchingUserAmounts : positive;
-          const nonPending = candidatesToUse.filter(c => !pendingAmountsForCorrection.has(Math.round(c.val * 100)));
+          const nonPending = candidatesToUse.filter(c => !imgPendingAmounts.has(Math.round(c.val * 100)));
           if (nonPending.length > 0) {
             return nonPending[nonPending.length - 1].val;
           }
@@ -3691,10 +4031,10 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
             }
           });
 
-          if (oldAmountsFromUser.size > 0) {
+          if (imgOldAmountsFromUser.size > 0) {
             const oldMatchIndices = totalKeyIndices.filter(idx => {
               const c = getFieldCents(normalizedFields[idx]);
-              return c !== null && oldAmountsFromUser.has(c);
+              return c !== null && imgOldAmountsFromUser.has(c);
             });
             if (oldMatchIndices.length > 0) {
               targetFieldIndices.push(...oldMatchIndices);
@@ -3906,13 +4246,17 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           }
         }
 
-        effectiveImageEvidence[targetIdx] = {
-          ...img,
-          fields: updatedFields,
-          originalFields,
-          journalLines: updatedJournalLines,
-          originalJournalLines
-        };
+        effectiveImageEvidence = effectiveImageEvidence.map((item, idx) =>
+          idx === targetIdx
+            ? {
+                ...img,
+                fields: updatedFields,
+                originalFields,
+                journalLines: updatedJournalLines,
+                originalJournalLines
+              }
+            : item
+        );
       }
     }
   }
@@ -4029,12 +4373,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
               const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
               if (srcImg?.imageId) {
                 extImgRefs.add(srcImg.imageId.toLowerCase());
-                for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+                for (const r of extractNormalizedDocRefs(`doc no. ${srcImg.imageId}`)) extImgRefs.add(r);
               }
               const groupAttributedUserDate = extractDocAttributedTextFacts(
                 userInput,
                 extImgRefs,
-                effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+                effectiveImageEvidence.length === 1 && extractedGroups.length === 1 && isSingleDocumentScenario
               ).date;
 
               if ((rawAiDateStr && !aiDate) ||
@@ -4188,12 +4532,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
           const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
           if (srcImg?.imageId) {
             extImgRefs.add(srcImg.imageId.toLowerCase());
-            for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+            for (const r of extractNormalizedDocRefs(`doc no. ${srcImg.imageId}`)) extImgRefs.add(r);
           }
           const groupAttributedUserDate = extractDocAttributedTextFacts(
             userInput,
             extImgRefs,
-            effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+            effectiveImageEvidence.length === 1 && extractedGroups.length === 1 && isSingleDocumentScenario
           ).date;
           const resolvedDate = extDate || groupAttributedUserDate || '';
           if (!resolvedDate) {
@@ -4244,12 +4588,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         const extImgRefs = srcImg ? extractDocRefsFromImages([srcImg]) : new Set<string>();
         if (srcImg?.imageId) {
           extImgRefs.add(srcImg.imageId.toLowerCase());
-          for (const r of extractNormalizedDocRefs(`doc: ${srcImg.imageId}`)) extImgRefs.add(r);
+          for (const r of extractNormalizedDocRefs(`doc no. ${srcImg.imageId}`)) extImgRefs.add(r);
         }
         const groupAttributedUserDate = extractDocAttributedTextFacts(
           userInput,
           extImgRefs,
-          effectiveImageEvidence.length === 1 && extractedGroups.length === 1
+          effectiveImageEvidence.length === 1 && extractedGroups.length === 1 && isSingleDocumentScenario
         ).date;
         const resolvedDate = extDate || groupAttributedUserDate || '';
 
@@ -4659,52 +5003,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         fieldsOnlyErrors.push(pendingCorrectionAmbiguousError);
       }
 
-      // Collect verified date & amount sources linked to prior transaction
-      const userInputDocRefs = extractNormalizedDocRefs(userInput);
-
-      const allScenarioDocRefs = new Set<string>();
-      if (currentScenario) {
-        for (const ref of extractDocRefsFromImages(currentScenario.imageEvidence || [])) allScenarioDocRefs.add(ref);
-        for (const ref of extractDocRefsFromImages(currentScenario.pendingImageEvidence || [])) allScenarioDocRefs.add(ref);
-        for (const ref of extractNormalizedDocRefs(currentScenario.rawQuery || '')) allScenarioDocRefs.add(ref);
-        for (const e of (currentScenario.evidence || [])) {
-          const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (docRefKeyPattern.test(cleanKey) && e.value) {
-            for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
-          }
-        }
-        for (const e of (currentScenario.pendingEvidence || [])) {
-          const cleanKey = String(e.field || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-          if (docRefKeyPattern.test(cleanKey) && e.value) {
-            for (const ref of extractNormalizedDocRefs(String(e.value))) allScenarioDocRefs.add(ref);
-          }
-        }
-        for (const p of priorCommittedForImage) {
-          const pRefs = extractNormalizedDocRefs(`${p.id || ''} ${p.transactionId || ''} ${p.title || ''} ${p.summary || ''} ${p.narration || ''}`);
-          for (const ref of pRefs) allScenarioDocRefs.add(ref);
-          const imgInP = (currentScenario.imageEvidence || []).filter(im => p.sourceImageIds && p.sourceImageIds.includes(im.imageId));
-          for (const ref of extractDocRefsFromImages(imgInP)) allScenarioDocRefs.add(ref);
-        }
-      }
-      for (const ref of extractDocRefsFromImages(effectiveImageEvidence)) allScenarioDocRefs.add(ref);
-      for (const ref of userInputDocRefs) allScenarioDocRefs.add(ref);
-
-      const totalScenarioImages = new Set<string>();
-      for (const img of (currentScenario?.imageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
-      for (const img of (currentScenario?.pendingImageEvidence || [])) if (img.imageId) totalScenarioImages.add(img.imageId);
-      for (const img of effectiveImageEvidence) if (img.imageId) totalScenarioImages.add(img.imageId);
-
-      const hasMultipleImagesInScenario =
-        imageAnalysisList.length > 1 ||
-        (currentScenario?.pendingImageEvidence?.length || 0) > 1 ||
-        (currentScenario?.imageEvidence?.length || 0) > 1 ||
-        totalScenarioImages.size > 1;
-
-      const isSingleDocumentScenario =
-        !hasMultipleImagesInScenario &&
-        priorCommittedForImage.length <= 1 &&
-        allScenarioDocRefs.size <= 1;
-
+      // Collect verified date & amount sources linked to prior transaction (reusing userInputDocRefs, allScenarioDocRefs, isSingleDocumentScenario)
       const priorImgIds = new Set<string>();
       const allPriorDocRefs = new Set<string>();
       if (isFollowUpForImage && currentScenario) {
@@ -4748,7 +5047,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         for (const r of info.imgDocRefs) infoRefs.add(r);
         if (info.img.imageId) {
           infoRefs.add(info.img.imageId.toLowerCase());
-          for (const r of extractNormalizedDocRefs(`doc: ${info.img.imageId}`)) infoRefs.add(r);
+          for (const r of extractNormalizedDocRefs(`doc no. ${info.img.imageId}`)) infoRefs.add(r);
         }
 
         const userAttributed = extractDocAttributedTextFacts(

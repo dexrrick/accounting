@@ -2797,21 +2797,75 @@ export function rollbackRejectedScenarioState(
   }
 }
 
-export function extractNormalizedDocRefs(text: string): Set<string> {
-  const refs = new Set<string>();
-  if (!text || typeof text !== 'string') return refs;
-  const regex = /(?:^|[^a-z0-9])(inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)(?:[-#:_]+\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+#\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*)|([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*))(?=$|[^a-z0-9/])/gi;
+const DOC_REF_STOPWORDS = new Set<string>([
+  'is', 'was', 'are', 'were', 'for', 'of', 'to', 'from', 'in', 'on', 'at', 'by', 'with',
+  'and', 'or', 'the', 'a', 'an', 'this', 'that', 'these', 'those',
+  'date', 'dated', 'amount', 'total', 'subtotal', 'gst', 'tax', 'vat',
+  'number', 'no', 'id', 'code', 'details', 'summary', 'line', 'lines',
+  'entry', 'entries', 'journal', 'transaction', 'payment', 'receipt', 'invoice',
+  'voucher', 'bill', 'document', 'ref', 'reference', 'pending', 'missing',
+  'correct', 'unchanged', 'attached', 'uploaded', 'shown', 'below', 'above',
+  'here', 'only', 'first', 'second', 'third',
+  'sgd', 'usd', 'eur', 'gbp', 'jpy', 'aud', 'cad', 'chf', 'cny', 'rmb',
+  'hkd', 'myr', 'inr', 'nzd', 'thb', 'idr', 'php', 'vnd', 'krw', 'twd',
+  'dollar', 'dollars', 'cents',
+  'jan', 'january', 'feb', 'february', 'mar', 'march', 'apr', 'april',
+  'may', 'jun', 'june', 'jul', 'july', 'aug', 'august',
+  'sep', 'sept', 'september', 'oct', 'october', 'nov', 'november', 'dec', 'december'
+]);
+
+const MONTH_AFTER_DAY_REGEX = /^\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\b/i;
+
+export function extractDocRefOccurrences(
+  text: string
+): Array<{ startIndex: number; endIndex: number; cleanBody: string }> {
+  const occurrences: Array<{ startIndex: number; endIndex: number; cleanBody: string }> = [];
+  if (!text || typeof text !== 'string') return occurrences;
+
+  const regex = /(?:^|[^a-z0-9])(inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)(?:\s+(?:no\.?|number|num\.?|id)(?:\s+(?:is|was|are|were)\s+|\s*[-#:_.=]+\s*|\s+)([a-z0-9]+(?:[-_][a-z0-9]+)*)|[-#:_]+\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+#\s*([a-z0-9]+(?:[-_][a-z0-9]+)*)|\s+([a-z0-9]+(?:[-_][a-z0-9]+)*)|([0-9][a-z0-9]*(?:[-_][a-z0-9]+)*))(?=$|[^a-z0-9/])/gi;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(text)) !== null) {
-    const rawBody = match[2] || match[3] || match[4] || match[5];
+    const prefixOffset = match[0].match(/^[^a-z0-9]/i) ? 1 : 0;
+    const hasExplicitIndicator = Boolean(match[2] || match[3] || match[4]);
+    const rawBody = match[2] || match[3] || match[4] || match[5] || match[6];
     if (!rawBody) continue;
-    if (!/\d/.test(rawBody)) continue;
-    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(rawBody) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{4}$/.test(rawBody)) continue;
+    if (DOC_REF_STOPWORDS.has(rawBody.toLowerCase())) {
+      // Rewind past only the prefix so an adjacent doc ref (e.g. "invoice ref 101") is still scanned
+      regex.lastIndex = match.index + prefixOffset + match[1].length;
+      continue;
+    }
+    if (
+      !hasExplicitIndicator &&
+      match[5] &&
+      /^\d{1,2}(?:st|nd|rd|th)?$/i.test(rawBody) &&
+      MONTH_AFTER_DAY_REGEX.test(text.slice(match.index + match[0].length))
+    ) {
+      continue;
+    }
+    if (/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}$/.test(rawBody) || /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/.test(rawBody)) continue;
+
     const strippedBody = rawBody.replace(/^(?:inv(?:oice)?|rcp|receipt|pv|paymentvoucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)[-_]*/i, '');
     const cleanBody = (strippedBody || rawBody).replace(/[^a-z0-9]/gi, '').toLowerCase();
-    if (cleanBody && /\d/.test(cleanBody)) {
-      refs.add(cleanBody);
-    }
+    if (!cleanBody) continue;
+
+    const isValidToken =
+      /\d/.test(rawBody) ||
+      (hasExplicitIndicator && (Boolean(match[2]) || /^[A-Z0-9]+(?:[-_][A-Z0-9]+)*$/.test(rawBody)) && cleanBody.length >= 2);
+    if (!isValidToken) continue;
+
+    occurrences.push({
+      startIndex: match.index + prefixOffset,
+      endIndex: match.index + match[0].length,
+      cleanBody
+    });
+  }
+  return occurrences;
+}
+
+export function extractNormalizedDocRefs(text: string): Set<string> {
+  const refs = new Set<string>();
+  for (const occ of extractDocRefOccurrences(text)) {
+    refs.add(occ.cleanBody);
   }
   return refs;
 }
