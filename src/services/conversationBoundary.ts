@@ -143,10 +143,15 @@ export function startsNewAccountingScenario(
       const hasDefiniteNewObject = /^\s+(?:(?:the|our|your|my|its|their|his|her)\s+)new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
       const hasSubsequentAction = /\b(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then|again)(?:,\s*)?\s+(?:(?:we|the company)\s+)?$/i.test(actionLead);
       const frontedConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)((?:what\s+)?if|suppose|assuming)\b[^.!?;]*$/i.exec(actionLead);
-      const ifClauseLead = actionLead.split(/\bif\b/i).slice(1).at(-1) ?? '';
+      const ifSegments = actionLead.split(/\bif\b/i);
+      const ifClauseLead = ifSegments.slice(1).at(-1) ?? '';
       const hasCompletedIfBeforeContrast = /,[^,]+,\s*but\b/i.test(ifClauseLead);
       const ifClauseAfterContrast = ifClauseLead.split(/,\s*but\b/i).slice(1).at(-1) ?? '';
-      const hasIndependentIfContrast = !ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast);
+      const ifQuestionLead = ifSegments.at(-2) ?? '';
+      const actionSentenceTerminator = /[.!?;](?=\s|$)/.exec(actionObject)?.[0];
+      const hasDirectIfQuestion = actionSentenceTerminator === '?' &&
+        /(?:^|[,;.:])\s*(?:(?:what|how|when|where|why|which|who)\s+)?(?:can|could|will|would|shall|should|may|might|do|does|did|is|are|was|were|has|have|had)\s+\w+\b[^.!?]*$/i.test(ifQuestionLead);
+      const hasIndependentIfContrast = !ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasDirectIfQuestion;
       const frontedMarkerIsIf = /^(?:what\s+)?if$/i.test(frontedConditionalAction?.[1] ?? '');
       const isFrontedConditionalAction = Boolean(frontedConditionalAction &&
         !(frontedMarkerIsIf && hasCompletedIfBeforeContrast));

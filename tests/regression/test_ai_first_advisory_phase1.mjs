@@ -542,8 +542,18 @@ for (const call of calls) {
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine and subsequently purchased another machine for SGD 100,000?';
     const embeddedIfWithSharedSubjectContrast =
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but subsequently purchased another machine for SGD 100,000?';
+    const embeddedIfWithRepeatedSubjectContrast =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const embeddedIfWithRepeatedSubjectAfterSentence =
+      'Regarding our previous machine purchase. Can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
     const embeddedIfWithEarlierSentenceAction =
       'Regarding our previous machine purchase, we sold the old machine. We checked if the earlier invoice qualified and subsequently purchased another machine for SGD 100,000.';
+    assert.equal(startsNewAccountingScenario(embeddedIfWithRepeatedSubjectContrast, activeScenario), false,
+      'a repeated subject does not make the purchase in a directly asked if-clause independent');
+    assert.equal(assessConversationRelation(embeddedIfWithRepeatedSubjectContrast, activeScenario), 'RELATED',
+      'the repeated-subject conditional purchase remains in the earlier analysis');
+    assert.equal(startsNewAccountingScenario(embeddedIfWithRepeatedSubjectAfterSentence, activeScenario), false,
+      'a direct conditional question after a contextual sentence retains its hypothetical scope');
     assert.equal(startsNewAccountingScenario(embeddedIfPurchaseWithCompanySubject, activeScenario), false,
       'an embedded conditional purchase remains hypothetical with a company subject and time adverb');
     assert.equal(assessConversationRelation(embeddedIfPurchaseWithCompanySubject, activeScenario), 'RELATED',
@@ -592,12 +602,22 @@ for (const call of calls) {
       'Regarding our previous machine purchase, we checked if the earlier invoice qualified and subsequently purchased another machine for SGD 100,000.';
     const actualPurchaseAfterHistoricalIfContrast =
       'Regarding our previous machine purchase, we asked if we sold the old machine, but we subsequently purchased another machine for SGD 100,000.';
+    const declarativeReportBeforeActualPurchase =
+      'Regarding our previous machine purchase, what we asked was if we should have sold the old machine, but we subsequently purchased another machine for SGD 100,000.';
+    const passiveReportBeforeActualPurchase =
+      'Regarding our previous machine purchase, what was discussed was if we should have sold the old machine, but we subsequently purchased another machine for SGD 100,000.';
     assert.equal(startsNewAccountingScenario(actualPurchaseAfterHistoricalIf, activeScenario), true,
       'a past if-clause about an earlier invoice does not make a later asserted purchase hypothetical');
     assert.equal(assessConversationRelation(actualPurchaseAfterHistoricalIf, activeScenario), 'NEW',
       'a later asserted purchase remains a new analysis after a past if-clause');
     assert.equal(assessConversationRelation(actualPurchaseAfterHistoricalIfContrast, activeScenario), 'NEW',
       'a separate purchase after the comma-but contrast starts a new analysis');
+    assert.equal(startsNewAccountingScenario(declarativeReportBeforeActualPurchase, activeScenario), true,
+      'a declarative report of an earlier question does not make a subsequent purchase hypothetical');
+    assert.equal(assessConversationRelation(declarativeReportBeforeActualPurchase, activeScenario), 'NEW',
+      'a subsequent purchase after a declarative report starts a new analysis');
+    assert.equal(startsNewAccountingScenario(passiveReportBeforeActualPurchase, activeScenario), true,
+      'a passive report of an earlier question does not make a subsequent purchase hypothetical');
     const actualPurchaseAfterFrontedHistoricalIf =
       'Regarding our previous machine purchase, if the old machine qualified, we could claim allowances, but we subsequently purchased another machine.';
     assert.equal(startsNewAccountingScenario(actualPurchaseAfterFrontedHistoricalIf, activeScenario), true,
@@ -718,6 +738,8 @@ for (const call of calls) {
       { question: actualPurchaseAfterHistoricalModal, startsNewAnalysis: true },
       { question: actualPurchaseAfterHistoricalIf, startsNewAnalysis: true },
       { question: actualPurchaseAfterHistoricalIfContrast, startsNewAnalysis: true },
+      { question: declarativeReportBeforeActualPurchase, startsNewAnalysis: true },
+      { question: passiveReportBeforeActualPurchase, startsNewAnalysis: true },
       { question: actualPurchaseAfterFrontedHistoricalIf, startsNewAnalysis: true },
       { question: hypotheticalSubsequentPurchase, startsNewAnalysis: false },
       { question: hypotheticalCoordinatedPurchaseWithNewSubject, startsNewAnalysis: false },
@@ -731,6 +753,8 @@ for (const call of calls) {
       { question: embeddedIfPurchaseWithCompanySubject, startsNewAnalysis: false },
       { question: embeddedIfWithEarlierAction, startsNewAnalysis: false },
       { question: embeddedIfWithSharedSubjectContrast, startsNewAnalysis: false },
+      { question: embeddedIfWithRepeatedSubjectContrast, startsNewAnalysis: false },
+      { question: embeddedIfWithRepeatedSubjectAfterSentence, startsNewAnalysis: false },
       { question: embeddedIfWithEarlierSentenceAction, startsNewAnalysis: true },
       { question: hypotheticalPurchaseWithAlso, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithAlsoNot, startsNewAnalysis: false },
