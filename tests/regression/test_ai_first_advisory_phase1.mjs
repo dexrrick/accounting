@@ -452,6 +452,40 @@ for (const call of calls) {
       'the question still has an explicit historical reference for advisory scoping');
     assert.equal(startsNewAccountingScenario(newPurchaseComparedWithEarlierExpense, activeScenario), true,
       'a question-led new purchase does not inherit context merely because it mentions an earlier expense');
+    const subsequentPurchaseWithHistoricalReference =
+      'Regarding our previous machine purchase, we subsequently bought a new machine for SGD 100,000. What IRAS deduction rules apply to this purchase?';
+    assert.equal(hasExplicitPriorFactReference(subsequentPurchaseWithHistoricalReference), true,
+      'a new purchase can still refer to an earlier machine purchase');
+    assert.equal(startsNewAccountingScenario(subsequentPurchaseWithHistoricalReference, activeScenario), true,
+      'an explicit subsequent purchase takes priority over the retrospective lead-in');
+    assert.equal(assessConversationRelation(subsequentPurchaseWithHistoricalReference, activeScenario), 'NEW',
+      'the App starts a new analysis for the subsequent purchase');
+    const additionalPurchaseWithoutTimeMarker =
+      'Regarding our previous machine purchase, we bought another machine for SGD 100,000. What IRAS deduction rules apply?';
+    assert.equal(startsNewAccountingScenario(additionalPurchaseWithoutTimeMarker, activeScenario), true,
+      'an explicitly additional machine purchase starts a new scenario without requiring a temporal marker');
+    const independentPurchaseWithLaterHistoricalMention =
+      'Please explain how IRAS deduction rules apply to a new machine purchased for SGD 100,000, considering our earlier invoice.';
+    assert.equal(hasExplicitPriorFactReference(independentPurchaseWithLaterHistoricalMention), true,
+      'an independent purchase may still mention an earlier invoice');
+    assert.equal(startsNewAccountingScenario(independentPurchaseWithLaterHistoricalMention, activeScenario), true,
+      'a later mention of an earlier invoice does not suppress an independent transaction boundary');
+    const subsequentQuestionAfterPriorLead =
+      'Regarding our previous machine purchase, this is a separate question: we purchased a machine for SGD 100,000. What IRAS rules apply?';
+    assert.equal(hasExplicitPriorFactReference(subsequentQuestionAfterPriorLead), false,
+      'an explicit separate question clears its earlier machine reference');
+    assert.equal(startsNewAccountingScenario(subsequentQuestionAfterPriorLead, activeScenario), true,
+      'a separate transaction after the earlier-machine lead starts a new scenario');
+    const newQuestionAfterPriorInvoice =
+      'Please explain the earlier invoice. New question: we purchased a machine for SGD 100,000. What IRAS rules apply?';
+    assert.equal(hasExplicitPriorFactReference(newQuestionAfterPriorInvoice), false,
+      'an explicit new question clears its earlier-invoice reference');
+    assert.equal(startsNewAccountingScenario(newQuestionAfterPriorInvoice, activeScenario), true,
+      'a new purchase after the earlier-invoice lead starts a new scenario');
+    const historicalRestatementWithHypothetical =
+      'Regarding our previous machine purchase, the company bought a machine for SGD 100,000. What if we considered the new machine as well?';
+    assert.equal(startsNewAccountingScenario(historicalRestatementWithHypothetical, activeScenario), false,
+      'a hypothetical clause with a new-machine mention does not change a prior-fact restatement into a new transaction');
 
     const contextualIrasTurn = {
       id: 'boundary-contextual-iras-user', sender: 'user', timestamp: '', text: contextualIrasQuestion
@@ -468,6 +502,73 @@ for (const call of calls) {
       'the contextual statutory prompt preserves the user’s original wording');
     assert.equal(contextualIrasResponse.conversationBoundaryMessageId, undefined,
       'an explicitly contextual statutory question does not establish a new history boundary');
+
+    const explicitlyContextualIrasQuestions = [
+      'For the previous expense, what are the IRAS deduction rules? The expense was the supplier invoice from the earlier discussion, and the payable remains unpaid. Please connect the facts I supplied previously to the current general rules, explain which prior details could matter, and identify any material information I should still confirm before reaching a conclusion.',
+      'Please explain the earlier invoice and its IRAS deduction rules. It was the supplier invoice from our previous discussion, and it remains unpaid. Please connect the facts already supplied to this question, explain which earlier details could affect the general deduction analysis, and identify any material information I should still confirm before reaching a conclusion.'
+    ];
+    for (const [index, question] of explicitlyContextualIrasQuestions.entries()) {
+      assert.ok(question.length > 260, 'the explicit follow-up exceeds the short semantic follow-up limit');
+      assert.equal(hasExplicitPriorFactReference(question), true,
+        'an explicitly named prior expense or invoice is recognized as contextual');
+      assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
+        'the App keeps an explicitly named prior expense or invoice in the current analysis');
+      const turn = { id: `boundary-prior-fact-iras-${index}`, sender: 'user', timestamp: '', text: question };
+      const callsBeforeQuestion = boundaryCalls.length;
+      const response = await processAccountingQuery(
+        question, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousHistory, turn]
+      );
+      const questionCalls = boundaryCalls.slice(callsBeforeQuestion);
+      assert.ok(questionCalls.some(call => call.prompt.includes(priorTransaction) && call.prompt.includes(priorAnswer)),
+        'the explicit statutory follow-up sends the earlier transaction facts to the provider');
+      assert.ok(questionCalls.some(call => call.prompt.includes(question)),
+        'the provider prompt preserves the original contextual question');
+      assert.equal(response.conversationBoundaryMessageId, undefined,
+        'the explicit statutory follow-up does not reset conversation history');
+    }
+
+    const subsequentPurchaseTurn = {
+      id: 'boundary-subsequent-purchase-user',
+      sender: 'user',
+      timestamp: '',
+      text: subsequentPurchaseWithHistoricalReference
+    };
+    const callsBeforeSubsequentPurchase = boundaryCalls.length;
+    const subsequentPurchaseResponse = await processAccountingQuery(
+      subsequentPurchaseWithHistoricalReference,
+      activeScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [...previousHistory, subsequentPurchaseTurn]
+    );
+    const subsequentPurchaseCalls = boundaryCalls.slice(callsBeforeSubsequentPurchase);
+    assert.equal(subsequentPurchaseResponse.conversationBoundaryMessageId, subsequentPurchaseTurn.id,
+      'the explicitly subsequent purchase establishes a new conversation boundary');
+    assert.ok(subsequentPurchaseCalls.some(call => call.prompt.includes(subsequentPurchaseWithHistoricalReference)),
+      'the new purchase reaches statutory advice with the original question');
+    assert.ok(subsequentPurchaseCalls.every(call =>
+      !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
+    ), 'the subsequent purchase excludes earlier transaction facts from provider prompts');
+
+    for (const [index, question] of [
+      subsequentQuestionAfterPriorLead,
+      newQuestionAfterPriorInvoice
+    ].entries()) {
+      const turn = { id: `boundary-explicit-new-purchase-${index}`, sender: 'user', timestamp: '', text: question };
+      const callsBeforeQuestion = boundaryCalls.length;
+      const response = await processAccountingQuery(
+        question, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousHistory, turn]
+      );
+      const questionCalls = boundaryCalls.slice(callsBeforeQuestion);
+      assert.equal(response.conversationBoundaryMessageId, turn.id,
+        'an explicit new-question boundary is retained by the public service');
+      assert.ok(questionCalls.some(call => call.prompt.includes(question)),
+        'the new transaction reaches the provider with the original question');
+      assert.ok(questionCalls.every(call =>
+        !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
+      ), 'explicitly separate transaction prompts omit earlier invoice facts');
+    }
 
     const interpretationQuestion = 'What documents are required by ACRA?';
     const interpretationHistory = [

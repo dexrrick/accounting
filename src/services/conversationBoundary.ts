@@ -13,7 +13,7 @@ export function isJournalDisplayRequest(query: string): boolean {
 /** Recognizes a longer question that explicitly refers to facts from earlier turns. */
 export function hasExplicitPriorFactReference(query: string): boolean {
   const text = query.trim();
-  const isContextualQuestion = /^(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|what|how|can|could|would|should|does|do|is|are|explain|tell\s+me)\b/i.test(text);
+  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(text);
   if (!text || !isContextualQuestion ||
       /\b(?:new|different|separate|unrelated)\s+(?:question|transaction|analysis|case|scenario|situation)\b|\b(?:separate|different|unrelated|distinct)\s+from\b|\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b/i.test(text)) {
     return false;
@@ -23,8 +23,10 @@ export function hasExplicitPriorFactReference(query: string): boolean {
 }
 
 function startsWithPriorFactReference(query: string): boolean {
-  return /^\s*(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to)\b/i.test(query) &&
-    hasExplicitPriorFactReference(query);
+  const referenceLead = /^\s*(?:please\s+(?:explain|tell\s+me|describe|outline)\s+|(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for)\s+)/i.exec(query);
+  return Boolean(referenceLead &&
+    /^(?:(?:the|our|my|this|that)\s+)?(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b/i.test(query.slice(referenceLead[0].length)) &&
+    hasExplicitPriorFactReference(query));
 }
 
 /** Rebuilds the history that existed when a failed user turn was first sent. */
@@ -103,7 +105,8 @@ export function startsNewAccountingScenario(
   if (isDeferredTaxInquiry(query)) return true;
 
   const q = query.toLowerCase();
-  const startsNewTransaction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/.test(q);
+  const transactionAction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/i.exec(query);
+  const startsNewTransaction = Boolean(transactionAction);
   // "$2,000" begins with a non-word character, so it cannot have a word
   // boundary immediately before it. Keep currency codes word-bounded while
   // accepting the standalone dollar symbol as an amount marker.
@@ -116,6 +119,12 @@ export function startsNewAccountingScenario(
   const isIndependentPersonalCost = /\b(fine|penalt(?:y|ies)|traffic offence|personal expense|private expense)\b/.test(q) &&
     /\b(director|shareholder|owner|company)\b/.test(q) && hasTransactionDetail;
   if (isIndependentPersonalCost) return true;
+
+  const actionFollowedByNewSubject = Boolean(transactionAction &&
+    /\b(?:new|another)\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|customer|supplier)\b/i.test(
+      query.slice(transactionAction.index + transactionAction[0].length).split(/[,.!?;:]/, 1)[0]
+    ));
+  if (actionFollowedByNewSubject && hasTransactionDetail && hasNewSubject) return true;
 
   // A contextual statutory question may repeat the transaction wording and
   // amount while asking about its treatment.
