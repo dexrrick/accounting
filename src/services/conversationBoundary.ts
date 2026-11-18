@@ -10,6 +10,23 @@ export function isJournalDisplayRequest(query: string): boolean {
   return /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(query);
 }
 
+/** Recognizes a longer question that explicitly refers to facts from earlier turns. */
+export function hasExplicitPriorFactReference(query: string): boolean {
+  const text = query.trim();
+  const isContextualQuestion = /^(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|what|how|can|could|would|should|does|do|is|are|explain|tell\s+me)\b/i.test(text);
+  if (!text || !isContextualQuestion ||
+      /\b(?:new|different|separate|unrelated)\s+(?:question|transaction|analysis|case|scenario|situation)\b|\b(?:separate|different|unrelated|distinct)\s+from\b|\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b/i.test(text)) {
+    return false;
+  }
+
+  return /\b(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b|\b(?:discussed|mentioned|provided|stated|described)\s+(?:earlier|previously|above)\b/i.test(text);
+}
+
+function startsWithPriorFactReference(query: string): boolean {
+  return /^\s*(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to)\b/i.test(query) &&
+    hasExplicitPriorFactReference(query);
+}
+
 /** Rebuilds the history that existed when a failed user turn was first sent. */
 export function buildRetryConversationHistory(history: ChatMessage[], originalUserMessageId: string): ChatMessage[] {
   const originalTurnIndex = history.findIndex(message => message.id === originalUserMessageId && message.sender === 'user');
@@ -56,6 +73,7 @@ export function assessConversationRelation(
   const explicitNewSignal = /\b(new (?:question|transaction|analysis)|unrelated|separate (?:analysis|question|transaction)|different (?:analysis|question|transaction))\b/i.test(q);
 
   if (explicitNewSignal) return 'NEW';
+  if (hasExplicitPriorFactReference(query)) return 'RELATED';
   const payrollScenario = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
     ? currentScenario
     : committedScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? committedScenario : null;
@@ -98,6 +116,10 @@ export function startsNewAccountingScenario(
   const isIndependentPersonalCost = /\b(fine|penalt(?:y|ies)|traffic offence|personal expense|private expense)\b/.test(q) &&
     /\b(director|shareholder|owner|company)\b/.test(q) && hasTransactionDetail;
   if (isIndependentPersonalCost) return true;
+
+  // A contextual statutory question may repeat the transaction wording and
+  // amount while asking about its treatment.
+  if (startsWithPriorFactReference(query)) return false;
 
   // A complete narrative supersedes the active workflow even when both
   // transactions are in the same accounting domain.

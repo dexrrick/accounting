@@ -104,10 +104,15 @@ export const App: React.FC = () => {
     const isJournalRecall = isJournalDisplayRequest(text);
     setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
     try {
-      const requestScenario = options?.useProvidedScenario
-        ? activeScenario
-        : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
-      const journalRecallProposal = isJournalRecall && !committedJournalScenario ? activeScenario || undefined : undefined;
+      const journalRecallGroups = isJournalRecall
+        ? getDisplayableUncommittedJournalGroups(activeScenario, standard)
+        : [];
+      const journalRecallProposal = journalRecallGroups.length > 0 ? activeScenario || undefined : undefined;
+      const requestScenario = journalRecallProposal
+        ? null
+        : options?.useProvidedScenario
+          ? activeScenario
+          : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
       const history = retryHistory || (options?.startNewScenario
         ? [userMsg]
         : messages.some(message => message.id === userMsg.id)

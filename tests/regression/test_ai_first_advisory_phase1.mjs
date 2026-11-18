@@ -19,7 +19,7 @@ import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetri
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
 import { ChatPanel } from '../../src/components/ChatPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
-import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer } from '../../src/services/conversationBoundary.ts';
+import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, hasExplicitPriorFactReference, startsNewAccountingScenario } from '../../src/services/conversationBoundary.ts';
 import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { resolveFactAmendment, isSingleMonthlySalaryAmendment } from '../../src/services/factAmendmentService.ts';
 
@@ -419,6 +419,56 @@ for (const call of calls) {
     assert.ok(!acraFollowUpCall.prompt.includes(priorTransaction) && !acraFollowUpCall.prompt.includes(priorAnswer),
       'the contextual follow-up still excludes the older transaction history');
 
+    const contextualIrasQuestion = 'Regarding our earlier expense, what are the IRAS deduction rules? The transaction was the supplier invoice we discussed earlier and remains unpaid. Please explain how the facts already provided in that earlier discussion may affect the general deduction rules, and identify any material information I would still need to confirm.';
+    assert.ok(contextualIrasQuestion.length > 260,
+      'the explicit prior-fact test exceeds the short follow-up length limit');
+    assert.equal(hasExplicitPriorFactReference(contextualIrasQuestion), true,
+      'a longer statutory question explicitly referring to an earlier expense retains context');
+    assert.equal(assessConversationRelation(contextualIrasQuestion, activeScenario), 'RELATED',
+      'the App recognizes an explicit reference to earlier facts as a continuation');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our earlier equipment purchase, the company bought a machine for SGD 100,000. What IRAS deduction rules apply?',
+      activeScenario
+    ), false, 'a contextual statutory question may repeat purchase wording and amounts without resetting the scenario');
+    assert.equal(hasExplicitPriorFactReference('New question regarding our earlier expense: what are the IRAS rules?'), false,
+      'an explicit new question takes precedence over an earlier-fact reference');
+    assert.equal(hasExplicitPriorFactReference('Ignore the earlier expense and explain the general IRAS rules.'), false,
+      'an explicit instruction to ignore earlier facts clears contextual retention');
+    const newPurchaseWithHistoricalReference =
+      'We bought new equipment for SGD 100,000 to replace our previous asset described earlier.';
+    assert.equal(hasExplicitPriorFactReference(newPurchaseWithHistoricalReference), false,
+      'a complete new transaction remains independent when it mentions an earlier asset');
+    assert.equal(startsNewAccountingScenario(newPurchaseWithHistoricalReference, activeScenario), true,
+      'a complete new purchase still starts a separate transaction despite its historical reference');
+    const clearlySeparatePurchase =
+      'What are the IRAS deduction rules for a new machine purchased for SGD 100,000, separate from our earlier expense?';
+    assert.equal(hasExplicitPriorFactReference(clearlySeparatePurchase), false,
+      'a clearly separate new transaction does not inherit an earlier expense reference');
+    assert.equal(startsNewAccountingScenario(clearlySeparatePurchase, activeScenario), true,
+      'a complete machine purchase remains independent when the question explicitly separates it from the prior expense');
+    const newPurchaseComparedWithEarlierExpense =
+      'What are the IRAS deduction rules for a new machine purchased for SGD 100,000, like our earlier expense?';
+    assert.equal(hasExplicitPriorFactReference(newPurchaseComparedWithEarlierExpense), true,
+      'the question still has an explicit historical reference for advisory scoping');
+    assert.equal(startsNewAccountingScenario(newPurchaseComparedWithEarlierExpense, activeScenario), true,
+      'a question-led new purchase does not inherit context merely because it mentions an earlier expense');
+
+    const contextualIrasTurn = {
+      id: 'boundary-contextual-iras-user', sender: 'user', timestamp: '', text: contextualIrasQuestion
+    };
+    const contextualIrasHistory = [...previousHistory, contextualIrasTurn];
+    const contextualIrasCallStart = boundaryCalls.length;
+    const contextualIrasResponse = await processAccountingQuery(
+      contextualIrasQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', contextualIrasHistory
+    );
+    const contextualIrasCalls = boundaryCalls.slice(contextualIrasCallStart);
+    assert.ok(contextualIrasCalls.some(call => call.prompt.includes(priorTransaction) && call.prompt.includes(priorAnswer)),
+      'IRAS statutory interpretation and answer generation retain the referenced transaction facts');
+    assert.ok(contextualIrasCalls.some(call => call.prompt.includes(contextualIrasQuestion)),
+      'the contextual statutory prompt preserves the user’s original wording');
+    assert.equal(contextualIrasResponse.conversationBoundaryMessageId, undefined,
+      'an explicitly contextual statutory question does not establish a new history boundary');
+
     const interpretationQuestion = 'What documents are required by ACRA?';
     const interpretationHistory = [
       ...previousHistory,
@@ -814,7 +864,7 @@ try {
       }
       if (/^(?:show|where is) the double entry$/i.test(query.trim())) {
         const proposal = args[8];
-        if (proposal?.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION') {
+      if (proposal) {
           return processAccountingQuery(...args);
         }
         const hasConditional = proposal?.directGroups?.some(group => group.authorityStatus === 'CONDITIONAL');
@@ -984,7 +1034,7 @@ try {
   assert.match(proposalMarkup, /AI Proposed/, 'the UI keeps the existing AI Proposed warning visible');
   await appUi.chatProps.onSendMessage('show the double entry');
   appUi = renderApp();
-  assert.equal(appCalls.at(-1)[1], null, 'recalling a journal with no committed snapshot sends no proposal as accounting context');
+  assert.equal(appCalls.at(-1)[1], null, 'recalling a journal with no committed snapshot sends no committed context');
   assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
     'a pure recall keeps the active AI proposal visibly marked as proposed');
 
@@ -998,9 +1048,14 @@ try {
   assert.equal(appUi.journalProps.assumptions[0].id, 'assumption-usd', 'proposal display preserves its assumptions when IDs collide');
   await appUi.chatProps.onSendMessage('show the double entry');
   appUi = renderApp();
-  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll entry'],
-    'pure recall displays the separately retained deterministic journal');
-  assert.equal(appUi.journalProps.functionalCurrency, 'SGD', 'committed recall uses committed journal currency');
+  assert.strictEqual(appCalls.at(-1)[8], proposalScenario,
+    'App supplies the current proposal separately when an older committed journal exists');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /AI-Proposed Journal \(Not Confirmed\)/,
+    'real service recall describes the current proposal rather than the older committed journal');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
+    'pure recall keeps the current proposed groups visible alongside the older committed snapshot');
+  assert.equal(appUi.journalProps.functionalCurrency, 'USD', 'the current proposal recall preserves its currency');
+  assert.equal(appUi.journalProps.groups[1].totalDebit, 72000, 'the current proposal recall preserves its amount');
 
   const correctionPromptCount = appUi.chatProps.messages.filter(message => message.relationPrompt).length;
   assert.equal(assessConversationRelation(salaryCorrection, deterministicScenario, deterministicScenario), 'RELATED',
@@ -1016,6 +1071,18 @@ try {
   assert.equal(appCalls.at(-1)[1].scenarioType, 'PAYROLL_CPF_SALARY', 'the correction is routed with payroll context');
   assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [72000],
     'the corrected App journal balances at the corrected amount');
+  await appUi.chatProps.onSendMessage('What did you say about the deadline?');
+  appUi = renderApp();
+  assert.equal(appUi.inputProps.scenario.directGroups.length, 0,
+    'the advisory-only response replaces the current scenario with no journal');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Corrected payroll entry'],
+    'the last committed journal remains available while the advisory-only response is current');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Corrected payroll entry'],
+    'journal recall still returns the prior committed entry after an advisory-only response');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 72000,
+    'the advisory-only response preserves the last committed amount');
 
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();
@@ -1066,6 +1133,8 @@ try {
   };
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();
+  appUi.inputProps.onScenarioChange(deterministicScenario);
+  appUi = renderApp();
   appUi.inputProps.onScenarioChange(conditionalEquipmentScenario);
   appUi = renderApp();
   assert.deepEqual(appUi.journalProps.groups.map(group => group.authorityStatus), ['CONDITIONAL'],
@@ -1075,6 +1144,8 @@ try {
   assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/);
   await appUi.chatProps.onSendMessage('show the double entry');
   appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1], null,
+    'a valid conditional proposal recall does not route the older committed journal as current context');
   assert.strictEqual(appCalls.at(-1)[8], conditionalEquipmentScenario);
   assert.match(appUi.chatProps.messages.at(-1).fullText, /Conditional Journal \(Unconfirmed\)/);
   assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [50000]);
@@ -1109,8 +1180,8 @@ try {
   appUi = renderApp();
   await appUi.chatProps.onSendMessage('What are annual filing deadlines?');
   appUi = renderApp();
-  assert.equal(appCalls.at(-1)[5].some(message => message.text === 'What are annual filing deadlines?'), true,
-    'the standalone statutory question is sent to the service');
+  assert.equal(appCalls.at(-1)[5]?.some(message => message.text === 'What are annual filing deadlines?'), true,
+    `the standalone statutory question is sent to the service (${appUi.inputProps.scenario?.transactionTitle}; ${appUi.chatProps.messages.at(-1)?.text})`);
   await appUi.chatProps.onSendMessage('What did you say about the deadline?');
   appUi = renderApp();
   assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [

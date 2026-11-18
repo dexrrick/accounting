@@ -24,7 +24,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
-import { isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
+import { hasExplicitPriorFactReference, isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
@@ -1029,12 +1029,13 @@ async function processAccountingQueryCore(
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
   const deterministicClassification = classifyQuestion(userInput);
   const explicitNewQuestion = /\b(?:new question|unrelated|(?:separate|different) (?:question|transaction))\b/i.test(userInput);
+  const isContextualFollowUp = !explicitNewQuestion &&
+    (isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
   const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&
     isSingleMonthlySalaryAmendment(userInput);
-  const retainConversationContext = !explicitNewQuestion &&
-    (isShortSemanticFollowUp(userInput) || isPayrollSalaryAmendment);
+  const retainConversationContext = isContextualFollowUp || (!explicitNewQuestion && isPayrollSalaryAmendment);
   const aiFirstAdvisoryEligible = isAiFirstAdvisoryEligible(
     userInput, providerOrApiKey, hasImages, activeScenario, outputPreference
   );
@@ -1216,7 +1217,7 @@ async function processAccountingQueryCore(
       amendmentResolution = resolveFactAmendment(userInput, null);
       // Advisory continuations need labeled history, not transaction parsing.
       // A standalone question or unresolved mixed journal still clears it.
-      if (unsupportedAccountingRuleExplanationRuntimeEnabled || unresolvedMixedJournal || !isShortSemanticFollowUp(userInput)) {
+      if (unsupportedAccountingRuleExplanationRuntimeEnabled || unresolvedMixedJournal || !isContextualFollowUp) {
         const currentUserTurn = [...chatHistory].reverse().find(message =>
           message.sender === 'user' && message.text.trim() === userInput.trim());
         relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
@@ -1253,7 +1254,7 @@ async function processAccountingQueryCore(
   const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isShortSemanticFollowUp(userInput);
+    !isContextualFollowUp;
   if (standaloneIrasQuestion) {
     activeScenario = null;
     amendmentResolution = resolveFactAmendment(userInput, null);
