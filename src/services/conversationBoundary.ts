@@ -141,11 +141,20 @@ export function startsNewAccountingScenario(
         /^\s+(?:(?:some|new)\s+)?(?:equipment|machinery)\b/i.test(actionObject);
       const hasDefiniteNewObject = /^\s+(?:(?:the|our|your|my|its|their|his|her)\s+)new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
       const hasSubsequentAction = /\b(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then|again)(?:,\s*)?\s+(?:(?:we|the company)\s+)?$/i.test(actionLead);
-      const isConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead);
-      const isInterrogativeConditionalAction = /\b(?:what|how)\b[^.!?;]*\bif\s+(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then)?\s*$/i.test(actionLead);
+      const frontedConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)((?:what\s+)?if|suppose|assuming)\b[^.!?;]*$/i.exec(actionLead);
+      const ifClauseLead = actionLead.split(/\bif\b/i).slice(1).at(-1) ?? '';
+      const hasCompletedIfBeforeContrast = /,[^,]+,\s*but\b/i.test(ifClauseLead);
+      const frontedMarkerIsIf = /^(?:what\s+)?if$/i.test(frontedConditionalAction?.[1] ?? '');
+      const isFrontedConditionalAction = Boolean(frontedConditionalAction &&
+        !(frontedMarkerIsIf && hasCompletedIfBeforeContrast));
+      const actionLeadWithIfAsideRemoved = actionLead.replace(/\bif\s*,\s*[^,]+,\s*/gi, 'if ');
+      const finalActionClause = actionLeadWithIfAsideRemoved.split(/[,;]|\b(?:and|but)\b/i).at(-1) ?? '';
+      // Coordinated transaction verbs can still share the same condition.
+      const isEmbeddedConditionalAction = /\bif\b/i.test(finalActionClause) ||
+        (!hasCompletedIfBeforeContrast && Boolean(ifClauseLead.match(transactionActionPattern)));
       // Keep the modal tied to an auxiliary immediately before the purchase verb.
       const isModalAction = HYPOTHETICAL_MODAL_ACTION.test(actionLead);
-      const isHypothetical = isConditionalAction || isInterrogativeConditionalAction || isModalAction;
+      const isHypothetical = isFrontedConditionalAction || isEmbeddedConditionalAction || isModalAction;
       return !isHypothetical && (hasSeparateObject ||
         (hasSubsequentAction && (hasIndefiniteObject || hasDefiniteNewObject)));
     });

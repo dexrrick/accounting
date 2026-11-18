@@ -333,11 +333,17 @@ for (const call of calls) {
   const boundaryFetch = globalThis.fetch;
   const priorTransaction = 'The previous supplier invoice was SGD 7,500 and remains unpaid.';
   const priorAnswer = 'Prior complete answer: the expense is accrued and the payable remains until settlement.';
+  const previousMachinePurchaseQuestion = 'How should we account for the machine we purchased for SGD 80,000?';
+  const previousMachinePurchaseAnswer = 'Prior machine purchase answer: recognize the machine as property, plant and equipment.';
   const independentQuestion = 'Explain how accounting applies to the new machine the company purchased for SGD 100,000.';
   const followUpQuestion = 'How does that apply to the invoice?';
   const previousHistory = [
     { id: 'boundary-prior-user', sender: 'user', timestamp: '', text: priorTransaction },
     { id: 'boundary-prior-answer', sender: 'assistant', timestamp: '', text: 'Short preview', fullText: priorAnswer }
+  ];
+  const previousMachinePurchaseHistory = [
+    { id: 'boundary-prior-machine-user', sender: 'user', timestamp: '', text: previousMachinePurchaseQuestion },
+    { id: 'boundary-prior-machine-answer', sender: 'assistant', timestamp: '', text: previousMachinePurchaseAnswer }
   ];
   globalThis.fetch = async (input, init) => {
     const url = String(input);
@@ -500,16 +506,46 @@ for (const call of calls) {
       'the App retains context when a definite new-object description has no subsequent marker');
     const hypotheticalSubsequentPurchase =
       'Regarding our previous machine purchase, suppose we subsequently purchased another machine...';
+    const hypotheticalCoordinatedPurchaseWithNewSubject =
+      'Regarding our previous machine purchase, suppose we sold the old machine and we subsequently purchased another machine?';
+    const hypotheticalPurchaseAfterContrast =
+      'Regarding our previous machine purchase, suppose we sold the old machine, but purchased another machine instead?';
+    const hypotheticalPurchaseAfterAside =
+      'Regarding our previous machine purchase, suppose that, after reviewing the options, we purchased another machine?';
+    const hypotheticalFrontedIfAcrossConjunction =
+      'Regarding our previous machine purchase, if we sold the old machine and we subsequently purchased another machine, could we claim allowances?';
     assert.equal(startsNewAccountingScenario(hypotheticalSubsequentPurchase, activeScenario), false,
       'a suppose clause governing the subsequent purchase remains hypothetical');
     assert.equal(assessConversationRelation(hypotheticalSubsequentPurchase, activeScenario), 'RELATED',
       'a hypothetical subsequent purchase remains in the earlier analysis');
+    const hypotheticalCoordinatedPurchase =
+      'Regarding our previous machine purchase, suppose we sold the old machine and subsequently purchased another machine?';
+    assert.equal(startsNewAccountingScenario(hypotheticalCoordinatedPurchase, activeScenario), false,
+      'a coordinated purchase action remains governed by the preceding hypothetical clause');
+    assert.equal(assessConversationRelation(hypotheticalCoordinatedPurchase, activeScenario), 'RELATED',
+      'the coordinated hypothetical purchase retains the earlier analysis');
     const interrogativeConditionalPurchase =
       'Regarding our previous machine purchase, what would happen if we subsequently purchased another machine?';
     assert.equal(startsNewAccountingScenario(interrogativeConditionalPurchase, activeScenario), false,
       'an embedded what-if condition governing the purchase remains hypothetical');
     assert.equal(assessConversationRelation(interrogativeConditionalPurchase, activeScenario), 'RELATED',
       'an embedded what-if purchase remains in the earlier analysis');
+    const embeddedIfPurchase =
+      'Regarding our previous machine purchase, can we claim capital allowances if we subsequently purchased another machine for SGD 100,000?';
+    assert.equal(startsNewAccountingScenario(embeddedIfPurchase, activeScenario), false,
+      'an embedded if-clause governing a subsequent purchase remains hypothetical');
+    assert.equal(assessConversationRelation(embeddedIfPurchase, activeScenario), 'RELATED',
+      'an embedded conditional purchase remains in the earlier analysis');
+    const embeddedIfPurchaseWithCompanySubject =
+      'Regarding our previous machine purchase, would the same treatment apply if our subsidiary later purchased another machine?';
+    const embeddedIfWithEarlierAction =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine and subsequently purchased another machine for SGD 100,000?';
+    const embeddedIfWithEarlierSentenceAction =
+      'Regarding our previous machine purchase, we sold the old machine. We checked if the earlier invoice qualified and subsequently purchased another machine for SGD 100,000.';
+    assert.equal(startsNewAccountingScenario(embeddedIfPurchaseWithCompanySubject, activeScenario), false,
+      'an embedded conditional purchase remains hypothetical with a company subject and time adverb');
+    assert.equal(assessConversationRelation(embeddedIfPurchaseWithCompanySubject, activeScenario), 'RELATED',
+      'the company-subject conditional purchase remains in the earlier analysis');
     assert.equal(startsNewAccountingScenario(
       'Regarding our previous machine purchase, we could subsequently have purchased another machine.',
       activeScenario
@@ -548,6 +584,20 @@ for (const call of calls) {
       'a historical negative claim does not make a later actual purchase hypothetical');
     assert.equal(assessConversationRelation(actualPurchaseAfterHistoricalModal, activeScenario), 'NEW',
       'a later actual purchase after a historical modal starts a new analysis');
+    const actualPurchaseAfterHistoricalIf =
+      'Regarding our previous machine purchase, we checked if the earlier invoice qualified, and then we subsequently purchased another machine for SGD 100,000.';
+    const actualPurchaseAfterHistoricalIfWithoutComma =
+      'Regarding our previous machine purchase, we checked if the earlier invoice qualified and subsequently purchased another machine for SGD 100,000.';
+    assert.equal(startsNewAccountingScenario(actualPurchaseAfterHistoricalIf, activeScenario), true,
+      'a past if-clause about an earlier invoice does not make a later asserted purchase hypothetical');
+    assert.equal(assessConversationRelation(actualPurchaseAfterHistoricalIf, activeScenario), 'NEW',
+      'a later asserted purchase remains a new analysis after a past if-clause');
+    const actualPurchaseAfterFrontedHistoricalIf =
+      'Regarding our previous machine purchase, if the old machine qualified, we could claim allowances, but we subsequently purchased another machine.';
+    assert.equal(startsNewAccountingScenario(actualPurchaseAfterFrontedHistoricalIf, activeScenario), true,
+      'a fronted historical condition before a separate asserted purchase does not keep the old analysis');
+    assert.equal(assessConversationRelation(actualPurchaseAfterFrontedHistoricalIf, activeScenario), 'NEW',
+      'a fronted historical condition does not suppress a later purchase boundary');
     const additionalPurchaseWithoutTimeMarker =
       'Regarding our previous machine purchase, we bought another machine for SGD 100,000. What IRAS deduction rules apply?';
     assert.equal(startsNewAccountingScenario(additionalPurchaseWithoutTimeMarker, activeScenario), true,
@@ -660,8 +710,20 @@ for (const call of calls) {
       { question: possessiveSubsequentMachinePurchase, startsNewAnalysis: true },
       { question: definitePurchaseWithoutSubsequentMarker, startsNewAnalysis: false },
       { question: actualPurchaseAfterHistoricalModal, startsNewAnalysis: true },
+      { question: actualPurchaseAfterHistoricalIf, startsNewAnalysis: true },
+      { question: actualPurchaseAfterFrontedHistoricalIf, startsNewAnalysis: true },
       { question: hypotheticalSubsequentPurchase, startsNewAnalysis: false },
+      { question: hypotheticalCoordinatedPurchaseWithNewSubject, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseAfterContrast, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseAfterAside, startsNewAnalysis: false },
+      { question: hypotheticalFrontedIfAcrossConjunction, startsNewAnalysis: false },
+      { question: actualPurchaseAfterHistoricalIfWithoutComma, startsNewAnalysis: true },
+      { question: hypotheticalCoordinatedPurchase, startsNewAnalysis: false },
       { question: interrogativeConditionalPurchase, startsNewAnalysis: false },
+      { question: embeddedIfPurchase, startsNewAnalysis: false },
+      { question: embeddedIfPurchaseWithCompanySubject, startsNewAnalysis: false },
+      { question: embeddedIfWithEarlierAction, startsNewAnalysis: false },
+      { question: embeddedIfWithEarlierSentenceAction, startsNewAnalysis: true },
       { question: hypotheticalPurchaseWithAlso, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithAlsoNot, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithProbably, startsNewAnalysis: false },
@@ -671,7 +733,7 @@ for (const call of calls) {
       const turn = { id: `boundary-subsequent-purchase-case-${index}`, sender: 'user', timestamp: '', text: question };
       const callsBeforeQuestion = boundaryCalls.length;
       const response = await processAccountingQuery(
-        question, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousHistory, turn]
+        question, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousMachinePurchaseHistory, turn]
       );
       const questionCalls = boundaryCalls.slice(callsBeforeQuestion);
       assert.equal(response.conversationBoundaryMessageId, startsNewAnalysis ? turn.id : undefined,
@@ -682,12 +744,14 @@ for (const call of calls) {
         'the provider receives the original subsequent-purchase wording');
       if (startsNewAnalysis) {
         assert.ok(questionCalls.every(call =>
-          !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
-        ), 'a real subsequent purchase excludes earlier user and assistant facts from every provider prompt');
+          !call.prompt.includes(previousMachinePurchaseQuestion) && !call.prompt.includes(previousMachinePurchaseAnswer)
+        ), 'a real subsequent purchase excludes the earlier machine question and answer from every provider prompt');
       } else {
         assert.ok(questionCalls.some(call =>
-          call.prompt.includes(priorTransaction) && call.prompt.includes(priorAnswer)
-        ), 'a hypothetical subsequent purchase retains earlier user and assistant facts in the provider prompt');
+          call.prompt.includes(previousMachinePurchaseQuestion) &&
+          call.prompt.includes(previousMachinePurchaseAnswer) &&
+          call.prompt.includes(question)
+        ), 'a hypothetical purchase prompt retains the earlier machine question, answer and current question together');
       }
     }
 
