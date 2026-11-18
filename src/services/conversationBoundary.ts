@@ -3,11 +3,12 @@ import type { ChatMessage } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 
-const MODAL_ACTION_MODIFIERS = String.raw`(?:\s+(?:[a-z]+ly|also|again|still|instead|later|afterwards|then|not|even|just|already|ever|never|well))*`;
+const ACTION_MODIFIERS = String.raw`(?:\s+(?:[a-z]+ly|also|again|still|instead|later|afterwards|then|not|even|just|already|ever|never|well))*`;
 const HYPOTHETICAL_MODAL_ACTION = new RegExp(
-  String.raw`\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?${MODAL_ACTION_MODIFIERS}\s+(?:have|be)${MODAL_ACTION_MODIFIERS}\s*$`,
+  String.raw`\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?${ACTION_MODIFIERS}\s+(?:have|be)${ACTION_MODIFIERS}\s*$`,
   'i'
 );
+const ACTION_MODIFIERS_ONLY = new RegExp(`^(?:\\s+had)?${ACTION_MODIFIERS}\\s*$`, 'i');
 
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
@@ -144,14 +145,16 @@ export function startsNewAccountingScenario(
       const frontedConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)((?:what\s+)?if|suppose|assuming)\b[^.!?;]*$/i.exec(actionLead);
       const ifClauseLead = actionLead.split(/\bif\b/i).slice(1).at(-1) ?? '';
       const hasCompletedIfBeforeContrast = /,[^,]+,\s*but\b/i.test(ifClauseLead);
+      const ifClauseAfterContrast = ifClauseLead.split(/,\s*but\b/i).slice(1).at(-1) ?? '';
+      const hasIndependentIfContrast = !ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast);
       const frontedMarkerIsIf = /^(?:what\s+)?if$/i.test(frontedConditionalAction?.[1] ?? '');
       const isFrontedConditionalAction = Boolean(frontedConditionalAction &&
         !(frontedMarkerIsIf && hasCompletedIfBeforeContrast));
       const actionLeadWithIfAsideRemoved = actionLead.replace(/\bif\s*,\s*[^,]+,\s*/gi, 'if ');
       const finalActionClause = actionLeadWithIfAsideRemoved.split(/[,;]|\b(?:and|but)\b/i).at(-1) ?? '';
-      // Coordinated transaction verbs can still share the same condition.
+      // A contrast that shares the subject can still be part of the embedded condition.
       const isEmbeddedConditionalAction = /\bif\b/i.test(finalActionClause) ||
-        (!hasCompletedIfBeforeContrast && Boolean(ifClauseLead.match(transactionActionPattern)));
+        (!hasIndependentIfContrast && Boolean(ifClauseLead.match(transactionActionPattern)));
       // Keep the modal tied to an auxiliary immediately before the purchase verb.
       const isModalAction = HYPOTHETICAL_MODAL_ACTION.test(actionLead);
       const isHypothetical = isFrontedConditionalAction || isEmbeddedConditionalAction || isModalAction;
