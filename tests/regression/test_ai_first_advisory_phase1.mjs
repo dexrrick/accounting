@@ -546,6 +546,28 @@ for (const call of calls) {
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
     const embeddedIfWithRepeatedSubjectAfterSentence =
       'Regarding our previous machine purchase. Can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const indirectIfQuestionWithRepeatedSubject =
+      'Regarding our previous machine purchase, please advise whether we can claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const indirectIfRequestWithPeriod =
+      'Regarding our previous machine purchase, please advise whether we can claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000.';
+    const extendedWhIfQuestionWithRepeatedSubject =
+      'Regarding our previous machine purchase, how much capital allowance can we claim if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const whatIfQuestionWithNounPhrase =
+      'Regarding our previous machine purchase, what capital allowances can we claim if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const whichIfQuestionWithNounPhrase =
+      'Regarding our previous machine purchase, which capital allowances can we claim if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const actualPurchaseAfterIfWithInFact =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but in fact we subsequently purchased another machine for SGD 100,000?';
+    const actualPurchaseAfterIfWithActually =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we actually subsequently purchased another machine for SGD 100,000?';
+    const hypotheticalPurchaseWithLaterActually =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000, and would that be treated as hypothetical? Actually, the purchase is only hypothetical.';
+    const passiveReportBeforeActualPurchaseWithTag =
+      'Regarding our previous machine purchase, what was discussed was if we should have sold the old machine, but we subsequently purchased another machine for SGD 100,000, correct?';
+    const reportedQuestionBeforeActualPurchase =
+      'Regarding our previous machine purchase, what we asked earlier was whether we can claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000, correct?';
+    const reportedThirdPartyQuestionBeforeActualPurchase =
+      'Regarding our previous machine purchase, what the accountant asked was whether we can claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000, correct?';
     const embeddedIfWithEarlierSentenceAction =
       'Regarding our previous machine purchase, we sold the old machine. We checked if the earlier invoice qualified and subsequently purchased another machine for SGD 100,000.';
     assert.equal(startsNewAccountingScenario(embeddedIfWithRepeatedSubjectContrast, activeScenario), false,
@@ -554,6 +576,32 @@ for (const call of calls) {
       'the repeated-subject conditional purchase remains in the earlier analysis');
     assert.equal(startsNewAccountingScenario(embeddedIfWithRepeatedSubjectAfterSentence, activeScenario), false,
       'a direct conditional question after a contextual sentence retains its hypothetical scope');
+    for (const question of [
+      indirectIfQuestionWithRepeatedSubject,
+      indirectIfRequestWithPeriod,
+      extendedWhIfQuestionWithRepeatedSubject,
+      whatIfQuestionWithNounPhrase,
+      whichIfQuestionWithNounPhrase
+    ]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), false,
+        'an indirect request or extended wh-question keeps the replacement purchase hypothetical');
+      assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
+        'an indirect or extended conditional question retains the earlier analysis');
+    }
+    for (const question of [actualPurchaseAfterIfWithInFact, actualPurchaseAfterIfWithActually]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), true,
+        'a factual marker in the contrast establishes that the replacement purchase occurred');
+      assert.equal(assessConversationRelation(question, activeScenario), 'NEW',
+        'an explicitly factual replacement purchase starts a new analysis');
+    }
+    assert.equal(startsNewAccountingScenario(hypotheticalPurchaseWithLaterActually, activeScenario), false,
+      'a later sentence containing actually does not turn a hypothetical replacement purchase into a factual one');
+    assert.equal(startsNewAccountingScenario(passiveReportBeforeActualPurchaseWithTag, activeScenario), true,
+      'a reported passive question ending with a tag question remains historical');
+    assert.equal(startsNewAccountingScenario(reportedQuestionBeforeActualPurchase, activeScenario), true,
+      'a reported earlier question is not mistaken for the current question before an actual purchase');
+    assert.equal(startsNewAccountingScenario(reportedThirdPartyQuestionBeforeActualPurchase, activeScenario), true,
+      'a third-party reported question is not mistaken for the current question before an actual purchase');
     assert.equal(startsNewAccountingScenario(embeddedIfPurchaseWithCompanySubject, activeScenario), false,
       'an embedded conditional purchase remains hypothetical with a company subject and time adverb');
     assert.equal(assessConversationRelation(embeddedIfPurchaseWithCompanySubject, activeScenario), 'RELATED',
@@ -578,12 +626,15 @@ for (const call of calls) {
       'Regarding our previous machine purchase, we could even have purchased another machine for SGD 100,000. What would its tax treatment be?';
     const hypotheticalPurchaseWithJust =
       'Regarding our previous machine purchase, we could have just purchased another machine for SGD 100,000. What would its tax treatment be?';
+    const hypotheticalPurchaseWithActually =
+      'Regarding our previous machine purchase, we could actually have purchased another machine for SGD 100,000. What would its tax treatment be?';
     for (const question of [
       hypotheticalPurchaseWithAlso,
       hypotheticalPurchaseWithAlsoNot,
       hypotheticalPurchaseWithProbably,
       hypotheticalPurchaseWithEven,
-      hypotheticalPurchaseWithJust
+      hypotheticalPurchaseWithJust,
+      hypotheticalPurchaseWithActually
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
         'adverbs in a modal perfect purchase keep the earlier scenario');
@@ -755,12 +806,24 @@ for (const call of calls) {
       { question: embeddedIfWithSharedSubjectContrast, startsNewAnalysis: false },
       { question: embeddedIfWithRepeatedSubjectContrast, startsNewAnalysis: false },
       { question: embeddedIfWithRepeatedSubjectAfterSentence, startsNewAnalysis: false },
+      { question: indirectIfQuestionWithRepeatedSubject, startsNewAnalysis: false },
+      { question: indirectIfRequestWithPeriod, startsNewAnalysis: false },
+      { question: extendedWhIfQuestionWithRepeatedSubject, startsNewAnalysis: false },
+      { question: whatIfQuestionWithNounPhrase, startsNewAnalysis: false },
+      { question: whichIfQuestionWithNounPhrase, startsNewAnalysis: false },
+      { question: actualPurchaseAfterIfWithInFact, startsNewAnalysis: true },
+      { question: actualPurchaseAfterIfWithActually, startsNewAnalysis: true },
       { question: embeddedIfWithEarlierSentenceAction, startsNewAnalysis: true },
       { question: hypotheticalPurchaseWithAlso, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithAlsoNot, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithProbably, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithEven, startsNewAnalysis: false },
-      { question: hypotheticalPurchaseWithJust, startsNewAnalysis: false }
+      { question: hypotheticalPurchaseWithJust, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithActually, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithLaterActually, startsNewAnalysis: false },
+      { question: passiveReportBeforeActualPurchaseWithTag, startsNewAnalysis: true },
+      { question: reportedQuestionBeforeActualPurchase, startsNewAnalysis: true },
+      { question: reportedThirdPartyQuestionBeforeActualPurchase, startsNewAnalysis: true }
     ].entries()) {
       const turn = { id: `boundary-subsequent-purchase-case-${index}`, sender: 'user', timestamp: '', text: question };
       const callsBeforeQuestion = boundaryCalls.length;

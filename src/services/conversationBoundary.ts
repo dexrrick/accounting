@@ -10,6 +10,13 @@ const HYPOTHETICAL_MODAL_ACTION = new RegExp(
 );
 const ACTION_MODIFIERS_ONLY = new RegExp(`^(?:\\s+had)?${ACTION_MODIFIERS}\\s*$`, 'i');
 
+const INTERROGATIVE_AUXILIARY = '(?:can|could|will|would|shall|should|may|might|do|does|did|is|are|was|were|has|have|had)';
+const INTERROGATIVE_WORD = '(?:what|how|when|where|why|which|who)';
+const CURRENT_INTERROGATIVE_HEAD = new RegExp(
+  String.raw`(?:^|[,;.:])\s*(?:(?:how\s+(?:much|many)|what|which)(?:\s+(?!\b(?:${INTERROGATIVE_AUXILIARY}|i|we|you|they|he|she|it|that|whether|if)\b)[a-z]+){0,6}\s+${INTERROGATIVE_AUXILIARY}\s+(?!\b(?:whether|if|that)\b)\w+\b|(?:${INTERROGATIVE_WORD}\s+)?${INTERROGATIVE_AUXILIARY}\s+\w+\b[^.!?]*$)`,
+  'i'
+);
+
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
 /** A journal-display request reads an existing result and should not be routed as a transaction. */
@@ -148,10 +155,17 @@ export function startsNewAccountingScenario(
       const hasCompletedIfBeforeContrast = /,[^,]+,\s*but\b/i.test(ifClauseLead);
       const ifClauseAfterContrast = ifClauseLead.split(/,\s*but\b/i).slice(1).at(-1) ?? '';
       const ifQuestionLead = ifSegments.at(-2) ?? '';
+      const currentQuestionLead = ifQuestionLead.split(/[.!?;](?=\s|$)/).at(-1) ?? ifQuestionLead;
       const actionSentenceTerminator = /[.!?;](?=\s|$)/.exec(actionObject)?.[0];
-      const hasDirectIfQuestion = actionSentenceTerminator === '?' &&
-        /(?:^|[,;.:])\s*(?:(?:what|how|when|where|why|which|who)\s+)?(?:can|could|will|would|shall|should|may|might|do|does|did|is|are|was|were|has|have|had)\s+\w+\b[^.!?]*$/i.test(ifQuestionLead);
-      const hasIndependentIfContrast = !ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasDirectIfQuestion;
+      const isReportedPassiveQuestion = /\bwhat\s+(?:is|are|was|were)\s+\w+\s+(?:is|are|was|were)\s*$/i.test(currentQuestionLead);
+      const hasCurrentInterrogative = !isReportedPassiveQuestion &&
+        CURRENT_INTERROGATIVE_HEAD.test(currentQuestionLead);
+      const startsCurrentIndirectRequest = /(?:^|[,;.:])\s*(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b[^.!?]*$/i.test(currentQuestionLead);
+      const hasDirectIfQuestion = startsCurrentIndirectRequest ||
+        (actionSentenceTerminator === '?' && hasCurrentInterrogative);
+      const hasExplicitFactualContrast = /\b(?:in fact|actually)\b/i.test(ifClauseAfterContrast);
+      const hasIndependentIfContrast = hasExplicitFactualContrast ||
+        (!ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasDirectIfQuestion);
       const frontedMarkerIsIf = /^(?:what\s+)?if$/i.test(frontedConditionalAction?.[1] ?? '');
       const isFrontedConditionalAction = Boolean(frontedConditionalAction &&
         !(frontedMarkerIsIf && hasCompletedIfBeforeContrast));
