@@ -437,20 +437,46 @@ export function extractAmountsCentsFromText(text: string): Set<number> {
   return amounts;
 }
 
-const OTHER_DOC_ORDINAL_REGEX = /\b(?:(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|other|another|previous|earlier|prior|next|subsequent|remaining|last|latter|former)\s+(?:screenshot|image|invoice|document|receipt|bill|voucher|one|item)|(?:screenshot|image|item)\s*#?\s*\d+)\b/i;
+const DOC_ORDINAL_MODIFIERS = 'first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|other|another|previous|earlier|prior|next|subsequent|following|remaining|last|latter|former|separate|different|distinct|new|additional|extra|unrelated|unlisted|unknown|unnamed|unnumbered|unidentified';
+const DOC_HEADING_NOUNS = 'screenshot|image|photo|picture|scan|invoice|tax\\s+invoice|document|doc|receipt|bill|voucher|payment\\s+voucher|credit\\s+note|debit\\s+note|statement|quotation|quote|purchase\\s+order|order|attachment|file|page|slip|memo|one|item|entry|transaction';
+const NUMBERED_NON_REF_HEADINGS = '(?:screenshot|image|photo|picture|scan|item|page|attachment|file|slip)\\s*(?:#|no\\.?\\s*)?\\d+|(?:invoice|document|doc|receipt|bill|voucher)\\s*#\\s*[1-9]\\b';
+const OTHER_DOC_ORDINAL_REGEX = new RegExp(`\\b(?:(?:${DOC_ORDINAL_MODIFIERS})\\s+(?:${DOC_HEADING_NOUNS})|${NUMBERED_NON_REF_HEADINGS})\\b`, 'i');
+const NON_INDEXED_OTHER_DOC_REGEX = new RegExp(`\\b(?:other|another|previous|earlier|prior|next|subsequent|following|remaining|separate|different|distinct|new|additional|extra|unrelated|unlisted|unknown|unnamed|unnumbered|unidentified)\\s+(?:${DOC_HEADING_NOUNS})\\b`, 'i');
+const NEW_DOC_HEADING_REGEX = new RegExp(`(?:^|[\\s.;!?—–-])(?:(?:(?:the|a|an)\\s+)?(?:${DOC_ORDINAL_MODIFIERS})\\s+(?:${DOC_HEADING_NOUNS})|${NUMBERED_NON_REF_HEADINGS})(?:\\s+(?:details|corrections?|updates?|info|information))?\\s*:`, 'i');
+const INLINE_NEW_DOC_HEADING_SPLIT_REGEX = new RegExp(`\\s+(?=(?:(?:(?:the|a|an)\\s+)?(?:${DOC_ORDINAL_MODIFIERS})\\s+(?:${DOC_HEADING_NOUNS})|${NUMBERED_NON_REF_HEADINGS})(?:\\s+(?:details|corrections?|updates?|info|information))?\\s*:)`, 'gi');
 const ABBR_BEFORE_DOT_REGEX = /(?:^|[\s(])(?:no|num|dr|cr|mr|mrs|ms|st|ltd|pte|inc|co|corp|ref|doc|inv|rcp|pv|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|e\.g|i\.e|etc|vs)$/i;
-const TRAILING_LINKER_REGEX = /(?:^|\s)(?:(?:is|are|was|were|be)\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to|attributed\s+to|assigned\s+to)\s*$/i;
+const POSITIVE_PARTICIPLE_LINKER_WORDS = 'attributed|attributable|assigned|assignable|allocated|allocable|applied|applicable|related|linked|connected|tied|attached|associated|meant|intended|belonging|pertaining|referring|corresponding|charged|chargeable|billed|billable|payable|recorded|posted';
+const TRAILING_LINKER_REGEX = new RegExp(`(?:^|\\s|[,;—–\\-():])(?:(?:(?:is|are|was|were|be|being|been)\\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:)|(?:(?:is|are|was|were|be|being|been)\\s+)?(?:${POSITIVE_PARTICIPLE_LINKER_WORDS})\\s+(?:to|for|with|under|in|on)|(?:belongs?|appl(?:y|ies|ied)|relates?|pertains?|refers?|corresponds?|matches|match|goes|went)\\s+(?:to|for|with)?)\\s*$`, 'i');
 const TRAILING_COPULA_REGEX = /\s+(?:is|are|was|were)\s*$/i;
-const NEGATIVE_TRAILING_LINKER_REGEX = /(?:^|[\s,;—–-])(?:(?:(?:is|are|was|were|be|being|been)\s+)?(?:not|never)\s+(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\b|(?:related|linked|connected|tied|attached|attributed|assigned|associated|meant|intended|applicable|belonging|pertaining|referring|corresponding)\s+(?:to|with|for)\b)?|(?:isn't|aren't|wasn't|weren't)\s*(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\b|(?:related|linked|connected|tied|attached|attributed|assigned|associated|meant|intended|applicable|belonging|pertaining|referring|corresponding)\s+(?:to|with|for)\b)?|(?:(?:does|do|did)\s+not|doesn't|don't|didn't|cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\s+(?:(?:be\s+)?(?:used?\s+for|appl(?:y|ied)\s+to|belong\s+to|relate\s+to|pertain\s+to|refer\s+to|correspond\s+to|match|attributed\s+to|assigned\s+to|associated\s+with|linked\s+to|meant\s+for|intended\s+for)\b)?|(?:(?:is|are|was|were)\s+)?(?:unrelated|unconnected)\s+(?:to|with)\b|(?:has|have|had)\s+(?:nothing\s+to\s+do\s+with|no\s+(?:relation|connection|link|bearing)\s+(?:to|with|on))\b|(?:(?:is|are|was|were)\s+)?(?:different\s+(?:from|than|to)|distinct\s+from|separate\s+from|independent\s+(?:of|from))\b|differs?\s+from\b|(?:other\s+than|apart\s+from|aside\s+from|except(?:\s+for)?|excluding|instead\s+of|rather\s+than|as\s+opposed\s+to|in\s+contrast\s+(?:to|with)|contrary\s+to|unlike|compared\s+(?:to|with)|versus|vs\.?))\s*$/i;
-const NEGATIVE_IMPERATIVE_CLAUSE_REGEX = /\b(?:do\s+not|don't|never|cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\s+(?:be\s+)?(?:use|used|apply|applied|attribute|attributed|assign|assigned|associate|associated|link|linked|record|recorded|post|posted)\b/i;
-const NEGATIVE_POST_DOC_PREDICATE_REGEX = /^\s*(?:,\s*)?(?:(?:which|that|it|this)\s+)?(?:(?:is|are|was|were)\s+(?:not|never|unrelated|unconnected|different|distinct|separate|independent)\b|(?:isn't|aren't|wasn't|weren't)\b|(?:does|do|did)\s+not\b|(?:doesn't|don't|didn't)\b|(?:has|have|had)\s+(?:nothing\s+to\s+do\s+with|no\s+(?:relation|connection|link|bearing)\s+(?:to|with|on))\b|differs?\s+from\b|(?:unrelated|unconnected)\s+(?:to|with)\b|(?:different\s+(?:from|than|to)|distinct\s+from|separate\s+from|independent\s+(?:of|from))\b|(?:not\s+(?:for|to|related\s+to|linked\s+to|connected\s+to|attributed\s+to|assigned\s+to|associated\s+with|meant\s+for|intended\s+for|applicable\s+to|dated)\b)|(?:cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\b|(?:not|never|instead\s+of|rather\s+than|apart\s+from|aside\s+from|other\s+than|except(?:\s+for)?)\b)/i;
-const NEGATIVE_SUBCLAUSE_PREDICATE_REGEX = /\b(?:(?:is|are|was|were)\s+(?:not\s+(?:applicable|relevant|related|linked|connected|attributed|assigned|associated|meant|intended|for\s+this|for\s+it)|unrelated|unconnected|irrelevant|inapplicable)|(?:does|do|did)\s+not\s+(?:apply|belong|relate|pertain|refer|correspond)|(?:doesn't|don't|didn't)\s+(?:apply|belong|relate|pertain|refer|correspond)|(?:has|have|had)\s+(?:nothing\s+to\s+do|no\s+(?:relation|connection|link|bearing)))\b/i;
+const NEGATIVE_PARTICIPLE_WORDS = 'related|linked|connected|tied|attached|attributed|attributable|assigned|assignable|allocated|allocable|associated|meant|intended|applicable|belonging|pertaining|referring|corresponding|chargeable|billable|payable|referable|traceable|connectable|relatable|transferable|deductible|claimable|postable|recordable';
+const NEGATIVE_TRAILING_LINKER_REGEX = new RegExp(`(?:^|[\\s,;—–-])(?:(?:(?:is|are|was|were|be|being|been)\\s+)?(?:not|never)\\s+(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\\b|(?:${NEGATIVE_PARTICIPLE_WORDS})\\s+(?:to|with|for|under|in|on)\\b)?|(?:isn't|aren't|wasn't|weren't)\\s*(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\\b|(?:${NEGATIVE_PARTICIPLE_WORDS})\\s+(?:to|with|for|under|in|on)\\b)?|(?:cannot|can't|should\\s+not|shouldn't|must\\s+not|mustn't|will\\s+not|won't|would\\s+not|wouldn't|could\\s+not|couldn't)\\s+be\\s+(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\\b|(?:(?:does|do|did)\\s+not|doesn't|don't|didn't|cannot|can't|should\\s+not|shouldn't|must\\s+not|mustn't|will\\s+not|won't|would\\s+not|wouldn't|could\\s+not|couldn't)\\s+(?:(?:be\\s+)?(?:used?\\s+for|appl(?:y|ied)\\s+to|belong\\s+to|relate\\s+to|pertain\\s+to|refer\\s+to|correspond\\s+to|match|attributed\\s+to|assigned\\s+to|associated\\s+with|linked\\s+to|meant\\s+for|intended\\s+for|charged\\s+to|billed\\s+to|paid\\s+to|allocated\\s+to|posted\\s+to|recorded\\s+under)\\b)?|(?:(?:is|are|was|were|be|being|been|does|do|did|has|have|had|can|could|should|would|will|must)\\s+)?(?:not|never|no|neither|nor|without)\\s+(?:(?!(?:and|or|but|while|whereas)\\b)[a-z]+(?:\\s+(?!(?:and|or|but|while|whereas)\\b)[a-z]+){0,3}\\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\\b|(?:(?:is|are|was|were)\\s+)?(?:unrelated|unconnected|extraneous|irrelevant|inapplicable|incompatible)\\s+(?:to|with)\\b|(?:has|have|had)\\s+(?:nothing\\s+to\\s+do\\s+with|no\\s+(?:relation|connection|link|bearing)\\s+(?:to|with|on))\\b|(?:(?:is|are|was|were)\\s+)?(?:different\\s+(?:from|than|to)|distinct\\s+from|separate\\s+from|independent\\s+(?:of|from))\\b|differs?\\s+from\\b|(?:other\\s+than|apart\\s+from|aside\\s+from|except(?:\\s+for)?|excluding|instead\\s+of|rather\\s+than|as\\s+opposed\\s+to|in\\s+contrast\\s+(?:to|with)|contrary\\s+to|unlike|compared\\s+(?:to|with)|versus|vs\\.?))\\s*$`, 'i');
+const NEGATIVE_IMPERATIVE_CLAUSE_REGEX = /\b(?:do\s+not|don't|never|cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\s+(?:be\s+)?(?:use|used|apply|applied|attribute|attributed|assign|assigned|allocate|allocated|charge|charged|bill|billed|associate|associated|link|linked|record|recorded|post|posted)\b/i;
+const NEGATIVE_POST_DOC_PREDICATE_REGEX = new RegExp(`^\\s*(?:,\\s*)?(?:(?:which|that|it|this)\\s+)?(?:(?:is|are|was|were)\\s+(?:not|never|unrelated|unconnected|extraneous|irrelevant|inapplicable|incompatible|different|distinct|separate|independent)\\b|(?:isn't|aren't|wasn't|weren't)\\b|(?:does|do|did)\\s+not\\b|(?:doesn't|don't|didn't)\\b|(?:has|have|had)\\s+(?:nothing\\s+to\\s+do\\s+with|no\\s+(?:relation|connection|link|bearing)\\s+(?:to|with|on))\\b|differs?\\s+from\\b|(?:unrelated|unconnected|extraneous|irrelevant|inapplicable|incompatible)\\s+(?:to|with)\\b|(?:different\\s+(?:from|than|to)|distinct\\s+from|separate\\s+from|independent\\s+(?:of|from))\\b|(?:not\\s+(?:for|to|related\\s+to|linked\\s+to|connected\\s+to|(?:${NEGATIVE_PARTICIPLE_WORDS})\\s+(?:to|with|for)|dated|on)\\b)|(?:cannot|can't|should\\s+not|shouldn't|must\\s+not|mustn't)\\b|(?:not|never|instead\\s+of|rather\\s+than|apart\\s+from|aside\\s+from|other\\s+than|except(?:\\s+for)?)\\b)`, 'i');
+const NEGATIVE_SUBCLAUSE_PREDICATE_REGEX = new RegExp(`\\b(?:(?:is|are|was|were)\\s+(?:not\\s+(?:applicable|relevant|related|linked|connected|${NEGATIVE_PARTICIPLE_WORDS}|for\\s+this|for\\s+it|correct|right|accurate|valid|true|the\\s+(?:(?:correct|right|actual|true)\\s+)?(?:date|amount|total|figure|value|invoice|document))|unrelated|unconnected|extraneous|irrelevant|inapplicable|incompatible|wrong|incorrect|invalid|erroneous|mistaken|rejected|disputed|false)|(?:does|do|did)\\s+not\\s+(?:apply|belong|relate|pertain|refer|correspond|match)|(?:doesn't|don't|didn't)\\s+(?:apply|belong|relate|pertain|refer|correspond|match)|(?:has|have|had)\\s+(?:nothing\\s+to\\s+do|no\\s+(?:relation|connection|link|bearing)))\\b`, 'i');
 const FORWARD_CLAUSE_INTRODUCER_REGEX = /^(?:for|to|of|on|in|under|from|regarding|concerning|re:)\s*$/i;
 const CONJOINING_GAP_REGEX = /^\s*(?:,|&|\/|\band\b|\bor\b|,\s*(?:and|or))\s*$/i;
-const SUBCLAUSE_SPLIT_REGEX = /,\s*(?:while|whereas|but|and|however|though|although|unlike)\b\s*|,\s+(?!(?:\d{3}|\d{4})\b)|\s*:\s+|\s+\b(?:while|whereas|but|however|though|although|unlike|compared\s+(?:to|with)|versus|vs\.?)\b\s+|(?:,\s*|\s+)(?=\b(?:instead\s+of|rather\s+than|apart\s+from|aside\s+from|other\s+than|except(?:\s+for)?)\b)|\s*[—–]\s*/gi;
+const SUBCLAUSE_SPLIT_REGEX = /,\s*(?:while|whereas|but|and|however|though|although|unlike)\b\s*|,\s+(?!(?:\d{3}|\d{4})\b)|\s*:\s+|\s+\b(?:while|whereas|but|however|though|although|unlike|compared\s+(?:to|with)|versus|vs\.?)\b\s+|(?:,\s*|\s+)(?=(?:(?:is|are|was|were|be)\s+)?(?:not|never)\s+(?:(?:actually|really|definitely|certainly|even|for|at|on|the)\s+){0,2}(?:dated\b|on\b|amount\b|total\b|figure\b|value\b|the\s+(?:date|amount|total|figure|value)\b|(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d|\d)|\b(?:instead\s+of|rather\s+than|as\s+opposed\s+to|apart\s+from|aside\s+from|other\s+than|except(?:\s+for)?|excluding)\b)|\s*[—–]\s*/gi;
+
+const AMOUNT_VALUE_TOKEN_PATTERN = '(?:(?:for|at|as\\s+of|on)\\s+)?(?:(?:the\\s+)?(?:amount|total|figure|value|sum)\\s+(?:of\\s+)?)?(?:(?:S\\$|\\$|SGD|USD|EUR|GBP)\\s*\\d[\\d,]*(?:\\.\\d+)?|\\d[\\d,]*(?:\\.\\d+)?\\s*(?:SGD|USD|EUR|GBP|dollars?)\\b)(?:\\s+(?:amount|total|figure|value|sum)\\b)?';
+const DATE_VALUE_TOKEN_PATTERN = '(?:(?:for|at|as\\s+of|on)\\s+)?(?:(?:the\\s+)?date\\s+(?:of\\s+)?)?(?:\\d{1,2}[/-]\\d{1,2}[/-]\\d{2,4}|\\d{4}[/-]\\d{1,2}[/-]\\d{1,2}|\\d{1,2}\\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{2,4}|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+\\d{2,4})(?:\\s+date\\b)?';
+const FACT_VALUE_TOKEN_PATTERN = `(?:(?:dated(?:\\s+on)?|on)\\s+${DATE_VALUE_TOKEN_PATTERN}|${DATE_VALUE_TOKEN_PATTERN}|${AMOUNT_VALUE_TOKEN_PATTERN})`;
+const INLINE_NEGATED_FACT_REGEX = new RegExp(
+  `(?:,\\s*(?:and\\s+)?|\\s+and\\s+|\\s+|^)(?:(?:(?:is|are|was|were|be|does|do|did)\\s+)?(?:not|never)|isn't|aren't|wasn't|weren't|doesn't|don't|didn't|instead\\s+of|rather\\s+than|as\\s+opposed\\s+to|other\\s+than|apart\\s+from|aside\\s+from|except(?:\\s+for)?|excluding)\\s+(?:(?:actually|really|definitely|certainly|even|for|at|on|the)\\s+){0,2}${FACT_VALUE_TOKEN_PATTERN}(?:\\s+(?:(?:on|dated(?:\\s+on)?|at)\\s+${DATE_VALUE_TOKEN_PATTERN}|(?:for|of|with)\\s+${AMOUNT_VALUE_TOKEN_PATTERN}|(?:and\\s+not|or(?:\\s+not)?|nor)\\s+${FACT_VALUE_TOKEN_PATTERN}))*(?=\\s*$|[\\s,.;:!?—–\\-)]|\\s+\\b(?:but|while|whereas|however|and|is|are|was|were|for|to|on|in|under)\\b)`,
+  'gi'
+);
+
+function stripInlineNegatedValues(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(
+      /\(\s*(?:(?:is|are|was|were)\s+)?(?:not|never|instead\s+of|rather\s+than|as\s+opposed\s+to|other\s+than|apart\s+from|aside\s+from|except(?:\s+for)?|excluding)\b[^)]*\)/gi,
+      ' '
+    )
+    .replace(INLINE_NEGATED_FACT_REGEX, ' ');
+}
 
 function splitIntoSentenceSpans(text: string): Array<{ start: number; end: number; text: string }> {
-  const spans: Array<{ start: number; end: number; text: string }> = [];
+  const rawSpans: Array<{ start: number; end: number; text: string }> = [];
   const delimRegex = /[;\n!?]+|\.(?=\s|$)/g;
   let start = 0;
   let m: RegExpExecArray | null;
@@ -461,11 +487,31 @@ function splitIntoSentenceSpans(text: string): Array<{ start: number; end: numbe
       if (/\d/.test(prevChar) && /\d/.test(nextChar)) continue;
       if (ABBR_BEFORE_DOT_REGEX.test(text.slice(0, m.index))) continue;
     }
-    spans.push({ start, end: m.index, text: text.slice(start, m.index) });
+    rawSpans.push({ start, end: m.index, text: text.slice(start, m.index) });
     start = m.index + m[0].length;
   }
   if (start <= text.length) {
-    spans.push({ start, end: text.length, text: text.slice(start) });
+    rawSpans.push({ start, end: text.length, text: text.slice(start) });
+  }
+
+  const spans: Array<{ start: number; end: number; text: string }> = [];
+  for (const span of rawSpans) {
+    INLINE_NEW_DOC_HEADING_SPLIT_REGEX.lastIndex = 0;
+    let subStart = 0;
+    let hm: RegExpExecArray | null;
+    while ((hm = INLINE_NEW_DOC_HEADING_SPLIT_REGEX.exec(span.text)) !== null) {
+      spans.push({
+        start: span.start + subStart,
+        end: span.start + hm.index,
+        text: span.text.slice(subStart, hm.index)
+      });
+      subStart = hm.index + hm[0].length;
+    }
+    spans.push({
+      start: span.start + subStart,
+      end: span.end,
+      text: span.text.slice(subStart)
+    });
   }
   return spans;
 }
@@ -534,10 +580,52 @@ function filterOutOtherDocumentSubClauses(clause: string): string {
   const kept = refinedParts.filter(
     part =>
       !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+      !NEW_DOC_HEADING_REGEX.test(part) &&
       !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) &&
       !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part)
   );
-  return kept.join(' ').trim();
+  return stripInlineNegatedValues(kept.join(' ')).replace(/\s+/g, ' ').trim();
+}
+
+const FACT_MATCH_REGEX_FOR_LINKER =
+  /(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s*(?:SGD|USD|EUR|GBP|dollars?)\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/gi;
+
+const POSITIVE_FACT_TO_DOC_TAIL_REGEX = new RegExp(
+  `^[\\s,;:—–\\-()]*(?:(?:is|are|was|were|be)|(?:(?:is|are|was|were|be)\\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:)|(?:(?:is|are|was|were|be|being|been)\\s+)?(?:${POSITIVE_PARTICIPLE_LINKER_WORDS})\\s+(?:to|for|with|under|in|on)|(?:belongs?|appl(?:y|ies|ied)|relates?|pertains?|refers?|corresponds?|matches|match|goes|went)\\s+(?:to|for|with)?)(?:\\s+(?:the\\s+)?(?:invoice|tax\\s+invoice|document|doc|receipt|bill|voucher|payment\\s+voucher|credit\\s+note|debit\\s+note|item|ref(?:erence)?))?[\\s,;:—–\\-()]*$`,
+  'i'
+);
+
+function hasValidPositiveFactToDocLinker(beforeText: string): boolean {
+  if (!beforeText || !hasMonetaryOrDateFact(beforeText)) return true;
+
+  FACT_MATCH_REGEX_FOR_LINKER.lastIndex = 0;
+  let lastFactEnd = -1;
+  let fm: RegExpExecArray | null;
+  while ((fm = FACT_MATCH_REGEX_FOR_LINKER.exec(beforeText)) !== null) {
+    lastFactEnd = fm.index + fm[0].length;
+  }
+  if (lastFactEnd < 0) return true;
+
+  let tail = beforeText.slice(lastFactEnd);
+  // Consume immediate trailing unit, tax/GST qualifier, or fact noun attached to the fact
+  tail = tail.replace(
+    /^\s*(?:(?:SGD|USD|EUR|GBP|dollars?)\b|\([^)]*(?:gst|tax|vat|net|gross|total|subtotal|incl|excl)[^)]*\)|(?:amount|total|date)\b)*/i,
+    ''
+  );
+
+  if (
+    NEGATIVE_TRAILING_LINKER_REGEX.test(tail) ||
+    NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(tail) ||
+    /\b(?:not|never|no|neither|nor|unrelated|unconnected|extraneous|irrelevant|inapplicable|incompatible|prior|subsequent|different|distinct|separate|independent|differs?|excluding|except)\b/i.test(tail)
+  ) {
+    return false;
+  }
+
+  if (/^[\s,;:—–\-()]*$/.test(tail)) {
+    return true;
+  }
+
+  return POSITIVE_FACT_TO_DOC_TAIL_REGEX.test(tail);
 }
 
 function sanitizeAttributedDocClause(beforeDoc: string, docToken: string, afterDoc: string): string {
@@ -554,35 +642,48 @@ function sanitizeAttributedDocClause(beforeDoc: string, docToken: string, afterD
         }
       }
     }
-    beforeParts = splitTopLevelSubClauses(effectiveBeforeDoc);
-    if (beforeParts.length > 0) {
-      const lastPart = beforeParts[beforeParts.length - 1];
-      if (NEGATIVE_TRAILING_LINKER_REGEX.test(lastPart) || NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(lastPart)) {
-        beforeParts = [];
+    effectiveBeforeDoc = stripInlineNegatedValues(effectiveBeforeDoc);
+    if (hasMonetaryOrDateFact(effectiveBeforeDoc) && !hasValidPositiveFactToDocLinker(effectiveBeforeDoc)) {
+      beforeParts = [];
+    } else {
+      beforeParts = splitTopLevelSubClauses(effectiveBeforeDoc);
+      if (beforeParts.length > 0) {
+        const lastPart = beforeParts[beforeParts.length - 1];
+        if (NEGATIVE_TRAILING_LINKER_REGEX.test(lastPart) || NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(lastPart)) {
+          beforeParts = [];
+        }
       }
     }
   }
-  const cleanedBefore = beforeParts
-    .filter(
-      part =>
-        !OTHER_DOC_ORDINAL_REGEX.test(part) &&
-        !NEGATIVE_TRAILING_LINKER_REGEX.test(part) &&
-        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part) &&
-        !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part)
-    )
-    .join(' ')
+  const cleanedBefore = stripInlineNegatedValues(
+    beforeParts
+      .filter(
+        part =>
+          !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+          !NEW_DOC_HEADING_REGEX.test(part) &&
+          !NEGATIVE_TRAILING_LINKER_REGEX.test(part) &&
+          !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part) &&
+          !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part)
+      )
+      .join(' ')
+  )
+    .replace(/\s+/g, ' ')
     .trim();
 
   const afterParts = afterDoc ? splitTopLevelSubClauses(afterDoc) : [];
-  const cleanedAfter = afterParts
-    .filter(
-      part =>
-        !OTHER_DOC_ORDINAL_REGEX.test(part) &&
-        !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(part) &&
-        !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) &&
-        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part)
-    )
-    .join(' ')
+  const cleanedAfter = stripInlineNegatedValues(
+    afterParts
+      .filter(
+        part =>
+          !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+          !NEW_DOC_HEADING_REGEX.test(part) &&
+          !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(part) &&
+          !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) &&
+          !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part)
+      )
+      .join(' ')
+  )
+    .replace(/\s+/g, ' ')
     .trim();
 
   if (!/[a-z0-9]/i.test(cleanedBefore) && !/[a-z0-9]/i.test(cleanedAfter)) {
@@ -630,11 +731,22 @@ function hasMonetaryOrDateFact(text: string): boolean {
 }
 
 function hasPositiveTrailingLinker(text: string): boolean {
-  return (
-    (TRAILING_LINKER_REGEX.test(text) || TRAILING_COPULA_REGEX.test(text)) &&
-    !NEGATIVE_TRAILING_LINKER_REGEX.test(text) &&
-    !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(text)
-  );
+  if (
+    !(TRAILING_LINKER_REGEX.test(text) || TRAILING_COPULA_REGEX.test(text)) ||
+    NEGATIVE_TRAILING_LINKER_REGEX.test(text) ||
+    NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(text)
+  ) {
+    return false;
+  }
+  if (
+    new RegExp(
+      `\\b(?:is|are|was|were|be|being|been)\\s+(?!for\\b|to\\b|of\\b|on\\b|in\\b|under\\b|from\\b|regarding\\b|concerning\\b|the\\b|${POSITIVE_PARTICIPLE_LINKER_WORDS.replace(/\|/g, '\\b|')}\\b)[a-z]+\\s+(?:to|for|with|of|on|in|under|from)\\s*$`,
+      'i'
+    ).test(text)
+  ) {
+    return false;
+  }
+  return !hasMonetaryOrDateFact(text) || hasValidPositiveFactToDocLinker(text);
 }
 
 function isInternalFactConjunction(
@@ -651,6 +763,7 @@ function isInternalFactConjunction(
   }
   const prevSeg = between.slice(prevB ? prevB.end : 0, b.index);
   const nextSeg = between.slice(b.end, nextB ? nextB.index : between.length);
+  const nextSegInBetween = between.slice(b.end, nextB ? nextB.index : between.length);
   const afterB = between.slice(b.end);
 
   const prevHasAmt = extractAmountsCentsFromText(prevSeg).size > 0;
@@ -686,14 +799,42 @@ function isInternalFactConjunction(
   }
 
   const prevHasOwnPredicate = /\b(?:is|are|was|were|has|have|had|totals?|equals?)\b|^\s*[:=—–-]/i.test(prevSeg);
-  const afterHasOwnClauseVerb = /\b(?:is|was|has|totals?|equals?|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to)\b/i.test(trimmedAfterB);
+  const afterHasOwnClauseVerb =
+    /\b(?:is|are|was|were|be|being|been|have|had|does|do|did|isn't|aren't|wasn't|weren't|doesn't|don't|didn't|hasn't|haven't|hadn't|cannot|can't|should|shouldn't|must|mustn't|will|won't|would|wouldn't|could|couldn't|has|totals?|equals?|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to|refers?\s+to|corresponds?\s+to|matches|match|differs?\s+from)\b/i.test(trimmedAfterB) ||
+    NEGATIVE_TRAILING_LINKER_REGEX.test(trimmedAfterB) ||
+    NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(trimmedAfterB);
   if (prevHasOwnPredicate && afterHasOwnClauseVerb) {
     return false;
   }
-  if (hasPositiveTrailingLinker(trimmedAfterB) && !/\b(?:are|were|belong|apply|relate|pertain)\b/i.test(trimmedAfterB)) {
-    // Singular trailing linker (e.g. "is for", "was for", "belongs to") agrees with a single subject in afterB, not a compound "A and B" subject
-    if (prevHasOwnPredicate || /^(?:(?:the|a|an|its)\s+)/i.test(trimmedAfterB)) {
+  if (NEGATIVE_TRAILING_LINKER_REGEX.test(trimmedAfterB)) {
+    const isSingularNegVerb =
+      /\b(?:is|was|does|has|isn't|wasn't|doesn't|hasn't|differs)\b/i.test(trimmedAfterB) &&
+      !/\b(?:are|were|do|have|aren't|weren't|don't|haven't|differ)\b/i.test(trimmedAfterB);
+    if (isSingularNegVerb) {
       return false;
+    }
+    const prevAttachedDirectlyToPrevDoc = !prevB || !hasMonetaryOrDateFact(between.slice(0, prevB.index));
+    if (
+      prevHasOwnPredicate ||
+      /^(?:(?:the|a|an|its)\s+)/i.test(trimmedAfterB) ||
+      (!prevB && NEGATIVE_TRAILING_LINKER_REGEX.test(nextSegInBetween)) ||
+      (prevAttachedDirectlyToPrevDoc && NEGATIVE_TRAILING_LINKER_REGEX.test(nextSegInBetween))
+    ) {
+      return false;
+    }
+  }
+  if (hasPositiveTrailingLinker(trimmedAfterB)) {
+    const isSingularPosVerb =
+      /\b(?:is|was|belongs?|appl(?:ies|ied)|relates?|pertains?|refers?|corresponds?|matches)\b/i.test(trimmedAfterB) &&
+      !/\b(?:are|were|belong|apply|relate|pertain|refer|correspond|match)\b/i.test(trimmedAfterB);
+    if (isSingularPosVerb) {
+      return false;
+    }
+    if (!/\b(?:are|were|belong|apply|relate|pertain|refer|correspond|match)\b/i.test(trimmedAfterB)) {
+      // Singular trailing linker (e.g. "is for", "was for", "belongs to") agrees with a single subject in afterB, not a compound "A and B" subject
+      if (prevHasOwnPredicate || /^(?:(?:the|a|an|its)\s+)/i.test(trimmedAfterB)) {
+        return false;
+      }
     }
   }
 
@@ -778,6 +919,137 @@ function splitBetweenDocRefs(
   return { left: '', right: '' };
 }
 
+function stripNegatedClausesAndValues(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  const docOccurrences = extractDocRefOccurrences(text);
+  const sentenceSpans = splitIntoSentenceSpans(text);
+  const keptSpans: string[] = [];
+  let suspendedByUnreferencedDocHeading = false;
+
+  for (const span of sentenceSpans) {
+    if (!span.text.trim()) continue;
+    const sentOccs = docOccurrences
+      .filter(o => o.startIndex >= span.start && o.endIndex <= span.end)
+      .map(o => ({
+        startIndex: o.startIndex - span.start,
+        endIndex: o.endIndex - span.start,
+        cleanBody: o.cleanBody
+      }));
+
+    if (sentOccs.length === 0) {
+      const isUnreferencedDocHeading =
+        NEW_DOC_HEADING_REGEX.test(span.text) ||
+        NON_INDEXED_OTHER_DOC_REGEX.test(span.text) ||
+        (docOccurrences.length > 0 && OTHER_DOC_ORDINAL_REGEX.test(span.text));
+      if (
+        isUnreferencedDocHeading ||
+        NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text) ||
+        NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(span.text)
+      ) {
+        if (isUnreferencedDocHeading) {
+          suspendedByUnreferencedDocHeading = true;
+        }
+        continue;
+      }
+      if (suspendedByUnreferencedDocHeading) {
+        continue;
+      }
+      const subParts = splitTopLevelSubClauses(span.text).filter(
+        p =>
+          !NEGATIVE_TRAILING_LINKER_REGEX.test(p) &&
+          !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(p) &&
+          !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(p) &&
+          !NON_INDEXED_OTHER_DOC_REGEX.test(p) &&
+          !(docOccurrences.length > 0 && OTHER_DOC_ORDINAL_REGEX.test(p)) &&
+          !NEW_DOC_HEADING_REGEX.test(p)
+      );
+      const cleaned = stripInlineNegatedValues(subParts.join(' ')).replace(/\s+/g, ' ').trim();
+      if (cleaned) keptSpans.push(cleaned);
+      continue;
+    }
+
+    suspendedByUnreferencedDocHeading = false;
+
+    if (sentOccs.length === 1) {
+      const occ = sentOccs[0];
+      const beforeDoc = span.text.slice(0, occ.startIndex);
+      const docToken = span.text.slice(occ.startIndex, occ.endIndex);
+      const afterDoc = span.text.slice(occ.endIndex);
+
+      const keepBefore =
+        beforeDoc &&
+        !NEGATIVE_TRAILING_LINKER_REGEX.test(beforeDoc) &&
+        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(beforeDoc) &&
+        (!hasMonetaryOrDateFact(beforeDoc) || hasValidPositiveFactToDocLinker(stripInlineNegatedValues(beforeDoc)));
+
+      const cleanedBefore = keepBefore
+        ? stripInlineNegatedValues(
+            splitTopLevelSubClauses(stripInlineNegatedValues(beforeDoc))
+              .filter(
+                p =>
+                  !NEGATIVE_TRAILING_LINKER_REGEX.test(p) &&
+                  !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(p) &&
+                  !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(p)
+              )
+              .join(' ')
+          )
+        : '';
+
+      const cleanedAfter = stripInlineNegatedValues(
+        splitTopLevelSubClauses(afterDoc)
+          .filter(
+            p =>
+              !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(p) &&
+              !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(p) &&
+              !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(p)
+          )
+          .join(' ')
+      );
+
+      const combined = [cleanedBefore, docToken, cleanedAfter].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (combined) keptSpans.push(combined);
+      continue;
+    }
+
+    const beforePieces: string[] = sentOccs.map(() => '');
+    const afterPieces: string[] = sentOccs.map(() => '');
+    beforePieces[0] = span.text.slice(0, sentOccs[0].startIndex);
+    for (let i = 0; i < sentOccs.length - 1; i++) {
+      const between = span.text.slice(sentOccs[i].endIndex, sentOccs[i + 1].startIndex);
+      const nextDocFollowedByColon = /^\s*:/.test(span.text.slice(sentOccs[i + 1].endIndex));
+      const { left, right } = splitBetweenDocRefs(between, nextDocFollowedByColon);
+      afterPieces[i] += left;
+      beforePieces[i + 1] += right;
+    }
+    afterPieces[sentOccs.length - 1] += span.text.slice(sentOccs[sentOccs.length - 1].endIndex);
+
+    for (let i = 0; i < sentOccs.length; i++) {
+      const docToken = span.text.slice(sentOccs[i].startIndex, sentOccs[i].endIndex);
+      const rawBefore = beforePieces[i];
+      const keepBefore =
+        rawBefore &&
+        !NEGATIVE_TRAILING_LINKER_REGEX.test(rawBefore) &&
+        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(rawBefore) &&
+        (!hasMonetaryOrDateFact(rawBefore) || hasValidPositiveFactToDocLinker(stripInlineNegatedValues(rawBefore)));
+      const cleanedBefore = keepBefore ? stripInlineNegatedValues(rawBefore) : '';
+      const cleanedAfter = stripInlineNegatedValues(
+        splitTopLevelSubClauses(afterPieces[i])
+          .filter(
+            p =>
+              !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(p) &&
+              !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(p) &&
+              !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(p)
+          )
+          .join(' ')
+      );
+      const combined = [cleanedBefore, docToken, cleanedAfter].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim();
+      if (combined) keptSpans.push(combined);
+    }
+  }
+
+  return keptSpans.join('. ');
+}
+
 function extractDocAttributedTextSegments(
   text: string,
   targetDocRefs: Set<string>,
@@ -789,11 +1061,15 @@ function extractDocAttributedTextSegments(
   const allTextDocRefs = new Set<string>(docOccurrences.map(o => o.cleanBody));
 
   if (allTextDocRefs.size === 0) {
-    return isSingleDocumentScenario ? [text] : [];
+    if (!isSingleDocumentScenario) return [];
+    const cleaned = stripNegatedClausesAndValues(text);
+    return cleaned ? [cleaned] : [];
   }
 
   if (targetDocRefs.size === 0) {
-    return isSingleDocumentScenario && allTextDocRefs.size === 1 ? [text] : [];
+    if (!(isSingleDocumentScenario && allTextDocRefs.size === 1)) return [];
+    const cleaned = stripNegatedClausesAndValues(text);
+    return cleaned ? [cleaned] : [];
   }
 
   if (!Array.from(allTextDocRefs).some(r => targetDocRefs.has(r))) {
@@ -803,6 +1079,7 @@ function extractDocAttributedTextSegments(
   const segments: Array<{ docRef: string; text: string }> = [];
   const sentenceSpans = splitIntoSentenceSpans(text);
   let activeBlockDocRef: string | null = null;
+  let suspendedByOtherDocContext = false;
   let lastNonEmptyEnd = -1;
 
   for (const span of sentenceSpans) {
@@ -828,10 +1105,12 @@ function extractDocAttributedTextSegments(
     if (sentOccs.length === 0) {
       if (
         OTHER_DOC_ORDINAL_REGEX.test(span.text) ||
+        NEW_DOC_HEADING_REGEX.test(span.text) ||
         NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text) ||
         NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(span.text)
       ) {
         activeBlockDocRef = null;
+        suspendedByOtherDocContext = true;
         continue;
       }
       if (activeBlockDocRef) {
@@ -841,7 +1120,7 @@ function extractDocAttributedTextSegments(
         }
         continue;
       }
-      if (isSingleDocumentScenario && allTextDocRefs.size === 1) {
+      if (!suspendedByOtherDocContext && isSingleDocumentScenario && allTextDocRefs.size === 1) {
         const soleRef = Array.from(allTextDocRefs)[0];
         const cleaned = filterOutOtherDocumentSubClauses(span.text);
         if (cleaned) {
@@ -851,6 +1130,7 @@ function extractDocAttributedTextSegments(
       continue;
     }
 
+    suspendedByOtherDocContext = false;
     const firstOcc = sentOccs[0];
     const rawBeforeFirst = span.text.slice(0, firstOcc.startIndex);
     let adjustedBeforeFirst = rawBeforeFirst;
@@ -885,11 +1165,15 @@ function extractDocAttributedTextSegments(
       const isBlockHeaderSuffix = /^\s*(?:(?:details|corrections?|updates?|info|information)\s*)?(?::|[-—–]\s*$|$)/i.test(afterDoc);
       const hasNoNegativeOrOrdinal =
         !OTHER_DOC_ORDINAL_REGEX.test(span.text) &&
+        !NEW_DOC_HEADING_REGEX.test(span.text) &&
         !NEGATIVE_TRAILING_LINKER_REGEX.test(beforeDoc) &&
         !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(beforeDoc) &&
         !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(afterDoc) &&
         !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text);
       activeBlockDocRef = isBlockHeaderPrefix && isBlockHeaderSuffix && hasNoNegativeOrOrdinal ? occ.cleanBody : null;
+      if (OTHER_DOC_ORDINAL_REGEX.test(span.text) || NEW_DOC_HEADING_REGEX.test(span.text)) {
+        suspendedByOtherDocContext = true;
+      }
 
       const cleanedClause = sanitizeAttributedDocClause(beforeDoc, docToken, afterDoc);
       if (cleanedClause) {
@@ -3675,6 +3959,7 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
   let retainUnresolvedPendingImage = false;
   let isValidUserAmountCorrection = false;
   let userAmountsForCorrection: number[] = [];
+  let allRawUserAmountsForCorrection: number[] = [];
   let pendingAmountsForCorrection = new Set<number>();
   let hasConflictingUserAmount = false;
 
@@ -3770,10 +4055,20 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     effectiveImageEvidence = imageEvidence;
   } else if (isFollowUpForImage && currentScenario?.pendingImageEvidence?.length) {
     // Check if the current turn is a follow-up that can complete the pending image evidence rather than a conflicting standalone text transaction:
+    const cleanedUserInput = stripNegatedClausesAndValues(userInput);
     const amountRegex = /(?:S\$|\$|SGD|USD|EUR|GBP)\s*(\d[\d,]*(?:\.\d+)?)|\b(\d[\d,]*(?:\.\d+)?)\s*(?:SGD|USD|dollars?)\b/gi;
-    const userAmounts: number[] = [];
+    const allRawUserAmounts: number[] = [];
     let match: RegExpExecArray | null;
     while ((match = amountRegex.exec(userInput)) !== null) {
+      const valStr = (match[1] || match[2] || '').replace(/,/g, '');
+      const val = parseFloat(valStr);
+      if (Number.isFinite(val) && val > 0) {
+        allRawUserAmounts.push(Math.round(val * 100));
+      }
+    }
+    const userAmounts: number[] = [];
+    amountRegex.lastIndex = 0;
+    while ((match = amountRegex.exec(cleanedUserInput)) !== null) {
       const valStr = (match[1] || match[2] || '').replace(/,/g, '');
       const val = parseFloat(valStr);
       if (Number.isFinite(val) && val > 0) {
@@ -3808,16 +4103,17 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       }
     }
     userAmountsForCorrection = userAmounts;
+    allRawUserAmountsForCorrection = allRawUserAmounts;
     pendingAmountsForCorrection = pendingAmounts;
 
     const hasExplicitAmountCorrectionIntent = /\b(?:correct(?:\s+amount|\s+total|\s+figure|\s+value)?\s+(?:is|was)|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))?|(?:the\s+)?(?:actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)|should\s+be|not\s+(?:S\$|\$|SGD)?\s*\d|(?:change|update|amend|revise|correct)\s+(?:the\s+)?(?:amount|total|invoice|entry|journal|figure)\s+to|(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD)\s*\d|(?:the\s+)?(?:subtotal|net\s+amount|pre[\s-]*tax(?:\s+amount)?|(?:amount\s+)?before\s+(?:gst|tax|vat)|taxable\s+amount|total(?:\s+amount)?|gst(?:\s+amount)?|tax(?:\s+amount)?|invoice\s+(?:amount|total)|amount)\s*(?:is|was|=|:)?\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*\d)|(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?\s+(?:[^.;\n]*?\b(?:is|are|was|were)\s+)?(?:for|to|on|in|under)\s+(?:inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)\b|(?:inv(?:oice)?|rcp|receipt|pv|payment\s*voucher|voucher|bill|ref(?:erence)?|doc(?:ument)?)\b[^.;\n]*?(?:\b(?:is|was|are|were|totals?)|[:=])\s*(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d/i.test(userInput);
-    const isNewStandaloneTransactionWhilePending = /\b(?:another\s+(?:invoice|bill|receipt|payment|transaction|purchase|entry)|separate\s+(?:invoice|bill|receipt|payment|transaction|entry)|different\s+(?:invoice|bill|receipt|payment|transaction)|new\s+(?:invoice|bill|receipt|payment|transaction|question)|second\s+(?:invoice|bill|receipt|payment|transaction)|also\s+(?:purchased|bought|paid|received|invoiced))\b/i.test(userInput);
 
     const hasNoConflictingAmount = userAmounts.length === 0 || pendingAmounts.size === 0 || userAmounts.every(a => pendingAmounts.has(a));
     const earlyUserDocRefs = extractNormalizedDocRefs(userInput);
     let hasTargetedNewAmountForDoc = false;
     let anyPendingDocHasAttributedAmount = false;
-    if (currentScenario.pendingImageEvidence.length >= 1 && earlyUserDocRefs.size > 0 && userAmounts.length > 0) {
+    let anyPendingDocHasAttributedDate = false;
+    if (currentScenario.pendingImageEvidence.length >= 1 && earlyUserDocRefs.size > 0) {
       for (const img of currentScenario.pendingImageEvidence) {
         const allImgRefs = new Set<string>(extractDocRefsFromImages([img]));
         if (img.imageId) {
@@ -3826,6 +4122,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         }
         if (allImgRefs.size === 0) continue;
         const attributed = extractDocAttributedTextFacts(userInput, allImgRefs, false);
+        if (attributed.date) {
+          anyPendingDocHasAttributedDate = true;
+        }
         if (attributed.amountsCents.size > 0) {
           anyPendingDocHasAttributedAmount = true;
           const imgExistingAmounts = getImageAmountCentsSet(img);
@@ -3835,10 +4134,19 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         }
       }
     }
+    const isNewStandaloneTransactionWhilePending =
+      !anyPendingDocHasAttributedAmount &&
+      !anyPendingDocHasAttributedDate &&
+      /\b(?:another\s+(?:invoice|bill|receipt|payment|transaction|purchase|entry)|separate\s+(?:invoice|bill|receipt|payment|transaction|entry)|different\s+(?:invoice|bill|receipt|payment|transaction)|new\s+(?:invoice|bill|receipt|payment|transaction|question)|second\s+(?:invoice|bill|receipt|payment|transaction)|(?:other|prior|previous|earlier|next|subsequent|unrelated)\s+(?:invoice|bill|receipt|payment|transaction|document|screenshot|image)|also\s+(?:purchased|bought|paid|received|invoiced))\b/i.test(userInput);
     const isUnattributedOrdinalOrNegativeDocRef =
       earlyUserDocRefs.size > 0 &&
       !anyPendingDocHasAttributedAmount &&
-      (OTHER_DOC_ORDINAL_REGEX.test(userInput) || NEGATIVE_TRAILING_LINKER_REGEX.test(userInput) || /\bunrelated\b/i.test(userInput));
+      (
+        OTHER_DOC_ORDINAL_REGEX.test(userInput) ||
+        NEGATIVE_TRAILING_LINKER_REGEX.test(userInput) ||
+        /\bunrelated\b/i.test(userInput) ||
+        extractDocAttributedTextFacts(userInput, earlyUserDocRefs, false).amountsCents.size === 0
+      );
     hasConflictingUserAmount = userAmounts.length > 0 && (!hasNoConflictingAmount || hasTargetedNewAmountForDoc);
     isValidUserAmountCorrection =
       hasConflictingUserAmount &&
@@ -3847,8 +4155,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
       !isUnattributedOrdinalOrNegativeDocRef &&
       (hasExplicitAmountCorrectionIntent || hasExplicitProceedDirective || hasTargetedNewAmountForDoc);
 
-    const userCorrectedDateEarly = extractDateFromText(userInput);
-    hasUserDateResolution = Boolean(userCorrectedDateEarly) && !hasInvalidCalendarDateToken(userInput);
+    const userCorrectedDateEarly = extractDateFromText(cleanedUserInput);
+    hasUserDateResolution = Boolean(userCorrectedDateEarly) && !hasInvalidCalendarDateToken(cleanedUserInput);
     hasUserAmountResolution =
       (userAmounts.length > 0 && (hasNoConflictingAmount || isValidUserAmountCorrection)) ||
       (hasExplicitProceedDirective && (!hasUserDateResolution || userAmounts.length > 0 || /\b(?:amount|total|figure|value|screenshot|image)\b/i.test(userInput)));
@@ -3957,11 +4265,12 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
 
   let pendingCorrectionAmbiguousError: { code: string; message: string; severity: 'ERROR' } | null = null;
 
-  const userCorrectedDate = extractDateFromText(userInput);
-  const hasValidUserDateCorrection = Boolean(userCorrectedDate) && !hasInvalidCalendarDateToken(userInput);
+  const cleanedUserInputForDate = stripNegatedClausesAndValues(userInput);
+  const userCorrectedDate = extractDateFromText(cleanedUserInputForDate);
+  const hasValidUserDateCorrection = Boolean(userCorrectedDate) && !hasInvalidCalendarDateToken(cleanedUserInputForDate);
   if (usingPendingImageEvidence && hasValidUserDateCorrection) {
     const dateKeyPattern = /^(?:date|eventdate|transactiondate|invoicedate|paymentdate|receiptdate|documentdate|commencementdate|adjustmentdate|postingdate)$/;
-    const userTargetMatch = userInput.match(/\b(invoice|payment|receipt|document|commencement|adjustment|posting|event|transaction)\s+date\b/i);
+    const userTargetMatch = cleanedUserInputForDate.match(/\b(invoice|payment|receipt|document|commencement|adjustment|posting|event|transaction)\s+date\b/i);
     const explicitTargetKey = userTargetMatch ? `${userTargetMatch[1].toLowerCase()}date` : '';
     const dateFieldProperName = userTargetMatch ? `${userTargetMatch[1].toLowerCase()}Date` : 'transactionDate';
 
@@ -4094,7 +4403,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
   }
 
   if (usingPendingImageEvidence && isValidUserAmountCorrection) {
-    const oldAmountsFromUser = new Set<number>(userAmountsForCorrection.filter(a => pendingAmountsForCorrection.has(a)));
+    const rawAmountsSource = allRawUserAmountsForCorrection.length > 0 ? allRawUserAmountsForCorrection : userAmountsForCorrection;
+    const oldAmountsFromUser = new Set<number>(rawAmountsSource.filter(a => pendingAmountsForCorrection.has(a)));
 
     const targetIndices = resolveTargetPendingImageIndices(
       effectiveImageEvidence,
@@ -4148,8 +4458,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         const isSingleDocInput = effectiveImageEvidence.length === 1 && isSingleDocumentScenario;
         const targetSegments = (userInputDocRefs.size > 0 && imgAllRefs.size > 0)
           ? extractDocAttributedTextSegments(userInput, imgAllRefs, isSingleDocInput)
-          : [userInput];
-        const targetInputText = targetSegments.length > 0 ? targetSegments.join('. ') : userInput;
+          : [stripNegatedClausesAndValues(userInput)];
+        const targetInputText = targetSegments.length > 0 ? targetSegments.join('. ') : stripNegatedClausesAndValues(userInput);
 
         const imgAttributedAmounts = (userInputDocRefs.size > 0 && imgAllRefs.size > 0)
           ? Array.from(extractDocAttributedTextFacts(userInput, imgAllRefs, isSingleDocInput).amountsCents)

@@ -10424,6 +10424,560 @@ try {
     passed++;
   }
 
+  // 10R-5 (P1 — Unrecognised negative/ambiguous predicates, inline "not" overrides, inter-doc negated clauses, and unrecognised new-doc headings)
+  {
+    const pendingPair = [
+      { imageId: 'img-r5-a', fields: [{ field: 'invoiceNo', value: 'INV-101' }, { field: 'invoiceDate', value: '15/01/2025' }, { field: 'totalAmount', value: 500 }] },
+      { imageId: 'img-r5-b', fields: [{ field: 'invoiceNo', value: 'INV-202' }] }
+    ];
+
+    // 1. Finding 1 (P1): Unrecognised negative or ambiguous attribution predicates
+    for (const negPred of [
+      'S$300 on 20/01/2025 is not attributable to INV-202.',
+      'S$300 on 20/01/2025 is not chargeable to INV-202.',
+      'S$300 on 20/01/2025 is not payable to INV-202.',
+      'S$300 on 20/01/2025 is not allocable to INV-202.',
+      'S$300 on 20/01/2025 is not connected with INV-202.',
+      'S$300 on 20/01/2025 is prior to INV-202.',
+      'S$300 on 20/01/2025 is extraneous to INV-202.',
+      'S$300 on 20/01/2025 is incompatible with INV-202.'
+    ]) {
+      const f202 = extractDocAttributedTextFacts(negPred, new Set(['202']), false);
+      assert.equal(f202.date, '', `Negative/ambiguous "${negPred}" must NOT attribute date to INV-202`);
+      assert.equal(f202.amountsCents.size, 0, `Negative/ambiguous "${negPred}" must NOT attribute amount to INV-202`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, negPred, 'date'), [], `Date target must be [] for "${negPred}"`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, negPred, 'amount'), [], `Amount target must be [] for "${negPred}"`);
+    }
+
+    // Positive "attributable to" must still attribute
+    const posAttributable = 'S$300 on 20/01/2025 is attributable to INV-202.';
+    const fPosAttr = extractDocAttributedTextFacts(posAttributable, new Set(['202']), false);
+    assert.equal(fPosAttr.date, '20/01/2025', 'Positive "attributable to" must attribute date 20/01/2025 to INV-202');
+    assert.deepEqual(Array.from(fPosAttr.amountsCents), [30000], 'Positive "attributable to" must attribute S$300 to INV-202');
+
+    // End-to-end Turn 1 -> Turn 2 for Finding 1
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Pending Invoices R5-F1',
+      directGroups: [
+        {
+          id: 'grp-r5f1-101',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-101',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        },
+        {
+          id: 'grp-r5f1-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 300,
+          totalCredit: 300,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r5f1-101', fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 }, journalLines: [] },
+        { imageId: 'img-r5f1-202', fields: { invoiceNo: 'INV-202' }, journalLines: [] }
+      ]
+    });
+
+    const r5f1Turn1 = await processAccountingQuery(
+      'Attached two invoices.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached two invoices.',
+          images: [
+            { id: 'img-r5f1-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-r5f1-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(r5f1Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F1 Turn 1 must hold pending');
+
+    const r5f1Turn2 = await processAccountingQuery(
+      'S$300 on 20/01/2025 is not attributable to INV-202.',
+      r5f1Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5f1Turn2.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F1 Turn 2 must NOT commit INV-202');
+    const r5f1Pending202Fields = r5f1Turn2.scenarioState.pendingImageEvidence?.[1]?.fields || [];
+    const r5f1Pending202List = Array.isArray(r5f1Pending202Fields)
+      ? r5f1Pending202Fields
+      : Object.entries(r5f1Pending202Fields).map(([field, value]) => ({ field, value }));
+    assert.equal(r5f1Pending202List.some(f => /date/i.test(String(f.field || '')) && f.value), false, 'INV-202 must NOT receive date 20/01/2025');
+    assert.equal(r5f1Pending202List.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) > 0), false, 'INV-202 must NOT receive amount 300');
+
+    // 2. Finding 2 (P1): Inline "not" retains rejected amount or date
+    for (const inlineAmtCase of [
+      'INV-202 is S$600 not S$500.',
+      'INV-202 is S$600 (not S$500).',
+      'INV-202 is S$600 and not S$500.',
+      'S$600 not S$500 is for INV-202.',
+      'INV-202 is not S$500 but S$600.'
+    ]) {
+      const f = extractDocAttributedTextFacts(inlineAmtCase, new Set(['202']), false);
+      assert.deepEqual(Array.from(f.amountsCents), [60000], `Inline not amount case "${inlineAmtCase}" must yield ONLY [60000]`);
+    }
+
+    for (const inlineDateCase of [
+      'INV-202 is S$300 not dated 15/01/2025.',
+      'INV-202 is S$300 (not dated 15/01/2025).',
+      'INV-202 is S$300 not on 15/01/2025.'
+    ]) {
+      const f = extractDocAttributedTextFacts(inlineDateCase, new Set(['202']), false);
+      assert.deepEqual(Array.from(f.amountsCents), [30000], `Inline not date case "${inlineDateCase}" must yield [30000]`);
+      assert.equal(f.date, '', `Inline not date case "${inlineDateCase}" must yield empty date`);
+    }
+
+    const inlineDateOverride = extractDocAttributedTextFacts('INV-202 is dated 20/01/2025 not 15/01/2025.', new Set(['202']), false);
+    assert.equal(inlineDateOverride.date, '20/01/2025', 'Inline date override must keep 20/01/2025 and drop 15/01/2025');
+
+    // End-to-end 2a: INV-202 missing original amount, Turn 2 'INV-202 is S$600 not S$500.'
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice INV-202 R5-F2a',
+      directGroups: [
+        {
+          id: 'grp-r5f2a-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 600 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r5f2a-202', fields: { invoiceNo: 'INV-202', invoiceDate: '20/01/2025' }, journalLines: [] }
+      ]
+    });
+
+    const r5f2aTurn1 = await processAccountingQuery(
+      'Attached invoice INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached invoice INV-202.',
+          images: [{ id: 'img-r5f2a-202', dataUrl: 'data:image/png;base64,mock202a', mimeType: 'image/png' }]
+        }
+      ]
+    );
+    assert.equal(r5f2aTurn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F2a Turn 1 must hold pending (missing amount)');
+
+    const r5f2aTurn2 = await processAccountingQuery(
+      'INV-202 is S$600 not S$500.',
+      r5f2aTurn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5f2aTurn2.scenarioState.committedDirectGroups?.length, 1, 'R5-F2a Turn 2 must commit INV-202');
+    assert.equal(r5f2aTurn2.scenarioState.committedDirectGroups[0].totalDebit, 600, 'R5-F2a Turn 2 must commit with totalDebit === 600 (NOT 500)');
+
+    // End-to-end 2b: INV-202 missing date, Turn 2 'INV-202 is S$300 not dated 15/01/2025.'
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Invoice INV-202 R5-F2b',
+      directGroups: [
+        {
+          id: 'grp-r5f2b-202',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 300,
+          totalCredit: 300,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r5f2b-202', fields: { invoiceNo: 'INV-202' }, journalLines: [] }
+      ]
+    });
+
+    const r5f2bTurn1 = await processAccountingQuery(
+      'Attached invoice INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached invoice INV-202.',
+          images: [{ id: 'img-r5f2b-202', dataUrl: 'data:image/png;base64,mock202b', mimeType: 'image/png' }]
+        }
+      ]
+    );
+    assert.equal(r5f2bTurn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F2b Turn 1 must hold pending');
+
+    const r5f2bTurn2 = await processAccountingQuery(
+      'INV-202 is S$300 not dated 15/01/2025.',
+      r5f2bTurn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5f2bTurn2.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F2b Turn 2 must NOT commit with 15/01/2025');
+    const r5f2bPendingFields = r5f2bTurn2.scenarioState.pendingImageEvidence?.[0]?.fields || [];
+    const r5f2bPendingList = Array.isArray(r5f2bPendingFields)
+      ? r5f2bPendingFields
+      : Object.entries(r5f2bPendingFields).map(([field, value]) => ({ field, value }));
+    assert.equal(r5f2bPendingList.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) === 300), true, 'R5-F2b INV-202 must receive amount 300');
+    assert.equal(r5f2bPendingList.some(f => /date/i.test(String(f.field || '')) && f.value), false, 'R5-F2b INV-202 must NOT receive date 15/01/2025');
+
+    // 3. Finding 3 (P1): Negated clauses between invoices leaking dates into preceding invoice
+    for (const interNeg of [
+      'INV-101 is S$500 and the date 20/01/2025 does not match INV-202.',
+      'INV-101 is S$500 and 20/01/2025 does not match INV-202.',
+      'For INV-101, S$500 and the date 20/01/2025 does not match INV-202.',
+      'INV-101 is S$500 and the date 20/01/2025 is not attributable to INV-202.',
+      'INV-101 is S$500 and the amount S$300 and date 20/01/2025 do not match INV-202.'
+    ]) {
+      const f101 = extractDocAttributedTextFacts(interNeg, new Set(['101']), false);
+      const f202 = extractDocAttributedTextFacts(interNeg, new Set(['202']), false);
+      assert.deepEqual(Array.from(f101.amountsCents), [50000], `INV-101 must receive [50000] in "${interNeg}"`);
+      assert.equal(f101.date, '', `INV-101 must NOT receive date in "${interNeg}"`);
+      assert.equal(f202.amountsCents.size, 0, `INV-202 must NOT receive amount in "${interNeg}"`);
+      assert.equal(f202.date, '', `INV-202 must NOT receive date in "${interNeg}"`);
+    }
+
+    // End-to-end Turn 1 -> Turn 2 for Finding 3
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Pending Invoices R5-F3',
+      directGroups: [
+        {
+          id: 'grp-r5f3-101',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-101',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        },
+        {
+          id: 'grp-r5f3-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 300,
+          totalCredit: 300,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r5f3-101', fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101' }, journalLines: [] },
+        { imageId: 'img-r5f3-202', fields: { invoiceNo: 'INV-202' }, journalLines: [] }
+      ]
+    });
+
+    const r5f3Turn1 = await processAccountingQuery(
+      'Attached two invoices.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached two invoices.',
+          images: [
+            { id: 'img-r5f3-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-r5f3-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(r5f3Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F3 Turn 1 must hold pending');
+
+    const r5f3Turn2 = await processAccountingQuery(
+      'INV-101 is S$500 and the date 20/01/2025 does not match INV-202.',
+      r5f3Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    const r5f3Pending101Fields = r5f3Turn2.scenarioState.pendingImageEvidence?.[0]?.fields || [];
+    const r5f3Pending101List = Array.isArray(r5f3Pending101Fields)
+      ? r5f3Pending101Fields
+      : Object.entries(r5f3Pending101Fields).map(([field, value]) => ({ field, value }));
+    const r5f3Pending202Fields = r5f3Turn2.scenarioState.pendingImageEvidence?.[1]?.fields || [];
+    const r5f3Pending202List = Array.isArray(r5f3Pending202Fields)
+      ? r5f3Pending202Fields
+      : Object.entries(r5f3Pending202Fields).map(([field, value]) => ({ field, value }));
+    assert.equal(r5f3Pending101List.find(f => /date/i.test(String(f.field || '')))?.value, '15/01/2025', 'R5-F3 INV-101 must keep 15/01/2025');
+    assert.equal(r5f3Pending101List.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) === 500), true, 'R5-F3 INV-101 must receive 500');
+    assert.equal(r5f3Pending202List.some(f => /date/i.test(String(f.field || '')) && f.value), false, 'R5-F3 INV-202 must still have no date');
+
+    // 4. Finding 4 (P1): Unrecognised new-document heading does not terminate active block
+    for (const headingCase of [
+      'INV-101: Amount: S$500 Separate invoice: Date: 20/01/2025 Amount: S$300',
+      'INV-101:\nAmount: S$500\nSeparate invoice:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101: Amount: S$500 Different document: Date: 20/01/2025 Amount: S$300',
+      'INV-101:\nAmount: S$500\nDifferent document:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101:\nAmount: S$500\nNew invoice:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101:\nAmount: S$500\nUnrelated invoice:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101:\nAmount: S$500\nInvoice #2:\nDate: 20/01/2025\nAmount: S$300'
+    ]) {
+      for (const isSingle of [false, true]) {
+        const f101 = extractDocAttributedTextFacts(headingCase, new Set(['101']), isSingle);
+        assert.deepEqual(Array.from(f101.amountsCents), [50000], `Heading case (single=${isSingle}) "${headingCase}" must give INV-101 ONLY [50000]`);
+        assert.equal(f101.date, '', `Heading case (single=${isSingle}) "${headingCase}" must give INV-101 empty date`);
+      }
+      const f202 = extractDocAttributedTextFacts(headingCase, new Set(['202']), false);
+      assert.equal(f202.amountsCents.size, 0, `Heading case "${headingCase}" must give INV-202 no amounts`);
+      assert.equal(f202.date, '', `Heading case "${headingCase}" must give INV-202 empty date`);
+    }
+
+    const thirdBlockResumes = 'INV-101:\nAmount: S$500\nSeparate invoice:\nDate: 20/01/2025\nAmount: S$300\nINV-202:\nDate: 25/01/2025\nAmount: S$400';
+    const fThird101 = extractDocAttributedTextFacts(thirdBlockResumes, new Set(['101']), false);
+    const fThird202 = extractDocAttributedTextFacts(thirdBlockResumes, new Set(['202']), false);
+    assert.deepEqual(Array.from(fThird101.amountsCents), [50000], 'Third block test: INV-101 gets S$500');
+    assert.equal(fThird101.date, '', 'Third block test: INV-101 gets no date');
+    assert.equal(fThird202.date, '25/01/2025', 'Third block test: INV-202 gets 25/01/2025');
+    assert.deepEqual(Array.from(fThird202.amountsCents), [40000], 'Third block test: INV-202 gets S$400');
+
+    // End-to-end Turn 1 -> Turn 2 for Finding 4
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Pending Invoices R5-F4',
+      directGroups: [
+        {
+          id: 'grp-r5f4-101',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-101',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        },
+        {
+          id: 'grp-r5f4-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 300,
+          totalCredit: 300,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r5f4-101', fields: { invoiceNo: 'INV-101' }, journalLines: [] },
+        { imageId: 'img-r5f4-202', fields: { invoiceNo: 'INV-202' }, journalLines: [] }
+      ]
+    });
+
+    const r5f4Turn1 = await processAccountingQuery(
+      'Attached two invoices.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached two invoices.',
+          images: [
+            { id: 'img-r5f4-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-r5f4-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(r5f4Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F4 Turn 1 must hold pending');
+
+    const r5f4Turn2 = await processAccountingQuery(
+      'INV-101: Amount: S$500 Separate invoice: Date: 20/01/2025 Amount: S$300',
+      r5f4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5f4Turn2.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-F4 Turn 2 must NOT commit INV-101 with 20/01/2025');
+    const r5f4Pending101Fields = r5f4Turn2.scenarioState.pendingImageEvidence?.[0]?.fields || [];
+    const r5f4Pending101List = Array.isArray(r5f4Pending101Fields)
+      ? r5f4Pending101Fields
+      : Object.entries(r5f4Pending101Fields).map(([field, value]) => ({ field, value }));
+    assert.equal(r5f4Pending101List.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) === 500), true, 'R5-F4 INV-101 must receive amount 500');
+    assert.equal(r5f4Pending101List.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) === 300), false, 'R5-F4 INV-101 must NOT receive amount 300');
+    assert.equal(r5f4Pending101List.some(f => /date/i.test(String(f.field || '')) && f.value), false, 'R5-F4 INV-101 must NOT receive date 20/01/2025');
+
+    // 5. Reviewer edge-case regressions (P1 #1-#4 and P2 #5-#6)
+    // Edge case 1: Inline numbered/memo headings & preserved sub-heading "Invoice Details:"
+    for (const inlineHeading of [
+      'INV-101: Amount: S$500 Invoice #2: Date: 20/01/2025 Amount: S$300',
+      'INV-101: Amount: S$500 Screenshot 2: Date: 20/01/2025 Amount: S$300',
+      'INV-101: Amount: S$500 Separate memo: Date: 20/01/2025 Amount: S$300'
+    ]) {
+      for (const isSingle of [false, true]) {
+        const f101 = extractDocAttributedTextFacts(inlineHeading, new Set(['101']), isSingle);
+        assert.deepEqual(Array.from(f101.amountsCents), [50000], `Inline heading (single=${isSingle}) "${inlineHeading}" must give INV-101 ONLY [50000]`);
+        assert.equal(f101.date, '', `Inline heading (single=${isSingle}) "${inlineHeading}" must give INV-101 empty date`);
+      }
+    }
+    const subHeadingPreserved = extractDocAttributedTextFacts('INV-101:\nInvoice Details:\nDate: 20/01/2025\nAmount: S$500', new Set(['101']), false);
+    assert.equal(subHeadingPreserved.date, '20/01/2025', 'Modifier-free sub-heading "Invoice Details:" must NOT reset activeBlockDocRef');
+    assert.deepEqual(Array.from(subHeadingPreserved.amountsCents), [50000], 'Modifier-free sub-heading "Invoice Details:" must keep INV-101 amount');
+
+    // Edge case 2: Singular positive/negative linker checks & modal "cannot be for"
+    const singPosComp = 'For INV-101, S$500 and 20/01/2025 is for INV-202.';
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(singPosComp, new Set(['101']), false).amountsCents), [50000], 'INV-101 must get S$500 in singular linker comp');
+    assert.equal(extractDocAttributedTextFacts(singPosComp, new Set(['101']), false).date, '', 'INV-101 must NOT get 20/01/2025 in singular linker comp');
+    assert.equal(extractDocAttributedTextFacts(singPosComp, new Set(['202']), false).date, '20/01/2025', 'INV-202 must get 20/01/2025 in singular linker comp');
+    assert.equal(extractDocAttributedTextFacts(singPosComp, new Set(['202']), false).amountsCents.size, 0, 'INV-202 must NOT get S$500 in singular linker comp');
+
+    const singNegHeader = 'INV-101: Date: 15/01/2025, Amount: S$500 and 20/01/2025 does not match INV-202.';
+    assert.equal(extractDocAttributedTextFacts(singNegHeader, new Set(['101']), false).date, '15/01/2025', 'INV-101 must keep 15/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(singNegHeader, new Set(['101']), false).amountsCents), [50000], 'INV-101 must keep S$500');
+    assert.equal(extractDocAttributedTextFacts(singNegHeader, new Set(['202']), false).date, '', 'INV-202 must NOT receive 20/01/2025');
+    assert.equal(extractDocAttributedTextFacts(singNegHeader, new Set(['202']), false).amountsCents.size, 0, 'INV-202 must NOT receive amount');
+
+    const modalNeg = extractDocAttributedTextFacts('S$300 on 20/01/2025 cannot be for INV-202.', new Set(['202']), false);
+    assert.equal(modalNeg.date, '', '"cannot be for" must reject date');
+    assert.equal(modalNeg.amountsCents.size, 0, '"cannot be for" must reject amount');
+
+    // Edge case 3: Multiline Separate invoice & standalone "Other invoice:" in Turn 2
+    const r5e3Turn2 = await processAccountingQuery(
+      'INV-101:\nAmount: S$500\nSeparate invoice:\nDate: 20/01/2025\nAmount: S$300',
+      r5f4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5e3Turn2.scenarioState.committedDirectGroups?.length || 0, 0, 'Multiline Separate invoice Turn 2 must NOT commit INV-101');
+    assert.equal(r5e3Turn2.scenarioState.pendingImageRejectionReasons?.some(r => r.code === 'AMBIGUOUS_DOCUMENT_CORRECTION'), false, 'Multiline Separate invoice Turn 2 must NOT raise spurious AMBIGUOUS_DOCUMENT_CORRECTION');
+
+    const r5e3OtherTurn2 = await processAccountingQuery(
+      'Other invoice: Date: 20/01/2025 Amount: S$300',
+      r5f4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5e3OtherTurn2.scenarioState.committedDirectGroups?.length || 0, 0, 'Standalone "Other invoice:" Turn 2 must NOT commit');
+    const r5e3OtherFields101 = Array.isArray(r5e3OtherTurn2.scenarioState.pendingImageEvidence?.[0]?.fields)
+      ? r5e3OtherTurn2.scenarioState.pendingImageEvidence[0].fields
+      : [];
+    assert.equal(r5e3OtherFields101.some(f => /amount|total|date/i.test(String(f.field || '')) && f.value), false, '"Other invoice:" must NOT inject date or amount into INV-101');
+
+    // Edge case 4: Multi-field Turn 2 without doc ref uses sanitized targetSegments (ignores "instead of S$500")
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Multi-field Invoice INV-202',
+      directGroups: [
+        {
+          id: 'grp-r5e4-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 654,
+          totalCredit: 654,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Input GST', category: 'ASSET', debit: 54, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 654 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        {
+          imageId: 'img-r5e4-202',
+          fields: { invoiceNo: 'INV-202', invoiceDate: '20/01/2025', subtotal: 400, gst: 36, totalAmount: 436 },
+          journalLines: []
+        }
+      ]
+    });
+    const r5e4Turn1 = await processAccountingQuery(
+      'Attached invoice INV-202.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached invoice INV-202.',
+          images: [{ id: 'img-r5e4-202', dataUrl: 'data:image/png;base64,mocke4', mimeType: 'image/png' }]
+        }
+      ]
+    );
+    assert.equal(r5e4Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R5-E4 Turn 1 must hold pending due to conflict');
+
+    const r5e4Turn2 = await processAccountingQuery(
+      'The total is S$654 instead of S$500, subtotal is S$600, gst is S$54.',
+      r5e4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r5e4Turn2.scenarioState.committedDirectGroups?.length, 1, 'R5-E4 Turn 2 must commit INV-202');
+    assert.equal(r5e4Turn2.scenarioState.committedDirectGroups[0].totalDebit, 654, 'R5-E4 Turn 2 must commit with totalDebit === 654 (not 500)');
+
+    // Edge cases 5 & 6: Inline "not" modifiers, "or"-chained negations, and subject-position negative predicates
+    for (const modCase of [
+      'INV-202 is S$600, not S$500 or S$400.',
+      'INV-202 is S$600, not for S$500.',
+      'INV-202 is S$600, not actually S$500.',
+      'INV-202 is S$600, not the S$500 figure.'
+    ]) {
+      const f = extractDocAttributedTextFacts(modCase, new Set(['202']), false);
+      assert.deepEqual(Array.from(f.amountsCents), [60000], `Inline modifier/chain case "${modCase}" must yield ONLY [60000]`);
+    }
+
+    const subjNegAmt = extractDocAttributedTextFacts('INV-202 is S$300. S$500 is not correct.', new Set(['202']), true);
+    assert.deepEqual(Array.from(subjNegAmt.amountsCents), [30000], 'Subject-position "S$500 is not correct" must be dropped');
+
+    const subjNegDate = extractDocAttributedTextFacts('INV-202 is S$300. 15/01/2025 is not the date.', new Set(['202']), true);
+    assert.deepEqual(Array.from(subjNegDate.amountsCents), [30000], 'INV-202 keeps S$300 when date is rejected');
+    assert.equal(subjNegDate.date, '', 'Subject-position "15/01/2025 is not the date" must be dropped');
+
+    const subjRejectedBefore = extractDocAttributedTextFacts('The amount S$500 was rejected, S$300 is for INV-202.', new Set(['202']), false);
+    assert.deepEqual(Array.from(subjRejectedBefore.amountsCents), [30000], 'Subject-position "The amount S$500 was rejected" before INV-202 must be dropped');
+
+    console.log('✓ 10R-5 (P1). Unrecognised negative/ambiguous predicates, inline "not" overrides, inter-doc negated clauses, and unrecognised new-doc headings verified');
+    passed++;
+  }
+
 } finally {
   globalThis.fetch = origFetch;
 }
