@@ -3,6 +3,12 @@ import type { ChatMessage } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 
+const MODAL_ACTION_MODIFIERS = String.raw`(?:\s+(?:[a-z]+ly|also|again|still|instead|later|afterwards|then|not|even|just|already|ever|never|well))*`;
+const HYPOTHETICAL_MODAL_ACTION = new RegExp(
+  String.raw`\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?${MODAL_ACTION_MODIFIERS}\s+(?:have|be)${MODAL_ACTION_MODIFIERS}\s*$`,
+  'i'
+);
+
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
 /** A journal-display request reads an existing result and should not be routed as a transaction. */
@@ -133,12 +139,15 @@ export function startsNewAccountingScenario(
       const hasSeparateObject = /^\s+(?:(?:a|an|the)\s+)?(?:another|additional|second|different)\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
       const hasIndefiniteObject = /^\s+a(?:n)?\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject) ||
         /^\s+(?:(?:some|new)\s+)?(?:equipment|machinery)\b/i.test(actionObject);
+      const hasDefiniteNewObject = /^\s+(?:(?:the|our|your|my|its|their|his|her)\s+)new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
       const hasSubsequentAction = /\b(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then|again)(?:,\s*)?\s+(?:(?:we|the company)\s+)?$/i.test(actionLead);
       const isConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead);
       const isInterrogativeConditionalAction = /\b(?:what|how)\b[^.!?;]*\bif\s+(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then)?\s*$/i.test(actionLead);
-      const isModalAction = /\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead))*\s*$/i.test(actionLead);
+      // Keep the modal tied to an auxiliary immediately before the purchase verb.
+      const isModalAction = HYPOTHETICAL_MODAL_ACTION.test(actionLead);
       const isHypothetical = isConditionalAction || isInterrogativeConditionalAction || isModalAction;
-      return !isHypothetical && (hasSeparateObject || (hasSubsequentAction && hasIndefiniteObject));
+      return !isHypothetical && (hasSeparateObject ||
+        (hasSubsequentAction && (hasIndefiniteObject || hasDefiniteNewObject)));
     });
   }
 

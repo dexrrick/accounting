@@ -476,6 +476,28 @@ for (const call of calls) {
       'a subsequent purchase of uncountable equipment starts a new scenario');
     assert.equal(assessConversationRelation(subsequentEquipmentPurchase, activeScenario), 'NEW',
       'a subsequent purchase of uncountable equipment starts a new analysis');
+    const definiteSubsequentPurchase =
+      'Regarding our previous machine purchase, we subsequently purchased the new machine for SGD 100,000. What IRAS rules apply?';
+    const possessiveSubsequentEquipmentPurchase =
+      'Regarding our previous machine purchase, we subsequently purchased our new equipment for SGD 100,000. What IRAS rules apply?';
+    const possessiveSubsequentMachinePurchase =
+      'Regarding our previous machine purchase, we subsequently purchased your new machine for SGD 100,000. What IRAS rules apply?';
+    const definitePurchaseWithoutSubsequentMarker =
+      'Regarding our previous machine purchase, we purchased the new machine for SGD 100,000. What IRAS rules apply?';
+    for (const question of [
+      definiteSubsequentPurchase,
+      possessiveSubsequentEquipmentPurchase,
+      possessiveSubsequentMachinePurchase
+    ]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), true,
+        'a subsequent purchase with a definite or possessive new-object description starts a new scenario');
+      assert.equal(assessConversationRelation(question, activeScenario), 'NEW',
+        'the App starts a new analysis for a subsequent definite or possessive new-object description');
+    }
+    assert.equal(startsNewAccountingScenario(definitePurchaseWithoutSubsequentMarker, activeScenario), false,
+      'a definite new-object description without a subsequent marker remains a historical restatement');
+    assert.equal(assessConversationRelation(definitePurchaseWithoutSubsequentMarker, activeScenario), 'RELATED',
+      'the App retains context when a definite new-object description has no subsequent marker');
     const hypotheticalSubsequentPurchase =
       'Regarding our previous machine purchase, suppose we subsequently purchased another machine...';
     assert.equal(startsNewAccountingScenario(hypotheticalSubsequentPurchase, activeScenario), false,
@@ -498,6 +520,28 @@ for (const call of calls) {
       'a modal purchase action remains hypothetical when its subject is first-person singular');
     assert.equal(assessConversationRelation(firstPersonHypotheticalPurchase, activeScenario), 'RELATED',
       'a first-person hypothetical purchase remains in the earlier analysis');
+    const hypotheticalPurchaseWithAlso =
+      'Regarding our previous machine purchase, we could also have purchased another machine for SGD 100,000. What would its tax treatment be?';
+    const hypotheticalPurchaseWithAlsoNot =
+      'Regarding our previous machine purchase, we could also not have purchased another machine for SGD 100,000. What would its tax treatment be?';
+    const hypotheticalPurchaseWithProbably =
+      'Regarding our previous machine purchase, we might probably have purchased another machine for SGD 100,000. What would its tax treatment be?';
+    const hypotheticalPurchaseWithEven =
+      'Regarding our previous machine purchase, we could even have purchased another machine for SGD 100,000. What would its tax treatment be?';
+    const hypotheticalPurchaseWithJust =
+      'Regarding our previous machine purchase, we could have just purchased another machine for SGD 100,000. What would its tax treatment be?';
+    for (const question of [
+      hypotheticalPurchaseWithAlso,
+      hypotheticalPurchaseWithAlsoNot,
+      hypotheticalPurchaseWithProbably,
+      hypotheticalPurchaseWithEven,
+      hypotheticalPurchaseWithJust
+    ]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), false,
+        'adverbs in a modal perfect purchase keep the earlier scenario');
+      assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
+        'the App retains earlier context for a modal perfect purchase with an adverb');
+    }
     const actualPurchaseAfterHistoricalModal =
       'Regarding our previous machine purchase, we could not claim capital allowances on it and subsequently purchased another machine.';
     assert.equal(startsNewAccountingScenario(actualPurchaseAfterHistoricalModal, activeScenario), true,
@@ -611,9 +655,18 @@ for (const call of calls) {
 
     for (const [index, { question, startsNewAnalysis }] of [
       { question: subsequentEquipmentPurchase, startsNewAnalysis: true },
+      { question: definiteSubsequentPurchase, startsNewAnalysis: true },
+      { question: possessiveSubsequentEquipmentPurchase, startsNewAnalysis: true },
+      { question: possessiveSubsequentMachinePurchase, startsNewAnalysis: true },
+      { question: definitePurchaseWithoutSubsequentMarker, startsNewAnalysis: false },
       { question: actualPurchaseAfterHistoricalModal, startsNewAnalysis: true },
       { question: hypotheticalSubsequentPurchase, startsNewAnalysis: false },
-      { question: interrogativeConditionalPurchase, startsNewAnalysis: false }
+      { question: interrogativeConditionalPurchase, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithAlso, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithAlsoNot, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithProbably, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithEven, startsNewAnalysis: false },
+      { question: hypotheticalPurchaseWithJust, startsNewAnalysis: false }
     ].entries()) {
       const turn = { id: `boundary-subsequent-purchase-case-${index}`, sender: 'user', timestamp: '', text: question };
       const callsBeforeQuestion = boundaryCalls.length;
