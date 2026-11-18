@@ -10953,6 +10953,97 @@ try {
     assert.equal(r5e4Turn2.scenarioState.committedDirectGroups?.length, 1, 'R5-E4 Turn 2 must commit INV-202');
     assert.equal(r5e4Turn2.scenarioState.committedDirectGroups[0].totalDebit, 654, 'R5-E4 Turn 2 must commit with totalDebit === 654 (not 500)');
 
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Corrected Invoice INV-202',
+      directGroups: [
+        {
+          id: 'grp-r5e4-correction-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 600,
+          totalCredit: 600,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 600 }
+          ]
+        }
+      ],
+      imageEvidence: []
+    });
+    const replacementAfterRejection = await processAccountingQuery(
+      'S$500 is not correct, please use S$600',
+      r5e4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(replacementAfterRejection.scenarioState.pendingImageEvidence?.length || 0, 0,
+      'R5-E4 replacement after a rejected amount must resolve the pending single-image evidence');
+    assert.equal(replacementAfterRejection.scenarioState.committedDirectGroups?.length, 1,
+      'R5-E4 replacement after a rejected amount must commit the validated corrected journal');
+    assert.equal(replacementAfterRejection.scenarioState.committedDirectGroups[0].totalDebit, 600,
+      'R5-E4 replacement after a rejected amount must use S$600');
+    const replacementFields = replacementAfterRejection.scenarioState.imageEvidence?.[0]?.fields || [];
+    const normalizedReplacementFields = Array.isArray(replacementFields)
+      ? replacementFields
+      : Object.entries(replacementFields).map(([field, value]) => ({ field, value }));
+    assert.equal(normalizedReplacementFields.some(field => /total|amount/i.test(String(field.field || '')) && Number(field.value) === 600), true,
+      'R5-E4 corrected image evidence must retain replacement amount S$600');
+    for (const rejectedAmountList of [
+      'Do not use S$500, S$600, or S$700.',
+      'S$500 was rejected, as was S$600.'
+    ]) {
+      const rejectedFacts = extractDocAttributedTextFacts(rejectedAmountList, new Set(), true);
+      assert.equal(rejectedFacts.amountsCents.size, 0,
+        `R5-E4 rejected amount list must not revive a rejected value from "${rejectedAmountList}"`);
+    }
+    for (const replacementWithRejection of [
+      'Do not use S$500, S$700, please use S$600.',
+      'Please use S$600, do not use S$500, or S$700.',
+      'S$500 is not the amount, please use S$600.',
+      'S$500 is not correct, S$600 is correct.',
+      'S$500 is not correct, please use S$600, S$700 isn\'t correct.',
+      'Do not use S$500, please use S$600, nor S$700.'
+    ]) {
+      const replacementFacts = extractDocAttributedTextFacts(replacementWithRejection, new Set(), true);
+      assert.deepEqual(Array.from(replacementFacts.amountsCents), [60000],
+        `R5-E4 must retain only the independent positive replacement from "${replacementWithRejection}"`);
+    }
+
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Unresolved Invoice INV-202',
+      directGroups: [
+        {
+          id: 'grp-r5e4-rejection-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 654,
+          totalCredit: 654,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 600, credit: 0 },
+            { accountName: 'Input GST', category: 'ASSET', debit: 54, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 654 }
+          ]
+        }
+      ],
+      imageEvidence: []
+    });
+    const rejectionWithoutReplacement = await processAccountingQuery(
+      'S$500 is not correct',
+      r5e4Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(rejectionWithoutReplacement.scenarioState.pendingImageEvidence?.length, 1,
+      'rejecting an amount without a positive replacement must keep the image evidence pending');
+    assert.equal(rejectionWithoutReplacement.scenarioState.committedDirectGroups?.length || 0, 0,
+      'rejecting an amount without a positive replacement must not commit the journal');
+
     // Edge cases 5 & 6: Inline "not" modifiers, "or"-chained negations, and subject-position negative predicates
     for (const modCase of [
       'INV-202 is S$600, not S$500 or S$400.',

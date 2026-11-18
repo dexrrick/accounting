@@ -590,6 +590,8 @@ function filterOutOtherDocumentSubClauses(clause: string): string {
 const FACT_MATCH_REGEX_FOR_LINKER =
   /(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s*(?:SGD|USD|EUR|GBP|dollars?)\b|\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b|\b\d{4}[/-]\d{1,2}[/-]\d{1,2}(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?\b|\b\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\b|\b(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?,?\s+\d{2,4}\b/gi;
 
+const POSITIVE_AMOUNT_REPLACEMENT_CUE_REGEX = /^\s*(?:(?:please\s+)?(?:use|record|post|commit|apply)\s+(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?|(?:the\s+)?(?:correct|actual|true|right|revised|amended|updated)\s+(?:amount|total|figure|value|invoice|price)\s+(?:is|was)\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*\d[\d,]*(?:\.\d+)?|actually(?:\s+it\s+(?:is|was)|\s+the\s+amount\s+(?:is|was))\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*\d[\d,]*(?:\.\d+)?|(?:the\s+)?(?:amount|total|subtotal|figure|value|price)\s+(?:should\s+be|is|was|=|:)\s*(?:S\$|\$|SGD|USD|EUR|GBP)?\s*\d[\d,]*(?:\.\d+)?|(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d[\d,]*(?:\.\d+)?\s+(?:is|was)\s+(?:the\s+)?(?:correct|actual|true|right)\b)/i;
+
 const POSITIVE_FACT_TO_DOC_TAIL_REGEX = new RegExp(
   `^[\\s,;:—–\\-()]*(?:(?:is|are|was|were|be)|(?:(?:is|are|was|were|be)\\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:)|(?:(?:is|are|was|were|be|being|been)\\s+)?(?:${POSITIVE_PARTICIPLE_LINKER_WORDS})\\s+(?:to|for|with|under|in|on)|(?:belongs?|appl(?:y|ies|ied)|relates?|pertains?|refers?|corresponds?|matches|match|goes|went)\\s+(?:to|for|with)?)(?:\\s+(?:the\\s+)?(?:invoice|tax\\s+invoice|document|doc|receipt|bill|voucher|payment\\s+voucher|credit\\s+note|debit\\s+note|item|ref(?:erence)?))?[\\s,;:—–\\-()]*$`,
   'i'
@@ -941,29 +943,52 @@ function stripNegatedClausesAndValues(text: string): string {
         NEW_DOC_HEADING_REGEX.test(span.text) ||
         NON_INDEXED_OTHER_DOC_REGEX.test(span.text) ||
         (docOccurrences.length > 0 && OTHER_DOC_ORDINAL_REGEX.test(span.text));
-      if (
-        isUnreferencedDocHeading ||
-        NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text) ||
-        NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(span.text)
-      ) {
-        if (isUnreferencedDocHeading) {
-          suspendedByUnreferencedDocHeading = true;
-        }
+      if (isUnreferencedDocHeading) {
+        suspendedByUnreferencedDocHeading = true;
         continue;
       }
       if (suspendedByUnreferencedDocHeading) {
         continue;
       }
-      const subParts = splitTopLevelSubClauses(span.text).filter(
-        p =>
-          !NEGATIVE_TRAILING_LINKER_REGEX.test(p) &&
-          !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(p) &&
-          !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(p) &&
-          !NON_INDEXED_OTHER_DOC_REGEX.test(p) &&
-          !(docOccurrences.length > 0 && OTHER_DOC_ORDINAL_REGEX.test(p)) &&
-          !NEW_DOC_HEADING_REGEX.test(p)
-      );
-      const cleaned = stripInlineNegatedValues(subParts.join(' ')).replace(/\s+/g, ' ').trim();
+      const splitSubParts = splitTopLevelSubClauses(span.text);
+      const subParts: string[] = [];
+      for (const part of splitSubParts) {
+        const previousPart = subParts[subParts.length - 1];
+        const partBeforeCopula = subParts[subParts.length - 2];
+        const hasSeparateCopula = Boolean(previousPart && /^(?:is|are|was|were)$/i.test(previousPart));
+        const factPrefix = hasSeparateCopula ? partBeforeCopula : previousPart;
+        const startsNegativePredicate = /^\s*(?:(?:is|are|was|were)\s+)?(?:not|never)\b/i.test(part);
+        const combinedPart = [factPrefix, hasSeparateCopula ? previousPart : '', part].filter(Boolean).join(' ');
+        if (
+          factPrefix && hasMonetaryOrDateFact(factPrefix) && startsNegativePredicate &&
+          NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(combinedPart)
+        ) {
+          if (hasSeparateCopula) {
+            subParts.splice(subParts.length - 2, 2, combinedPart);
+          } else {
+            subParts[subParts.length - 1] = combinedPart;
+          }
+        } else {
+          subParts.push(part);
+        }
+      }
+      const hasRejectedClause =
+        NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text) || NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(span.text);
+      const isFilteredSubPart = (part: string) =>
+        NEGATIVE_TRAILING_LINKER_REGEX.test(part) ||
+        NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) ||
+        NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part) ||
+        NON_INDEXED_OTHER_DOC_REGEX.test(part) ||
+        (docOccurrences.length > 0 && OTHER_DOC_ORDINAL_REGEX.test(part)) ||
+        NEW_DOC_HEADING_REGEX.test(part);
+      const positiveSubParts = hasRejectedClause
+        ? subParts.filter(part =>
+            !isFilteredSubPart(part) &&
+            !/^\s*(?:or|nor|neither)\b/i.test(part) &&
+            POSITIVE_AMOUNT_REPLACEMENT_CUE_REGEX.test(part)
+          )
+        : subParts.filter(part => !isFilteredSubPart(part));
+      const cleaned = stripInlineNegatedValues(positiveSubParts.join(' ')).replace(/\s+/g, ' ').trim();
       if (cleaned) keptSpans.push(cleaned);
       continue;
     }
