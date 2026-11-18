@@ -10108,6 +10108,322 @@ try {
     passed++;
   }
 
+  // 10R-4 (P1/P2 — Negative/unrelated doc associations, !/? & internal conjunctions, and multiline/headed blocks)
+  {
+    const pendingPair = [
+      { imageId: 'img-r4-a', fields: [{ field: 'invoiceNo', value: 'INV-101' }, { field: 'invoiceDate', value: '15/01/2025' }, { field: 'totalAmount', value: 500 }] },
+      { imageId: 'img-r4-b', fields: [{ field: 'invoiceNo', value: 'INV-202' }] }
+    ];
+
+    // 1. Finding 1 (P1): Negative / unrelated document associations & ordinal + doc ref in same clause
+    for (const negCase of [
+      'The first screenshot S$500 on 15/01/2025 is unrelated to INV-202.',
+      'The first screenshot S$500 on 15/01/2025 is not for INV-202.',
+      'S$500 on 15/01/2025 is unrelated to INV-202.',
+      'S$500 on 15/01/2025 does not belong to INV-202.',
+      'INV-202 is unrelated to the first screenshot S$500 on 15/01/2025.',
+      'INV-202 is not S$500 on 15/01/2025.'
+    ]) {
+      const f202 = extractDocAttributedTextFacts(negCase, new Set(['202']), false);
+      assert.equal(f202.date, '', `Negative/unrelated "${negCase}" must NOT attribute date to INV-202`);
+      assert.equal(f202.amountsCents.size, 0, `Negative/unrelated "${negCase}" must NOT attribute amount to INV-202`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, negCase, 'date'), [], `Date target must be empty for "${negCase}"`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, negCase, 'amount'), [], `Amount target must be empty for "${negCase}"`);
+    }
+
+    for (const posNegPair of [
+      'S$500 on 15/01/2025 is for INV-101, not INV-202.',
+      'INV-101 S$500 on 15/01/2025 is unrelated to INV-202.'
+    ]) {
+      const f101 = extractDocAttributedTextFacts(posNegPair, new Set(['101']), false);
+      const f202 = extractDocAttributedTextFacts(posNegPair, new Set(['202']), false);
+      assert.equal(f101.date, '15/01/2025', `INV-101 must receive date in "${posNegPair}"`);
+      assert.deepEqual(Array.from(f101.amountsCents), [50000], `INV-101 must receive amount in "${posNegPair}"`);
+      assert.equal(f202.date, '', `INV-202 must NOT receive date in "${posNegPair}"`);
+      assert.equal(f202.amountsCents.size, 0, `INV-202 must NOT receive amount in "${posNegPair}"`);
+    }
+
+    const negPrefixWithPositiveRelative = 'The first screenshot S$500 on 15/01/2025 is unrelated to INV-202, which is S$300 on 20/01/2025.';
+    const fRel202 = extractDocAttributedTextFacts(negPrefixWithPositiveRelative, new Set(['202']), false);
+    assert.equal(fRel202.date, '20/01/2025', 'INV-202 must receive positive relative clause date 20/01/2025');
+    assert.deepEqual(Array.from(fRel202.amountsCents), [30000], 'INV-202 must receive ONLY positive relative clause amount S$300');
+
+    // End-to-end Turn 1 -> Turn 2 negative/unrelated follow-up
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Pending Invoices R4-F1',
+      directGroups: [
+        {
+          id: 'grp-r4f1-101',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-101',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        },
+        {
+          id: 'grp-r4f1-202',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        }
+      ],
+      imageEvidence: [
+        { imageId: 'img-r4f1-101', fields: { invoiceDate: '15/01/2025', invoiceNo: 'INV-101', totalAmount: 500 }, journalLines: [] },
+        { imageId: 'img-r4f1-202', fields: { invoiceNo: 'INV-202' }, journalLines: [] }
+      ]
+    });
+
+    const r4f1Turn1 = await processAccountingQuery(
+      'Attached two invoices.',
+      null,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite',
+      [
+        {
+          sender: 'user',
+          text: 'Attached two invoices.',
+          images: [
+            { id: 'img-r4f1-101', dataUrl: 'data:image/png;base64,mock101', mimeType: 'image/png' },
+            { id: 'img-r4f1-202', dataUrl: 'data:image/png;base64,mock202', mimeType: 'image/png' }
+          ]
+        }
+      ]
+    );
+    assert.equal(r4f1Turn1.scenarioState.committedDirectGroups?.length || 0, 0, 'R4-F1 Turn 1 must hold pending');
+
+    const r4f1Turn2 = await processAccountingQuery(
+      'The first screenshot S$500 on 15/01/2025 is unrelated to INV-202.',
+      r4f1Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r4f1Turn2.scenarioState.committedDirectGroups?.length || 0, 0, 'R4-F1 Turn 2 must NOT commit INV-202');
+    const r4f1Pending202Fields = r4f1Turn2.scenarioState.pendingImageEvidence?.[1]?.fields || [];
+    const r4f1Pending202List = Array.isArray(r4f1Pending202Fields)
+      ? r4f1Pending202Fields
+      : Object.entries(r4f1Pending202Fields).map(([field, value]) => ({ field, value }));
+    assert.equal(r4f1Pending202List.some(f => /date/i.test(String(f.field || '')) && f.value), false, 'INV-202 must NOT receive 15/01/2025');
+    assert.equal(r4f1Pending202List.some(f => /amount|total/i.test(String(f.field || '')) && Number(f.value) > 0), false, 'INV-202 must NOT receive 500');
+
+    // 2. Finding 2 (P1): Sentence punctuation ! / ? and conjunctions inside amount/date descriptions
+    const f2Cases = [
+      'INV-101 is unchanged! The amount S$300 and date 20/01/2025 are for INV-202.',
+      'Is INV-101 unchanged? The amount S$300 and date 20/01/2025 are for INV-202.',
+      'INV-101 is unchanged, and the date 20/01/2025 and amount S$300 are for INV-202.',
+      'INV-101 is unchanged and the amount S$300 and the date 20/01/2025 are for INV-202.',
+      'INV-101 is unchanged: the amount S$300 and date 20/01/2025 are for INV-202.'
+    ];
+    for (const c of f2Cases) {
+      const f101 = extractDocAttributedTextFacts(c, new Set(['101']), false);
+      const f202 = extractDocAttributedTextFacts(c, new Set(['202']), false);
+      assert.equal(f101.date, '', `INV-101 must NOT receive date in "${c}"`);
+      assert.equal(f101.amountsCents.size, 0, `INV-101 must NOT receive amount in "${c}"`);
+      assert.equal(f202.date, '20/01/2025', `INV-202 must receive 20/01/2025 in "${c}"`);
+      assert.deepEqual(Array.from(f202.amountsCents), [30000], `INV-202 must receive S$300 in "${c}"`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, c, 'date'), [1], `Date target must be INV-202 for "${c}"`);
+      assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, c, 'amount'), [1], `Amount target must be INV-202 for "${c}"`);
+    }
+
+    // End-to-end Turn 1 -> Turn 2 with "!" punctuation
+    globalThis.fetch = async () => makeGeminiSuccessResponse({
+      responseKind: 'JOURNAL_ENTRY',
+      transactionTitle: 'Two Resolved Invoices R4-F2',
+      directGroups: [
+        {
+          id: 'grp-r4f1-101',
+          eventDate: '15/01/2025',
+          title: 'Invoice INV-101',
+          totalDebit: 500,
+          totalCredit: 500,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Office Supplies Expense', category: 'EXPENSE', debit: 500, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 500 }
+          ]
+        },
+        {
+          id: 'grp-r4f1-202',
+          eventDate: '20/01/2025',
+          title: 'Invoice INV-202',
+          totalDebit: 300,
+          totalCredit: 300,
+          isBalanced: true,
+          lines: [
+            { accountName: 'Maintenance Expense', category: 'EXPENSE', debit: 300, credit: 0 },
+            { accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 300 }
+          ]
+        }
+      ]
+    });
+
+    const r4f2Turn2 = await processAccountingQuery(
+      'INV-101 is unchanged! The amount S$300 and date 20/01/2025 are for INV-202.',
+      r4f1Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r4f2Turn2.scenarioState.committedDirectGroups?.length, 2, 'R4-F2 Turn 2 must commit both INV-101 and INV-202');
+    assert.equal(r4f2Turn2.scenarioState.committedDirectGroups[0].eventDate, '15/01/2025', 'INV-101 date must stay 15/01/2025');
+    assert.equal(r4f2Turn2.scenarioState.committedDirectGroups[0].totalDebit, 500, 'INV-101 amount must stay S$500');
+    assert.equal(r4f2Turn2.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 date must become 20/01/2025');
+    assert.equal(r4f2Turn2.scenarioState.committedDirectGroups[1].totalDebit, 300, 'INV-202 amount must become S$300');
+
+    // 3. Finding 3 (P2): Multiline and headed block invoice corrections
+    const multilineSingleBlock = 'INV-202:\nDate: 20/01/2025\nAmount: S$300';
+    assert.equal(extractDocAttributedTextFacts(multilineSingleBlock, new Set(['101']), false).date, '');
+    assert.equal(extractDocAttributedTextFacts(multilineSingleBlock, new Set(['101']), false).amountsCents.size, 0);
+    assert.equal(extractDocAttributedTextFacts(multilineSingleBlock, new Set(['202']), false).date, '20/01/2025');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(multilineSingleBlock, new Set(['202']), false).amountsCents), [30000]);
+    assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, multilineSingleBlock, 'date'), [1]);
+    assert.deepEqual(resolveTargetPendingImageIndices(pendingPair, multilineSingleBlock, 'amount'), [1]);
+
+    for (const twoBlock of [
+      'INV-101:\nDate: 15/01/2025\nAmount: S$500\n\nINV-202:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101:\nDate: 15/01/2025\nAmount: S$500\nINV-202:\nDate: 20/01/2025\nAmount: S$300',
+      'INV-101: Date: 15/01/2025, Amount: S$500 INV-202: Date: 20/01/2025, Amount: S$300'
+    ]) {
+      const f101 = extractDocAttributedTextFacts(twoBlock, new Set(['101']), false);
+      const f202 = extractDocAttributedTextFacts(twoBlock, new Set(['202']), false);
+      assert.equal(f101.date, '15/01/2025', `INV-101 must get ONLY 15/01/2025 in "${twoBlock}"`);
+      assert.deepEqual(Array.from(f101.amountsCents), [50000], `INV-101 must get ONLY S$500 in "${twoBlock}"`);
+      assert.equal(f202.date, '20/01/2025', `INV-202 must get ONLY 20/01/2025 in "${twoBlock}"`);
+      assert.deepEqual(Array.from(f202.amountsCents), [30000], `INV-202 must get ONLY S$300 in "${twoBlock}"`);
+    }
+
+    for (const singleHeaded of [
+      'INV-202: Date: 20/01/2025 Amount: S$300',
+      'INV-202: Date: 20/01/2025; Amount: S$300'
+    ]) {
+      const f202 = extractDocAttributedTextFacts(singleHeaded, new Set(['202']), false);
+      assert.equal(f202.date, '20/01/2025', `Headed block "${singleHeaded}" must attribute date to INV-202`);
+      assert.deepEqual(Array.from(f202.amountsCents), [30000], `Headed block "${singleHeaded}" must attribute amount to INV-202`);
+    }
+
+    // Guard checks: non-header prose and blank line after headed block must not leak in multi-doc scenario
+    const nonHeaderProse = 'INV-101 is unchanged.\nDate: 20/01/2025\nAmount: S$300';
+    assert.equal(extractDocAttributedTextFacts(nonHeaderProse, new Set(['101']), false).date, '', 'Non-header prose must NOT attribute following lines to INV-101');
+    assert.equal(extractDocAttributedTextFacts(nonHeaderProse, new Set(['101']), false).amountsCents.size, 0, 'Non-header prose must NOT attribute following line amount to INV-101');
+
+    const blankLineAfterBlock = 'INV-101:\nDate: 15/01/2025\n\nAmount: S$300';
+    const fBlank101 = extractDocAttributedTextFacts(blankLineAfterBlock, new Set(['101']), false);
+    assert.equal(fBlank101.date, '15/01/2025', 'Line before blank line belongs to INV-101');
+    assert.equal(fBlank101.amountsCents.size, 0, 'Line after blank line must NOT attribute to INV-101 in multi-doc scenario');
+
+    // End-to-end Turn 1 -> Turn 2 with multiline headed block
+    const r4f3Turn2 = await processAccountingQuery(
+      'INV-202:\nDate: 20/01/2025\nAmount: S$300',
+      r4f1Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r4f3Turn2.scenarioState.committedDirectGroups?.length, 2, 'R4-F3 Turn 2 multiline block must commit both INV-101 and INV-202');
+    assert.equal(r4f3Turn2.scenarioState.committedDirectGroups[0].eventDate, '15/01/2025', 'INV-101 date must stay 15/01/2025');
+    assert.equal(r4f3Turn2.scenarioState.committedDirectGroups[0].totalDebit, 500, 'INV-101 amount must stay S$500');
+    assert.equal(r4f3Turn2.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 date must become 20/01/2025');
+    assert.equal(r4f3Turn2.scenarioState.committedDirectGroups[1].totalDebit, 300, 'INV-202 amount must become S$300');
+
+    // Also verify label-free multiline headed block ("INV-202:\n20/01/2025\nS$300")
+    const r4f3LabelFree = await processAccountingQuery(
+      'INV-202:\n20/01/2025\nS$300',
+      r4f1Turn1.scenarioState,
+      'SFRS_I',
+      'test-gemini-key-long-enough-12345',
+      'gemini-3.5-flash-lite'
+    );
+    assert.equal(r4f3LabelFree.scenarioState.committedDirectGroups?.length, 2, 'R4-F3 label-free multiline block must commit both INV-101 and INV-202');
+    assert.equal(r4f3LabelFree.scenarioState.committedDirectGroups[1].eventDate, '20/01/2025', 'INV-202 date must become 20/01/2025');
+    assert.equal(r4f3LabelFree.scenarioState.committedDirectGroups[1].totalDebit, 300, 'INV-202 amount must become S$300');
+
+    // 4. Reviewer edge-case regressions (Findings 1–5)
+    // Edge case 1: Negated clause after boundary in multi-doc sentence must not leak to Doc 1 or Doc 2
+    const negAfterBoundary = 'INV-101 is unchanged, and S$300 on 20/01/2025 is unrelated to INV-202.';
+    assert.equal(extractDocAttributedTextFacts(negAfterBoundary, new Set(['101']), false).date, '', 'INV-101 must NOT receive negated date 20/01/2025');
+    assert.equal(extractDocAttributedTextFacts(negAfterBoundary, new Set(['101']), false).amountsCents.size, 0, 'INV-101 must NOT receive negated amount S$300');
+    assert.equal(extractDocAttributedTextFacts(negAfterBoundary, new Set(['202']), false).date, '', 'INV-202 must NOT receive negated date 20/01/2025');
+    assert.equal(extractDocAttributedTextFacts(negAfterBoundary, new Set(['202']), false).amountsCents.size, 0, 'INV-202 must NOT receive negated amount S$300');
+
+    const sameDocNegWhereas = 'INV-202 is S$300, whereas S$500 on 15/01/2025 is unrelated to INV-202.';
+    const fSameDocNeg = extractDocAttributedTextFacts(sameDocNegWhereas, new Set(['202']), false);
+    assert.equal(fSameDocNeg.date, '', 'INV-202 must NOT receive negated date 15/01/2025');
+    assert.deepEqual(Array.from(fSameDocNeg.amountsCents), [30000], 'INV-202 must receive ONLY S$300');
+
+    const bareAndNegUnrelated = 'INV-101 is S$500 and the date 20/01/2025 is unrelated to INV-202.';
+    assert.equal(extractDocAttributedTextFacts(bareAndNegUnrelated, new Set(['101']), false).date, '', 'INV-101 must NOT receive unrelated date 20/01/2025 across bare and');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(bareAndNegUnrelated, new Set(['101']), false).amountsCents), [50000], 'INV-101 must receive S$500');
+    assert.equal(extractDocAttributedTextFacts(bareAndNegUnrelated, new Set(['202']), false).date, '', 'INV-202 must NOT receive unrelated date 20/01/2025');
+
+    // Edge case 2: Comma inside negated/imperative beforeDoc + additional negative participles
+    for (const negCommaOrParticiple of [
+      'S$500, dated 15/01/2025 is unrelated to INV-202.',
+      "Don't use S$500, dated 15/01/2025, for INV-202.",
+      'S$500 on 15/01/2025 is not associated with INV-202.',
+      'S$500 on 15/01/2025 is not meant for INV-202.',
+      'S$500 on 15/01/2025 is not intended for INV-202.'
+    ]) {
+      const f = extractDocAttributedTextFacts(negCommaOrParticiple, new Set(['202']), false);
+      assert.equal(f.date, '', `Must reject negated date in "${negCommaOrParticiple}"`);
+      assert.equal(f.amountsCents.size, 0, `Must reject negated amount in "${negCommaOrParticiple}"`);
+    }
+
+    // Edge case 3: Complementary single-fact clauses across two documents
+    const comp1 = 'INV-101 is S$500 and the date 20/01/2025 is for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(comp1, new Set(['101']), false).date, '', 'INV-101 must NOT receive 20/01/2025 in comp1');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(comp1, new Set(['101']), false).amountsCents), [50000], 'INV-101 must receive S$500 in comp1');
+    assert.equal(extractDocAttributedTextFacts(comp1, new Set(['202']), false).date, '20/01/2025', 'INV-202 must receive 20/01/2025 in comp1');
+    assert.equal(extractDocAttributedTextFacts(comp1, new Set(['202']), false).amountsCents.size, 0, 'INV-202 must NOT receive S$500 in comp1');
+
+    const comp2 = 'INV-101 is dated 15/01/2025 and the amount S$300 is for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(comp2, new Set(['101']), false).date, '15/01/2025', 'INV-101 must receive 15/01/2025 in comp2');
+    assert.equal(extractDocAttributedTextFacts(comp2, new Set(['101']), false).amountsCents.size, 0, 'INV-101 must NOT receive S$300 in comp2');
+    assert.equal(extractDocAttributedTextFacts(comp2, new Set(['202']), false).date, '', 'INV-202 must NOT receive 15/01/2025 in comp2');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(comp2, new Set(['202']), false).amountsCents), [30000], 'INV-202 must receive S$300 in comp2');
+
+    const comp3 = 'For INV-101, S$500 and the date 20/01/2025 is for INV-202.';
+    assert.equal(extractDocAttributedTextFacts(comp3, new Set(['101']), false).date, '', 'INV-101 must NOT receive 20/01/2025 in comp3');
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(comp3, new Set(['101']), false).amountsCents), [50000], 'INV-101 must receive S$500 in comp3');
+    assert.equal(extractDocAttributedTextFacts(comp3, new Set(['202']), false).date, '20/01/2025', 'INV-202 must receive 20/01/2025 in comp3');
+    assert.equal(extractDocAttributedTextFacts(comp3, new Set(['202']), false).amountsCents.size, 0, 'INV-202 must NOT receive S$500 in comp3');
+
+    // Edge case 4: Conflict-override phrases ("not <amount>" / "instead of <amount>")
+    const overrideNotAmt = 'For INV-202, the correct amount is S$600, not S$500.';
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(overrideNotAmt, new Set(['202']), false).amountsCents), [60000], 'INV-202 must keep S$600 and drop negated S$500');
+
+    const overrideNotAmtAndDate = 'INV-202 is S$300, not S$500 on 15/01/2025.';
+    const fOverride2 = extractDocAttributedTextFacts(overrideNotAmtAndDate, new Set(['202']), false);
+    assert.equal(fOverride2.date, '', 'INV-202 must drop negated date 15/01/2025');
+    assert.deepEqual(Array.from(fOverride2.amountsCents), [30000], 'INV-202 must keep S$300 and drop negated S$500');
+
+    const overrideInsteadOf = 'INV-202 is S$600 instead of S$500.';
+    assert.deepEqual(Array.from(extractDocAttributedTextFacts(overrideInsteadOf, new Set(['202']), false).amountsCents), [60000], 'INV-202 must keep S$600 and drop "instead of S$500"');
+
+    // Edge case 5: Active headed block interrupted by "; ... , and INV-202:"
+    const semicolonAndHeaded = 'INV-101: Date: 15/01/2025; Amount: S$500, and INV-202: Date: 20/01/2025; Amount: S$300';
+    const fSemi101 = extractDocAttributedTextFacts(semicolonAndHeaded, new Set(['101']), false);
+    const fSemi202 = extractDocAttributedTextFacts(semicolonAndHeaded, new Set(['202']), false);
+    assert.equal(fSemi101.date, '15/01/2025', 'INV-101 must receive 15/01/2025');
+    assert.deepEqual(Array.from(fSemi101.amountsCents), [50000], 'INV-101 must receive S$500 before ", and INV-202:"');
+    assert.equal(fSemi202.date, '20/01/2025', 'INV-202 must receive 20/01/2025');
+    assert.deepEqual(Array.from(fSemi202.amountsCents), [30000], 'INV-202 must receive ONLY S$300');
+
+    console.log('✓ 10R-4 (P1/P2). Negative/unrelated doc associations, !/? & internal conjunctions, and multiline/headed blocks verified');
+    passed++;
+  }
+
 } finally {
   globalThis.fetch = origFetch;
 }

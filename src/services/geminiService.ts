@@ -437,16 +437,21 @@ export function extractAmountsCentsFromText(text: string): Set<number> {
   return amounts;
 }
 
-const OTHER_DOC_ORDINAL_REGEX = /\b(?:(?:first|second|third|1st|2nd|3rd|other|another|previous|earlier|prior)\s+(?:screenshot|image|invoice|document|receipt|bill|voucher|one|item)|(?:screenshot|image|item)\s*#?\s*\d+)\b/i;
+const OTHER_DOC_ORDINAL_REGEX = /\b(?:(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|other|another|previous|earlier|prior|next|subsequent|remaining|last|latter|former)\s+(?:screenshot|image|invoice|document|receipt|bill|voucher|one|item)|(?:screenshot|image|item)\s*#?\s*\d+)\b/i;
 const ABBR_BEFORE_DOT_REGEX = /(?:^|[\s(])(?:no|num|dr|cr|mr|mrs|ms|st|ltd|pte|inc|co|corp|ref|doc|inv|rcp|pv|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|e\.g|i\.e|etc|vs)$/i;
 const TRAILING_LINKER_REGEX = /(?:^|\s)(?:(?:is|are|was|were|be)\s+)?(?:for|to|of|on|in|under|from|regarding|concerning|re:|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to|attributed\s+to|assigned\s+to)\s*$/i;
 const TRAILING_COPULA_REGEX = /\s+(?:is|are|was|were)\s*$/i;
+const NEGATIVE_TRAILING_LINKER_REGEX = /(?:^|[\s,;—–-])(?:(?:(?:is|are|was|were|be|being|been)\s+)?(?:not|never)\s+(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\b|(?:related|linked|connected|tied|attached|attributed|assigned|associated|meant|intended|applicable|belonging|pertaining|referring|corresponding)\s+(?:to|with|for)\b)?|(?:isn't|aren't|wasn't|weren't)\s*(?:(?:for|to|of|on|in|under|from|regarding|concerning|about|with)\b|(?:related|linked|connected|tied|attached|attributed|assigned|associated|meant|intended|applicable|belonging|pertaining|referring|corresponding)\s+(?:to|with|for)\b)?|(?:(?:does|do|did)\s+not|doesn't|don't|didn't|cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\s+(?:(?:be\s+)?(?:used?\s+for|appl(?:y|ied)\s+to|belong\s+to|relate\s+to|pertain\s+to|refer\s+to|correspond\s+to|match|attributed\s+to|assigned\s+to|associated\s+with|linked\s+to|meant\s+for|intended\s+for)\b)?|(?:(?:is|are|was|were)\s+)?(?:unrelated|unconnected)\s+(?:to|with)\b|(?:has|have|had)\s+(?:nothing\s+to\s+do\s+with|no\s+(?:relation|connection|link|bearing)\s+(?:to|with|on))\b|(?:(?:is|are|was|were)\s+)?(?:different\s+(?:from|than|to)|distinct\s+from|separate\s+from|independent\s+(?:of|from))\b|differs?\s+from\b|(?:other\s+than|apart\s+from|aside\s+from|except(?:\s+for)?|excluding|instead\s+of|rather\s+than|as\s+opposed\s+to|in\s+contrast\s+(?:to|with)|contrary\s+to|unlike|compared\s+(?:to|with)|versus|vs\.?))\s*$/i;
+const NEGATIVE_IMPERATIVE_CLAUSE_REGEX = /\b(?:do\s+not|don't|never|cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\s+(?:be\s+)?(?:use|used|apply|applied|attribute|attributed|assign|assigned|associate|associated|link|linked|record|recorded|post|posted)\b/i;
+const NEGATIVE_POST_DOC_PREDICATE_REGEX = /^\s*(?:,\s*)?(?:(?:which|that|it|this)\s+)?(?:(?:is|are|was|were)\s+(?:not|never|unrelated|unconnected|different|distinct|separate|independent)\b|(?:isn't|aren't|wasn't|weren't)\b|(?:does|do|did)\s+not\b|(?:doesn't|don't|didn't)\b|(?:has|have|had)\s+(?:nothing\s+to\s+do\s+with|no\s+(?:relation|connection|link|bearing)\s+(?:to|with|on))\b|differs?\s+from\b|(?:unrelated|unconnected)\s+(?:to|with)\b|(?:different\s+(?:from|than|to)|distinct\s+from|separate\s+from|independent\s+(?:of|from))\b|(?:not\s+(?:for|to|related\s+to|linked\s+to|connected\s+to|attributed\s+to|assigned\s+to|associated\s+with|meant\s+for|intended\s+for|applicable\s+to|dated)\b)|(?:cannot|can't|should\s+not|shouldn't|must\s+not|mustn't)\b|(?:not|never|instead\s+of|rather\s+than|apart\s+from|aside\s+from|other\s+than|except(?:\s+for)?)\b)/i;
+const NEGATIVE_SUBCLAUSE_PREDICATE_REGEX = /\b(?:(?:is|are|was|were)\s+(?:not\s+(?:applicable|relevant|related|linked|connected|attributed|assigned|associated|meant|intended|for\s+this|for\s+it)|unrelated|unconnected|irrelevant|inapplicable)|(?:does|do|did)\s+not\s+(?:apply|belong|relate|pertain|refer|correspond)|(?:doesn't|don't|didn't)\s+(?:apply|belong|relate|pertain|refer|correspond)|(?:has|have|had)\s+(?:nothing\s+to\s+do|no\s+(?:relation|connection|link|bearing)))\b/i;
 const FORWARD_CLAUSE_INTRODUCER_REGEX = /^(?:for|to|of|on|in|under|from|regarding|concerning|re:)\s*$/i;
 const CONJOINING_GAP_REGEX = /^\s*(?:,|&|\/|\band\b|\bor\b|,\s*(?:and|or))\s*$/i;
+const SUBCLAUSE_SPLIT_REGEX = /,\s*(?:while|whereas|but|and|however|though|although|unlike)\b\s*|,\s+(?!(?:\d{3}|\d{4})\b)|\s*:\s+|\s+\b(?:while|whereas|but|however|though|although|unlike|compared\s+(?:to|with)|versus|vs\.?)\b\s+|(?:,\s*|\s+)(?=\b(?:instead\s+of|rather\s+than|apart\s+from|aside\s+from|other\s+than|except(?:\s+for)?)\b)|\s*[—–]\s*/gi;
 
 function splitIntoSentenceSpans(text: string): Array<{ start: number; end: number; text: string }> {
   const spans: Array<{ start: number; end: number; text: string }> = [];
-  const delimRegex = /[;\n]+|\.(?=\s|$)/g;
+  const delimRegex = /[;\n!?]+|\.(?=\s|$)/g;
   let start = 0;
   let m: RegExpExecArray | null;
   while ((m = delimRegex.exec(text)) !== null) {
@@ -474,18 +479,28 @@ function isTopLevelIndex(text: string, idx: number): boolean {
   return depth === 0;
 }
 
-function filterOutOtherDocumentSubClauses(clause: string): string {
-  if (!clause || !OTHER_DOC_ORDINAL_REGEX.test(clause)) return clause;
-  const subClauseSplitRegex = /,\s*(?:while|whereas|but|and|however|though|although)\b\s*|,\s+(?!(?:\d{3}|\d{4})\b)|\s*:\s+|\s+\b(?:while|whereas|but|however|though|although)\b\s+|\s*[—–]\s*/gi;
+function splitTopLevelSubClauses(clause: string): string[] {
+  if (!clause) return [];
   const parts: string[] = [];
+  SUBCLAUSE_SPLIT_REGEX.lastIndex = 0;
   let start = 0;
   let m: RegExpExecArray | null;
-  while ((m = subClauseSplitRegex.exec(clause)) !== null) {
+  while ((m = SUBCLAUSE_SPLIT_REGEX.exec(clause)) !== null) {
     if (!isTopLevelIndex(clause, m.index)) continue;
+    if (/^,\s+$/.test(m[0])) {
+      const afterComma = clause.slice(m.index + m[0].length);
+      if (/^(?:dated|on\s+\d|for\s*$)/i.test(afterComma)) continue;
+    }
     parts.push(clause.slice(start, m.index));
     start = m.index + m[0].length;
   }
   parts.push(clause.slice(start));
+  return parts;
+}
+
+function filterOutOtherDocumentSubClauses(clause: string): string {
+  if (!clause) return '';
+  const parts = splitTopLevelSubClauses(clause);
 
   // If a part still mixes a doc ref and an ordinal via bare "and", split only at that separating "and"
   const refinedParts: string[] = [];
@@ -516,15 +531,72 @@ function filterOutOtherDocumentSubClauses(clause: string): string {
     refinedParts.push(part);
   }
 
-  const kept = refinedParts.filter(part => !OTHER_DOC_ORDINAL_REGEX.test(part) || extractDocRefOccurrences(part).length > 0);
-  return kept.join(' ');
+  const kept = refinedParts.filter(
+    part =>
+      !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+      !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) &&
+      !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part)
+  );
+  return kept.join(' ').trim();
+}
+
+function sanitizeAttributedDocClause(beforeDoc: string, docToken: string, afterDoc: string): string {
+  let beforeParts: string[] = [];
+  if (beforeDoc && !NEGATIVE_TRAILING_LINKER_REGEX.test(beforeDoc) && !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(beforeDoc)) {
+    let effectiveBeforeDoc = beforeDoc;
+    if (!hasPositiveTrailingLinker(effectiveBeforeDoc)) {
+      const { all: bBounds } = collectClauseBoundaries(effectiveBeforeDoc);
+      if (bBounds.length > 0) {
+        const lastB = bBounds[bBounds.length - 1];
+        const afterLastB = effectiveBeforeDoc.slice(lastB.end);
+        if (!hasMonetaryOrDateFact(afterLastB) && (lastB.kind !== 'comma' || afterLastB.trim().length > 0)) {
+          effectiveBeforeDoc = afterLastB;
+        }
+      }
+    }
+    beforeParts = splitTopLevelSubClauses(effectiveBeforeDoc);
+    if (beforeParts.length > 0) {
+      const lastPart = beforeParts[beforeParts.length - 1];
+      if (NEGATIVE_TRAILING_LINKER_REGEX.test(lastPart) || NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(lastPart)) {
+        beforeParts = [];
+      }
+    }
+  }
+  const cleanedBefore = beforeParts
+    .filter(
+      part =>
+        !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+        !NEGATIVE_TRAILING_LINKER_REGEX.test(part) &&
+        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part) &&
+        !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part)
+    )
+    .join(' ')
+    .trim();
+
+  const afterParts = afterDoc ? splitTopLevelSubClauses(afterDoc) : [];
+  const cleanedAfter = afterParts
+    .filter(
+      part =>
+        !OTHER_DOC_ORDINAL_REGEX.test(part) &&
+        !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(part) &&
+        !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(part) &&
+        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(part)
+    )
+    .join(' ')
+    .trim();
+
+  if (!/[a-z0-9]/i.test(cleanedBefore) && !/[a-z0-9]/i.test(cleanedAfter)) {
+    return '';
+  }
+
+  return [cleanedBefore, docToken, cleanedAfter].filter(Boolean).join(' ').trim();
 }
 
 function collectClauseBoundaries(text: string): {
   all: Array<{ index: number; end: number; kind: 'strong' | 'comma' | 'and' }>;
 } {
   const all: Array<{ index: number; end: number; kind: 'strong' | 'comma' | 'and' }> = [];
-  const strongRegex = /,\s*(?:and|but|while|whereas|however|yet)\b\s*|\s*[—–]\s*|\s+\b(?:but|while|whereas|however)\b\s+/gi;
+  const strongRegex = /,\s*(?:and|but|while|whereas|however|yet)\b\s*|\s*[—–]\s*|\s+-\s+|\s*:\s+|\s+\b(?:but|while|whereas|however)\b\s+/gi;
   const commaRegex = /,\s+(?!\d{4}\b)/g;
   const andRegex = /\s+\band\b\s+/gi;
 
@@ -557,10 +629,109 @@ function hasMonetaryOrDateFact(text: string): boolean {
   return Boolean(extractDateFromText(text)) || extractAmountsCentsFromText(text).size > 0;
 }
 
-function splitBetweenDocRefs(between: string): { left: string; right: string } {
+function hasPositiveTrailingLinker(text: string): boolean {
+  return (
+    (TRAILING_LINKER_REGEX.test(text) || TRAILING_COPULA_REGEX.test(text)) &&
+    !NEGATIVE_TRAILING_LINKER_REGEX.test(text) &&
+    !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(text)
+  );
+}
+
+function isInternalFactConjunction(
+  between: string,
+  b: { index: number; end: number; kind: 'strong' | 'comma' | 'and' },
+  all: Array<{ index: number; end: number; kind: 'strong' | 'comma' | 'and' }>
+): boolean {
+  if (b.kind !== 'and') return false;
+  let prevB: { index: number; end: number; kind: 'strong' | 'comma' | 'and' } | undefined;
+  let nextB: { index: number; end: number; kind: 'strong' | 'comma' | 'and' } | undefined;
+  for (const item of all) {
+    if (item.end <= b.index) prevB = item;
+    else if (!nextB && item.index >= b.end) nextB = item;
+  }
+  const prevSeg = between.slice(prevB ? prevB.end : 0, b.index);
+  const nextSeg = between.slice(b.end, nextB ? nextB.index : between.length);
+  const afterB = between.slice(b.end);
+
+  const prevHasAmt = extractAmountsCentsFromText(prevSeg).size > 0;
+  const prevHasDate = Boolean(extractDateFromText(prevSeg));
+  const nextHasAmt = extractAmountsCentsFromText(nextSeg).size > 0;
+  const nextHasDate = Boolean(extractDateFromText(nextSeg));
+
+  if (!(prevHasAmt || prevHasDate) || !(nextHasAmt || nextHasDate)) {
+    return false;
+  }
+
+  // If prevSeg already contains both amount and date, the following "and" begins a distinct clause
+  if (prevHasAmt && prevHasDate) {
+    return false;
+  }
+
+  const sameKindSecondFact =
+    (prevHasAmt && !prevHasDate && nextHasAmt && !nextHasDate) ||
+    (prevHasDate && !prevHasAmt && nextHasDate && !nextHasAmt);
+  if (sameKindSecondFact) {
+    return false;
+  }
+
+  const isComplementary =
+    (prevHasAmt && !prevHasDate && nextHasDate && !nextHasAmt) ||
+    (prevHasDate && !prevHasAmt && nextHasAmt && !nextHasDate);
+
+  const continuationStartRegex = /^(?:(?:the|a|an|its)\s+)?(?:(?:invoice|transaction|document|receipt|bill|voucher|payment|correct|actual|revised|updated|new)\s+)?(?:date(?:d|\s+of|\s+is|\s+was|:)?|on\b|amount(?:\s+of|\s+is|\s+was|:)?|total(?:ing|ling|\s+of|\s+amount|\s+is|\s+was|:)?|sum(?:\s+of|:)?|value(?:\s+of|:)?|(?:S\$|\$|SGD|USD|EUR|GBP)\s*\d|\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2}|\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2})/i;
+  const trimmedAfterB = afterB.trimStart();
+
+  if (!isComplementary && !continuationStartRegex.test(trimmedAfterB)) {
+    return false;
+  }
+
+  const prevHasOwnPredicate = /\b(?:is|are|was|were|has|have|had|totals?|equals?)\b|^\s*[:=—–-]/i.test(prevSeg);
+  const afterHasOwnClauseVerb = /\b(?:is|was|has|totals?|equals?|belongs?\s+to|appl(?:y|ies)\s+to|relates?\s+to|pertains?\s+to)\b/i.test(trimmedAfterB);
+  if (prevHasOwnPredicate && afterHasOwnClauseVerb) {
+    return false;
+  }
+  if (hasPositiveTrailingLinker(trimmedAfterB) && !/\b(?:are|were|belong|apply|relate|pertain)\b/i.test(trimmedAfterB)) {
+    // Singular trailing linker (e.g. "is for", "was for", "belongs to") agrees with a single subject in afterB, not a compound "A and B" subject
+    if (prevHasOwnPredicate || /^(?:(?:the|a|an|its)\s+)/i.test(trimmedAfterB)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function splitBetweenDocRefs(
+  between: string,
+  nextDocFollowedByColon: boolean = false
+): { left: string; right: string } {
   if (!between) return { left: '', right: '' };
+  if (NEGATIVE_TRAILING_LINKER_REGEX.test(between)) {
+    const strippedLeft = between.replace(NEGATIVE_TRAILING_LINKER_REGEX, '');
+    const { all: leftBounds } = collectClauseBoundaries(strippedLeft);
+    const nonInternalLeft = leftBounds.filter(b => !isInternalFactConjunction(between, b, leftBounds));
+    if (nonInternalLeft.length > 0) {
+      const lastB = nonInternalLeft[nonInternalLeft.length - 1];
+      return { left: strippedLeft.slice(0, lastB.index), right: '' };
+    }
+    if (/^\s*(?:the|a|an)\b/i.test(strippedLeft)) {
+      return { left: '', right: '' };
+    }
+    return { left: strippedLeft, right: '' };
+  }
+
   const { all } = collectClauseBoundaries(between);
-  const hasTrailingLinker = TRAILING_LINKER_REGEX.test(between) || TRAILING_COPULA_REGEX.test(between);
+  const hasTrailingLinker = hasPositiveTrailingLinker(between);
+
+  if (nextDocFollowedByColon && !hasTrailingLinker) {
+    for (let i = all.length - 1; i >= 0; i--) {
+      const b = all[i];
+      const afterB = between.slice(b.end);
+      if (afterB.trim() === '' || FORWARD_CLAUSE_INTRODUCER_REGEX.test(afterB)) {
+        return { left: between.slice(0, b.index), right: afterB };
+      }
+    }
+    return { left: between, right: '' };
+  }
 
   if (hasTrailingLinker) {
     for (let i = all.length - 1; i >= 0; i--) {
@@ -575,25 +746,32 @@ function splitBetweenDocRefs(between: string): { left: string; right: string } {
       const b = strongWithFacts[strongWithFacts.length - 1];
       return { left: between.slice(0, b.index), right: between.slice(b.end) };
     }
-    const commaWithFacts = all.filter(b => b.kind === 'comma' && hasMonetaryOrDateFact(between.slice(b.end)));
-    if (commaWithFacts.length > 0) {
-      const firstEmptyLeft = commaWithFacts.find(b => !hasMonetaryOrDateFact(between.slice(0, b.index)));
-      const b = firstEmptyLeft || commaWithFacts[commaWithFacts.length - 1];
+    const separatingAnd = all.filter(
+      b => b.kind === 'and' && hasMonetaryOrDateFact(between.slice(b.end)) && !isInternalFactConjunction(between, b, all)
+    );
+    const commaCandidates = all.filter(
+      b =>
+        b.kind === 'comma' &&
+        hasMonetaryOrDateFact(between.slice(b.end)) &&
+        !(between.slice(0, b.index).trim() === '' && separatingAnd.length > 0)
+    );
+    if (commaCandidates.length > 0) {
+      const nonLeadingEmptyLeft = commaCandidates.find(
+        b => between.slice(0, b.index).trim() !== '' && !hasMonetaryOrDateFact(between.slice(0, b.index))
+      );
+      const b = nonLeadingEmptyLeft || commaCandidates[commaCandidates.length - 1];
       return { left: between.slice(0, b.index), right: between.slice(b.end) };
     }
-    const andWithFacts = all.filter(b => b.kind === 'and' && hasMonetaryOrDateFact(between.slice(b.end)));
-    if (andWithFacts.length > 0) {
-      const separatingAnd = andWithFacts.filter(
-        b => !(hasMonetaryOrDateFact(between.slice(0, b.index)) && /^(?:dated?|on)\b/i.test(between.slice(b.end)))
-      );
-      const b = (separatingAnd.length > 0 ? separatingAnd : andWithFacts)[0];
+    if (separatingAnd.length > 0) {
+      const b = separatingAnd[0];
       return { left: between.slice(0, b.index), right: between.slice(b.end) };
     }
     return { left: '', right: '' };
   }
 
-  if (all.length > 0) {
-    const b = all[all.length - 1];
+  const nonInternal = all.filter(b => !isInternalFactConjunction(between, b, all));
+  if (nonInternal.length > 0) {
+    const b = nonInternal[nonInternal.length - 1];
     return { left: between.slice(0, b.index), right: between.slice(b.end) };
   }
 
@@ -624,8 +802,21 @@ function extractDocAttributedTextSegments(
 
   const segments: Array<{ docRef: string; text: string }> = [];
   const sentenceSpans = splitIntoSentenceSpans(text);
+  let activeBlockDocRef: string | null = null;
+  let lastNonEmptyEnd = -1;
 
   for (const span of sentenceSpans) {
+    if (!span.text.trim()) continue;
+
+    const leadingWsLen = span.text.match(/^\s*/)?.[0].length ?? 0;
+    const firstNonWsIdx = span.start + leadingWsLen;
+    const hasBlankLineBefore =
+      lastNonEmptyEnd >= 0 && /\r?\n[ \t]*\r?\n/.test(text.slice(lastNonEmptyEnd, firstNonWsIdx));
+    lastNonEmptyEnd = span.end;
+    if (hasBlankLineBefore) {
+      activeBlockDocRef = null;
+    }
+
     const sentOccs = docOccurrences
       .filter(o => o.startIndex >= span.start && o.endIndex <= span.end)
       .map(o => ({
@@ -635,26 +826,86 @@ function extractDocAttributedTextSegments(
       }));
 
     if (sentOccs.length === 0) {
-      if (isSingleDocumentScenario && allTextDocRefs.size === 1 && !OTHER_DOC_ORDINAL_REGEX.test(span.text)) {
+      if (
+        OTHER_DOC_ORDINAL_REGEX.test(span.text) ||
+        NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text) ||
+        NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(span.text)
+      ) {
+        activeBlockDocRef = null;
+        continue;
+      }
+      if (activeBlockDocRef) {
+        const cleaned = filterOutOtherDocumentSubClauses(span.text);
+        if (cleaned) {
+          segments.push({ docRef: activeBlockDocRef, text: cleaned });
+        }
+        continue;
+      }
+      if (isSingleDocumentScenario && allTextDocRefs.size === 1) {
         const soleRef = Array.from(allTextDocRefs)[0];
-        segments.push({ docRef: soleRef, text: span.text });
+        const cleaned = filterOutOtherDocumentSubClauses(span.text);
+        if (cleaned) {
+          segments.push({ docRef: soleRef, text: cleaned });
+        }
       }
       continue;
+    }
+
+    const firstOcc = sentOccs[0];
+    const rawBeforeFirst = span.text.slice(0, firstOcc.startIndex);
+    let adjustedBeforeFirst = rawBeforeFirst;
+    if (
+      activeBlockDocRef &&
+      activeBlockDocRef !== firstOcc.cleanBody &&
+      hasMonetaryOrDateFact(rawBeforeFirst) &&
+      !hasPositiveTrailingLinker(rawBeforeFirst)
+    ) {
+      const { all: preBounds } = collectClauseBoundaries(rawBeforeFirst);
+      if (preBounds.length > 0) {
+        const lastPreB = preBounds[preBounds.length - 1];
+        const forPrevBlock = rawBeforeFirst.slice(0, lastPreB.index);
+        const remBeforeFirst = rawBeforeFirst.slice(lastPreB.end);
+        if (hasMonetaryOrDateFact(forPrevBlock) && !hasMonetaryOrDateFact(remBeforeFirst)) {
+          const cleanedPrev = filterOutOtherDocumentSubClauses(forPrevBlock);
+          if (cleanedPrev) {
+            segments.push({ docRef: activeBlockDocRef, text: cleanedPrev });
+          }
+          adjustedBeforeFirst = remBeforeFirst;
+        }
+      }
     }
 
     if (sentOccs.length === 1) {
-      const cleanedClause = filterOutOtherDocumentSubClauses(span.text);
+      const occ = sentOccs[0];
+      const beforeDoc = adjustedBeforeFirst;
+      const docToken = span.text.slice(occ.startIndex, occ.endIndex);
+      const afterDoc = span.text.slice(occ.endIndex);
+
+      const isBlockHeaderPrefix = /^\s*(?:[-*•]|\d+[.)])?\s*(?:(?:for|re:?|regarding|concerning|on|in|under|update\s+for|corrections?\s+for|details\s+for)\s+)?$/i.test(beforeDoc);
+      const isBlockHeaderSuffix = /^\s*(?:(?:details|corrections?|updates?|info|information)\s*)?(?::|[-—–]\s*$|$)/i.test(afterDoc);
+      const hasNoNegativeOrOrdinal =
+        !OTHER_DOC_ORDINAL_REGEX.test(span.text) &&
+        !NEGATIVE_TRAILING_LINKER_REGEX.test(beforeDoc) &&
+        !NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(beforeDoc) &&
+        !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(afterDoc) &&
+        !NEGATIVE_SUBCLAUSE_PREDICATE_REGEX.test(span.text);
+      activeBlockDocRef = isBlockHeaderPrefix && isBlockHeaderSuffix && hasNoNegativeOrOrdinal ? occ.cleanBody : null;
+
+      const cleanedClause = sanitizeAttributedDocClause(beforeDoc, docToken, afterDoc);
       if (cleanedClause) {
-        segments.push({ docRef: sentOccs[0].cleanBody, text: cleanedClause });
+        segments.push({ docRef: occ.cleanBody, text: cleanedClause });
       }
       continue;
     }
 
-    const prefix = span.text.slice(0, sentOccs[0].startIndex);
+    const prefix = adjustedBeforeFirst;
     const suffix = span.text.slice(sentOccs[sentOccs.length - 1].endIndex);
-    const pieces: string[] = sentOccs.map(() => '');
+    const beforePieces: string[] = sentOccs.map(() => '');
+    const afterPieces: string[] = sentOccs.map(() => '');
     const conjoinedLeft: boolean[] = sentOccs.map(() => false);
     const conjoinedRight: boolean[] = sentOccs.map(() => false);
+
+    beforePieces[0] = prefix;
 
     for (let i = 0; i < sentOccs.length - 1; i++) {
       const between = span.text.slice(sentOccs[i].endIndex, sentOccs[i + 1].startIndex);
@@ -662,14 +913,20 @@ function extractDocAttributedTextSegments(
         conjoinedRight[i] = true;
         conjoinedLeft[i + 1] = true;
       } else {
-        const { left, right } = splitBetweenDocRefs(between);
-        pieces[i] += left;
-        pieces[i + 1] += right;
+        const nextDocFollowedByColon = /^\s*:/.test(span.text.slice(sentOccs[i + 1].endIndex));
+        const { left, right } = splitBetweenDocRefs(between, nextDocFollowedByColon);
+        afterPieces[i] += left;
+        beforePieces[i + 1] += right;
       }
     }
 
-    pieces[0] = prefix + pieces[0];
-    pieces[sentOccs.length - 1] = pieces[sentOccs.length - 1] + suffix;
+    afterPieces[sentOccs.length - 1] += suffix;
+
+    for (let i = 0; i < sentOccs.length; i++) {
+      if (NEGATIVE_TRAILING_LINKER_REGEX.test(beforePieces[i]) || NEGATIVE_IMPERATIVE_CLAUSE_REGEX.test(beforePieces[i])) {
+        beforePieces[i] = '';
+      }
+    }
 
     // Fail closed on any conjoined run of distinct doc refs where facts appear asymmetrically
     let idx = 0;
@@ -682,22 +939,32 @@ function extractDocAttributedTextSegments(
       while (runEnd + 1 < sentOccs.length && conjoinedLeft[runEnd + 1]) {
         runEnd++;
       }
-      const leftFacts = hasMonetaryOrDateFact(pieces[idx]);
-      const rightFacts = hasMonetaryOrDateFact(pieces[runEnd]);
+      const leftFacts = hasMonetaryOrDateFact(`${beforePieces[idx]} ${afterPieces[idx]}`);
+      const rightFacts = hasMonetaryOrDateFact(`${beforePieces[runEnd]} ${afterPieces[runEnd]}`);
       if (leftFacts !== rightFacts) {
         for (let k = idx; k <= runEnd; k++) {
-          pieces[k] = '';
+          beforePieces[k] = '';
+          afterPieces[k] = '';
         }
       }
       idx = runEnd + 1;
     }
 
     for (let i = 0; i < sentOccs.length; i++) {
-      const cleaned = filterOutOtherDocumentSubClauses(pieces[i]);
+      const docToken = span.text.slice(sentOccs[i].startIndex, sentOccs[i].endIndex);
+      const cleaned = sanitizeAttributedDocClause(beforePieces[i], docToken, afterPieces[i]);
       if (cleaned) {
         segments.push({ docRef: sentOccs[i].cleanBody, text: cleaned });
       }
     }
+
+    const lastOcc = sentOccs[sentOccs.length - 1];
+    activeBlockDocRef =
+      /^\s*(?:(?:details|corrections?|updates?|info|information)\s*)?:/i.test(suffix) &&
+      !OTHER_DOC_ORDINAL_REGEX.test(suffix) &&
+      !NEGATIVE_POST_DOC_PREDICATE_REGEX.test(suffix)
+        ? lastOcc.cleanBody
+        : null;
   }
 
   return segments.filter(seg => targetDocRefs.has(seg.docRef)).map(seg => seg.text);
@@ -3381,10 +3648,19 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
 
+  const pendingDocRefsForFollowUp = currentScenario?.pendingImageEvidence?.length
+    ? extractDocRefsFromImages(currentScenario.pendingImageEvidence)
+    : new Set<string>();
+  const userDocRefsForFollowUp = currentScenario?.pendingImageEvidence?.length
+    ? extractNormalizedDocRefs(userInput)
+    : new Set<string>();
+  const referencesPendingDocument = Array.from(userDocRefsForFollowUp).some(r => pendingDocRefsForFollowUp.has(r));
+
   const isFollowUpForImage = Boolean(
     currentScenario &&
     (context.semanticUnderstanding?.followUpAnalysis?.isFollowUp ||
-     assessConversationRelation(userInput, currentScenario) !== 'NEW')
+     assessConversationRelation(userInput, currentScenario) !== 'NEW' ||
+     referencesPendingDocument)
   );
   const priorCommittedForImage: JournalEntryGroup[] = (isFollowUpForImage && currentScenario)
     ? (Array.isArray(currentScenario.committedDirectGroups)
@@ -3540,7 +3816,8 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
     const hasNoConflictingAmount = userAmounts.length === 0 || pendingAmounts.size === 0 || userAmounts.every(a => pendingAmounts.has(a));
     const earlyUserDocRefs = extractNormalizedDocRefs(userInput);
     let hasTargetedNewAmountForDoc = false;
-    if (currentScenario.pendingImageEvidence.length > 1 && earlyUserDocRefs.size > 0 && userAmounts.length > 0) {
+    let anyPendingDocHasAttributedAmount = false;
+    if (currentScenario.pendingImageEvidence.length >= 1 && earlyUserDocRefs.size > 0 && userAmounts.length > 0) {
       for (const img of currentScenario.pendingImageEvidence) {
         const allImgRefs = new Set<string>(extractDocRefsFromImages([img]));
         if (img.imageId) {
@@ -3550,16 +3827,25 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         if (allImgRefs.size === 0) continue;
         const attributed = extractDocAttributedTextFacts(userInput, allImgRefs, false);
         if (attributed.amountsCents.size > 0) {
+          anyPendingDocHasAttributedAmount = true;
           const imgExistingAmounts = getImageAmountCentsSet(img);
           if (Array.from(attributed.amountsCents).some(a => !imgExistingAmounts.has(a))) {
             hasTargetedNewAmountForDoc = true;
-            break;
           }
         }
       }
     }
+    const isUnattributedOrdinalOrNegativeDocRef =
+      earlyUserDocRefs.size > 0 &&
+      !anyPendingDocHasAttributedAmount &&
+      (OTHER_DOC_ORDINAL_REGEX.test(userInput) || NEGATIVE_TRAILING_LINKER_REGEX.test(userInput) || /\bunrelated\b/i.test(userInput));
     hasConflictingUserAmount = userAmounts.length > 0 && (!hasNoConflictingAmount || hasTargetedNewAmountForDoc);
-    isValidUserAmountCorrection = hasConflictingUserAmount && !isExplanatoryQuery && !isNewStandaloneTransactionWhilePending && (hasExplicitAmountCorrectionIntent || hasExplicitProceedDirective);
+    isValidUserAmountCorrection =
+      hasConflictingUserAmount &&
+      !isExplanatoryQuery &&
+      !isNewStandaloneTransactionWhilePending &&
+      !isUnattributedOrdinalOrNegativeDocRef &&
+      (hasExplicitAmountCorrectionIntent || hasExplicitProceedDirective || hasTargetedNewAmountForDoc);
 
     const userCorrectedDateEarly = extractDateFromText(userInput);
     hasUserDateResolution = Boolean(userCorrectedDateEarly) && !hasInvalidCalendarDateToken(userInput);
@@ -3872,7 +4158,9 @@ ${currentScenario.pendingImageEvidence?.length ? `Pending uncommitted image evid
         const newAmounts = effectiveUserAmounts.filter(a => !imgPendingAmounts.has(a));
         const correctedCents = newAmounts.length > 0 ? newAmounts[newAmounts.length - 1] : effectiveUserAmounts[effectiveUserAmounts.length - 1];
         const correctedAmount = correctedCents / 100;
-        const imgOldAmountsFromUser = new Set<number>(effectiveUserAmounts.filter(a => imgPendingAmounts.has(a)));
+        const imgOldAmountsFromUser = new Set<number>(
+          [...effectiveUserAmounts, ...userAmountsForCorrection].filter(a => imgPendingAmounts.has(a) && a !== correctedCents)
+        );
         const normalizedFields: ExtractedEvidence[] = Array.isArray(img.fields)
           ? img.fields.map(f => ({ ...f }))
           : typeof img.fields === 'object' && img.fields !== null
