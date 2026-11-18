@@ -23,6 +23,7 @@ import {
 import { removeNegatedJournalDirectives, removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 import type { AdvisoryConversation } from './aiFirstAdvisory';
+import { hasAffirmativeResetDirective } from './conversationBoundary';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -2594,15 +2595,15 @@ export function buildSemanticDiscoveryQuery(query: string, interpretation?: Sema
 
 export function isShortSemanticFollowUp(query: string): boolean {
   const shortQuery = query.trim();
-  if (shortQuery.length > 260 || /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|discussion|analysis|discussed|mentioned|that|this|these|those)\b|\b(?:new|different|separate)\s+(?:case|scenario|situation|question|transaction|analysis|example)\b|\bunrelated\b/i.test(shortQuery)) return false;
+  if (shortQuery.length > 260 || hasAffirmativeResetDirective(shortQuery) || /\b(?:new|different|separate)\s+(?:case|scenario|situation|question|transaction|analysis|example)\b|\bunrelated\b|\b(?:separate|different|unrelated|distinct)\s+from\b/i.test(shortQuery)) return false;
   const continuationPrefix = shortQuery.length <= 140 && /^\s*(?:and|also|so|then|what about|how about|would that|is that|does that|can i for that|why is that|how does that)\b/i.test(shortQuery);
   const leadingQuestion = shortQuery.split('?')[0].trim();
   const contextualSubject = '(?:transaction|transactions|purchase|purchases|expense|expenses|supply|supplies|asset|assets|invoice|invoices|amount|amounts|case|cases|scenario|scenarios|situation|situations|example|examples|employee|employees|worker|workers|staff|payment|payments|contract|contracts|lease|leases|arrangement|arrangements|deadline|deadlines|rate|rates|calculation|calculations|journal|journals|entry|entries)';
   const explicitContextualReference = new RegExp(
     `\\b(?:` +
       `(?:this|that|these|those|the\\s+same)\\s+${contextualSubject}|` +
-      `(?:the|our|my|this|that|these|those)\\s+(?:above|earlier|previous|prior|foregoing|aforementioned|preceding)\\s+(?:[a-z]+\\s+)?${contextualSubject}|` +
-      `(?:the|our|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${contextualSubject}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+)?(?:discussed|mentioned|described)\\b|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)|(?:above|earlier|previously)\\b)|` +
+      `(?:the|our|my|this|that|these|those)\\s+(?:above|earlier|previous|prior|foregoing|aforementioned|preceding)\\s+(?:(?!year\\b|years\\b|period\\b|periods\\b|month\\b|months\\b|quarter\\b|quarters\\b|fy\\b|ya\\b)[a-z]+\\s+){0,2}${contextualSubject}|` +
+      `(?:the|our|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${contextualSubject}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+)?(?:discussed|mentioned|described)\\b|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)|(?:above|previously|earlier(?!\\s+(?:this|last|next|in)\\s+(?:year|month|quarter|week|period)\\b))\\b)|` +
       `(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|talked\\s+about)|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously))` +
     `)\\b`,
     'i'

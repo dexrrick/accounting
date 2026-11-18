@@ -20,7 +20,12 @@ import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
-import { assessConversationRelation } from '../../src/services/conversationBoundary.ts';
+import {
+  assessConversationRelation,
+  hasAffirmativeResetDirective,
+  hasExplicitPriorFactReference,
+  startsNewAccountingScenario
+} from '../../src/services/conversationBoundary.ts';
 import { buildAdvisoryConversation } from '../../src/services/aiFirstAdvisory.ts';
 import { usesIrasEvidencePolicy } from '../../src/services/irasEvidencePolicy.ts';
 import { RequestProfiler } from '../../src/services/telemetry.ts';
@@ -1662,6 +1667,82 @@ assert.equal(isShortSemanticFollowUp('Does that apply? Forget what we discussed.
   'An explicit instruction to forget what was discussed starts a new boundary.');
 assert.equal(isShortSemanticFollowUp('Unrelated: how does that apply?'), false,
   'Bare "unrelated" starts a new boundary even with anaphora.');
+
+// Finding 1: Negated reset directives must not clear follow-up context; affirmative reset directives must.
+const negatedForgetFollowUp = "Does that CPF rule apply? Don't forget that she is a second-year Singapore PR.";
+const negatedDisregardFollowUp = 'Does that apply? Please do not disregard the earlier employee details.';
+const negatedCoordinatedResetFollowUp = 'Does that CPF rule apply? Please do not ignore or disregard the earlier employee details.';
+const negatedAdverbResetFollowUp = "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR.";
+const negatedInfinitiveResetFollowUp = 'Does that CPF rule apply? Remember not to forget that she is a second-year Singapore PR.';
+const affirmativeForgetReset = 'Does that CPF rule apply? Forget that she is a second-year Singapore PR.';
+const employeeCpfScenario = {
+  scenarioType: 'PAYROLL_CPF_SALARY',
+  rawQuery: 'For an employee aged 58 years old who is a second-year Singapore PR in 2026, what CPF rules apply?',
+  transactionTitle: 'Employee CPF facts (58 years old, second-year Singapore PR, 2026)',
+  amount: 5000,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+assert.equal(hasAffirmativeResetDirective(negatedForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedDisregardFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedCoordinatedResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedAdverbResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedInfinitiveResetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(affirmativeForgetReset), true);
+assert.equal(isShortSemanticFollowUp(negatedForgetFollowUp), true,
+  'Negated forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedDisregardFollowUp), true,
+  'Negated disregard instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedCoordinatedResetFollowUp), true,
+  'Negated coordinated ignore/disregard instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedAdverbResetFollowUp), true,
+  'Negated adverbial forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedInfinitiveResetFollowUp), true,
+  'Infinitive negation (not to forget) preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(affirmativeForgetReset), false,
+  'Affirmative forget instruction resets short semantic follow-up retention.');
+assert.equal(assessConversationRelation(negatedForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedDisregardFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedCoordinatedResetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedAdverbResetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(affirmativeForgetReset, employeeCpfScenario), 'NEW');
+
+// Finding 2: Independent transactions mentioning prior-year/earlier-period/previous-year items must prompt as AMBIGUOUS.
+const priorYearInvoiceTx = 'We received SGD 5,000 from a customer for a prior-year invoice. What accounting entry is required?';
+const previousYearInvoiceTx = 'We received SGD 5,000 from a customer for a previous-year invoice. What accounting entry is required?';
+const unhyphenatedPriorYearInvoiceTx = 'We received SGD 5,000 from a customer for the prior year invoice. What accounting entry is required?';
+const earlierPeriodUtilityTx = 'We paid SGD 3,000 for an earlier-period utility bill. What journal entry is required?';
+const earlierThisYearInvoiceQuestion = 'What accounting entry is required for the invoice earlier this year?';
+assert.equal(hasExplicitPriorFactReference(priorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(previousYearInvoiceTx), false);
+assert.equal(isShortSemanticFollowUp(unhyphenatedPriorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(unhyphenatedPriorYearInvoiceTx), false);
+assert.equal(hasExplicitPriorFactReference(earlierPeriodUtilityTx), false);
+assert.equal(isShortSemanticFollowUp(earlierThisYearInvoiceQuestion), false);
+assert.equal(hasExplicitPriorFactReference(earlierThisYearInvoiceQuestion), false);
+assert.equal(isShortSemanticFollowUp('What is the treatment for this invoice, separate from the earlier case?'), false);
+assert.equal(assessConversationRelation(priorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(previousYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(unhyphenatedPriorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(assessConversationRelation(earlierPeriodUtilityTx, employeeCpfScenario), 'AMBIGUOUS');
+
+// Finding 3: Detailed (>260 chars) contextual statutory follow-up vs >300-char separate new employee transaction.
+const detailedEmployeeFollowUp =
+  'What CPF contribution rates apply to the employee we discussed if her monthly ordinary wages are SGD 5,000 and she also receives an annual bonus, and which employee facts from our earlier discussion still need to be confirmed before calculating the exact employer and employee CPF contributions for the year?';
+assert.ok(detailedEmployeeFollowUp.length > 300);
+assert.equal(isShortSemanticFollowUp(detailedEmployeeFollowUp), false);
+assert.equal(hasExplicitPriorFactReference(detailedEmployeeFollowUp), true);
+assert.equal(assessConversationRelation(detailedEmployeeFollowUp, employeeCpfScenario), 'RELATED');
+
+const longSeparateNewEmployeeQuery =
+  'We hired a new employee on a monthly salary of SGD 5,000, separate from the employee we discussed earlier, and she will also receive a fixed monthly transport allowance and an annual performance bonus once her probation period ends. Which CPF contribution rates and wage ceiling rules apply to this new employment arrangement in Singapore?';
+assert.ok(longSeparateNewEmployeeQuery.length > 300);
+assert.equal(hasExplicitPriorFactReference(longSeparateNewEmployeeQuery), false);
+assert.equal(startsNewAccountingScenario(longSeparateNewEmployeeQuery, employeeCpfScenario), true);
+assert.equal(assessConversationRelation(longSeparateNewEmployeeQuery, employeeCpfScenario), 'NEW');
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {

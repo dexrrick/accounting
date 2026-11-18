@@ -10,23 +10,48 @@ export function isJournalDisplayRequest(query: string): boolean {
   return /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(query);
 }
 
+const PRIOR_SUBJECT_NOUNS = '(?:transaction|transactions|expense|expenses|purchase|purchases|supply|supplies|invoice|invoices|amount|amounts|facts?|details?|asset|assets|equipment|machine|machinery|salary|salaries|payroll|employee|employees|worker|workers|staff|scenario|scenarios|situation|situations|case|cases|example|examples|payment|payments|contract|contracts|lease|leases|arrangement|arrangements|deadline|deadlines|rate|rates|calculation|calculations|journal|journals|entry|entries|answer|discussion|conversation|analysis)';
+const PRIOR_ADJECTIVE_MODIFIER = '(?:(?!year\\b|years\\b|period\\b|periods\\b|month\\b|months\\b|quarter\\b|quarters\\b|fy\\b|ya\\b)[a-z]+\\s+){0,2}';
+const EXPLICIT_ADJECTIVE_SUBJECT_SOURCE = `(?:earlier|previous|prior|above|last|foregoing|aforementioned|preceding)\\s+${PRIOR_ADJECTIVE_MODIFIER}${PRIOR_SUBJECT_NOUNS}\\b`;
+const SUBJECT_DISCUSSION_CLAUSE_SOURCE = `(?:the|our|my|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${PRIOR_SUBJECT_NOUNS}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|provided|stated|established)\\b|(?:discussed|mentioned|described|provided|stated|noted|shown)\\s+(?:above|earlier|before|previously)\\b|(?:above|previously|earlier(?!\\s+(?:this|last|next|in)\\s+(?:year|month|quarter|week|period)\\b))\\b)`;
+
+/** Detects an affirmative instruction to ignore, disregard, or forget prior conversation context. */
+export function hasAffirmativeResetDirective(query: string): boolean {
+  const withoutNegatedReset = query.replace(
+    /\b(?:(?:do\s+not|don['’]?t|dont|never|cannot|can['’]?t|cant|should\s+not|shouldn['’]?t|shouldnt|must\s+not|mustn['’]?t|mustnt|need\s+not|needn['’]?t|neednt)|not\s+to)\s+(?:(?:please|ever|just|simply|accidentally)\s+)*(?:ignore|disregard|forget|omit|drop|discard)(?:\s+(?:or|nor)\s+(?:ignore|disregard|forget|omit|drop|discard))*\b/gi,
+    ' '
+  );
+  return /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/i.test(withoutNegatedReset);
+}
+
 /** Recognizes a longer question that explicitly refers to facts from earlier turns. */
 export function hasExplicitPriorFactReference(query: string): boolean {
   const text = query.trim();
-  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(text);
+  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me|describe|outline)|(?:what|which|when|where|who|why|how|can|could|would|should|does|do|did|is|are|was|were))\b/i.test(text);
   if (!text || !isContextualQuestion ||
-      /\b(?:new|different|separate|unrelated)\s+(?:question|transaction|analysis|case|scenario|situation)\b|\b(?:separate|different|unrelated|distinct)\s+from\b|\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b/i.test(text)) {
+      hasAffirmativeResetDirective(text) ||
+      /\b(?:new|different|separate)\s+(?:question|transaction|analysis|case|scenario|situation|example)\b|\bunrelated\b|\b(?:separate|different|unrelated|distinct)\s+from\b/i.test(text)) {
     return false;
   }
 
-  return /\b(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b|\b(?:discussed|mentioned|provided|stated|described)\s+(?:earlier|previously|above)\b/i.test(text);
+  const explicitAdjectiveSubject = new RegExp(`\\b${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}`, 'i');
+  const subjectDiscussionClause = new RegExp(`\\b${SUBJECT_DISCUSSION_CLAUSE_SOURCE}`, 'i');
+  const explicitDiscussionVerb = /\b(?:discussed|mentioned|provided|stated|described|noted|shown)\s+(?:earlier|previously|above|before)\b/i;
+
+  return explicitAdjectiveSubject.test(text) ||
+    subjectDiscussionClause.test(text) ||
+    explicitDiscussionVerb.test(text);
 }
 
 function startsWithPriorFactReference(query: string): boolean {
   const referenceLead = /^\s*(?:please\s+(?:explain|tell\s+me|describe|outline)\s+|(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for)\s+)/i.exec(query);
-  return Boolean(referenceLead &&
-    /^(?:(?:the|our|my|this|that)\s+)?(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b/i.test(query.slice(referenceLead[0].length)) &&
-    hasExplicitPriorFactReference(query));
+  if (!referenceLead) return false;
+  const remainder = query.slice(referenceLead[0].length);
+  const leadingExplicitSubject = new RegExp(
+    `^(?:(?:(?:the|our|my|this|that|these|those)\\s+)?${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}|${SUBJECT_DISCUSSION_CLAUSE_SOURCE})`,
+    'i'
+  );
+  return leadingExplicitSubject.test(remainder) && hasExplicitPriorFactReference(query);
 }
 
 /** Rebuilds the history that existed when a failed user turn was first sent. */
@@ -71,11 +96,12 @@ export function assessConversationRelation(
   const q = query.toLowerCase().trim();
   const wordCount = q.split(/\s+/).filter(Boolean).length;
   const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
-  const continuationSignal = /\b(what if|instead|then|also|same|previous|prior|earlier|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
-  const explicitNewSignal = /\b(new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example)|(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|discussion|analysis|discussed|mentioned|that|this|these|those))\b/i.test(q);
+  const continuationSignal = /\b(what if|instead|then|also|same|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|show|repeat|clarif)/i.test(q);
+  const explicitNewSignal = /\b(new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example))\b/i.test(q) ||
+    hasAffirmativeResetDirective(query);
 
   if (explicitNewSignal) return 'NEW';
-  if (hasExplicitPriorFactReference(query)) return 'RELATED';
+  if (isJournalDisplayRequest(query) || hasExplicitPriorFactReference(query)) return 'RELATED';
   const payrollScenario = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
     ? currentScenario
     : committedScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? committedScenario : null;
@@ -111,7 +137,7 @@ export function startsNewAccountingScenario(
   // boundary immediately before it. Keep currency codes word-bounded while
   // accepting the standalone dollar symbol as an amount marker.
   const hasTransactionDetail = /(?:\b(?:sgd|usd|eur|s\$)\s*[\d,]+|\$\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/.test(q);
-  const hasNewSubject = /\b(new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?)|machine|machinery|equipment|vehicle|lease|share capital|payroll|salary|customer|supplier)\b/.test(q);
+  const hasNewSubject = /\b(new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|employee|worker)|machine|machinery|equipment|vehicle|lease|share capital|payroll|salary|customer|supplier)\b/.test(q);
 
   // A company-paid fine or private/director cost is a new transaction even
   // when its narrative uses “paid”; it must never be attached to an earlier
@@ -121,7 +147,7 @@ export function startsNewAccountingScenario(
   if (isIndependentPersonalCost) return true;
 
   const actionFollowedByNewSubject = Boolean(transactionAction &&
-    /\b(?:new|another)\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|customer|supplier)\b/i.test(
+    /\b(?:new|another)\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|customer|supplier|employee|worker)\b/i.test(
       query.slice(transactionAction.index + transactionAction[0].length).split(/[,.!?;:]/, 1)[0]
     ));
   if (actionFollowedByNewSubject && hasTransactionDetail && hasNewSubject) return true;

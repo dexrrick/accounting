@@ -91,6 +91,7 @@ import {
   type RequestCompletenessContext
 } from './requestCompleteness';
 import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
+import { hasExplicitPriorFactReference, startsNewAccountingScenario } from './conversationBoundary';
 
 const APPROVED_ACCOUNTING_DISCOVERY_HOSTS = ['ifrs.org', 'www.ifrs.org', 'asc.acra.gov.sg', 'acra.gov.sg', 'www.acra.gov.sg'] as const;
 const APPROVED_IRAS_DISCOVERY_HOSTS = ['www.iras.gov.sg', 'iras.gov.sg', 'sso.agc.gov.sg'] as const;
@@ -3067,10 +3068,12 @@ export async function buildGroundedReasoningContext(
     : reconciledQuestion.classification;
   const questionUnderstanding = reconciledQuestion.understanding;
   const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
+  const hasContextualPriorReference = !startsNewAccountingScenario(userInput, currentScenario) &&
+    (isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
   const ignorePriorAccountingContext = Boolean(irasPolicy &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isShortSemanticFollowUp(userInput));
+    !hasContextualPriorReference);
   const relevantScenario = ignorePriorAccountingContext ? null : currentScenario;
   const conversationContext = extractAccountingContext(relevantScenario);
   const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
