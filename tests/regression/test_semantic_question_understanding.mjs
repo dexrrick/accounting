@@ -1646,6 +1646,22 @@ assert.equal(isShortSemanticFollowUp('What is the reporting deadline? Does that 
   'Anaphora in a later question does not reattach a preceding standalone question to the prior case.');
 assert.equal(isShortSemanticFollowUp(`And what about it? ${'Please explain this further. '.repeat(6)}`), false,
   'The existing length limit still applies to additive continuation prefixes.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to the employee we just discussed?'), true,
+  'A follow-up referencing the employee we just discussed retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to the employee we discussed?'), true,
+  'A follow-up referencing the employee we discussed retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to these employees?'), true,
+  'A follow-up referencing these employees retains context.');
+assert.equal(isShortSemanticFollowUp('How does GST apply to the above transaction?'), true,
+  'A follow-up referencing the above transaction retains context.');
+assert.equal(isShortSemanticFollowUp('What is the tax treatment in our earlier example?'), true,
+  'A follow-up referencing our earlier example retains context.');
+assert.equal(isShortSemanticFollowUp('What CPF rates apply to a 58-year-old employee? Ignore the employee we discussed earlier.'), false,
+  'An explicit instruction to ignore the employee discussed earlier starts a new boundary.');
+assert.equal(isShortSemanticFollowUp('Does that apply? Forget what we discussed.'), false,
+  'An explicit instruction to forget what was discussed starts a new boundary.');
+assert.equal(isShortSemanticFollowUp('Unrelated: how does that apply?'), false,
+  'Bare "unrelated" starts a new boundary even with anaphora.');
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {

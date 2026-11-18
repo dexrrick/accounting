@@ -69,8 +69,8 @@ export function assessConversationRelation(
   const q = query.toLowerCase().trim();
   const wordCount = q.split(/\s+/).filter(Boolean).length;
   const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
-  const continuationSignal = /\b(what if|instead|then|also|same|previous|above|that|this|it|they|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
-  const explicitNewSignal = /\b(new (?:question|transaction|analysis)|unrelated|separate (?:analysis|question|transaction)|different (?:analysis|question|transaction))\b/i.test(q);
+  const continuationSignal = /\b(what if|instead|then|also|same|previous|prior|earlier|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
+  const explicitNewSignal = /\b(new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example)|(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|discussion|analysis|discussed|mentioned|that|this|these|those))\b/i.test(q);
 
   if (explicitNewSignal) return 'NEW';
   if (hasExplicitPriorFactReference(query)) return 'RELATED';

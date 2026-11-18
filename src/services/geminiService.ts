@@ -989,10 +989,14 @@ async function processAccountingQueryCore(
     const uncommittedGroups = getDisplayableUncommittedJournalGroups(uncommittedScenario, standard);
     if (uncommittedScenario && uncommittedGroups.length > 0) {
       const hasConditionalGroups = uncommittedGroups.some(group => group.authorityStatus === 'CONDITIONAL');
-      return attachAmendmentProvenance({
-        messageText: hasConditionalGroups
+      const hasAiProposedGroups = uncommittedGroups.some(group => group.authorityStatus === 'AI_PROPOSED');
+      const messageText = hasConditionalGroups && hasAiProposedGroups
+        ? '### Mixed Unconfirmed Journal (Conditional and AI-Proposed)\n\nThere is no confirmed journal available. The current journal in the Double Entry Journal tab includes both conditional entries that depend on current assumptions and unverified AI-proposed entries for review; neither has been committed.'
+        : hasConditionalGroups
           ? '### Conditional Journal (Unconfirmed)\n\nA complete journal is available under the current assumptions. It remains conditional and has not been committed; review the assumptions before relying on it. The journal is shown in the Double Entry Journal tab.'
-          : '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.',
+          : '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.';
+      return attachAmendmentProvenance({
+        messageText,
         scenarioState: {
           ...uncommittedScenario,
           directGroups: uncommittedGroups,
@@ -1035,10 +1039,13 @@ async function processAccountingQueryCore(
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&
     isSingleMonthlySalaryAmendment(userInput);
-  const retainConversationContext = isContextualFollowUp || (!explicitNewQuestion && isPayrollSalaryAmendment);
-  const aiFirstAdvisoryEligible = isAiFirstAdvisoryEligible(
-    userInput, providerOrApiKey, hasImages, activeScenario, outputPreference
-  );
+  const isFactualClarificationReply = Boolean(activeScenario?.missingFields?.length) &&
+    !/[?]/.test(userInput) &&
+    !/\b(?:what|when|which|how|why|who|where|explain|describe|outline|actually|instead)\b/i.test(userInput) &&
+    (/^\s*(?:(?:sgd|usd|eur|s\$|\$)\s*)?[\d,]+(?:\.\d+)?\s*$/i.test(userInput) ||
+      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
+  const retainConversationContext = isContextualFollowUp ||
+    (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
   const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
     deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
     !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
@@ -1053,7 +1060,7 @@ async function processAccountingQueryCore(
     amendmentResolution = resolveFactAmendment(userInput, null);
     onConversationScope?.(relevantChatHistory);
   }
-  if (aiFirstAdvisoryEligible) {
+  if (isAiFirstAdvisoryEligible(userInput, providerOrApiKey, hasImages, activeScenario, outputPreference)) {
     try {
       const advisory = await generateAiFirstAdvisory(
         userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,

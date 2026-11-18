@@ -2594,10 +2594,22 @@ export function buildSemanticDiscoveryQuery(query: string, interpretation?: Sema
 
 export function isShortSemanticFollowUp(query: string): boolean {
   const shortQuery = query.trim();
-  if (shortQuery.length > 260 || /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b|\b(?:new|different|separate|unrelated)\s+(?:case|scenario|situation|question)\b/i.test(shortQuery)) return false;
+  if (shortQuery.length > 260 || /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|discussion|analysis|discussed|mentioned|that|this|these|those)\b|\b(?:new|different|separate)\s+(?:case|scenario|situation|question|transaction|analysis|example)\b|\bunrelated\b/i.test(shortQuery)) return false;
   const continuationPrefix = shortQuery.length <= 140 && /^\s*(?:and|also|so|then|what about|how about|would that|is that|does that|can i for that|why is that|how does that)\b/i.test(shortQuery);
   const leadingQuestion = shortQuery.split('?')[0].trim();
-  const questionWithExplicitAnaphora = /^\s*(?:can|could|would|should|do|does|is|are|what|how)\b[^?]{0,110}\b(?:it|that|this\s+(?:transaction|purchase|expense|supply|asset|invoice|amount|case)|the same (?:transaction|purchase|expense|supply))\b[^?]*\??\s*$/i.test(leadingQuestion);
+  const contextualSubject = '(?:transaction|transactions|purchase|purchases|expense|expenses|supply|supplies|asset|assets|invoice|invoices|amount|amounts|case|cases|scenario|scenarios|situation|situations|example|examples|employee|employees|worker|workers|staff|payment|payments|contract|contracts|lease|leases|arrangement|arrangements|deadline|deadlines|rate|rates|calculation|calculations|journal|journals|entry|entries)';
+  const explicitContextualReference = new RegExp(
+    `\\b(?:` +
+      `(?:this|that|these|those|the\\s+same)\\s+${contextualSubject}|` +
+      `(?:the|our|my|this|that|these|those)\\s+(?:above|earlier|previous|prior|foregoing|aforementioned|preceding)\\s+(?:[a-z]+\\s+)?${contextualSubject}|` +
+      `(?:the|our|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${contextualSubject}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+)?(?:discussed|mentioned|described)\\b|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)|(?:above|earlier|previously)\\b)|` +
+      `(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|talked\\s+about)|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously))` +
+    `)\\b`,
+    'i'
+  );
+  const questionWithExplicitAnaphora =
+    /^\s*(?:can|could|would|should|do|does|did|is|are|was|were|what|which|when|where|who|why|how)\b[^?]{0,110}\b(?:it|that)\b[^?]*\??\s*$/i.test(leadingQuestion) ||
+    (leadingQuestion.length <= 160 && explicitContextualReference.test(leadingQuestion));
   return continuationPrefix || questionWithExplicitAnaphora;
 }
 

@@ -534,6 +534,226 @@ for (const call of calls) {
     );
     assert.equal(statutoryFollowUp.scenarioState.rawQuery, statutoryFollowUpQuestion,
       'the contextual statutory follow-up is processed with the scoped history');
+
+    // P1: Contextual references in follow-ups retain scoped employee facts and active scenario without resetting boundary
+    const employeeSetupQuestion = 'For an employee aged 58 years old who is a second-year Singapore PR in 2026, what CPF rules apply?';
+    const employeeSetupTurn = { id: 'boundary-employee-setup-user', sender: 'user', timestamp: '', text: employeeSetupQuestion };
+    const employeeSetupScenario = {
+      scenarioType: 'PAYROLL_CPF_SALARY',
+      rawQuery: employeeSetupQuestion,
+      transactionTitle: 'Employee CPF facts (58 years old, second-year Singapore PR, 2026)',
+      amount: 5000,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      directGroups: [],
+      missingFields: [],
+      isComplete: true
+    };
+    const employeeSetupHistory = [...previousHistory, employeeSetupTurn];
+    const employeeSetupResponse = await processAccountingQuery(
+      employeeSetupQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', employeeSetupHistory
+    );
+    assert.equal(employeeSetupResponse.conversationBoundaryMessageId, employeeSetupTurn.id,
+      'the initial employee CPF inquiry establishes its boundary at the employee turn');
+    const employeeSetupAnswerTurn = {
+      id: 'boundary-employee-setup-answer',
+      sender: 'assistant',
+      timestamp: '',
+      text: employeeSetupResponse.messageText,
+      fullText: employeeSetupResponse.messageText
+    };
+    const employeeRateFollowUp = 'What CPF rates apply to the employee we just discussed?';
+    assert.equal(
+      assessConversationRelation(employeeRateFollowUp, employeeSetupScenario, employeeSetupScenario),
+      'RELATED',
+      'assessConversationRelation classifies an explicit contextual employee follow-up as RELATED'
+    );
+    assert.equal(
+      assessConversationRelation(
+        'What CPF rates apply to a 58-year-old employee? Ignore the employee we discussed earlier.',
+        employeeSetupScenario,
+        employeeSetupScenario
+      ),
+      'NEW',
+      'assessConversationRelation classifies an explicit ignore instruction as NEW'
+    );
+    const employeeRateTurn = { id: 'boundary-employee-rate-user', sender: 'user', timestamp: '', text: employeeRateFollowUp };
+    const scopedEmployeeRateHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      employeeRateTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeEmployeeRate = boundaryCalls.length;
+    const employeeRateResponse = await processAccountingQuery(
+      employeeRateFollowUp, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedEmployeeRateHistory
+    );
+    assert.equal(employeeRateResponse.conversationBoundaryMessageId, undefined,
+      'contextual employee follow-up does not reset conversationBoundaryMessageId');
+    assert.ok(boundaryCalls.length > callsBeforeEmployeeRate, 'employee follow-up reaches the provider');
+    const employeeRatePrompt = boundaryCalls.slice(callsBeforeEmployeeRate).map(call => call.prompt).join('\n');
+    assert.ok(
+      employeeRatePrompt.includes('58 years old') &&
+      employeeRatePrompt.includes('second-year Singapore PR') &&
+      employeeRatePrompt.includes('2026'),
+      'contextual employee follow-up retains scoped age, PR status, and contribution-year facts'
+    );
+    assert.ok(
+      employeeRatePrompt.includes(employeeSetupScenario.transactionTitle),
+      'contextual employee follow-up retains the active scenario context'
+    );
+    assert.ok(
+      !employeeRatePrompt.includes(priorTransaction) && !employeeRatePrompt.includes(priorAnswer),
+      'contextual employee follow-up excludes older unrelated transaction history before the boundary'
+    );
+
+    for (const contextualQuery of [
+      'What CPF rates apply to these employees?',
+      'How does GST apply to the above transaction?',
+      'What is the tax treatment in our earlier example?'
+    ]) {
+      const contextualTurn = { id: `boundary-contextual-${contextualQuery.length}`, sender: 'user', timestamp: '', text: contextualQuery };
+      const scopedContextualHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        contextualTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeContextual = boundaryCalls.length;
+      const contextualResponse = await processAccountingQuery(
+        contextualQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedContextualHistory
+      );
+      assert.equal(contextualResponse.conversationBoundaryMessageId, undefined,
+        `contextual reference follow-up retains boundary: ${contextualQuery}`);
+      const contextualPrompts = boundaryCalls.slice(callsBeforeContextual).map(call => call.prompt).join('\n');
+      assert.ok(
+        contextualPrompts.includes('58 years old') &&
+        contextualPrompts.includes('second-year Singapore PR') &&
+        contextualPrompts.includes('2026'),
+        `scoped employee facts remain in prompt for: ${contextualQuery}`
+      );
+      assert.ok(
+        !contextualPrompts.includes(priorTransaction) && !contextualPrompts.includes(priorAnswer),
+        `older pre-boundary transaction stays excluded for: ${contextualQuery}`
+      );
+    }
+
+    const employeeObligationFollowUp = 'What CPF obligations apply to the employee we just discussed?';
+    const employeeObligationTurn = { id: 'boundary-employee-obligation-user', sender: 'user', timestamp: '', text: employeeObligationFollowUp };
+    const scopedObligationHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      employeeObligationTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeObligation = boundaryCalls.length;
+    const employeeObligationResponse = await processAccountingQuery(
+      employeeObligationFollowUp, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedObligationHistory
+    );
+    assert.equal(employeeObligationResponse.conversationBoundaryMessageId, undefined,
+      'governed statutory obligation follow-up does not reset conversationBoundaryMessageId');
+    assert.ok(boundaryCalls.length > callsBeforeObligation,
+      'governed statutory obligation follow-up invokes semantic interpretation');
+    const obligationPrompt = boundaryCalls[callsBeforeObligation].prompt;
+    assert.match(obligationPrompt, /Interpret this question:/,
+      'governed statutory obligation follow-up sends scoped history to semantic interpretation');
+    assert.ok(
+      obligationPrompt.includes('58 years old') &&
+      obligationPrompt.includes('second-year Singapore PR') &&
+      obligationPrompt.includes('2026'),
+      'semantic interpretation retains scoped employee age, PR status, and contribution year'
+    );
+    assert.ok(
+      !obligationPrompt.includes(priorTransaction) && !obligationPrompt.includes(priorAnswer),
+      'semantic interpretation excludes older pre-boundary transaction history'
+    );
+
+    const payrollInitTurn = {
+      id: 'boundary-payroll-init-user',
+      sender: 'user',
+      timestamp: '',
+      text: 'Calculate CPF for our employee earning $6,000 a month in 2026.'
+    };
+    const payrollClarificationReply = 'He is 58 years old and is a second-year Singapore PR';
+    const payrollClarificationTurn = {
+      id: 'boundary-payroll-clarification-user',
+      sender: 'user',
+      timestamp: '',
+      text: payrollClarificationReply
+    };
+    const payrollClarificationHistory = [
+      payrollInitTurn,
+      { id: 'boundary-payroll-init-answer', sender: 'assistant', timestamp: '', text: 'Please confirm the employee age and residency status.' },
+      payrollClarificationTurn
+    ];
+    const payrollClarificationResponse = await processAccountingQuery(
+      payrollClarificationReply, incompletePayrollScenario, 'SFRS_I', adapters[2].settings, 'unused', payrollClarificationHistory
+    );
+    assert.equal(payrollClarificationResponse.conversationBoundaryMessageId, undefined,
+      'factual clarification reply on an incomplete payroll scenario retains conversation context');
+    const payrollPostClarificationFollowUpTurn = {
+      id: 'boundary-payroll-post-clarification-follow-up',
+      sender: 'user',
+      timestamp: '',
+      text: employeeRateFollowUp
+    };
+    const callsBeforePostClarification = boundaryCalls.length;
+    const postClarificationResponse = await processAccountingQuery(
+      employeeRateFollowUp,
+      incompletePayrollScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [
+        ...payrollClarificationHistory,
+        {
+          id: 'boundary-payroll-clarification-answer',
+          sender: 'assistant',
+          timestamp: '',
+          text: payrollClarificationResponse.messageText,
+          fullText: payrollClarificationResponse.messageText
+        },
+        payrollPostClarificationFollowUpTurn
+      ]
+    );
+    assert.equal(postClarificationResponse.conversationBoundaryMessageId, undefined,
+      'follow-up after factual clarification reply retains the conversation boundary');
+    const postClarificationPrompt = boundaryCalls.slice(callsBeforePostClarification).map(call => call.prompt).join('\n');
+    assert.ok(
+      postClarificationPrompt.includes('58 years old') &&
+      postClarificationPrompt.includes('second-year Singapore PR') &&
+      postClarificationPrompt.includes('2026'),
+      'follow-up after factual clarification reply retains the clarified employee facts and initial payroll year'
+    );
+
+    // P2: Evaluate AI-first eligibility after clearing stale activeScenario for independent statutory requests
+    const acraChangeQuestion = "Can you explain how to change the company's registered address with ACRA?";
+    assert.equal(
+      isAiFirstAdvisoryEligible(acraChangeQuestion, adapters[2].settings, false, activeScenario),
+      false,
+      'pre-check confirms stale activeScenario with state-change verb "change" previously blocked AI-first eligibility'
+    );
+    assert.equal(
+      isAiFirstAdvisoryEligible(acraChangeQuestion, adapters[2].settings, false, null),
+      true,
+      'clearing activeScenario makes the independent ACRA explanation AI-first eligible'
+    );
+    const acraChangeTurn = { id: 'boundary-acra-change-user', sender: 'user', timestamp: '', text: acraChangeQuestion };
+    const acraChangeHistory = [...previousHistory, acraChangeTurn];
+    const callsBeforeAcraChange = boundaryCalls.length;
+    const acraChangeResponse = await processAccountingQuery(
+      acraChangeQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', acraChangeHistory
+    );
+    assert.equal(acraChangeResponse.conversationBoundaryMessageId, acraChangeTurn.id,
+      'independent ACRA change explanation establishes its boundary at the new ACRA turn');
+    assert.equal(acraChangeResponse.displayFullAnswer, true,
+      'independent ACRA change explanation is accepted by AI-first advisory after clearing stale context');
+    assert.equal(boundaryCalls.length - callsBeforeAcraChange, 1,
+      'AI-first advisory makes only 1 provider call without falling back through semantic interpretation');
+    const acraChangePrompt = boundaryCalls.at(-1).prompt;
+    assert.ok(
+      !acraChangePrompt.includes(priorTransaction) &&
+      !acraChangePrompt.includes(priorAnswer) &&
+      !acraChangePrompt.includes(activeScenario.transactionTitle),
+      'AI-first prompt excludes both prior transaction history and cleared activeScenario'
+    );
   } finally {
     globalThis.fetch = boundaryFetch;
   }
@@ -826,6 +1046,52 @@ try {
   assert.equal(activeProposalRecallResponse.scenarioState.committedDirectGroups, undefined,
     'direct service callers cannot promote an AI proposal to committed journal state');
 
+  const equipmentScenario = await parseAccountingQuery(
+    'My company incurred $50,000 on a piece of equipment. Give me the journal entry and tell me whether it is tax deductible.', null
+  );
+  assert.equal(equipmentScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
+    'the App regression uses the real equipment-acquisition parser result');
+  assert.equal(equipmentScenario.isComplete, true, 'the equipment scenario is complete under its conditional assumptions');
+  const equipmentGroup = equipmentScenario.directGroups[0];
+  assert.equal(equipmentGroup.authorityStatus, 'CONDITIONAL');
+  const aiProposedEquipmentCompanion = {
+    ...equipmentGroup,
+    id: 'app-equipment-ai-proposed-companion',
+    title: 'AI-proposed equipment companion',
+    summary: 'A separate AI-proposed equipment event',
+    authorityStatus: 'AI_PROPOSED',
+    totalDebit: 1000,
+    totalCredit: 1000,
+    lines: equipmentGroup.lines.map((line, index) => ({
+      ...line,
+      id: `app-equipment-ai-proposed-line-${index + 1}`,
+      debit: index === 0 ? 1000 : 0,
+      credit: index === 0 ? 0 : 1000
+    }))
+  };
+  const mixedConditionalProposalScenario = {
+    ...equipmentScenario,
+    directGroups: [equipmentGroup, aiProposedEquipmentCompanion]
+  };
+  const mixedDirectProposalRecall = await processAccountingQuery(
+    'show the double entry', null, 'SFRS_I', undefined, 'unused', [], undefined, undefined, mixedConditionalProposalScenario
+  );
+  assert.match(mixedDirectProposalRecall.messageText, /Mixed Unconfirmed Journal \(Conditional and AI-Proposed\)/,
+    'mixed CONDITIONAL and AI_PROPOSED recall uses an explicit mixed unconfirmed heading');
+  assert.match(mixedDirectProposalRecall.messageText, /conditional entries that depend on current assumptions and unverified AI-proposed entries/i,
+    'mixed recall explains both conditional assumption-dependent entries and unverified AI-proposed entries');
+  assert.deepEqual(mixedDirectProposalRecall.scenarioState.directGroups.map(group => group.authorityStatus), ['CONDITIONAL', 'AI_PROPOSED'],
+    'mixed recall preserves each group’s individual authorityStatus');
+  assert.equal(mixedDirectProposalRecall.scenarioState.committedDirectGroups, undefined,
+    'mixed unconfirmed recall leaves committedDirectGroups undefined');
+  const mixedDirectActiveRecall = await processAccountingQuery(
+    'show the double entry', mixedConditionalProposalScenario, 'SFRS_I', undefined, 'unused', []
+  );
+  assert.match(mixedDirectActiveRecall.messageText, /Mixed Unconfirmed Journal \(Conditional and AI-Proposed\)/,
+    'active mixed CONDITIONAL and AI_PROPOSED recall also uses the mixed unconfirmed heading');
+  assert.deepEqual(mixedDirectActiveRecall.scenarioState.directGroups.map(group => group.authorityStatus), ['CONDITIONAL', 'AI_PROPOSED']);
+  assert.equal(mixedDirectActiveRecall.scenarioState.committedDirectGroups, undefined);
+
   const incompleteRecallResponse = await processAccountingQuery(
     'show the double entry', incompleteDeterministicScenario, 'SFRS_I', undefined, 'unused', []
   );
@@ -1100,14 +1366,6 @@ try {
   assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /AI Proposed/,
     'recalling the proposal retains the existing warning in the journal table');
 
-  const equipmentScenario = await parseAccountingQuery(
-    'My company incurred $50,000 on a piece of equipment. Give me the journal entry and tell me whether it is tax deductible.', null
-  );
-  assert.equal(equipmentScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
-    'the App regression uses the real equipment-acquisition parser result');
-  assert.equal(equipmentScenario.isComplete, true, 'the equipment scenario is complete under its conditional assumptions');
-  const equipmentGroup = equipmentScenario.directGroups[0];
-  assert.equal(equipmentGroup.authorityStatus, 'CONDITIONAL');
   const deterministicEquipmentCompanion = {
     ...equipmentGroup,
     id: 'app-equipment-deterministic-companion',
@@ -1175,6 +1433,28 @@ try {
   assert.equal(appUi.journalProps.functionalCurrency, 'SGD');
   assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/,
     'the conditional warning remains visible after App-level recall');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  appUi.inputProps.onScenarioChange(mixedConditionalProposalScenario);
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.authorityStatus), ['CONDITIONAL', 'AI_PROPOSED'],
+    'the App displays the mixed CONDITIONAL and AI_PROPOSED journal groups');
+  const mixedPreRecallMarkup = renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps));
+  assert.match(mixedPreRecallMarkup, /Conditional Illustrative Entry/);
+  assert.match(mixedPreRecallMarkup, /AI Proposed/);
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.strictEqual(appCalls.at(-1)[8], mixedConditionalProposalScenario,
+    'App passes the mixed CONDITIONAL and AI_PROPOSED scenario through the read-only recall input');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Mixed Unconfirmed Journal \(Conditional and AI-Proposed\)/,
+    'App recall chat message explicitly labels the mixed unconfirmed journal');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /conditional entries that depend on current assumptions and unverified AI-proposed entries/i);
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.authorityStatus), ['CONDITIONAL', 'AI_PROPOSED'],
+    'App recall preserves each group’s individual authorityStatus');
+  const mixedPostRecallMarkup = renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps));
+  assert.match(mixedPostRecallMarkup, /Conditional Illustrative Entry/);
+  assert.match(mixedPostRecallMarkup, /AI Proposed/);
 
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();
