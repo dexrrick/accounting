@@ -371,6 +371,32 @@ for (const call of calls) {
     assert.equal(boundaryCalls.length, 2);
     assert.ok(boundaryCalls[1].prompt.includes(priorTransaction) && boundaryCalls[1].prompt.includes(priorAnswer),
       'a genuine follow-up retains the relevant transaction context');
+
+    const statutoryQuestion = 'What are CPF contribution deadlines in Singapore?';
+    const statutoryUserTurn = { id: 'boundary-standalone-statutory-user', sender: 'user', timestamp: '', text: statutoryQuestion };
+    const statutoryHistory = [...previousHistory, statutoryUserTurn];
+    const statutoryResponse = await processAccountingQuery(
+      statutoryQuestion, null, 'SFRS_I', undefined, 'unused', statutoryHistory
+    );
+    assert.equal(statutoryResponse.scenarioState.queryIntent, 'STATUTORY_ADVISORY',
+      'the test query follows the standalone statutory advisory path');
+    assert.equal(statutoryResponse.conversationBoundaryMessageId, statutoryUserTurn.id,
+      'the service returns the user turn selected as the standalone advisory boundary');
+    const statutoryFollowUpQuestion = 'What about those deadlines?';
+    const statutoryFollowUpTurn = { id: 'boundary-statutory-follow-up-user', sender: 'user', timestamp: '', text: statutoryFollowUpQuestion };
+    const scopedStatutoryFollowUpHistory = buildAnalysisConversationHistory([
+      ...statutoryHistory,
+      { id: 'boundary-standalone-statutory-answer', sender: 'assistant', timestamp: '', text: statutoryResponse.messageText },
+      statutoryFollowUpTurn
+    ], statutoryResponse.conversationBoundaryMessageId);
+    assert.deepEqual(scopedStatutoryFollowUpHistory.map(message => message.id), [
+      statutoryUserTurn.id, 'boundary-standalone-statutory-answer', statutoryFollowUpTurn.id
+    ], 'the follow-up history starts at the service-selected statutory boundary and excludes older analysis');
+    const statutoryFollowUp = await processAccountingQuery(
+      statutoryFollowUpQuestion, statutoryResponse.scenarioState, 'SFRS_I', undefined, 'unused', scopedStatutoryFollowUpHistory
+    );
+    assert.equal(statutoryFollowUp.scenarioState.rawQuery, statutoryFollowUpQuestion,
+      'the contextual statutory follow-up is processed with the scoped history');
   } finally {
     globalThis.fetch = boundaryFetch;
   }
@@ -620,6 +646,44 @@ try {
     assumptions: [{ id: 'assumption-sgd', field: 'currency', assumedValue: 'SGD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
     directGroups: [makeGroup('collision', 'Committed payroll entry', 'DETERMINISTIC', 60000)]
   };
+  const salaryCorrection = 'Actually the monthly salary for CPF is 72k a month';
+  const unrelatedConfirmedScenario = {
+    ...deterministicScenario,
+    scenarioType: 'GENERAL_EXPENSE',
+    rawQuery: 'Paid an unrelated consulting expense of SGD 2,000',
+    transactionTitle: 'Unrelated consulting expense',
+    directGroups: [makeGroup('unrelated-confirmed', 'Unrelated confirmed journal', 'DETERMINISTIC', 2000)]
+  };
+  assert.strictEqual(selectAccountingScenarioForRequest(salaryCorrection, unrelatedConfirmedScenario, deterministicScenario), deterministicScenario,
+    'a payroll salary correction stays bound to its committed payroll even when another confirmed journal is active');
+  assert.strictEqual(selectAccountingScenarioForRequest(salaryCorrection, proposalScenario, deterministicScenario), deterministicScenario,
+    'a payroll salary correction uses committed payroll facts instead of an AI-proposed active result');
+  assert.strictEqual(selectAccountingScenarioForRequest('prepare the journal entry', {
+    ...proposalScenario, directGroups: [makeGroup('proposal-only', 'Proposal only', 'AI_PROPOSED', 72000)]
+  }, deterministicScenario), deterministicScenario,
+  'an AI proposal alone does not qualify as a confirmed journal for a journal request');
+  assert.deepEqual(getDisplayableUncommittedJournalGroups({
+    ...proposalScenario,
+    directGroups: [...proposalScenario.directGroups, { ...makeGroup('invalid', 'Invalid group', 'DETERMINISTIC', 72000), lines: [] }]
+  }, 'SFRS_I'), [], 'an invalid group hides the entire proposal collection instead of producing an incomplete journal');
+
+  const proposalRecallResponse = await processAccountingQuery(
+    'show the double entry', null, 'SFRS_I', undefined, 'unused', [], undefined, undefined, proposalScenario
+  );
+  assert.match(proposalRecallResponse.messageText, /AI-Proposed Journal \(Not Confirmed\)/,
+    'service recall clearly distinguishes a validated proposal from a committed journal');
+  assert.doesNotMatch(proposalRecallResponse.messageText, /No Double Entry Available Yet/,
+    'proposal recall does not contradict the visible proposal with an empty-journal heading');
+  assert.equal(proposalRecallResponse.scenarioState.committedDirectGroups, undefined,
+    'proposal recall does not mark the AI proposal as committed');
+  const activeProposalRecallResponse = await processAccountingQuery(
+    'show the double entry', proposalScenario, 'SFRS_I', undefined, 'unused', []
+  );
+  assert.match(activeProposalRecallResponse.messageText, /AI-Proposed Journal \(Not Confirmed\)/,
+    'direct service callers also receive an unconfirmed explanation for a current AI proposal');
+  assert.equal(activeProposalRecallResponse.scenarioState.committedDirectGroups, undefined,
+    'direct service callers cannot promote an AI proposal to committed journal state');
+
   const serviceStub = {
     processAccountingQuery: async (...args) => {
       appCalls.push(args);
@@ -632,8 +696,23 @@ try {
       if (query === 'deferred follow-up while processing') {
         return new Promise(resolve => { resolveDeferredProcessing = resolve; });
       }
+      if (query === 'What are annual filing deadlines?') {
+        return {
+          messageText: 'The statutory answer is shown here.',
+          scenarioState: { ...emptyScenario, queryIntent: 'STATUTORY_ADVISORY' },
+          conversationBoundaryMessageId: args[5].find(message => message.sender === 'user' && message.text === query)?.id
+        };
+      }
+      if (query === 'What did you say about the deadline?') {
+        return { messageText: 'The follow-up answer.', scenarioState: emptyScenario };
+      }
       if (/^(?:show|where is) the double entry$/i.test(query.trim())) {
-        return { messageText: requestScenario ? 'Committed journal recalled.' : 'No confirmed journal.', scenarioState: requestScenario || emptyScenario };
+        const proposal = args[8];
+        return requestScenario
+          ? { messageText: 'Committed journal recalled.', scenarioState: requestScenario }
+          : proposal
+            ? { messageText: 'AI-Proposed Journal (Not Confirmed).', scenarioState: proposal }
+            : { messageText: 'No confirmed journal.', scenarioState: emptyScenario };
       }
       if (query === 'Actually the monthly salary for CPF is 72k a month') {
         return { messageText: 'Corrected payroll.', scenarioState: { ...deterministicScenario, amount: 72000, directGroups: [makeGroup('collision', 'Corrected payroll entry', 'DETERMINISTIC', 72000)] } };
@@ -783,6 +862,8 @@ try {
     'pure journal recall does not promote an AI proposal when no committed snapshot exists');
   assert.equal(getDisplayableUncommittedJournalGroups(proposalScenario, 'SFRS_I').length, 2,
     'a complete mixed result displays all valid current groups when it includes an AI proposal');
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
   appUi.inputProps.onScenarioChange(proposalScenario);
   appUi = renderApp();
   assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Current trusted companion', 'Proposed payroll entry'],
@@ -812,7 +893,6 @@ try {
   assert.equal(appUi.journalProps.functionalCurrency, 'SGD', 'committed recall uses committed journal currency');
 
   const correctionPromptCount = appUi.chatProps.messages.filter(message => message.relationPrompt).length;
-  const salaryCorrection = 'Actually the monthly salary for CPF is 72k a month';
   assert.equal(assessConversationRelation(salaryCorrection, deterministicScenario, deterministicScenario), 'RELATED',
     'the exact salary correction is identified as related to the existing payroll');
   assert.equal(assessConversationRelation('New analysis: ' + salaryCorrection, deterministicScenario, deterministicScenario), 'NEW',
@@ -826,6 +906,32 @@ try {
   assert.equal(appCalls.at(-1)[1].scenarioType, 'PAYROLL_CPF_SALARY', 'the correction is routed with payroll context');
   assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [72000],
     'the corrected App journal balances at the corrected amount');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage('Start proposal recall analysis');
+  appUi = renderApp();
+  appUi.inputProps.onScenarioChange(proposalScenario);
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[8], proposalScenario,
+    'the App passes the active proposal separately for read-only journal recall');
+  assert.match(appUi.chatProps.messages.at(-1).text, /AI-Proposed Journal \(Not Confirmed\)/,
+    'the recall response matches the proposal shown in the journal table');
+  assert.doesNotMatch(appUi.chatProps.messages.at(-1).text, /No Double Entry Available Yet/);
+  assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /AI Proposed/,
+    'recalling the proposal retains the existing warning in the journal table');
+
+  await appUi.chatProps.onSendMessage('What are annual filing deadlines?');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[5].some(message => message.text === 'What are annual filing deadlines?'), true,
+    'the standalone statutory question is sent to the service');
+  await appUi.chatProps.onSendMessage('What did you say about the deadline?');
+  appUi = renderApp();
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    'What are annual filing deadlines?', 'The statutory answer is shown here.', 'What did you say about the deadline?'
+  ], 'the App persists the service-selected statutory boundary for the next contextual follow-up');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;

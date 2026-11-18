@@ -107,6 +107,7 @@ export const App: React.FC = () => {
       const requestScenario = options?.useProvidedScenario
         ? activeScenario
         : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
+      const journalRecallProposal = isJournalRecall && !committedJournalScenario ? activeScenario || undefined : undefined;
       const history = retryHistory || (options?.startNewScenario
         ? [userMsg]
         : messages.some(message => message.id === userMsg.id)
@@ -123,17 +124,18 @@ export const App: React.FC = () => {
         providerSettings,
         providerSettings.gemini.model,
         relevantChatHistory,
-        outputPreference
+        outputPreference,
+        undefined,
+        journalRecallProposal
       );
 
-      const displayedScenario = isJournalRecall && activeScenario && !committedJournalScenario &&
-        getDisplayableUncommittedJournalGroups(activeScenario, standard).length > 0
-        ? activeScenario
-        : response.scenarioState;
       const answerState: AccountingScenarioState = {
-        ...displayedScenario,
+        ...response.scenarioState,
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
+      if (response.conversationBoundaryMessageId) {
+        setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      }
       setScenario(answerState);
       setCommittedJournalScenario(previous => updateCommittedJournalScenario(
         previous, answerState, standard, options?.startNewScenario

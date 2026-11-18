@@ -38,14 +38,8 @@ export function getDisplayableUncommittedJournalGroups(
 ) {
   if (!candidate?.isComplete || candidate.isHypothetical) return [];
   const groups = calculateDoubleEntries(candidate, standard).groups;
-  const validProposalExists = groups.some(group =>
-    group.authorityStatus === 'AI_PROPOSED' &&
-    !group.isHypothetical &&
-    validateJournalGroups([group]).isValid
-  );
-  return validProposalExists
-    ? groups.filter(group => !group.isHypothetical && validateJournalGroups([group]).isValid)
-    : [];
+  if (groups.length === 0 || groups.some(group => group.isHypothetical) || !validateJournalGroups(groups).isValid) return [];
+  return groups.some(group => group.authorityStatus === 'AI_PROPOSED') ? groups : [];
 }
 
 /** Select prior accounting context only for an accounting operation that needs it. */
@@ -64,11 +58,17 @@ export function selectAccountingScenarioForRequest(
   const amendments = resolveFactAmendment(query, committedScenario).amendments || [];
   const isNarrowPayrollSalaryAmendment = committedScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendments.length === 1 && amendments[0].field === 'monthlySalary' && isSingleMonthlySalaryAmendment(query);
+  if (isNarrowPayrollSalaryAmendment) return committedScenario;
   const requestsSupportedAmendment = Boolean(amendments.length) &&
-    ((!classification.taxAnalysisRequired && !classification.regulatoryAnalysisRequired) || isNarrowPayrollSalaryAmendment);
+    (!classification.taxAnalysisRequired && !classification.regulatoryAnalysisRequired);
   if (!explicitJournalRequest && !requestsSupportedAmendment) return activeScenario;
 
+  const activeGroups = activeScenario?.committedDirectGroups?.length
+    ? activeScenario.committedDirectGroups
+    : activeScenario?.directGroups || [];
   const activeHasActualJournal = activeScenario && !activeScenario.isHypothetical &&
-    (activeScenario.committedDirectGroups?.length || activeScenario.directGroups?.some(group => !group.isHypothetical));
+    activeGroups.length > 0 && activeGroups.every(group =>
+      group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical
+    ) && validateJournalGroups(activeGroups).isValid;
   return activeHasActualJournal ? activeScenario : committedScenario;
 }

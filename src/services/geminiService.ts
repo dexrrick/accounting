@@ -25,6 +25,7 @@ import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManag
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { resolveFactAmendment } from './factAmendmentService';
 import { isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
+import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -60,6 +61,8 @@ import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
+  /** User turn selected by the service when it narrows unrelated chat history. */
+  conversationBoundaryMessageId?: string;
   /** The advisory response is already structured and safe to show in full in chat. */
   displayFullAnswer?: boolean;
   /** Sanitized explanation category when AI-first generation falls back offline. */
@@ -472,14 +475,16 @@ export async function processAccountingQuery(
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
   outputPreference?: OutputPreference,
-  diagnostics?: AccountingQueryDiagnostics
+  diagnostics?: AccountingQueryDiagnostics,
+  journalRecallProposal?: AccountingScenarioState
 ): Promise<GeminiResponse> {
   let groundedContext: GroundedReasoningContext | undefined;
   let authorityWorkstreams: AuthorityWorkstreamsResult | undefined;
   let deterministicScenario: AccountingScenarioState | undefined;
   let synthesisHistory = chatHistory;
+  let conversationBoundaryMessageId: string | undefined;
   const response = await processAccountingQueryCore(
-    userInput, currentScenario, standard, providerOrApiKey, modelName, chatHistory, outputPreference,
+    userInput, currentScenario, standard, providerOrApiKey, modelName, chatHistory, outputPreference, journalRecallProposal,
     {
       onGroundedContext: context => {
         groundedContext = context;
@@ -490,9 +495,13 @@ export async function processAccountingQuery(
         diagnostics?.onAuthorityWorkstreams?.(result);
       }
     },
-    history => { synthesisHistory = history; },
+    history => {
+      synthesisHistory = history;
+      conversationBoundaryMessageId = history.find(message => message.sender === 'user')?.id;
+    },
     scenario => { deterministicScenario = structuredClone(scenario); }
   );
+  if (conversationBoundaryMessageId) response.conversationBoundaryMessageId = conversationBoundaryMessageId;
   // Reuse the governed result and its evidence; never restart a failed provider
   // request or let synthesis produce accounting state or image-derived facts.
   if (response.displayFullAnswer || response.advisoryFailureStatus || response.providerStatus === 'FAILED' ||
@@ -873,6 +882,7 @@ async function processAccountingQueryCore(
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
   outputPreference?: OutputPreference,
+  journalRecallProposal?: AccountingScenarioState,
   diagnostics?: AccountingQueryDiagnostics,
   onConversationScope?: (history: ChatMessage[]) => void,
   onDeterministicScenario?: (scenario: AccountingScenarioState) => void
@@ -952,7 +962,11 @@ async function processAccountingQueryCore(
     const candidateGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
       ? currentScenario.committedDirectGroups
       : currentScenario?.directGroups || [];
-    const committedGroups = candidateGroups.filter(group => !group.isHypothetical && group.isBalanced && group.totalDebit > 0 && group.totalCredit > 0);
+    const committedGroups = currentScenario && !currentScenario.isHypothetical &&
+      candidateGroups.every(group => group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical) &&
+      validateJournalGroups(candidateGroups).isValid
+      ? candidateGroups
+      : [];
     const lastGroup = committedGroups[committedGroups.length - 1];
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
@@ -965,6 +979,41 @@ async function processAccountingQueryCore(
           ...currentScenario,
           directGroups: committedGroups,
           committedDirectGroups: committedGroups
+        }
+      });
+    }
+
+    const proposalScenario = journalRecallProposal || currentScenario;
+    const proposalGroups = getDisplayableUncommittedJournalGroups(proposalScenario, standard);
+    if (proposalScenario && proposalGroups.length > 0) {
+      return attachAmendmentProvenance({
+        messageText: '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.',
+        scenarioState: {
+          ...proposalScenario,
+          directGroups: proposalGroups,
+          committedDirectGroups: undefined,
+          projectedGroups: undefined,
+          isHypothetical: false
+        }
+      });
+    }
+
+    const conditionalGroups = currentScenario?.isComplete && !currentScenario.isHypothetical &&
+      candidateGroups.length > 0 && candidateGroups.every(group =>
+        (group.authorityStatus === 'CONDITIONAL' || group.authorityStatus === 'DETERMINISTIC') && !group.isHypothetical
+      ) && candidateGroups.some(group => group.authorityStatus === 'CONDITIONAL') &&
+      validateJournalGroups(candidateGroups).isValid
+      ? candidateGroups
+      : [];
+    if (currentScenario && conditionalGroups.length > 0) {
+      return attachAmendmentProvenance({
+        messageText: '### Conditional Journal (Unconfirmed)\n\nA complete journal is available under the current assumptions. It remains conditional and has not been committed; review the assumptions before relying on it. The journal is shown in the Double Entry Journal tab.',
+        scenarioState: {
+          ...currentScenario,
+          directGroups: conditionalGroups,
+          committedDirectGroups: undefined,
+          projectedGroups: undefined,
+          isHypothetical: false
         }
       });
     }
