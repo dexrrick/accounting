@@ -426,10 +426,12 @@ for (const call of calls) {
       'a longer statutory question explicitly referring to an earlier expense retains context');
     assert.equal(assessConversationRelation(contextualIrasQuestion, activeScenario), 'RELATED',
       'the App recognizes an explicit reference to earlier facts as a continuation');
-    assert.equal(startsNewAccountingScenario(
-      'Regarding our earlier equipment purchase, the company bought a machine for SGD 100,000. What IRAS deduction rules apply?',
-      activeScenario
-    ), false, 'a contextual statutory question may repeat purchase wording and amounts without resetting the scenario');
+    const historicalPurchaseRestatement =
+      'Regarding our earlier equipment purchase, the company bought a new machine for SGD 100,000. What IRAS deduction rules apply?';
+    assert.equal(startsNewAccountingScenario(historicalPurchaseRestatement, activeScenario), false,
+      'a new machine described within a prior purchase restatement does not reset the scenario');
+    assert.equal(assessConversationRelation(historicalPurchaseRestatement, activeScenario), 'RELATED',
+      'the App keeps an explicit historical restatement in the earlier analysis');
     assert.equal(hasExplicitPriorFactReference('New question regarding our earlier expense: what are the IRAS rules?'), false,
       'an explicit new question takes precedence over an earlier-fact reference');
     assert.equal(hasExplicitPriorFactReference('Ignore the earlier expense and explain the general IRAS rules.'), false,
@@ -453,17 +455,37 @@ for (const call of calls) {
     assert.equal(startsNewAccountingScenario(newPurchaseComparedWithEarlierExpense, activeScenario), true,
       'a question-led new purchase does not inherit context merely because it mentions an earlier expense');
     const subsequentPurchaseWithHistoricalReference =
-      'Regarding our previous machine purchase, we subsequently bought a new machine for SGD 100,000. What IRAS deduction rules apply to this purchase?';
+      'Regarding our previous machine purchase, we bought a machine for SGD 80,000. We subsequently purchased another machine for SGD 100,000. What IRAS rules apply to the second purchase?';
     assert.equal(hasExplicitPriorFactReference(subsequentPurchaseWithHistoricalReference), true,
       'a new purchase can still refer to an earlier machine purchase');
     assert.equal(startsNewAccountingScenario(subsequentPurchaseWithHistoricalReference, activeScenario), true,
       'an explicit subsequent purchase takes priority over the retrospective lead-in');
     assert.equal(assessConversationRelation(subsequentPurchaseWithHistoricalReference, activeScenario), 'NEW',
       'the App starts a new analysis for the subsequent purchase');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our previous machine purchase, we subsequently bought a new machine for SGD 100,000. What IRAS deduction rules apply to this purchase?',
+      activeScenario
+    ), true, 'the original one-action subsequent-purchase wording remains a new scenario');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our previous machine purchase, we bought a machine for SGD 80,000. We subsequently purchased a machine for SGD 100,000. What IRAS rules apply to the second purchase?',
+      activeScenario
+    ), true, 'a subsequent purchase with an indefinite object is a new scenario without the word new');
     const additionalPurchaseWithoutTimeMarker =
       'Regarding our previous machine purchase, we bought another machine for SGD 100,000. What IRAS deduction rules apply?';
     assert.equal(startsNewAccountingScenario(additionalPurchaseWithoutTimeMarker, activeScenario), true,
       'an explicitly additional machine purchase starts a new scenario without requiring a temporal marker');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our previous machine purchase, we subsequently purchased another machine. What IRAS rules apply?',
+      activeScenario
+    ), true, 'an explicitly additional purchase starts a new scenario even when its price is unknown');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our previous machine purchase, we bought a machine for SGD 80,000. What if, after reviewing the production plan and the next financial year budget, we purchased another machine for SGD 100,000?',
+      activeScenario
+    ), false, 'a hypothetical additional purchase remains a follow-up');
+    assert.equal(startsNewAccountingScenario(
+      'Regarding our previous machine purchase, in May we purchased another machine for SGD 100,000. What IRAS rules apply?',
+      activeScenario
+    ), true, 'a dated additional purchase in May starts a new scenario');
     const independentPurchaseWithLaterHistoricalMention =
       'Please explain how IRAS deduction rules apply to a new machine purchased for SGD 100,000, considering our earlier invoice.';
     assert.equal(hasExplicitPriorFactReference(independentPurchaseWithLaterHistoricalMention), true,
@@ -505,7 +527,9 @@ for (const call of calls) {
 
     const explicitlyContextualIrasQuestions = [
       'For the previous expense, what are the IRAS deduction rules? The expense was the supplier invoice from the earlier discussion, and the payable remains unpaid. Please connect the facts I supplied previously to the current general rules, explain which prior details could matter, and identify any material information I should still confirm before reaching a conclusion.',
-      'Please explain the earlier invoice and its IRAS deduction rules. It was the supplier invoice from our previous discussion, and it remains unpaid. Please connect the facts already supplied to this question, explain which earlier details could affect the general deduction analysis, and identify any material information I should still confirm before reaching a conclusion.'
+      'Please explain the earlier invoice and its IRAS deduction rules. It was the supplier invoice from our previous discussion, and it remains unpaid. Please connect the facts already supplied to this question, explain which earlier details could affect the general deduction analysis, and identify any material information I should still confirm before reaching a conclusion.',
+      'Please describe the earlier invoice and its IRAS deduction rules. It was the supplier invoice from our previous discussion, and it remains unpaid. Please connect the facts already supplied to this question, explain which earlier details could affect the general deduction analysis, and identify any material information I should still confirm before reaching a conclusion.',
+      'Please outline the earlier invoice and its IRAS deduction rules. It was the supplier invoice from our previous discussion, and it remains unpaid. Please connect the facts already supplied to this question, explain which earlier details could affect the general deduction analysis, and identify any material information I should still confirm before reaching a conclusion.'
     ];
     for (const [index, question] of explicitlyContextualIrasQuestions.entries()) {
       assert.ok(question.length > 260, 'the explicit follow-up exceeds the short semantic follow-up limit');

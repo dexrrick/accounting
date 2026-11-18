@@ -13,7 +13,7 @@ export function isJournalDisplayRequest(query: string): boolean {
 /** Recognizes a longer question that explicitly refers to facts from earlier turns. */
 export function hasExplicitPriorFactReference(query: string): boolean {
   const text = query.trim();
-  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(text);
+  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me|describe|outline)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(text);
   if (!text || !isContextualQuestion ||
       /\b(?:new|different|separate|unrelated)\s+(?:question|transaction|analysis|case|scenario|situation)\b|\b(?:separate|different|unrelated|distinct)\s+from\b|\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b/i.test(text)) {
     return false;
@@ -105,8 +105,9 @@ export function startsNewAccountingScenario(
   if (isDeferredTaxInquiry(query)) return true;
 
   const q = query.toLowerCase();
-  const transactionAction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/i.exec(query);
-  const startsNewTransaction = Boolean(transactionAction);
+  const transactionActionPattern = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/gi;
+  const transactionActions = [...q.matchAll(transactionActionPattern)];
+  const startsNewTransaction = transactionActions.length > 0;
   // "$2,000" begins with a non-word character, so it cannot have a word
   // boundary immediately before it. Keep currency codes word-bounded while
   // accepting the standalone dollar symbol as an amount marker.
@@ -120,15 +121,22 @@ export function startsNewAccountingScenario(
     /\b(director|shareholder|owner|company)\b/.test(q) && hasTransactionDetail;
   if (isIndependentPersonalCost) return true;
 
-  const actionFollowedByNewSubject = Boolean(transactionAction &&
-    /\b(?:new|another)\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|customer|supplier)\b/i.test(
-      query.slice(transactionAction.index + transactionAction[0].length).split(/[,.!?;:]/, 1)[0]
-    ));
-  if (actionFollowedByNewSubject && hasTransactionDetail && hasNewSubject) return true;
-
-  // A contextual statutory question may repeat the transaction wording and
-  // amount while asking about its treatment.
-  if (startsWithPriorFactReference(query)) return false;
+  // An opening reference to an earlier transaction makes a later “new
+  // machine” ambiguous. Reset only for an explicitly additional object or a
+  // subsequent action with its own identifiable object.
+  if (startsWithPriorFactReference(query)) {
+    return transactionActions.some(action => {
+      const actionIndex = action.index ?? 0;
+      const actionEnd = actionIndex + action[0].length;
+      const actionObject = q.slice(actionEnd);
+      const actionLead = q.slice(0, actionIndex).split(/[.!?;](?=\s+)/).at(-1) ?? '';
+      const hasSeparateObject = /^\s+(?:(?:a|an|the)\s+)?(?:another|additional|second|different)\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
+      const hasIndefiniteObject = /^\s+a(?:n)?\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
+      const hasSubsequentAction = /\b(?:(?:we|the company)\s+)?(?:subsequently|later|afterwards|then|again)(?:,\s*)?\s+(?:(?:we|the company)\s+)?$/i.test(actionLead);
+      const isHypothetical = /\b(?:what\s+if|if\s+(?:we|the company)|could|would|should|might|may\s+have)\b/i.test(actionLead);
+      return !isHypothetical && (hasSeparateObject || (hasSubsequentAction && hasIndefiniteObject));
+    });
+  }
 
   // A complete narrative supersedes the active workflow even when both
   // transactions are in the same accounting domain.
