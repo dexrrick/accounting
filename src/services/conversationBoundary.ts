@@ -10,18 +10,36 @@ export function isJournalDisplayRequest(query: string): boolean {
   return /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(query);
 }
 
-const PRIOR_SUBJECT_NOUNS = '(?:transaction|transactions|expense|expenses|purchase|purchases|supply|supplies|invoice|invoices|amount|amounts|facts?|details?|asset|assets|equipment|machine|machinery|salary|salaries|payroll|employee|employees|worker|workers|staff|scenario|scenarios|situation|situations|case|cases|example|examples|payment|payments|contract|contracts|lease|leases|arrangement|arrangements|deadline|deadlines|rate|rates|calculation|calculations|journal|journals|entry|entries|answer|discussion|conversation|analysis)';
-const PRIOR_ADJECTIVE_MODIFIER = '(?:(?!year\\b|years\\b|period\\b|periods\\b|month\\b|months\\b|quarter\\b|quarters\\b|fy\\b|ya\\b)[a-z]+\\s+){0,2}';
-const EXPLICIT_ADJECTIVE_SUBJECT_SOURCE = `(?:earlier|previous|prior|above|last|foregoing|aforementioned|preceding)\\s+${PRIOR_ADJECTIVE_MODIFIER}${PRIOR_SUBJECT_NOUNS}\\b`;
-const SUBJECT_DISCUSSION_CLAUSE_SOURCE = `(?:the|our|my|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${PRIOR_SUBJECT_NOUNS}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|provided|stated|established)\\b|(?:discussed|mentioned|described|provided|stated|noted|shown)\\s+(?:above|earlier|before|previously)\\b|(?:above|previously|earlier(?!\\s+(?:this|last|next|in)\\s+(?:year|month|quarter|week|period)\\b))\\b)`;
+const DISCOURSE_SUBJECT_NOUNS = '(?:facts?|details?|scenario|scenarios|situation|situations|case|cases|example|examples|calculation|calculations|journal|journals|entry|entries|answer|discussion|conversation|analysis)';
+const ACCOUNTING_SUBJECT_NOUNS = '(?:transaction|expense|purchase|supply|invoice|amount|asset|equipment|machine|machinery|salary|payroll|employee|worker|staff|payment|contract|lease|arrangement|deadline|rate)';
+const PRIOR_SUBJECT_NOUNS = `(?:${DISCOURSE_SUBJECT_NOUNS}|${ACCOUNTING_SUBJECT_NOUNS}|transactions|expenses|purchases|supplies|invoices|amounts|assets|salaries|employees|workers|payments|contracts|leases|arrangements|deadlines|rates)`;
+const PRIOR_SCENARIO_MODIFIER = '(?:(?:supplier|vendor|customer|client|business|company|equipment|machine|machinery|vehicle|asset|lease|rental|loan|employee|worker|staff|payroll|salary|cpf|gst|tax)\\s+){0,2}';
+const HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD = '(?!(?:\\s+(?:incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received|arising))?\\s+(?:for|in|from|during|of|under)\\s+(?:ya\\s*\\d{4}|fy\\s*\\d{4}|ya|fy|year\\s+of\\s+assessment|financial\\s+year|tax\\s+year|calendar\\s+year|(?:the\\s+)?(?:prior|previous|earlier|preceding|last)\\s+(?:years?|periods?|months?|quarters?)|\\d{4})\\b)';
+const EXPLICIT_ADJECTIVE_SUBJECT_SOURCE =
+  `(?:` +
+    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:above|foregoing|aforementioned)\\s+${PRIOR_SCENARIO_MODIFIER}${PRIOR_SUBJECT_NOUNS}|` +
+    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_SCENARIO_MODIFIER}${DISCOURSE_SUBJECT_NOUNS}|` +
+    `(?:the|our|my|this|that|these|those)\\s+(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_SCENARIO_MODIFIER}${PRIOR_SUBJECT_NOUNS}` +
+  `)\\b${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD}`;
+const SUBJECT_DISCUSSION_CLAUSE_SOURCE = `(?:the|our|my|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${PRIOR_SUBJECT_NOUNS}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|provided|stated|established)\\b|(?:discussed|mentioned|described|provided|stated|noted|shown)\\s+(?:above|earlier|before|previously)\\b${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD}|(?:above(?!\\s+(?:sgd|usd|eur|s\\$|\\$|\\d|the\\s+(?:[a-z]+\\s+)?(?:ceiling|limit|threshold|cap|rate|amount))\\b)|(?:previously|earlier)(?!\\s+(?:this|last|next|in|for|from|during|under|incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received)\\b))\\b)`;
 
 /** Detects an affirmative instruction to ignore, disregard, or forget prior conversation context. */
 export function hasAffirmativeResetDirective(query: string): boolean {
-  const withoutNegatedReset = query.replace(
-    /\b(?:(?:do\s+not|don['’]?t|dont|never|cannot|can['’]?t|cant|should\s+not|shouldn['’]?t|shouldnt|must\s+not|mustn['’]?t|mustnt|need\s+not|needn['’]?t|neednt)|not\s+to)\s+(?:(?:please|ever|just|simply|accidentally)\s+)*(?:ignore|disregard|forget|omit|drop|discard)(?:\s+(?:or|nor)\s+(?:ignore|disregard|forget|omit|drop|discard))*\b/gi,
-    ' '
+  const withoutQuotedSpans = query
+    .replace(/"[^"\r\n]*"|“[^”\r\n]*”|‘[^’\r\n]*’/g, ' ')
+    .replace(/(?:^|(?<=[\s([{,:;-]))'(?:[^'\r\n]|'(?=[a-z]))*'(?=$|[\s.,!?;:)\]}])/gi, ' ');
+  const collapsedCoordinatedVerbs = withoutQuotedSpans.replace(
+    /\b(?:ignore|disregard|forget|omit|drop|discard)(?:\s*,\s*(?:ignore|disregard|forget|omit|drop|discard))*(?:\s*,?\s*(?:or|nor|and)\s+(?:ignore|disregard|forget|omit|drop|discard))+\b/gi,
+    'forget'
   );
-  return /\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/i.test(withoutNegatedReset);
+  const directivePattern = /\b(ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/gi;
+  for (const match of collapsedCoordinatedVerbs.matchAll(directivePattern)) {
+    const matchIndex = match.index ?? 0;
+    const clausePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/[.!?;,:]/).at(-1) ?? '';
+    const isNegatedClause = /\b(?:not|do\s+not|don['’]?t|dont|does\s+not|doesn['’]?t|doesnt|did\s+not|didn['’]?t|didnt|have\s+not|haven['’]?t|havent|has\s+not|hasn['’]?t|hasnt|had\s+not|hadn['’]?t|hadnt|never|cannot|can['’]?t|cant|should\s+not|shouldn['’]?t|shouldnt|must\s+not|mustn['’]?t|mustnt|need\s+not|needn['’]?t|neednt|would\s+not|wouldn['’]?t|wouldnt|could\s+not|couldn['’]?t|couldnt|will\s+not|won['’]?t|wont|is\s+not|isn['’]?t|isnt|are\s+not|aren['’]?t|arent|was\s+not|wasn['’]?t|wasnt|were\s+not|weren['’]?t|werent|no\s+(?:need|reason|call|cause)|without)\b(?:(?!\b(?:and|but|so|however|instead|rather)\b)\s+[a-z'’]+){0,8}\s*$/i.test(clausePrefix);
+    if (!isNegatedClause) return true;
+  }
+  return false;
 }
 
 /** Recognizes a longer question that explicitly refers to facts from earlier turns. */
@@ -36,7 +54,7 @@ export function hasExplicitPriorFactReference(query: string): boolean {
 
   const explicitAdjectiveSubject = new RegExp(`\\b${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}`, 'i');
   const subjectDiscussionClause = new RegExp(`\\b${SUBJECT_DISCUSSION_CLAUSE_SOURCE}`, 'i');
-  const explicitDiscussionVerb = /\b(?:discussed|mentioned|provided|stated|described|noted|shown)\s+(?:earlier|previously|above|before)\b/i;
+  const explicitDiscussionVerb = new RegExp(`\\b(?:discussed|mentioned|provided|stated|described|noted|shown)\\s+(?:earlier|previously|above|before)\\b${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD}`, 'i');
 
   return explicitAdjectiveSubject.test(text) ||
     subjectDiscussionClause.test(text) ||
@@ -48,7 +66,7 @@ function startsWithPriorFactReference(query: string): boolean {
   if (!referenceLead) return false;
   const remainder = query.slice(referenceLead[0].length);
   const leadingExplicitSubject = new RegExp(
-    `^(?:(?:(?:the|our|my|this|that|these|those)\\s+)?${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}|${SUBJECT_DISCUSSION_CLAUSE_SOURCE})`,
+    `^(?:${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}|${SUBJECT_DISCUSSION_CLAUSE_SOURCE})`,
     'i'
   );
   return leadingExplicitSubject.test(remainder) && hasExplicitPriorFactReference(query);
@@ -131,13 +149,14 @@ export function startsNewAccountingScenario(
   if (isDeferredTaxInquiry(query)) return true;
 
   const q = query.toLowerCase();
-  const transactionAction = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/i.exec(query);
-  const startsNewTransaction = Boolean(transactionAction);
+  const transactionActionPattern = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|leased|issued|subscribed|borrowed|took out|hired)\b/gi;
+  const transactionActions = [...q.matchAll(transactionActionPattern)];
+  const startsNewTransaction = transactionActions.length > 0;
   // "$2,000" begins with a non-word character, so it cannot have a word
   // boundary immediately before it. Keep currency codes word-bounded while
   // accepting the standalone dollar symbol as an amount marker.
   const hasTransactionDetail = /(?:\b(?:sgd|usd|eur|s\$)\s*[\d,]+|\$\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/.test(q);
-  const hasNewSubject = /\b(new\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|employee|worker)|machine|machinery|equipment|vehicle|lease|share capital|payroll|salary|customer|supplier)\b/.test(q);
+  const hasNewSubject = /\b((?:new|another|additional|second|different)\s+(?:[a-z]+\s+)?(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff)|machine|machinery|equipment|vehicle|lease|premises|share capital|payroll|salary|customer|supplier)\b/.test(q);
 
   // A company-paid fine or private/director cost is a new transaction even
   // when its narrative uses “paid”; it must never be attached to an earlier
@@ -146,15 +165,31 @@ export function startsNewAccountingScenario(
     /\b(director|shareholder|owner|company)\b/.test(q) && hasTransactionDetail;
   if (isIndependentPersonalCost) return true;
 
-  const actionFollowedByNewSubject = Boolean(transactionAction &&
-    /\b(?:new|another)\s+(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|customer|supplier|employee|worker)\b/i.test(
-      query.slice(transactionAction.index + transactionAction[0].length).split(/[,.!?;:]/, 1)[0]
-    ));
-  if (actionFollowedByNewSubject && hasTransactionDetail && hasNewSubject) return true;
-
   // A contextual statutory question may repeat the transaction wording and
   // amount while asking about its treatment.
-  if (startsWithPriorFactReference(query)) return false;
+  if (startsWithPriorFactReference(query)) {
+    const leadingReferenceClause = query.split(/[,.;:!?]/, 1)[0];
+    const leadingReferenceCanRestateAction = /\b(?:purchase|transaction|asset|equipment|machine|machinery|vehicle|lease|contract|arrangement|loan|shares?|employee|worker|staff|salary|payroll|scenario|situation|case|example|facts?|details?|discussion|conversation|analysis)\b/i.test(leadingReferenceClause);
+    const hasSubsequentFollowUpReference = /\b(?:the|this|that|our)\s+(?:additional|second|subsequent)\s+(?:purchase|acquisition|transaction)\b/i.test(q);
+    return transactionActions.some(action => {
+      const actionIndex = action.index ?? 0;
+      const actionEnd = actionIndex + action[0].length;
+      const actionObject = q.slice(actionEnd);
+      const actionClauseAfter = actionObject.split(/[.!?;]/, 1)[0];
+      const actionLead = q.slice(0, actionIndex).split(/[.!?;](?=\s+)/).at(-1) ?? '';
+      const hasSeparateObject = /\b(?:new|another|additional|second|different)\s+(?:[a-z]+\s+)?(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter.split(/[,:]/, 1)[0]);
+      const hasIndefiniteOrQuantifiedObject = /^\s+(?:(?:a|an|some|new|more|additional|two|three|four|five|\d+)\s+)?(?:[a-z]+\s+){0,2}(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter);
+      const hasSubsequentOrAdditiveAction = /\b(?:(?:we|the company|our company|i)\s+)?(?:subsequently|later|afterwards|then|again|also|additionally|separately)(?:,\s*)?\s+(?:(?:we|the company|our company|i)\s+)?$/i.test(actionLead);
+      const isConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead);
+      const isInterrogativeConditionalAction = /\b(?:what|how)\b[^.!?;]*\bif\s+(?:[a-z]+\s+){0,3}(?:subsequently|later|afterwards|then|also)?\s*$/i.test(actionLead);
+      const isModalAction = /\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s*$/i.test(actionLead);
+      const isHypothetical = isConditionalAction || isInterrogativeConditionalAction || isModalAction;
+      if (isHypothetical) return false;
+      if (hasSeparateObject && (hasTransactionDetail || hasNewSubject || hasSubsequentOrAdditiveAction)) return true;
+      if ((hasSubsequentOrAdditiveAction || hasSubsequentFollowUpReference) && hasIndefiniteOrQuantifiedObject) return true;
+      return !leadingReferenceCanRestateAction && hasTransactionDetail && hasNewSubject && hasIndefiniteOrQuantifiedObject;
+    });
+  }
 
   // A complete narrative supersedes the active workflow even when both
   // transactions are in the same accounting domain.

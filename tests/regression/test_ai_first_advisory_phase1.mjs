@@ -496,6 +496,38 @@ for (const call of calls) {
     assert.equal(startsNewAccountingScenario(historicalRestatementWithHypothetical, activeScenario), false,
       'a hypothetical clause with a new-machine mention does not change a prior-fact restatement into a new transaction');
 
+    // Finding 2: Separate purchases after prior references vs hypothetical variations
+    const separateEquipmentAfterVendorInvoice =
+      'Regarding our previous vendor invoice, we also purchased equipment for SGD 100,000. How should we account for the additional purchase?';
+    assert.equal(startsNewAccountingScenario(separateEquipmentAfterVendorInvoice, activeScenario), true,
+      'a separate equipment purchase after a previous vendor invoice starts a new scenario');
+    assert.equal(assessConversationRelation(separateEquipmentAfterVendorInvoice, activeScenario), 'NEW',
+      'a separate equipment purchase after a previous vendor invoice is classified as NEW');
+    const subsequentNewEquipmentPurchase =
+      'Regarding our previous machine purchase, we subsequently purchased new equipment for SGD 100,000. What IRAS rules apply?';
+    assert.equal(startsNewAccountingScenario(subsequentNewEquipmentPurchase, activeScenario), true,
+      'a subsequent new equipment purchase starts a new scenario');
+    assert.equal(assessConversationRelation(subsequentNewEquipmentPurchase, activeScenario), 'NEW',
+      'a subsequent new equipment purchase is classified as NEW');
+    const hypotheticalSubsequentPurchase =
+      'Regarding our previous machine purchase, suppose we subsequently purchased another machine for SGD 100,000. What IRAS rules apply?';
+    assert.equal(startsNewAccountingScenario(hypotheticalSubsequentPurchase, activeScenario), false,
+      'suppose-prefixed hypothetical subsequent purchase does not start a new scenario');
+    const interrogativeHypotheticalSubsequentPurchase =
+      'Regarding our previous machine purchase, what would happen if we subsequently purchased another machine for SGD 100,000?';
+    assert.equal(startsNewAccountingScenario(interrogativeHypotheticalSubsequentPurchase, activeScenario), false,
+      'interrogative conditional hypothetical subsequent purchase does not start a new scenario');
+
+    // Finding 3: Historical accounting period statutory questions are not treated as conversation references
+    const priorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to prior unpaid expenses for YA 2026?';
+    const thePriorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to the prior unpaid expenses for YA 2026?';
+    for (const historicalPeriodQuestion of [priorUnpaidExpensesYa2026, thePriorUnpaidExpensesYa2026]) {
+      assert.equal(hasExplicitPriorFactReference(historicalPeriodQuestion), false,
+        `historical accounting period statutory question is not treated as an explicit prior-fact reference: ${historicalPeriodQuestion}`);
+      assert.equal(isShortSemanticFollowUp(historicalPeriodQuestion), false,
+        `historical accounting period statutory question is not treated as a short semantic follow-up: ${historicalPeriodQuestion}`);
+    }
+
     // Finding 2: Independent transactions mentioning prior-year/earlier-period/previous-year items must prompt as AMBIGUOUS
     for (const independentHistoricalTx of [
       'We received SGD 5,000 from a customer for a prior-year invoice. What accounting entry is required?',
@@ -593,6 +625,54 @@ for (const call of calls) {
         !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
       ), 'explicitly separate transaction prompts omit earlier invoice facts');
     }
+
+    const separateEquipmentTurn = {
+      id: 'boundary-separate-equipment-after-vendor-invoice',
+      sender: 'user',
+      timestamp: '',
+      text: separateEquipmentAfterVendorInvoice
+    };
+    const callsBeforeSeparateEquipment = boundaryCalls.length;
+    const separateEquipmentResponse = await processAccountingQuery(
+      separateEquipmentAfterVendorInvoice,
+      activeScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [...previousHistory, separateEquipmentTurn]
+    );
+    const separateEquipmentCalls = boundaryCalls.slice(callsBeforeSeparateEquipment);
+    assert.equal(separateEquipmentResponse.conversationBoundaryMessageId, separateEquipmentTurn.id,
+      'separate equipment purchase after prior vendor invoice establishes a new conversationBoundaryMessageId');
+    assert.notEqual(separateEquipmentResponse.scenarioState?.transactionTitle, activeScenario.transactionTitle,
+      'separate equipment purchase does not inherit the earlier transaction scenario');
+    assert.ok(separateEquipmentCalls.every(call =>
+      !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
+    ), 'separate equipment purchase excludes earlier vendor invoice facts from provider prompts');
+
+    const historicalYa2026Turn = {
+      id: 'boundary-historical-ya2026-user',
+      sender: 'user',
+      timestamp: '',
+      text: priorUnpaidExpensesYa2026
+    };
+    const callsBeforeHistoricalYa2026 = boundaryCalls.length;
+    const historicalYa2026Response = await processAccountingQuery(
+      priorUnpaidExpensesYa2026,
+      activeScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [...previousHistory, historicalYa2026Turn]
+    );
+    const historicalYa2026Calls = boundaryCalls.slice(callsBeforeHistoricalYa2026);
+    assert.equal(historicalYa2026Response.conversationBoundaryMessageId, historicalYa2026Turn.id,
+      'independent YA 2026 statutory question establishes its own conversation boundary');
+    assert.ok(historicalYa2026Calls.length > 0,
+      'independent YA 2026 statutory question reaches the provider');
+    assert.ok(historicalYa2026Calls.every(call =>
+      !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
+    ), 'independent YA 2026 statutory question excludes priorTransaction and priorAnswer from provider prompts');
 
     const interpretationQuestion = 'What documents are required by ACRA?';
     const interpretationHistory = [
@@ -790,9 +870,11 @@ for (const call of calls) {
       'semantic interpretation excludes older pre-boundary transaction history'
     );
 
-    // Finding 1: Negated reset directives retain scoped employee context; affirmative reset directives establish a new boundary
+    // Finding 1: Negated or quoted reset directives retain scoped employee context; affirmative reset directives establish a new boundary
     const negatedResetQueries = [
       "Does that CPF rule apply? Don't forget that she is a second-year Singapore PR.",
+      "Does that CPF rule apply? I don't want you to forget the earlier employee details.",
+      'Does that CPF rule apply? Do not say "forget the earlier employee details".',
       'Does that apply? Please do not disregard the earlier employee details.',
       'Does that CPF rule apply? Please do not ignore or disregard the earlier employee details.',
       "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR."
@@ -805,36 +887,41 @@ for (const call of calls) {
       assert.equal(assessConversationRelation(negatedResetQuery, employeeSetupScenario, employeeSetupScenario), 'RELATED',
         `negated reset directive stays RELATED: ${negatedResetQuery}`);
     }
-    const negatedForgetQuery = negatedResetQueries[0];
-    const negatedForgetTurn = { id: 'boundary-negated-forget-user', sender: 'user', timestamp: '', text: negatedForgetQuery };
-    const scopedNegatedForgetHistory = buildAnalysisConversationHistory([
-      ...employeeSetupHistory,
-      employeeSetupAnswerTurn,
-      negatedForgetTurn
-    ], employeeSetupResponse.conversationBoundaryMessageId);
-    const callsBeforeNegatedForget = boundaryCalls.length;
-    const negatedForgetResponse = await processAccountingQuery(
-      negatedForgetQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedNegatedForgetHistory
-    );
-    assert.equal(negatedForgetResponse.conversationBoundaryMessageId, undefined,
-      'negated forget follow-up does not reset conversationBoundaryMessageId');
-    assert.ok(boundaryCalls.length > callsBeforeNegatedForget,
-      'negated forget follow-up reaches the provider');
-    const negatedForgetPrompt = boundaryCalls.slice(callsBeforeNegatedForget).map(call => call.prompt).join('\n');
-    assert.ok(
-      negatedForgetPrompt.includes('58 years old') &&
-      negatedForgetPrompt.includes('second-year Singapore PR') &&
-      negatedForgetPrompt.includes('2026'),
-      'negated forget follow-up retains scoped employee facts in provider prompt'
-    );
-    assert.ok(
-      negatedForgetPrompt.includes(employeeSetupScenario.transactionTitle),
-      'negated forget follow-up retains active scenario in provider prompt'
-    );
-    assert.ok(
-      !negatedForgetPrompt.includes(priorTransaction) && !negatedForgetPrompt.includes(priorAnswer),
-      'negated forget follow-up still excludes pre-boundary transaction history'
-    );
+    for (const [index, retainedResetQuery] of [
+      negatedResetQueries[0],
+      negatedResetQueries[1],
+      negatedResetQueries[2]
+    ].entries()) {
+      const retainedTurn = { id: `boundary-negated-forget-user-${index}`, sender: 'user', timestamp: '', text: retainedResetQuery };
+      const scopedRetainedHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        retainedTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeRetained = boundaryCalls.length;
+      const retainedResponse = await processAccountingQuery(
+        retainedResetQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedRetainedHistory
+      );
+      assert.equal(retainedResponse.conversationBoundaryMessageId, undefined,
+        `negated/quoted forget follow-up does not reset conversationBoundaryMessageId: ${retainedResetQuery}`);
+      assert.ok(boundaryCalls.length > callsBeforeRetained,
+        `negated/quoted forget follow-up reaches the provider: ${retainedResetQuery}`);
+      const retainedPrompt = boundaryCalls.slice(callsBeforeRetained).map(call => call.prompt).join('\n');
+      assert.ok(
+        retainedPrompt.includes('58 years old') &&
+        retainedPrompt.includes('second-year Singapore PR') &&
+        retainedPrompt.includes('2026'),
+        `negated/quoted forget follow-up retains scoped employee facts in provider prompt: ${retainedResetQuery}`
+      );
+      assert.ok(
+        retainedPrompt.includes(employeeSetupScenario.transactionTitle),
+        `negated/quoted forget follow-up retains active scenario in provider prompt: ${retainedResetQuery}`
+      );
+      assert.ok(
+        !retainedPrompt.includes(priorTransaction) && !retainedPrompt.includes(priorAnswer),
+        `negated/quoted forget follow-up still excludes pre-boundary transaction history: ${retainedResetQuery}`
+      );
+    }
 
     const affirmativeForgetQuery = 'Does that CPF rule apply? Forget that she is a second-year Singapore PR.';
     assert.equal(hasAffirmativeResetDirective(affirmativeForgetQuery), true);
@@ -903,6 +990,17 @@ for (const call of calls) {
     assert.equal(hasExplicitPriorFactReference(longSeparateNewEmployee), false);
     assert.equal(startsNewAccountingScenario(longSeparateNewEmployee, employeeSetupScenario), true);
     assert.equal(assessConversationRelation(longSeparateNewEmployee, employeeSetupScenario, employeeSetupScenario), 'NEW');
+
+    // Finding 4: Hiring another employee or another worker starts a new accounting scenario
+    for (const anotherHireQuery of [
+      'We hired another employee for SGD 5,000 per month. What CPF rate applies?',
+      'We hired another worker for SGD 4,500 per month. What CPF rate applies?'
+    ]) {
+      assert.equal(startsNewAccountingScenario(anotherHireQuery, employeeSetupScenario), true,
+        `hiring another employee/worker starts a new accounting scenario: ${anotherHireQuery}`);
+      assert.equal(assessConversationRelation(anotherHireQuery, employeeSetupScenario, employeeSetupScenario), 'NEW',
+        `hiring another employee/worker is classified as NEW: ${anotherHireQuery}`);
+    }
 
     const payrollInitTurn = {
       id: 'boundary-payroll-init-user',

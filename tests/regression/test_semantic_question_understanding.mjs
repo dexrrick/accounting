@@ -1670,6 +1670,8 @@ assert.equal(isShortSemanticFollowUp('Unrelated: how does that apply?'), false,
 
 // Finding 1: Negated reset directives must not clear follow-up context; affirmative reset directives must.
 const negatedForgetFollowUp = "Does that CPF rule apply? Don't forget that she is a second-year Singapore PR.";
+const negatedWantForgetFollowUp = "Does that CPF rule apply? I don't want you to forget the earlier employee details.";
+const quotedForgetFollowUp = 'Does that CPF rule apply? Do not say "forget the earlier employee details".';
 const negatedDisregardFollowUp = 'Does that apply? Please do not disregard the earlier employee details.';
 const negatedCoordinatedResetFollowUp = 'Does that CPF rule apply? Please do not ignore or disregard the earlier employee details.';
 const negatedAdverbResetFollowUp = "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR.";
@@ -1687,6 +1689,8 @@ const employeeCpfScenario = {
   isComplete: true
 };
 assert.equal(hasAffirmativeResetDirective(negatedForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(negatedWantForgetFollowUp), false);
+assert.equal(hasAffirmativeResetDirective(quotedForgetFollowUp), false);
 assert.equal(hasAffirmativeResetDirective(negatedDisregardFollowUp), false);
 assert.equal(hasAffirmativeResetDirective(negatedCoordinatedResetFollowUp), false);
 assert.equal(hasAffirmativeResetDirective(negatedAdverbResetFollowUp), false);
@@ -1694,6 +1698,10 @@ assert.equal(hasAffirmativeResetDirective(negatedInfinitiveResetFollowUp), false
 assert.equal(hasAffirmativeResetDirective(affirmativeForgetReset), true);
 assert.equal(isShortSemanticFollowUp(negatedForgetFollowUp), true,
   'Negated forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(negatedWantForgetFollowUp), true,
+  'Negated want-to-forget instruction preserves short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(quotedForgetFollowUp), true,
+  'Quoted reset phrase preserves short semantic follow-up retention.');
 assert.equal(isShortSemanticFollowUp(negatedDisregardFollowUp), true,
   'Negated disregard instruction preserves short semantic follow-up retention.');
 assert.equal(isShortSemanticFollowUp(negatedCoordinatedResetFollowUp), true,
@@ -1705,17 +1713,21 @@ assert.equal(isShortSemanticFollowUp(negatedInfinitiveResetFollowUp), true,
 assert.equal(isShortSemanticFollowUp(affirmativeForgetReset), false,
   'Affirmative forget instruction resets short semantic follow-up retention.');
 assert.equal(assessConversationRelation(negatedForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(negatedWantForgetFollowUp, employeeCpfScenario), 'RELATED');
+assert.equal(assessConversationRelation(quotedForgetFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(negatedDisregardFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(negatedCoordinatedResetFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(negatedAdverbResetFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(affirmativeForgetReset, employeeCpfScenario), 'NEW');
 
-// Finding 2: Independent transactions mentioning prior-year/earlier-period/previous-year items must prompt as AMBIGUOUS.
+// Finding 2 & 3: Independent transactions and historical-period statutory questions must not attach as conversation references.
 const priorYearInvoiceTx = 'We received SGD 5,000 from a customer for a prior-year invoice. What accounting entry is required?';
 const previousYearInvoiceTx = 'We received SGD 5,000 from a customer for a previous-year invoice. What accounting entry is required?';
 const unhyphenatedPriorYearInvoiceTx = 'We received SGD 5,000 from a customer for the prior year invoice. What accounting entry is required?';
 const earlierPeriodUtilityTx = 'We paid SGD 3,000 for an earlier-period utility bill. What journal entry is required?';
 const earlierThisYearInvoiceQuestion = 'What accounting entry is required for the invoice earlier this year?';
+const priorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to prior unpaid expenses for YA 2026?';
+const thePriorUnpaidExpensesYa2026 = 'What IRAS deduction rules apply to the prior unpaid expenses for YA 2026?';
 assert.equal(hasExplicitPriorFactReference(priorYearInvoiceTx), false);
 assert.equal(hasExplicitPriorFactReference(previousYearInvoiceTx), false);
 assert.equal(isShortSemanticFollowUp(unhyphenatedPriorYearInvoiceTx), false);
@@ -1723,11 +1735,26 @@ assert.equal(hasExplicitPriorFactReference(unhyphenatedPriorYearInvoiceTx), fals
 assert.equal(hasExplicitPriorFactReference(earlierPeriodUtilityTx), false);
 assert.equal(isShortSemanticFollowUp(earlierThisYearInvoiceQuestion), false);
 assert.equal(hasExplicitPriorFactReference(earlierThisYearInvoiceQuestion), false);
+assert.equal(hasExplicitPriorFactReference(priorUnpaidExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp(priorUnpaidExpensesYa2026), false);
+assert.equal(hasExplicitPriorFactReference(thePriorUnpaidExpensesYa2026), false);
+assert.equal(isShortSemanticFollowUp(thePriorUnpaidExpensesYa2026), false);
 assert.equal(isShortSemanticFollowUp('What is the treatment for this invoice, separate from the earlier case?'), false);
 assert.equal(assessConversationRelation(priorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(previousYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(unhyphenatedPriorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(earlierPeriodUtilityTx, employeeCpfScenario), 'AMBIGUOUS');
+
+// Finding 4: Hiring another employee or another worker starts a new accounting scenario.
+for (const anotherHireQuery of [
+  'We hired another employee for SGD 5,000 per month. What CPF rate applies?',
+  'We hired another worker for SGD 4,500 per month. What CPF rate applies?'
+]) {
+  assert.equal(startsNewAccountingScenario(anotherHireQuery, employeeCpfScenario), true,
+    `hiring another employee/worker starts a new accounting scenario: ${anotherHireQuery}`);
+  assert.equal(assessConversationRelation(anotherHireQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `hiring another employee/worker is classified as NEW: ${anotherHireQuery}`);
+}
 
 // Finding 3: Detailed (>260 chars) contextual statutory follow-up vs >300-char separate new employee transaction.
 const detailedEmployeeFollowUp =
