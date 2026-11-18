@@ -13,6 +13,7 @@ import {
 } from '../../src/services/aiFirstAdvisory.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
+import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetriever.ts';
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
@@ -233,10 +234,17 @@ try {
   for (let providerIndex = 0; providerIndex < adapters.length; providerIndex += 1) {
     const adapter = adapters[providerIndex];
     const scenario = cases[providerIndex === 2 ? 1 : 0];
+    const question = providerIndex === 2 ? 'How does that differ from output tax?' : scenario.question;
+    const priorTransaction = providerIndex === 2
+      ? 'The company recorded GST on an equipment purchase.'
+      : 'Previous question: what is the transaction context?';
+    const priorAssistantAnswer = providerIndex === 2
+      ? 'Prior complete answer: input tax relates to GST on business purchases; output tax relates to business supplies.'
+      : 'Prior complete answer: accrued expense remains payable until settled.';
     const history = [
-      { id: 'prior-user', sender: 'user', timestamp: '', text: 'Previous question: what is the transaction context?' },
-      { id: 'prior-answer', sender: 'assistant', timestamp: '', text: 'Short preview', fullText: 'Prior complete answer: accrued expense remains payable until settled.' },
-      { id: 'current-user', sender: 'user', timestamp: '', text: scenario.question }
+      { id: 'prior-user', sender: 'user', timestamp: '', text: priorTransaction },
+      { id: 'prior-answer', sender: 'assistant', timestamp: '', text: 'Short preview', fullText: priorAssistantAnswer },
+      { id: 'current-user', sender: 'user', timestamp: '', text: question }
     ];
     globalThis.fetch = async (input, init) => {
       const url = String(input);
@@ -252,7 +260,7 @@ try {
       return new Response(JSON.stringify(responseBody), { status: 200, headers: { 'Content-Type': 'application/json' } });
     };
 
-    const response = await processAccountingQuery(scenario.question, null, 'SFRS_I', adapter.settings, 'unused', history);
+    const response = await processAccountingQuery(question, null, 'SFRS_I', adapter.settings, 'unused', history);
     assert.equal(response.displayFullAnswer, true, 'AI-first response is marked for full display');
     assert.match(response.messageText, /# Direct Answer/, 'complete structured advisory reaches the chat response');
     assert.match(response.messageText, /# Explanation/, 'professional explanation is retained');
@@ -315,7 +323,7 @@ try {
 assert.equal(calls.length, 3, 'one generation call is made per provider without a separate classification call');
 assert.deepEqual(new Set(calls.map(call => call.provider)), new Set(['gemini', 'azure', 'openai']));
 for (const call of calls) {
-  assert.ok(call.prompt.includes(call.provider === 'openai' ? cases[1].question : cases[0].question), 'the provider receives the complete original question');
+  assert.ok(call.prompt.includes(call.provider === 'openai' ? 'How does that differ from output tax?' : cases[0].question), 'the provider receives the complete original question');
   assert.ok(call.prompt.includes('Prior complete answer'), 'the provider receives the relevant full assistant history');
   assert.ok(call.prompt.includes('SELECTED SOURCE RECORDS'), 'retrieval context has a separate prompt section');
 }
@@ -371,6 +379,85 @@ for (const call of calls) {
     assert.equal(boundaryCalls.length, 2);
     assert.ok(boundaryCalls[1].prompt.includes(priorTransaction) && boundaryCalls[1].prompt.includes(priorAnswer),
       'a genuine follow-up retains the relevant transaction context');
+
+    const acraQuestion = 'Explain what ACRA does.';
+    const acraUserTurn = { id: 'boundary-acra-user', sender: 'user', timestamp: '', text: acraQuestion };
+    const acraHistory = [...previousHistory, acraUserTurn];
+    const acraResponse = await processAccountingQuery(
+      acraQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', acraHistory
+    );
+    assert.equal(acraResponse.displayFullAnswer, true, 'a standalone ACRA explanation reaches AI-first advisory');
+    assert.equal(acraResponse.conversationBoundaryMessageId, acraUserTurn.id,
+      'the standalone AI-first advisory establishes its conversation boundary before returning');
+    const acraCall = boundaryCalls.at(-1);
+    assert.ok(!acraCall.prompt.includes(priorTransaction) && !acraCall.prompt.includes(priorAnswer),
+      'AI-first advisory excludes the older unrelated transaction and answer');
+
+    const acraWithoutScenario = await processAccountingQuery(
+      acraQuestion, null, 'SFRS_I', adapters[2].settings, 'unused', acraHistory
+    );
+    assert.equal(acraWithoutScenario.conversationBoundaryMessageId, acraUserTurn.id,
+      'a standalone ACRA question establishes its boundary even when the caller has no active scenario');
+    const acraWithoutScenarioCall = boundaryCalls.at(-1);
+    assert.ok(!acraWithoutScenarioCall.prompt.includes(priorTransaction) && !acraWithoutScenarioCall.prompt.includes(priorAnswer),
+      'an ACRA question with no active scenario still excludes unrelated conversation history');
+
+    const acraFollowUp = 'Could you explain that in more detail?';
+    const acraFollowUpTurn = { id: 'boundary-acra-follow-up-user', sender: 'user', timestamp: '', text: acraFollowUp };
+    const scopedAcraFollowUpHistory = buildAnalysisConversationHistory([
+      ...acraHistory,
+      { id: 'boundary-acra-answer', sender: 'assistant', timestamp: '', text: acraResponse.messageText, fullText: acraResponse.messageText },
+      acraFollowUpTurn
+    ], acraResponse.conversationBoundaryMessageId);
+    const acraFollowUpResponse = await processAccountingQuery(
+      acraFollowUp, acraResponse.scenarioState, 'SFRS_I', adapters[2].settings, 'unused', scopedAcraFollowUpHistory
+    );
+    assert.equal(acraFollowUpResponse.displayFullAnswer, true, 'a contextual AI-first follow-up retains advisory handling');
+    const acraFollowUpCall = boundaryCalls.at(-1);
+    assert.ok(acraFollowUpCall.prompt.includes(acraQuestion) && acraFollowUpCall.prompt.includes('Direct Answer'),
+      'the contextual follow-up retains the scoped ACRA question and answer');
+    assert.ok(!acraFollowUpCall.prompt.includes(priorTransaction) && !acraFollowUpCall.prompt.includes(priorAnswer),
+      'the contextual follow-up still excludes the older transaction history');
+
+    const interpretationQuestion = 'What documents are required by ACRA?';
+    const interpretationHistory = [
+      ...previousHistory,
+      { id: 'boundary-cpf-user', sender: 'user', timestamp: '', text: interpretationQuestion }
+    ];
+    const callsBeforeInterpretation = boundaryCalls.length;
+    await processAccountingQuery(
+      interpretationQuestion, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', interpretationHistory
+    );
+    assert.ok(boundaryCalls.length > callsBeforeInterpretation,
+      'a governed statutory question invokes semantic interpretation with the mocked provider');
+    const interpretationCall = boundaryCalls[callsBeforeInterpretation];
+    assert.match(interpretationCall.prompt, /Interpret this question:/,
+      'the test inspects the semantic interpretation request rather than only later evidence or generation');
+    assert.ok(!interpretationCall.prompt.includes(priorTransaction) && !interpretationCall.prompt.includes(priorAnswer),
+      'semantic interpretation never receives the prior unrelated transaction history');
+
+    const rateCorrection = 'Actually the CPF contribution rate is 17%';
+    const incompletePayrollScenario = {
+      scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'The employee salary is awaiting confirmation.',
+      transactionTitle: 'Pending payroll facts', amount: 6000, functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+      directGroups: [], isComplete: false,
+      missingFields: [{ fieldKey: 'salary', fieldName: 'Monthly salary', prompt: 'Please confirm the monthly salary.', whyNeeded: 'The payroll journal requires a confirmed salary.' }]
+    };
+    assert.equal(resolveFactAmendment(rateCorrection, incompletePayrollScenario).amendments?.[0]?.field, 'monthlySalary',
+      'the negative control reproduces the generic amount parser mislabeling a CPF rate as salary');
+    const rateUserTurn = { id: 'boundary-cpf-rate-user', sender: 'user', timestamp: '', text: rateCorrection };
+    const rateHistory = [...previousHistory, rateUserTurn];
+    const callsBeforeRateCorrection = boundaryCalls.length;
+    const rateCorrectionResponse = await processAccountingQuery(
+      rateCorrection, incompletePayrollScenario, 'SFRS_I', adapters[2].settings, 'unused', rateHistory
+    );
+    assert.equal(rateCorrectionResponse.conversationBoundaryMessageId, rateUserTurn.id,
+      'a CPF rate statement does not retain an incomplete payroll scenario as a salary amendment');
+    const rateInterpretationCall = boundaryCalls[callsBeforeRateCorrection];
+    assert.match(rateInterpretationCall.prompt, /Interpret this question:/,
+      'the CPF rate reaches semantic interpretation');
+    assert.ok(!rateInterpretationCall.prompt.includes(priorTransaction) && !rateInterpretationCall.prompt.includes(priorAnswer),
+      'semantic interpretation excludes old accounting history after the CPF rate correction');
 
     const statutoryQuestion = 'What are CPF contribution deadlines in Singapore?';
     const statutoryUserTurn = { id: 'boundary-standalone-statutory-user', sender: 'user', timestamp: '', text: statutoryQuestion };
@@ -646,6 +733,9 @@ try {
     assumptions: [{ id: 'assumption-sgd', field: 'currency', assumedValue: 'SGD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
     directGroups: [makeGroup('collision', 'Committed payroll entry', 'DETERMINISTIC', 60000)]
   };
+  const incompleteDeterministicScenario = {
+    ...deterministicScenario, isComplete: false, committedDirectGroups: undefined
+  };
   const salaryCorrection = 'Actually the monthly salary for CPF is 72k a month';
   const unrelatedConfirmedScenario = {
     ...deterministicScenario,
@@ -658,6 +748,8 @@ try {
     'a payroll salary correction stays bound to its committed payroll even when another confirmed journal is active');
   assert.strictEqual(selectAccountingScenarioForRequest(salaryCorrection, proposalScenario, deterministicScenario), deterministicScenario,
     'a payroll salary correction uses committed payroll facts instead of an AI-proposed active result');
+  assert.strictEqual(selectAccountingScenarioForRequest('prepare the journal entry', incompleteDeterministicScenario, deterministicScenario), deterministicScenario,
+    'an incomplete deterministic group does not replace the retained committed journal as accounting context');
   assert.strictEqual(selectAccountingScenarioForRequest('prepare the journal entry', {
     ...proposalScenario, directGroups: [makeGroup('proposal-only', 'Proposal only', 'AI_PROPOSED', 72000)]
   }, deterministicScenario), deterministicScenario,
@@ -684,6 +776,20 @@ try {
   assert.equal(activeProposalRecallResponse.scenarioState.committedDirectGroups, undefined,
     'direct service callers cannot promote an AI proposal to committed journal state');
 
+  const incompleteRecallResponse = await processAccountingQuery(
+    'show the double entry', incompleteDeterministicScenario, 'SFRS_I', undefined, 'unused', []
+  );
+  assert.match(incompleteRecallResponse.messageText, /No Double Entry Available Yet/,
+    'ordinary deterministic groups from an incomplete scenario are not described as committed');
+  const retainedSnapshotResponse = await processAccountingQuery(
+    'show the double entry', {
+      ...incompleteDeterministicScenario,
+      committedDirectGroups: deterministicScenario.directGroups
+    }, 'SFRS_I', undefined, 'unused', []
+  );
+  assert.match(retainedSnapshotResponse.messageText, /most recent committed journal/i,
+    'an explicitly retained committed snapshot remains recallable if the active scenario is incomplete');
+
   const serviceStub = {
     processAccountingQuery: async (...args) => {
       appCalls.push(args);
@@ -708,10 +814,14 @@ try {
       }
       if (/^(?:show|where is) the double entry$/i.test(query.trim())) {
         const proposal = args[8];
+        if (proposal?.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION') {
+          return processAccountingQuery(...args);
+        }
+        const hasConditional = proposal?.directGroups?.some(group => group.authorityStatus === 'CONDITIONAL');
         return requestScenario
           ? { messageText: 'Committed journal recalled.', scenarioState: requestScenario }
           : proposal
-            ? { messageText: 'AI-Proposed Journal (Not Confirmed).', scenarioState: proposal }
+            ? { messageText: hasConditional ? 'Conditional Journal (Unconfirmed).' : 'AI-Proposed Journal (Not Confirmed).', scenarioState: proposal }
             : { messageText: 'No confirmed journal.', scenarioState: emptyScenario };
       }
       if (query === 'Actually the monthly salary for CPF is 72k a month') {
@@ -923,6 +1033,80 @@ try {
   assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /AI Proposed/,
     'recalling the proposal retains the existing warning in the journal table');
 
+  const equipmentScenario = await parseAccountingQuery(
+    'My company incurred $50,000 on a piece of equipment. Give me the journal entry and tell me whether it is tax deductible.', null
+  );
+  assert.equal(equipmentScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
+    'the App regression uses the real equipment-acquisition parser result');
+  assert.equal(equipmentScenario.isComplete, true, 'the equipment scenario is complete under its conditional assumptions');
+  const equipmentGroup = equipmentScenario.directGroups[0];
+  assert.equal(equipmentGroup.authorityStatus, 'CONDITIONAL');
+  const deterministicEquipmentCompanion = {
+    ...equipmentGroup,
+    id: 'app-equipment-deterministic-companion',
+    title: 'Deterministic equipment companion',
+    summary: 'A separate deterministic equipment event',
+    authorityStatus: 'DETERMINISTIC',
+    totalDebit: 1000,
+    totalCredit: 1000,
+    lines: equipmentGroup.lines.map((line, index) => ({
+      ...line,
+      id: `app-equipment-companion-line-${index + 1}`,
+      debit: index === 0 ? 1000 : 0,
+      credit: index === 0 ? 0 : 1000
+    }))
+  };
+  const mixedEquipmentScenario = {
+    ...equipmentScenario,
+    directGroups: [equipmentGroup, deterministicEquipmentCompanion]
+  };
+  const conditionalEquipmentScenario = {
+    ...equipmentScenario,
+    directGroups: [equipmentGroup]
+  };
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  appUi.inputProps.onScenarioChange(conditionalEquipmentScenario);
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.authorityStatus), ['CONDITIONAL'],
+    'the App displays a valid conditional-only equipment journal');
+  assert.deepEqual(appUi.journalProps.groups.map(group => [group.totalDebit, group.totalCredit]), [[50000, 50000]]);
+  assert.equal(appUi.journalProps.functionalCurrency, 'SGD');
+  assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/);
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.strictEqual(appCalls.at(-1)[8], conditionalEquipmentScenario);
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Conditional Journal \(Unconfirmed\)/);
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [50000]);
+  assert.equal(appUi.journalProps.functionalCurrency, 'SGD');
+  assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/);
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  appUi.inputProps.onScenarioChange(mixedEquipmentScenario);
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.authorityStatus), ['CONDITIONAL', 'DETERMINISTIC'],
+    'the App displays the full validated mixed equipment collection');
+  assert.deepEqual(appUi.journalProps.groups.map(group => [group.totalDebit, group.totalCredit]), [
+    [50000, 50000], [1000, 1000]
+  ], 'the App keeps each equipment group’s debit and credit amounts');
+  assert.equal(appUi.journalProps.functionalCurrency, 'SGD', 'the equipment display keeps its functional currency');
+  assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/,
+    'the existing conditional warning remains visible for the equipment journal');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.strictEqual(appCalls.at(-1)[8], mixedEquipmentScenario,
+    'App passes the active conditional equipment scenario through the read-only recall input');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Conditional Journal \(Unconfirmed\)/,
+    'the App chat explains that the recalled equipment journal remains conditional');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.totalDebit), [50000, 1000],
+    'journal recall continues to display every validated equipment group');
+  assert.equal(appUi.journalProps.functionalCurrency, 'SGD');
+  assert.match(renderToStaticMarkup(React.createElement(JournalTable, appUi.journalProps)), /Conditional Illustrative Entry/,
+    'the conditional warning remains visible after App-level recall');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
   await appUi.chatProps.onSendMessage('What are annual filing deadlines?');
   appUi = renderApp();
   assert.equal(appCalls.at(-1)[5].some(message => message.text === 'What are annual filing deadlines?'), true,

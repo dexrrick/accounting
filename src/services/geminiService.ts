@@ -23,7 +23,7 @@ import {
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
-import { resolveFactAmendment } from './factAmendmentService';
+import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 import { isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
@@ -959,10 +959,12 @@ async function processAccountingQueryCore(
   // committed journal exactly; if none exists, say so rather than inventing
   // one from generic expense defaults.
   if (isJournalDisplayRequest(userInput)) {
-    const candidateGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+    const hasRetainedCommittedSnapshot = Boolean(currentScenario?.committedDirectGroups?.length);
+    const candidateGroups = currentScenario?.committedDirectGroups?.length
       ? currentScenario.committedDirectGroups
       : currentScenario?.directGroups || [];
     const committedGroups = currentScenario && !currentScenario.isHypothetical &&
+      (hasRetainedCommittedSnapshot || currentScenario.isComplete) &&
       candidateGroups.every(group => group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical) &&
       validateJournalGroups(candidateGroups).isValid
       ? candidateGroups
@@ -983,34 +985,17 @@ async function processAccountingQueryCore(
       });
     }
 
-    const proposalScenario = journalRecallProposal || currentScenario;
-    const proposalGroups = getDisplayableUncommittedJournalGroups(proposalScenario, standard);
-    if (proposalScenario && proposalGroups.length > 0) {
+    const uncommittedScenario = journalRecallProposal || currentScenario;
+    const uncommittedGroups = getDisplayableUncommittedJournalGroups(uncommittedScenario, standard);
+    if (uncommittedScenario && uncommittedGroups.length > 0) {
+      const hasConditionalGroups = uncommittedGroups.some(group => group.authorityStatus === 'CONDITIONAL');
       return attachAmendmentProvenance({
-        messageText: '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.',
+        messageText: hasConditionalGroups
+          ? '### Conditional Journal (Unconfirmed)\n\nA complete journal is available under the current assumptions. It remains conditional and has not been committed; review the assumptions before relying on it. The journal is shown in the Double Entry Journal tab.'
+          : '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.',
         scenarioState: {
-          ...proposalScenario,
-          directGroups: proposalGroups,
-          committedDirectGroups: undefined,
-          projectedGroups: undefined,
-          isHypothetical: false
-        }
-      });
-    }
-
-    const conditionalGroups = currentScenario?.isComplete && !currentScenario.isHypothetical &&
-      candidateGroups.length > 0 && candidateGroups.every(group =>
-        (group.authorityStatus === 'CONDITIONAL' || group.authorityStatus === 'DETERMINISTIC') && !group.isHypothetical
-      ) && candidateGroups.some(group => group.authorityStatus === 'CONDITIONAL') &&
-      validateJournalGroups(candidateGroups).isValid
-      ? candidateGroups
-      : [];
-    if (currentScenario && conditionalGroups.length > 0) {
-      return attachAmendmentProvenance({
-        messageText: '### Conditional Journal (Unconfirmed)\n\nA complete journal is available under the current assumptions. It remains conditional and has not been committed; review the assumptions before relying on it. The journal is shown in the Double Entry Journal tab.',
-        scenarioState: {
-          ...currentScenario,
-          directGroups: conditionalGroups,
+          ...uncommittedScenario,
+          directGroups: uncommittedGroups,
           committedDirectGroups: undefined,
           projectedGroups: undefined,
           isHypothetical: false
@@ -1042,7 +1027,32 @@ async function processAccountingQueryCore(
   const journalIntentQuery = removeNegatedJournalDirectives(userInput);
   const outputJournalRequested = Boolean(outputPreference?.journal);
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
-  if (isAiFirstAdvisoryEligible(userInput, providerOrApiKey, hasImages, activeScenario, outputPreference)) {
+  const deterministicClassification = classifyQuestion(userInput);
+  const explicitNewQuestion = /\b(?:new question|unrelated|(?:separate|different) (?:question|transaction))\b/i.test(userInput);
+  const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+    amendmentResolution.amendments?.length === 1 &&
+    amendmentResolution.amendments[0].field === 'monthlySalary' &&
+    isSingleMonthlySalaryAmendment(userInput);
+  const retainConversationContext = !explicitNewQuestion &&
+    (isShortSemanticFollowUp(userInput) || isPayrollSalaryAmendment);
+  const aiFirstAdvisoryEligible = isAiFirstAdvisoryEligible(
+    userInput, providerOrApiKey, hasImages, activeScenario, outputPreference
+  );
+  const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
+    deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
+    !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
+    !journalRequested && !outputJournalRequested && !retainConversationContext;
+  if (independentStatutoryRequest) {
+    const currentUserTurn = [...chatHistory].reverse().find(message =>
+      message.sender === 'user' && message.text.trim() === userInput.trim());
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    activeScenario = null;
+    amendmentResolution = resolveFactAmendment(userInput, null);
+    onConversationScope?.(relevantChatHistory);
+  }
+  if (aiFirstAdvisoryEligible) {
     try {
       const advisory = await generateAiFirstAdvisory(
         userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,
@@ -1147,7 +1157,6 @@ async function processAccountingQueryCore(
   if (rawQuestionUnderstanding.failure === 'TIMEOUT') profiler.recordTimeout();
   else if (rawQuestionUnderstanding.failure && rawQuestionUnderstanding.failure !== 'NO_PROVIDER') profiler.recordFallback();
   const classificationStarted = performance.now();
-  const deterministicClassification = classifyQuestion(userInput);
   const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(
     userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext, semanticConversation
   );

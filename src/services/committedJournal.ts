@@ -31,7 +31,7 @@ export function updateCommittedJournalScenario(
   };
 }
 
-/** Returns the complete current result for display when it contains a valid AI proposal. */
+/** Returns a complete, valid current result that is still proposed or conditional. */
 export function getDisplayableUncommittedJournalGroups(
   candidate: AccountingScenarioState | null,
   standard: AccountingStandard
@@ -39,7 +39,7 @@ export function getDisplayableUncommittedJournalGroups(
   if (!candidate?.isComplete || candidate.isHypothetical) return [];
   const groups = calculateDoubleEntries(candidate, standard).groups;
   if (groups.length === 0 || groups.some(group => group.isHypothetical) || !validateJournalGroups(groups).isValid) return [];
-  return groups.some(group => group.authorityStatus === 'AI_PROPOSED') ? groups : [];
+  return groups.some(group => group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') ? groups : [];
 }
 
 /** Select prior accounting context only for an accounting operation that needs it. */
@@ -66,7 +66,9 @@ export function selectAccountingScenarioForRequest(
   const activeGroups = activeScenario?.committedDirectGroups?.length
     ? activeScenario.committedDirectGroups
     : activeScenario?.directGroups || [];
+  const hasRetainedCommittedSnapshot = Boolean(activeScenario?.committedDirectGroups?.length);
   const activeHasActualJournal = activeScenario && !activeScenario.isHypothetical &&
+    (hasRetainedCommittedSnapshot || activeScenario.isComplete) &&
     activeGroups.length > 0 && activeGroups.every(group =>
       group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical
     ) && validateJournalGroups(activeGroups).isValid;
