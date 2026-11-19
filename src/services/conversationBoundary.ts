@@ -22,6 +22,24 @@ const CURRENT_INTERROGATIVE_HEAD = new RegExp(
   'i'
 );
 
+const PAST_TIME_ANCHOR = String.raw`(?:yesterday|last\s+(?:week|month|year)|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))`;
+const REPORTED_QUESTION_ATTRIBUTION = new RegExp(
+  String.raw`\b(?:wrote|asked|said|advised|emailed|messaged|told|reported|requested)(?:\s+(?:me|us|them|him|her))?(?:\s+(?:earlier|previously|${PAST_TIME_ANCHOR}))?\s*:\s*(?<quote>["\u201c\u2018'])?`,
+  'i'
+);
+// Single marks within words or after possessive s before another word are apostrophes.
+const REPORT_CLOSING_QUOTE = new Map([
+  ['"', /"/],
+  ["'", /'(?![\p{L}\p{N}]|(?<=s')\s+[\p{L}\p{N}])/u],
+  ['\u201c', /\u201d/],
+  ['\u2018', /\u2019(?![\p{L}\p{N}]|(?<=s\u2019)\s+[\p{L}\p{N}])/u]
+]);
+const DECLARATIVE_ACTION_SUBJECT = String.raw`(?:i|we|you|they|he|she|it|(?:the|our)\s+company)`;
+const TIME_ANCHORED_ACTION_LEAD = new RegExp(
+  String.raw`^\s*(?:${PAST_TIME_ANCHOR}\s*,?\s+${DECLARATIVE_ACTION_SUBJECT}|${DECLARATIVE_ACTION_SUBJECT}\s+${PAST_TIME_ANCHOR})(?:\s+had)?${ACTION_MODIFIERS}\s*$`,
+  'i'
+);
+
 export type ConversationRelation = 'RELATED' | 'NEW' | 'AMBIGUOUS';
 
 /** A journal-display request reads an existing result and should not be routed as a transaction. */
@@ -159,19 +177,31 @@ export function startsNewAccountingScenario(
       const ifSegments = actionLead.split(/\bif\b/i);
       const ifClauseLead = ifSegments.slice(1).at(-1) ?? '';
       const hasCompletedIfBeforeContrast = /,[^,]+,\s*but\b/i.test(ifClauseLead);
-      const ifClauseAfterContrast = ifClauseLead.split(/,\s*but\b/i).slice(1).at(-1) ?? '';
+      const ifContrastClauses = ifClauseLead.split(/,\s*but\b/i);
+      const ifClauseAfterContrast = ifContrastClauses.length > 1 ? ifContrastClauses.at(-1) ?? '' : '';
       const ifQuestionLead = ifSegments.at(-2) ?? '';
       const currentQuestionLead = ifQuestionLead.split(/[.!?;](?=\s|$)/).at(-1) ?? ifQuestionLead;
       const actionSentenceTerminator = /[.!?;](?=\s|$)/.exec(actionObject)?.[0];
-      const hasReportedQuestionAttribution = /\b(?:wrote|asked|said|advised|emailed|messaged|told|reported|requested)(?:\s+(?:me|us|them|him|her))?(?:\s+(?:earlier|previously))?\s*:\s*[^.!?]*$/i.test(currentQuestionLead);
-      const isReportedPassiveQuestion = /\bwhat\s+(?:is|are|was|were)\s+\w+\s+(?:is|are|was|were)\s*$/i.test(currentQuestionLead);
-      const hasCurrentInterrogative = !isReportedPassiveQuestion && CURRENT_INTERROGATIVE_HEAD.test(currentQuestionLead);
-      const startsCurrentIndirectRequest = /(?:^|[,;.:])\s*(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b[^.!?]*$/i.test(currentQuestionLead);
-      const hasDirectIfQuestion = !hasReportedQuestionAttribution &&
-        (startsCurrentIndirectRequest || (actionSentenceTerminator === '?' && hasCurrentInterrogative));
+      const attribution = REPORTED_QUESTION_ATTRIBUTION.exec(currentQuestionLead);
+      const questionLead = attribution
+        ? currentQuestionLead.slice(attribution.index + attribution[0].length)
+        : currentQuestionLead;
+      const isReportedPassiveQuestion = /\bwhat\s+(?:is|are|was|were)\s+\w+\s+(?:is|are|was|were)\s*$/i.test(questionLead);
+      const hasInterrogative = !isReportedPassiveQuestion && CURRENT_INTERROGATIVE_HEAD.test(questionLead);
+      const hasIndirectRequest = /(?:^|[,;.:])\s*(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b[^.!?]*$/i.test(questionLead);
+      const hasReportedConditionalQuestion = attribution !== null &&
+        (hasInterrogative || hasIndirectRequest || /^\s*what\s*$/i.test(questionLead));
+      const hasConditionalQuestion = hasReportedConditionalQuestion ||
+        hasIndirectRequest || (hasInterrogative && actionSentenceTerminator === '?');
       const hasExplicitFactualContrast = /\b(?:in fact|actually)\b/i.test(ifClauseAfterContrast);
-      const hasIndependentIfContrast = hasExplicitFactualContrast ||
-        (!ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasDirectIfQuestion);
+      const hasDatedReportedContrast = hasReportedConditionalQuestion &&
+        TIME_ANCHORED_ACTION_LEAD.test(ifClauseAfterContrast);
+      const closingQuotePattern = REPORT_CLOSING_QUOTE.get(attribution?.groups?.quote ?? '');
+      // Wording inside a quotation cannot end the reported condition before the quote closes.
+      const hasIndependentIfContrast = hasReportedConditionalQuestion && closingQuotePattern
+        ? ifContrastClauses.slice(0, -1).some(clause => closingQuotePattern.test(clause))
+        : hasExplicitFactualContrast || hasDatedReportedContrast ||
+          (!ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasConditionalQuestion);
       const frontedMarkerIsIf = /^(?:what\s+)?if$/i.test(frontedConditionalAction?.[1] ?? '');
       const isFrontedConditionalAction = Boolean(frontedConditionalAction &&
         !(frontedMarkerIsIf && hasCompletedIfBeforeContrast));
@@ -179,7 +209,7 @@ export function startsNewAccountingScenario(
       const finalActionClause = actionLeadWithIfAsideRemoved.split(/[,;]|\b(?:and|but)\b/i).at(-1) ?? '';
       // A contrast that shares the subject can still be part of the embedded condition.
       const isEmbeddedConditionalAction = /\bif\b/i.test(finalActionClause) ||
-        (!hasIndependentIfContrast && Boolean(ifClauseLead.match(transactionActionPattern)));
+        (!hasIndependentIfContrast && (hasReportedConditionalQuestion || Boolean(ifClauseLead.match(transactionActionPattern))));
       // Keep the modal tied to an auxiliary immediately before the purchase verb.
       const isModalAction = HYPOTHETICAL_MODAL_ACTION.test(actionLead);
       const isHypothetical = isFrontedConditionalAction || isEmbeddedConditionalAction || isModalAction;
