@@ -596,6 +596,28 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but last Friday we purchased another machine for SGD 100,000?"';
     const quotedConditionWithCalendarDatePurchase =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but on 15 November we purchased another machine for SGD 100,000?"';
+    const quotedFactualPurchaseInQuestion =
+      'Our accountant asked: “Can we claim capital allowances on another machine we purchased for SGD 100,000 last Friday?”';
+    const quotedFactualPurchaseWithLaterConditional =
+      'Our accountant asked: “Can we claim allowances on another machine we purchased for SGD 100,000 last Friday if we write off the old machine?”';
+    const quotedPurchaseWordAsNoun =
+      'Our accountant asked: “Can we claim allowances on another machine we purchased parts for last Friday?”';
+    const contextualQuotedFactualPurchase =
+      `Regarding our previous machine purchase, ${quotedFactualPurchaseInQuestion}`;
+    const quotedMultipleConditionalQuestions =
+      'Our accountant asked: “Can we claim allowances if we sold the old machine? If we subsequently purchased another machine for SGD 100,000, would that change our claim?”';
+    const contextualQuotedMultipleConditionalQuestions =
+      `Regarding our previous machine purchase, ${quotedMultipleConditionalQuestions}`;
+    const reportedAdviceWithCalendarDatePurchase =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but on 15 November 2026 we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithAbbreviatedDatePurchase =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but on 15 Nov we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithNumericDatePurchase =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but on 15/11/2026 we purchased another machine for SGD 100,000.';
+    const quotedConditionalRelativePurchase =
+      'Our accountant asked: “If we considered another machine we purchased for SGD 100,000, would that change our claim?”';
+    const quotedConditionalWithExampleAbbreviation =
+      'Our accountant asked: “If we sold the old machine (e.g. to our supplier) and subsequently purchased another machine for SGD 100,000, would that change our claim?”';
     const quotedIfQuestionWithPurchase =
       'Our accountant asked: "If we sold the old machine, but we subsequently purchased another machine for SGD 100,000, could we claim allowances?"';
     const quotedSupposeQuestionWithPurchase =
@@ -692,6 +714,9 @@ for (const call of calls) {
       reportedAdviceWithObjectBeforeActualPurchase,
       reportedAdviceWithFridayPurchase,
       reportedAdviceWithDatedPurchase,
+      reportedAdviceWithCalendarDatePurchase,
+      reportedAdviceWithAbbreviatedDatePurchase,
+      reportedAdviceWithNumericDatePurchase,
       reportedPurchaseBeforeQuotedQuestion,
       reportedConditionalThenActualPurchaseInQuote,
       earlierReportThenActualPurchaseAfterQuestion,
@@ -712,6 +737,10 @@ for (const call of calls) {
       quotedConditionWithDatedPurchase,
       quotedConditionWithFridayPurchase,
       quotedConditionWithCalendarDatePurchase,
+      quotedMultipleConditionalQuestions,
+      quotedConditionalRelativePurchase,
+      quotedConditionalWithExampleAbbreviation,
+      quotedPurchaseWordAsNoun,
       quotedIfQuestionWithPurchase,
       quotedSupposeQuestionWithPurchase,
       quotedAssumingQuestionWithPurchase,
@@ -728,10 +757,22 @@ for (const call of calls) {
       directQuestionWithDatedHypotheticalPurchase
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
-        'an attributed question or a date alone does not establish an independent purchase');
+        `an attributed question or a date alone does not establish an independent purchase: ${question}`);
       assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
         'a conditional replacement purchase retains the earlier analysis');
     }
+    assert.equal(startsNewAccountingScenario(quotedFactualPurchaseInQuestion, activeScenario), true,
+      'an established additional purchase in the object of a reported question starts a new analysis');
+    assert.equal(assessConversationRelation(quotedFactualPurchaseInQuestion, activeScenario), 'NEW',
+      'a factual purchase inside a reported question does not inherit the earlier scenario');
+    assert.equal(startsNewAccountingScenario(quotedFactualPurchaseWithLaterConditional, activeScenario), true,
+      'a factual purchase stays independent when a later condition qualifies the question');
+    assert.equal(assessConversationRelation(quotedFactualPurchaseWithLaterConditional, activeScenario), 'NEW',
+      'a condition after an established purchase does not hide the new transaction');
+    assert.equal(startsNewAccountingScenario(quotedMultipleConditionalQuestions, activeScenario), false,
+      'multiple conditional questions inside one reported quote remain hypothetical');
+    assert.equal(assessConversationRelation(quotedMultipleConditionalQuestions, activeScenario), 'RELATED',
+      'a later conditional question inside the same quote does not reset the conversation');
     assert.equal(startsNewAccountingScenario(neutralColonBeforeCurrentQuestion, activeScenario), false,
       'a neutral context colon still allows the current conditional question to be recognized');
     assert.equal(startsNewAccountingScenario(affirmativeNotOnlyPurchaseAfterIf, activeScenario), true,
@@ -967,6 +1008,9 @@ for (const call of calls) {
       { question: reportedAdviceWithObjectBeforeActualPurchase, startsNewAnalysis: true },
       { question: reportedAdviceWithFridayPurchase, startsNewAnalysis: true },
       { question: reportedAdviceWithDatedPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithCalendarDatePurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithAbbreviatedDatePurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithNumericDatePurchase, startsNewAnalysis: true },
       { question: reportedAdviceWithFridayPurchaseInQuestion, startsNewAnalysis: false },
       { question: reportedAdviceWithDatedPurchaseInQuestion, startsNewAnalysis: false },
       { question: reportedFridayPurchaseWithLaterQuestionTag, startsNewAnalysis: false },
@@ -978,6 +1022,8 @@ for (const call of calls) {
       { question: quotedConditionWithDatedPurchase, startsNewAnalysis: false },
       { question: quotedConditionWithFridayPurchase, startsNewAnalysis: false },
       { question: quotedConditionWithCalendarDatePurchase, startsNewAnalysis: false },
+      { question: contextualQuotedFactualPurchase, startsNewAnalysis: true },
+      { question: contextualQuotedMultipleConditionalQuestions, startsNewAnalysis: false },
       { question: quotedIfQuestionWithPurchase, startsNewAnalysis: false },
       { question: quotedSupposeQuestionWithPurchase, startsNewAnalysis: false },
       { question: quotedAssumingQuestionWithPurchase, startsNewAnalysis: false },
@@ -1017,8 +1063,8 @@ for (const call of calls) {
       const questionCalls = boundaryCalls.slice(callsBeforeQuestion);
       assert.equal(response.conversationBoundaryMessageId, startsNewAnalysis ? turn.id : undefined,
         startsNewAnalysis
-          ? 'a real subsequent purchase establishes a conversation boundary through the public service'
-          : 'a hypothetical subsequent purchase keeps the existing conversation boundary');
+          ? `a real subsequent purchase establishes a conversation boundary through the public service: ${question}`
+          : `a hypothetical subsequent purchase keeps the existing conversation boundary: ${question}`);
       assert.ok(questionCalls.some(call => call.prompt.includes(question)),
         'the provider receives the original subsequent-purchase wording');
       if (startsNewAnalysis) {

@@ -22,7 +22,9 @@ const CURRENT_INTERROGATIVE_HEAD = new RegExp(
   'i'
 );
 
-const PAST_TIME_ANCHOR = String.raw`(?:yesterday|last\s+(?:week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|on\s+(?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)))`;
+const MONTH_NAME = String.raw`(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)`;
+const CALENDAR_DATE = String.raw`(?:\d{1,2}(?:st|nd|rd|th)?\s+${MONTH_NAME}(?:\s+\d{4})?|\d{1,2}[/-]\d{1,2}[/-]\d{4})`;
+const PAST_TIME_ANCHOR = String.raw`(?:yesterday|last\s+(?:week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|on\s+(?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|${CALENDAR_DATE}))`;
 const REPORTED_QUESTION_ATTRIBUTION = new RegExp(
   String.raw`\b(?:wrote|asked|said|advised|emailed|messaged|told|reported|requested)(?:\s+(?:me|us|them|him|her))?(?:\s+(?:earlier|previously|${PAST_TIME_ANCHOR}))?\s*:\s*(?<quote>["\u201c\u2018'])?`,
   'i'
@@ -34,18 +36,33 @@ const REPORT_CLOSING_QUOTE = new Map([
   ['\u201c', /\u201d/],
   ['\u2018', /\u2019(?![\p{L}\p{N}]|(?<=s\u2019)\s+[\p{L}\p{N}])/u]
 ]);
+const DECLARATIVE_ACTION_SUBJECT = String.raw`(?:i|we|you|they|he|she|it|(?:the|our)\s+company)`;
+const REPORTED_CONDITIONAL_HEAD = /^(?:(?:what\s+)?if|unless|suppose|assuming)\b/i;
+const REPORTED_CONDITION = /\b(?:if|unless|suppose|assuming)\b/i;
+const REPORTED_ADDITIONAL_PURCHASE = new RegExp(
+  String.raw`\b(?:another|additional|second|different)\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset)\s+(?:(?:that|which)\s+)?${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?\s+(?:bought|purchased|acquired)\b`,
+  'i'
+);
+
+const REPORTED_PURCHASE_DETAIL = new RegExp(
+  String.raw`^\s+(?:for\s+(?:(?:sgd|usd|eur)\s*|s?\$\s*)\d|${PAST_TIME_ANCHOR}\b)`,
+  'i'
+);
+
 function isRecognizedReportedQuestionHead(quoteContent: string): boolean {
   const quoteHead = quoteContent.replace(/[.!?]+\s*$/, '').trim();
-  const startsConditionalQuestion = /^(?:(?:what\s+)?if|suppose|assuming)\b/i.test(quoteHead);
   const startsReportedRequest = /^(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b/i.test(quoteHead);
   const startsInterrogativeQuestion = CURRENT_INTERROGATIVE_HEAD.exec(quoteHead)?.index === 0;
-  return startsConditionalQuestion || startsReportedRequest || startsInterrogativeQuestion;
+  return REPORTED_CONDITIONAL_HEAD.test(quoteHead) || startsReportedRequest || startsInterrogativeQuestion;
 }
 
-function prepareBoundaryQuery(query: string): string {
+type PreparedBoundaryQuery = { text: string; hasReportedPurchase: boolean };
+
+function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
   const normalizedQuery = query.toLowerCase();
   const attributedQuestions = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'gi');
   const rangesToMask: Array<{ start: number; end: number }> = [];
+  let hasReportedPurchase = false;
   let attribution: RegExpExecArray | null;
 
   while ((attribution = attributedQuestions.exec(normalizedQuery)) !== null) {
@@ -58,25 +75,43 @@ function prepareBoundaryQuery(query: string): string {
     if (!closingQuote) break;
 
     const quoteContent = normalizedQuery.slice(quoteContentStart, quoteContentStart + closingQuote.index);
-    const firstQuestionMark = quoteContent.indexOf('?');
-    const questionHead = firstQuestionMark >= 0 ? quoteContent.slice(0, firstQuestionMark + 1) : quoteContent;
-    if (isRecognizedReportedQuestionHead(questionHead)) {
-      // Mask through the first question mark so a following factual sentence can still establish a boundary.
-      const contentEnd = quoteContentStart + (firstQuestionMark >= 0 ? firstQuestionMark + 1 : closingQuote.index);
-      if (contentEnd > quoteContentStart) rangesToMask.push({ start: quoteContentStart, end: contentEnd });
+    let blockStart = quoteContentStart;
+    for (const block of quoteContent.split(/(?<=\?)/)) {
+      let sentenceOffset = 0;
+      for (const sentence of block.split(/(?<=[.!])(?=\s|$)/)) {
+        if (isRecognizedReportedQuestionHead(sentence)) {
+          // Preserve preceding statements. Once a reported question or premise begins,
+          // keep its scope through the question mark, including periods in abbreviations.
+          const reportedQuestion = block.slice(sentenceOffset);
+          const condition = REPORTED_CONDITION.exec(reportedQuestion);
+          const beforeCondition = reportedQuestion.slice(0, condition?.index);
+          const purchase = REPORTED_ADDITIONAL_PURCHASE.exec(beforeCondition);
+          if (purchase) {
+            const afterPurchase = beforeCondition.slice(purchase.index + purchase[0].length);
+            // The asset must be the object of the purchase, as in "the machine we purchased for $10,000".
+            const purchaseHasNoOtherObject = /^\s*(?:for\b|[,.!?;]|$)/i.test(afterPurchase);
+            hasReportedPurchase ||= REPORTED_PURCHASE_DETAIL.test(afterPurchase) ||
+              (!condition && purchaseHasNoOtherObject);
+          }
+          rangesToMask.push({ start: blockStart + sentenceOffset, end: blockStart + block.length });
+          break;
+        }
+        sentenceOffset += sentence.length;
+      }
+      blockStart += block.length;
     }
 
-    attributedQuestions.lastIndex = quoteContentStart + closingQuote.index + closingQuote[0].length;
+    attributedQuestions.lastIndex = blockStart + closingQuote[0].length;
   }
 
-  let routingQuery = normalizedQuery;
-  for (const range of rangesToMask) {
-    routingQuery = `${routingQuery.slice(0, range.start)}${' '.repeat(range.end - range.start)}${routingQuery.slice(range.end)}`;
+  let text = '';
+  let unmaskedStart = 0;
+  for (const { start, end } of rangesToMask) {
+    text += normalizedQuery.slice(unmaskedStart, start) + ' '.repeat(end - start);
+    unmaskedStart = end;
   }
-
-  return routingQuery;
+  return { text: text + normalizedQuery.slice(unmaskedStart), hasReportedPurchase };
 }
-const DECLARATIVE_ACTION_SUBJECT = String.raw`(?:i|we|you|they|he|she|it|(?:the|our)\s+company)`;
 const TIME_ANCHORED_ACTION_LEAD = new RegExp(
   String.raw`^\s*(?:${PAST_TIME_ANCHOR}\s*,?\s+${DECLARATIVE_ACTION_SUBJECT}|${DECLARATIVE_ACTION_SUBJECT}\s+${PAST_TIME_ANCHOR})(?:\s+had)?${ACTION_MODIFIERS}\s*$`,
   'i'
@@ -146,7 +181,7 @@ export function assessConversationRelation(
   const relationScenario = currentScenario || committedScenario;
   if (!relationScenario) return 'NEW';
   const routingQuery = prepareBoundaryQuery(query);
-  const q = routingQuery.trim();
+  const q = routingQuery.text.trim();
   if (startsNewAccountingScenarioFromPreparedQuery(routingQuery, relationScenario)) return 'NEW';
 
   const wordCount = q.split(/\s+/).filter(Boolean).length;
@@ -184,13 +219,13 @@ export function startsNewAccountingScenario(
 }
 
 function startsNewAccountingScenarioFromPreparedQuery(
-  q: string,
+  { text: q, hasReportedPurchase }: PreparedBoundaryQuery,
   currentScenario?: AccountingScenarioState | null,
   context?: ConversationAccountingContext
 ): boolean {
   if (!currentScenario && !context?.underlyingTransaction) return false;
 
-  if (isDeferredTaxInquiry(q)) return true;
+  if (hasReportedPurchase || isDeferredTaxInquiry(q)) return true;
   const transactionActionPattern = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/gi;
   const transactionActions = [...q.matchAll(transactionActionPattern)];
   const startsNewTransaction = transactionActions.length > 0;
