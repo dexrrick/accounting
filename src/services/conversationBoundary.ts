@@ -22,7 +22,7 @@ const CURRENT_INTERROGATIVE_HEAD = new RegExp(
   'i'
 );
 
-const PAST_TIME_ANCHOR = String.raw`(?:yesterday|last\s+(?:week|month|year)|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))`;
+const PAST_TIME_ANCHOR = String.raw`(?:yesterday|last\s+(?:week|month|year|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|on\s+(?:(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)|\d{1,2}(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)))`;
 const REPORTED_QUESTION_ATTRIBUTION = new RegExp(
   String.raw`\b(?:wrote|asked|said|advised|emailed|messaged|told|reported|requested)(?:\s+(?:me|us|them|him|her))?(?:\s+(?:earlier|previously|${PAST_TIME_ANCHOR}))?\s*:\s*(?<quote>["\u201c\u2018'])?`,
   'i'
@@ -34,6 +34,48 @@ const REPORT_CLOSING_QUOTE = new Map([
   ['\u201c', /\u201d/],
   ['\u2018', /\u2019(?![\p{L}\p{N}]|(?<=s\u2019)\s+[\p{L}\p{N}])/u]
 ]);
+function isRecognizedReportedQuestionHead(quoteContent: string): boolean {
+  const quoteHead = quoteContent.replace(/[.!?]+\s*$/, '').trim();
+  const startsConditionalQuestion = /^(?:(?:what\s+)?if|suppose|assuming)\b/i.test(quoteHead);
+  const startsReportedRequest = /^(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b/i.test(quoteHead);
+  const startsInterrogativeQuestion = CURRENT_INTERROGATIVE_HEAD.exec(quoteHead)?.index === 0;
+  return startsConditionalQuestion || startsReportedRequest || startsInterrogativeQuestion;
+}
+
+function prepareBoundaryQuery(query: string): string {
+  const normalizedQuery = query.toLowerCase();
+  const attributedQuestions = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'gi');
+  const rangesToMask: Array<{ start: number; end: number }> = [];
+  let attribution: RegExpExecArray | null;
+
+  while ((attribution = attributedQuestions.exec(normalizedQuery)) !== null) {
+    const openingQuote = attribution.groups?.quote;
+    const closingQuotePattern = openingQuote ? REPORT_CLOSING_QUOTE.get(openingQuote) : undefined;
+    if (!openingQuote || !closingQuotePattern) continue;
+
+    const quoteContentStart = attribution.index + attribution[0].length;
+    const closingQuote = closingQuotePattern.exec(normalizedQuery.slice(quoteContentStart));
+    if (!closingQuote) break;
+
+    const quoteContent = normalizedQuery.slice(quoteContentStart, quoteContentStart + closingQuote.index);
+    const firstQuestionMark = quoteContent.indexOf('?');
+    const questionHead = firstQuestionMark >= 0 ? quoteContent.slice(0, firstQuestionMark + 1) : quoteContent;
+    if (isRecognizedReportedQuestionHead(questionHead)) {
+      // Mask through the first question mark so a following factual sentence can still establish a boundary.
+      const contentEnd = quoteContentStart + (firstQuestionMark >= 0 ? firstQuestionMark + 1 : closingQuote.index);
+      if (contentEnd > quoteContentStart) rangesToMask.push({ start: quoteContentStart, end: contentEnd });
+    }
+
+    attributedQuestions.lastIndex = quoteContentStart + closingQuote.index + closingQuote[0].length;
+  }
+
+  let routingQuery = normalizedQuery;
+  for (const range of rangesToMask) {
+    routingQuery = `${routingQuery.slice(0, range.start)}${' '.repeat(range.end - range.start)}${routingQuery.slice(range.end)}`;
+  }
+
+  return routingQuery;
+}
 const DECLARATIVE_ACTION_SUBJECT = String.raw`(?:i|we|you|they|he|she|it|(?:the|our)\s+company)`;
 const TIME_ANCHORED_ACTION_LEAD = new RegExp(
   String.raw`^\s*(?:${PAST_TIME_ANCHOR}\s*,?\s+${DECLARATIVE_ACTION_SUBJECT}|${DECLARATIVE_ACTION_SUBJECT}\s+${PAST_TIME_ANCHOR})(?:\s+had)?${ACTION_MODIFIERS}\s*$`,
@@ -103,21 +145,22 @@ export function assessConversationRelation(
 ): ConversationRelation {
   const relationScenario = currentScenario || committedScenario;
   if (!relationScenario) return 'NEW';
-  if (startsNewAccountingScenario(query, relationScenario)) return 'NEW';
+  const routingQuery = prepareBoundaryQuery(query);
+  const q = routingQuery.trim();
+  if (startsNewAccountingScenarioFromPreparedQuery(routingQuery, relationScenario)) return 'NEW';
 
-  const q = query.toLowerCase().trim();
   const wordCount = q.split(/\s+/).filter(Boolean).length;
   const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
   const continuationSignal = /\b(what if|instead|then|also|same|previous|prior|earlier|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|double entry|journal entry|show|repeat|clarif)/i.test(q);
   const explicitNewSignal = /\b(new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example)|(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|discussion|analysis|discussed|mentioned|that|this|these|those))\b/i.test(q);
 
   if (explicitNewSignal) return 'NEW';
-  if (hasExplicitPriorFactReference(query)) return 'RELATED';
+  if (hasExplicitPriorFactReference(q)) return 'RELATED';
   const payrollScenario = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
     ? currentScenario
     : committedScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? committedScenario : null;
-  const salaryCorrection = payrollScenario && isSingleMonthlySalaryAmendment(query)
-    ? resolveFactAmendment(query, payrollScenario).amendments
+  const salaryCorrection = payrollScenario && isSingleMonthlySalaryAmendment(q)
+    ? resolveFactAmendment(q, payrollScenario).amendments
     : undefined;
   if (salaryCorrection?.length === 1 && salaryCorrection[0].field === 'monthlySalary') return 'RELATED';
   if (relationScenario.missingFields?.length || isShortFactReply || continuationSignal) return 'RELATED';
@@ -137,11 +180,17 @@ export function startsNewAccountingScenario(
   currentScenario?: AccountingScenarioState | null,
   context?: ConversationAccountingContext
 ): boolean {
+  return startsNewAccountingScenarioFromPreparedQuery(prepareBoundaryQuery(query), currentScenario, context);
+}
+
+function startsNewAccountingScenarioFromPreparedQuery(
+  q: string,
+  currentScenario?: AccountingScenarioState | null,
+  context?: ConversationAccountingContext
+): boolean {
   if (!currentScenario && !context?.underlyingTransaction) return false;
 
-  if (isDeferredTaxInquiry(query)) return true;
-
-  const q = query.toLowerCase();
+  if (isDeferredTaxInquiry(q)) return true;
   const transactionActionPattern = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|issued|subscribed|borrowed|took out|hired)\b/gi;
   const transactionActions = [...q.matchAll(transactionActionPattern)];
   const startsNewTransaction = transactionActions.length > 0;
@@ -161,7 +210,7 @@ export function startsNewAccountingScenario(
   // An opening reference to an earlier transaction makes a later “new
   // machine” ambiguous. Reset only for an explicitly additional object or a
   // subsequent action with its own identifiable object.
-  if (startsWithPriorFactReference(query)) {
+  if (startsWithPriorFactReference(q)) {
     return transactionActions.some(action => {
       const actionIndex = action.index ?? 0;
       const actionEnd = actionIndex + action[0].length;
@@ -181,7 +230,11 @@ export function startsNewAccountingScenario(
       const ifClauseAfterContrast = ifContrastClauses.length > 1 ? ifContrastClauses.at(-1) ?? '' : '';
       const ifQuestionLead = ifSegments.at(-2) ?? '';
       const currentQuestionLead = ifQuestionLead.split(/[.!?;](?=\s|$)/).at(-1) ?? ifQuestionLead;
-      const actionSentenceTerminator = /[.!?;](?=\s|$)/.exec(actionObject)?.[0];
+      const actionSentenceTerminatorMatch = /[.!?;](?=\s|$)/.exec(actionObject);
+      const actionSentenceTerminator = actionSentenceTerminatorMatch?.[0];
+      const actionTextThroughTerminator = actionSentenceTerminatorMatch
+        ? actionObject.slice(0, actionSentenceTerminatorMatch.index + 1)
+        : actionObject;
       const attribution = REPORTED_QUESTION_ATTRIBUTION.exec(currentQuestionLead);
       const questionLead = attribution
         ? currentQuestionLead.slice(attribution.index + attribution[0].length)
@@ -194,7 +247,10 @@ export function startsNewAccountingScenario(
       const hasConditionalQuestion = hasReportedConditionalQuestion ||
         hasIndirectRequest || (hasInterrogative && actionSentenceTerminator === '?');
       const hasExplicitFactualContrast = /\b(?:in fact|actually)\b/i.test(ifClauseAfterContrast);
+      const actionEndsWithQuestionTag = actionSentenceTerminator === '?' &&
+        /,\s*(?:correct|right)\s*\?\s*$/i.test(actionTextThroughTerminator);
       const hasDatedReportedContrast = hasReportedConditionalQuestion &&
+        (actionSentenceTerminator !== '?' || actionEndsWithQuestionTag) &&
         TIME_ANCHORED_ACTION_LEAD.test(ifClauseAfterContrast);
       const closingQuotePattern = REPORT_CLOSING_QUOTE.get(attribution?.groups?.quote ?? '');
       // Wording inside a quotation cannot end the reported condition before the quote closes.

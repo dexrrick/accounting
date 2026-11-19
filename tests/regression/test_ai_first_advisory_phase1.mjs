@@ -576,18 +576,50 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant wrote earlier: please advise whether we can claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000.';
     const reportedAdviceWithObjectBeforeActualPurchase =
       'Regarding our previous machine purchase, our accountant asked us: please advise whether we can claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithFridayPurchase =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but last Friday we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithDatedPurchase =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but on 15 November we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithFridayPurchaseInQuestion =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but last Friday we purchased another machine for SGD 100,000?';
+    const reportedAdviceWithDatedPurchaseInQuestion =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but on 15 November we purchased another machine for SGD 100,000?';
+    const reportedFridayPurchaseWithLaterQuestionTag =
+      'Regarding our previous machine purchase, our accountant asked: please advise whether we can claim capital allowances if we sold the old machine, but last Friday we purchased another machine for SGD 100,000? Would that qualify, correct?';
     const reportedColonHypotheticalPurchase =
       'Regarding our previous machine purchase, our accountant asked: can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
     const quotedReportWithStatementPunctuation =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000".';
     const quotedConditionWithDatedPurchase =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000?"';
+    const quotedConditionWithFridayPurchase =
+      'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but last Friday we purchased another machine for SGD 100,000?"';
+    const quotedConditionWithCalendarDatePurchase =
+      'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but on 15 November we purchased another machine for SGD 100,000?"';
+    const quotedIfQuestionWithPurchase =
+      'Our accountant asked: "If we sold the old machine, but we subsequently purchased another machine for SGD 100,000, could we claim allowances?"';
+    const quotedSupposeQuestionWithPurchase =
+      'Our accountant asked: "Suppose we sold the old machine, but we subsequently purchased another machine for SGD 100,000. Could we claim allowances?"';
+    const quotedAssumingQuestionWithPurchase =
+      'Our accountant asked: "Assuming we sold the old machine, but we subsequently purchased another machine for SGD 100,000, could we claim allowances?"';
+    const reportedPurchaseBeforeQuotedQuestion =
+      'Our accountant reported: "We purchased another machine for SGD 100,000. Could we claim capital allowances?"';
+    const reportedConditionalThenActualPurchaseInQuote =
+      'Regarding our previous machine purchase, our accountant reported: "If we sold the old machine, could we claim allowances? We subsequently purchased another machine for SGD 100,000."';
+    const earlierReportThenActualPurchaseAfterQuestion =
+      'Regarding our previous machine purchase, our CFO said: "Fine." Our accountant asked: "can we claim capital allowances if we sold the old machine?", and we subsequently purchased another machine for SGD 100,000.';
+    const standaloneQuotedConditionalEquipmentQuestion =
+      'Our accountant asked: "If we sold the old equipment, but we subsequently purchased some new equipment for SGD 100,000, could we claim allowances?"';
+    const quotedDeferredTaxQuestion =
+      'Our accountant asked: "If we sold the old equipment, but we subsequently purchased some new equipment for SGD 100,000, would that create a deferred tax liability for temporary differences?"';
     const quotedConditionWithPluralPossessive =
       "Regarding our previous machine purchase, our accountant asked: 'can we claim capital allowances if we sold the directors' old machine, but last week we purchased another machine for SGD 100,000?'";
     const quotedConditionWithFactualModifier =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine, but in fact we subsequently purchased another machine for SGD 100,000?"';
     const actualPurchaseAfterClosedQuote =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine?", but we subsequently purchased another machine for SGD 100,000.';
+    const actualPurchaseAfterClosedQuoteAnd =
+      'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine?" and we subsequently purchased another machine for SGD 100,000.';
     const actualPurchaseAfterReplyToQuotedQuestion =
       'Regarding our previous machine purchase, our accountant asked: "can we claim capital allowances if we sold the old machine?" and I answered no, but we subsequently purchased another machine for SGD 100,000.';
     const reportedConditionalWithNonTransactionPremise =
@@ -658,13 +690,19 @@ for (const call of calls) {
       reportedColonQuestionBeforeActualPurchase,
       reportedAdviceWithTimingBeforeActualPurchase,
       reportedAdviceWithObjectBeforeActualPurchase,
+      reportedAdviceWithFridayPurchase,
+      reportedAdviceWithDatedPurchase,
+      reportedPurchaseBeforeQuotedQuestion,
+      reportedConditionalThenActualPurchaseInQuote,
+      earlierReportThenActualPurchaseAfterQuestion,
       yesterdayReportBeforeActualPurchase,
       weekdayReportBeforeActualPurchase,
       actualPurchaseAfterClosedQuote,
+      actualPurchaseAfterClosedQuoteAnd,
       actualPurchaseAfterReplyToQuotedQuestion
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), true,
-        'a reported historical question does not hide a genuine subsequent purchase');
+        `a reported historical question does not hide a genuine subsequent purchase: ${question}`);
       assert.equal(assessConversationRelation(question, activeScenario), 'NEW',
         'a genuine subsequent purchase after a reported question starts a new analysis');
     }
@@ -672,6 +710,16 @@ for (const call of calls) {
       reportedColonHypotheticalPurchase,
       quotedReportWithStatementPunctuation,
       quotedConditionWithDatedPurchase,
+      quotedConditionWithFridayPurchase,
+      quotedConditionWithCalendarDatePurchase,
+      quotedIfQuestionWithPurchase,
+      quotedSupposeQuestionWithPurchase,
+      quotedAssumingQuestionWithPurchase,
+      reportedAdviceWithFridayPurchaseInQuestion,
+      reportedAdviceWithDatedPurchaseInQuestion,
+      reportedFridayPurchaseWithLaterQuestionTag,
+      standaloneQuotedConditionalEquipmentQuestion,
+      quotedDeferredTaxQuestion,
       quotedConditionWithPluralPossessive,
       quotedConditionWithFactualModifier,
       reportedConditionalWithNonTransactionPremise,
@@ -917,12 +965,28 @@ for (const call of calls) {
       { question: reportedColonQuestionBeforeActualPurchase, startsNewAnalysis: true },
       { question: reportedAdviceWithTimingBeforeActualPurchase, startsNewAnalysis: true },
       { question: reportedAdviceWithObjectBeforeActualPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithFridayPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithDatedPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithFridayPurchaseInQuestion, startsNewAnalysis: false },
+      { question: reportedAdviceWithDatedPurchaseInQuestion, startsNewAnalysis: false },
+      { question: reportedFridayPurchaseWithLaterQuestionTag, startsNewAnalysis: false },
+      { question: reportedPurchaseBeforeQuotedQuestion, startsNewAnalysis: true },
+      { question: reportedConditionalThenActualPurchaseInQuote, startsNewAnalysis: true },
+      { question: earlierReportThenActualPurchaseAfterQuestion, startsNewAnalysis: true },
       { question: reportedColonHypotheticalPurchase, startsNewAnalysis: false },
       { question: quotedReportWithStatementPunctuation, startsNewAnalysis: false },
       { question: quotedConditionWithDatedPurchase, startsNewAnalysis: false },
+      { question: quotedConditionWithFridayPurchase, startsNewAnalysis: false },
+      { question: quotedConditionWithCalendarDatePurchase, startsNewAnalysis: false },
+      { question: quotedIfQuestionWithPurchase, startsNewAnalysis: false },
+      { question: quotedSupposeQuestionWithPurchase, startsNewAnalysis: false },
+      { question: quotedAssumingQuestionWithPurchase, startsNewAnalysis: false },
+      { question: standaloneQuotedConditionalEquipmentQuestion, startsNewAnalysis: false },
+      { question: quotedDeferredTaxQuestion, startsNewAnalysis: false },
       { question: quotedConditionWithPluralPossessive, startsNewAnalysis: false },
       { question: quotedConditionWithFactualModifier, startsNewAnalysis: false },
       { question: actualPurchaseAfterClosedQuote, startsNewAnalysis: true },
+      { question: actualPurchaseAfterClosedQuoteAnd, startsNewAnalysis: true },
       { question: actualPurchaseAfterReplyToQuotedQuestion, startsNewAnalysis: true },
       { question: reportedConditionalWithNonTransactionPremise, startsNewAnalysis: false },
       { question: reportedWhatIfPurchase, startsNewAnalysis: false },
