@@ -3,7 +3,12 @@ import type { ChatMessage } from '../types/accounting';
 import type { ConversationAccountingContext } from '../types/conversationState';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 
-const ACTION_MODIFIERS = String.raw`(?:\s+(?:[a-z]+ly|also|again|still|instead|later|afterwards|then|not|even|just|already|ever|never|well))*`;
+const ACTION_MODIFIER = '[a-z]+ly|also|again|still|instead|later|afterwards|then|not|even|just|already|ever|never|well';
+const ACTION_MODIFIERS = String.raw`(?:\s+(?:${ACTION_MODIFIER}))*`;
+const NEGATED_ACTION = new RegExp(
+  String.raw`\b(?:never|not(?!\s+(?:only|just|merely|simply)\b)|[a-z]+n['’]t)\b(?:\s+(?:${ACTION_MODIFIER}|yet|in\s+fact)|\s*,\s*in\s+fact\s*,)*\s*$`,
+  'i'
+);
 const HYPOTHETICAL_MODAL_ACTION = new RegExp(
   String.raw`\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?${ACTION_MODIFIERS}\s+(?:have|be)${ACTION_MODIFIERS}\s*$`,
   'i'
@@ -144,6 +149,7 @@ export function startsNewAccountingScenario(
       const actionEnd = actionIndex + action[0].length;
       const actionObject = q.slice(actionEnd);
       const actionLead = q.slice(0, actionIndex).split(/[.!?;](?=\s+)/).at(-1) ?? '';
+      if (NEGATED_ACTION.test(actionLead)) return false;
       const hasSeparateObject = /^\s+(?:(?:a|an|the)\s+)?(?:another|additional|second|different)\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject);
       const hasIndefiniteObject = /^\s+a(?:n)?\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset|lease|loan|shares?|purchase|acquisition|transaction)\b/i.test(actionObject) ||
         /^\s+(?:(?:some|new)\s+)?(?:equipment|machinery)\b/i.test(actionObject);
@@ -157,12 +163,12 @@ export function startsNewAccountingScenario(
       const ifQuestionLead = ifSegments.at(-2) ?? '';
       const currentQuestionLead = ifQuestionLead.split(/[.!?;](?=\s|$)/).at(-1) ?? ifQuestionLead;
       const actionSentenceTerminator = /[.!?;](?=\s|$)/.exec(actionObject)?.[0];
+      const hasReportedQuestionAttribution = /\b(?:wrote|asked|said|advised|emailed|messaged|told|reported|requested)(?:\s+(?:me|us|them|him|her))?(?:\s+(?:earlier|previously))?\s*:\s*[^.!?]*$/i.test(currentQuestionLead);
       const isReportedPassiveQuestion = /\bwhat\s+(?:is|are|was|were)\s+\w+\s+(?:is|are|was|were)\s*$/i.test(currentQuestionLead);
-      const hasCurrentInterrogative = !isReportedPassiveQuestion &&
-        CURRENT_INTERROGATIVE_HEAD.test(currentQuestionLead);
+      const hasCurrentInterrogative = !isReportedPassiveQuestion && CURRENT_INTERROGATIVE_HEAD.test(currentQuestionLead);
       const startsCurrentIndirectRequest = /(?:^|[,;.:])\s*(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b[^.!?]*$/i.test(currentQuestionLead);
-      const hasDirectIfQuestion = startsCurrentIndirectRequest ||
-        (actionSentenceTerminator === '?' && hasCurrentInterrogative);
+      const hasDirectIfQuestion = !hasReportedQuestionAttribution &&
+        (startsCurrentIndirectRequest || (actionSentenceTerminator === '?' && hasCurrentInterrogative));
       const hasExplicitFactualContrast = /\b(?:in fact|actually)\b/i.test(ifClauseAfterContrast);
       const hasIndependentIfContrast = hasExplicitFactualContrast ||
         (!ACTION_MODIFIERS_ONLY.test(ifClauseAfterContrast) && !hasDirectIfQuestion);

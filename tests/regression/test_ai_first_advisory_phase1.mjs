@@ -560,6 +560,28 @@ for (const call of calls) {
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but in fact we subsequently purchased another machine for SGD 100,000?';
     const actualPurchaseAfterIfWithActually =
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we actually subsequently purchased another machine for SGD 100,000?';
+    const negatedPurchaseAfterIfWithNeverActually =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we never actually purchased another machine for SGD 100,000?';
+    const negatedPurchaseAfterIfWithHadNotActually =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we had not actually purchased another machine for SGD 100,000.';
+    const negatedPurchaseAfterIfWithHadNotYetActually =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we had not yet actually purchased another machine for SGD 100,000?';
+    const negatedPurchaseAfterIfWithHadNotInFact =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we had not, in fact, purchased another machine for SGD 100,000?';
+    const reportedAdviceBeforeActualPurchase =
+      'Regarding our previous machine purchase, our accountant wrote: please advise whether we can claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000.';
+    const reportedColonQuestionBeforeActualPurchase =
+      'Regarding our previous machine purchase, our accountant asked: can we claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000, correct?';
+    const reportedAdviceWithTimingBeforeActualPurchase =
+      'Regarding our previous machine purchase, our accountant wrote earlier: please advise whether we can claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000.';
+    const reportedAdviceWithObjectBeforeActualPurchase =
+      'Regarding our previous machine purchase, our accountant asked us: please advise whether we can claim capital allowances if we sold the old machine, but last week we purchased another machine for SGD 100,000.';
+    const neutralColonBeforeCurrentQuestion =
+      'Regarding our previous machine purchase, one point: can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+    const affirmativeNotOnlyPurchaseAfterIf =
+      'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we not only actually purchased another machine for SGD 100,000?';
+    const affirmativeNotJustPurchaseWithInstallation =
+      'Regarding our previous machine purchase, we have not just purchased another machine for SGD 100,000, we have also installed it.';
     const hypotheticalPurchaseWithLaterActually =
       'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000, and would that be treated as hypothetical? Actually, the purchase is only hypothetical.';
     const passiveReportBeforeActualPurchaseWithTag =
@@ -594,6 +616,34 @@ for (const call of calls) {
       assert.equal(assessConversationRelation(question, activeScenario), 'NEW',
         'an explicitly factual replacement purchase starts a new analysis');
     }
+    for (const question of [
+      negatedPurchaseAfterIfWithNeverActually,
+      negatedPurchaseAfterIfWithHadNotActually,
+      negatedPurchaseAfterIfWithHadNotYetActually,
+      negatedPurchaseAfterIfWithHadNotInFact
+    ]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), false,
+        'a negated purchase does not establish a factual replacement transaction');
+      assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
+        'a negated replacement purchase retains the earlier analysis');
+    }
+    for (const question of [
+      reportedAdviceBeforeActualPurchase,
+      reportedColonQuestionBeforeActualPurchase,
+      reportedAdviceWithTimingBeforeActualPurchase,
+      reportedAdviceWithObjectBeforeActualPurchase
+    ]) {
+      assert.equal(startsNewAccountingScenario(question, activeScenario), true,
+        'a reported historical question does not hide a genuine subsequent purchase');
+      assert.equal(assessConversationRelation(question, activeScenario), 'NEW',
+        'a genuine subsequent purchase after a reported question starts a new analysis');
+    }
+    assert.equal(startsNewAccountingScenario(neutralColonBeforeCurrentQuestion, activeScenario), false,
+      'a neutral context colon still allows the current conditional question to be recognized');
+    assert.equal(startsNewAccountingScenario(affirmativeNotOnlyPurchaseAfterIf, activeScenario), true,
+      'the affirmative phrase not only actually purchased remains factual');
+    assert.equal(startsNewAccountingScenario(affirmativeNotJustPurchaseWithInstallation, activeScenario), true,
+      'the affirmative phrase not just purchased remains a new transaction');
     assert.equal(startsNewAccountingScenario(hypotheticalPurchaseWithLaterActually, activeScenario), false,
       'a later sentence containing actually does not turn a hypothetical replacement purchase into a factual one');
     assert.equal(startsNewAccountingScenario(passiveReportBeforeActualPurchaseWithTag, activeScenario), true,
@@ -813,6 +863,17 @@ for (const call of calls) {
       { question: whichIfQuestionWithNounPhrase, startsNewAnalysis: false },
       { question: actualPurchaseAfterIfWithInFact, startsNewAnalysis: true },
       { question: actualPurchaseAfterIfWithActually, startsNewAnalysis: true },
+      { question: negatedPurchaseAfterIfWithNeverActually, startsNewAnalysis: false },
+      { question: negatedPurchaseAfterIfWithHadNotActually, startsNewAnalysis: false },
+      { question: negatedPurchaseAfterIfWithHadNotYetActually, startsNewAnalysis: false },
+      { question: negatedPurchaseAfterIfWithHadNotInFact, startsNewAnalysis: false },
+      { question: reportedAdviceBeforeActualPurchase, startsNewAnalysis: true },
+      { question: reportedColonQuestionBeforeActualPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithTimingBeforeActualPurchase, startsNewAnalysis: true },
+      { question: reportedAdviceWithObjectBeforeActualPurchase, startsNewAnalysis: true },
+      { question: neutralColonBeforeCurrentQuestion, startsNewAnalysis: false },
+      { question: affirmativeNotOnlyPurchaseAfterIf, startsNewAnalysis: true },
+      { question: affirmativeNotJustPurchaseWithInstallation, startsNewAnalysis: true },
       { question: embeddedIfWithEarlierSentenceAction, startsNewAnalysis: true },
       { question: hypotheticalPurchaseWithAlso, startsNewAnalysis: false },
       { question: hypotheticalPurchaseWithAlsoNot, startsNewAnalysis: false },
