@@ -15,7 +15,8 @@ const HYPOTHETICAL_MODAL_ACTION = new RegExp(
 );
 const ACTION_MODIFIERS_ONLY = new RegExp(`^(?:\\s+had)?${ACTION_MODIFIERS}\\s*$`, 'i');
 
-const INTERROGATIVE_AUXILIARY = '(?:can|could|will|would|shall|should|may|might|do|does|did|is|are|was|were|has|have|had)';
+const INTERROGATIVE_AUXILIARY_BASE = '(?:can|could|will|would|shall|should|may|might|do|does|did|is|are|was|were|has|have|had)';
+const INTERROGATIVE_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY_BASE}|${INTERROGATIVE_AUXILIARY_BASE}n['’]t|can['’]t|cannot|won['’]t|shan['’]t)`;
 const INTERROGATIVE_WORD = '(?:what|how|when|where|why|which|who)';
 const CURRENT_INTERROGATIVE_HEAD = new RegExp(
   String.raw`(?:^|[,;.:])\s*(?:(?:how\s+(?:much|many)|what|which)(?:\s+(?!\b(?:${INTERROGATIVE_AUXILIARY}|i|we|you|they|he|she|it|that|whether|if)\b)[a-z]+){0,6}\s+${INTERROGATIVE_AUXILIARY}\s+(?!\b(?:whether|if|that)\b)\w+\b|(?:${INTERROGATIVE_WORD}\s+)?${INTERROGATIVE_AUXILIARY}\s+\w+\b[^.!?]*$)`,
@@ -49,6 +50,10 @@ const REPORTED_ADDITIONAL_PURCHASE = new RegExp(
   String.raw`\b${ADDITIONAL_ASSET_OBJECT}\s+(?:(?:that|which)\s+)?${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\b`,
   'i'
 );
+const REPORTED_EXISTENTIAL_QUESTION_PREFIX = new RegExp(
+  String.raw`\b${INTERROGATIVE_AUXILIARY}\s+there${ACTION_MODIFIERS}(?:\s+(?:be|been)${ACTION_MODIFIERS})?\s*$`,
+  'i'
+);
 
 const REPORTED_SUBJECT_FIRST_PURCHASE = new RegExp(
   String.raw`\b${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\s+${ADDITIONAL_ASSET_OBJECT}\b`,
@@ -56,7 +61,7 @@ const REPORTED_SUBJECT_FIRST_PURCHASE = new RegExp(
 );
 const REPORTED_PURCHASE_ADJUNCT = /^\s*(?:(?:for|in|on|at|during|since|from|to|with|without|through|by|before|after|last|yesterday|today|recently|already|just|subsequently|later|outright|and)\b|[,.!?;]|$)/i;
 const CONFIRMATION_QUESTION_TAG = /,\s*(?:correct|right)\s*\?\s*$/i;
-const PURCHASE_CONFIRMATION_TAG_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY}|(?:can|could|will|would|shall|should|may|might|must|do|does|did|is|are|was|were|has|have|had)n['’]t)`;
+const PURCHASE_CONFIRMATION_TAG_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY}|mustn['’]t)`;
 const PURCHASE_CONFIRMATION_TAG = new RegExp(
   String.raw`,\s*(?:(?:correct|right)\s*\?|${PURCHASE_CONFIRMATION_TAG_AUXILIARY}\s+(?:i|we|you|they|he|she|it)(?:\s+(?:really|actually|definitely))?\s*\?)\s*$`,
   'i'
@@ -75,15 +80,14 @@ const PURCHASE_UNCERTAINTY_LEAD = new RegExp(
 const PURCHASE_UNCERTAINTY_QUESTION_HEAD = new RegExp(`^${HOW_LIKELY_PURCHASE_QUESTION}\\b`, 'i');
 
 function isSubjectFirstPurchaseQuestioned(subjectPrefix: string): boolean {
-  const prefix = subjectPrefix.trim();
-  const uncertaintyHead = PURCHASE_UNCERTAINTY_QUESTION_HEAD.exec(prefix);
-  const uncertaintyEndsAtPurchase = uncertaintyHead?.[0] === prefix;
-  return /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(subjectPrefix) ||
-    new RegExp('^\\s*' + INTERROGATIVE_AUXILIARY + '\\s*$', 'i').test(subjectPrefix) ||
-    PURCHASE_CONFIRMATION_PREFIX.test(subjectPrefix) ||
-    uncertaintyEndsAtPurchase ||
-    (CURRENT_INTERROGATIVE_HEAD.exec(prefix)?.index === 0 &&
-      (PURCHASE_UNCERTAINTY_LEAD.test(subjectPrefix) || /\btrue\s+(?:that\s*)?$/i.test(subjectPrefix)));
+  const prefix = subjectPrefix.trim().replace(/^(?:(?:and|but|so)\s+)+/i, '');
+  const isQuestioned = /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(prefix) ||
+    new RegExp('^\\s*' + INTERROGATIVE_AUXILIARY + '\\s*$', 'i').test(prefix) ||
+    PURCHASE_CONFIRMATION_PREFIX.test(prefix) ||
+    PURCHASE_UNCERTAINTY_QUESTION_HEAD.test(prefix) ||
+    CURRENT_INTERROGATIVE_HEAD.exec(prefix)?.index === 0;
+  const assertedBackground = /\b(?:now\s+that|since|because|given\s+that)\s*$/i.test(prefix);
+  return isQuestioned && !assertedBackground;
 }
 
 function isReportedPurchaseTagQuestion(sentence: string): boolean {
@@ -98,9 +102,14 @@ function isReportedPurchaseTagQuestion(sentence: string): boolean {
 const PURCHASE_NEGATION_ADVERB = '(?:actually|really|indeed|certainly|definitely|in fact)';
 const REPORTED_CLAUSE_END = /[!?;]|(?<!approx)\.(?=\s|$)/;
 
-function isSeparateQuestion(question: string): boolean {
-  return question.trim().split(/\s+/).length >= 4 &&
-    CURRENT_INTERROGATIVE_HEAD.exec(question)?.index === 0;
+function isSeparateQuestion(question: string, separator = ''): boolean {
+  const text = question.trim();
+  const isBareCommaWhichClause = /^,\s*$/.test(separator) &&
+    new RegExp(`^which\\s+${INTERROGATIVE_AUXILIARY}\\b`, 'i').test(text);
+  const allowsAnyFragment = !separator || /\b(?:but|so)\s*$/i.test(separator);
+  return (!isBareCommaWhichClause && CURRENT_INTERROGATIVE_HEAD.exec(text)?.index === 0) ||
+    /^(?:what|how|why)\b/i.test(text) ||
+    (allowsAnyFragment && /^any\b/i.test(text));
 }
 
 function findSeparateQuestionAfterCorrection(questionScope: string): string | undefined {
@@ -108,7 +117,7 @@ function findSeparateQuestionAfterCorrection(questionScope: string): string | un
   let questionLead: RegExpExecArray | null;
   while ((questionLead = questionLeads.exec(questionScope)) !== null) {
     const questionText = questionScope.slice(questionLead.index + questionLead[0].length).replace(/[.!?]+\s*$/, '');
-    if (isSeparateQuestion(questionText)) return questionText;
+    if (isSeparateQuestion(questionText, questionLead[0])) return questionText;
   }
   return undefined;
 }
@@ -150,7 +159,7 @@ function findExplicitPurchaseCorrection(text: string, asset: string | undefined)
 }
 
 function isRecognizedReportedQuestionHead(quoteContent: string): boolean {
-  const quoteHead = quoteContent.replace(/[.!?]+\s*$/, '').trim();
+  const quoteHead = quoteContent.replace(/[.!?]+\s*$/, '').trim().replace(/^(?:(?:and|but|so)\s+)+/i, '');
   const startsReportedRequest = /^(?:please\s+)?(?:advise|explain|tell|confirm|indicate|describe|outline|clarify)\b[^.!?]*\b(?:whether|if)\b/i.test(quoteHead);
   const startsReportedConfirmation = new RegExp(
     '^\\s*(?:please\\s+)?confirm' + PURCHASE_CONFIRMATION_RECIPIENT +
@@ -200,9 +209,10 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
           const condition = REPORTED_CONDITION.exec(reportedQuestion);
           const beforeCondition = reportedQuestion.slice(0, condition?.index);
           const relativePurchase = REPORTED_ADDITIONAL_PURCHASE.exec(beforeCondition);
-          const relativePurchaseHasNoOtherObject = relativePurchase && REPORTED_PURCHASE_ADJUNCT.test(
-            beforeCondition.slice(relativePurchase.index + relativePurchase[0].length)
-          );
+          // A relative clause cannot establish a purchase when the question asks whether the asset exists.
+          const relativePurchaseIsFactual = relativePurchase &&
+            !REPORTED_EXISTENTIAL_QUESTION_PREFIX.test(beforeCondition.slice(0, relativePurchase.index)) &&
+            REPORTED_PURCHASE_ADJUNCT.test(beforeCondition.slice(relativePurchase.index + relativePurchase[0].length));
           const subjectFirstPurchase = REPORTED_SUBJECT_FIRST_PURCHASE.exec(beforeCondition);
           const subjectFirstPrefix = subjectFirstPurchase
             ? beforeCondition.slice(0, subjectFirstPurchase.index)
@@ -229,7 +239,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
             }
           }
           hasReportedPurchase ||= !correction && Boolean(
-            relativePurchaseHasNoOtherObject || (subjectFirstPurchase && !subjectFirstIsQuestionedOrHypothetical)
+            relativePurchaseIsFactual || (subjectFirstPurchase && !subjectFirstIsQuestionedOrHypothetical)
           );
           break;
         }
