@@ -891,8 +891,9 @@ async function processAccountingQueryCore(
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
-  const { startsNewScenario: isNewAccountingScenario, earlierPurchaseFollowUp } =
-    evaluateAccountingScenarioBoundary(userInput, currentScenario);
+  const {
+    startsNewScenario: isNewAccountingScenario, earlierPurchaseFollowUp, isReportedHypotheticalPurchaseFollowUp
+  } = evaluateAccountingScenarioBoundary(userInput, currentScenario);
   if (isNewAccountingScenario) {
     const currentUserTurn = [...chatHistory].reverse().find(message => message.sender === 'user' && message.text === userInput);
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
@@ -1044,7 +1045,8 @@ async function processAccountingQueryCore(
     !purchaseFollowUpClassification.taxAnalysisRequired && !purchaseFollowUpClassification.regulatoryAnalysisRequired &&
     !usesIrasEvidencePolicy(purchaseFollowUpClassification, earlierPurchaseFollowUp);
   const isContextualFollowUp = !explicitNewQuestion &&
-    (isAccountingPurchaseFollowUp || isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
+    (isAccountingPurchaseFollowUp || (Boolean(activeScenario) && isReportedHypotheticalPurchaseFollowUp) ||
+      isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
   const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&

@@ -651,6 +651,26 @@ for (const call of calls) {
       'Our accountant asked: "Can we claim allowances when we purchased another machine for SGD 100,000?"';
     const quotedProspectivePresentPerfectPurchase =
       'Our accountant asked: "Can we claim allowances once we have purchased another machine for SGD 100,000?"';
+    const quotedHypotheticalTemporalPurchaseAfterAmount =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithoutComma =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 hypothetically?"';
+    const quotedHypotheticalScenarioTemporalPurchase =
+      'Our accountant asked: "Can we claim allowances when we purchased another machine on 15 November, in a hypothetical scenario?"';
+    const factualTemporalPurchaseFollowedByHypotheticalQuestion =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, and how would we treat a disposal, hypothetically?"';
+    const independentStatutoryQuestionAfterHypotheticalPurchase =
+      quotedHypotheticalTemporalPurchaseAfterAmount + ' What is the GST registration threshold in Singapore?';
+    const independentStatutoryQuestionWithinHypotheticalPurchaseQuote =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically, and what is the GST registration threshold in Singapore?"';
+    const quotedUncertainExistentialPurchase =
+      'Our accountant asked: "Could it be that there was another machine we purchased for SGD 100,000?"';
+    const quotedPossibleExistentialPurchase =
+      'Our accountant asked: "Is it possible that there is another machine we purchased for SGD 100,000?"';
+    const quotedPossibleAllowanceWithFactualPurchase =
+      'Our accountant asked: "Could it be that there was an allowance for another machine we purchased for SGD 100,000?"';
+    const quotedAffirmativeCertaintyWithTemporalPurchase =
+      'Our accountant asked: "Can we claim allowances given that we are certain that there was another machine we purchased for SGD 100,000?"';
     const quotedPurchaseConfirmationQuestion =
       'Our accountant asked: "Can you confirm whether and when we purchased another machine for SGD 100,000?"';
     const quotedHypotheticalQuestionWithTemporalPurchase =
@@ -952,6 +972,9 @@ for (const call of calls) {
       quotedPurchaseConfirmationQuestion,
       quotedHypotheticalQuestionWithTemporalPurchase,
       quotedHypotheticalScenarioWithTemporalPurchase,
+      quotedHypotheticalTemporalPurchaseAfterAmount,
+      quotedHypotheticalTemporalPurchaseWithoutComma,
+      quotedHypotheticalScenarioTemporalPurchase,
       quotedMultipleConditionalQuestions,
       quotedConditionalRelativePurchase,
       quotedConditionalWithExampleAbbreviation,
@@ -984,7 +1007,9 @@ for (const call of calls) {
       reportedPurchaseExistenceQuestion,
       reportedPurchaseExistenceQuestionWithAmount,
       reportedPurchaseExistenceQuestionWithPerfect,
-      reportedPurchaseExistenceQuestionWithWouldPerfect
+      reportedPurchaseExistenceQuestionWithWouldPerfect,
+      quotedUncertainExistentialPurchase,
+      quotedPossibleExistentialPurchase
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
         'asking whether a machine purchase exists does not establish the purchase');
@@ -1007,6 +1032,9 @@ for (const call of calls) {
       reportedAllowanceExistenceQuestion,
       purchaseAssertedAsReasonInQuestion,
       purchaseAssertedAsPremiseBeforeQuestion,
+      quotedPossibleAllowanceWithFactualPurchase,
+      quotedAffirmativeCertaintyWithTemporalPurchase,
+      factualTemporalPurchaseFollowedByHypotheticalQuestion,
       quotedFactualPurchaseWithMonthAndAmount,
       quotedLikelyAllowanceWithPurchase,
       quotedSubjectFirstFactualPurchase,
@@ -1426,6 +1454,13 @@ for (const call of calls) {
       { question: quotedPurchaseAfterTemporalClause, startsNewAnalysis: true },
       { question: quotedPurchaseOnceTemporalClause, startsNewAnalysis: true },
       { question: quotedPurchaseWhenTemporalClause, startsNewAnalysis: true },
+      { question: quotedHypotheticalTemporalPurchaseAfterAmount, startsNewAnalysis: false },
+      { question: independentStatutoryQuestionAfterHypotheticalPurchase, startsNewAnalysis: true },
+      { question: independentStatutoryQuestionWithinHypotheticalPurchaseQuote, startsNewAnalysis: true },
+      { question: quotedUncertainExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedPossibleAllowanceWithFactualPurchase, startsNewAnalysis: true },
+      { question: quotedAffirmativeCertaintyWithTemporalPurchase, startsNewAnalysis: true },
+      { question: factualTemporalPurchaseFollowedByHypotheticalQuestion, startsNewAnalysis: true },
       { question: reportedPurchaseExistenceQuestionWithPerfect, startsNewAnalysis: false },
       { question: reportedPurchaseExistenceQuestionWithWouldPerfect, startsNewAnalysis: false },
       { question: quotedCouldItBePurchaseQuestion, startsNewAnalysis: false },
