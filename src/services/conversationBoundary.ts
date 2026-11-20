@@ -39,15 +39,31 @@ const REPORT_CLOSING_QUOTE = new Map([
 const DECLARATIVE_ACTION_SUBJECT = String.raw`(?:i|we|you|they|he|she|it|(?:the|our)\s+company)`;
 const REPORTED_CONDITIONAL_HEAD = /^(?:(?:what\s+)?if|unless|suppose|assuming)\b/i;
 const REPORTED_CONDITION = /\b(?:if|unless|suppose|assuming)\b/i;
+const ADDITIONAL_ASSET_OBJECT = String.raw`(?:(?:a|an|the)\s+)?(?:another|additional|second|different)\s+(?:new\s+)?(?<asset>machine|machinery|equipment|vehicle|asset)`;
 const REPORTED_ADDITIONAL_PURCHASE = new RegExp(
-  String.raw`\b(?:another|additional|second|different)\s+(?:new\s+)?(?:machine|machinery|equipment|vehicle|asset)\s+(?:(?:that|which)\s+)?${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?\s+(?:bought|purchased|acquired)\b`,
+  String.raw`\b${ADDITIONAL_ASSET_OBJECT}\s+(?:(?:that|which)\s+)?${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\b`,
   'i'
 );
 
-const REPORTED_PURCHASE_DETAIL = new RegExp(
-  String.raw`^\s+(?:for\s+(?:(?:sgd|usd|eur)\s*|s?\$\s*)\d|${PAST_TIME_ANCHOR}\b)`,
+const REPORTED_SUBJECT_FIRST_PURCHASE = new RegExp(
+  String.raw`\b${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\s+${ADDITIONAL_ASSET_OBJECT}\b`,
   'i'
 );
+const REPORTED_PURCHASE_ADJUNCT = /^\s*(?:(?:for|in|on|at|during|since|from|to|with|without|through|by|before|after|last|yesterday|today|recently|already|just|subsequently|later|outright|and)\b|[,.!?;]|$)/i;
+
+function findExplicitPurchaseCorrection(text: string, asset: string | undefined): RegExpExecArray | null {
+  if (!asset) return null;
+  const negatedPurchaseOfReportedAsset = new RegExp(
+    String.raw`\b(?:i|we|the company)\s+(?:(?:have|had)\s+)?(?:never|not|didn['’]t|did\s+not|hadn['’]t|had\s+not|haven['’]t|have\s+not)\s+(?:actually\s+)?(?:buy|bought|purchase(?:d)?|acquire(?:d)?)\s+(?:(?:that|the|a|an|another)\s+)?(?:second\s+)?${asset}\b|\b(?:that|the|a|an|another)\s+(?:second\s+)?${asset}\s+(?:(?:was|is|has been|had been)\s+)?(?:never|not)\s+(?:actually\s+)?(?:bought|purchased|acquired)\b`,
+    'gi'
+  );
+  for (const correction of text.matchAll(negatedPurchaseOfReportedAsset)) {
+    const clauseLead = text.slice(0, correction.index).split(/[.!?;]/).at(-1) ?? '';
+    const immediatelyQuestioned = /^\s*\?/.test(text.slice((correction.index ?? 0) + correction[0].length));
+    if (!immediatelyQuestioned && !/\b(?:if|whether|suppose|assuming)\b/i.test(clauseLead)) return correction;
+  }
+  return null;
+}
 
 function isRecognizedReportedQuestionHead(quoteContent: string): boolean {
   const quoteHead = quoteContent.replace(/[.!?]+\s*$/, '').trim();
@@ -85,14 +101,31 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
           const reportedQuestion = block.slice(sentenceOffset);
           const condition = REPORTED_CONDITION.exec(reportedQuestion);
           const beforeCondition = reportedQuestion.slice(0, condition?.index);
-          const purchase = REPORTED_ADDITIONAL_PURCHASE.exec(beforeCondition);
-          if (purchase) {
-            const afterPurchase = beforeCondition.slice(purchase.index + purchase[0].length);
-            // The asset must be the object of the purchase, as in "the machine we purchased for $10,000".
-            const purchaseHasNoOtherObject = /^\s*(?:for\b|[,.!?;]|$)/i.test(afterPurchase);
-            hasReportedPurchase ||= REPORTED_PURCHASE_DETAIL.test(afterPurchase) ||
-              (!condition && purchaseHasNoOtherObject);
+          const relativePurchase = REPORTED_ADDITIONAL_PURCHASE.exec(beforeCondition);
+          const relativePurchaseHasNoOtherObject = relativePurchase && REPORTED_PURCHASE_ADJUNCT.test(
+            beforeCondition.slice(relativePurchase.index + relativePurchase[0].length)
+          );
+          const subjectFirstPurchase = REPORTED_SUBJECT_FIRST_PURCHASE.exec(beforeCondition);
+          const subjectFirstPrefix = subjectFirstPurchase
+            ? beforeCondition.slice(0, subjectFirstPurchase.index)
+            : '';
+          const subjectFirstIsQuestionedOrHypothetical = /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(subjectFirstPrefix);
+          const quoteEnd = quoteContentStart + closingQuote.index + closingQuote[0].length;
+          const followingReport = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'i').exec(normalizedQuery.slice(quoteEnd));
+          const correctionWindow = normalizedQuery.slice(quoteEnd, followingReport ? quoteEnd + followingReport.index : undefined);
+          const reportedPurchaseAsset = relativePurchase?.groups?.asset || subjectFirstPurchase?.groups?.asset;
+          const correction = findExplicitPurchaseCorrection(correctionWindow, reportedPurchaseAsset);
+          const explicitlyCorrected = Boolean(correction);
+          if (correction) {
+            const correctionStart = quoteEnd + correction.index;
+            const correctionEnd = correctionStart + correction[0].length;
+            if (!rangesToMask.some(range => range.start === correctionStart && range.end === correctionEnd)) {
+              rangesToMask.push({ start: correctionStart, end: correctionEnd });
+            }
           }
+          hasReportedPurchase ||= !explicitlyCorrected && Boolean(
+            relativePurchaseHasNoOtherObject || (subjectFirstPurchase && !subjectFirstIsQuestionedOrHypothetical)
+          );
           rangesToMask.push({ start: blockStart + sentenceOffset, end: blockStart + block.length });
           break;
         }
@@ -106,6 +139,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
 
   let text = '';
   let unmaskedStart = 0;
+  rangesToMask.sort((left, right) => left.start - right.start);
   for (const { start, end } of rangesToMask) {
     text += normalizedQuery.slice(unmaskedStart, start) + ' '.repeat(end - start);
     unmaskedStart = end;
