@@ -51,14 +51,15 @@ const REPORTED_ADDITIONAL_PURCHASE = new RegExp(
   'i'
 );
 const REPORTED_EXISTENTIAL_QUESTION_PREFIX = new RegExp(
-  String.raw`\b${INTERROGATIVE_AUXILIARY}\s+there${ACTION_MODIFIERS}(?:\s+(?:be|been)${ACTION_MODIFIERS})?\s*$`,
+  String.raw`\b${INTERROGATIVE_AUXILIARY}\s+there${ACTION_MODIFIERS}(?:\s+(?:be|been)${ACTION_MODIFIERS}|\s+have${ACTION_MODIFIERS}\s+been${ACTION_MODIFIERS})?\s*$`,
   'i'
 );
 
 const REPORTED_SUBJECT_FIRST_PURCHASE = new RegExp(
-  String.raw`\b${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?:have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\s+${ADDITIONAL_ASSET_OBJECT}\b`,
+  String.raw`\b${DECLARATIVE_ACTION_SUBJECT}(?:\s+(?<perfectAuxiliary>have|had))?(?:\s+actually)?\s+(?:bought|purchased|acquired)\s+${ADDITIONAL_ASSET_OBJECT}\b`,
   'i'
 );
+const COMPLETED_TEMPORAL_PURCHASE_LEAD = /\b(?:after|once|when)\s*$/i;
 const REPORTED_PURCHASE_ADJUNCT = /^\s*(?:(?:for|in|on|at|during|since|from|to|with|without|through|by|before|after|last|yesterday|today|recently|already|just|subsequently|later|outright|and)\b|[,.!?;]|$)/i;
 const CONFIRMATION_QUESTION_TAG = /,\s*(?:correct|right)\s*\?\s*$/i;
 const PURCHASE_CONFIRMATION_TAG_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY}|mustn['’]t)`;
@@ -79,13 +80,19 @@ const PURCHASE_UNCERTAINTY_LEAD = new RegExp(
 );
 const PURCHASE_UNCERTAINTY_QUESTION_HEAD = new RegExp(`^${HOW_LIKELY_PURCHASE_QUESTION}\\b`, 'i');
 
-function isSubjectFirstPurchaseQuestioned(subjectPrefix: string): boolean {
+function isSubjectFirstPurchaseQuestioned(
+  subjectPrefix: string,
+  allowCompletedTemporalPremise = false
+): boolean {
   const prefix = subjectPrefix.trim().replace(/^(?:(?:and|but|so)\s+)+/i, '');
-  const isQuestioned = /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(prefix) ||
+  const isExplicitlyQuestioned = /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(prefix) ||
     new RegExp('^\\s*' + INTERROGATIVE_AUXILIARY + '\\s*$', 'i').test(prefix) ||
     PURCHASE_CONFIRMATION_PREFIX.test(prefix) ||
-    PURCHASE_UNCERTAINTY_QUESTION_HEAD.test(prefix) ||
-    CURRENT_INTERROGATIVE_HEAD.exec(prefix)?.index === 0;
+    PURCHASE_UNCERTAINTY_QUESTION_HEAD.test(prefix);
+  const isGeneralInterrogative = CURRENT_INTERROGATIVE_HEAD.exec(prefix)?.index === 0;
+  const allowsTemporalPremise = allowCompletedTemporalPremise &&
+    !/\b(?:would|hypothetical(?:ly)?)\b/i.test(prefix);
+  const isQuestioned = isExplicitlyQuestioned || (isGeneralInterrogative && !allowsTemporalPremise);
   const assertedBackground = /\b(?:now\s+that|since|because|given\s+that)\s*$/i.test(prefix);
   return isQuestioned && !assertedBackground;
 }
@@ -217,7 +224,15 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
           const subjectFirstPrefix = subjectFirstPurchase
             ? beforeCondition.slice(0, subjectFirstPurchase.index)
             : '';
-          const subjectFirstIsQuestionedOrHypothetical = isSubjectFirstPurchaseQuestioned(subjectFirstPrefix);
+          const subjectFirstIsCompletedTemporalPremise = Boolean(
+            subjectFirstPurchase &&
+            subjectFirstPurchase.groups?.perfectAuxiliary !== 'have' &&
+            COMPLETED_TEMPORAL_PURCHASE_LEAD.test(subjectFirstPrefix)
+          );
+          const subjectFirstIsQuestionedOrHypothetical = isSubjectFirstPurchaseQuestioned(
+            subjectFirstPrefix,
+            subjectFirstIsCompletedTemporalPremise
+          );
           const quoteEnd = quoteContentStart + closingQuote.index + closingQuote[0].length;
           const followingReport = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'i').exec(normalizedQuery.slice(quoteEnd));
           const correctionWindow = normalizedQuery.slice(quoteEnd, followingReport ? quoteEnd + followingReport.index : undefined);

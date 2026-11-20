@@ -602,6 +602,10 @@ for (const call of calls) {
       'Our accountant asked: "Is there another machine we purchased?"';
     const reportedPurchaseExistenceQuestionWithAmount =
       'Our accountant asked: "Could there be another machine we purchased for SGD 100,000?"';
+    const reportedPurchaseExistenceQuestionWithPerfect =
+      'Our accountant asked: "Could there have been another machine we purchased for SGD 100,000?"';
+    const reportedPurchaseExistenceQuestionWithWouldPerfect =
+      'Our accountant asked: "Would there have been another machine we purchased for SGD 100,000?"';
     const reportedAllowanceExistenceQuestion =
       'Our accountant asked: "Is there a capital allowance for another machine we purchased for SGD 100,000?"';
     const reportedOpinionAboutPurchase =
@@ -639,6 +643,20 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant asked: "Can we claim allowances now that we purchased another machine?"';
     const quotedSubjectFirstPresentPerfectPurchase =
       'Regarding our previous machine purchase, our accountant asked: "Can we claim allowances now that we have purchased another machine?"';
+    const quotedPurchaseAfterTemporalClause =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000?"';
+    const quotedPurchaseOnceTemporalClause =
+      'Our accountant asked: "Can we claim allowances once we purchased another machine for SGD 100,000?"';
+    const quotedPurchaseWhenTemporalClause =
+      'Our accountant asked: "Can we claim allowances when we purchased another machine for SGD 100,000?"';
+    const quotedProspectivePresentPerfectPurchase =
+      'Our accountant asked: "Can we claim allowances once we have purchased another machine for SGD 100,000?"';
+    const quotedPurchaseConfirmationQuestion =
+      'Our accountant asked: "Can you confirm whether and when we purchased another machine for SGD 100,000?"';
+    const quotedHypotheticalQuestionWithTemporalPurchase =
+      'Our accountant asked: "What would happen once we purchased another machine for SGD 100,000?"';
+    const quotedHypotheticalScenarioWithTemporalPurchase =
+      'Our accountant asked: "Could we claim allowances in a hypothetical scenario after we purchased another machine for SGD 100,000?"';
     const quotedHavePurchaseQuestion =
       'Regarding our previous machine purchase, our accountant asked: "Have we purchased another machine?"';
     const quotedHasPurchaseQuestion =
@@ -930,6 +948,10 @@ for (const call of calls) {
       quotedConditionWithDatedPurchase,
       quotedConditionWithFridayPurchase,
       quotedConditionWithCalendarDatePurchase,
+      quotedProspectivePresentPerfectPurchase,
+      quotedPurchaseConfirmationQuestion,
+      quotedHypotheticalQuestionWithTemporalPurchase,
+      quotedHypotheticalScenarioWithTemporalPurchase,
       quotedMultipleConditionalQuestions,
       quotedConditionalRelativePurchase,
       quotedConditionalWithExampleAbbreviation,
@@ -958,7 +980,12 @@ for (const call of calls) {
       'an established additional purchase in the object of a reported question starts a new analysis');
     assert.equal(assessConversationRelation(quotedFactualPurchaseInQuestion, activeScenario), 'NEW',
       'a factual purchase inside a reported question does not inherit the earlier scenario');
-    for (const question of [reportedPurchaseExistenceQuestion, reportedPurchaseExistenceQuestionWithAmount]) {
+    for (const question of [
+      reportedPurchaseExistenceQuestion,
+      reportedPurchaseExistenceQuestionWithAmount,
+      reportedPurchaseExistenceQuestionWithPerfect,
+      reportedPurchaseExistenceQuestionWithWouldPerfect
+    ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
         'asking whether a machine purchase exists does not establish the purchase');
       assert.equal(assessConversationRelation(question, activeScenario), 'RELATED',
@@ -984,6 +1011,9 @@ for (const call of calls) {
       quotedLikelyAllowanceWithPurchase,
       quotedSubjectFirstFactualPurchase,
       quotedSubjectFirstPresentPerfectPurchase,
+      quotedPurchaseAfterTemporalClause,
+      quotedPurchaseOnceTemporalClause,
+      quotedPurchaseWhenTemporalClause,
       quotedPurchaseWithUnrelatedConfirmation,
       quotedAllowancesTagQuestion,
       quotedSincePurchase,
@@ -1393,6 +1423,11 @@ for (const call of calls) {
       { question: quotedPurchaseFollowedByApproximateAmountNegativeTag, startsNewAnalysis: true },
       { question: quotedPurchaseCorrectedThenSeparatePurchase, startsNewAnalysis: true },
       { question: quotedWhetherPurchaseIsEstablished, startsNewAnalysis: false },
+      { question: quotedPurchaseAfterTemporalClause, startsNewAnalysis: true },
+      { question: quotedPurchaseOnceTemporalClause, startsNewAnalysis: true },
+      { question: quotedPurchaseWhenTemporalClause, startsNewAnalysis: true },
+      { question: reportedPurchaseExistenceQuestionWithPerfect, startsNewAnalysis: false },
+      { question: reportedPurchaseExistenceQuestionWithWouldPerfect, startsNewAnalysis: false },
       { question: quotedCouldItBePurchaseQuestion, startsNewAnalysis: false },
       { question: quotedCouldItBePurchaseQuestionWithAmount, startsNewAnalysis: false },
       { question: quotedPossiblePurchaseQuestion, startsNewAnalysis: false },
