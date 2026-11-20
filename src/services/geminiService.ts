@@ -24,7 +24,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
-import { hasExplicitPriorFactReference, isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
+import { evaluateAccountingScenarioBoundary, hasExplicitPriorFactReference, isJournalDisplayRequest } from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
@@ -891,7 +891,8 @@ async function processAccountingQueryCore(
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
-  const isNewAccountingScenario = startsNewAccountingScenario(userInput, currentScenario);
+  const { startsNewScenario: isNewAccountingScenario, earlierPurchaseFollowUp } =
+    evaluateAccountingScenarioBoundary(userInput, currentScenario);
   if (isNewAccountingScenario) {
     const currentUserTurn = [...chatHistory].reverse().find(message => message.sender === 'user' && message.text === userInput);
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
@@ -1033,8 +1034,17 @@ async function processAccountingQueryCore(
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
   const deterministicClassification = classifyQuestion(userInput);
   const explicitNewQuestion = /\b(?:new question|unrelated|(?:separate|different) (?:question|transaction))\b/i.test(userInput);
+  // Scope the check to the new question. A quoted tax question can coexist
+  // with an accounting follow-up, and an incidental asset mention in a new
+  // statutory question does not make that question contextual.
+  const purchaseFollowUpClassification = activeScenario && earlierPurchaseFollowUp
+    ? classifyQuestion(earlierPurchaseFollowUp)
+    : undefined;
+  const isAccountingPurchaseFollowUp = purchaseFollowUpClassification &&
+    !purchaseFollowUpClassification.taxAnalysisRequired && !purchaseFollowUpClassification.regulatoryAnalysisRequired &&
+    !usesIrasEvidencePolicy(purchaseFollowUpClassification, earlierPurchaseFollowUp);
   const isContextualFollowUp = !explicitNewQuestion &&
-    (isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
+    (isAccountingPurchaseFollowUp || isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
   const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&

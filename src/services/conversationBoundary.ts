@@ -56,21 +56,39 @@ const REPORTED_SUBJECT_FIRST_PURCHASE = new RegExp(
 );
 const REPORTED_PURCHASE_ADJUNCT = /^\s*(?:(?:for|in|on|at|during|since|from|to|with|without|through|by|before|after|last|yesterday|today|recently|already|just|subsequently|later|outright|and)\b|[,.!?;]|$)/i;
 const CONFIRMATION_QUESTION_TAG = /,\s*(?:correct|right)\s*\?\s*$/i;
+const PURCHASE_CONFIRMATION_TAG_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY}|(?:can|could|will|would|shall|should|may|might|must|do|does|did|is|are|was|were|has|have|had)n['’]t)`;
+const PURCHASE_CONFIRMATION_TAG = new RegExp(
+  String.raw`,\s*(?:(?:correct|right)\s*\?|${PURCHASE_CONFIRMATION_TAG_AUXILIARY}\s+(?:i|we|you|they|he|she|it)(?:\s+(?:really|actually|definitely))?\s*\?)\s*$`,
+  'i'
+);
 const PURCHASE_TAG_TIME = String.raw`(?:${PAST_TIME_ANCHOR}|this\s+(?:morning|afternoon|evening)|at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?))`;
 const PURCHASE_TAG_ADJUNCT = new RegExp(
   String.raw`^(?:\s+(?:for\s+(?:(?:sgd|usd|eur|s?\$)\s*)?\d+(?:,\d{3})*(?:\.\d+)?|${PURCHASE_TAG_TIME})){0,2}\s*$`,
   'i'
 );
-const PURCHASE_UNCERTAINTY_LEAD = /\b(?:possible|impossible|sure|certain|likely|unlikely|clear|unclear|uncertain|doubtful)\s+(?:(?:that|whether|if)\s*)?$/i;
-const PURCHASE_UNCERTAINTY_QUESTION_HEAD = /^how\s+(?:likely|possible|probable|unlikely)\s+(?:is|are|was|were)\s+(?:it|that)\s+(?:that|whether|if)\b/i;
-const PURCHASE_CONFIRMATION_TAG = new RegExp(
-  String.raw`,\s*(?:(?:correct|right)\s*\?|${INTERROGATIVE_AUXILIARY}\s+(?:i|we|you|they|he|she|it)(?:\s+(?:really|actually|definitely))?\s*\?)\s*$`,
+const PURCHASE_UNCERTAINTY_ADJECTIVE = '(?:possible|impossible|sure|certain|likely|unlikely|clear|unclear|uncertain|doubtful)';
+const HOW_LIKELY_PURCHASE_QUESTION = String.raw`how\s+(?:likely|possible|probable|unlikely)\s+(?:is|are|was|were)\s+(?:it|that)(?:\s+(?:that|whether|if))?`;
+const PURCHASE_UNCERTAINTY_LEAD = new RegExp(
+  String.raw`(?:\b${PURCHASE_UNCERTAINTY_ADJECTIVE}\s+(?:(?:that|whether|if)\s*)?|\b(?:could|can|might|may|would|should)\s+it\s+be\s+(?:that|whether|if)\s*|\b${HOW_LIKELY_PURCHASE_QUESTION}\s*)$`,
   'i'
 );
+const PURCHASE_UNCERTAINTY_QUESTION_HEAD = new RegExp(`^${HOW_LIKELY_PURCHASE_QUESTION}\\b`, 'i');
+
+function isSubjectFirstPurchaseQuestioned(subjectPrefix: string): boolean {
+  const prefix = subjectPrefix.trim();
+  const uncertaintyHead = PURCHASE_UNCERTAINTY_QUESTION_HEAD.exec(prefix);
+  const uncertaintyEndsAtPurchase = uncertaintyHead?.[0] === prefix;
+  return /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(subjectPrefix) ||
+    new RegExp('^\\s*' + INTERROGATIVE_AUXILIARY + '\\s*$', 'i').test(subjectPrefix) ||
+    PURCHASE_CONFIRMATION_PREFIX.test(subjectPrefix) ||
+    uncertaintyEndsAtPurchase ||
+    (CURRENT_INTERROGATIVE_HEAD.exec(prefix)?.index === 0 &&
+      (PURCHASE_UNCERTAINTY_LEAD.test(subjectPrefix) || /\btrue\s+(?:that\s*)?$/i.test(subjectPrefix)));
+}
 
 function isReportedPurchaseTagQuestion(sentence: string): boolean {
   const text = sentence.trimStart();
-  const tag = CONFIRMATION_QUESTION_TAG.exec(text);
+  const tag = PURCHASE_CONFIRMATION_TAG.exec(text);
   if (!tag) return false;
   const purchase = REPORTED_SUBJECT_FIRST_PURCHASE.exec(text);
   // A tag after another clause can ask about that clause while the purchase remains factual.
@@ -78,8 +96,26 @@ function isReportedPurchaseTagQuestion(sentence: string): boolean {
 }
 
 const PURCHASE_NEGATION_ADVERB = '(?:actually|really|indeed|certainly|definitely|in fact)';
+const REPORTED_CLAUSE_END = /[!?;]|(?<!approx)\.(?=\s|$)/;
 
-function findExplicitPurchaseCorrection(text: string, asset: string | undefined): RegExpExecArray | null {
+function isSeparateQuestion(question: string): boolean {
+  return question.trim().split(/\s+/).length >= 4 &&
+    CURRENT_INTERROGATIVE_HEAD.exec(question)?.index === 0;
+}
+
+function findSeparateQuestionAfterCorrection(questionScope: string): string | undefined {
+  const questionLeads = /(?:,\s*(?:(?:so|and|but)\s+)?|\s+(?:so|and|but)\s+)/gi;
+  let questionLead: RegExpExecArray | null;
+  while ((questionLead = questionLeads.exec(questionScope)) !== null) {
+    const questionText = questionScope.slice(questionLead.index + questionLead[0].length).replace(/[.!?]+\s*$/, '');
+    if (isSeparateQuestion(questionText)) return questionText;
+  }
+  return undefined;
+}
+
+type ReportedPurchaseCorrection = { match: RegExpExecArray; followingQuestion?: string };
+
+function findExplicitPurchaseCorrection(text: string, asset: string | undefined): ReportedPurchaseCorrection | null {
   if (!asset) return null;
   const negatedPurchaseOfReportedAsset = new RegExp(
     String.raw`\b(?:i|we|the company)\s+(?:(?:${PURCHASE_NEGATION_ADVERB})\s+)*(?:(?:have|had)\s+)?(?:(?:${PURCHASE_NEGATION_ADVERB})\s+)*(?:never|not|didn['’]t|did\s+not|hadn['’]t|had\s+not|haven['’]t|have\s+not)\s+(?:(?:${PURCHASE_NEGATION_ADVERB})\s+)*(?:buy|bought|purchase(?:d)?|acquire(?:d)?)\s+(?:(?:that|the|a|an|another)\s+)?(?:second\s+)?${asset}\b|\b(?:that|the|a|an|another)\s+(?:second\s+)?${asset}\s+(?:(?:was|is|has been|had been)\s+)?(?:(?:${PURCHASE_NEGATION_ADVERB})\s+)*(?:never|not)\s+(?:(?:${PURCHASE_NEGATION_ADVERB})\s+)*(?:bought|purchased|acquired)\b`,
@@ -89,18 +125,26 @@ function findExplicitPurchaseCorrection(text: string, asset: string | undefined)
     const clauseLead = text.slice(0, correction.index).split(/[.!?;]/).at(-1) ?? '';
     const correctionEnd = (correction.index ?? 0) + correction[0].length;
     const correctionRemainder = text.slice(correctionEnd);
-    const nextClauseBoundary = /[!?;]|(?<!approx)\.(?=\s|$)/.exec(correctionRemainder);
+    const nextClauseBoundary = REPORTED_CLAUSE_END.exec(correctionRemainder);
     const correctionClauseEnd = nextClauseBoundary ? nextClauseBoundary.index + 1 : correctionRemainder.length;
-    const questionScope = correction[0] + correctionRemainder.slice(0, correctionClauseEnd);
-    const separateQuestionLead = /,\s+(?:so\s+)?|\s+and\s+/i.exec(questionScope);
-    const separateQuestionText = separateQuestionLead &&
-      questionScope.slice(separateQuestionLead.index + separateQuestionLead[0].length).replace(/[.!?]+\s*$/, '');
-    const separateQuestion = separateQuestionText && separateQuestionText.trim().split(/\s+/).length >= 4 &&
-      CURRENT_INTERROGATIVE_HEAD.exec(separateQuestionText)?.index === 0;
-    const isQuestioned = /\?/.test(questionScope) &&
-      (PURCHASE_CONFIRMATION_TAG.test(questionScope) || !separateQuestion);
-    if (!isQuestioned && !REPORTED_CONDITION.test(clauseLead) &&
-        !/\bwhether\b/i.test(clauseLead) && !PURCHASE_CONFIRMATION_PREFIX.test(clauseLead)) return correction;
+    const questionScope = correctionRemainder.slice(0, correctionClauseEnd);
+    const endsInQuestion = nextClauseBoundary?.[0] === '?';
+    let followingQuestion = endsInQuestion ? findSeparateQuestionAfterCorrection(questionScope) : undefined;
+    if (endsInQuestion && (PURCHASE_CONFIRMATION_TAG.test(questionScope) || !followingQuestion)) continue;
+    if (isSubjectFirstPurchaseQuestioned(clauseLead) || REPORTED_CONDITION.test(clauseLead) ||
+        PURCHASE_UNCERTAINTY_LEAD.test(clauseLead)) continue;
+
+    // A separate question can start in the same sentence or immediately after
+    // the correction. Its punctuation cannot change whether the retraction was asked.
+    if (nextClauseBoundary && !endsInQuestion) {
+      const nextClause = correctionRemainder.slice(correctionClauseEnd).trimStart();
+      const nextQuestionEnd = REPORTED_CLAUSE_END.exec(nextClause);
+      if (nextQuestionEnd?.[0] === '?') {
+        const question = nextClause.slice(0, nextQuestionEnd.index);
+        if (isSeparateQuestion(question)) followingQuestion = question;
+      }
+    }
+    return { match: correction, followingQuestion };
   }
   return null;
 }
@@ -118,13 +162,18 @@ function isRecognizedReportedQuestionHead(quoteContent: string): boolean {
     startsReportedConfirmation || startsInterrogativeQuestion || PURCHASE_UNCERTAINTY_QUESTION_HEAD.test(quoteHead);
 }
 
-type PreparedBoundaryQuery = { text: string; hasReportedPurchase: boolean };
+type PreparedBoundaryQuery = {
+  text: string;
+  hasReportedPurchase: boolean;
+  earlierPurchaseFollowUp?: string;
+};
 
 function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
   const normalizedQuery = query.toLowerCase();
   const attributedQuestions = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'gi');
   const rangesToMask: Array<{ start: number; end: number }> = [];
   let hasReportedPurchase = false;
+  let earlierPurchaseFollowUp: string | undefined;
   let attribution: RegExpExecArray | null;
 
   while ((attribution = attributedQuestions.exec(normalizedQuery)) !== null) {
@@ -158,27 +207,28 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
           const subjectFirstPrefix = subjectFirstPurchase
             ? beforeCondition.slice(0, subjectFirstPurchase.index)
             : '';
-          const reportedQuestionHead = reportedQuestion.replace(/[.!?]+\s*$/, '');
-          const subjectFirstIsQuestionedOrHypothetical = /\bwhether\b|\b(?:if|could|would|should|might|may|can)\s*$/i.test(subjectFirstPrefix) ||
-            new RegExp('^\\s*' + INTERROGATIVE_AUXILIARY + '\\s*$', 'i').test(subjectFirstPrefix) ||
-            PURCHASE_CONFIRMATION_PREFIX.test(subjectFirstPrefix) ||
-            PURCHASE_UNCERTAINTY_QUESTION_HEAD.test(reportedQuestionHead) ||
-            (CURRENT_INTERROGATIVE_HEAD.exec(reportedQuestionHead)?.index === 0 &&
-              PURCHASE_UNCERTAINTY_LEAD.test(subjectFirstPrefix));
+          const subjectFirstIsQuestionedOrHypothetical = isSubjectFirstPurchaseQuestioned(subjectFirstPrefix);
           const quoteEnd = quoteContentStart + closingQuote.index + closingQuote[0].length;
           const followingReport = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'i').exec(normalizedQuery.slice(quoteEnd));
           const correctionWindow = normalizedQuery.slice(quoteEnd, followingReport ? quoteEnd + followingReport.index : undefined);
           const reportedPurchaseAsset = relativePurchase?.groups?.asset || subjectFirstPurchase?.groups?.asset;
           const correction = findExplicitPurchaseCorrection(correctionWindow, reportedPurchaseAsset);
-          const explicitlyCorrected = Boolean(correction);
           if (correction) {
-            const correctionStart = quoteEnd + correction.index;
-            const correctionEnd = correctionStart + correction[0].length;
+            const correctionStart = quoteEnd + correction.match.index;
+            const correctionEnd = correctionStart + correction.match[0].length;
             if (!rangesToMask.some(range => range.start === correctionStart && range.end === correctionEnd)) {
               rangesToMask.push({ start: correctionStart, end: correctionEnd });
             }
+            if (correction.followingQuestion && reportedPurchaseAsset) {
+              const earlierAssetReference = new RegExp(
+                String.raw`\b(?:first|original|earlier|previous|prior)\s+${reportedPurchaseAsset}\b`
+              );
+              if (earlierAssetReference.test(correction.followingQuestion)) {
+                earlierPurchaseFollowUp = correction.followingQuestion;
+              }
+            }
           }
-          hasReportedPurchase ||= !explicitlyCorrected && Boolean(
+          hasReportedPurchase ||= !correction && Boolean(
             relativePurchaseHasNoOtherObject || (subjectFirstPurchase && !subjectFirstIsQuestionedOrHypothetical)
           );
           break;
@@ -198,7 +248,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
     text += normalizedQuery.slice(unmaskedStart, start) + ' '.repeat(end - start);
     unmaskedStart = end;
   }
-  return { text: text + normalizedQuery.slice(unmaskedStart), hasReportedPurchase };
+  return { text: text + normalizedQuery.slice(unmaskedStart), hasReportedPurchase, earlierPurchaseFollowUp };
 }
 const TIME_ANCHORED_ACTION_LEAD = new RegExp(
   String.raw`^\s*(?:${PAST_TIME_ANCHOR}\s*,?\s+${DECLARATIVE_ACTION_SUBJECT}|${DECLARATIVE_ACTION_SUBJECT}\s+${PAST_TIME_ANCHOR})(?:\s+had)?${ACTION_MODIFIERS}\s*$`,
@@ -304,6 +354,15 @@ export function startsNewAccountingScenario(
   context?: ConversationAccountingContext
 ): boolean {
   return startsNewAccountingScenarioFromPreparedQuery(prepareBoundaryQuery(query), currentScenario, context);
+}
+
+/** Provides the public query service with the scoped follow-up as well as the transaction boundary. */
+export function evaluateAccountingScenarioBoundary(query: string, currentScenario: AccountingScenarioState | null) {
+  const prepared = prepareBoundaryQuery(query);
+  return {
+    startsNewScenario: startsNewAccountingScenarioFromPreparedQuery(prepared, currentScenario),
+    earlierPurchaseFollowUp: prepared.earlierPurchaseFollowUp
+  };
 }
 
 function startsNewAccountingScenarioFromPreparedQuery(

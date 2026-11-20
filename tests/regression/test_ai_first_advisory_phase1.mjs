@@ -600,6 +600,10 @@ for (const call of calls) {
       'Our accountant asked: “Can we claim capital allowances on another machine we purchased for SGD 100,000 last Friday?”';
     const quotedPossiblePurchaseQuestion =
       'Regarding our previous machine purchase, our accountant asked: "Is it possible that we purchased another machine?"';
+    const quotedCouldItBePurchaseQuestion =
+      'Our accountant asked: "Could it be that we purchased another machine?"';
+    const quotedCouldItBePurchaseQuestionWithAmount =
+      'Our accountant asked: "Could it be that we purchased another machine for approx. SGD 100,000?"';
     const quotedHowLikelyPurchaseQuestion =
       'Regarding our previous machine purchase, our accountant asked: "How likely is it that we purchased another machine?"';
     const quotedSurePurchaseQuestion =
@@ -630,6 +634,8 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant asked: "We purchased another machine at 3 pm, correct?"';
     const quotedCalendarDatedPurchaseTagQuestion =
       'Regarding our previous machine purchase, our accountant asked: "We purchased another machine on 15 November, correct?"';
+    const quotedDatedNegativePurchaseTagQuestion =
+      'Our accountant asked: "We purchased another machine last Friday, didn\'t we?"';
     const quotedPricedPurchaseTagQuestion =
       'Regarding our previous machine purchase, our accountant asked: "We purchased another machine for SGD 100,000, right?"';
     const quotedAllowancesTagQuestion =
@@ -700,6 +706,28 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, so why is it on the ledger?';
     const quotedPurchaseCorrectionBeforeAndQuestion =
       'Regarding our previous machine purchase, our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine and can we claim allowances?';
+    const quotedPurchaseCorrectionBeforeButQuestion =
+      'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, but how should we account for the first machine?';
+    const purchaseCorrectionBeforeIndependentTaxQuestion =
+      'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, but what are the GST registration thresholds in Singapore?';
+    const independentTaxQuestionWithIncidentalPurchase =
+      purchaseCorrectionBeforeIndependentTaxQuestion.replace('Singapore?', 'Singapore, regardless of the first machine?');
+    const quotedPurchaseCorrectionThenNextQuestion =
+      quotedPurchaseCorrectionBeforeButQuestion.replace(', but how', '. How');
+    const quotedPurchaseCorrectionThenSemicolonQuestion =
+      quotedPurchaseCorrectionBeforeButQuestion.replace(', but how', '; how');
+    const quotedPurchaseWithInterrogativeCorrection =
+      quotedPurchaseCorrectionBeforeButQuestion.replace('We never purchased', 'Did we never purchase');
+    const quotedPurchaseWithQuestionedCorrection =
+      quotedPurchaseCorrectionBeforeButQuestion.replace('We never purchased', 'Is it true that we never purchased');
+    const questionedCorrectionThenAccountingQuestion =
+      quotedPurchaseCorrectionBeforeButQuestion.replace(', but how', '? How');
+    const confirmedCorrectionThenAccountingQuestion =
+      quotedPurchaseCorrectionBeforeButQuestion.replace('We never purchased', 'It is true that we never purchased');
+    const quotedUncertainPurchaseWithFactualCorrection =
+      'Our accountant asked: "Could it be that we purchased another machine?" We never purchased that second machine.';
+    const quotedFactualPurchaseWithUncertainCorrectionBeforeButQuestion =
+      'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" Could it be that we never purchased that second machine, but how should we account for the first machine?';
     const correctedReportedPurchaseWithoutPriorLead =
       'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine for SGD 100,000. It was hypothetical.';
     const quotedFactualPurchaseWithLaterConditional =
@@ -844,11 +872,14 @@ for (const call of calls) {
       quotedPurchaseWithFinanceConfirmation,
       quotedPurchaseTagQuestion,
       quotedDatedPurchaseTagQuestion,
+      quotedDatedNegativePurchaseTagQuestion,
       quotedCalendarDatedPurchaseTagQuestion,
       quotedMorningPurchaseTagQuestion,
       quotedTimedPurchaseTagQuestion,
       quotedPricedPurchaseTagQuestion,
       quotedPossiblePurchaseQuestion,
+      quotedCouldItBePurchaseQuestion,
+      quotedCouldItBePurchaseQuestionWithAmount,
       quotedSurePurchaseQuestion,
       quotedHowLikelyPurchaseQuestion,
       quotedConditionWithDatedPurchase,
@@ -911,6 +942,8 @@ for (const call of calls) {
       quotedPurchaseCorrectedWithAmount,
       quotedPurchaseCorrectionBeforeSeparateQuestion,
       quotedPurchaseCorrectionBeforeAndQuestion,
+      quotedPurchaseCorrectionBeforeButQuestion,
+      quotedUncertainPurchaseWithFactualCorrection,
       correctedReportedPurchaseWithoutPriorLead
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
@@ -922,7 +955,8 @@ for (const call of calls) {
       quotedPurchaseWithUnrelatedNegation,
       quotedMachinePurchaseWithVehicleCorrection,
       quotedPurchaseWithUncertainCorrectionAdverb,
-      quotedPurchaseFollowedByWhetherNegation
+      quotedPurchaseFollowedByWhetherNegation,
+      quotedFactualPurchaseWithUncertainCorrectionBeforeButQuestion
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), true,
         `an unrelated or uncertain negation does not retract the reported machine purchase: ${question}`);
@@ -1243,6 +1277,16 @@ for (const call of calls) {
       { question: quotedPurchaseCorrectedWithAmount, startsNewAnalysis: false },
       { question: quotedPurchaseCorrectionBeforeSeparateQuestion, startsNewAnalysis: false },
       { question: quotedPurchaseCorrectionBeforeAndQuestion, startsNewAnalysis: false },
+      { question: quotedPurchaseCorrectionBeforeButQuestion, startsNewAnalysis: false },
+      { question: quotedPurchaseCorrectionThenNextQuestion, startsNewAnalysis: false },
+      { question: quotedPurchaseCorrectionThenSemicolonQuestion, startsNewAnalysis: false },
+      { question: purchaseCorrectionBeforeIndependentTaxQuestion, startsNewAnalysis: true },
+      { question: independentTaxQuestionWithIncidentalPurchase, startsNewAnalysis: true },
+      { question: quotedPurchaseWithInterrogativeCorrection, startsNewAnalysis: true },
+      { question: quotedPurchaseWithQuestionedCorrection, startsNewAnalysis: true },
+      { question: questionedCorrectionThenAccountingQuestion, startsNewAnalysis: true },
+      { question: confirmedCorrectionThenAccountingQuestion, startsNewAnalysis: false },
+      { question: quotedUncertainPurchaseWithFactualCorrection, startsNewAnalysis: false },
       { question: quotedPurchaseWithUnrelatedNegation, startsNewAnalysis: true },
       { question: quotedMachinePurchaseWithVehicleCorrection, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByConditionalNegation, startsNewAnalysis: true },
@@ -1250,12 +1294,15 @@ for (const call of calls) {
       { question: quotedPurchaseFollowedByPartsNegation, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByQuestionThenCorrection, startsNewAnalysis: false },
       { question: quotedPurchaseFollowedByUncertainNegationQuestion, startsNewAnalysis: true },
+      { question: quotedFactualPurchaseWithUncertainCorrectionBeforeButQuestion, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByNegativeConfirmationTag, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByDecimalNegativeConfirmationTag, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByEmphaticNegativeTag, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByApproximateAmountNegativeTag, startsNewAnalysis: true },
       { question: quotedPurchaseCorrectedThenSeparatePurchase, startsNewAnalysis: true },
       { question: quotedWhetherPurchaseIsEstablished, startsNewAnalysis: false },
+      { question: quotedCouldItBePurchaseQuestion, startsNewAnalysis: false },
+      { question: quotedCouldItBePurchaseQuestionWithAmount, startsNewAnalysis: false },
       { question: quotedPossiblePurchaseQuestion, startsNewAnalysis: false },
       { question: quotedSurePurchaseQuestion, startsNewAnalysis: false },
       { question: quotedHowLikelyPurchaseQuestion, startsNewAnalysis: false },
@@ -1265,6 +1312,7 @@ for (const call of calls) {
       { question: quotedPurchaseWithFinanceConfirmation, startsNewAnalysis: false },
       { question: quotedPurchaseTagQuestion, startsNewAnalysis: false },
       { question: quotedDatedPurchaseTagQuestion, startsNewAnalysis: false },
+      { question: quotedDatedNegativePurchaseTagQuestion, startsNewAnalysis: false },
       { question: quotedCalendarDatedPurchaseTagQuestion, startsNewAnalysis: false },
       { question: quotedMorningPurchaseTagQuestion, startsNewAnalysis: false },
       { question: quotedTimedPurchaseTagQuestion, startsNewAnalysis: false },
