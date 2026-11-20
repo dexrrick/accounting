@@ -19,7 +19,7 @@ const INTERROGATIVE_AUXILIARY_BASE = '(?:can|could|will|would|shall|should|may|m
 const INTERROGATIVE_AUXILIARY = `(?:${INTERROGATIVE_AUXILIARY_BASE}|${INTERROGATIVE_AUXILIARY_BASE}n['’]t|can['’]t|cannot|won['’]t|shan['’]t)`;
 const INTERROGATIVE_WORD = '(?:what|how|when|where|why|which|who)';
 const CURRENT_INTERROGATIVE_HEAD = new RegExp(
-  String.raw`(?:^|[,;.:])\s*(?:(?:how\s+(?:much|many)|what|which)(?:\s+(?!\b(?:${INTERROGATIVE_AUXILIARY}|i|we|you|they|he|she|it|that|whether|if)\b)[a-z]+){0,6}\s+${INTERROGATIVE_AUXILIARY}\s+(?!\b(?:whether|if|that)\b)\w+\b|(?:${INTERROGATIVE_WORD}\s+)?${INTERROGATIVE_AUXILIARY}\s+\w+\b[^.!?]*$)`,
+  String.raw`(?:^|[,;.:])\s*(?:(?:how\s+(?:much|many)|what|which)(?:\s+(?!\b(?:${INTERROGATIVE_AUXILIARY}|i|we|you|they|he|she|it|that|whether|if)\b)[a-z]+){0,6}\s+${INTERROGATIVE_AUXILIARY}\s+(?!\b(?:whether|if|that)\b)\w+\b|(?:${INTERROGATIVE_WORD}\s+)?${INTERROGATIVE_AUXILIARY}\s+\w+\b(?:[^.!?]|(?<=\d)\.(?=\d)|(?<!\w)[ap]\.m\.(?=\s|[,.!?;]|$))*$)`,
   'i'
 );
 
@@ -82,7 +82,10 @@ const PURCHASE_UNCERTAINTY_LEAD = new RegExp(
 );
 const PURCHASE_UNCERTAINTY_QUESTION_HEAD = new RegExp(`^${HOW_LIKELY_PURCHASE_QUESTION}\\b`, 'i');
 
-const REPORTED_EXISTENTIAL_QUESTION_WRAPPER = String.raw`${INTERROGATIVE_AUXILIARY}\s+(?:it|we|you|they|he|she)\s+(?:be(?:\s+${PURCHASE_UNCERTAINTY_ADJECTIVE})?|${PURCHASE_UNCERTAINTY_ADJECTIVE})\s+(?:(?:that|whether)\s+)?`;
+const EXISTENTIAL_UNCERTAINTY_WRAPPER = String.raw`${INTERROGATIVE_AUXILIARY}\s+(?:it|we|you|they|he|she)\s+(?:be(?:\s+${PURCHASE_UNCERTAINTY_ADJECTIVE})?|${PURCHASE_UNCERTAINTY_ADJECTIVE})\s+(?:(?:that|whether)\s+)?`;
+const EXISTENTIAL_OPINION_WRAPPER = String.raw`(?:do|does|did)\s+(?:you|we|they|he|she)\s+(?:think|believe)\s+(?:that\s+)?`;
+const EXISTENTIAL_CONFIRMATION_WRAPPER = String.raw`(?:${INTERROGATIVE_AUXILIARY}\s+(?:you|we|they|he|she)\s+confirm${PURCHASE_CONFIRMATION_RECIPIENT}(?:\s+(?:that|whether|if))?|(?:please\s+)?confirm${PURCHASE_CONFIRMATION_RECIPIENT}(?:\s+(?:that|whether|if))?)\s+`;
+const REPORTED_EXISTENTIAL_QUESTION_WRAPPER = String.raw`(?:${EXISTENTIAL_UNCERTAINTY_WRAPPER}|${EXISTENTIAL_OPINION_WRAPPER}|${EXISTENTIAL_CONFIRMATION_WRAPPER})`;
 const REPORTED_WRAPPED_EXISTENTIAL_QUESTION_PREFIX = new RegExp(
   String.raw`^\s*(?:(?:and|but|so)\s+)*(?:${REPORTED_EXISTENTIAL_QUESTION_WRAPPER}|${HOW_LIKELY_PURCHASE_QUESTION}\s+)there${ACTION_MODIFIERS}\s+(?:is|are|was|were|(?:has|have|had)${ACTION_MODIFIERS}\s+been)${ACTION_MODIFIERS}\s*$`,
   'i'
@@ -90,10 +93,14 @@ const REPORTED_WRAPPED_EXISTENTIAL_QUESTION_PREFIX = new RegExp(
 
 function findAttachedHypotheticalPurchaseQualifier(purchaseTail: string): RegExpExecArray | null {
   const qualifier = REPORTED_HYPOTHETICAL_PURCHASE_QUALIFIER.exec(purchaseTail);
-  // A separate clause before the qualifier can describe its own hypothetical.
-  return qualifier && PURCHASE_TAG_ADJUNCT.test(purchaseTail.slice(0, qualifier.index).replace(/,\s*$/, ''))
-    ? qualifier
-    : null;
+  if (!qualifier) return null;
+
+  const purchaseClausePrefix = purchaseTail.slice(0, qualifier.index);
+  // A semicolon ends the purchase clause even when the next clause is not a question.
+  if (purchaseClausePrefix.includes(';')) return null;
+
+  // Purchase details may intervene, but a separate question owns its own qualifier.
+  return findSeparateQuestion(purchaseClausePrefix, true) ? null : qualifier;
 }
 
 function isSubjectFirstPurchaseQuestioned(
@@ -135,8 +142,12 @@ function isSeparateQuestion(question: string, separator = ''): boolean {
     (allowsAnyFragment && /^any\b/i.test(text));
 }
 
-function findSeparateQuestionAfterCorrection(questionScope: string): string | undefined {
-  const questionLeads = /(?:,\s*(?:(?:so|and|but)\s+)?|\s+(?:so|and|but)\s+)/gi;
+function findSeparateQuestion(questionScope: string, allowOrQuestion = false): string | undefined {
+  const questionConjunctions = allowOrQuestion ? 'so|and|but|or' : 'so|and|but';
+  const questionLeads = new RegExp(
+    `(?:[,;]\\s*(?:(?:${questionConjunctions})\\s+)?|[.!]\\s+|\\s+(?:${questionConjunctions})\\s+)`,
+    'gi'
+  );
   let questionLead: RegExpExecArray | null;
   while ((questionLead = questionLeads.exec(questionScope)) !== null) {
     const questionText = questionScope.slice(questionLead.index + questionLead[0].length).replace(/[.!?]+\s*$/, '');
@@ -161,7 +172,7 @@ function findExplicitPurchaseCorrection(text: string, asset: string | undefined)
     const correctionClauseEnd = nextClauseBoundary ? nextClauseBoundary.index + 1 : correctionRemainder.length;
     const questionScope = correctionRemainder.slice(0, correctionClauseEnd);
     const endsInQuestion = nextClauseBoundary?.[0] === '?';
-    let followingQuestion = endsInQuestion ? findSeparateQuestionAfterCorrection(questionScope) : undefined;
+    let followingQuestion = endsInQuestion ? findSeparateQuestion(questionScope) : undefined;
     if (endsInQuestion && (PURCHASE_CONFIRMATION_TAG.test(questionScope) || !followingQuestion)) continue;
     if (isSubjectFirstPurchaseQuestioned(clauseLead) || REPORTED_CONDITION.test(clauseLead) ||
         PURCHASE_UNCERTAINTY_LEAD.test(clauseLead)) continue;
@@ -198,7 +209,7 @@ type PreparedBoundaryQuery = {
   text: string;
   hasReportedPurchase: boolean;
   earlierPurchaseFollowUp?: string;
-  isReportedHypotheticalPurchaseFollowUp: boolean;
+  reportedHypotheticalPurchaseAsset?: string;
 };
 
 function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
@@ -207,7 +218,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
   const rangesToMask: Array<{ start: number; end: number }> = [];
   let hasReportedPurchase = false;
   let earlierPurchaseFollowUp: string | undefined;
-  let isReportedHypotheticalPurchaseFollowUp = false;
+  let reportedHypotheticalPurchaseAsset: string | undefined;
   let attribution: RegExpExecArray | null;
 
   while ((attribution = attributedQuestions.exec(normalizedQuery)) !== null) {
@@ -257,11 +268,15 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
             );
           const quoteEnd = quoteContentStart + closingQuote.index + closingQuote[0].length;
           // A separate question in the same turn can establish its own advisory scope.
-          if (hypotheticalQualifier && /^[\s.!?]*$/.test(purchaseTail.slice(hypotheticalQualifier.index + hypotheticalQualifier[0].length)) &&
+          const hypotheticalQualifierSuffix = hypotheticalQualifier
+            ? purchaseTail.slice(hypotheticalQualifier.index + hypotheticalQualifier[0].length)
+            : '';
+          if (hypotheticalQualifier && !hypotheticalQualifierSuffix.includes(';') &&
+              !findSeparateQuestion(hypotheticalQualifierSuffix, true) &&
               block.length === quoteContent.length && sentenceOffset === 0 &&
               !REPORTED_CLAUSE_END.test(normalizedQuery.slice(0, attribution.index)) &&
               /^[\s.!?]*$/.test(normalizedQuery.slice(quoteEnd))) {
-            isReportedHypotheticalPurchaseFollowUp = true;
+            reportedHypotheticalPurchaseAsset = subjectFirstPurchase?.groups?.asset;
           }
           const followingReport = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'i').exec(normalizedQuery.slice(quoteEnd));
           const correctionWindow = normalizedQuery.slice(quoteEnd, followingReport ? quoteEnd + followingReport.index : undefined);
@@ -306,7 +321,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
     text: text + normalizedQuery.slice(unmaskedStart),
     hasReportedPurchase,
     earlierPurchaseFollowUp,
-    isReportedHypotheticalPurchaseFollowUp
+    reportedHypotheticalPurchaseAsset
   };
 }
 const TIME_ANCHORED_ACTION_LEAD = new RegExp(
@@ -421,7 +436,7 @@ export function evaluateAccountingScenarioBoundary(query: string, currentScenari
   return {
     startsNewScenario: startsNewAccountingScenarioFromPreparedQuery(prepared, currentScenario),
     earlierPurchaseFollowUp: prepared.earlierPurchaseFollowUp,
-    isReportedHypotheticalPurchaseFollowUp: prepared.isReportedHypotheticalPurchaseFollowUp
+    reportedHypotheticalPurchaseAsset: prepared.reportedHypotheticalPurchaseAsset
   };
 }
 

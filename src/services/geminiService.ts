@@ -58,6 +58,39 @@ import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalcul
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 
+function hasCompatibleHypotheticalPurchaseContext(
+  currentScenario: AccountingScenarioState | null,
+  reportedAsset?: string
+): boolean {
+  if (!currentScenario || !reportedAsset) return false;
+
+  const isAssetAcquisitionScenario = currentScenario.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION' ||
+    currentScenario.scenarioType === 'PPE_IAS16' ||
+    currentScenario.scenarioType === 'ASSET_PURCHASE_DISCOUNT' ||
+    currentScenario.underlyingTransaction?.type === 'asset_purchase' ||
+    currentScenario.semanticUnderstanding?.transactionType === 'asset_purchase';
+  if (!isAssetAcquisitionScenario) return false;
+
+  const priorAssetDescription = [
+    currentScenario.rawQuery,
+    currentScenario.transactionTitle,
+    currentScenario.underlyingTransaction?.assetName,
+    currentScenario.underlyingTransaction?.subject,
+    currentScenario.semanticUnderstanding?.subject
+  ].filter((description): description is string => typeof description === 'string')
+    .map(description => description.replace(/\bproperty,\s*plant\s+and\s+equipment\b/gi, ' '))
+    .join(' ');
+  const priorDescribesVehicle = /\b(?:vehicle|car|van|truck)\b/i.test(priorAssetDescription);
+  const priorDescribesEquipment = /\b(?:machine|machinery|equipment)\b/i.test(priorAssetDescription);
+  const hypotheticalAssetIsVehicle = reportedAsset === 'vehicle';
+  const hypotheticalAssetIsEquipment = /^(?:machine|machinery|equipment)$/.test(reportedAsset);
+  const hasAssetTypeMismatch =
+    (hypotheticalAssetIsVehicle && priorDescribesEquipment && !priorDescribesVehicle) ||
+    (hypotheticalAssetIsEquipment && priorDescribesVehicle && !priorDescribesEquipment);
+
+  return !hasAssetTypeMismatch;
+}
+
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
@@ -892,8 +925,15 @@ async function processAccountingQueryCore(
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
   const {
-    startsNewScenario: isNewAccountingScenario, earlierPurchaseFollowUp, isReportedHypotheticalPurchaseFollowUp
+    startsNewScenario: hasNewConversationBoundary, earlierPurchaseFollowUp, reportedHypotheticalPurchaseAsset
   } = evaluateAccountingScenarioBoundary(userInput, currentScenario);
+  const hasExplicitPriorReference = hasExplicitPriorFactReference(userInput);
+  const hasCompatibleAssetPurchaseContext = hasCompatibleHypotheticalPurchaseContext(
+    currentScenario, reportedHypotheticalPurchaseAsset
+  );
+  const isNewAccountingScenario = hasNewConversationBoundary || Boolean(
+    reportedHypotheticalPurchaseAsset && !hasCompatibleAssetPurchaseContext && !hasExplicitPriorReference
+  );
   if (isNewAccountingScenario) {
     const currentUserTurn = [...chatHistory].reverse().find(message => message.sender === 'user' && message.text === userInput);
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
@@ -1045,8 +1085,8 @@ async function processAccountingQueryCore(
     !purchaseFollowUpClassification.taxAnalysisRequired && !purchaseFollowUpClassification.regulatoryAnalysisRequired &&
     !usesIrasEvidencePolicy(purchaseFollowUpClassification, earlierPurchaseFollowUp);
   const isContextualFollowUp = !explicitNewQuestion &&
-    (isAccountingPurchaseFollowUp || (Boolean(activeScenario) && isReportedHypotheticalPurchaseFollowUp) ||
-      isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
+    (isAccountingPurchaseFollowUp || (Boolean(activeScenario) && Boolean(reportedHypotheticalPurchaseAsset)) ||
+      isShortSemanticFollowUp(userInput) || hasExplicitPriorReference);
   const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&

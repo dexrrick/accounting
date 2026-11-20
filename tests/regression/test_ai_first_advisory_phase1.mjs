@@ -333,7 +333,7 @@ for (const call of calls) {
   const boundaryFetch = globalThis.fetch;
   const priorTransaction = 'The previous supplier invoice was SGD 7,500 and remains unpaid.';
   const priorAnswer = 'Prior complete answer: the expense is accrued and the payable remains until settlement.';
-  const previousMachinePurchaseQuestion = 'How should we account for the machine we purchased for SGD 80,000?';
+  const previousMachinePurchaseQuestion = 'My company incurred SGD 80,000 on a piece of equipment. How should we account for it?';
   const previousMachinePurchaseAnswer = 'Prior machine purchase answer: recognize the machine as property, plant and equipment.';
   const independentQuestion = 'Explain how accounting applies to the new machine the company purchased for SGD 100,000.';
   const followUpQuestion = 'How does that apply to the invoice?';
@@ -345,6 +345,11 @@ for (const call of calls) {
     { id: 'boundary-prior-machine-user', sender: 'user', timestamp: '', text: previousMachinePurchaseQuestion },
     { id: 'boundary-prior-machine-answer', sender: 'assistant', timestamp: '', text: previousMachinePurchaseAnswer }
   ];
+  const previousMachineScenario = await parseAccountingQuery(
+    previousMachinePurchaseQuestion, null
+  );
+  assert.equal(previousMachineScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
+    'the contextual purchase tests use an equipment acquisition scenario');
   globalThis.fetch = async (input, init) => {
     const url = String(input);
     const request = JSON.parse(init.body);
@@ -653,6 +658,24 @@ for (const call of calls) {
       'Our accountant asked: "Can we claim allowances once we have purchased another machine for SGD 100,000?"';
     const quotedHypotheticalTemporalPurchaseAfterAmount =
       'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithOctober =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 in October, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithDecimalAmount =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000.50 in October, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithTimedInstallation =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 at 2 p.m., hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithLocation =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine in Singapore, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithInstallation =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 and installed it, hypothetically?"';
+    const quotedHypotheticalTemporalPurchaseWithTrailingMonth =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically, in October?"';
+    const factualTemporalPurchaseBeforeHypotheticalSemicolonQuestion =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000; how would we account for the installation, hypothetically?"';
+    const factualTemporalPurchaseBeforeHypotheticalOrQuestion =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 or should we model an equipment rental, hypothetically?"';
+    const factualTemporalPurchaseBeforeHypotheticalSemicolon =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000; hypothetically?"';
     const quotedHypotheticalTemporalPurchaseWithoutComma =
       'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 hypothetically?"';
     const quotedHypotheticalScenarioTemporalPurchase =
@@ -665,6 +688,18 @@ for (const call of calls) {
       'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically, and what is the GST registration threshold in Singapore?"';
     const quotedUncertainExistentialPurchase =
       'Our accountant asked: "Could it be that there was another machine we purchased for SGD 100,000?"';
+    const quotedOpinionExistentialPurchase =
+      'Our accountant asked: "Do you think there was another machine we purchased for SGD 100,000?"';
+    const quotedConfirmationExistentialPurchase =
+      'Our accountant asked: "Can you confirm whether there was another machine we purchased for SGD 100,000?"';
+    const quotedBeliefExistentialPurchase =
+      'Our accountant asked: "Do you believe there was another machine we purchased for SGD 100,000?"';
+    const quotedFinanceConfirmationExistentialPurchase =
+      'Our accountant asked: "Can you confirm with finance whether there was another machine we purchased for SGD 100,000?"';
+    const quotedFinanceConfirmationRequestExistentialPurchase =
+      'Our accountant asked: "Please confirm with finance whether there was another machine we purchased for SGD 100,000."';
+    const quotedOpinionExistentialAllowance =
+      'Our accountant asked: "Do you think there was an allowance for another machine we purchased for SGD 100,000?"';
     const quotedPossibleExistentialPurchase =
       'Our accountant asked: "Is it possible that there is another machine we purchased for SGD 100,000?"';
     const quotedPossibleAllowanceWithFactualPurchase =
@@ -757,6 +792,8 @@ for (const call of calls) {
       'Regarding our previous machine purchase, our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine?';
     const quotedPurchaseFollowedByNegativeConfirmationTag =
       'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, did we?';
+    const quotedPurchaseFollowedByOrConfirmationQuestion =
+      'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, or did we?';
     const quotedPurchaseFollowedByEmphaticNegativeTag =
       'Our accountant asked: "Can we claim allowances on another machine we purchased for SGD 100,000?" We never purchased that second machine, did we really?';
     const quotedPurchaseFollowedByApproximateAmountNegativeTag =
@@ -973,6 +1010,12 @@ for (const call of calls) {
       quotedHypotheticalQuestionWithTemporalPurchase,
       quotedHypotheticalScenarioWithTemporalPurchase,
       quotedHypotheticalTemporalPurchaseAfterAmount,
+      quotedHypotheticalTemporalPurchaseWithOctober,
+      quotedHypotheticalTemporalPurchaseWithDecimalAmount,
+      quotedHypotheticalTemporalPurchaseWithTimedInstallation,
+      quotedHypotheticalTemporalPurchaseWithLocation,
+      quotedHypotheticalTemporalPurchaseWithInstallation,
+      quotedHypotheticalTemporalPurchaseWithTrailingMonth,
       quotedHypotheticalTemporalPurchaseWithoutComma,
       quotedHypotheticalScenarioTemporalPurchase,
       quotedMultipleConditionalQuestions,
@@ -1009,6 +1052,11 @@ for (const call of calls) {
       reportedPurchaseExistenceQuestionWithPerfect,
       reportedPurchaseExistenceQuestionWithWouldPerfect,
       quotedUncertainExistentialPurchase,
+      quotedOpinionExistentialPurchase,
+      quotedConfirmationExistentialPurchase,
+      quotedBeliefExistentialPurchase,
+      quotedFinanceConfirmationExistentialPurchase,
+      quotedFinanceConfirmationRequestExistentialPurchase,
       quotedPossibleExistentialPurchase
     ]) {
       assert.equal(startsNewAccountingScenario(question, activeScenario), false,
@@ -1100,6 +1148,7 @@ for (const call of calls) {
       quotedPurchaseFollowedByPartsNegation,
       quotedPurchaseFollowedByUncertainNegationQuestion,
       quotedPurchaseFollowedByNegativeConfirmationTag,
+      quotedPurchaseFollowedByOrConfirmationQuestion,
       quotedPurchaseFollowedByDecimalNegativeConfirmationTag,
       quotedPurchaseFollowedByEmphaticNegativeTag,
       quotedPurchaseFollowedByApproximateAmountNegativeTag,
@@ -1446,6 +1495,7 @@ for (const call of calls) {
       { question: quotedPurchaseFollowedByUncertainNegationQuestion, startsNewAnalysis: true },
       { question: quotedFactualPurchaseWithUncertainCorrectionBeforeButQuestion, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByNegativeConfirmationTag, startsNewAnalysis: true },
+      { question: quotedPurchaseFollowedByOrConfirmationQuestion, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByDecimalNegativeConfirmationTag, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByEmphaticNegativeTag, startsNewAnalysis: true },
       { question: quotedPurchaseFollowedByApproximateAmountNegativeTag, startsNewAnalysis: true },
@@ -1455,9 +1505,24 @@ for (const call of calls) {
       { question: quotedPurchaseOnceTemporalClause, startsNewAnalysis: true },
       { question: quotedPurchaseWhenTemporalClause, startsNewAnalysis: true },
       { question: quotedHypotheticalTemporalPurchaseAfterAmount, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithOctober, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithDecimalAmount, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithTimedInstallation, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithLocation, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithInstallation, startsNewAnalysis: false },
+      { question: quotedHypotheticalTemporalPurchaseWithTrailingMonth, startsNewAnalysis: false },
+      { question: factualTemporalPurchaseBeforeHypotheticalSemicolonQuestion, startsNewAnalysis: true },
+      { question: factualTemporalPurchaseBeforeHypotheticalOrQuestion, startsNewAnalysis: true },
+      { question: factualTemporalPurchaseBeforeHypotheticalSemicolon, startsNewAnalysis: true },
       { question: independentStatutoryQuestionAfterHypotheticalPurchase, startsNewAnalysis: true },
       { question: independentStatutoryQuestionWithinHypotheticalPurchaseQuote, startsNewAnalysis: true },
       { question: quotedUncertainExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedOpinionExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedConfirmationExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedBeliefExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedFinanceConfirmationExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedFinanceConfirmationRequestExistentialPurchase, startsNewAnalysis: false },
+      { question: quotedOpinionExistentialAllowance, startsNewAnalysis: true },
       { question: quotedPossibleAllowanceWithFactualPurchase, startsNewAnalysis: true },
       { question: quotedAffirmativeCertaintyWithTemporalPurchase, startsNewAnalysis: true },
       { question: factualTemporalPurchaseFollowedByHypotheticalQuestion, startsNewAnalysis: true },
@@ -1515,7 +1580,7 @@ for (const call of calls) {
       const turn = { id: `boundary-subsequent-purchase-case-${index}`, sender: 'user', timestamp: '', text: question };
       const callsBeforeQuestion = boundaryCalls.length;
       const response = await processAccountingQuery(
-        question, activeScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousMachinePurchaseHistory, turn]
+        question, previousMachineScenario, 'SFRS_I', adapters[2].settings, 'unused', [...previousMachinePurchaseHistory, turn]
       );
       const questionCalls = boundaryCalls.slice(callsBeforeQuestion);
       assert.equal(response.conversationBoundaryMessageId, startsNewAnalysis ? turn.id : undefined,
@@ -1555,6 +1620,75 @@ for (const call of calls) {
         !call.prompt.includes(priorTransaction) && !call.prompt.includes(priorAnswer)
       ), 'explicitly separate transaction prompts omit earlier invoice facts');
     }
+
+    const priorPayrollQuestion = 'The employee’s CPF contributions were discussed using monthly salary of SGD 6,000.';
+    const priorPayrollAnswer = 'Prior payroll answer: CPF contributions were based on the employee’s monthly salary.';
+    const unrelatedPayrollScenario = {
+      scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: priorPayrollQuestion,
+      transactionTitle: 'Monthly payroll', functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+      directGroups: [], missingFields: [], isComplete: true
+    };
+    for (const [index, hypotheticalMachineQuestion] of [
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 in October, hypothetically?"',
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically, in October?"'
+    ].entries()) {
+      const hypotheticalMachineTurn = {
+        id: `boundary-payroll-hypothetical-machine-user-${index}`,
+        sender: 'user', timestamp: '', text: hypotheticalMachineQuestion
+      };
+      const hypotheticalMachineHistory = [
+        { id: 'boundary-prior-payroll-user', sender: 'user', timestamp: '', text: priorPayrollQuestion },
+        { id: 'boundary-prior-payroll-answer', sender: 'assistant', timestamp: '', text: priorPayrollAnswer },
+        hypotheticalMachineTurn
+      ];
+      const callsBeforeHypotheticalMachine = boundaryCalls.length;
+      const hypotheticalMachineResponse = await processAccountingQuery(
+        hypotheticalMachineQuestion, unrelatedPayrollScenario, 'SFRS_I', adapters[2].settings, 'unused', hypotheticalMachineHistory
+      );
+      const hypotheticalMachineCalls = boundaryCalls.slice(callsBeforeHypotheticalMachine);
+      assert.equal(hypotheticalMachineResponse.conversationBoundaryMessageId, hypotheticalMachineTurn.id,
+        'a standalone hypothetical machine question establishes a boundary after payroll');
+      assert.notEqual(hypotheticalMachineResponse.scenarioState.scenarioType, 'PAYROLL_CPF_SALARY',
+        'the standalone hypothetical machine response does not retain payroll scenario state');
+      assert.ok(hypotheticalMachineCalls.some(call => call.prompt.includes(hypotheticalMachineQuestion)),
+        'the standalone hypothetical machine question reaches its provider');
+      assert.ok(hypotheticalMachineCalls.every(call =>
+        !call.prompt.includes(priorPayrollQuestion) && !call.prompt.includes(priorPayrollAnswer) &&
+        !call.prompt.includes('Monthly payroll')
+      ), 'the standalone hypothetical machine provider prompt excludes the unrelated payroll history and scenario');
+    }
+
+    const priorVehicleQuestion = 'The company acquired a delivery van for SGD 80,000.';
+    const priorVehicleAnswer = 'Prior vehicle answer: the delivery van is company property, plant and equipment.';
+    const unrelatedVehicleScenario = {
+      scenarioType: 'PPE_IAS16', rawQuery: priorVehicleQuestion,
+      transactionTitle: 'Company delivery van acquisition',
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true,
+      underlyingTransaction: { type: 'asset_purchase', subject: 'delivery van', assetName: 'delivery van' },
+      semanticUnderstanding: {
+        transactionType: 'asset_purchase', subject: 'property, plant and equipment acquisition'
+      }
+    };
+    const vehicleHistory = [
+      { id: 'boundary-prior-vehicle-user', sender: 'user', timestamp: '', text: priorVehicleQuestion },
+      { id: 'boundary-prior-vehicle-answer', sender: 'assistant', timestamp: '', text: priorVehicleAnswer },
+      { id: 'boundary-machine-after-vehicle-user', sender: 'user', timestamp: '', text: 'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 in October, hypothetically?"' }
+    ];
+    const machineAfterVehicleQuestion = vehicleHistory.at(-1).text;
+    const callsBeforeMachineAfterVehicle = boundaryCalls.length;
+    const machineAfterVehicleResponse = await processAccountingQuery(
+      machineAfterVehicleQuestion, unrelatedVehicleScenario, 'SFRS_I', adapters[2].settings, 'unused', vehicleHistory
+    );
+    const machineAfterVehicleCalls = boundaryCalls.slice(callsBeforeMachineAfterVehicle);
+    assert.equal(machineAfterVehicleResponse.conversationBoundaryMessageId, vehicleHistory.at(-1).id,
+      'a hypothetical machine question after a vehicle acquisition starts its own analysis');
+    assert.ok(machineAfterVehicleCalls.some(call => call.prompt.includes(machineAfterVehicleQuestion)),
+      'the hypothetical machine question reaches its provider after the vehicle acquisition');
+    assert.ok(machineAfterVehicleCalls.every(call =>
+      !call.prompt.includes(priorVehicleQuestion) && !call.prompt.includes(priorVehicleAnswer) &&
+      !call.prompt.includes('delivery van acquisition')
+    ), 'the machine provider prompt excludes a completed vehicle acquisition');
 
     const interpretationQuestion = 'What documents are required by ACRA?';
     const interpretationHistory = [
