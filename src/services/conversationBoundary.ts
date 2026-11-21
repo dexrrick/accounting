@@ -84,7 +84,7 @@ const EXPLICIT_CONVERSATION_RESET_HEADING = new RegExp(
   'i'
 );
 const EXPLICIT_IGNORE_DIRECTIVE = new RegExp(
-  String.raw`${EXPLICIT_RESET_CLAUSE_START}(?:please\s+)?(?:ignore|disregard|forget)\s+(?:(?:all|the)\s+)*(?:earlier|previous|prior|above|last)\s+(?:(?:conversation|chat)\s+)?(?:context|history|messages?|discussion|facts?)(?=\s*(?:[:,.!?;]|$)|\s+and\b)`,
+  String.raw`${EXPLICIT_RESET_CLAUSE_START}(?:please\s+)?(?:ignore|disregard|forget)\s+(?:(?:all|the)\s+)*(?:earlier|previous|prior|above|last)\s+(?:(?:conversation|chat)\s+)?(?:context|history|messages?|discussion|facts?|questions?)(?=\s*(?:[:,.!?;]|$)|\s+and\b)`,
   'i'
 );
 const PURCHASE_UNCERTAINTY_ADJECTIVE = '(?:possible|impossible|sure|certain|likely|unlikely|clear|unclear|uncertain|doubtful)';

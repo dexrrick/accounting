@@ -1883,6 +1883,32 @@ for (const call of calls) {
       }
     }
 
+    const shareOutput = { shareStructure: true };
+    const initialShareQuestion =
+      "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.";
+    const initialShareResponse = await processAccountingQuery(
+      initialShareQuestion, null, 'SFRS_I', undefined, 'unused', [], shareOutput
+    );
+    const shareTrade = "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.";
+    const shareFollowUp = await processAccountingQuery(
+      shareTrade, initialShareResponse.scenarioState, 'SFRS_I', undefined, 'unused', [], shareOutput
+    );
+    assert.deepEqual(
+      shareFollowUp.scenarioState.shareTransferAnalysis?.rows.map(row => [row.company, row.afterShares]),
+      [['Company C', 490], ['Company B', 505]],
+      'a continuing share trade uses the active holdings'
+    );
+
+    const resetShareQuestion = `New question: ${shareTrade}`;
+    const resetShareResponse = await processAccountingQuery(
+      resetShareQuestion, initialShareResponse.scenarioState, 'SFRS_I', undefined, 'unused',
+      [{ id: 'boundary-reset-share-trade', sender: 'user', timestamp: '', text: resetShareQuestion }],
+      shareOutput
+    );
+    assert.equal(resetShareResponse.conversationBoundaryMessageId, 'boundary-reset-share-trade');
+    assert.equal(resetShareResponse.scenarioState.shareTransferAnalysis, undefined,
+      'an explicit reset prevents the share shortcut from reusing earlier holdings');
+
     const explicitResetCases = [
       {
         id: 'boundary-explicit-new-question-heading', scenario: unrelatedVehicleScenario,
@@ -1895,6 +1921,12 @@ for (const call of calls) {
         priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
         priorTitle: unrelatedVehicleScenario.transactionTitle,
         question: 'Ignore the earlier context; Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-ignore-previous-question', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Ignore the previous question. What is depreciation?'
       },
       {
         id: 'boundary-explicit-separate-question-heading', scenario: unrelatedVehicleScenario,
@@ -1979,6 +2011,7 @@ for (const call of calls) {
       'incidental prose before a reported question does not become an explicit reset directive');
     for (const selectiveIgnoreText of [
       'Ignore the previous message from our auditor. What is depreciation?',
+      'Ignore the previous question from our auditor. What is depreciation?',
       'Ignore the previous context field in the invoice. What is depreciation?'
     ]) {
       assert.equal(evaluateAccountingScenarioBoundary(selectiveIgnoreText, unrelatedVehicleScenario).hasExplicitConversationReset, false,

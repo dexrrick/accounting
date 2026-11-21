@@ -980,16 +980,16 @@ async function processAccountingQueryCore(
     hasImages = imageAttachments.length > 0;
     onConversationScope?.(relevantChatHistory);
   }
-  if (outputPreference?.shareStructure) {
-    const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
-    if (shareAnswer) return shareAnswer;
-  }
-  let apiErrorMessage: string | null = null;
   // Keep prior state only where the incoming message is compatible with it.
   // The parser has the same boundary as a defence in depth measure; applying
   // it here also prevents grounding and provider prompts from seeing stale
   // balances on a complete new transaction.
   let activeScenario = isNewAccountingScenario ? null : currentScenario;
+  if (outputPreference?.shareStructure) {
+    const shareAnswer = answerShareStructureQuery(userInput, activeScenario);
+    if (shareAnswer) return shareAnswer;
+  }
+  let apiErrorMessage: string | null = null;
   let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let authorityEvidenceMessage: string | undefined;
