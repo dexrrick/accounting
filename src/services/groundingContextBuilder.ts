@@ -3069,7 +3069,7 @@ export async function buildGroundedReasoningContext(
   const questionUnderstanding = reconciledQuestion.understanding;
   const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
   const hasContextualPriorReference = !startsNewAccountingScenario(userInput, currentScenario) &&
-    (isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
+    (isShortSemanticFollowUp(userInput, currentScenario) || hasExplicitPriorFactReference(userInput, currentScenario));
   const ignorePriorAccountingContext = Boolean(irasPolicy &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&

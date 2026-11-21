@@ -22,8 +22,16 @@ import {
 } from './requestedTopicOwnership';
 import { removeNegatedJournalDirectives, removeNegatedOutputDirectives } from '../utils/journalRequestIntent';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
+import type { AccountingScenarioState } from '../types/accounting';
 import type { AdvisoryConversation } from './aiFirstAdvisory';
-import { hasAffirmativeResetDirective } from './conversationBoundary';
+import {
+  EXPLICIT_ADJECTIVE_SUBJECT_SOURCE,
+  HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD,
+  PRIOR_SUBJECT_NOUNS,
+  SUBJECT_DISCUSSION_CLAUSE_SOURCE,
+  hasAffirmativeResetDirective,
+  hasConflictingPriorSubject
+} from './conversationBoundary';
 
 export const SEMANTIC_QUESTION_MIN_CONFIDENCE = 0.72;
 export const SEMANTIC_QUESTION_TIMEOUT_MS = 8_000;
@@ -2593,20 +2601,21 @@ export function buildSemanticDiscoveryQuery(query: string, interpretation?: Sema
     .filter(Boolean).join(' ');
 }
 
-export function isShortSemanticFollowUp(query: string): boolean {
+export function isShortSemanticFollowUp(
+  query: string,
+  currentScenario?: AccountingScenarioState | null
+): boolean {
   const shortQuery = query.trim();
   if (shortQuery.length > 260 || hasAffirmativeResetDirective(shortQuery) || /\b(?:new|different|separate)\s+(?:case|scenario|situation|question|transaction|analysis|example)\b|\bunrelated\b|\b(?:separate|different|unrelated|distinct)\s+from\b/i.test(shortQuery)) return false;
+  if (currentScenario && hasConflictingPriorSubject(shortQuery, currentScenario)) return false;
   const continuationPrefix = shortQuery.length <= 140 && /^\s*(?:and|also|so|then|what about|how about|would that|is that|does that|can i for that|why is that|how does that)\b/i.test(shortQuery);
   const leadingQuestion = shortQuery.split('?')[0].trim();
-  const contextualSubject = '(?:transaction|transactions|purchase|purchases|expense|expenses|supply|supplies|asset|assets|equipment|machine|machinery|vehicle|vehicles|invoice|invoices|amount|amounts|case|cases|scenario|scenarios|situation|situations|example|examples|employee|employees|worker|workers|staff|salary|salaries|payroll|payment|payments|contract|contracts|lease|leases|arrangement|arrangements|deadline|deadlines|rate|rates|calculation|calculations|journal|journals|entry|entries|facts?|details?|answer|discussion|conversation|analysis)';
-  const priorAdjectiveModifier = '(?:(?!year\\b|years\\b|period\\b|periods\\b|month\\b|months\\b|quarter\\b|quarters\\b|fy\\b|ya\\b)[a-z]+\\s+){0,2}';
-  const historicalPeriodLookahead = `(?!\\s+(?:year|years|period|periods|month|months|quarter|quarters|fy|ya)\\b)(?!(?:\\s+${contextualSubject}){0,2}(?:\\s+(?:incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received|arising))?\\s+(?:for|in|from|during|of|under)\\s+(?:ya\\s*\\d{4}|fy\\s*\\d{4}|ya|fy|year\\s+of\\s+assessment|financial\\s+year|tax\\s+year|calendar\\s+year|(?:the\\s+)?(?:prior|previous|earlier|preceding|last)\\s+(?:years?|periods?|months?|quarters?)|\\d{4})\\b)`;
   const explicitContextualReference = new RegExp(
     `\\b(?:` +
-      `(?:this|that|these|those|the\\s+same)\\s+${contextualSubject}|` +
-      `(?:the|our|my|this|that|these|those)\\s+(?:above|earlier|previous|prior|foregoing|aforementioned|preceding)\\s+${priorAdjectiveModifier}${contextualSubject}${historicalPeriodLookahead}|` +
-      `(?:the|our|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${contextualSubject}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+)?(?:discussed|mentioned|described)\\b|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)\\b${historicalPeriodLookahead}|(?:above(?!\\s+(?:sgd|usd|eur|s\\$|\\$|\\d|the\\s+(?:[a-z]+\\s+)?(?:ceiling|limit|threshold|cap|rate|amount))\\b)|(?:previously|earlier)(?!\\s+(?:this|last|next|in|for|from|during|under|incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received)\\b))\\b)|` +
-      `(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|talked\\s+about)|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)${historicalPeriodLookahead})` +
+      `(?:this|that|these|those|the\\s+same)\\s+${PRIOR_SUBJECT_NOUNS}|` +
+      `${EXPLICIT_ADJECTIVE_SUBJECT_SOURCE}|` +
+      `${SUBJECT_DISCUSSION_CLAUSE_SOURCE}|` +
+      `(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|talked\\s+about)|(?:discussed|mentioned|described|stated|noted|shown)\\s+(?:above|earlier|before|previously)${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD})` +
     `)\\b`,
     'i'
   );

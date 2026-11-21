@@ -1762,22 +1762,124 @@ assert.equal(isShortSemanticFollowUp(thePriorUnpaidExpensesYa2026), false);
 assert.equal(hasExplicitPriorFactReference(thePriorSalaryExpensesYa2026), false);
 assert.equal(isShortSemanticFollowUp(thePriorSalaryExpensesYa2026), false);
 assert.equal(isShortSemanticFollowUp('What is the treatment for this invoice, separate from the earlier case?'), false);
-for (const ordinaryModifierFollowUp of [
-  previousDirectorSalaryFollowUp,
+const carExpenseScenario = {
+  scenarioType: 'GENERAL_EXPENSE',
+  rawQuery: 'We paid SGD 1,200 for car rental and vehicle repair expenses.',
+  transactionTitle: 'Car rental and vehicle repair expenses',
+  amount: 1200,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+const ppeMachineScenario = {
+  scenarioType: 'PPE_ASSET_PURCHASE',
+  rawQuery: 'We bought a machine for SGD 50,000.',
+  transactionTitle: 'Machine purchase',
+  amount: 50000,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+
+// Finding 4 (review fixes): Historical-period phrases and unrelated prior subjects must not attach to employeeCpfScenario,
+// while compatible prior-subject references remain RELATED.
+for (const historicalPeriodQuery of [
+  'What is the GST treatment for the previous March expenses?',
+  'Can we claim a deduction for the earlier Q1 repair expense?',
+  'How should we account for our previous 2025 car rental expenses?',
+  'What is the treatment for our prior January payroll expenses?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(historicalPeriodQuery), false,
+    `historical-period query is not an explicit prior-fact reference: ${historicalPeriodQuery}`);
+  assert.equal(isShortSemanticFollowUp(historicalPeriodQuery), false,
+    `historical-period query is not a short semantic follow-up: ${historicalPeriodQuery}`);
+}
+
+assert.equal(hasExplicitPriorFactReference(previousDirectorSalaryFollowUp, employeeCpfScenario), true);
+assert.equal(isShortSemanticFollowUp(previousDirectorSalaryFollowUp, employeeCpfScenario), true);
+assert.equal(assessConversationRelation(previousDirectorSalaryFollowUp, employeeCpfScenario), 'RELATED');
+
+for (const unrelatedVehicleFollowUp of [
+  previousCarRentalFollowUp,
+  earlierVehicleRepairFollowUp,
+  'What is the GST treatment for our previous consulting invoice?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(unrelatedVehicleFollowUp, employeeCpfScenario), false,
+    `unrelated subject is rejected against employeeCpfScenario (prior-fact): ${unrelatedVehicleFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(unrelatedVehicleFollowUp, employeeCpfScenario), false,
+    `unrelated subject is rejected against employeeCpfScenario (short follow-up): ${unrelatedVehicleFollowUp}`);
+  assert.equal(assessConversationRelation(unrelatedVehicleFollowUp, employeeCpfScenario), 'AMBIGUOUS',
+    `unrelated subject does not stay RELATED against employeeCpfScenario: ${unrelatedVehicleFollowUp}`);
+}
+
+for (const compatibleVehicleFollowUp of [
   previousCarRentalFollowUp,
   earlierVehicleRepairFollowUp
 ]) {
-  assert.equal(hasExplicitPriorFactReference(ordinaryModifierFollowUp), true,
-    `ordinary descriptive modifier prior-fact reference is recognized: ${ordinaryModifierFollowUp}`);
-  assert.equal(isShortSemanticFollowUp(ordinaryModifierFollowUp), true,
-    `ordinary descriptive modifier follow-up is recognized as short semantic follow-up: ${ordinaryModifierFollowUp}`);
-  assert.equal(assessConversationRelation(ordinaryModifierFollowUp, employeeCpfScenario), 'RELATED',
-    `ordinary descriptive modifier follow-up stays RELATED: ${ordinaryModifierFollowUp}`);
+  assert.equal(hasExplicitPriorFactReference(compatibleVehicleFollowUp, carExpenseScenario), true,
+    `compatible subject attaches against carExpenseScenario (prior-fact): ${compatibleVehicleFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(compatibleVehicleFollowUp, carExpenseScenario), true,
+    `compatible subject attaches against carExpenseScenario (short follow-up): ${compatibleVehicleFollowUp}`);
+  assert.equal(assessConversationRelation(compatibleVehicleFollowUp, carExpenseScenario), 'RELATED',
+    `compatible subject stays RELATED against carExpenseScenario: ${compatibleVehicleFollowUp}`);
 }
 assert.equal(assessConversationRelation(priorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(previousYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(unhyphenatedPriorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(earlierPeriodUtilityTx, employeeCpfScenario), 'AMBIGUOUS');
+
+// Finding 1, 2 & 3 (review fixes): Clause-scoped hypothetical/indirect-if, general negation scope, and negated reset directives.
+// Finding 1: Disjoint hypothetical and affirmative indirect-question "if" start new scenarios; same-domain hypothetical stays RELATED.
+assert.equal(startsNewAccountingScenario('What if we bought a new machine for SGD 5,000?', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('What if we bought a new machine for SGD 5,000?', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if the company bought a new machine for SGD 5,000 instead?', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('What if the company bought a new machine for SGD 5,000 instead?', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if we leased that machine instead?', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('What if we leased that machine instead?', ppeMachineScenario, ppeMachineScenario), 'RELATED');
+assert.equal(startsNewAccountingScenario('We asked if the candidate needed a work permit and hired another employee for SGD 5,000.', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('We asked if the candidate needed a work permit and hired another employee for SGD 5,000.', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('We asked the candidate if he needed a work permit and hired another employee for SGD 5,000.50.', employeeCpfScenario), true);
+assert.equal(assessConversationRelation('We asked the candidate if he needed a work permit and hired another employee for SGD 5,000.50.', employeeCpfScenario, employeeCpfScenario), 'NEW');
+assert.equal(startsNewAccountingScenario('What if we hired another employee for SGD 5,000 per month?', ppeMachineScenario), true);
+assert.equal(assessConversationRelation('What if we hired another employee for SGD 5,000 per month?', ppeMachineScenario, ppeMachineScenario), 'NEW');
+
+// Finding 2: General negation scope with arbitrary -ly adverbs and coordinated modifiers.
+for (const generalNegatedActionQuery of [
+  'We have not previously hired another employee for SGD 5,000 per month.',
+  'We have not formally hired another employee for SGD 5,000 per month.',
+  'We have not officially or formally hired another employee for SGD 5,000 per month.',
+  'We have never previously acquired another machine for SGD 5,000.'
+]) {
+  assert.equal(startsNewAccountingScenario(generalNegatedActionQuery, employeeCpfScenario), false,
+    `general negated action does not start a new scenario: ${generalNegatedActionQuery}`);
+  assert.equal(assessConversationRelation(generalNegatedActionQuery, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `general negated action stays RELATED: ${generalNegatedActionQuery}`);
+}
+
+// Finding 3: Negated reset directives with bare-infinitive causatives and contracted state negations.
+for (const negatedCausativeOrContractedReset of [
+  "Does that CPF rule apply? Don't let me forget the earlier employee details.",
+  "Does that CPF rule apply? I'm not asking you to forget the earlier employee details.",
+  "Don't let me forget the earlier employee details.",
+  "I'm not asking you to forget the earlier employee details.",
+  "Don't let me forget the earlier salary details.",
+  "I'm not asking you to forget the earlier salary details.",
+  "I'm not going to let you forget the earlier employee details.",
+  "I'm not saying we should forget the earlier employee details.",
+  "Please don't make us disregard the earlier employee details.",
+  "We're not telling you to ignore the earlier employee details."
+]) {
+  assert.equal(hasAffirmativeResetDirective(negatedCausativeOrContractedReset), false,
+    `negated causative/contracted reset directive is not affirmative: ${negatedCausativeOrContractedReset}`);
+  assert.equal(isShortSemanticFollowUp(negatedCausativeOrContractedReset, employeeCpfScenario), true,
+    `negated causative/contracted reset directive stays a short semantic follow-up: ${negatedCausativeOrContractedReset}`);
+  assert.equal(assessConversationRelation(negatedCausativeOrContractedReset, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `negated causative/contracted reset directive stays RELATED: ${negatedCausativeOrContractedReset}`);
+}
 
 // Finding 4: Hiring another employee or another worker starts a new accounting scenario; hypothetical or negated hiring stays RELATED.
 for (const anotherHireQuery of [

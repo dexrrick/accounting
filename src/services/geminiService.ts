@@ -24,7 +24,13 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
-import { hasAffirmativeResetDirective, hasExplicitPriorFactReference, isJournalDisplayRequest, startsNewAccountingScenario } from './conversationBoundary';
+import {
+  hasAffirmativeResetDirective,
+  hasConflictingPriorSubject,
+  hasExplicitPriorFactReference,
+  isJournalDisplayRequest,
+  startsNewAccountingScenario
+} from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
@@ -1035,7 +1041,7 @@ async function processAccountingQueryCore(
   const explicitNewQuestion = /\b(?:new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example))\b/i.test(userInput) ||
     hasAffirmativeResetDirective(userInput);
   const isContextualFollowUp = !explicitNewQuestion &&
-    (isShortSemanticFollowUp(userInput) || hasExplicitPriorFactReference(userInput));
+    (isShortSemanticFollowUp(userInput, activeScenario) || hasExplicitPriorFactReference(userInput, activeScenario));
   const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&
@@ -1051,7 +1057,8 @@ async function processAccountingQueryCore(
     deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
     !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
     !journalRequested && !outputJournalRequested && !retainConversationContext;
-  if (independentStatutoryRequest) {
+  const conflictingPriorSubject = !retainConversationContext && hasConflictingPriorSubject(userInput, activeScenario);
+  if (independentStatutoryRequest || conflictingPriorSubject) {
     const currentUserTurn = [...chatHistory].reverse().find(message =>
       message.sender === 'user' && message.text.trim() === userInput.trim());
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
