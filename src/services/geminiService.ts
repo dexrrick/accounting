@@ -268,6 +268,42 @@ type PendingImageCorrection =
   | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices'; prompt: string }
   | { kind: 'correction'; source: 'explicit_replacement' | 'invoice_total_statement'; amount: number; imageIndex: number; fieldIndex: number; imageId: string };
 
+const IMAGE_SUBTOTAL_FIELD_ALIASES = new Set(['subtotal', 'subtotalamount', 'invoicesubtotal', 'netsubtotal', 'subtotalbeforetax', 'amountbeforetax']);
+const IMAGE_GST_AMOUNT_FIELD_ALIASES = new Set(['gst', 'gstamount', 'gsttax', 'gsttotal', 'tax', 'taxamount', 'taxvalue', 'taxtotal', 'totaltax', 'gstvalue', 'salestax', 'salestaxamount']);
+
+function normalizeImageMoneyFieldName(field: string): string {
+  return field.toLowerCase().replace(/[^a-z]/g, '');
+}
+
+function parseImageAmountCents(value: string | number): number | undefined {
+  let amount: number;
+  if (typeof value === 'number') {
+    amount = value;
+  } else {
+    const match = value.trim().match(/^(?:(?:sgd|s\$)\s*)?((?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?)$/i);
+    if (!match) return undefined;
+    amount = Number(match[1].replace(/,/g, ''));
+  }
+  if (!Number.isFinite(amount) || amount < 0) return undefined;
+  const cents = Math.round(amount * 100);
+  return Number.isSafeInteger(cents) && Math.abs(amount * 100 - cents) < 0.000001 ? cents : undefined;
+}
+
+function formatImageAmountCents(cents: number): string {
+  return `SGD ${(cents / 100).toLocaleString()}`;
+}
+
+function describeImageAmountEvidence(field: ExtractedEvidence): string {
+  const cents = parseImageAmountCents(field.value);
+  const normalizedName = normalizeImageMoneyFieldName(field.field);
+  const label = IMAGE_SUBTOTAL_FIELD_ALIASES.has(normalizedName)
+    ? 'subtotal'
+    : IMAGE_GST_AMOUNT_FIELD_ALIASES.has(normalizedName)
+      ? 'GST'
+      : field.field;
+  return `${label} (${cents === undefined ? String(field.value) : formatImageAmountCents(cents)})`;
+}
+
 const IMAGE_AMOUNT_LABELS = /\b(invoice\s+total|grand\s+total|subtotal|gst|tax|total)\b/gi;
 const IMAGE_AMOUNT_VALUE = /(?:(?:sgd|s\$|usd|eur|gbp|\$)\s*)?(\d[\d,]*(?:\.\d+)?)/gi;
 const EXPLICIT_WRONG_AMOUNT = /(?:sgd|s\$)\s*\d[\d,]*(?:\.\d+)?\s+(?:is\s+)?(?:not\s+(?:correct|right)|incorrect|wrong)\b/i;
@@ -509,6 +545,44 @@ async function respondToPendingImageCorrection(
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formattedInvoiceDate)) {
     return createImageCorrectionClarification(scenario, userInput,
       `You supplied a corrected invoice total of SGD ${correction.amount.toLocaleString()}. Please confirm the invoice date using DD/MM/YYYY before I prepare a journal. No journal proposal is shown.`);
+  }
+
+  const remainingFinancialEvidence = invoiceImage.fields.filter((field, fieldIndex) =>
+    fieldIndex !== correction.fieldIndex && !/date/i.test(field.field));
+  const uncertainFinancialFields = getMaterialImageUncertainties([{ ...invoiceImage, fields: remainingFinancialEvidence }]);
+  if (uncertainFinancialFields.length > 0) {
+    const affectedAmounts = uncertainFinancialFields.map(describeImageAmountEvidence).join(', ');
+    return createImageCorrectionClarification(scenario, userInput,
+      `The screenshot's extracted financial amounts need verification: ${affectedAmounts}. Please check these amounts against the invoice, then upload a clearer or corrected invoice image showing the confirmed figures. Confirm the total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`);
+  }
+
+  const normalizedFields = invoiceImage.fields
+    .map((field, fieldIndex) => ({ field, fieldIndex, name: normalizeImageMoneyFieldName(field.field) }))
+    .filter(({ fieldIndex }) => fieldIndex !== correction.fieldIndex);
+  const subtotalFields = normalizedFields.filter(({ name }) => IMAGE_SUBTOTAL_FIELD_ALIASES.has(name));
+  const gstAmountFields = normalizedFields.filter(({ name }) => IMAGE_GST_AMOUNT_FIELD_ALIASES.has(name));
+  if (subtotalFields.length > 1 || gstAmountFields.length > 1) {
+    const ambiguousAmounts = [...subtotalFields, ...gstAmountFields].map(({ field }) => describeImageAmountEvidence(field)).join(', ');
+    return createImageCorrectionClarification(scenario, userInput,
+      `The screenshot has multiple extracted invoice amount fields that may represent subtotal or GST: ${ambiguousAmounts}. Please verify the amounts on the invoice, then upload a clearer or corrected invoice image showing the confirmed figures. No journal proposal is shown.`);
+  }
+
+  const unreadableAmountFields = [...subtotalFields, ...gstAmountFields]
+    .filter(({ field }) => parseImageAmountCents(field.value) === undefined);
+  if (unreadableAmountFields.length > 0) {
+    const affectedAmounts = unreadableAmountFields.map(({ field }) => describeImageAmountEvidence(field)).join(', ');
+    return createImageCorrectionClarification(scenario, userInput,
+      `I could not reliably read the extracted invoice amount${unreadableAmountFields.length > 1 ? 's' : ''}: ${affectedAmounts}. Please verify these figures, then upload a clearer or corrected invoice image showing the confirmed subtotal, GST, and total before I prepare a journal. No journal proposal is shown.`);
+  }
+
+  if (subtotalFields.length === 1 && gstAmountFields.length === 1) {
+    const subtotalCents = parseImageAmountCents(subtotalFields[0].field.value)!;
+    const gstCents = parseImageAmountCents(gstAmountFields[0].field.value)!;
+    const correctedTotalCents = Math.round(correction.amount * 100);
+    if (subtotalCents + gstCents !== correctedTotalCents) {
+      return createImageCorrectionClarification(scenario, userInput,
+        `The extracted subtotal (${formatImageAmountCents(subtotalCents)}) plus GST (${formatImageAmountCents(gstCents)}) does not reconcile to the corrected invoice total ${formatImageAmountCents(correctedTotalCents)}. Please verify the subtotal and GST against the invoice, then upload a clearer or corrected invoice image showing those confirmed figures and the invoice total. No journal proposal is shown.`);
+    }
   }
 
   const invoiceNumber = invoiceImage.fields.find(field => /invoice.?no/i.test(field.field))?.value;

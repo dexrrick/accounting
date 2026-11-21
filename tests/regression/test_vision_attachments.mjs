@@ -140,8 +140,58 @@ try {
     }
   }
 
-  proposedInvoice = invoiceProposal(700);
   const mismatchedCorrection = 'S$500 is not correct, please use S$600';
+  const amountCorrection = 'S$545 is not correct, please use S$600';
+  const amountEvidenceState = structuredClone(initialCorrectionState.scenarioState);
+  const amountEvidenceInvoice = amountEvidenceState.imageEvidence[0];
+  amountEvidenceInvoice.fields.find(field => field.field === 'total').value = 545;
+  amountEvidenceInvoice.fields.push(
+    { source: 'image', imageId: amountEvidenceInvoice.imageId, field: 'subtotalBeforeTax', value: 500, confidence: 0.99 },
+    { source: 'image', imageId: amountEvidenceInvoice.imageId, field: 'gstTotal', value: 45, confidence: 0.99 }
+  );
+  assert.equal(amountEvidenceInvoice.fields.find(field => field.field === 'total').value, 545);
+  assert.equal(amountEvidenceInvoice.fields.find(field => field.field === 'subtotalBeforeTax').value, 500);
+  assert.equal(amountEvidenceInvoice.fields.find(field => field.field === 'gstTotal').value, 45);
+  amountEvidenceState.evidence = [
+    ...(amountEvidenceState.evidence || []).filter(field => field.imageId !== amountEvidenceInvoice.imageId),
+    ...flattenImageEvidence([amountEvidenceInvoice])
+  ];
+  proposedInvoice = invoiceProposal(600);
+  correctionProviderRequests.length = 0;
+  const inconsistentInvoiceAmounts = await processAccountingQuery(
+    amountCorrection,
+    amountEvidenceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'inconsistent-correction', sender: 'user', timestamp: '', text: amountCorrection }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(inconsistentInvoiceAmounts.scenarioState, 'SFRS_I'), []);
+  assert.deepEqual(inconsistentInvoiceAmounts.scenarioState.directGroups, []);
+  assert.match(inconsistentInvoiceAmounts.messageText, /subtotal.*SGD 500.*GST.*SGD 45.*SGD 600.*clearer or corrected invoice image.*confirmed figures/i);
+  assert.equal(correctionProviderRequests.length, 0, 'an extracted subtotal plus GST mismatch must stop before Gemini generation');
+
+  const uncertainAmountState = structuredClone(amountEvidenceState);
+  uncertainAmountState.imageEvidence[0].fields.find(field => field.field === 'subtotalBeforeTax').confidence = 0.6;
+  uncertainAmountState.evidence = [
+    ...(uncertainAmountState.evidence || []).filter(field => field.imageId !== amountEvidenceInvoice.imageId),
+    ...flattenImageEvidence([uncertainAmountState.imageEvidence[0]])
+  ];
+  correctionProviderRequests.length = 0;
+  const uncertainInvoiceAmounts = await processAccountingQuery(
+    amountCorrection,
+    uncertainAmountState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'uncertain-correction', sender: 'user', timestamp: '', text: amountCorrection }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(uncertainInvoiceAmounts.scenarioState, 'SFRS_I'), []);
+  assert.deepEqual(uncertainInvoiceAmounts.scenarioState.directGroups, []);
+  assert.match(uncertainInvoiceAmounts.messageText, /subtotal.*SGD 500.*clearer or corrected invoice image.*confirmed figures/i);
+  assert.equal(correctionProviderRequests.length, 0, 'a low-confidence remaining invoice amount must stop before Gemini generation');
+
+  proposedInvoice = invoiceProposal(700);
   const mismatchedResult = await processAccountingQuery(
     mismatchedCorrection,
     structuredClone(initialCorrectionState.scenarioState),
