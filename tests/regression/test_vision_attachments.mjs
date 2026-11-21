@@ -276,21 +276,27 @@ try {
 
   const negatedSupplierHeadingState = structuredClone(capturedInvoiceState);
   negatedSupplierHeadingState.imageEvidence[0].documentType = 'supplier_invoice';
-  negatedSupplierHeadingState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Not a Supplier Invoice INV-202';
+  negatedSupplierHeadingState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Not a Supplier Invoice';
   negatedSupplierHeadingState.evidence = flattenImageEvidence(negatedSupplierHeadingState.imageEvidence);
   correctionProviderRequests.length = 0;
-  const negatedSupplierHeading = await processAccountingQuery(
+  for (const confirmationText of [
     capturedCorrectionText,
-    negatedSupplierHeadingState,
-    'SFRS_I',
-    correctionProviderKey,
-    'gemini-3.5-flash-lite',
-    [correctionImageTurn, { id: 'negated-supplier-invoice-heading', sender: 'user', timestamp: '', text: capturedCorrectionText }]
-  );
-  assert.match(negatedSupplierHeading.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
-    'a negated supplier invoice title cannot authorize a correction even when documentType says supplier_invoice');
-  assert.deepEqual(negatedSupplierHeading.scenarioState.directGroups, []);
-  assert.equal(correctionProviderRequests.length, 0, 'a negated supplier heading is clarified before Gemini');
+    'This is a supplier purchase invoice. The invoice total is SGD 600.'
+  ]) {
+    correctionProviderRequests.length = 0;
+    const negatedSupplierHeading = await processAccountingQuery(
+      confirmationText,
+      negatedSupplierHeadingState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `negated-supplier-invoice-heading-${confirmationText.length}`, sender: 'user', timestamp: '', text: confirmationText }]
+    );
+    assert.match(negatedSupplierHeading.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+      'a negated supplier invoice title cannot authorize a correction even after user confirmation');
+    assert.deepEqual(negatedSupplierHeading.scenarioState.directGroups, []);
+    assert.equal(correctionProviderRequests.length, 0, 'a negated supplier heading is clarified before Gemini');
+  }
 
   const retainedTypeOnlyState = structuredClone(descriptionOnlyInvoiceState);
   retainedTypeOnlyState.imageEvidence[0].documentType = 'supplier_invoice';
@@ -430,6 +436,66 @@ try {
   ]);
   assert.equal(validateJournalGroups(confirmedNoNumberGroups).isValid, true);
   assert.ok(correctionProviderRequests.length > 0);
+
+  const numberedHeadingState = structuredClone(noNumberInvoiceState);
+  numberedHeadingState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Supplier Invoice No. INV-202';
+  numberedHeadingState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'invoiceType', value: 'Supplier Invoice No. INV-202', confidence: 0.95
+  });
+  numberedHeadingState.evidence = flattenImageEvidence(numberedHeadingState.imageEvidence);
+  for (const [id, text] of [
+    ['numbered-invoice-total-only', 'The invoice total is SGD 600.'],
+    ['confirmed-numbered-invoice', 'This is a supplier purchase invoice. The invoice total is SGD 600.']
+  ]) {
+    correctionProviderRequests.length = 0;
+    const numberedHeadingCorrection = await processAccountingQuery(
+      text,
+      numberedHeadingState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id, sender: 'user', timestamp: '', text }]
+    );
+    const numberedHeadingGroups = getDisplayableUncommittedJournalGroups(numberedHeadingCorrection.scenarioState, 'SFRS_I');
+    assert.equal(numberedHeadingCorrection.scenarioState.amount, 600,
+      'No. in a supplier invoice heading is interpreted as its number, not as negation');
+    assert.equal(numberedHeadingGroups.length, 1);
+    assert.equal(numberedHeadingGroups[0].totalDebit, 600);
+    assert.equal(numberedHeadingGroups[0].totalCredit, 600);
+    assert.equal(validateJournalGroups(numberedHeadingGroups).isValid, true);
+    assert.ok(correctionProviderRequests.length > 0);
+  }
+
+  for (const { title, invoiceNumber } of [
+    { title: 'Supplier Invoice Summary' },
+    { title: 'Supplier Invoice Statement' },
+    { title: 'Invoice Register' },
+    { title: 'Supplier Invoice Payment Summary', invoiceNumber: 'INV-202' }
+  ]) {
+    const invoiceAggregateState = structuredClone(noNumberInvoiceState);
+    invoiceAggregateState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = title;
+    if (invoiceNumber) {
+      invoiceAggregateState.imageEvidence[0].fields.push({
+        source: 'image', imageId: 'image-202', field: 'invoiceNumber', value: invoiceNumber, confidence: 0.95
+      });
+    }
+    invoiceAggregateState.evidence = flattenImageEvidence(invoiceAggregateState.imageEvidence);
+    correctionProviderRequests.length = 0;
+    const confirmedInvoiceAggregate = await processAccountingQuery(
+      'This is a supplier purchase invoice. The invoice total is SGD 600.',
+      invoiceAggregateState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `confirmed-${title.toLowerCase().replace(/\s+/g, '-')}`, sender: 'user', timestamp: '', text: 'This is a supplier purchase invoice. The invoice total is SGD 600.' }]
+    );
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(confirmedInvoiceAggregate.scenarioState, 'SFRS_I'), [],
+      `${title} is not eligible for an individual invoice correction journal`);
+    assert.doesNotMatch(confirmedInvoiceAggregate.messageText, /Corrected invoice journal proposal/i);
+    assert.match(confirmedInvoiceAggregate.messageText, /upload the individual supplier invoice/i);
+    assert.equal(correctionProviderRequests.length, 0,
+      `${title} is rejected before invoice journal generation`);
+  }
 
   correctionProviderRequests.length = 0;
   const unconfirmedNoNumberCorrection = await processAccountingQuery(

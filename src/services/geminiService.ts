@@ -265,7 +265,7 @@ export function flattenImageEvidence(imageEvidence: ExtractedImageEvidence[]): E
 }
 
 type PendingImageCorrection =
-  | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices' | 'supplier_direction_confirmation'; prompt: string }
+  | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices' | 'supplier_direction_confirmation' | 'individual_invoice_required'; prompt: string }
   | { kind: 'correction'; source: 'explicit_replacement' | 'invoice_total_statement' | 'confirmed_supplier_invoice_total_statement'; amount: number; imageIndex: number; fieldIndex: number; imageId: string };
 
 const IMAGE_SUBTOTAL_FIELD_ALIASES = new Set(['subtotal', 'subtotalamount', 'invoicesubtotal', 'netsubtotal', 'subtotalbeforetax', 'amountbeforetax']);
@@ -315,6 +315,8 @@ const EXPLICIT_IMAGE_REPLACEMENT = /(?:sgd|s\$)\s*(\d[\d,]*(?:\.\d+)?)\s+(?:is\s
 const SGD_AMOUNT_LIST = /^\s*(?:(?:sgd|s\$)\s*\d[\d,]*(?:\.\d+)?)(?:\s+or\s+(?:(?:sgd|s\$)\s*\d[\d,]*(?:\.\d+)?))*\s*[.!?]?\s*$/i;
 const STANDALONE_INVOICE_TOTAL = /^\s*(?:(?:the|my|our)\s+)?(?:invoice\s+)?total\s+(?:is|should\s+be|=|:)\s*(?:sgd|s\$)\s*([\d,]+(?:\.\d+)?)\s*[.!?]?\s*$/i;
 const CONFIRMED_SUPPLIER_INVOICE_PREFIX = /^\s*(?:this|it)\s+is\s+(?:a\s+)?(?:supplier(?:\s+purchase)?|vendor|purchase)\s+invoice[.!]\s*/i;
+// A bare reference must contain a digit. A labelled reference may be alphabetic.
+const INDIVIDUAL_INVOICE_HEADING = /^\s*(?:(supplier(?:\s+purchase)?|vendor|purchase|payable|expense)\s+|(?:sales?|customer(?:\s+sales?)?)\s+)?(?:tax\s+)?invoice(?:\s+(?:(?:(?:no\.|(?:no|number)\b)\s*[:#]?\s*|#\s*)[\w/-]+|[\w/-]*\d[\w/-]*))?\s*$/i;
 
 function toImageAmount(value: string): number | undefined {
   const amount = Number(value.replace(/,/g, ''));
@@ -330,14 +332,29 @@ function normalizeImageAmountField(field: string): string | undefined {
   return undefined;
 }
 
+function getImageDocumentTitles(image: ExtractedImageEvidence): string[] {
+  return image.fields.flatMap(field =>
+    field.source === 'image' && normalizeImageMoneyFieldName(field.field) === 'documenttitle' &&
+    typeof field.value === 'string' ? [field.value] : []
+  );
+}
+
+function isAggregateInvoiceHeading(title: string): boolean {
+  return /\binvoices?\b/i.test(title) && /\b(?:summary|register|statement)s?\b/i.test(title) &&
+    !INDIVIDUAL_INVOICE_HEADING.test(title);
+}
+
+function isNegatedPurchaseInvoiceHeading(title: string): boolean {
+  return !INDIVIDUAL_INVOICE_HEADING.test(title) && /\b(?:not|no|without)\b/i.test(title) &&
+    /\b(?:supplier|vendor|purchase|payable|expense)(?:\s+tax)?\s+invoice\b/i.test(title);
+}
+
 function isInvoiceCorrectionCandidate(image: ExtractedImageEvidence): boolean {
+  const titles = getImageDocumentTitles(image);
+  if (titles.some(isAggregateInvoiceHeading)) return false;
   if (image.documentType === 'supplier_invoice') return true;
   if (image.documentType !== 'accounting_transaction') return false;
-  const hasVisibleInvoiceHeading = image.fields.some(field =>
-    field.source === 'image' && normalizeImageMoneyFieldName(field.field) === 'documenttitle' &&
-    typeof field.value === 'string' && /\binvoice\b/i.test(field.value)
-  );
-  if (hasVisibleInvoiceHeading) return true;
+  if (titles.some(title => INDIVIDUAL_INVOICE_HEADING.test(title) || isNegatedPurchaseInvoiceHeading(title))) return true;
 
   return image.fields.some(field =>
     /^(?:invoice(?:number|no|id)|supplierinvoice(?:number|no|id))$/i.test(normalizeImageMoneyFieldName(field.field)) &&
@@ -373,13 +390,12 @@ function getInvoiceCorrectionDirectionClarification(
   if (/\b(?:credit\s*note|sales?\s*invoice|customer\s*invoice|sales?\s*(?:return|transaction)|customer\s*(?:sale|sales))\b/i.test(labeledEvidence)) {
     return 'The screenshot identifies a customer sales invoice or credit note, which this supplier invoice correction cannot prepare. Please confirm the document direction and corrected amount. No journal proposal is shown.';
   }
-  const hasNegatedPurchaseDirection = documentFields.some(field => {
-    const fieldName = normalizeImageMoneyFieldName(field.field);
-    if (typeof field.value !== 'string' || !/\b(?:not|no|without)\b/i.test(field.value)) return false;
-    return (fieldName === 'documenttitle' &&
-      /\b(?:supplier|vendor|purchase|payable|expense)\s+invoice\b/i.test(field.value)) ||
-      (fieldName === 'invoicetype' && /\b(?:supplier|vendor|purchase|payable|expense)\b/i.test(field.value));
-  });
+  const titles = getImageDocumentTitles(image);
+  const hasNegatedPurchaseDirection = titles.some(isNegatedPurchaseInvoiceHeading) || documentFields.some(field =>
+    normalizeImageMoneyFieldName(field.field) === 'invoicetype' && typeof field.value === 'string' &&
+    !INDIVIDUAL_INVOICE_HEADING.test(field.value) && /\b(?:not|no|without)\b/i.test(field.value) &&
+    /\b(?:supplier|vendor|purchase|payable|expense)\b/i.test(field.value)
+  );
   const hasUncertainInvoiceType = documentFields.some(field =>
     normalizeImageMoneyFieldName(field.field) === 'invoicetype' &&
     typeof field.value === 'string' && field.value.includes('?')
@@ -393,12 +409,7 @@ function getInvoiceCorrectionDirectionClarification(
     !/\b(?:not|no|without)\b/i.test(field.value) &&
     EXPLICIT_PURCHASE_INVOICE_TYPES.has(normalizeImageMoneyFieldName(field.value))
   );
-  const hasExplicitPurchaseHeading = documentFields.some(field =>
-    normalizeImageMoneyFieldName(field.field) === 'documenttitle' &&
-    typeof field.value === 'string' &&
-    !/\b(?:not|no|without)\b/i.test(field.value) &&
-    /^\s*(?:supplier(?:\s+purchase)?|vendor|purchase|payable|expense)(?:\s+tax)?\s+invoice(?:\s+(?:no\.?\s*)?[\w/-]+)?\s*$/i.test(field.value)
-  );
+  const hasExplicitPurchaseHeading = titles.some(title => Boolean(title.match(INDIVIDUAL_INVOICE_HEADING)?.[1]));
   if (hasExplicitPurchaseType || hasExplicitPurchaseHeading) return undefined;
 
   return directionClarification;
@@ -484,12 +495,26 @@ function findPendingImageCorrection(
     scenario.missingFields?.some(field =>
       field.fieldKey.startsWith('guardrail-') && field.fieldName === 'Accounting guardrail validation'
     );
-  if (correctionImages.length === 0 || (!hasPendingVerification && !hasRejectedProposal)) return undefined;
+  if (!hasPendingVerification && !hasRejectedProposal) return undefined;
+
+  const confirmedSupplierInvoice = query.match(CONFIRMED_SUPPLIER_INVOICE_PREFIX);
+  const amountStatement = confirmedSupplierInvoice ? query.slice(confirmedSupplierInvoice[0].length) : query;
+  const standaloneTotal = amountStatement.match(STANDALONE_INVOICE_TOTAL);
+  const startsWithInvoiceAmountDeclaration = /^\s*(?:(?:the|our|this)\s+)?(?:(?:supplier\s+)?invoice\s+)?(?:subtotal|gst|tax|total)\s+(?:is|was|should\s+be|=|:)/i.test(query);
+  if (correctionImages.length === 0) {
+    if ((standaloneTotal || startsWithInvoiceAmountDeclaration || EXPLICIT_WRONG_AMOUNT.test(query)) &&
+        scenario.imageEvidence?.some(image => getImageDocumentTitles(image).some(isAggregateInvoiceHeading))) {
+      return {
+        kind: 'clarification',
+        reason: 'individual_invoice_required',
+        prompt: 'The screenshot shows an invoice summary, register, or statement. Please upload the individual supplier invoice and confirm its corrected total. No journal proposal is shown.'
+      };
+    }
+    return undefined;
+  }
 
   const supplierInvoiceImages = correctionImages;
-
   const labeledAmounts = getLabeledImageAmounts(query);
-  const startsWithInvoiceAmountDeclaration = /^\s*(?:(?:the|our|this)\s+)?(?:(?:supplier\s+)?invoice\s+)?(?:subtotal|gst|tax|total)\s+(?:is|was|should\s+be|=|:)/i.test(query);
   const conflicts = [...labeledAmounts].flatMap(([field, amounts]) => {
     const uniqueAmounts = [...new Set(amounts)];
     return uniqueAmounts.length > 1 ? [{ field, amounts: uniqueAmounts }] : [];
@@ -544,9 +569,6 @@ function findPendingImageCorrection(
     return { kind: 'correction', source: 'explicit_replacement', amount: uniqueReplacementAmounts[0], ...field };
   }
 
-  const confirmedSupplierInvoice = query.match(CONFIRMED_SUPPLIER_INVOICE_PREFIX);
-  const amountStatement = confirmedSupplierInvoice ? query.slice(confirmedSupplierInvoice[0].length) : query;
-  const standaloneTotal = amountStatement.match(STANDALONE_INVOICE_TOTAL);
   const isQuestionedInvoiceTotal = Boolean(standaloneTotal && query.includes('?')) ||
     /^\s*(?:(?:the|my|our|this)\s+)?(?:(?:supplier\s+)?invoice\s+)?total\s+(?:is|was|should\s+be|=|:)/i.test(query) && query.includes('?');
   if (isQuestionedInvoiceTotal) {
