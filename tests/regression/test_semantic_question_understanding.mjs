@@ -1902,6 +1902,125 @@ for (const hypotheticalOrNegatedHireQuery of [
     `hypothetical or negated hire stays RELATED: ${hypotheticalOrNegatedHireQuery}`);
 }
 
+// Journal context review fixes (Findings 1–4):
+const unpaidSupplierInvoiceScenario = {
+  scenarioType: 'GENERAL_EXPENSE',
+  rawQuery: 'We received an unpaid supplier invoice of SGD 1,200 plus GST.',
+  transactionTitle: 'Unpaid supplier invoice',
+  amount: 1200,
+  functionalCurrency: 'SGD',
+  transactionCurrency: 'SGD',
+  directGroups: [],
+  missingFields: [],
+  isComplete: true
+};
+
+// Finding 1: Primary transaction subject determined from direct object rather than purpose/beneficiary adjuncts.
+for (const purposeAdjunctMachineQuery of [
+  'What if we bought a new machine for SGD 5,000 to assist payroll?',
+  'What if we purchased new equipment for SGD 8,000 for our payroll team?',
+  'What if we bought software to manage payroll?',
+  'What if we entered into a contract for a new machine to assist payroll?',
+  'What if we borrowed SGD 10,000 for payroll?',
+  'What if a new machine was bought for SGD 5,000 to assist payroll?',
+  'What if we bought a machine to use in payroll?'
+]) {
+  assert.equal(startsNewAccountingScenario(purposeAdjunctMachineQuery, employeeCpfScenario), true,
+    `machine purchase with payroll purpose/beneficiary adjunct starts a new scenario: ${purposeAdjunctMachineQuery}`);
+  assert.equal(assessConversationRelation(purposeAdjunctMachineQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `machine purchase with payroll purpose/beneficiary adjunct is NEW against payroll: ${purposeAdjunctMachineQuery}`);
+}
+const hireToOperateMachineQuery = 'What if we hired another employee for SGD 5,000 to operate the new machine?';
+assert.equal(startsNewAccountingScenario(hireToOperateMachineQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(hireToOperateMachineQuery, employeeCpfScenario, employeeCpfScenario), 'RELATED');
+assert.equal(startsNewAccountingScenario(hireToOperateMachineQuery, ppeMachineScenario), true);
+assert.equal(assessConversationRelation(hireToOperateMachineQuery, ppeMachineScenario, ppeMachineScenario), 'NEW');
+
+// Finding 2: Conditional & modal hypothetical scope preserved across coordinated clauses with numeric commas.
+for (const coordinatedSameDomainHypothetical of [
+  'If we hired another employee for SGD 5,000, and then hired a second employee for SGD 4,500, what are the CPF rates?',
+  'If we hired another employee for SGD 5,000, hired a second employee for SGD 4,500, and hired a third employee for SGD 4,000, what are the CPF rates?',
+  'Suppose we hired an employee for SGD 5,000, and also hired another worker for SGD 4,000, what CPF contribution rates apply?',
+  'Could we have hired another employee for SGD 5,000, and then hired a second worker for SGD 4,500?'
+]) {
+  assert.equal(startsNewAccountingScenario(coordinatedSameDomainHypothetical, employeeCpfScenario), false,
+    `coordinated same-domain hypothetical does not start a new scenario: ${coordinatedSameDomainHypothetical}`);
+  assert.equal(assessConversationRelation(coordinatedSameDomainHypothetical, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `coordinated same-domain hypothetical stays RELATED: ${coordinatedSameDomainHypothetical}`);
+}
+for (const coordinatedNewScenario of [
+  'If we hired another employee for SGD 5,000, and then bought a new machine for SGD 4,500, what is the accounting treatment?',
+  'We asked if the candidate needed a work permit, and then hired another employee for SGD 5,000.',
+  "We weren't sure if the candidate needed a work permit, and then hired another employee for SGD 5,000.",
+  'If the candidate accepts, we hired a second employee for SGD 4,500.'
+]) {
+  assert.equal(startsNewAccountingScenario(coordinatedNewScenario, employeeCpfScenario), true,
+    `coordinated cross-domain or indirect-if action starts a new scenario: ${coordinatedNewScenario}`);
+  assert.equal(assessConversationRelation(coordinatedNewScenario, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `coordinated cross-domain or indirect-if action is NEW: ${coordinatedNewScenario}`);
+}
+
+// Finding 3: Preference-based negation ("rather not", "sooner not", "prefer not to") in reset directives and negated actions.
+for (const preferenceNegatedReset of [
+  'I would rather not forget the earlier employee details.',
+  "I'd rather not forget the earlier employee details.",
+  'We would prefer not to ignore the earlier employee details.',
+  "Does that CPF rule apply? I'd rather not disregard the earlier employee details.",
+  "We'd sooner not ignore the earlier employee details.",
+  "We'd rather not also forget the earlier employee details."
+]) {
+  assert.equal(hasAffirmativeResetDirective(preferenceNegatedReset), false,
+    `preference-negated reset directive is not affirmative: ${preferenceNegatedReset}`);
+  assert.equal(isShortSemanticFollowUp(preferenceNegatedReset, employeeCpfScenario), true,
+    `preference-negated reset directive remains a short semantic follow-up: ${preferenceNegatedReset}`);
+  assert.equal(assessConversationRelation(preferenceNegatedReset, employeeCpfScenario, employeeCpfScenario), 'RELATED',
+    `preference-negated reset directive stays RELATED: ${preferenceNegatedReset}`);
+}
+assert.equal(startsNewAccountingScenario("We'd rather not have hired another employee for SGD 5,000 per month.", employeeCpfScenario), false);
+assert.equal(assessConversationRelation("We'd rather not have hired another employee for SGD 5,000 per month.", employeeCpfScenario, employeeCpfScenario), 'RELATED');
+for (const affirmativePreferenceReset of [
+  'I would rather forget the earlier employee details.',
+  "I'd rather ignore the earlier case and start fresh."
+]) {
+  assert.equal(hasAffirmativeResetDirective(affirmativePreferenceReset), true,
+    `affirmative preference reset directive triggers reset: ${affirmativePreferenceReset}`);
+  assert.equal(isShortSemanticFollowUp(affirmativePreferenceReset, employeeCpfScenario), false);
+  assert.equal(assessConversationRelation(affirmativePreferenceReset, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `affirmative preference reset directive is classified as NEW: ${affirmativePreferenceReset}`);
+}
+
+// Finding 4: Accounting-state adjectives ("unpaid", "overdue") allowed as prior-subject modifiers without breaking historical-period exclusion.
+for (const priorInvoiceFollowUp of [
+  'What is the GST treatment for our previous unpaid invoice?',
+  'What is the GST treatment for the earlier overdue supplier invoice?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp), true,
+    `unpaid/overdue prior invoice is recognized without scenario: ${priorInvoiceFollowUp}`);
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario), true,
+    `unpaid/overdue prior invoice is compatible with unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario), true,
+    `unpaid/overdue prior invoice is short semantic follow-up with unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(assessConversationRelation(priorInvoiceFollowUp, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario), 'RELATED',
+    `unpaid/overdue prior invoice stays RELATED against unpaidSupplierInvoiceScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(hasExplicitPriorFactReference(priorInvoiceFollowUp, employeeCpfScenario), false,
+    `unpaid/overdue prior invoice is rejected against disjoint employeeCpfScenario: ${priorInvoiceFollowUp}`);
+  assert.equal(isShortSemanticFollowUp(priorInvoiceFollowUp, employeeCpfScenario), false);
+  assert.equal(assessConversationRelation(priorInvoiceFollowUp, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS',
+    `unpaid/overdue prior invoice is AMBIGUOUS against disjoint employeeCpfScenario: ${priorInvoiceFollowUp}`);
+}
+for (const historicalPeriodControl of [
+  'What IRAS deduction rules apply to prior unpaid expenses for YA 2026?',
+  'What IRAS deduction rules apply to the prior unpaid expenses for YA 2026?',
+  'What IRAS deduction rules apply to the prior unpaid expenses for the financial year 2025?',
+  'What is the GST treatment for the previous March expenses?',
+  'What is the GST treatment for the prior unpaid invoice for YA 2026?'
+]) {
+  assert.equal(hasExplicitPriorFactReference(historicalPeriodControl), false,
+    `historical-period control query remains excluded from prior-fact reference: ${historicalPeriodControl}`);
+  assert.equal(isShortSemanticFollowUp(historicalPeriodControl), false,
+    `historical-period control query remains excluded from short follow-up: ${historicalPeriodControl}`);
+}
+
 // Finding 3: Detailed (>260 chars) contextual statutory follow-up vs >300-char separate new employee transaction.
 const detailedEmployeeFollowUp =
   'What CPF contribution rates apply to the employee we discussed if her monthly ordinary wages are SGD 5,000 and she also receives an annual bonus, and which employee facts from our earlier discussion still need to be confirmed before calculating the exact employer and employee CPF contributions for the year?';

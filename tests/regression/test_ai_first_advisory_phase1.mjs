@@ -1272,6 +1272,230 @@ for (const call of calls) {
       );
     }
 
+    // Journal context review fixes (Findings 1–4): end-to-end processAccountingQuery boundary checks
+    // Finding 1: Machine purchase to assist payroll sets new boundary excluding employee facts; hire to operate machine retains employee facts
+    for (const [index, machineToAssistPayrollQuery] of [
+      'What if we bought a new machine for SGD 5,000 to assist payroll?',
+      'What if we purchased new equipment for SGD 8,000 for our payroll team?'
+    ].entries()) {
+      const machineTurn = { id: `boundary-machine-assist-payroll-${index}`, sender: 'user', timestamp: '', text: machineToAssistPayrollQuery };
+      const scopedMachineHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        machineTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeMachine = boundaryCalls.length;
+      const machineResponse = await processAccountingQuery(
+        machineToAssistPayrollQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedMachineHistory
+      );
+      assert.equal(machineResponse.conversationBoundaryMessageId, machineTurn.id,
+        `machine purchase to assist payroll sets new boundary against employeeSetupScenario: ${machineToAssistPayrollQuery}`);
+      const machinePrompt = boundaryCalls.slice(callsBeforeMachine).map(call => call.prompt).join('\n');
+      assert.ok(
+        !machinePrompt.includes('58 years old') &&
+        !machinePrompt.includes('second-year Singapore PR') &&
+        !machinePrompt.includes(employeeSetupScenario.transactionTitle),
+        `machine purchase to assist payroll excludes employee facts from provider prompt: ${machineToAssistPayrollQuery}`
+      );
+    }
+
+    const hireToOperateTurn = { id: 'boundary-hire-operate-machine', sender: 'user', timestamp: '', text: 'What if we hired another employee for SGD 5,000 to operate the new machine?' };
+    const scopedHireToOperateHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      hireToOperateTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeHireToOperate = boundaryCalls.length;
+    const hireToOperateResponse = await processAccountingQuery(
+      hireToOperateTurn.text, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedHireToOperateHistory
+    );
+    assert.equal(hireToOperateResponse.conversationBoundaryMessageId, undefined,
+      'hypothetical hire to operate machine retains employee boundary');
+    const hireToOperatePrompt = boundaryCalls.slice(callsBeforeHireToOperate).map(call => call.prompt).join('\n');
+    assert.ok(
+      hireToOperatePrompt.includes('58 years old') &&
+      hireToOperatePrompt.includes('second-year Singapore PR') &&
+      hireToOperatePrompt.includes('2026'),
+      'hypothetical hire to operate machine retains scoped employee facts'
+    );
+
+    // Finding 2: Comma-separated hypothetical hires retain employee facts; cross-domain or indirect-if establish a new boundary
+    for (const commaStatutoryHypothetical of [
+      'If we hired another employee for SGD 5,000, and then hired a second employee for SGD 4,500, what are the CPF rates?',
+      'Suppose we hired an employee for SGD 5,000, and also hired another worker for SGD 4,000, what CPF contribution rates apply?'
+    ]) {
+      assert.equal(startsNewAccountingScenario(commaStatutoryHypothetical, employeeSetupScenario), false);
+      assert.equal(assessConversationRelation(commaStatutoryHypothetical, employeeSetupScenario, employeeSetupScenario), 'RELATED');
+    }
+    for (const [index, commaHypotheticalQuery] of [
+      'If we hired another employee for SGD 5,000, and then hired a second employee for SGD 4,500?',
+      'Could we have hired another employee for SGD 5,000, and then hired a second worker for SGD 4,500?'
+    ].entries()) {
+      const commaHypTurn = { id: `boundary-comma-hypothetical-hire-${index}`, sender: 'user', timestamp: '', text: commaHypotheticalQuery };
+      const scopedCommaHypHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        commaHypTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeCommaHyp = boundaryCalls.length;
+      const commaHypResponse = await processAccountingQuery(
+        commaHypotheticalQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedCommaHypHistory
+      );
+      assert.equal(commaHypResponse.conversationBoundaryMessageId, undefined,
+        `comma-separated hypothetical hire retains conversationBoundaryMessageId: ${commaHypotheticalQuery}`);
+      const commaHypPrompt = boundaryCalls.slice(callsBeforeCommaHyp).map(call => call.prompt).join('\n');
+      assert.ok(
+        commaHypPrompt.includes('58 years old') &&
+        commaHypPrompt.includes('second-year Singapore PR') &&
+        commaHypPrompt.includes('2026'),
+        `comma-separated hypothetical hire retains employee facts in provider prompt: ${commaHypotheticalQuery}`
+      );
+    }
+
+    for (const [index, coordinatedBoundaryQuery] of [
+      'If we hired another employee for SGD 5,000, and then bought a new machine for SGD 4,500, what is the accounting treatment?',
+      'We asked if the candidate needed a work permit, and then hired another employee for SGD 5,000.'
+    ].entries()) {
+      const coordNewTurn = { id: `boundary-coordinated-new-${index}`, sender: 'user', timestamp: '', text: coordinatedBoundaryQuery };
+      const scopedCoordNewHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        coordNewTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeCoordNew = boundaryCalls.length;
+      const coordNewResponse = await processAccountingQuery(
+        coordinatedBoundaryQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedCoordNewHistory
+      );
+      assert.equal(coordNewResponse.conversationBoundaryMessageId, coordNewTurn.id,
+        `coordinated cross-domain or indirect-if sets new boundary: ${coordinatedBoundaryQuery}`);
+      const coordNewPrompt = boundaryCalls.slice(callsBeforeCoordNew).map(call => call.prompt).join('\n');
+      assert.ok(
+        !coordNewPrompt.includes('58 years old') &&
+        !coordNewPrompt.includes('second-year Singapore PR') &&
+        !coordNewPrompt.includes(employeeSetupScenario.transactionTitle),
+        `coordinated cross-domain or indirect-if excludes employee facts: ${coordinatedBoundaryQuery}`
+      );
+    }
+
+    // Finding 3: "I would rather not forget..." and "I'd rather not forget..." retain employee facts; affirmative "I would rather forget..." resets
+    for (const [index, ratherNotQuery] of [
+      'I would rather not forget the earlier employee details.',
+      "I'd rather not forget the earlier employee details.",
+      'Does that CPF rule apply? I would rather not forget the earlier employee details.',
+      "Does that CPF rule apply? I'd rather not disregard the earlier employee details."
+    ].entries()) {
+      const ratherNotTurn = { id: `boundary-rather-not-${index}`, sender: 'user', timestamp: '', text: ratherNotQuery };
+      const scopedRatherNotHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        ratherNotTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeRatherNot = boundaryCalls.length;
+      const ratherNotResponse = await processAccountingQuery(
+        ratherNotQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedRatherNotHistory
+      );
+      assert.equal(ratherNotResponse.conversationBoundaryMessageId, undefined,
+        `preference-negated reset retains conversationBoundaryMessageId: ${ratherNotQuery}`);
+      const ratherNotPrompt = boundaryCalls.slice(callsBeforeRatherNot).map(call => call.prompt).join('\n');
+      assert.ok(
+        ratherNotPrompt.includes('58 years old') &&
+        ratherNotPrompt.includes('second-year Singapore PR') &&
+        ratherNotPrompt.includes('2026'),
+        `preference-negated reset retains employee facts in provider prompt: ${ratherNotQuery}`
+      );
+    }
+
+    const affirmativeRatherResetTurn = { id: 'boundary-affirmative-rather-reset', sender: 'user', timestamp: '', text: 'Does that CPF rule apply? I would rather forget the earlier employee details.' };
+    const callsBeforeAffirmativeRather = boundaryCalls.length;
+    const affirmativeRatherResponse = await processAccountingQuery(
+      affirmativeRatherResetTurn.text,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [...employeeSetupHistory, employeeSetupAnswerTurn, affirmativeRatherResetTurn]
+    );
+    assert.equal(affirmativeRatherResponse.conversationBoundaryMessageId, affirmativeRatherResetTurn.id,
+      'affirmative preference reset establishes a new conversationBoundaryMessageId');
+    const affirmativeRatherPrompt = boundaryCalls.slice(callsBeforeAffirmativeRather).map(call => call.prompt).join('\n');
+    assert.ok(
+      !affirmativeRatherPrompt.includes('58 years old') &&
+      !affirmativeRatherPrompt.includes(employeeSetupScenario.transactionTitle),
+      'affirmative preference reset clears prior employee facts from provider prompt'
+    );
+
+    // Finding 4: "What is the GST treatment for our previous unpaid invoice?" retains unpaid invoice context & resets against employeeSetupScenario
+    const unpaidSupplierInvoiceScenario = {
+      scenarioType: 'GENERAL_EXPENSE',
+      rawQuery: 'We received an unpaid supplier invoice of SGD 1,200 plus GST.',
+      transactionTitle: 'Unpaid supplier invoice',
+      amount: 1200,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      directGroups: [],
+      missingFields: [],
+      isComplete: true
+    };
+    const unpaidInvoiceInitTurn = {
+      id: 'boundary-unpaid-invoice-init',
+      sender: 'user',
+      timestamp: '',
+      text: unpaidSupplierInvoiceScenario.rawQuery
+    };
+    const unpaidInvoiceAnswerTurn = {
+      id: 'boundary-unpaid-invoice-answer',
+      sender: 'assistant',
+      timestamp: '',
+      text: 'Recorded unpaid supplier invoice of SGD 1,200 plus GST.'
+    };
+    const unpaidInvoiceFollowUpQuery = 'What is the GST treatment for our previous unpaid invoice?';
+    const unpaidInvoiceFollowUpTurn = {
+      id: 'boundary-unpaid-invoice-followup',
+      sender: 'user',
+      timestamp: '',
+      text: unpaidInvoiceFollowUpQuery
+    };
+    const callsBeforeUnpaidMatching = boundaryCalls.length;
+    const unpaidMatchingResponse = await processAccountingQuery(
+      unpaidInvoiceFollowUpQuery,
+      unpaidSupplierInvoiceScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [unpaidInvoiceInitTurn, unpaidInvoiceAnswerTurn, unpaidInvoiceFollowUpTurn]
+    );
+    assert.equal(unpaidMatchingResponse.conversationBoundaryMessageId, undefined,
+      'unpaid invoice follow-up retains active unpaid supplier invoice context');
+    const unpaidMatchingPrompt = boundaryCalls.slice(callsBeforeUnpaidMatching).map(call => call.prompt).join('\n');
+    assert.ok(
+      unpaidMatchingPrompt.includes('SGD 1,200') || unpaidMatchingPrompt.includes('Unpaid supplier invoice'),
+      'unpaid invoice follow-up retains unpaid supplier invoice details in provider prompt'
+    );
+
+    const scopedUnpaidAgainstEmployeeHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      unpaidInvoiceFollowUpTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeUnpaidEmployee = boundaryCalls.length;
+    const unpaidEmployeeResponse = await processAccountingQuery(
+      unpaidInvoiceFollowUpQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      scopedUnpaidAgainstEmployeeHistory
+    );
+    assert.equal(unpaidEmployeeResponse.conversationBoundaryMessageId, unpaidInvoiceFollowUpTurn.id,
+      'unpaid invoice follow-up establishes a new boundary against disjoint employeeSetupScenario');
+    const unpaidEmployeePrompt = boundaryCalls.slice(callsBeforeUnpaidEmployee).map(call => call.prompt).join('\n');
+    assert.ok(
+      !unpaidEmployeePrompt.includes('58 years old') &&
+      !unpaidEmployeePrompt.includes('second-year Singapore PR') &&
+      !unpaidEmployeePrompt.includes(employeeSetupScenario.transactionTitle),
+      'unpaid invoice follow-up excludes employee facts from provider prompt'
+    );
+
     const payrollInitTurn = {
       id: 'boundary-payroll-init-user',
       sender: 'user',
