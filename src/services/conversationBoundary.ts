@@ -74,6 +74,19 @@ const PURCHASE_TAG_ADJUNCT = new RegExp(
 );
 const REPORTED_HYPOTHETICAL_PURCHASE_QUALIFIER =
   /\b(?:hypothetically|(?:in|as)\s+a\s+hypothetical\s+(?:scenario|case|example))\b/i;
+const NEGATED_HYPOTHETICAL_PURCHASE_QUALIFIER_PREFIX =
+  /\b(?:not|never|rather\s+than)\s+(?:(?:at\s+all|even|merely|purely|just|only|strictly|really)\s+)?(?:a\s+)?$/i;
+const EXPLICIT_RESET_CLAUSE_START = String.raw`(?:^|[.!?;]\s+|,\s*)`;
+const EXPLICIT_RESET_TOPIC = String.raw`(?:question|analysis|case|scenario|transaction)`;
+const EXPLICIT_RESET_HEADING_END = String.raw`(?:\s*[:-]\s*|\s*[.!?;](?=\s|$)|\s*$)`;
+const EXPLICIT_CONVERSATION_RESET_HEADING = new RegExp(
+  String.raw`${EXPLICIT_RESET_CLAUSE_START}(?:(?:new|separate|different|unrelated)\s+${EXPLICIT_RESET_TOPIC}|this\s+is\s+(?:a|an)\s+(?:new|separate|different|unrelated)\s+${EXPLICIT_RESET_TOPIC})${EXPLICIT_RESET_HEADING_END}`,
+  'i'
+);
+const EXPLICIT_IGNORE_DIRECTIVE = new RegExp(
+  String.raw`${EXPLICIT_RESET_CLAUSE_START}(?:please\s+)?(?:ignore|disregard|forget)\s+(?:(?:all|the)\s+)*(?:earlier|previous|prior|above|last)\s+(?:(?:conversation|chat)\s+)?(?:context|history|messages?|discussion|facts?)(?=\s*(?:[:,.!?;]|$)|\s+and\b)`,
+  'i'
+);
 const PURCHASE_UNCERTAINTY_ADJECTIVE = '(?:possible|impossible|sure|certain|likely|unlikely|clear|unclear|uncertain|doubtful)';
 const HOW_LIKELY_PURCHASE_QUESTION = String.raw`how\s+(?:likely|possible|probable|unlikely)\s+(?:is|are|was|were)\s+(?:it|that)(?:\s+(?:that|whether|if))?`;
 const PURCHASE_UNCERTAINTY_LEAD = new RegExp(
@@ -98,6 +111,9 @@ function findAttachedHypotheticalPurchaseQualifier(purchaseTail: string): RegExp
   const purchaseClausePrefix = purchaseTail.slice(0, qualifier.index);
   // A semicolon ends the purchase clause even when the next clause is not a question.
   if (purchaseClausePrefix.includes(';')) return null;
+
+  // Reject a qualifier with an immediately preceding negation.
+  if (NEGATED_HYPOTHETICAL_PURCHASE_QUALIFIER_PREFIX.test(purchaseClausePrefix)) return null;
 
   // Purchase details may intervene, but a separate question owns its own qualifier.
   return findSeparateQuestion(purchaseClausePrefix, true) ? null : qualifier;
@@ -210,6 +226,7 @@ type PreparedBoundaryQuery = {
   hasReportedPurchase: boolean;
   earlierPurchaseFollowUp?: string;
   reportedHypotheticalPurchaseAsset?: string;
+  reportedHypotheticalPurchaseQuestion?: string;
 };
 
 function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
@@ -219,6 +236,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
   let hasReportedPurchase = false;
   let earlierPurchaseFollowUp: string | undefined;
   let reportedHypotheticalPurchaseAsset: string | undefined;
+  let reportedHypotheticalPurchaseQuestion: string | undefined;
   let attribution: RegExpExecArray | null;
 
   while ((attribution = attributedQuestions.exec(normalizedQuery)) !== null) {
@@ -277,6 +295,7 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
               !REPORTED_CLAUSE_END.test(normalizedQuery.slice(0, attribution.index)) &&
               /^[\s.!?]*$/.test(normalizedQuery.slice(quoteEnd))) {
             reportedHypotheticalPurchaseAsset = subjectFirstPurchase?.groups?.asset;
+            reportedHypotheticalPurchaseQuestion = reportedQuestion.trim();
           }
           const followingReport = new RegExp(REPORTED_QUESTION_ATTRIBUTION.source, 'i').exec(normalizedQuery.slice(quoteEnd));
           const correctionWindow = normalizedQuery.slice(quoteEnd, followingReport ? quoteEnd + followingReport.index : undefined);
@@ -321,7 +340,8 @@ function prepareBoundaryQuery(query: string): PreparedBoundaryQuery {
     text: text + normalizedQuery.slice(unmaskedStart),
     hasReportedPurchase,
     earlierPurchaseFollowUp,
-    reportedHypotheticalPurchaseAsset
+    reportedHypotheticalPurchaseAsset,
+    reportedHypotheticalPurchaseQuestion
   };
 }
 const TIME_ANCHORED_ACTION_LEAD = new RegExp(
@@ -337,15 +357,19 @@ export function isJournalDisplayRequest(query: string): boolean {
 }
 
 /** Recognizes a longer question that explicitly refers to facts from earlier turns. */
-export function hasExplicitPriorFactReference(query: string): boolean {
+export function hasExplicitPriorFactReference(query: string, scopedQuestion?: string): boolean {
   const text = query.trim();
-  const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me|describe|outline)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(text);
-  if (!text || !isContextualQuestion ||
+  const isReferenceQuestion = (candidate: string): boolean => {
+    const isContextualQuestion = /^(?:(?:please\s+)?(?:regarding|about|concerning|as\s+for|in\s+relation\s+to|with\s+(?:regard|respect|reference)\s+to|for|explain|tell\s+me|describe|outline)|(?:what|how|can|could|would|should|does|do|is|are))\b/i.test(candidate);
+    return isContextualQuestion &&
+      /\b(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b|\b(?:discussed|mentioned|provided|stated|described)\s+(?:earlier|previously|above)\b/i.test(candidate);
+  };
+  if (!text ||
       /\b(?:new|different|separate|unrelated)\s+(?:question|transaction|analysis|case|scenario|situation)\b|\b(?:separate|different|unrelated|distinct)\s+from\b|\b(?:ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context)\b/i.test(text)) {
     return false;
   }
 
-  return /\b(?:earlier|previous|prior|above|last)\s+(?:(?:supplier|business|equipment|machine|company)\s+){0,2}(?:transaction|expense|purchase|invoice|amount|facts?|details?|asset|equipment|machine|salary|payroll|scenario|situation|case|answer|discussion|conversation)\b|\b(?:discussed|mentioned|provided|stated|described)\s+(?:earlier|previously|above)\b/i.test(text);
+  return isReferenceQuestion(text) || Boolean(scopedQuestion && isReferenceQuestion(scopedQuestion.trim()));
 }
 
 function startsWithPriorFactReference(query: string): boolean {
@@ -433,11 +457,40 @@ export function startsNewAccountingScenario(
 /** Provides the public query service with the scoped follow-up as well as the transaction boundary. */
 export function evaluateAccountingScenarioBoundary(query: string, currentScenario: AccountingScenarioState | null) {
   const prepared = prepareBoundaryQuery(query);
+  const resetDirectiveText = maskQuotedText(prepared.text.trim());
   return {
     startsNewScenario: startsNewAccountingScenarioFromPreparedQuery(prepared, currentScenario),
+    hasExplicitConversationReset: EXPLICIT_CONVERSATION_RESET_HEADING.test(resetDirectiveText) ||
+      EXPLICIT_IGNORE_DIRECTIVE.test(resetDirectiveText),
     earlierPurchaseFollowUp: prepared.earlierPurchaseFollowUp,
-    reportedHypotheticalPurchaseAsset: prepared.reportedHypotheticalPurchaseAsset
+    reportedHypotheticalPurchaseAsset: prepared.reportedHypotheticalPurchaseAsset,
+    hasExplicitPriorReference: hasExplicitPriorFactReference(query, prepared.reportedHypotheticalPurchaseQuestion)
   };
+}
+
+function maskQuotedText(text: string): string {
+  const ranges: Array<{ start: number; end: number }> = [];
+  for (let index = 0; index < text.length;) {
+    const openingQuote = text[index];
+    const closingQuotePattern = REPORT_CLOSING_QUOTE.get(openingQuote);
+    if (!closingQuotePattern || (openingQuote === "'" && /[\p{L}\p{N}]/u.test(text[index - 1] || ''))) {
+      index++;
+      continue;
+    }
+
+    const closingQuote = closingQuotePattern.exec(text.slice(index + 1));
+    const end = closingQuote ? index + closingQuote.index + closingQuote[0].length + 1 : text.length;
+    ranges.push({ start: index, end });
+    index = end;
+  }
+
+  let masked = '';
+  let unmaskedStart = 0;
+  for (const { start, end } of ranges) {
+    masked += text.slice(unmaskedStart, start) + text.slice(start, end).replace(/[^\r\n]/g, ' ');
+    unmaskedStart = end;
+  }
+  return masked + text.slice(unmaskedStart);
 }
 
 function startsNewAccountingScenarioFromPreparedQuery(

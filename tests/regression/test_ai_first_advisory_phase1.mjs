@@ -19,7 +19,7 @@ import { isAnswerGroundingEligibleSource } from '../../src/retrieval/sourceRetri
 import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSourceRegistry.ts';
 import { ChatPanel } from '../../src/components/ChatPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
-import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, hasExplicitPriorFactReference, startsNewAccountingScenario } from '../../src/services/conversationBoundary.ts';
+import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, evaluateAccountingScenarioBoundary, hasExplicitPriorFactReference, startsNewAccountingScenario } from '../../src/services/conversationBoundary.ts';
 import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { resolveFactAmendment, isSingleMonthlySalaryAmendment } from '../../src/services/factAmendmentService.ts';
 
@@ -356,7 +356,7 @@ for (const call of calls) {
     const prompt = url.includes('generativelanguage.googleapis.com')
       ? request.contents.flatMap(item => item.parts).map(part => part.text || '').join('\n')
       : request.messages.at(-1).content;
-    boundaryCalls.push({ url, prompt });
+    boundaryCalls.push({ url, prompt, payload: request });
     const responseText = JSON.stringify({
       directAnswer: 'Accrual accounting recognizes activity as it occurs.',
       explanation: ['The treatment follows the facts of the current question.'],
@@ -658,6 +658,16 @@ for (const call of calls) {
       'Our accountant asked: "Can we claim allowances once we have purchased another machine for SGD 100,000?"';
     const quotedHypotheticalTemporalPurchaseAfterAmount =
       'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"';
+    const quotedFactualTemporalPurchaseNotHypothetically =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, not hypothetically?"';
+    const quotedFactualTemporalPurchaseNotInHypotheticalScenario =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, not in a hypothetical scenario?"';
+    const quotedFactualTemporalPurchaseNotMerelyHypothetically =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, not merely hypothetically?"';
+    const quotedFactualTemporalPurchaseNotEvenHypothetically =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, not even hypothetically?"';
+    const quotedFactualTemporalPurchaseRatherThanHypothetically =
+      'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, rather than hypothetically?"';
     const quotedHypotheticalTemporalPurchaseWithOctober =
       'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000 in October, hypothetically?"';
     const quotedHypotheticalTemporalPurchaseWithDecimalAmount =
@@ -1505,6 +1515,11 @@ for (const call of calls) {
       { question: quotedPurchaseOnceTemporalClause, startsNewAnalysis: true },
       { question: quotedPurchaseWhenTemporalClause, startsNewAnalysis: true },
       { question: quotedHypotheticalTemporalPurchaseAfterAmount, startsNewAnalysis: false },
+      { question: quotedFactualTemporalPurchaseNotHypothetically, startsNewAnalysis: true },
+      { question: quotedFactualTemporalPurchaseNotInHypotheticalScenario, startsNewAnalysis: true },
+      { question: quotedFactualTemporalPurchaseNotMerelyHypothetically, startsNewAnalysis: true },
+      { question: quotedFactualTemporalPurchaseNotEvenHypothetically, startsNewAnalysis: true },
+      { question: quotedFactualTemporalPurchaseRatherThanHypothetically, startsNewAnalysis: true },
       { question: quotedHypotheticalTemporalPurchaseWithOctober, startsNewAnalysis: false },
       { question: quotedHypotheticalTemporalPurchaseWithDecimalAmount, startsNewAnalysis: false },
       { question: quotedHypotheticalTemporalPurchaseWithTimedInstallation, startsNewAnalysis: false },
@@ -1689,6 +1704,297 @@ for (const call of calls) {
       !call.prompt.includes(priorVehicleQuestion) && !call.prompt.includes(priorVehicleAnswer) &&
       !call.prompt.includes('delivery van acquisition')
     ), 'the machine provider prompt excludes a completed vehicle acquisition');
+
+    const laptopPurchaseQuestion = 'The company purchased a laptop for SGD 2,500 for business use.';
+    const laptopPurchaseAnswer = 'Prior laptop answer: the laptop is company property, plant and equipment.';
+    const laptopScenario = {
+      scenarioType: 'PPE_IAS16', rawQuery: laptopPurchaseQuestion,
+      transactionTitle: 'Business laptop acquisition',
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true,
+      underlyingTransaction: { type: 'asset_purchase', subject: 'laptop', assetName: 'laptop' },
+      semanticUnderstanding: { transactionType: 'asset_purchase', subject: 'laptop' }
+    };
+    const vanWithGpsQuestion =
+      'The company acquired a delivery van for SGD 80,000 and fitted the van with GPS equipment for SGD 2,000.';
+    const vanWithGpsAnswer = 'Prior van answer: the delivery van is company property, plant and equipment.';
+    const vanWithGpsScenario = {
+      scenarioType: 'PPE_IAS16', rawQuery: vanWithGpsQuestion,
+      transactionTitle: 'Delivery van fitted with GPS equipment',
+      functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true,
+      underlyingTransaction: { type: 'asset_purchase', subject: 'delivery van', assetName: 'delivery van' },
+      semanticUnderstanding: { transactionType: 'asset_purchase', subject: 'delivery van' }
+    };
+    const laptopGpsQuestion =
+      'We bought a laptop for SGD 2,500 to monitor GPS equipment. How should we account for the laptop?';
+    const laptopGpsScenario = await parseAccountingQuery(laptopGpsQuestion, null);
+    assert.equal(laptopGpsScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
+      'the laptop and GPS reproduction follows the parser acquisition path');
+    assert.equal(laptopGpsScenario.underlyingTransaction?.assetName, undefined,
+      'the parser reproduction has no structured asset name');
+    assert.equal(laptopGpsScenario.underlyingTransaction?.subject, undefined,
+      'the parser reproduction has no structured asset subject');
+    assert.equal(laptopGpsScenario.assetName, undefined,
+      'the parser reproduction has no legacy structured asset name');
+    assert.equal(laptopGpsScenario.semanticUnderstanding?.subject, undefined,
+      'the parser reproduction has no semantic asset subject');
+    assert.equal(laptopGpsScenario.transactionTitle, 'Business Equipment Acquisition',
+      'the parser reproduction has only a generic acquisition title');
+    const equipmentCoverQuestion =
+      'We bought equipment covers for SGD 2,500. How should we account for them?';
+    const equipmentCoverScenario = await parseAccountingQuery(equipmentCoverQuestion, null);
+    assert.equal(equipmentCoverScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION',
+      'equipment-cover wording follows the parser equipment acquisition path');
+    const laptopVehicleRoutesQuestion = 'We bought a laptop for SGD 2,500 to track vehicle routes.';
+    const laptopVehicleRoutesScenario = { ...laptopGpsScenario, rawQuery: laptopVehicleRoutesQuestion };
+    const assetScopeCases = [
+      {
+        id: 'boundary-laptop-before-vehicle', scenario: laptopScenario,
+        priorQuestion: laptopPurchaseQuestion, priorAnswer: laptopPurchaseAnswer,
+        priorTitle: laptopScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-gps-van-before-machine', scenario: vanWithGpsScenario,
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-legacy-laptop-gps-before-machine', scenario: laptopGpsScenario,
+        priorQuestion: laptopGpsQuestion,
+        priorAnswer: 'Prior laptop answer: the laptop is used to monitor GPS equipment.',
+        priorTitle: laptopGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-legacy-laptop-routes-before-vehicle', scenario: laptopVehicleRoutesScenario,
+        priorQuestion: laptopVehicleRoutesQuestion,
+        priorAnswer: 'Prior laptop answer: the laptop tracks vehicle routes.',
+        priorTitle: laptopVehicleRoutesScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-legacy-equipment-covers-before-machine', scenario: equipmentCoverScenario,
+        priorQuestion: equipmentCoverQuestion,
+        priorAnswer: 'Prior answer: equipment covers cost SGD 2,500.',
+        priorTitle: equipmentCoverScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-van-before-vehicle', scenario: vanWithGpsScenario,
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: true
+      },
+      {
+        id: 'boundary-explicit-prior-van-before-machine', scenario: vanWithGpsScenario,
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Regarding the previous transaction, our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: true
+      },
+      {
+        id: 'boundary-quoted-prior-purchase-before-machine', scenario: vanWithGpsScenario,
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim the same allowances as the previous purchase after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: true
+      },
+      {
+        id: 'boundary-structured-type-before-semantic-unclassified',
+        scenario: {
+          ...vanWithGpsScenario,
+          semanticUnderstanding: { transactionType: 'unclassified_transaction', subject: 'delivery van' }
+        },
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: true
+      },
+      {
+        id: 'boundary-conflicting-asset-names',
+        scenario: { ...vanWithGpsScenario, assetName: 'milling machine' },
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-generic-ppe-identity',
+        scenario: {
+          ...vanWithGpsScenario,
+          rawQuery: 'Property, Plant & Equipment acquisition.',
+          transactionTitle: 'Property, Plant & Equipment acquisition',
+          underlyingTransaction: { type: 'asset_purchase', subject: 'Property, Plant & Equipment acquisition' },
+          semanticUnderstanding: { transactionType: 'asset_purchase', subject: 'PPE acquisition' }
+        },
+        priorQuestion: 'Property, Plant & Equipment acquisition.',
+        priorAnswer: 'Prior generic PPE answer: an asset acquisition was discussed.',
+        priorTitle: 'Property, Plant & Equipment acquisition',
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another machine for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      },
+      {
+        id: 'boundary-van-depreciation-before-vehicle',
+        scenario: {
+          ...vanWithGpsScenario,
+          underlyingTransaction: { type: 'depreciation_expense', subject: 'delivery van', assetName: 'delivery van' }
+        },
+        priorQuestion: vanWithGpsQuestion, priorAnswer: vanWithGpsAnswer,
+        priorTitle: vanWithGpsScenario.transactionTitle,
+        question: 'Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"',
+        retainsPriorContext: false
+      }
+    ];
+    for (const assetScopeCase of assetScopeCases) {
+      const turn = {
+        id: assetScopeCase.id, sender: 'user', timestamp: '', text: assetScopeCase.question
+      };
+      const history = [
+        { id: `${assetScopeCase.id}-prior-user`, sender: 'user', timestamp: '', text: assetScopeCase.priorQuestion },
+        { id: `${assetScopeCase.id}-prior-answer`, sender: 'assistant', timestamp: '', text: assetScopeCase.priorAnswer },
+        turn
+      ];
+      const callsBeforeAssetQuestion = boundaryCalls.length;
+      const response = await processAccountingQuery(
+        assetScopeCase.question, assetScopeCase.scenario, 'SFRS_I', adapters[2].settings, 'unused', history
+      );
+      const assetQuestionCalls = boundaryCalls.slice(callsBeforeAssetQuestion);
+      assert.equal(response.conversationBoundaryMessageId,
+        assetScopeCase.retainsPriorContext ? undefined : turn.id,
+        `asset identity controls whether a hypothetical purchase keeps the prior boundary: ${assetScopeCase.id}`);
+      assert.ok(assetQuestionCalls.some(call => call.prompt.includes(assetScopeCase.question)),
+        `the hypothetical purchase reaches its provider: ${assetScopeCase.id}`);
+      if (assetScopeCase.retainsPriorContext) {
+        assert.ok(assetQuestionCalls.some(call =>
+          call.prompt.includes(assetScopeCase.priorQuestion) && call.prompt.includes(assetScopeCase.priorAnswer)
+        ), `compatible or explicitly linked asset context remains available: ${assetScopeCase.id}`);
+      } else {
+        assert.ok(assetQuestionCalls.every(call =>
+          !call.prompt.includes(assetScopeCase.priorQuestion) && !call.prompt.includes(assetScopeCase.priorAnswer) &&
+          !call.prompt.includes(assetScopeCase.priorTitle)
+        ), `an unrelated or unresolved asset is omitted from every provider prompt: ${assetScopeCase.id}`);
+      }
+    }
+
+    const explicitResetCases = [
+      {
+        id: 'boundary-explicit-new-question-heading', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'New question: Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-ignore-context', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Ignore the earlier context; Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-separate-question-heading', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'This is a separate question: Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-unrelated-question-heading', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Unrelated question: Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-period-heading', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'New question. Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-noninitial-heading', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Thanks. New question: Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-noninitial-ignore-context', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Thanks. Ignore the earlier context; Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      },
+      {
+        id: 'boundary-explicit-regarding-separate-question', scenario: unrelatedVehicleScenario,
+        priorQuestion: priorVehicleQuestion, priorAnswer: priorVehicleAnswer,
+        priorTitle: unrelatedVehicleScenario.transactionTitle,
+        question: 'Regarding the previous transaction, this is a separate question: Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"'
+      }
+    ];
+    for (const resetCase of explicitResetCases) {
+      const turn = { id: resetCase.id, sender: 'user', timestamp: '', text: resetCase.question };
+      const history = [
+        { id: `${resetCase.id}-prior-user`, sender: 'user', timestamp: '', text: resetCase.priorQuestion },
+        { id: `${resetCase.id}-prior-answer`, sender: 'assistant', timestamp: '', text: resetCase.priorAnswer },
+        turn
+      ];
+      const callsBeforeResetQuestion = boundaryCalls.length;
+      const response = await processAccountingQuery(
+        resetCase.question, resetCase.scenario, 'SFRS_I', adapters[2].settings, 'unused', history
+      );
+      const resetCalls = boundaryCalls.slice(callsBeforeResetQuestion);
+      assert.ok(resetCalls.some(call => call.prompt.includes(resetCase.question)),
+        `the explicit reset question reaches a provider: ${resetCase.id}`);
+      for (const priorFact of [resetCase.priorQuestion, resetCase.priorAnswer, resetCase.priorTitle]) {
+        assert.ok(resetCalls.every(call => !JSON.stringify(call.payload).includes(priorFact)),
+          `every outbound payload excludes prior fact '${priorFact}': ${resetCase.id}`);
+      }
+      assert.equal(response.conversationBoundaryMessageId, turn.id,
+        `an explicit reset bounds prior conversation history before provider dispatch: ${resetCase.id}`);
+    }
+
+    const nullScenarioResetQuestion = 'New question: What is accrual accounting?';
+    const nullScenarioResetTurn = {
+      id: 'boundary-new-question-without-scenario', sender: 'user', timestamp: '', text: nullScenarioResetQuestion
+    };
+    const nullScenarioResetHistory = [...previousHistory, nullScenarioResetTurn];
+    const callsBeforeNullScenarioReset = boundaryCalls.length;
+    const nullScenarioResetResponse = await processAccountingQuery(
+      nullScenarioResetQuestion, null, 'SFRS_I', adapters[2].settings, 'unused', nullScenarioResetHistory
+    );
+    const nullScenarioResetCalls = boundaryCalls.slice(callsBeforeNullScenarioReset);
+    assert.equal(nullScenarioResetResponse.conversationBoundaryMessageId, nullScenarioResetTurn.id,
+      'an explicit reset drops supplied chat history when currentScenario is null');
+    assert.ok(nullScenarioResetCalls.some(call => JSON.stringify(call.payload).includes(nullScenarioResetQuestion)),
+      'the current question reaches a provider after a null-scenario reset');
+    assert.ok(nullScenarioResetCalls.every(call =>
+      !JSON.stringify(call.payload).includes(priorTransaction) && !JSON.stringify(call.payload).includes(priorAnswer)
+    ), 'every null-scenario provider payload excludes the prior user and assistant messages');
+
+    const incidentalResetText =
+      'This note mentions a new question. Our accountant asked: "Can we claim allowances after we purchased another vehicle for SGD 100,000, hypothetically?"';
+    assert.equal(evaluateAccountingScenarioBoundary(incidentalResetText, unrelatedVehicleScenario).hasExplicitConversationReset, false,
+      'incidental prose before a reported question does not become an explicit reset directive');
+    for (const selectiveIgnoreText of [
+      'Ignore the previous message from our auditor. What is depreciation?',
+      'Ignore the previous context field in the invoice. What is depreciation?'
+    ]) {
+      assert.equal(evaluateAccountingScenarioBoundary(selectiveIgnoreText, unrelatedVehicleScenario).hasExplicitConversationReset, false,
+        `an ignore phrase with a following object modifier is not a whole-context reset: ${selectiveIgnoreText}`);
+    }
+    const quotedResetText = 'The note reads “First point. New question: Can we claim capital allowances for the vehicle?” What does it say?';
+    assert.equal(evaluateAccountingScenarioBoundary(quotedResetText, unrelatedVehicleScenario).hasExplicitConversationReset, false,
+      'a reset heading inside quoted literal text does not reset the conversation');
+    for (const resetAliasText of [
+      'New analysis: What is depreciation?',
+      'New case. What is depreciation?',
+      'New scenario: What is depreciation?'
+    ]) {
+      assert.equal(evaluateAccountingScenarioBoundary(resetAliasText, unrelatedVehicleScenario).hasExplicitConversationReset, true,
+        `a standalone heading alias establishes an explicit reset: ${resetAliasText}`);
+    }
 
     const interpretationQuestion = 'What documents are required by ACRA?';
     const interpretationHistory = [

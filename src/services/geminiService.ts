@@ -24,7 +24,7 @@ import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
-import { evaluateAccountingScenarioBoundary, hasExplicitPriorFactReference, isJournalDisplayRequest } from './conversationBoundary';
+import { evaluateAccountingScenarioBoundary, isJournalDisplayRequest } from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
@@ -58,37 +58,76 @@ import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalcul
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 
+const PROPERTY_PLANT_EQUIPMENT_TAXONOMY =
+  /\b(?:property\s*,?\s*plant\s*,?\s*(?:(?:and|&)\s*)?equipment|ppe)\b/gi;
+
 function hasCompatibleHypotheticalPurchaseContext(
   currentScenario: AccountingScenarioState | null,
   reportedAsset?: string
 ): boolean {
   if (!currentScenario || !reportedAsset) return false;
 
+  const purchaseTransactionTypes = new Set(['asset_purchase', 'trade_discount_purchase']);
+  const structuredTransactionType = currentScenario.underlyingTransaction?.type;
+  const semanticTransactionType = currentScenario.semanticUnderstanding?.transactionType;
+  const transactionType = structuredTransactionType && structuredTransactionType !== 'unclassified_transaction'
+    ? structuredTransactionType
+    : semanticTransactionType && semanticTransactionType !== 'unclassified_transaction'
+      ? semanticTransactionType
+      : undefined;
+  if (transactionType && !purchaseTransactionTypes.has(transactionType)) return false;
+
   const isAssetAcquisitionScenario = currentScenario.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION' ||
     currentScenario.scenarioType === 'PPE_IAS16' ||
     currentScenario.scenarioType === 'ASSET_PURCHASE_DISCOUNT' ||
-    currentScenario.underlyingTransaction?.type === 'asset_purchase' ||
-    currentScenario.semanticUnderstanding?.transactionType === 'asset_purchase';
+    (transactionType !== undefined && purchaseTransactionTypes.has(transactionType));
   if (!isAssetAcquisitionScenario) return false;
 
-  const priorAssetDescription = [
-    currentScenario.rawQuery,
-    currentScenario.transactionTitle,
-    currentScenario.underlyingTransaction?.assetName,
-    currentScenario.underlyingTransaction?.subject,
-    currentScenario.semanticUnderstanding?.subject
-  ].filter((description): description is string => typeof description === 'string')
-    .map(description => description.replace(/\bproperty,\s*plant\s+and\s+equipment\b/gi, ' '))
-    .join(' ');
-  const priorDescribesVehicle = /\b(?:vehicle|car|van|truck)\b/i.test(priorAssetDescription);
-  const priorDescribesEquipment = /\b(?:machine|machinery|equipment)\b/i.test(priorAssetDescription);
-  const hypotheticalAssetIsVehicle = reportedAsset === 'vehicle';
-  const hypotheticalAssetIsEquipment = /^(?:machine|machinery|equipment)$/.test(reportedAsset);
-  const hasAssetTypeMismatch =
-    (hypotheticalAssetIsVehicle && priorDescribesEquipment && !priorDescribesVehicle) ||
-    (hypotheticalAssetIsEquipment && priorDescribesVehicle && !priorDescribesEquipment);
+  const normalizedReportedAsset = reportedAsset.toLowerCase();
+  const requestedCategory = normalizedReportedAsset === 'vehicle'
+    ? 'vehicle'
+    : /^(?:machine|machinery|equipment)$/.test(normalizedReportedAsset)
+      ? 'equipment'
+      : undefined;
+  if (!requestedCategory) return false;
 
-  return !hasAssetTypeMismatch;
+  const classifyAssetIdentity = (description: string): 'vehicle' | 'equipment' | undefined => {
+    const normalizedDescription = description.replace(PROPERTY_PLANT_EQUIPMENT_TAXONOMY, ' ');
+    const priorDescribesVehicle = /\b(?:vehicle|car|van|truck)\b/i.test(normalizedDescription);
+    const priorDescribesEquipment = /\b(?:machine|machinery|equipment)\b/i.test(normalizedDescription);
+    if (priorDescribesVehicle === priorDescribesEquipment) return undefined;
+    if (priorDescribesVehicle) return 'vehicle';
+    return 'equipment';
+  };
+  const isGenericPpeDescription = (description: string): boolean => {
+    const genericRemainder = description
+      .replace(PROPERTY_PLANT_EQUIPMENT_TAXONOMY, ' ')
+      .replace(/\b(?:acquisition|purchase|asset|of|and|the|a|an)\b/gi, ' ')
+      .trim();
+    return genericRemainder.length === 0;
+  };
+  const assetNames = [
+    currentScenario.underlyingTransaction?.assetName,
+    currentScenario.assetName
+  ].filter((identity): identity is string =>
+      typeof identity === 'string' && identity.trim().length > 0 && !isGenericPpeDescription(identity)
+  );
+  const assetSubjects = [currentScenario.underlyingTransaction?.subject, currentScenario.semanticUnderstanding?.subject]
+    .filter((identity): identity is string =>
+      typeof identity === 'string' && identity.trim().length > 0 && !isGenericPpeDescription(identity)
+    );
+  const specificIdentities = assetNames.length ? assetNames : assetSubjects;
+  if (specificIdentities.length) {
+    return specificIdentities.every(identity => classifyAssetIdentity(identity) === requestedCategory);
+  }
+
+  if (currentScenario.scenarioType !== 'BUSINESS_EQUIPMENT_ACQUISITION' || requestedCategory !== 'equipment') return false;
+  const rawQuery = currentScenario.rawQuery || '';
+  const equipmentPurchase = /\b(?:(?:bought|purchased|acquired)\s+(?:(?:a|an|the|another|new|delivery|cargo|company|business)\s+)*(?:(?:piece|item)\s+of\s+)?|incurred\s+(?:(?:sgd|usd|eur|s\$|\$)\s*)?\d[\d,]*(?:\.\d+)?\s+on\s+(?:(?:a|an|the)\s+)?(?:(?:piece|item)\s+of\s+)?)(?:machine|machinery|equipment)\b(?=\s*(?:[,.!?;]|$)|\s+for\s+(?:(?:sgd|usd|eur|s\$|\$)\s*)?\d[\d,]*(?:\.\d+)?\b)/i.test(rawQuery);
+  if (!equipmentPurchase) return false;
+
+  const legacyDescription = [rawQuery, currentScenario.transactionTitle].filter(Boolean).join(' ');
+  return !/\b(?:vehicle|car|van|truck)\b/i.test(legacyDescription);
 }
 
 export interface GeminiResponse {
@@ -925,13 +964,13 @@ async function processAccountingQueryCore(
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
   const {
-    startsNewScenario: hasNewConversationBoundary, earlierPurchaseFollowUp, reportedHypotheticalPurchaseAsset
+    startsNewScenario: hasNewConversationBoundary, earlierPurchaseFollowUp, reportedHypotheticalPurchaseAsset,
+    hasExplicitPriorReference, hasExplicitConversationReset
   } = evaluateAccountingScenarioBoundary(userInput, currentScenario);
-  const hasExplicitPriorReference = hasExplicitPriorFactReference(userInput);
   const hasCompatibleAssetPurchaseContext = hasCompatibleHypotheticalPurchaseContext(
     currentScenario, reportedHypotheticalPurchaseAsset
   );
-  const isNewAccountingScenario = hasNewConversationBoundary || Boolean(
+  const isNewAccountingScenario = hasExplicitConversationReset || hasNewConversationBoundary || Boolean(
     reportedHypotheticalPurchaseAsset && !hasCompatibleAssetPurchaseContext && !hasExplicitPriorReference
   );
   if (isNewAccountingScenario) {
@@ -1074,7 +1113,8 @@ async function processAccountingQueryCore(
   const outputJournalRequested = Boolean(outputPreference?.journal);
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
   const deterministicClassification = classifyQuestion(userInput);
-  const explicitNewQuestion = /\b(?:new question|unrelated|(?:separate|different) (?:question|transaction))\b/i.test(userInput);
+  const explicitNewQuestion = hasExplicitConversationReset ||
+    /\b(?:new question|unrelated|(?:separate|different) (?:question|transaction))\b/i.test(userInput);
   // Scope the check to the new question. A quoted tax question can coexist
   // with an accounting follow-up, and an incidental asset mention in a new
   // statutory question does not make that question contextual.
