@@ -11,17 +11,32 @@ export function isJournalDisplayRequest(query: string): boolean {
 }
 
 const DISCOURSE_SUBJECT_NOUNS = '(?:facts?|details?|scenario|scenarios|situation|situations|case|cases|example|examples|calculation|calculations|journal|journals|entry|entries|answer|discussion|conversation|analysis)';
-const ACCOUNTING_SUBJECT_NOUNS = '(?:transaction|expense|purchase|supply|invoice|amount|asset|equipment|machine|machinery|salary|payroll|employee|worker|staff|payment|contract|lease|arrangement|deadline|rate)';
-const PRIOR_SUBJECT_NOUNS = `(?:${DISCOURSE_SUBJECT_NOUNS}|${ACCOUNTING_SUBJECT_NOUNS}|transactions|expenses|purchases|supplies|invoices|amounts|assets|salaries|employees|workers|payments|contracts|leases|arrangements|deadlines|rates)`;
-const PRIOR_SCENARIO_MODIFIER = '(?:(?:supplier|vendor|customer|client|business|company|equipment|machine|machinery|vehicle|asset|lease|rental|loan|employee|worker|staff|payroll|salary|cpf|gst|tax)\\s+){0,2}';
-const HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD = '(?!(?:\\s+(?:incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received|arising))?\\s+(?:for|in|from|during|of|under)\\s+(?:ya\\s*\\d{4}|fy\\s*\\d{4}|ya|fy|year\\s+of\\s+assessment|financial\\s+year|tax\\s+year|calendar\\s+year|(?:the\\s+)?(?:prior|previous|earlier|preceding|last)\\s+(?:years?|periods?|months?|quarters?)|\\d{4})\\b)';
+const ACCOUNTING_SUBJECT_NOUNS = '(?:transaction|expense|purchase|supply|invoice|amount|asset|equipment|machine|machinery|vehicle|salary|payroll|employee|worker|staff|payment|contract|lease|arrangement|deadline|rate)';
+const PRIOR_SUBJECT_NOUNS = `(?:${DISCOURSE_SUBJECT_NOUNS}|${ACCOUNTING_SUBJECT_NOUNS}|transactions|expenses|purchases|supplies|invoices|amounts|assets|vehicles|salaries|employees|workers|payments|contracts|leases|arrangements|deadlines|rates)`;
+const PRIOR_ADJECTIVE_MODIFIER = '(?:(?!year\\b|years\\b|period\\b|periods\\b|month\\b|months\\b|quarter\\b|quarters\\b|fy\\b|ya\\b)[a-z]+\\s+){0,2}';
+const HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD = `(?!\\s+(?:year|years|period|periods|month|months|quarter|quarters|fy|ya)\\b)(?!(?:\\s+${PRIOR_SUBJECT_NOUNS}){0,2}(?:\\s+(?:incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received|arising))?\\s+(?:for|in|from|during|of|under)\\s+(?:ya\\s*\\d{4}|fy\\s*\\d{4}|ya|fy|year\\s+of\\s+assessment|financial\\s+year|tax\\s+year|calendar\\s+year|(?:the\\s+)?(?:prior|previous|earlier|preceding|last)\\s+(?:years?|periods?|months?|quarters?)|\\d{4})\\b)`;
 const EXPLICIT_ADJECTIVE_SUBJECT_SOURCE =
   `(?:` +
-    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:above|foregoing|aforementioned)\\s+${PRIOR_SCENARIO_MODIFIER}${PRIOR_SUBJECT_NOUNS}|` +
-    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_SCENARIO_MODIFIER}${DISCOURSE_SUBJECT_NOUNS}|` +
-    `(?:the|our|my|this|that|these|those)\\s+(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_SCENARIO_MODIFIER}${PRIOR_SUBJECT_NOUNS}` +
+    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:above|foregoing|aforementioned)\\s+${PRIOR_ADJECTIVE_MODIFIER}${PRIOR_SUBJECT_NOUNS}|` +
+    `(?:(?:the|our|my|this|that|these|those)\\s+)?(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_ADJECTIVE_MODIFIER}${DISCOURSE_SUBJECT_NOUNS}|` +
+    `(?:the|our|my|this|that|these|those)\\s+(?:earlier|previous|prior|last|preceding)\\s+${PRIOR_ADJECTIVE_MODIFIER}${PRIOR_SUBJECT_NOUNS}` +
   `)\\b${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD}`;
 const SUBJECT_DISCUSSION_CLAUSE_SOURCE = `(?:the|our|my|this|that|these|those)\\s+(?:[a-z]+\\s+){0,2}${PRIOR_SUBJECT_NOUNS}\\s+(?:(?:that|which|whom|who)\\s+)?(?:(?:we|you|i)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|talked\\s+about|referred\\s+to|looked\\s+at|used|gave|calculated|established)|(?:was|were)\\s+(?:just\\s+|earlier\\s+|previously\\s+)?(?:discussed|mentioned|described|covered|provided|stated|established)\\b|(?:discussed|mentioned|described|provided|stated|noted|shown)\\s+(?:above|earlier|before|previously)\\b${HISTORICAL_PERIOD_QUALIFIER_LOOKAHEAD}|(?:above(?!\\s+(?:sgd|usd|eur|s\\$|\\$|\\d|the\\s+(?:[a-z]+\\s+)?(?:ceiling|limit|threshold|cap|rate|amount))\\b)|(?:previously|earlier)(?!\\s+(?:this|last|next|in|for|from|during|under|incurred|paid|accrued|billed|invoiced|recorded|recognised|recognized|claimed|deducted|disallowed|allowed|exempted|assessed|granted|applied|made|earned|received)\\b))\\b)`;
+
+const RESET_ADVERBS = '(?:(?:please|ever|just|simply|accidentally|completely|entirely|totally|really|actually|still|even)\\s+)*';
+const STRICT_RESET_ADVERBS = '(?:(?:ever|just|simply|accidentally|completely|entirely|totally|really|actually|still|even)\\s+)*';
+const DIRECT_RESET_NEGATOR = "(?:do\\s+not|don['’]?t|dont|does\\s+not|doesn['’]?t|doesnt|did\\s+not|didn['’]?t|didnt|cannot|can['’]?t|cant|should\\s+not|shouldn['’]?t|shouldnt|must\\s+not|mustn['’]?t|mustnt|need\\s+not|needn['’]?t|neednt|would\\s+not|wouldn['’]?t|wouldnt|could\\s+not|couldn['’]?t|couldnt|will\\s+not|won['’]?t|wont|may\\s+not|might\\s+not|shall\\s+not|shan['’]?t|shant|never)";
+const STATE_OR_PERFECT_NEGATOR = "(?:is\\s+not|isn['’]?t|isnt|are\\s+not|aren['’]?t|arent|am\\s+not|was\\s+not|wasn['’]?t|wasnt|were\\s+not|weren['’]?t|werent|have\\s+not|haven['’]?t|havent|has\\s+not|hasn['’]?t|hasnt|had\\s+not|hadn['’]?t|hadnt)";
+const RESET_CLAUSE_NEGATION_PATTERNS = [
+  new RegExp(`\\b${DIRECT_RESET_NEGATOR}\\s+${RESET_ADVERBS}$`, 'i'),
+  new RegExp(`(?:\\bnot\\s+to\\s+${RESET_ADVERBS}|\\b(?:let['’]?s|let\\s+us|you|we|they|i|he|she|it)\\s+not\\s+${STRICT_RESET_ADVERBS}|^\\s*(?:please\\s+)?not\\s+${STRICT_RESET_ADVERBS}|\\bnor\\s+${RESET_ADVERBS}|\\bwithout\\s+(?:to\\s+)?${STRICT_RESET_ADVERBS})$`, 'i'),
+  new RegExp(`(?:\\b(?:${DIRECT_RESET_NEGATOR}|${STATE_OR_PERFECT_NEGATOR})\\s+${STRICT_RESET_ADVERBS}(?:want|need|have|try|attempt|intend|mean|plan|expect|wish|like|choose|decide|agree|ask|tell|instruct|direct|require|allow|permit|advise|recommend|remind|warn|caution|encourage|going|supposed|meant|intended|trying|attempting|asking|telling|instructing|planning|expecting|wishing|needing|having|able|ready|willing|prepared)(?:\\s+(?:you|us|me|them|him|her|it|anyone|somebody|someone|the\\s+assistant|the\\s+model))?\\s+to|\\bno\\s+(?:need|reason|call|cause|grounds?|basis)(?:\\s+for\\s+(?:you|us|me|them|anyone))?\\s+to|\\b(?:${DIRECT_RESET_NEGATOR}|${STATE_OR_PERFECT_NEGATOR})\\s+${STRICT_RESET_ADVERBS}(?:say|saying|said|tell|telling|told|write|writing|state|stating|assume|assuming|think|thinking|imply|implying|suggest|suggesting)(?:\\s+(?:me|us|you|them))?(?:\\s+to)?)\\s+${RESET_ADVERBS}$`, 'i'),
+  new RegExp(`\\b(?:${DIRECT_RESET_NEGATOR}|not\\s+to)\\s+${STRICT_RESET_ADVERBS}[a-z]+(?:\\s+[a-z'’]+){0,4}\\s+or\\s+${STRICT_RESET_ADVERBS}$`, 'i')
+];
+
+function isNegatedResetClausePrefix(clausePrefix: string): boolean {
+  return RESET_CLAUSE_NEGATION_PATTERNS.some(pattern => pattern.test(clausePrefix));
+}
 
 /** Detects an affirmative instruction to ignore, disregard, or forget prior conversation context. */
 export function hasAffirmativeResetDirective(query: string): boolean {
@@ -36,8 +51,7 @@ export function hasAffirmativeResetDirective(query: string): boolean {
   for (const match of collapsedCoordinatedVerbs.matchAll(directivePattern)) {
     const matchIndex = match.index ?? 0;
     const clausePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/[.!?;,:]/).at(-1) ?? '';
-    const isNegatedClause = /\b(?:not|do\s+not|don['’]?t|dont|does\s+not|doesn['’]?t|doesnt|did\s+not|didn['’]?t|didnt|have\s+not|haven['’]?t|havent|has\s+not|hasn['’]?t|hasnt|had\s+not|hadn['’]?t|hadnt|never|cannot|can['’]?t|cant|should\s+not|shouldn['’]?t|shouldnt|must\s+not|mustn['’]?t|mustnt|need\s+not|needn['’]?t|neednt|would\s+not|wouldn['’]?t|wouldnt|could\s+not|couldn['’]?t|couldnt|will\s+not|won['’]?t|wont|is\s+not|isn['’]?t|isnt|are\s+not|aren['’]?t|arent|was\s+not|wasn['’]?t|wasnt|were\s+not|weren['’]?t|werent|no\s+(?:need|reason|call|cause)|without)\b(?:(?!\b(?:and|but|so|however|instead|rather)\b)\s+[a-z'’]+){0,8}\s*$/i.test(clausePrefix);
-    if (!isNegatedClause) return true;
+    if (!isNegatedResetClausePrefix(clausePrefix)) return true;
   }
   return false;
 }
@@ -97,6 +111,34 @@ export function isDeferredTaxInquiry(query: string): boolean {
     /\b(?:tax\s+depreciation|accelerated\s+(?:tax\s+)?(?:depreciation|write[ -]?off)|capital\s+allowances?|tax\s+base|temporary\s+differences?)\b/i.test(query);
 }
 
+const TRANSACTION_ACTION_PATTERN = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|leased|issued|subscribed|borrowed|took out|hired)\b/gi;
+
+function isHypotheticalOrNegatedTransactionAction(q: string, actionIndex: number): boolean {
+  const actionLead = q.slice(0, actionIndex).split(/[.!?;](?=\s+)/).at(-1) ?? '';
+  const clauseBeforeAction = actionLead.split(/[,;:]|\b(?:but|yet|however|instead|whereas)\b/i).at(-1) ?? '';
+  const isConditionalAction =
+    /(?:^\s*|[,;:]\s*|\b(?:and|but|or)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|say(?:\s+that)?|imagine(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead) ||
+    /\b(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|imagine(?:\s+that)?)\b/i.test(clauseBeforeAction);
+  const isInterrogativeConditionalAction =
+    /\b(?:what|how|which|where|who|when|would|could|should)\b[^.!?;]*\b(?:if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead);
+  const isModalAction =
+    /\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s*$/i.test(actionLead) ||
+    /(?:^\s*|[,;:]\s*)\bhad\s+(?:i|we|they|he|she|it|the\s+company|our\s+company)\s+(?:(?:subsequently|later|afterwards|then|also|instead|ever)\s+)*$/i.test(actionLead);
+  const isNegatedAction =
+    /\b(?:never|neither|nor|not|no\s+one|nobody|none\s+of\s+us|haven['’]?t|havent|hasn['’]?t|hasnt|hadn['’]?t|hadnt|didn['’]?t|didnt|don['’]?t|dont|doesn['’]?t|doesnt|wasn['’]?t|wasnt|weren['’]?t|werent|isn['’]?t|isnt|aren['’]?t|arent|cannot|can['’]?t|cant|couldn['’]?t|couldnt|wouldn['’]?t|wouldnt|shouldn['’]?t|shouldnt|mustn['’]?t|mustnt|won['’]?t|wont)\b(?:\s+(?:have|has|had|having|been|be|was|were|is|are|did|ever|actually|really|yet|even|still|subsequently|later|afterwards|then|also|just|simply))*\s*$/i.test(clauseBeforeAction) ||
+    /\b(?:not|never|didn['’]?t|didnt|don['’]?t|dont|doesn['’]?t|doesnt|isn['’]?t|isnt|aren['’]?t|arent|wasn['’]?t|wasnt|weren['’]?t|werent)\b[^,;:]*\b(?:that|say|said|claim|claimed|mean|meant|imply|implied|suggest|suggested|assume|assumed)\s+(?:that\s+)?(?:i|we|they|he|she|it|the\s+company|our\s+company)\s+(?:(?:had|have|has|ever|actually|really|subsequently|later|then|also)\s+)*$/i.test(clauseBeforeAction) ||
+    /(?:^\s*|\b(?:and|but|or)\s+)(?:no|neither)\s+(?:[a-z]+\s+){0,3}(?:was|were|has\s+been|have\s+been|had\s+been)?\s*(?:(?:ever|actually|subsequently|later)\s+)*$/i.test(clauseBeforeAction);
+  return isConditionalAction || isInterrogativeConditionalAction || isModalAction || isNegatedAction;
+}
+
+function analyzeTransactionActions(q: string) {
+  const transactionActions = [...q.matchAll(TRANSACTION_ACTION_PATTERN)];
+  const affirmativeTransactionActions = transactionActions.filter(
+    action => !isHypotheticalOrNegatedTransactionAction(q, action.index ?? 0)
+  );
+  return { transactionActions, affirmativeTransactionActions };
+}
+
 /**
  * A deliberately conservative UI safeguard. Most messages are routed
  * automatically; only a substantial transaction-like message that has no
@@ -114,7 +156,10 @@ export function assessConversationRelation(
   const q = query.toLowerCase().trim();
   const wordCount = q.split(/\s+/).filter(Boolean).length;
   const isShortFactReply = wordCount <= 4 || /^(?:sgd|usd|eur|s\$|\$)?\s*[\d,]+(?:\.\d+)?\s*(?:k|m|million|thousand)?$/i.test(q);
-  const continuationSignal = /\b(what if|instead|then|also|same|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|show|repeat|clarif)/i.test(q);
+  const { transactionActions, affirmativeTransactionActions } = analyzeTransactionActions(q);
+  const continuationSignal = /\b(what if|instead|then|also|same|above|that|this|these|those|it|they|discussed|mentioned|settle|settlement|recover|show|repeat|clarif)/i.test(q) ||
+    /\b(?:suppose(?:\s+that)?|assuming(?:\s+that)?|if\s+(?:i|we|they|the\s+company|our\s+company))\b/i.test(q) ||
+    (transactionActions.length > 0 && affirmativeTransactionActions.length === 0);
   const explicitNewSignal = /\b(new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example))\b/i.test(q) ||
     hasAffirmativeResetDirective(query);
 
@@ -149,9 +194,8 @@ export function startsNewAccountingScenario(
   if (isDeferredTaxInquiry(query)) return true;
 
   const q = query.toLowerCase();
-  const transactionActionPattern = /\b(bought|purchased|acquired|sold|disposed of|entered into|signed|leased|issued|subscribed|borrowed|took out|hired)\b/gi;
-  const transactionActions = [...q.matchAll(transactionActionPattern)];
-  const startsNewTransaction = transactionActions.length > 0;
+  const { affirmativeTransactionActions } = analyzeTransactionActions(q);
+  const startsNewTransaction = affirmativeTransactionActions.length > 0;
   // "$2,000" begins with a non-word character, so it cannot have a word
   // boundary immediately before it. Keep currency codes word-bounded while
   // accepting the standalone dollar symbol as an amount marker.
@@ -171,7 +215,7 @@ export function startsNewAccountingScenario(
     const leadingReferenceClause = query.split(/[,.;:!?]/, 1)[0];
     const leadingReferenceCanRestateAction = /\b(?:purchase|transaction|asset|equipment|machine|machinery|vehicle|lease|contract|arrangement|loan|shares?|employee|worker|staff|salary|payroll|scenario|situation|case|example|facts?|details?|discussion|conversation|analysis)\b/i.test(leadingReferenceClause);
     const hasSubsequentFollowUpReference = /\b(?:the|this|that|our)\s+(?:additional|second|subsequent)\s+(?:purchase|acquisition|transaction)\b/i.test(q);
-    return transactionActions.some(action => {
+    return affirmativeTransactionActions.some(action => {
       const actionIndex = action.index ?? 0;
       const actionEnd = actionIndex + action[0].length;
       const actionObject = q.slice(actionEnd);
@@ -180,11 +224,6 @@ export function startsNewAccountingScenario(
       const hasSeparateObject = /\b(?:new|another|additional|second|different)\s+(?:[a-z]+\s+)?(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter.split(/[,:]/, 1)[0]);
       const hasIndefiniteOrQuantifiedObject = /^\s+(?:(?:a|an|some|new|more|additional|two|three|four|five|\d+)\s+)?(?:[a-z]+\s+){0,2}(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter);
       const hasSubsequentOrAdditiveAction = /\b(?:(?:we|the company|our company|i)\s+)?(?:subsequently|later|afterwards|then|again|also|additionally|separately)(?:,\s*)?\s+(?:(?:we|the company|our company|i)\s+)?$/i.test(actionLead);
-      const isConditionalAction = /(?:^\s*|[,;]\s*|\b(?:and|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;]*$/i.test(actionLead);
-      const isInterrogativeConditionalAction = /\b(?:what|how)\b[^.!?;]*\bif\s+(?:[a-z]+\s+){0,3}(?:subsequently|later|afterwards|then|also)?\s*$/i.test(actionLead);
-      const isModalAction = /\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s*$/i.test(actionLead);
-      const isHypothetical = isConditionalAction || isInterrogativeConditionalAction || isModalAction;
-      if (isHypothetical) return false;
       if (hasSeparateObject && (hasTransactionDetail || hasNewSubject || hasSubsequentOrAdditiveAction)) return true;
       if ((hasSubsequentOrAdditiveAction || hasSubsequentFollowUpReference) && hasIndefiniteOrQuantifiedObject) return true;
       return !leadingReferenceCanRestateAction && hasTransactionDetail && hasNewSubject && hasIndefiniteOrQuantifiedObject;

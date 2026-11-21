@@ -877,7 +877,9 @@ for (const call of calls) {
       'Does that CPF rule apply? Do not say "forget the earlier employee details".',
       'Does that apply? Please do not disregard the earlier employee details.',
       'Does that CPF rule apply? Please do not ignore or disregard the earlier employee details.',
-      "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR."
+      "Does that CPF rule apply? Don't ever forget that she is a second-year Singapore PR.",
+      'Does that CPF rule apply? Remember not to forget that she is a second-year Singapore PR.',
+      'Does that CPF rule apply? Please proceed without forgetting the earlier employee details.'
     ];
     for (const negatedResetQuery of negatedResetQueries) {
       assert.equal(hasAffirmativeResetDirective(negatedResetQuery), false,
@@ -890,7 +892,9 @@ for (const call of calls) {
     for (const [index, retainedResetQuery] of [
       negatedResetQueries[0],
       negatedResetQueries[1],
-      negatedResetQueries[2]
+      negatedResetQueries[2],
+      negatedResetQueries[6],
+      negatedResetQueries[7]
     ].entries()) {
       const retainedTurn = { id: `boundary-negated-forget-user-${index}`, sender: 'user', timestamp: '', text: retainedResetQuery };
       const scopedRetainedHistory = buildAnalysisConversationHistory([
@@ -923,28 +927,38 @@ for (const call of calls) {
       );
     }
 
-    const affirmativeForgetQuery = 'Does that CPF rule apply? Forget that she is a second-year Singapore PR.';
-    assert.equal(hasAffirmativeResetDirective(affirmativeForgetQuery), true);
-    assert.equal(isShortSemanticFollowUp(affirmativeForgetQuery), false);
-    assert.equal(assessConversationRelation(affirmativeForgetQuery, employeeSetupScenario, employeeSetupScenario), 'NEW');
-    const affirmativeForgetTurn = { id: 'boundary-affirmative-forget-user', sender: 'user', timestamp: '', text: affirmativeForgetQuery };
-    const affirmativeForgetHistory = [
-      ...employeeSetupHistory,
-      employeeSetupAnswerTurn,
-      affirmativeForgetTurn
-    ];
-    const callsBeforeAffirmativeForget = boundaryCalls.length;
-    const affirmativeForgetResponse = await processAccountingQuery(
-      affirmativeForgetQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', affirmativeForgetHistory
-    );
-    assert.equal(affirmativeForgetResponse.conversationBoundaryMessageId, affirmativeForgetTurn.id,
-      'affirmative forget reset establishes a new conversationBoundaryMessageId');
-    const affirmativeForgetPrompt = boundaryCalls.slice(callsBeforeAffirmativeForget).map(call => call.prompt).join('\n');
-    assert.ok(
-      !affirmativeForgetPrompt.includes('58 years old') &&
-      !affirmativeForgetPrompt.includes(employeeSetupScenario.transactionTitle),
-      'affirmative forget reset clears prior employee history and active scenario from provider prompt'
-    );
+    for (const affirmativeResetQuery of [
+      'Does that CPF rule apply? Forget that she is a second-year Singapore PR.',
+      'Without further discussion please forget the previous transaction.',
+      'If that is not relevant please forget the previous transaction.'
+    ]) {
+      assert.equal(hasAffirmativeResetDirective(affirmativeResetQuery), true);
+      assert.equal(isShortSemanticFollowUp(affirmativeResetQuery), false);
+      assert.equal(assessConversationRelation(affirmativeResetQuery, employeeSetupScenario, employeeSetupScenario), 'NEW');
+    }
+    for (const [index, affirmativeResetQuery] of [
+      'Does that CPF rule apply? Forget that she is a second-year Singapore PR.',
+      'Does that CPF rule apply? Without further discussion please forget the previous transaction.'
+    ].entries()) {
+      const affirmativeForgetTurn = { id: `boundary-affirmative-forget-user-${index}`, sender: 'user', timestamp: '', text: affirmativeResetQuery };
+      const affirmativeForgetHistory = [
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        affirmativeForgetTurn
+      ];
+      const callsBeforeAffirmativeForget = boundaryCalls.length;
+      const affirmativeForgetResponse = await processAccountingQuery(
+        affirmativeResetQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', affirmativeForgetHistory
+      );
+      assert.equal(affirmativeForgetResponse.conversationBoundaryMessageId, affirmativeForgetTurn.id,
+        `affirmative forget reset establishes a new conversationBoundaryMessageId: ${affirmativeResetQuery}`);
+      const affirmativeForgetPrompt = boundaryCalls.slice(callsBeforeAffirmativeForget).map(call => call.prompt).join('\n');
+      assert.ok(
+        !affirmativeForgetPrompt.includes('58 years old') &&
+        !affirmativeForgetPrompt.includes(employeeSetupScenario.transactionTitle),
+        `affirmative forget reset clears prior employee history and active scenario from provider prompt: ${affirmativeResetQuery}`
+      );
+    }
 
     // Finding 3: Detailed (>260 chars) contextual statutory follow-up retains employee context vs >300-char new employee transaction
     const detailedEmployeeFollowUp =
@@ -984,6 +998,47 @@ for (const call of calls) {
       'detailed contextual employee follow-up excludes pre-boundary transaction history'
     );
 
+    for (const [index, ordinaryModifierFollowUp] of [
+      'How should we correct our previous director salary calculation?',
+      'What is the GST treatment for our previous car rental expense?',
+      'Can we claim a deduction for the earlier vehicle repair expense?'
+    ].entries()) {
+      assert.equal(hasExplicitPriorFactReference(ordinaryModifierFollowUp), true,
+        `ordinary modifier follow-up is recognized via explicit prior-fact reference: ${ordinaryModifierFollowUp}`);
+      assert.equal(isShortSemanticFollowUp(ordinaryModifierFollowUp), true,
+        `ordinary modifier follow-up is recognized as a short semantic follow-up: ${ordinaryModifierFollowUp}`);
+      assert.equal(assessConversationRelation(ordinaryModifierFollowUp, employeeSetupScenario, employeeSetupScenario), 'RELATED',
+        `ordinary modifier follow-up is classified as RELATED: ${ordinaryModifierFollowUp}`);
+      const modifierTurn = { id: `boundary-ordinary-modifier-user-${index}`, sender: 'user', timestamp: '', text: ordinaryModifierFollowUp };
+      const scopedModifierHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        modifierTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeModifier = boundaryCalls.length;
+      const modifierResponse = await processAccountingQuery(
+        ordinaryModifierFollowUp, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedModifierHistory
+      );
+      assert.equal(modifierResponse.conversationBoundaryMessageId, undefined,
+        `ordinary modifier follow-up retains conversationBoundaryMessageId: ${ordinaryModifierFollowUp}`);
+      const modifierPrompt = boundaryCalls.slice(callsBeforeModifier).map(call => call.prompt).join('\n');
+      assert.ok(
+        modifierPrompt.includes('58 years old') &&
+        modifierPrompt.includes('second-year Singapore PR') &&
+        modifierPrompt.includes('2026'),
+        `ordinary modifier follow-up retains scoped employee facts in provider prompt: ${ordinaryModifierFollowUp}`
+      );
+      assert.ok(
+        !modifierPrompt.includes(priorTransaction) && !modifierPrompt.includes(priorAnswer),
+        `ordinary modifier follow-up excludes pre-boundary transaction history: ${ordinaryModifierFollowUp}`
+      );
+    }
+    const historicalSalaryExpensesQuery = 'What IRAS deduction rules apply to the prior salary expenses for YA 2026?';
+    assert.equal(hasExplicitPriorFactReference(historicalSalaryExpensesQuery), false,
+      'historical-period salary expenses for YA 2026 must not attach as a prior-fact reference');
+    assert.equal(isShortSemanticFollowUp(historicalSalaryExpensesQuery), false,
+      'historical-period salary expenses for YA 2026 must not attach as a short semantic follow-up');
+
     const longSeparateNewEmployee =
       'We hired a new employee on a monthly salary of SGD 5,000, separate from the employee we discussed earlier, and she will also receive a fixed monthly transport allowance and an annual performance bonus once her probation period ends. Which CPF contribution rates and wage ceiling rules apply to this new employment arrangement in Singapore?';
     assert.ok(longSeparateNewEmployee.length > 300);
@@ -991,7 +1046,7 @@ for (const call of calls) {
     assert.equal(startsNewAccountingScenario(longSeparateNewEmployee, employeeSetupScenario), true);
     assert.equal(assessConversationRelation(longSeparateNewEmployee, employeeSetupScenario, employeeSetupScenario), 'NEW');
 
-    // Finding 4: Hiring another employee or another worker starts a new accounting scenario
+    // Finding 4: Hiring another employee or another worker starts a new accounting scenario; hypothetical or negated hiring stays RELATED
     for (const anotherHireQuery of [
       'We hired another employee for SGD 5,000 per month. What CPF rate applies?',
       'We hired another worker for SGD 4,500 per month. What CPF rate applies?'
@@ -1000,6 +1055,44 @@ for (const call of calls) {
         `hiring another employee/worker starts a new accounting scenario: ${anotherHireQuery}`);
       assert.equal(assessConversationRelation(anotherHireQuery, employeeSetupScenario, employeeSetupScenario), 'NEW',
         `hiring another employee/worker is classified as NEW: ${anotherHireQuery}`);
+    }
+    for (const hypotheticalOrNegatedHireQuery of [
+      'What if we hired another employee for SGD 5,000 per month?',
+      'Suppose we hired another employee for SGD 5,000 per month. What CPF rate applies?',
+      'We never hired another employee for SGD 5,000 per month.'
+    ]) {
+      assert.equal(startsNewAccountingScenario(hypotheticalOrNegatedHireQuery, employeeSetupScenario), false,
+        `hypothetical or negated hire does not start a new accounting scenario: ${hypotheticalOrNegatedHireQuery}`);
+      assert.equal(assessConversationRelation(hypotheticalOrNegatedHireQuery, employeeSetupScenario, employeeSetupScenario), 'RELATED',
+        `hypothetical or negated hire stays RELATED: ${hypotheticalOrNegatedHireQuery}`);
+    }
+    for (const [index, hypotheticalOrNegatedHireQuery] of [
+      'What if we hired another employee for SGD 5,000 per month?',
+      'We never hired another employee for SGD 5,000 per month.'
+    ].entries()) {
+      const hireFollowUpTurn = { id: `boundary-hypothetical-negated-hire-${index}`, sender: 'user', timestamp: '', text: hypotheticalOrNegatedHireQuery };
+      const scopedHireHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        hireFollowUpTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeHireFollowUp = boundaryCalls.length;
+      const hireFollowUpResponse = await processAccountingQuery(
+        hypotheticalOrNegatedHireQuery, employeeSetupScenario, 'SFRS_I', adapters[2].settings, 'unused', scopedHireHistory
+      );
+      assert.equal(hireFollowUpResponse.conversationBoundaryMessageId, undefined,
+        `hypothetical/negated hire follow-up retains conversationBoundaryMessageId: ${hypotheticalOrNegatedHireQuery}`);
+      const hireFollowUpPrompt = boundaryCalls.slice(callsBeforeHireFollowUp).map(call => call.prompt).join('\n');
+      assert.ok(
+        hireFollowUpPrompt.includes('58 years old') &&
+        hireFollowUpPrompt.includes('second-year Singapore PR') &&
+        hireFollowUpPrompt.includes('2026'),
+        `hypothetical/negated hire follow-up retains scoped employee facts in provider prompt: ${hypotheticalOrNegatedHireQuery}`
+      );
+      assert.ok(
+        !hireFollowUpPrompt.includes(priorTransaction) && !hireFollowUpPrompt.includes(priorAnswer),
+        `hypothetical/negated hire follow-up excludes pre-boundary transaction history: ${hypotheticalOrNegatedHireQuery}`
+      );
     }
 
     const payrollInitTurn = {
