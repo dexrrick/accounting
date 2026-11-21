@@ -20,6 +20,11 @@ export function normalizeEvidenceText(value: string): string {
   return value.normalize('NFC').replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+export function isWorkedExampleHeading(value: string): boolean {
+  return /^(?:(?:worked\s+)?example(?:\s+\d+)?|scenario(?:\s+[a-z0-9]+)?)(?:\s*[:—–-]|\s*$)/i
+    .test(normalizeEvidenceText(value));
+}
+
 export function startsAttachedEvidenceQualification(value: string): boolean {
   return ATTACHED_QUALIFICATION_START.test(normalizeEvidenceText(value));
 }

@@ -233,6 +233,60 @@ try {
   assert.equal(insufficient.evidenceQuality.status,'INSUFFICIENT');
 } finally {globalThis.fetch=originalFetch;}
 
+{
+  const sourceUrl = IRAS_SOURCE_MAP_DEFINITIONS.find(record => record.id === 'IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP').canonicalSourceUrl;
+  const lateExample = 'In this scenario, Company B claims capital allowances of $10,000 over the remaining one year.';
+  const followingRule = 'Both parties must complete a Section 24 notice of election for the transferred assets.';
+  // Model the IRAS page's native headings and tables, with enough earlier material to require excerpt selection.
+  const otherSections = Array.from({ length: 140 }, (_, index) =>
+    `<p>Reference ${index + 1} explains a separate administrative form and gives general background about record keeping.</p>`).join('');
+  const page = `<html><head><title>Capital Allowances</title></head><body><main>
+    <h1>Capital Allowances</h1>${otherSections}
+    <p>Companies can claim capital allowances under Section 19 or Section 19A on qualifying plant and machinery.</p>
+    <h3>Implications of a Section 24 Election</h3>
+    <p>When the election applies, the transfer uses the asset's tax written-down value.</p>
+    <h4>Example</h4>
+    <p>Company A bought a machine for $30,000 and later transferred it to Company B.</p>
+    <p>Company A had been claiming capital allowances using the three-year write-off.</p>
+    <h5>Scenario A: Section 24 is Elected</h5>
+    <table><tr><th>Assessment year</th><th>Allowance</th><th>Tax written-down value</th></tr>
+    <tr><td>2019</td><td>$10,000</td><td>$20,000</td></tr>
+    <tr><td>2020</td><td>$10,000</td><td>$10,000</td></tr></table>
+    <p>${lateExample}</p>
+    <h5>Scenario B: Section 24 is Not Elected</h5>
+    <p>The example uses the selling price to determine the buyer's basis.</p>
+    <h3>How to Elect for Section 24</h3><p>${followingRule}</p>
+  </main></body></html>`;
+  const sourceContext = await buildGroundedReasoningContext(
+    'How do capital allowances under Section 19A work for qualifying plant and machinery?',
+    null,
+    { retrieveSources: async () => [], getSourceById: id => UNIFIED_SOURCE_REGISTRY[id], findSourcesByStandardOrAct: () => [] },
+    undefined,
+    {
+      authorityLevelDiscovery: false,
+      discoveryAdapter: { discoverOfficialSourceCandidates: async () => [] },
+      officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [], getLastSearchTrace: () => [] },
+      fetchOptions: {
+        useCache: false,
+        customFetch: async input => String(input) === sourceUrl
+          ? new Response(page, { headers: { 'content-type': 'text/html' } })
+          : new Response('Unavailable in this fixture', { status: 404 })
+      }
+    }
+  );
+  const pageRecord = sourceContext.evidenceQuality?.eligibleRecords.find(record =>
+    record.provenance === 'LIVE_EXTERNAL' && record.canonicalSourceUrl === sourceUrl);
+  assert.ok(pageRecord, 'the mapped Capital Allowances page yields an eligible official excerpt');
+  assert.ok(pageRecord.sourceText.length <= 5_000 && !pageRecord.sourceText.includes('Reference 100 explains'),
+    'the source record uses the capped excerpt of the original page');
+  assert.ok(pageRecord.sourceText.includes(lateExample), 'the selected excerpt can contain the late example passage');
+  assert.ok(pageRecord.workedExampleSourceText?.some(section =>
+    section.includes(lateExample) && section.includes('Scenario B: Section 24 is Not Elected')),
+    'the official excerpt retains example scope from the full native section, across table rows and nested headings');
+  assert.ok(pageRecord.workedExampleSourceText.every(section => !section.includes(followingRule)),
+    'the next peer or enclosing heading ends the worked example');
+}
+
 const ir21Map = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_IR21_SOURCE_MAP');
 const bonusMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP');
 const aisMap = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_AIS_IR8A_SOURCE_MAP');

@@ -2663,16 +2663,62 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
 {
   const queryText = 'Our old machine was sold and replaced by a new machine. Can we claim capital allowances?';
   const generalRule = 'Capital allowances are granted on qualifying plant and machinery used in trade or business.';
-  const exampleQuote = 'Company A was claiming capital allowances over a 3-year write-off under Section 19A before selling the machine to company B.';
+  const exampleQuote = 'Company B claims AA based on the TWDV of the asset over the remaining working life of the asset.';
+  const followingSectionRule = 'Both parties must prepare a Section 24 Notice of Election and document details of the fixed assets transferred.';
   const topic = 'iras_capital_allowances';
+  const fullDocumentText = [
+    generalRule,
+    '### Transferring Fixed Assets to Related Companies',
+    'When a company takes over or buys fixed assets from a related company, both companies may elect to transfer assets under Section 24.',
+    '### Implications of a Section 24 Election',
+    'The buyer claims annual allowance based on the TWDV of the asset over the remaining working life.',
+    '#### Example',
+    'In 2018, Company A bought a machine for $30,000 with cash. In 2020, the machine was sold to Company B (a subsidiary of Company A) for $25,000. Both companies have a 31 Dec year end.',
+    'Company A was claiming capital allowances over a 3-year write-off under Section 19A before selling the machine to Company B.',
+    '##### Scenario A: Section 24 is Elected',
+    'The capital allowance schedule for Company A (seller) is as follows:',
+    '| Description | Machine ($) |',
+    '| --- | --- |',
+    '| Cost | 30,000 |',
+    '| YA 2019 AA | 10,000 |',
+    '| TWDV c/f | 20,000 |',
+    '| YA 2020 AA | 10,000 |',
+    '| TWDV c/f | 10,000 |',
+    'The capital allowance schedule for Company B (buyer) is as follows:',
+    '| Description | Machine ($) |',
+    '| --- | --- |',
+    '| Cost | 10,000 |',
+    '| YA 2021 AA | 10,000 |',
+    '| TWDV c/f | 0 |',
+    exampleQuote,
+    '##### Scenario B: Section 24 is Not Elected',
+    'It is necessary to compute BA or BC for Company A based on the selling price.',
+    '| Description | Machine ($) |',
+    '| --- | --- |',
+    '| Cost | 30,000 |',
+    '| Sale proceeds | 25,000 |',
+    '| TWDV c/f | 10,000 |',
+    'The balancing charge is taxable as income.',
+    '### How to Elect for Section 24',
+    followingSectionRule
+  ].join('\n\n');
+  const exampleSectionStart = fullDocumentText.indexOf('#### Example');
+  const followingSectionStart = fullDocumentText.indexOf('\n\n### How to Elect for Section 24', exampleSectionStart);
+  assert.ok(exampleSectionStart >= 0 && followingSectionStart > exampleSectionStart);
+  const workedExampleSection = fullDocumentText.slice(exampleSectionStart, followingSectionStart);
+  const selectedExcerpt = fullDocumentText.split('\n\n')
+    .filter(block => !/^#{1,6}\s+/.test(block))
+    .join('\n\n');
+  assert.ok(!selectedExcerpt.includes('#### Example') && selectedExcerpt.includes(exampleQuote),
+    'the source excerpt retains a late example-specific claim while omitting native heading levels');
   const source = makeAdmittedNarrativeSource({
     id: 'LIVE_TOPIC_iras_capital_allowances_worked_example_test', authority: 'IRAS',
     title: 'Capital Allowances',
     url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
     domain: 'IRAS_TAX', topicId: topic,
-    sourceText: [generalRule, 'Example: Related-company transfer', 'Both companies have a 31 Dec year end.',
-      exampleQuote, 'Scenario A: Section 24 is Elected'].join('\n\n')
+    sourceText: selectedExcerpt
   });
+  source.workedExampleSourceText = [workedExampleSection];
   source.authorityName = 'Inland Revenue Authority of Singapore (IRAS)';
   source.sourcePublisher = 'Inland Revenue Authority of Singapore (IRAS)';
   source.legalOrStandardInstrument = 'Income Tax Act 1947';
@@ -2681,6 +2727,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     issueId: 'issue-iras-capital-allowances-example', authority: 'IRAS', domain: 'IRAS_INCOME_TAX',
     subject: 'capital allowances on qualifying machinery', population: 'COMPANY', source, legacyQuote: generalRule
   });
+  issue.admittedDocumentContexts[0].sourceText = fullDocumentText;
   issue.sourceSections = ['IRAS_TAX'];
   const issuePlanIssues = [plannedNarrativeIssue(issue)];
   const makeIrasInput = query => makeInput({
@@ -2709,12 +2756,17 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     unlabelledPacket = packetFrom(prompt);
     const generalPassage = unlabelledPacket.evidencePassages.find(item => item.completeAdmittedPassage === generalRule);
     const examplePassage = unlabelledPacket.evidencePassages.find(item => item.completeAdmittedPassage === exampleQuote);
+    const followingRulePassage = unlabelledPacket.evidencePassages.find(item => item.completeAdmittedPassage === followingSectionRule);
+    assert.ok(followingRulePassage, 'the source excerpt retains the post-example Section 24 election rule');
     assert.equal(generalPassage?.sourceScope, undefined);
     assert.equal(examplePassage?.sourceScope, 'WORKED_EXAMPLE',
-      'the verified-claim path identifies the Company A/B fact from its own eligible live source record without supplemental context');
+      'the eligible live-source example remains in scope after several paragraphs and multi-column tables');
+    assert.equal(followingRulePassage?.sourceScope, undefined,
+      'the following Section 24 election instructions are outside the worked-example section');
     return { claims: [
       claim('iras-supported-general-rule', generalRule, [generalPassage.id]),
-      claim('iras-unlabelled-example-as-case', exampleQuote, [examplePassage.id])
+      claim('iras-unlabelled-example-as-case', exampleQuote, [examplePassage.id]),
+      claim('iras-following-section-rule', followingSectionRule, [followingRulePassage.id])
     ] };
   }, ({ prompt }) => {
     const supportPacket = packetFrom(prompt);
@@ -2722,7 +2774,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
       'the unlabelled example claim is rejected deterministically before a model support verdict can admit it');
     return { verdicts: [] };
   });
-  const verifiedClaimsWithoutSupplementalContext = [generalRule, exampleQuote].map(quote => ({
+  const verifiedClaimsWithoutSupplementalContext = [generalRule, exampleQuote, followingSectionRule].map(quote => ({
     recordId: source.id, quote, text: quote, supportKind: 'EXACT_SOURCE_QUOTE',
     canonicalUrl: source.canonicalSourceUrl, sourceAdmissionOptions: { targetDate: ADMITTED_DOCUMENT_TEST_DATE }
   }));
@@ -2732,7 +2784,9 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     evidenceQuality: { eligibleRecords: [source], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
   }), { call: unlabelledScript.call });
   assert.ok(unlabelledResult);
-  assert.deepEqual(unlabelledResult.verification.admittedClaimIds, ['iras-supported-general-rule']);
+  assert.deepEqual(unlabelledResult.verification.admittedClaimIds, [
+    'iras-supported-general-rule', 'iras-following-section-rule'
+  ]);
   assert.deepEqual(unlabelledResult.verification.withheldClaimIds, ['iras-unlabelled-example-as-case']);
   assert.equal(unlabelledResult.verification.providerCalls, 1,
     'a model SUPPORTED verdict cannot publish the source example as an unlabeled client fact');
@@ -2769,7 +2823,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   const momUrl = 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days';
   const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
   const deadlineQuote = 'For overtime work, payment must be made within 14 days after the last day of the salary period.';
-  const contractQuote = 'If an employee is not covered under Part 4 of the Employment Act, terms and conditions of employment will be according to the employment contract.';
+  const contractQuote = 'If you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract.';
   const salaryQuote = 'For employees covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.';
   const momSource = makeAdmittedNarrativeSource({
     id: 'LIVE_TOPIC_mom_overtime_scope_qualification_test', authority: 'MOM',
@@ -2852,7 +2906,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   assert.match(result.messageText, /ordinary salary at least once a month and within 7 days/);
   assert.match(result.messageText, /apply only to those covered under Part 4 of the Employment Act/);
   assert.match(result.messageText, /within 14 days after the last day of the salary period/);
-  assert.match(result.messageText, /terms and conditions of employment will be according to the employment contract/);
+  assert.match(result.messageText, /terms and conditions of employment will be according to your employment contract/);
   assert.match(result.messageText, /Whether the employment contract provides overtime pay/);
   assert.doesNotMatch(result.messageText, /the 14-day deadline does not apply|Section 21\(2\) never applies/i);
   assert.ok(result.verification.withheldClaimIds.includes('mom-unqualified-14-day-deadline'));

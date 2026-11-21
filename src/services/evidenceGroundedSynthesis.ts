@@ -12,7 +12,7 @@ import type { AuthorityWorkstreamsResult, AuthorityIssueEvidence, AuthorityAdmit
 import type { GroundedReasoningContext } from './groundingContextBuilder';
 import { isCurrentRequestCompletenessContext } from './requestCompleteness';
 import { verifyEvidenceClaims, type VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
-import { completeVisibleEvidenceListSpan, normalizeEvidenceText, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
+import { completeVisibleEvidenceListSpan, isWorkedExampleHeading, normalizeEvidenceText, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { validateJournalGroups } from '../verification/journalIntegrity';
@@ -277,18 +277,33 @@ function passageFromClaim(
 const MAX_ADMITTED_DOCUMENT_SOURCE_CHARS = 12_000;
 const NARRATIVE_DOCUMENT_AUTHORITIES = new Set<StatutoryAuthority>(['CPF', 'MOM', 'MAS', 'ACRA', 'IRAS']);
 
-function isWorkedExampleQuote(sourceText: string, quote: string): boolean {
+function hasNearbyWorkedExampleLabel(sourceText: string, quote: string): boolean {
   const blocks = splitEvidenceTextBlocks(sourceText);
   const normalizedQuote = normalizeEvidenceText(quote);
   const quoteIndex = blocks.findIndex(block => normalizeEvidenceText(block).includes(normalizedQuote));
   if (quoteIndex < 0) return false;
   const precedingBlocks = blocks.slice(Math.max(0, quoteIndex - 2), quoteIndex);
-  if (precedingBlocks.some(block => /^(?:#{1,6}\s*)?(?:example(?:\s+\d+)?|scenario(?:\s+[a-z0-9]+)?)(?:\s*[:—–-]|\s*$)/i.test(block))) return true;
+  if (precedingBlocks.some(block => isWorkedExampleHeading(block.replace(/^#{1,6}\s+/, '')))) return true;
   const isPlaceholderPartyFact = /\bcompany\s+[A-Z]\b/i.test(quote);
   const hasTwoPartySetup = precedingBlocks.some(block => /\b(?:both|each|two)\s+companies\b/i.test(block));
   const followingBlocks = blocks.slice(quoteIndex + 1, quoteIndex + 3);
-  const hasScenarioHeadingAfter = followingBlocks.some(block => /^(?:#{1,6}\s*)?scenario(?:\s+[a-z0-9]+)?(?:\s*[:—–-]|\s*$)/i.test(block));
+  const hasScenarioHeadingAfter = followingBlocks.some(block => {
+    const heading = block.replace(/^#{1,6}\s+/, '');
+    return /^scenario\b/i.test(heading) && isWorkedExampleHeading(heading);
+  });
   return isPlaceholderPartyFact && hasTwoPartySetup && hasScenarioHeadingAfter;
+}
+
+function isWorkedExampleQuote(
+  sourceText: string,
+  quote: string,
+  workedExampleSourceText?: string[]
+): boolean {
+  if (workedExampleSourceText !== undefined) {
+    const normalizedQuote = normalizeEvidenceText(quote);
+    return workedExampleSourceText.some(section => normalizeEvidenceText(section).includes(normalizedQuote));
+  }
+  return hasNearbyWorkedExampleLabel(sourceText, quote);
 }
 
 function isEligibleLiveWorkedExample(record: AuthoritativeSourceRecord, quote: string): boolean {
@@ -298,7 +313,7 @@ function isEligibleLiveWorkedExample(record: AuthoritativeSourceRecord, quote: s
     record.authority === record.sourceAuthority &&
     ['AUTHORITATIVE_SOURCE', 'OFFICIAL_GUIDANCE'].includes(record.sourceType) &&
     ['PRIMARY_SOURCE', 'OFFICIAL_GUIDANCE'].includes(record.evidenceTier) &&
-    isWorkedExampleQuote(record.sourceText, quote);
+    isWorkedExampleQuote(record.sourceText, quote, record.workedExampleSourceText);
 }
 
 function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassage[] {
@@ -309,7 +324,7 @@ function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassag
   const contractExclusionPassages = passages.filter(passage => isMomScopePassage(passage) &&
     /\bnot covered under Part\s+4\b/i.test(passage.verifiedQuote) &&
     /\bterms and conditions of employment\b/i.test(passage.verifiedQuote) &&
-    /\baccording to the employment contract\b/i.test(passage.verifiedQuote));
+    /\baccording to (?:your|the) employment contract\b/i.test(passage.verifiedQuote));
   const scopePassages = [...coveragePassages, ...contractExclusionPassages];
   if (!scopePassages.length) return passages;
   return passages.map(passage => {
@@ -342,7 +357,7 @@ function applyAdmittedExampleScope(
         if (!record || !issue.admittedDocumentTargetDate ||
             !isCurrentAdmittedNarrativeDocument(issue, record, issue.admittedDocumentTargetDate)) continue;
         const context = admittedDocumentContextForRecord(issue, record, issue.admittedDocumentTargetDate);
-        if (!context || !isWorkedExampleQuote(context.sourceText, passage.verifiedQuote)) continue;
+        if (!context || !isWorkedExampleQuote(context.sourceText, passage.verifiedQuote, record.workedExampleSourceText)) continue;
         return {
           ...passage,
           sourceScope: 'WORKED_EXAMPLE',
@@ -470,7 +485,7 @@ function buildAdmittedDocumentPassages(
       if (passage) passages.push({
         ...passage,
         needsSemanticSupport: true,
-        ...(isWorkedExampleQuote(completeContext.sourceText, claim.quote) ? { sourceScope: 'WORKED_EXAMPLE' as const } : {}),
+        ...(isWorkedExampleQuote(completeContext.sourceText, claim.quote, record.workedExampleSourceText) ? { sourceScope: 'WORKED_EXAMPLE' as const } : {}),
         documentContextRef,
         documentContextText: completeContext.sourceText
       });
@@ -501,7 +516,7 @@ function buildWorkstreamPassages(
           const contextTargetDate = issue.admittedDocumentTargetDate;
           const context = contextTargetDate ? admittedDocumentContextForRecord(issue, record, contextTargetDate) : undefined;
           const isAdmittedCurrentContext = Boolean(context && isCurrentAdmittedNarrativeDocument(issue, record, contextTargetDate));
-          passages.push(isAdmittedCurrentContext && context && isWorkedExampleQuote(context.sourceText, claim.quote)
+          passages.push(isAdmittedCurrentContext && context && isWorkedExampleQuote(context.sourceText, claim.quote, record.workedExampleSourceText)
             ? { ...passage, sourceScope: 'WORKED_EXAMPLE' }
             : passage);
         }

@@ -8,6 +8,7 @@ const tsxCli = path.join(projectRoot, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 
 const testSuites = [
   { name: 'AI-first Advisory Foundation', file: 'test_ai_first_advisory_phase1.mjs', layer: 'provider-resilience', tier: 'smoke' },
+  { name: 'Vision Attachments and Invoice Correction', file: 'test_vision_attachments.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Claim Review', file: 'test_evidence_grounded_synthesis.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Evidence-Grounded Synthesis Production Pipeline', file: 'test_evidence_grounded_synthesis_pipeline.mjs', layer: 'retrieval-evidence', tier: 'smoke' },
   { name: 'Synthesis Numeric Provenance', file: 'test_synthesis_numeric_provenance.mjs', layer: 'retrieval-evidence', tier: 'smoke' },

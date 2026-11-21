@@ -50,7 +50,7 @@ const correctionImageTurn = {
 };
 const correctionVision = { imageEvidence: [{
   imageIndex: 1, documentType: 'supplier_invoice', confidence: 0.6,
-  fields: { invoiceNo: 'INV-202', invoiceDate: '20/01/2025', total: 500, currency: 'SGD' }
+  fields: { documentTitle: 'Supplier Invoice', invoiceNo: 'INV-202', invoiceDate: '20/01/2025', total: 500, currency: 'SGD' }
 }] };
 const invoiceProposal = (total, eventDate = '20/01/2025', foreignCurrency) => ({
   messageText: 'Proposed invoice journal.',
@@ -292,6 +292,24 @@ try {
   assert.deepEqual(negatedSupplierHeading.scenarioState.directGroups, []);
   assert.equal(correctionProviderRequests.length, 0, 'a negated supplier heading is clarified before Gemini');
 
+  const retainedTypeOnlyState = structuredClone(descriptionOnlyInvoiceState);
+  retainedTypeOnlyState.imageEvidence[0].documentType = 'supplier_invoice';
+  retainedTypeOnlyState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Invoice';
+  retainedTypeOnlyState.evidence = flattenImageEvidence(retainedTypeOnlyState.imageEvidence);
+  correctionProviderRequests.length = 0;
+  const retainedTypeOnlyInvoice = await processAccountingQuery(
+    capturedCorrectionText,
+    retainedTypeOnlyState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'retained-invoice-type-only', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.match(retainedTypeOnlyInvoice.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+    'retained supplier_invoice classification cannot authorize a generic invoice');
+  assert.deepEqual(retainedTypeOnlyInvoice.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0);
+
   const descriptionWithSupplierEvidence = structuredClone(descriptionOnlyInvoiceState);
   descriptionWithSupplierEvidence.imageEvidence[0].fields.push({
     source: 'image', imageId: 'image-202', field: 'supplier', value: 'ABC Maintenance Services Pte Ltd', confidence: 0.95
@@ -306,9 +324,185 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'supplier-context-invoice', sender: 'user', timestamp: '', text: capturedCorrectionText }]
   );
-  assert.equal(getDisplayableUncommittedJournalGroups(contextBoundDescription.scenarioState, 'SFRS_I').length, 1,
-    'a description-only invoice can be corrected when structured supplier evidence establishes direction');
+  assert.match(contextBoundDescription.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+    'a supplier name on a generic invoice does not establish purchase direction');
+  assert.deepEqual(contextBoundDescription.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0, 'a supplier field alone cannot authorize a correction proposal');
+
+  const explicitInvoiceTypeState = structuredClone(descriptionOnlyInvoiceState);
+  explicitInvoiceTypeState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Invoice';
+  explicitInvoiceTypeState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'invoiceType', value: 'supplier purchase invoice', confidence: 0.95
+  });
+  explicitInvoiceTypeState.evidence = flattenImageEvidence(explicitInvoiceTypeState.imageEvidence);
+  correctionProviderRequests.length = 0;
+  const explicitInvoiceTypeCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    explicitInvoiceTypeState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'explicit-invoice-type', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  const explicitInvoiceTypeGroups = getDisplayableUncommittedJournalGroups(explicitInvoiceTypeCorrection.scenarioState, 'SFRS_I');
+  assert.equal(explicitInvoiceTypeGroups.length, 1, 'a visible explicit invoiceType can establish direction');
+  assert.equal(explicitInvoiceTypeGroups[0].totalDebit, 600);
+  assert.equal(explicitInvoiceTypeGroups[0].totalCredit, 600);
   assert.ok(correctionProviderRequests.length > 0);
+
+  for (const uncertainType of ['sales/purchase', 'possible purchase invoice', 'purchase?']) {
+    const uncertainInvoiceTypeState = structuredClone(descriptionOnlyInvoiceState);
+    uncertainInvoiceTypeState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Invoice';
+    uncertainInvoiceTypeState.imageEvidence[0].fields.push({
+      source: 'image', imageId: 'image-202', field: 'invoiceType', value: uncertainType, confidence: 0.95
+    });
+    uncertainInvoiceTypeState.evidence = flattenImageEvidence(uncertainInvoiceTypeState.imageEvidence);
+    correctionProviderRequests.length = 0;
+    const uncertainInvoiceType = await processAccountingQuery(
+      capturedCorrectionText,
+      uncertainInvoiceTypeState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `uncertain-invoice-type-${uncertainType}`, sender: 'user', timestamp: '', text: capturedCorrectionText }]
+    );
+    assert.match(uncertainInvoiceType.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+      `${uncertainType} is not an explicit purchase invoice type`);
+    assert.deepEqual(uncertainInvoiceType.scenarioState.directGroups, []);
+    assert.equal(correctionProviderRequests.length, 0);
+  }
+
+  const payableOnlyInvoiceState = structuredClone(descriptionOnlyInvoiceState);
+  payableOnlyInvoiceState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'amountPayable', value: 500, confidence: 0.95
+  });
+  payableOnlyInvoiceState.evidence = flattenImageEvidence(payableOnlyInvoiceState.imageEvidence);
+  correctionProviderRequests.length = 0;
+  const payableOnlyInvoice = await processAccountingQuery(
+    capturedCorrectionText,
+    payableOnlyInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'payable-only-invoice', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.match(payableOnlyInvoice.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+    'an amount payable field alone does not establish purchase direction');
+  assert.deepEqual(payableOnlyInvoice.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0);
+
+  const noNumberInvoiceState = structuredClone(descriptionOnlyInvoiceState);
+  noNumberInvoiceState.imageEvidence[0].fields = noNumberInvoiceState.imageEvidence[0].fields
+    .filter(field => !/invoice(?:number|no|id)/i.test(field.field));
+  noNumberInvoiceState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Invoice';
+  noNumberInvoiceState.evidence = flattenImageEvidence(noNumberInvoiceState.imageEvidence);
+  correctionProviderRequests.length = 0;
+  const noNumberClarification = await processAccountingQuery(
+    capturedCorrectionText,
+    noNumberInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'no-number-invoice-direction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.match(noNumberClarification.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+    'an identifiable invoice heading without an invoice number still enters the correction flow');
+  assert.deepEqual(noNumberClarification.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0);
+
+  correctionProviderRequests.length = 0;
+  const confirmedNoNumberCorrection = await processAccountingQuery(
+    'This is a supplier purchase invoice. The invoice total is SGD 600.',
+    noNumberInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'confirmed-no-number-invoice', sender: 'user', timestamp: '', text: 'This is a supplier purchase invoice. The invoice total is SGD 600.' }]
+  );
+  const confirmedNoNumberGroups = getDisplayableUncommittedJournalGroups(confirmedNoNumberCorrection.scenarioState, 'SFRS_I');
+  assert.equal(confirmedNoNumberCorrection.scenarioState.amount, 600);
+  assert.equal(confirmedNoNumberGroups.length, 1,
+    'a clear user confirmation and corrected total can proceed without an invoice number');
+  assert.equal(confirmedNoNumberGroups[0].totalDebit, 600);
+  assert.equal(confirmedNoNumberGroups[0].totalCredit, 600);
+  assert.deepEqual(confirmedNoNumberGroups[0].lines.map(line => [line.category, line.debit, line.credit]), [
+    ['EXPENSE', 600, 0], ['LIABILITY', 0, 600]
+  ]);
+  assert.equal(validateJournalGroups(confirmedNoNumberGroups).isValid, true);
+  assert.ok(correctionProviderRequests.length > 0);
+
+  correctionProviderRequests.length = 0;
+  const unconfirmedNoNumberCorrection = await processAccountingQuery(
+    'This is a supplier purchase invoice. The invoice total is SGD 600?',
+    noNumberInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'question-mark-invoice-total', sender: 'user', timestamp: '', text: 'This is a supplier purchase invoice. The invoice total is SGD 600?' }]
+  );
+  assert.match(unconfirmedNoNumberCorrection.messageText, /Please confirm the supplier purchase direction and corrected total/i);
+  assert.deepEqual(unconfirmedNoNumberCorrection.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0, 'a question-mark total does not authorize a journal proposal');
+
+  const negatedInvoiceTypeState = structuredClone(noNumberInvoiceState);
+  negatedInvoiceTypeState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Supplier Invoice';
+  negatedInvoiceTypeState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'invoiceType', value: 'Not a purchase invoice', confidence: 0.95
+  });
+  negatedInvoiceTypeState.evidence = flattenImageEvidence(negatedInvoiceTypeState.imageEvidence);
+  for (const confirmationText of [
+    capturedCorrectionText,
+    'This is a supplier purchase invoice. The invoice total is SGD 600.'
+  ]) {
+    correctionProviderRequests.length = 0;
+    const negatedInvoiceType = await processAccountingQuery(
+      confirmationText,
+      negatedInvoiceTypeState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `negated-invoice-type-${confirmationText.length}`, sender: 'user', timestamp: '', text: confirmationText }]
+    );
+    assert.match(negatedInvoiceType.messageText, /does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note/i,
+      'a negated invoiceType overrides both an affirmative heading and user confirmation');
+    assert.deepEqual(negatedInvoiceType.scenarioState.directGroups, []);
+    assert.equal(correctionProviderRequests.length, 0);
+  }
+
+  const explicitNoNumberPurchaseState = structuredClone(noNumberInvoiceState);
+  explicitNoNumberPurchaseState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Supplier Invoice';
+  explicitNoNumberPurchaseState.evidence = flattenImageEvidence(explicitNoNumberPurchaseState.imageEvidence);
+  for (const questionedTotal of ['The invoice total is SGD 600?', 'My invoice total is SGD 600?']) {
+    correctionProviderRequests.length = 0;
+    const questionedStandaloneTotal = await processAccountingQuery(
+      questionedTotal,
+      explicitNoNumberPurchaseState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `questioned-standalone-invoice-total-${questionedTotal.length}`, sender: 'user', timestamp: '', text: questionedTotal }]
+    );
+    assert.match(questionedStandaloneTotal.messageText, /Please confirm the corrected invoice total in a statement without a question mark/i);
+    assert.deepEqual(questionedStandaloneTotal.scenarioState.directGroups, []);
+    assert.equal(correctionProviderRequests.length, 0, `${questionedTotal} cannot prepare an explicit supplier invoice`);
+  }
+
+  const confirmedCustomerInvoiceState = structuredClone(noNumberInvoiceState);
+  confirmedCustomerInvoiceState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Customer Sales Invoice';
+  confirmedCustomerInvoiceState.evidence = flattenImageEvidence(confirmedCustomerInvoiceState.imageEvidence);
+  correctionProviderRequests.length = 0;
+  const confirmedCustomerInvoice = await processAccountingQuery(
+    'This is a supplier purchase invoice. The invoice total is SGD 600.',
+    confirmedCustomerInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'confirmed-opposite-invoice', sender: 'user', timestamp: '', text: 'This is a supplier purchase invoice. The invoice total is SGD 600.' }]
+  );
+  assert.match(confirmedCustomerInvoice.messageText, /identifies a customer sales invoice or credit note/i,
+    'an explicit user confirmation cannot override a conflicting customer invoice heading');
+  assert.deepEqual(confirmedCustomerInvoice.scenarioState.directGroups, []);
+  assert.equal(correctionProviderRequests.length, 0);
 
   for (const oppositeDirection of ['sale', 'customer_sales_invoice', 'credit_note']) {
     const oppositeInvoiceState = structuredClone(capturedInvoiceState);
@@ -615,6 +809,7 @@ try {
 
   const unrelatedImageState = structuredClone(initialCorrectionState.scenarioState);
   unrelatedImageState.imageEvidence.push({ imageId: 'statement-204', documentType: 'investment_statement', fields: [
+    { source: 'image', field: 'documentTitle', value: 'Invoice Summary' },
     { source: 'image', field: 'total', value: 9000 }
   ] });
   proposedInvoice = invoiceProposal(600);

@@ -28,6 +28,8 @@ export interface AuthoritativeSourceRecord {
   standardOrActCode: string;
   paragraphOrSection: string;
   sourceText: string;
+  /** Restrictive scope context from native official headings for quotes retained in sourceText. */
+  workedExampleSourceText?: string[];
   principleSummary: string;
   effectiveDate?: string; // Optional: unknown effective dates must remain undefined, NEVER generic fake dates
   revisionDate?: string;

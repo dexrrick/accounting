@@ -9,6 +9,7 @@ import {
   type BoundedStatutoryAdvisoryRequest
 } from './statutoryAdvisorySupport';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import { isWorkedExampleHeading } from '../utils/evidenceTextBoundaries';
 import {
   isAcraAuditExemptionContextRequest,
   type AcraAuditExemptionContextRequest
@@ -126,11 +127,14 @@ export interface TopicContentExpectation {
   preserveNativeDisclosureProse?: boolean;
   /** Preserves the one registered ACRA audit-exemption conditional heading for its bounded request. */
   acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
+  /** Keep example scopes when an official excerpt may omit the enclosing headings. */
+  collectWorkedExampleSourceText?: boolean;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
   pageTitle?: string;
   substantiveText?: string;
+  workedExampleSourceText?: string[];
 }
 
 /** Flatten balanced HTML list items into visible, individually marked blocks. */
@@ -848,6 +852,24 @@ function removeNavigationalSummaryLead(markup: string, rawDocument: string): str
   return withoutLead;
 }
 
+/** Keep nested scenario headings and tables inside their enclosing example. */
+function extractWorkedExampleSourceText(markup: string): string[] {
+  const examples: string[] = [];
+  let active: { level: number; start: number } | undefined;
+  for (const heading of markup.matchAll(/<h([1-6])\b([^>]*)>([\s\S]*?)<\/h\1\s*>/gi)) {
+    if (isHiddenMarkupAttributes(heading[2])) continue;
+    const level = Number(heading[1]);
+    const start = heading.index;
+    if (active && level <= active.level) {
+      examples.push(cleanHtmlText(markup.slice(active.start, start)));
+      active = undefined;
+    }
+    if (!active && isWorkedExampleHeading(cleanHtmlText(heading[3]))) active = { level, start };
+  }
+  if (active) examples.push(cleanHtmlText(markup.slice(active.start)));
+  return examples;
+}
+
 /** Remove page chrome before topic matching so menu labels cannot act as evidence. */
 function extractVisiblePageText(
   rawDocument: string,
@@ -859,8 +881,9 @@ function extractVisiblePageText(
     cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
     cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
     preserveNativeDisclosureProse?: boolean;
+    collectWorkedExampleSourceText?: boolean;
   } = {}
-): string {
+): { text: string; workedExampleSourceText?: string[] } {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
@@ -911,7 +934,7 @@ function extractVisiblePageText(
   }
   const deadlineTable = options.requireAcraAnnualReturnDeadlineTable
     ? findSimpleAcraDeadlineTable(visibleMarkup) : undefined;
-  if (options.requireAcraAnnualReturnDeadlineTable && !deadlineTable && hasAcraDeadlineTableHeader(visibleMarkup)) return '';
+  if (options.requireAcraAnnualReturnDeadlineTable && !deadlineTable && hasAcraDeadlineTableHeader(visibleMarkup)) return { text: '' };
   const tableMarker = '\uE100ACRA_DEADLINE_TABLE\uE101';
   if (deadlineTable) {
     for (const tableMarkup of deadlineTable.rawHtml) {
@@ -920,7 +943,7 @@ function extractVisiblePageText(
   }
   if (options.acraAuditExemptionContextRequest) {
     const visibleAuditMarkup = removeHiddenAcraAuditMarkup(visibleMarkup, options.acraAuditExemptionContextRequest);
-    if (visibleAuditMarkup === undefined) return '';
+    if (visibleAuditMarkup === undefined) return { text: '' };
     visibleMarkup = visibleAuditMarkup;
   }
   if (options.requireSubstantiveBody) {
@@ -936,7 +959,12 @@ function extractVisiblePageText(
   // are visible list formatting, not added tax-rule text.
   const listAwareMarkup = preserveListItemBoundaries(visibleMarkup);
   const visibleText = cleanHtmlText(listAwareMarkup);
-  return deadlineTable ? visibleText.replaceAll(tableMarker, deadlineTable.text) : visibleText;
+  return {
+    text: deadlineTable ? visibleText.replaceAll(tableMarker, deadlineTable.text) : visibleText,
+    ...(options.collectWorkedExampleSourceText
+      ? { workedExampleSourceText: extractWorkedExampleSourceText(listAwareMarkup) }
+      : {})
+  };
 }
 
 const TOPIC_TERM_STOPWORDS = new Set(['a', 'an', 'and', 'of', 'the']);
@@ -1120,14 +1148,15 @@ export class ExternalSourceValidator {
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
     const cpfWageDefinitionRequest = expectation.cpfAdditionalWageDefinitionRequest ||
       expectation.cpfOrdinaryWageDefinitionRequest;
-    const substantiveText = extractVisiblePageText(rawDocument, {
+    const { text: substantiveText, workedExampleSourceText } = extractVisiblePageText(rawDocument, {
       preferMainContent: expectation.preferMainContent,
       requireSubstantiveBody: expectation.requireSubstantiveBody,
       requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
       acraAuditExemptionContextRequest: expectation.acraAuditExemptionContextRequest,
       cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
       cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest,
-      preserveNativeDisclosureProse: expectation.preserveNativeDisclosureProse
+      preserveNativeDisclosureProse: expectation.preserveNativeDisclosureProse,
+      collectWorkedExampleSourceText: expectation.collectWorkedExampleSourceText
     });
     if (cpfWageDefinitionRequest &&
         (!isBoundedStatutoryAdvisoryRequest(cpfWageDefinitionRequest) ||
@@ -1196,7 +1225,12 @@ export class ExternalSourceValidator {
       return { isValid: false, errorCode: 'MALFORMED_DOCUMENT_STRUCTURE', reason: 'Fetched page does not contain enough topic-specific terms to support the mapped topic', pageTitle, substantiveText };
     }
 
-    return { isValid: true, pageTitle, substantiveText };
+    return {
+      isValid: true,
+      pageTitle,
+      substantiveText,
+      ...(workedExampleSourceText?.length ? { workedExampleSourceText } : {})
+    };
   }
 
   /**

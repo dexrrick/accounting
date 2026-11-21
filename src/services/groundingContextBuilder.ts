@@ -2194,7 +2194,11 @@ export async function resolveMappedOfficialSourceFallback(
         .replace(/<a\b[^>]*>([\s\S]*?)<\/a\s*>/gi, (anchor, contents: string) =>
           /<(?:div|section|p)\b/i.test(contents) ? ' ' : anchor)
       : result.content;
-    let contentValidation = defaultExternalSourceValidator.validateTopicContent(ruleDocument, expectation);
+    let contentValidation = defaultExternalSourceValidator.validateTopicContent(ruleDocument, {
+      ...expectation,
+      collectWorkedExampleSourceText: topic.domainId.startsWith('IRAS_') &&
+        (finalHost === 'iras.gov.sg' || finalHost === 'www.iras.gov.sg')
+    });
     if (!contentValidation.isValid) {
       attempt.fetchStatus = 'TOPIC_MISMATCH';
       attempt.titleMatched = false;
@@ -2357,6 +2361,9 @@ export async function resolveMappedOfficialSourceFallback(
       return undefined;
     }
     const fetchedRecord = makeLiveCandidateEvidence(topic, pointer, result.pageTitle || pointer?.documentTitle || topic.title, result.finalUrl, excerpt, result.contentHash, result.retrievedAt);
+    if (contentValidation.workedExampleSourceText) {
+      fetchedRecord.workedExampleSourceText = contentValidation.workedExampleSourceText;
+    }
     const extractedDocument = extractedDocuments.get(candidateUrl);
     if (extractedDocument) fetchedRecord.sourceLocator = extractedDocument.sourceLocator;
     const record = fetchedRecord;
