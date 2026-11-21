@@ -2660,4 +2660,298 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   assert.equal(supportPacket.claims.find(item => item.claimId === 'cpf-payroll-checklist').citedPassages.length, 3);
 }
 
+{
+  const queryText = 'Our old machine was sold and replaced by a new machine. Can we claim capital allowances?';
+  const generalRule = 'Capital allowances are granted on qualifying plant and machinery used in trade or business.';
+  const exampleQuote = 'Company A was claiming capital allowances over a 3-year write-off under Section 19A before selling the machine to company B.';
+  const topic = 'iras_capital_allowances';
+  const source = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_iras_capital_allowances_worked_example_test', authority: 'IRAS',
+    title: 'Capital Allowances',
+    url: 'https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances',
+    domain: 'IRAS_TAX', topicId: topic,
+    sourceText: [generalRule, 'Example: Related-company transfer', 'Both companies have a 31 Dec year end.',
+      exampleQuote, 'Scenario A: Section 24 is Elected'].join('\n\n')
+  });
+  source.authorityName = 'Inland Revenue Authority of Singapore (IRAS)';
+  source.sourcePublisher = 'Inland Revenue Authority of Singapore (IRAS)';
+  source.legalOrStandardInstrument = 'Income Tax Act 1947';
+  source.standardOrActCode = 'IRAS';
+  const issue = makeCurrentAdmittedNarrativeIssue({
+    issueId: 'issue-iras-capital-allowances-example', authority: 'IRAS', domain: 'IRAS_INCOME_TAX',
+    subject: 'capital allowances on qualifying machinery', population: 'COMPANY', source, legacyQuote: generalRule
+  });
+  issue.sourceSections = ['IRAS_TAX'];
+  const issuePlanIssues = [plannedNarrativeIssue(issue)];
+  const makeIrasInput = query => makeInput({
+    query, issues: [issue], issuePlanIssues,
+    evidenceQuality: { eligibleRecords: [source], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  });
+
+  let ordinaryPacket;
+  const ordinaryScript = scriptedCall(({ prompt }) => {
+    ordinaryPacket = packetFrom(prompt);
+    const generalPassage = ordinaryPacket.evidencePassages.find(item => item.completeAdmittedPassage === generalRule);
+    assert.ok(generalPassage);
+    assert.equal(generalPassage.sourceScope, undefined,
+      'a general rule is not labelled as an example merely because a worked example appears later in the document');
+    return { claims: [claim('iras-general-rule-fast-path', generalRule, [generalPassage.id], {
+      issueId: issue.issueId, kind: 'RULE'
+    })] };
+  });
+  const ordinaryResult = await tryGenerateGroundedSynthesis(makeIrasInput(queryText), { call: ordinaryScript.call });
+  assert.ok(ordinaryResult);
+  assert.equal(ordinaryResult.verification.providerCalls, 1,
+    'an exact general IRAS rule remains on the existing fast path');
+
+  let unlabelledPacket;
+  const unlabelledScript = scriptedCall(({ prompt }) => {
+    unlabelledPacket = packetFrom(prompt);
+    const generalPassage = unlabelledPacket.evidencePassages.find(item => item.completeAdmittedPassage === generalRule);
+    const examplePassage = unlabelledPacket.evidencePassages.find(item => item.completeAdmittedPassage === exampleQuote);
+    assert.equal(generalPassage?.sourceScope, undefined);
+    assert.equal(examplePassage?.sourceScope, 'WORKED_EXAMPLE',
+      'the verified-claim path identifies the Company A/B fact from its own eligible live source record without supplemental context');
+    return { claims: [
+      claim('iras-supported-general-rule', generalRule, [generalPassage.id]),
+      claim('iras-unlabelled-example-as-case', exampleQuote, [examplePassage.id])
+    ] };
+  }, ({ prompt }) => {
+    const supportPacket = packetFrom(prompt);
+    assert.equal(supportPacket.claims.length, 0,
+      'the unlabelled example claim is rejected deterministically before a model support verdict can admit it');
+    return { verdicts: [] };
+  });
+  const verifiedClaimsWithoutSupplementalContext = [generalRule, exampleQuote].map(quote => ({
+    recordId: source.id, quote, text: quote, supportKind: 'EXACT_SOURCE_QUOTE',
+    canonicalUrl: source.canonicalSourceUrl, sourceAdmissionOptions: { targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }));
+  const unlabelledResult = await tryGenerateGroundedSynthesis(makeInput({
+    query: queryText, noWorkstreams: true,
+    claimVerification: { accepted: verifiedClaimsWithoutSupplementalContext, rejected: [] },
+    evidenceQuality: { eligibleRecords: [source], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: unlabelledScript.call });
+  assert.ok(unlabelledResult);
+  assert.deepEqual(unlabelledResult.verification.admittedClaimIds, ['iras-supported-general-rule']);
+  assert.deepEqual(unlabelledResult.verification.withheldClaimIds, ['iras-unlabelled-example-as-case']);
+  assert.equal(unlabelledResult.verification.providerCalls, 1,
+    'a model SUPPORTED verdict cannot publish the source example as an unlabeled client fact');
+
+  const exampleQuery = 'Please explain IRAS’s worked example for a transfer of machinery between related companies.';
+  let exampleSupportPacket;
+  const labelledScript = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const examplePassage = packet.evidencePassages.find(item => item.completeAdmittedPassage === exampleQuote);
+    assert.equal(examplePassage?.sourceScope, 'WORKED_EXAMPLE');
+    return { claims: [claim('iras-labelled-example', `In IRAS’s worked example, ${exampleQuote}`,
+      [examplePassage.id], { issueId: issue.issueId })] };
+  }, ({ prompt }) => {
+    exampleSupportPacket = packetFrom(prompt);
+    assert.match(exampleSupportPacket.factContext.currentQuestion.text, /worked example/i);
+    assert.equal(exampleSupportPacket.claims[0].citedPassages[0].sourceScope, 'WORKED_EXAMPLE');
+    return { verdicts: exampleSupportPacket.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE'
+    })) };
+  });
+  const labelledResult = await tryGenerateGroundedSynthesis(makeIrasInput(exampleQuery), { call: labelledScript.call });
+  assert.ok(labelledResult);
+  assert.match(labelledResult.messageText, /In IRAS’s worked example/);
+  assert.deepEqual(labelledResult.verification.admittedClaimIds, ['iras-labelled-example'],
+    'a requested and clearly labelled worked example remains available with its source citation');
+  assert.equal(labelledResult.verification.providerCalls, 2,
+    'only the worked-example claim enters the existing selective support call');
+}
+
+{
+  const queryText = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+  const salaryIssueId = 'issue-mom-ordinary-salary-scope-test';
+  const overtimeIssueId = 'issue-mom-overtime-scope-test';
+  const momUrl = 'https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days';
+  const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
+  const deadlineQuote = 'For overtime work, payment must be made within 14 days after the last day of the salary period.';
+  const contractQuote = 'If an employee is not covered under Part 4 of the Employment Act, terms and conditions of employment will be according to the employment contract.';
+  const salaryQuote = 'For employees covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.';
+  const momSource = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_mom_overtime_scope_qualification_test', authority: 'MOM',
+    title: 'Hours of work, overtime and rest day', url: momUrl,
+    domain: 'MOM_EMPLOYMENT', topicId: 'mom_overtime',
+    sourceText: [coverageQuote, deadlineQuote, contractQuote].join('\n\n')
+  });
+  const overtimeIssue = makeCurrentAdmittedNarrativeIssue({
+    issueId: overtimeIssueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'overtime payment and coverage for an employee not covered by Part 4',
+    population: 'EMPLOYEE', source: momSource, legacyQuote: coverageQuote
+  });
+  overtimeIssue.applicationStatus = 'UNRESOLVED';
+  overtimeIssue.operation = 'EXPLAIN_RULE';
+  overtimeIssue.evidenceRequirement = 'AUTHORITATIVE_SOURCE';
+  overtimeIssue.gaps = [{ issueId: overtimeIssueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: overtimeIssue.subject, operation: 'COMPARE', stage: 'covered', code: 'MISSING_FACT',
+    reason: 'Whether the employment contract provides overtime pay and what payment terms it sets.' }];
+  const salarySource = makeCapturedOfficialSource({
+    id: 'LIVE_TOPIC_mom_salary_deadline_scope_control', authority: 'MOM', title: 'Paying salary',
+    url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary', quote: salaryQuote
+  });
+  const salaryIssue = makeNumericSourceIssue({
+    issueId: salaryIssueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'ordinary salary payment deadline', sourceQuotes: [{ source: salarySource, quote: salaryQuote }]
+  });
+  salaryIssue.population = 'EMPLOYEE';
+  salaryIssue.operation = 'EXPLAIN_RULE';
+  const issues = [salaryIssue, overtimeIssue];
+  const issuePlanIssues = issues.map(plannedNarrativeIssue);
+  let generationPacket;
+  let supportPacket;
+  const scripted = scriptedCall(({ prompt }) => {
+    generationPacket = packetFrom(prompt);
+    const passage = (issueId, quote) => {
+      const found = generationPacket.evidencePassages.find(item => item.issueId === issueId && item.completeAdmittedPassage === quote);
+      assert.ok(found, `the current issue provides its admitted passage: ${quote}`);
+      return found;
+    };
+    const salary = passage(salaryIssueId, salaryQuote);
+    const coverage = passage(overtimeIssueId, coverageQuote);
+    const deadline = passage(overtimeIssueId, deadlineQuote);
+    const contract = passage(overtimeIssueId, contractQuote);
+    assert.deepEqual(deadline.requiredScopePassageIds, [coverage.id],
+      'only the same-issue MOM overtime deadline receives its related Part 4 qualification');
+    assert.equal(salary.requiredScopePassageIds, undefined,
+      'ordinary salary remains a separately scoped rule');
+    const unqualifiedDeadline = 'For overtime work, payment must be made within 14 days after the last day of the salary period.';
+    const qualifiedDeadline = `${coverageQuote} ${deadlineQuote}`;
+    return { claims: [
+      claim('mom-ordinary-salary-7-day-rule', salaryQuote, [salary.id], { issueId: salaryIssueId }),
+      claim('mom-part-4-scope', coverageQuote, [coverage.id], { issueId: overtimeIssueId }),
+      claim('mom-contract-scope', contractQuote, [contract.id], { issueId: overtimeIssueId }),
+      claim('mom-unqualified-14-day-deadline', unqualifiedDeadline, [deadline.id], { issueId: overtimeIssueId }),
+      claim('mom-qualified-14-day-deadline', qualifiedDeadline, [deadline.id, coverage.id], { issueId: overtimeIssueId }),
+    ] };
+  }, ({ prompt }) => {
+    supportPacket = packetFrom(prompt);
+    assert.ok(!supportPacket.claims.some(item => item.claimId === 'mom-unqualified-14-day-deadline'),
+      'the unqualified deadline is rejected by deterministic claim validation before the support model can accept it');
+    const qualified = supportPacket.claims.find(item => item.claimId === 'mom-qualified-14-day-deadline');
+    assert.ok(qualified);
+    assert.ok(qualified.citedPassages.some(item => item.completeAdmittedPassage === coverageQuote),
+      'support review receives the deadline claim with its same-issue Part 4 qualification');
+    return { verdicts: supportPacket.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED',
+      claimType: item.kind === 'APPLICATION' ? 'CONDITIONAL_APPLICATION' : 'RULE'
+    })) };
+  });
+  const result = await tryGenerateGroundedSynthesis(makeInput({
+    query: queryText,
+    history: [
+      { id: 'mom-covered-user', sender: 'user', timestamp: '', text: 'The employee is covered by the Employment Act and works overtime.' },
+      { id: 'mom-covered-assistant', sender: 'ai', timestamp: '', text: 'The overtime rules apply.' }
+    ],
+    issues, issuePlanIssues,
+    evidenceQuality: { eligibleRecords: [salarySource, momSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: scripted.call });
+  assert.ok(result);
+  assert.match(result.messageText, /ordinary salary at least once a month and within 7 days/);
+  assert.match(result.messageText, /apply only to those covered under Part 4 of the Employment Act/);
+  assert.match(result.messageText, /within 14 days after the last day of the salary period/);
+  assert.match(result.messageText, /terms and conditions of employment will be according to the employment contract/);
+  assert.match(result.messageText, /Whether the employment contract provides overtime pay/);
+  assert.doesNotMatch(result.messageText, /the 14-day deadline does not apply|Section 21\(2\) never applies/i);
+  assert.ok(result.verification.withheldClaimIds.includes('mom-unqualified-14-day-deadline'));
+  assert.ok(result.verification.admittedClaimIds.includes('mom-qualified-14-day-deadline'));
+  assert.ok(result.verification.admittedClaimIds.includes('mom-ordinary-salary-7-day-rule'));
+  assert.equal(result.verification.providerCalls, 2,
+    'the deterministic scope check adds no extra model pass and the existing selective support call handles valid claims');
+
+  const contractOnlySource = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_mom_overtime_contract_scope_fallback_test', authority: 'MOM',
+    title: 'Hours of work, overtime and rest day', url: momUrl,
+    domain: 'MOM_EMPLOYMENT', topicId: 'mom_overtime',
+    sourceText: [deadlineQuote, contractQuote].join('\n\n')
+  });
+  const contractOnlyIssue = makeCurrentAdmittedNarrativeIssue({
+    issueId: 'issue-mom-overtime-contract-scope-fallback', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'overtime deadline and non-Part-4 contract terms', population: 'EMPLOYEE',
+    source: contractOnlySource, legacyQuote: contractQuote
+  });
+  const fallbackPlan = [plannedNarrativeIssue(contractOnlyIssue)];
+  let fallbackSupportPacket;
+  const fallbackScript = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const deadline = packet.evidencePassages.find(item => item.completeAdmittedPassage === deadlineQuote);
+    const contract = packet.evidencePassages.find(item => item.completeAdmittedPassage === contractQuote);
+    assert.ok(deadline && contract);
+    assert.deepEqual(deadline.requiredScopePassageIds, [contract.id],
+      'the contract exclusion is the same-issue fallback when a separate Part 4 coverage excerpt is absent');
+    return { claims: [
+      claim('mom-fallback-unqualified-deadline', deadlineQuote, [deadline.id], { issueId: contractOnlyIssue.issueId }),
+      claim('mom-fallback-qualified-deadline', `${contractQuote} ${deadlineQuote}`,
+        [deadline.id, contract.id], { issueId: contractOnlyIssue.issueId })
+    ] };
+  }, ({ prompt }) => {
+    fallbackSupportPacket = packetFrom(prompt);
+    assert.ok(!fallbackSupportPacket.claims.some(item => item.claimId === 'mom-fallback-unqualified-deadline'));
+    const qualified = fallbackSupportPacket.claims.find(item => item.claimId === 'mom-fallback-qualified-deadline');
+    assert.ok(qualified?.citedPassages.some(item => item.completeAdmittedPassage === contractQuote));
+    assert.ok(qualified.citedPassages.every(item => item.issueId === contractOnlyIssue.issueId),
+      'the fallback does not transfer the contract exclusion from another issue');
+    return { verdicts: fallbackSupportPacket.claims.map(item => ({
+      claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE'
+    })) };
+  });
+  const fallbackResult = await tryGenerateGroundedSynthesis(makeInput({
+    query: queryText, issues: [contractOnlyIssue], issuePlanIssues: fallbackPlan,
+    evidenceQuality: { eligibleRecords: [contractOnlySource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: fallbackScript.call });
+  assert.ok(fallbackResult);
+  assert.ok(fallbackResult.verification.withheldClaimIds.includes('mom-fallback-unqualified-deadline'));
+  assert.ok(fallbackResult.verification.admittedClaimIds.includes('mom-fallback-qualified-deadline'));
+  assert.equal(fallbackResult.verification.providerCalls, 2);
+
+  const splitIssueSource = makeCapturedOfficialSource({
+    id: 'LIVE_TOPIC_mom_split_issue_deadline_and_contract_scope_test', authority: 'MOM',
+    title: 'Hours of work, overtime and rest day', url: momUrl,
+    quote: [deadlineQuote, contractQuote].join('\n\n')
+  });
+  const deadlineOnlyIssue = makeNumericSourceIssue({
+    issueId: 'issue-mom-deadline-no-cross-scope', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'overtime payment deadline', sourceQuotes: [{ source: splitIssueSource, quote: deadlineQuote }]
+  });
+  const otherContractIssue = makeNumericSourceIssue({
+    issueId: 'issue-mom-contract-separate-scope', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'contract treatment for non-Part-4 employees', sourceQuotes: [{ source: splitIssueSource, quote: contractQuote }]
+  });
+  deadlineOnlyIssue.population = 'EMPLOYEE';
+  otherContractIssue.population = 'EMPLOYEE';
+  const splitIssueScopes = [deadlineOnlyIssue, otherContractIssue, salaryIssue];
+  const separateScopeScript = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const deadline = packet.evidencePassages.find(item => item.issueId === deadlineOnlyIssue.issueId &&
+      item.completeAdmittedPassage === deadlineQuote);
+    const contract = packet.evidencePassages.find(item => item.issueId === otherContractIssue.issueId &&
+      item.completeAdmittedPassage === contractQuote);
+    const salary = packet.evidencePassages.find(item => item.issueId === salaryIssueId &&
+      item.completeAdmittedPassage === salaryQuote);
+    assert.ok(deadline);
+    assert.equal(deadline.requiredScopeUnavailable, true,
+      'the exact source has a qualifying Part 4 passage, but only under another issue');
+    assert.ok(contract && salary);
+    return { claims: [
+      claim('mom-split-issue-exact-deadline', deadlineQuote, [deadline.id], { issueId: deadlineOnlyIssue.issueId }),
+      claim('mom-split-issue-contract-rule', contractQuote, [contract.id], { issueId: otherContractIssue.issueId }),
+      claim('mom-split-issue-salary-rule', salaryQuote, [salary.id], { issueId: salaryIssueId })
+    ] };
+  });
+  const splitIssueResult = await tryGenerateGroundedSynthesis(makeInput({
+    query: queryText, issues: splitIssueScopes, issuePlanIssues: splitIssueScopes.map(plannedNarrativeIssue),
+    evidenceQuality: { eligibleRecords: [splitIssueSource, salarySource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: separateScopeScript.call });
+  assert.ok(splitIssueResult);
+  assert.ok(splitIssueResult.verification.withheldClaimIds.includes('mom-split-issue-exact-deadline'));
+  assert.ok(splitIssueResult.verification.admittedClaimIds.includes('mom-split-issue-contract-rule'));
+  assert.ok(splitIssueResult.verification.admittedClaimIds.includes('mom-split-issue-salary-rule'));
+  assert.doesNotMatch(splitIssueResult.messageText, /within 14 days/,
+    'a valid contract or salary answer survives while the deadline cannot borrow a qualifier across issues');
+  assert.equal(splitIssueResult.verification.providerCalls, 1,
+    'the unavailable deadline is withheld before support review, with no extra model stage');
+}
+
 console.log('PASS: evidence-grounded synthesis admission, deterministic guards, scoped gaps, and provider diagnostics');

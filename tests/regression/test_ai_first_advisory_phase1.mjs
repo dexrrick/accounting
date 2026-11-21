@@ -1886,22 +1886,30 @@ for (const call of calls) {
     const shareOutput = { shareStructure: true };
     const initialShareQuestion =
       "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.";
+    const callsBeforeShareCalculation = boundaryCalls.length;
     const initialShareResponse = await processAccountingQuery(
-      initialShareQuestion, null, 'SFRS_I', undefined, 'unused', [], shareOutput
+      initialShareQuestion, null, 'SFRS_I', adapters[0].settings, 'unused', [], shareOutput
     );
+    assert.equal(initialShareResponse.displayFullAnswer, true,
+      'a resolved deterministic share calculation is terminal with a configured provider');
     const shareTrade = "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.";
     const shareFollowUp = await processAccountingQuery(
-      shareTrade, initialShareResponse.scenarioState, 'SFRS_I', undefined, 'unused', [], shareOutput
+      shareTrade, initialShareResponse.scenarioState, 'SFRS_I', adapters[0].settings, 'unused', [], shareOutput
     );
+    assert.equal(shareFollowUp.displayFullAnswer, true);
     assert.deepEqual(
       shareFollowUp.scenarioState.shareTransferAnalysis?.rows.map(row => [row.company, row.afterShares]),
       [['Company C', 490], ['Company B', 505]],
       'a continuing share trade uses the active holdings'
     );
+    assert.equal(shareFollowUp.scenarioState.directGroups.length, 0,
+      'the deterministic holdings calculation does not create a journal');
+    assert.equal(boundaryCalls.length, callsBeforeShareCalculation,
+      'resolved share calculations do not pass through Gemini synthesis');
 
     const resetShareQuestion = `New question: ${shareTrade}`;
     const resetShareResponse = await processAccountingQuery(
-      resetShareQuestion, initialShareResponse.scenarioState, 'SFRS_I', undefined, 'unused',
+      resetShareQuestion, initialShareResponse.scenarioState, 'SFRS_I', adapters[0].settings, 'unused',
       [{ id: 'boundary-reset-share-trade', sender: 'user', timestamp: '', text: resetShareQuestion }],
       shareOutput
     );

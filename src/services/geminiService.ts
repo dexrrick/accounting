@@ -325,23 +325,128 @@ function normalizeImageAmountField(field: string): string | undefined {
   return undefined;
 }
 
+function isInvoiceCorrectionCandidate(image: ExtractedImageEvidence): boolean {
+  if (image.documentType === 'supplier_invoice') return true;
+  if (image.documentType !== 'accounting_transaction') return false;
+
+  return image.fields.some(field =>
+    /^(?:invoice(?:number|no|id)|supplierinvoice(?:number|no|id))$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+    typeof field.value === 'string' && field.value.trim().length > 0
+  );
+}
+
 function getImageTotalFields(scenario: AccountingScenarioState): Array<{ imageIndex: number; fieldIndex: number; imageId: string; value: number }> {
-  return scenario.imageEvidence!.flatMap((image, imageIndex) => image.documentType === 'supplier_invoice'
-    ? image.fields.flatMap((field, fieldIndex) => typeof field.value === 'number' && normalizeImageAmountField(field.field) === 'total'
-      ? [{ imageIndex, fieldIndex, imageId: image.imageId, value: field.value }]
-      : [])
+  return scenario.imageEvidence!.flatMap((image, imageIndex) => isInvoiceCorrectionCandidate(image)
+    ? image.fields.flatMap((field, fieldIndex) => {
+      const cents = normalizeImageAmountField(field.field) === 'total'
+        ? parseImageAmountCents(field.value)
+        : undefined;
+      return cents === undefined ? [] : [{ imageIndex, fieldIndex, imageId: image.imageId, value: cents / 100 }];
+    })
     : []);
+}
+
+function getInvoiceCorrectionDirectionClarification(
+  image: ExtractedImageEvidence
+): string | undefined {
+  const directionClarification = 'The screenshot shows an invoice but does not establish whether it is a supplier purchase invoice, customer sales invoice, or credit note. Please confirm that it is a supplier purchase invoice and restate the corrected total. No journal proposal is shown.';
+  const explicitOppositeType = image.fields.some(field =>
+    /^(?:transactiontype|invoicetype|type)$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+    /^(?:sale|sales|customer sale|customer sales|sales invoice|customer invoice|credit note)$/i.test(String(field.value).trim().replace(/[_-]+/g, ' '))
+  );
+  if (explicitOppositeType) {
+    return 'The screenshot identifies a customer sales invoice or credit note, which this supplier invoice correction cannot prepare. Please confirm the document direction and corrected amount. No journal proposal is shown.';
+  }
+  const labeledEvidence = image.fields.map(field => `${field.field} ${String(field.value)}`).join(' ').replace(/[_-]+/g, ' ');
+  if (/\b(?:credit\s*note|sales?\s*invoice|customer\s*invoice|sales?\s*(?:return|transaction)|customer\s*(?:sale|sales))\b/i.test(labeledEvidence)) {
+    return 'The screenshot identifies a customer sales invoice or credit note, which this supplier invoice correction cannot prepare. Please confirm the document direction and corrected amount. No journal proposal is shown.';
+  }
+  const hasNegatedPurchaseHeading = image.fields.some(field =>
+    normalizeImageMoneyFieldName(field.field) === 'documenttitle' &&
+    typeof field.value === 'string' &&
+    /\b(?:not|no|without)\b/i.test(field.value) &&
+    /\b(?:supplier|vendor|purchase|payable|expense)\s+invoice\b/i.test(field.value)
+  );
+  if (hasNegatedPurchaseHeading) return directionClarification;
+  if (image.documentType === 'supplier_invoice') return undefined;
+
+  const hasExpenseType = image.fields.some(field =>
+    normalizeImageMoneyFieldName(field.field) === 'expensetype' &&
+    typeof field.value === 'string' &&
+    !/\b(?:not|no|without)\b/i.test(field.value) &&
+    /\b(?:expense|purchase)\b/i.test(field.value.replace(/[_-]+/g, ' '))
+  );
+  const hasExplicitPurchaseType = image.fields.some(field =>
+    /^(?:transactiontype|invoicetype)$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+    typeof field.value === 'string' &&
+    !/\b(?:not|no|without)\b/i.test(field.value) &&
+    /\b(?:purchase|supplier invoice|expense invoice)\b/i.test(field.value.replace(/[_-]+/g, ' '))
+  );
+  const hasExplicitPurchaseHeading = image.fields.some(field =>
+    normalizeImageMoneyFieldName(field.field) === 'documenttitle' &&
+    typeof field.value === 'string' &&
+    !/\b(?:not|no|without)\b/i.test(field.value) &&
+    /\b(?:supplier|vendor|purchase|payable|expense)\s+invoice\b/i.test(field.value)
+  );
+  const hasSupplierField = image.fields.some(field =>
+    /^(?:supplier|vendor)$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+    typeof field.value === 'string' && field.value.trim().length > 0
+  );
+  const hasPayableField = image.fields.some(field =>
+    /^(?:remainingpayable|creditbalance|amountpayable|accountspayable)$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+    parseImageAmountCents(field.value) !== undefined
+  );
+  if (hasExpenseType || hasExplicitPurchaseType || hasExplicitPurchaseHeading || hasSupplierField || hasPayableField) return undefined;
+
+  return directionClarification;
+}
+
+type InvoiceSettlementCheck = { clarification?: string; allPayable: boolean };
+
+function checkInvoiceSettlement(image: ExtractedImageEvidence, correctedTotal: number): InvoiceSettlementCheck {
+  const immediateFields = image.fields.filter(field =>
+    /^(?:immediatepayment|cashpaid|bankpayment|amountpaid|paidamount)$/i.test(normalizeImageMoneyFieldName(field.field))
+  );
+  const payableFields = image.fields.filter(field =>
+    /^(?:remainingpayable|creditbalance|amountpayable|accountspayable)$/i.test(normalizeImageMoneyFieldName(field.field))
+  );
+  if (immediateFields.length === 0 && payableFields.length === 0) return { allPayable: false };
+
+  const immediateValues = immediateFields.map(field => parseImageAmountCents(field.value));
+  const payableValues = payableFields.map(field => parseImageAmountCents(field.value));
+  const immediateCents = [...new Set(immediateValues)];
+  const payableCents = [...new Set(payableValues)];
+  const correctedCents = Math.round(correctedTotal * 100);
+  if (immediateCents.includes(undefined) || payableCents.includes(undefined) || immediateCents.length > 1 || payableCents.length > 1) {
+    return { clarification: 'The screenshot includes conflicting or unreadable payment/payable amounts. Please confirm the corrected invoice total and the amount already paid and remaining payable. No journal proposal is shown.', allPayable: false };
+  }
+  const paid = immediateCents[0];
+  const payable = payableCents[0];
+  if (paid !== undefined && paid > 0) {
+    const settlement = [
+      `immediate payment of ${formatImageAmountCents(paid)}`,
+      payable === undefined ? undefined : `remaining payable of ${formatImageAmountCents(payable)}`
+    ].filter(Boolean).join(' and ');
+    return { clarification: `The screenshot records an ${settlement}. The corrected invoice total of ${formatImageAmountCents(correctedCents)} cannot be represented by the all-payable correction proposal. Please confirm the corrected total and the amounts already paid and remaining payable. No journal proposal is shown.`, allPayable: false };
+  }
+  if (payable !== undefined && payable !== correctedCents) {
+    return { clarification: `The screenshot's remaining payable of ${formatImageAmountCents(payable)} does not match the corrected invoice total ${formatImageAmountCents(correctedCents)}. Please confirm the corrected total and the payment/payable split. No journal proposal is shown.`, allPayable: false };
+  }
+  if (immediateFields.length === 0 || payableFields.length === 0) {
+    return { clarification: 'The screenshot provides only part of the payment/payable allocation. Please confirm the corrected invoice total and full payment/payable split. No journal proposal is shown.', allPayable: false };
+  }
+  return { allPayable: paid === 0 && payable === correctedCents };
 }
 
 function getMultipleInvoiceClarification(supplierInvoiceImages: ExtractedImageEvidence[]): PendingImageCorrection {
   const invoiceNumbers = supplierInvoiceImages.flatMap(image => image.fields
-    .filter(field => /invoice.?no/i.test(field.field) && typeof field.value === 'string')
+    .filter(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field) && typeof field.value === 'string')
     .map(field => String(field.value)));
   const references = invoiceNumbers.length ? ` (${invoiceNumbers.join(', ')})` : '';
   return {
     kind: 'clarification',
     reason: 'multiple_invoices',
-    prompt: `More than one supplier invoice is attached${references}. Please send one invoice at a time and confirm its corrected total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`
+    prompt: `More than one invoice document is attached${references}. Please send one invoice at a time and confirm its corrected total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`
   };
 }
 
@@ -368,10 +473,17 @@ function findPendingImageCorrection(
   query: string,
   scenario: AccountingScenarioState | null
 ): PendingImageCorrection | undefined {
-  if (!scenario?.imageEvidence?.some(image => image.documentType === 'supplier_invoice') ||
-      !scenario.missingFields?.some(field => field.fieldKey === 'imageVerification')) return undefined;
+  if (!scenario) return undefined;
+  const correctionImages = scenario.imageEvidence?.filter(isInvoiceCorrectionCandidate) || [];
+  const hasPendingVerification = scenario.missingFields?.some(field => field.fieldKey === 'imageVerification');
+  const hasRejectedProposal = scenario.isComplete === false &&
+    !(scenario.directGroups?.length) &&
+    scenario.missingFields?.some(field =>
+      field.fieldKey.startsWith('guardrail-') && field.fieldName === 'Accounting guardrail validation'
+    );
+  if (correctionImages.length === 0 || (!hasPendingVerification && !hasRejectedProposal)) return undefined;
 
-  const supplierInvoiceImages = scenario.imageEvidence.filter(image => image.documentType === 'supplier_invoice');
+  const supplierInvoiceImages = correctionImages;
 
   const labeledAmounts = getLabeledImageAmounts(query);
   const startsWithInvoiceAmountDeclaration = /^\s*(?:(?:the|our|this)\s+)?(?:(?:supplier\s+)?invoice\s+)?(?:subtotal|gst|tax|total)\s+(?:is|was|should\s+be|=|:)/i.test(query);
@@ -518,15 +630,6 @@ async function respondToPendingImageCorrection(
     return createImageCorrectionClarification(scenario, userInput, correction.prompt);
   }
 
-  const provider = getImageCorrectionProvider(providerOrApiKey, modelName);
-  if (!provider) {
-    return createImageCorrectionClarification(
-      scenario,
-      userInput,
-      `You supplied a corrected total of SGD ${correction.amount.toLocaleString()}, but a Gemini model is required to prepare and validate the journal. Please select Gemini and retry. No journal proposal is shown.`
-    );
-  }
-
   const rawImageEvidence = scenario.imageEvidence;
   const invoiceImage = rawImageEvidence?.[correction.imageIndex];
   const correctedField = invoiceImage?.fields[correction.fieldIndex];
@@ -585,7 +688,24 @@ async function respondToPendingImageCorrection(
     }
   }
 
-  const invoiceNumber = invoiceImage.fields.find(field => /invoice.?no/i.test(field.field))?.value;
+  const directionClarification = getInvoiceCorrectionDirectionClarification(invoiceImage);
+  if (directionClarification) return createImageCorrectionClarification(scenario, userInput, directionClarification);
+
+  const settlementCheck = checkInvoiceSettlement(invoiceImage, correction.amount);
+  if (settlementCheck.clarification) {
+    return createImageCorrectionClarification(scenario, userInput, settlementCheck.clarification);
+  }
+
+  const provider = getImageCorrectionProvider(providerOrApiKey, modelName);
+  if (!provider) {
+    return createImageCorrectionClarification(
+      scenario,
+      userInput,
+      `You supplied a corrected total of SGD ${correction.amount.toLocaleString()}, but a Gemini model is required to prepare and validate the journal. Please select Gemini and retry. No journal proposal is shown.`
+    );
+  }
+
+  const invoiceNumber = invoiceImage.fields.find(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field))?.value;
   const invoiceReference = typeof invoiceNumber === 'string' ? ` ${invoiceNumber}` : '';
   const canonicalQuery = `Prepare a supplier invoice journal for${invoiceReference} dated ${formattedInvoiceDate}. The invoice total was explicitly corrected by the user to SGD ${correction.amount.toLocaleString()}. Keep the proposed journal uncommitted.`;
   const userEvidence: ExtractedEvidence = {
@@ -659,6 +779,19 @@ async function respondToPendingImageCorrection(
   if (!integrity.isValid || !reconcilesToCorrection) {
     return createImageCorrectionClarification(scenario, userInput,
       `The response did not produce one balanced journal that reconciles to SGD ${correction.amount.toLocaleString()}. Please confirm the corrected invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`);
+  }
+  if (settlementCheck.allPayable && groups.some(group => {
+    const payableCreditsCents = group.lines.reduce((sum, line) =>
+      line.category === 'LIABILITY' && /(?:accounts? payable|trade payable|creditors?)/i.test(line.accountName)
+        ? sum + Math.round(line.credit * 100)
+        : sum,
+      0
+    );
+    return group.lines.some(line => line.credit > 0 && /(?:cash|bank)/i.test(line.accountName)) ||
+      payableCreditsCents !== expectedCents;
+  })) {
+    return createImageCorrectionClarification(scenario, userInput,
+      'The screenshot explicitly shows no amount paid and a full remaining payable, but the generated journal does not preserve that payable treatment. Please confirm the corrected invoice total and payment/payable facts. No journal proposal is shown.');
   }
 
   const dateEvidence = invoiceImage.fields.find(field => /date/i.test(field.field));
@@ -758,7 +891,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. For invoices, copy the exact visible document heading into fields.documentTitle, including generic labels such as "Invoice". Set documentType to supplier_invoice only when the printed title or type explicitly says "supplier invoice", "purchase invoice", "payable invoice", or "expense invoice"; otherwise use accounting_transaction. Copy an explicit invoice direction into fields.invoiceType when visible, including customer sales invoices and credit notes. Do not infer direction from a name, item description, file name, user text, or accounting treatment. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -1425,7 +1558,7 @@ async function processAccountingQueryCore(
   let activeScenario = isNewAccountingScenario ? null : currentScenario;
   if (outputPreference?.shareStructure) {
     const shareAnswer = answerShareStructureQuery(userInput, activeScenario);
-    if (shareAnswer) return shareAnswer;
+    if (shareAnswer) return { ...shareAnswer, displayFullAnswer: true };
   }
   let apiErrorMessage: string | null = null;
   let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
