@@ -1,0 +1,1405 @@
+{
+  "decision": "NO-GO",
+  "approvedCommit": "7fd731c6a102e075b5a8d16bf50177d54130a681",
+  "approvedBranch": "codex/phase2-live-acceptance-fixes-86017cd",
+  "offline": {
+    "node": "22.23.3",
+    "suitePassed": 190,
+    "suiteFailed": 0,
+    "typescript": "pass",
+    "lint": "pass with warnings",
+    "viteBuild": "pass",
+    "workerBuild": "pass",
+    "attemptMeterPreflight": "pass"
+  },
+  "revisionVerification": {
+    "localAndRemoteMatchedBeforeAndAfter": true,
+    "trackedCheckoutClean": true
+  },
+  "resumePreflight": {
+    "earlierOfflineSuitesPassedOnApprovedSha": 190,
+    "setupStatesMatchedCapturedOutputsOffline": true,
+    "cumulativeAttemptCapsAndPriorRetryStateVerifiedOffline": true
+  },
+  "run": {
+    "model": "gemini-3.5-flash-lite",
+    "priorAttempts": 12,
+    "continuationAttempts": 5,
+    "totalAttempts": 17,
+    "attemptsRemaining": 7,
+    "overallAttemptCap": 24,
+    "maxAttemptsInOneTurn": 4,
+    "continuationHttp200": 5,
+    "continuationProviderFailures": 0,
+    "continuationRetries": 0,
+    "priorHttp503": 2,
+    "priorRetries": 1,
+    "continuationResponsesWithUsage": 5,
+    "continuationTokenUsage": {
+      "promptTokenCount": 8635,
+      "candidatesTokenCount": 1344,
+      "thoughtsTokenCount": 0,
+      "totalTokenCount": 9979
+    },
+    "confirmedP0P1": 0,
+    "initialStop": "Gemini HTTP 503 during reset after the single batch retry was used for the payroll setup",
+    "continuationStopReason": "COMPLETED",
+    "initialProviderUsage": {
+      "successfulResponsesWithUsage": 10,
+      "inputTokens": 45979,
+      "outputTokens": 2338,
+      "totalTokens": 48317,
+      "failedResponseUsage": "unavailable"
+    },
+    "attemptLog": "gemini-attempts.jsonl"
+  },
+  "workflows": [
+    {
+      "id": "image",
+      "grade": "PARTIAL",
+      "result": "Initial invoice proposals were rejected. The balanced S$600 correction and three ambiguity controls passed.",
+      "evidenceStages": [
+        "carried-forward"
+      ]
+    },
+    {
+      "id": "transaction",
+      "grade": "PARTIAL",
+      "result": "Named accounts on the S$80,000 journal with settlement clarification. The S$100,000 purchase was isolated, with no verified IRAS citation.",
+      "evidenceStages": [
+        "carried-forward"
+      ]
+    },
+    {
+      "id": "hypothetical",
+      "grade": "PARTIAL",
+      "result": "Relevant IRAS acquisition and disposal evidence and no journal. The facts needed to apply the rules were too general.",
+      "evidenceStages": [
+        "carried-forward"
+      ]
+    },
+    {
+      "id": "statutory-follow-up",
+      "grade": "PASS",
+      "result": "Covered turn gave separate salary and overtime deadlines. Outside-Part-4 turn retained seven-day ordinary salary and cited the employment-contract qualification. Both were journal-free. The live turn used successful synthesis. The context-limit path passed offline.",
+      "evidenceStages": [
+        "initial"
+      ]
+    },
+    {
+      "id": "correction",
+      "grade": "PARTIAL",
+      "result": "Corrected salary S$72,000. Journal balanced at S$73,291.25. Both answers used the unresolved-statutory-evidence fallback and provided no CPF citation.",
+      "evidenceStages": [
+        "initial"
+      ]
+    },
+    {
+      "id": "reset",
+      "grade": "PARTIAL",
+      "result": "Explicit reset opened a new boundary and cleared prior holdings before Gemini. The answer shifted to tax and accounting evidence and did not ask for opening balances.",
+      "evidenceStages": [
+        "initial",
+        "continuation"
+      ]
+    },
+    {
+      "id": "recall",
+      "grade": "PARTIAL",
+      "result": "The hypothetical equipment turn exposed truncated JSON and produced no journal. The display request recovered the committed payroll journal, matching the prior capture on every recorded account, amount, date and status. Eligible proposal recall remains unverified.",
+      "evidenceStages": [
+        "continuation"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "stage": "carried-forward",
+      "commit": "1339e26417f9dcae6943899559bca7c9c343696d",
+      "model": "gemini-3.5-flash-lite",
+      "startedAt": "2026-11-22T00:49:11.324Z",
+      "finishedAt": "2026-11-22T00:58:17.807Z",
+      "sourceRequests": [
+        {
+          "id": "second-purchase",
+          "target": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances",
+          "status": 200,
+          "ms": 81
+        },
+        {
+          "id": "second-purchase",
+          "target": "https://www.iras.gov.sg/sitemap",
+          "status": 200,
+          "ms": 85
+        },
+        {
+          "id": "second-purchase",
+          "target": "https://www.iras.gov.sg/taxes/pillar-2-top-up-taxes/global-anti-base-erosion-(globe)-rules-and-domestic-top-up-tax-(dtt)",
+          "status": 200,
+          "ms": 30
+        },
+        {
+          "id": "second-purchase",
+          "target": "https://www.iras.gov.sg/taxes/pillar-2-top-up-taxes/e-learning-on-global-anti-base-erosion-(globe)-rules-and-domestic-top-up-tax-(dtt)",
+          "status": 200,
+          "ms": 35
+        },
+        {
+          "id": "second-purchase",
+          "target": "https://html.duckduckgo.com/html/",
+          "status": 200,
+          "ms": 702
+        },
+        {
+          "id": "second-purchase",
+          "target": "https://www.iras.gov.sg/media/docs/default-source/e-tax/frequently-asked-questions-for-businesses-gst-rate-change-2023.pdf",
+          "status": 200,
+          "ms": 24
+        },
+        {
+          "id": "conditional-purchase",
+          "target": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/unutilised-items-(capital-allowances-trade-losses-donations)",
+          "status": 200,
+          "ms": 91
+        },
+        {
+          "id": "conditional-purchase",
+          "target": "https://www.iras.gov.sg/docs/default-source/e-tax/utilising-unabsorbed-items_2012-06-29.pdf",
+          "status": 200,
+          "ms": 77
+        },
+        {
+          "id": "conditional-purchase",
+          "target": "https://html.duckduckgo.com/html/",
+          "status": 200,
+          "ms": 697
+        },
+        {
+          "id": "conditional-purchase",
+          "target": "https://html.duckduckgo.com/html/",
+          "status": 200,
+          "ms": 569
+        },
+        {
+          "id": "conditional-purchase",
+          "target": "https://www.iras.gov.sg/media/docs/default-source/e-tax/etax-guide_zero-rating-of-tools-or-machine_second-edition.pdf",
+          "status": 200,
+          "ms": 32
+        }
+      ],
+      "workflows": [
+        {
+          "id": "image",
+          "turns": [
+            {
+              "id": "invoice-simple",
+              "query": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+              "status": "ANSWERED",
+              "answer": "### AI-Proposed Journal Rejected\n\n### Accounting Validation Issue\n\nThe proposed journal failed one or more accounting safety checks:\n- DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice for maintenance expense (INV-202)' is imbalanced: Total Dr (0.00) != Total Cr (0.00).\n\nThis entry has been rejected to prevent an incorrect accounting record.\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice for maintenance expense (INV-202)",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 4
+            },
+            {
+              "id": "invoice-replace",
+              "query": "S$500 is not correct, please use S$600",
+              "parentId": "invoice-simple",
+              "status": "ANSWERED",
+              "answer": "### Corrected invoice journal proposal\n\nThe invoice total was corrected to SGD 600. The proposed journal is balanced and remains uncommitted. This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.\n\nReview the invoice date before posting.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "amount": 600,
+              "currency": "SGD",
+              "journals": [
+                {
+                  "title": "Supplier invoice for Maintenance Expense",
+                  "status": "CONDITIONAL",
+                  "date": "20/01/2025",
+                  "debit": 600,
+                  "credit": 600,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 600,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 600
+                    }
+                  ]
+                }
+              ],
+              "validProposal": [
+                {
+                  "title": "Supplier invoice for Maintenance Expense",
+                  "status": "CONDITIONAL",
+                  "date": "20/01/2025",
+                  "debit": 600,
+                  "credit": 600,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 600,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 600
+                    }
+                  ]
+                }
+              ],
+              "displayedJournals": [
+                {
+                  "title": "Supplier invoice for Maintenance Expense",
+                  "status": "CONDITIONAL",
+                  "date": "20/01/2025",
+                  "debit": 600,
+                  "credit": 600,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 600,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 600
+                    }
+                  ]
+                }
+              ],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice for maintenance expense (INV-202)",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 0
+            },
+            {
+              "id": "invoice-alternatives",
+              "query": "S$500 is not correct, please use S$600 or S$700",
+              "parentId": "invoice-simple",
+              "status": "ANSWERED",
+              "answer": "### Screenshot journal clarification required\n\nThe screenshot correction has multiple replacement totals, SGD 600 or SGD 700. Please confirm one value using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice for maintenance expense (INV-202)",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 0
+            },
+            {
+              "id": "invoice-subtotals",
+              "query": "The subtotal is S$600, GST is S$54, total is S$654, and subtotal is S$650.",
+              "parentId": "invoice-simple",
+              "status": "ANSWERED",
+              "answer": "### Screenshot journal clarification required\n\nThe invoice details contain conflicting subtotal values SGD 600 and SGD 650. Please check which amount is correct on the invoice, then confirm the invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice for maintenance expense (INV-202)",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 0
+            },
+            {
+              "id": "invoice-with-gst",
+              "query": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+              "status": "ANSWERED",
+              "answer": "### AI-Proposed Journal Rejected\n\n### Accounting Validation Issue\n\nThe proposed journal failed one or more accounting safety checks:\n- DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice INV-202 for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).\n\nThis entry has been rejected to prevent an incorrect accounting record.\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice INV-202 for maintenance expense",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "GST Input Tax",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 4
+            },
+            {
+              "id": "invoice-conflicting-total",
+              "query": "S$545 is not correct, please use S$600",
+              "parentId": "invoice-with-gst",
+              "status": "ANSWERED",
+              "answer": "### Screenshot journal clarification required\n\nThe extracted subtotal (SGD 500) plus GST (SGD 45) does not reconcile to the corrected invoice total SGD 600. Please verify the subtotal and GST against the invoice, then upload a clearer or corrected invoice image showing those confirmed figures and the invoice total. No journal proposal is shown.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [
+                {
+                  "title": "Supplier invoice INV-202 for maintenance expense",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 0,
+                  "credit": 0,
+                  "markedBalanced": false,
+                  "lines": [
+                    {
+                      "account": "Maintenance Expense",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "GST Input Tax",
+                      "debit": 0,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 0
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [],
+              "attempts": 0
+            }
+          ]
+        },
+        {
+          "id": "transaction",
+          "turns": [
+            {
+              "id": "machine-parent",
+              "query": "My company incurred SGD 80,000 on a piece of equipment. How should we account for it?",
+              "status": "ANSWERED",
+              "answer": "The equipment acquisition journal is available for review in the Double Entry Journal tab.\n\nThe proposed credit is to Trade Payables on the assumption that the supplier invoice is unpaid.\n\nWas the equipment paid immediately, or is it still payable to the supplier?",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "amount": 80000,
+              "currency": "SGD",
+              "journals": [
+                {
+                  "title": "Business Equipment Acquisition",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 80000,
+                  "credit": 80000,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Property, Plant and Equipment — Equipment",
+                      "debit": 80000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 80000
+                    }
+                  ]
+                }
+              ],
+              "validProposal": [
+                {
+                  "title": "Business Equipment Acquisition",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 80000,
+                  "credit": 80000,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Property, Plant and Equipment — Equipment",
+                      "debit": 80000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 80000
+                    }
+                  ]
+                }
+              ],
+              "displayedJournals": [
+                {
+                  "title": "Business Equipment Acquisition",
+                  "status": "CONDITIONAL",
+                  "date": "22/11/2026",
+                  "debit": 80000,
+                  "credit": 80000,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Property, Plant and Equipment — Equipment",
+                      "debit": 80000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Trade Payables",
+                      "debit": 0,
+                      "credit": 80000
+                    }
+                  ]
+                }
+              ],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 2
+            },
+            {
+              "id": "second-purchase",
+              "query": "Regarding our previous machine purchase, we bought a machine for SGD 80,000. We subsequently purchased another machine for SGD 100,000. What IRAS rules apply to the second purchase?",
+              "parentId": "machine-parent",
+              "status": "ANSWERED",
+              "answer": "The provider could not complete the answer. The available source evidence is shown below.\n\nThe available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.\n\nThe admitted quotations do not establish these requested rule points: IRAS rules; iras-authority-query-concept-semantic-iras-rules.\n\nAdmitted source evidence and reviewed summaries:\n\nAccounting depreciation is disallowed for tax. In its place, Capital Allowances (CA) are granted on qualifying plant and machinery used in trade or business.\n\nReviewed local editorial summary (nonverbatim; Income Tax Act 1947); public URL not independently verified.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "boundary": "second-purchase",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 3
+            }
+          ]
+        },
+        {
+          "id": "hypothetical",
+          "turns": [
+            {
+              "id": "conditional-purchase",
+              "query": "Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?",
+              "parentId": "machine-parent",
+              "status": "ANSWERED",
+              "answer": "# Answer\n\nAccounting depreciation is disallowed for tax, and in its place, Capital Allowances are granted on qualifying plant and machinery used in trade or business.\n\nA capital allowance claim made under Section 19A(1) can be deferred and does not need to be claimed consecutively over 3 YAs. [IRAS: IRAS | Capital Allowances](https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances)\n\nWhen a fixed asset is sold, converted to trading stock or written off, you need to calculate balancing allowance or balancing charge if capital allowances have been claimed on the cost of the asset previously. [IRAS: IRAS | Capital Allowances](https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances)\n\nShow your basis of calculating the total capital allowance claimed, giving a breakdown of the cost/ tax written down value brought forward, capital allowance amount and tax written down value carried forward for each category of assets. [IRAS: IRAS | Capital Allowances](https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances)\n\n### Conditions and unresolved points\n\nSome claims could not be established from the admitted evidence and stated facts, so they have been withheld.\n\n- Facts relevant to the company income or claim, including the relevant tax year and supporting transaction details.",
+              "officialLinks": [
+                {
+                  "title": "IRAS: IRAS | Capital Allowances",
+                  "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances"
+                }
+              ],
+              "renderedLinks": [
+                "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances"
+              ],
+              "answerPath": "AI_GROUNDED_SYNTHESIS",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 4
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "initial",
+      "commit": "7fd731c6a102e075b5a8d16bf50177d54130a681",
+      "model": "gemini-3.5-flash-lite",
+      "startedAt": "2026-11-22T11:37:01.939Z",
+      "finishedAt": "2026-11-22T11:42:43.170Z",
+      "sourceRequests": [
+        {
+          "id": "mom-parent",
+          "target": "https://www.mom.gov.sg/sitemap.xml",
+          "status": 200,
+          "ms": 79
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://mom.gov.sg/passes-and-permits.xml",
+          "status": 301,
+          "ms": 580
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://www.mom.gov.sg/passes-and-permits.xml",
+          "status": 200,
+          "ms": 23
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://mom.gov.sg/employment-practices.xml",
+          "status": 301,
+          "ms": 552
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://www.mom.gov.sg/employment-practices.xml",
+          "status": 200,
+          "ms": 20
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 301,
+          "ms": 564
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 200,
+          "ms": 107
+        },
+        {
+          "id": "mom-parent",
+          "target": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+          "status": 200,
+          "ms": 112
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 301,
+          "ms": 345
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 200,
+          "ms": 184
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 301,
+          "ms": 781
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "status": 200,
+          "ms": 135
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://mom.gov.sg/employment-practices/salary/salary-deductions",
+          "status": 301,
+          "ms": 786
+        },
+        {
+          "id": "mom-follow-up",
+          "target": "https://www.mom.gov.sg/employment-practices/salary/salary-deductions",
+          "status": 200,
+          "ms": 109
+        }
+      ],
+      "workflows": [
+        {
+          "id": "statutory-follow-up",
+          "turns": [
+            {
+              "id": "mom-parent",
+              "query": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+              "status": "ANSWERED",
+              "answer": "# Answer\n\nSalary must be paid:\n\n• Within 7 days after the end of the salary period\n\n• For overtime work, within 14 days after the end of the salary period [MOM: Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\nIn accordance with the Employment Act and Ministry of Manpower official guidance, ordinary salary must be paid within 7 days after the end of the salary period. [MOM: Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\nEmployers must issue itemised pay slips and keep detailed employment and salary records for employees covered by the Employment Act. [MOM: Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\n### Conditions and unresolved points\n\nSome claims could not be established from the admitted evidence and stated facts, so they have been withheld.\n\n- The available admitted evidence does not establish whether Salary Periods, Payment and Deductions applies to your circumstances; the issue-specific admitted evidence remains incomplete.",
+              "officialLinks": [
+                {
+                  "title": "MOM: Paying salary",
+                  "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+                }
+              ],
+              "renderedLinks": [
+                "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+              ],
+              "answerPath": "AI_GROUNDED_SYNTHESIS",
+              "boundary": "mom-parent",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 3
+            },
+            {
+              "id": "mom-follow-up",
+              "query": "Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.",
+              "parentId": "mom-parent",
+              "status": "ANSWERED",
+              "answer": "# Answer\n\nAccording to the Ministry of Manpower, employers must pay ordinary salary at least once a month and within 7 days after the end of the salary period, regardless of whether the employee is covered by overtime provisions. [MOM: Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\nIf an employee is not covered by Part 4 of the Employment Act and its overtime provisions, the employee is not entitled to statutory overtime pay under those provisions, and terms regarding hours of work and any additional compensation are determined by the employment contract. [MOM: Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\nIf you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract. [MOM: Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)",
+              "officialLinks": [
+                {
+                  "title": "MOM: Paying salary",
+                  "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+                },
+                {
+                  "title": "MOM: Hours of work, overtime and rest day",
+                  "url": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+                }
+              ],
+              "renderedLinks": [
+                "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+                "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+              ],
+              "answerPath": "AI_GROUNDED_SYNTHESIS",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 3
+            }
+          ]
+        },
+        {
+          "id": "correction",
+          "turns": [
+            {
+              "id": "payroll-parent",
+              "query": "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal",
+              "status": "ANSWERED",
+              "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "amount": 10000,
+              "currency": "SGD",
+              "journals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 11291.25,
+                  "credit": 11291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 10000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 8560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "validProposal": [],
+              "displayedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 11291.25,
+                  "credit": 11291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 10000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 8560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "committedJournals": [],
+              "retainedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 11291.25,
+                  "credit": 11291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 10000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 8560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "attempts": 3
+            },
+            {
+              "id": "salary-correction",
+              "query": "Actually the monthly salary for CPF is 72k a month",
+              "parentId": "payroll-parent",
+              "status": "ANSWERED",
+              "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "amount": 72000,
+              "currency": "SGD",
+              "journals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "validProposal": [],
+              "displayedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "committedJournals": [],
+              "retainedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "attempts": 2
+            }
+          ]
+        },
+        {
+          "id": "reset",
+          "turns": [
+            {
+              "id": "holdings-parent",
+              "query": "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.",
+              "status": "ANSWERED",
+              "answer": "### Group Share Transfer — Stated Holding Changes\n\nThe stated holdings have been loaded into the Group Share-Transfer Calculator below.\n\n> ⚠️ **Counterparty leg is missing.** The request says Company A transfers 500 Company C shares to Company B, but does not state how Company A obtains the 500 Company B shares. Percentages cannot be calculated without each company’s issued shares and the other holders’ positions.\n\nThis is a share-structure analysis only; no journal has been created.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "currency": "SGD",
+              "shares": [
+                {
+                  "company": "Company C",
+                  "holder": "Company A",
+                  "beforeShares": 1000,
+                  "afterShares": 500,
+                  "beforePercent": 0,
+                  "afterPercent": 0
+                },
+                {
+                  "company": "Company B",
+                  "holder": "Company A",
+                  "beforeShares": 0,
+                  "afterShares": 500,
+                  "beforePercent": 0,
+                  "afterPercent": 0
+                }
+              ],
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 0
+            },
+            {
+              "id": "continuing-trade",
+              "query": "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+              "parentId": "holdings-parent",
+              "status": "ANSWERED",
+              "answer": "### Share Structure Follow-up Applied\n\nThe trade has been added to the active group share structure. The updated holdings are shown in the Group Share-Transfer Calculator below.\n\nNo journal entry or statutory conclusion has been created.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "currency": "SGD",
+              "shares": [
+                {
+                  "company": "Company C",
+                  "holder": "Company A",
+                  "beforeShares": 1000,
+                  "afterShares": 490,
+                  "beforePercent": 0,
+                  "afterPercent": 0
+                },
+                {
+                  "company": "Company B",
+                  "holder": "Company A",
+                  "beforeShares": 0,
+                  "afterShares": 505,
+                  "beforePercent": 0,
+                  "afterPercent": 0
+                }
+              ],
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 0
+            },
+            {
+              "id": "reset-trade",
+              "query": "New question: Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+              "parentId": "holdings-parent",
+              "status": "ANSWERED",
+              "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "boundary": "reset-trade",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 1,
+              "transportStop": "HTTP_503"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "stage": "continuation",
+      "commit": "7fd731c6a102e075b5a8d16bf50177d54130a681",
+      "model": "gemini-3.5-flash-lite",
+      "startedAt": "2026-11-22T12:05:31.752Z",
+      "finishedAt": "2026-11-22T12:08:10.272Z",
+      "sourceRequests": [],
+      "workflows": [
+        {
+          "id": "reset",
+          "turns": [
+            {
+              "id": "reset-trade",
+              "query": "New question: Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+              "parentId": "holdings-parent",
+              "status": "ANSWERED",
+              "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence incomplete\n\n**tax treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For tax treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**accounting treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For accounting treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- disposal of shares: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- acquisition of shares: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- tax treatment of share exchange: No reviewed topic was resolved for this issue\n- accounting treatment of share exchange: No reviewed topic was resolved for this issue",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+              "failure": "OTHER",
+              "boundary": "reset-trade",
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 1,
+              "cumulativeTurnAttempts": 2
+            }
+          ]
+        },
+        {
+          "id": "recall",
+          "turns": [
+            {
+              "id": "conditional-journal",
+              "query": "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+              "status": "ANSWERED",
+              "answer": "{\n  \"transactionNature\": \"Acquisition of office equipment on credit\",\n  \"treatment\": \"Under SFRS(I) 1-16, an item of property, plant, and equipment that qualifies for recognition as an asset shall initially be measured at its cost. When acquired on credit, the asset is recognized at the date",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "currency": "SGD",
+              "journals": [],
+              "validProposal": [],
+              "displayedJournals": [],
+              "committedJournals": [],
+              "retainedJournals": [],
+              "attempts": 4,
+              "cumulativeTurnAttempts": 4
+            },
+            {
+              "id": "recall-journal",
+              "query": "show the double entry",
+              "parentId": "conditional-journal",
+              "status": "ANSWERED",
+              "answer": "### Double Entry Journal\n\nThe most recent committed journal is **Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)** (30 Sep 2026). It is shown in the Double Entry Journal tab.",
+              "officialLinks": [],
+              "renderedLinks": [],
+              "stateHypothetical": false,
+              "amount": 72000,
+              "currency": "SGD",
+              "journals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "validProposal": [],
+              "displayedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "committedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "retainedJournals": [
+                {
+                  "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                  "status": "DETERMINISTIC",
+                  "date": "30 Sep 2026",
+                  "debit": 73291.25,
+                  "credit": 73291.25,
+                  "markedBalanced": true,
+                  "lines": [
+                    {
+                      "account": "Staff Salaries & Wages (Operating Expense)",
+                      "debit": 72000,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Employer CPF Contribution (Operating Expense)",
+                      "debit": 1280,
+                      "credit": 0
+                    },
+                    {
+                      "account": "CPF Payable to CPF Board (Current Liability)",
+                      "debit": 0,
+                      "credit": 2720
+                    },
+                    {
+                      "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                      "debit": 0,
+                      "credit": 70560
+                    },
+                    {
+                      "account": "Skills Development Levy (Operating Expense)",
+                      "debit": 11.25,
+                      "credit": 0
+                    },
+                    {
+                      "account": "Skills Development Levy Payable",
+                      "debit": 0,
+                      "credit": 11.25
+                    }
+                  ]
+                }
+              ],
+              "attempts": 0,
+              "cumulativeTurnAttempts": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
