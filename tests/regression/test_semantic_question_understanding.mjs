@@ -1702,7 +1702,9 @@ assert.equal(hasAffirmativeResetDirective(negatedInfinitiveResetFollowUp), false
 assert.equal(hasAffirmativeResetDirective(negatedWithoutForgettingFollowUp), false);
 assert.equal(hasAffirmativeResetDirective(affirmativeForgetReset), true);
 assert.equal(hasAffirmativeResetDirective(withoutDiscussionForgetReset), true);
-assert.equal(hasAffirmativeResetDirective(conditionalClauseForgetReset), true);
+assert.equal(hasAffirmativeResetDirective(conditionalClauseForgetReset), false);
+assert.equal(hasAffirmativeResetDirective('If we ignore the previous employee details, what CPF rate applies?'), false);
+assert.equal(assessConversationRelation('If we ignore the previous employee details, what CPF rate applies?', employeeCpfScenario), 'RELATED');
 assert.equal(isShortSemanticFollowUp(negatedForgetFollowUp), true,
   'Negated forget instruction preserves short semantic follow-up retention.');
 assert.equal(isShortSemanticFollowUp(negatedWantForgetFollowUp), true,
@@ -1723,8 +1725,8 @@ assert.equal(isShortSemanticFollowUp(affirmativeForgetReset), false,
   'Affirmative forget instruction resets short semantic follow-up retention.');
 assert.equal(isShortSemanticFollowUp(withoutDiscussionForgetReset), false,
   'Affirmative forget instruction after "without further discussion" resets short semantic follow-up retention.');
-assert.equal(isShortSemanticFollowUp(conditionalClauseForgetReset), false,
-  'Affirmative forget instruction after negated condition resets short semantic follow-up retention.');
+assert.equal(isShortSemanticFollowUp(conditionalClauseForgetReset), true,
+  'Conditional forget instruction preserves short semantic follow-up retention.');
 assert.equal(assessConversationRelation(negatedForgetFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(negatedWantForgetFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(quotedForgetFollowUp, employeeCpfScenario), 'RELATED');
@@ -1735,7 +1737,7 @@ assert.equal(assessConversationRelation(negatedInfinitiveResetFollowUp, employee
 assert.equal(assessConversationRelation(negatedWithoutForgettingFollowUp, employeeCpfScenario), 'RELATED');
 assert.equal(assessConversationRelation(affirmativeForgetReset, employeeCpfScenario), 'NEW');
 assert.equal(assessConversationRelation(withoutDiscussionForgetReset, employeeCpfScenario), 'NEW');
-assert.equal(assessConversationRelation(conditionalClauseForgetReset, employeeCpfScenario), 'NEW');
+assert.equal(assessConversationRelation(conditionalClauseForgetReset, employeeCpfScenario), 'RELATED');
 
 // Finding 2 & 3: Independent transactions and historical-period statutory questions must not attach as conversation references.
 const priorYearInvoiceTx = 'We received SGD 5,000 from a customer for a prior-year invoice. What accounting entry is required?';
@@ -2117,6 +2119,19 @@ assert.equal(hasExplicitPriorFactReference(priorSoftwareLicenceQuery, employeeCp
 assert.equal(assessConversationRelation(priorSoftwareLicenceQuery, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(hasAffirmativeResetDirective('Please proceed without letting us forget the earlier employee details.'), false);
 assert.equal(startsNewAccountingScenario('If the candidate accepts, we hired a second employee for SGD 4,500.', employeeCpfScenario), true);
+for (const nonNegatedActionQuery of [
+  'We are not GST-registered and bought a laptop for SGD 2,000.',
+  'Without GST we bought a machine for SGD 5,000.',
+  'We did not lease the equipment and purchased a server for SGD 5,000.'
+]) {
+  assert.equal(startsNewAccountingScenario(nonNegatedActionQuery, employeeCpfScenario), true,
+    `predicate-scoped negation does not suppress new scenario: ${nonNegatedActionQuery}`);
+  assert.equal(assessConversationRelation(nonNegatedActionQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `predicate-scoped negation classifies as NEW: ${nonNegatedActionQuery}`);
+}
+assert.equal(startsNewAccountingScenario('We did not buy or lease a machine for SGD 5,000.', employeeCpfScenario), false);
+assert.equal(startsNewAccountingScenario('We have not bought or leased a machine for SGD 5,000.', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('We have not bought or leased a machine for SGD 5,000.', ppeMachineScenario, ppeMachineScenario), 'RELATED');
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {

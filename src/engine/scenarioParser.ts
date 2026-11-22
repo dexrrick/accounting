@@ -366,8 +366,7 @@ export async function parseAccountingQuery(
   );
   const isNonSalaryPayrollCorrection = Boolean(
     currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-    !isSingleMonthlySalaryAmendment(query) &&
-    !/\b(?:salary|wages?|monthly|per\s+month|a\s+month)\b|(?:sgd|s\$|usd|eur|gbp|\$)\s*\d/i.test(query)
+    !isSingleMonthlySalaryAmendment(query)
   );
   const amendmentResolution = (isMeasurementBasisFollowUp || isNonSalaryPayrollCorrection)
     ? { intent: 'QUESTION' as const }
@@ -618,9 +617,11 @@ export async function parseAccountingQuery(
     ? independentSaleMissingField
     : independentTransactionMissingField;
   const hasSalaryFigure =
-    /(?:earning|earns|salary|wages?|pay)\s*(?:of|is|:)?\s*(?:sgd|\$)?\s*\d+/i.test(q) ||
-    /(?:sgd|\$)\s*\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i.test(q) ||
-    /\d+[\d,]*(?:\.\d+)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i.test(q);
+    /(?:earning|earns|earned|salary|wages?|pay|remuneration)\s*(?:of|is|at|:)?\s*(?:sgd|s\$|\$)?\s*\d+/i.test(q) ||
+    /\b(?:hired|employ(?:ed)?)\b[^.!?]{0,80}(?:sgd|s\$|\$)\s*\d+/i.test(q) ||
+    /(?:(?:sgd|s\$|\$)\s*)?\d+[\d,]*(?:\.\d+)?\s*(?:k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b/i.test(q);
+  const hasBareCurrencyAmount = /(?:sgd|s\$|\$)\s*\d+[\d,]*(?:\.\d+)?/i.test(q);
+  const hasExplicitPayrollTerm = /\b(?:cpf|salary|wages?|payroll|remuneration|bonus|allowance|last\s+day|prorat|final\s+pay|earning|earns|earned)\b/i.test(q);
 
   // Pronouns occur in many commercial transactions (for example, "his own
   // company"). They are payroll evidence only when paired with payroll terms.
@@ -633,26 +634,24 @@ export async function parseAccountingQuery(
     (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
     (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
 
-  const isNonPayrollAssetOrLicenceAcquisition =
+  const isAssetOrExpenseAcquisition =
     /\b(?:bought|purchased|acquired|leased|rented)\b/i.test(q) &&
-    /\b(?:laptops?|computers?|servers?|printers?|equipment|machinery|plant|furniture|vehicles?|cars?|vans?|trucks?|software|licen[cs]es?|subscriptions?)\b/i.test(q) &&
-    !/\b(?:cpf|salary|wages?|final\s+pay|prorat|earning|earns)\b/i.test(q);
+    !hasSalaryFigure &&
+    !/\b(?:cpf|final\s+pay|prorat|last\s+day)\b/i.test(q);
 
   const isPayrollSalaryQuery =
-    !isNonPayrollAssetOrLicenceAcquisition && (
-      requestsIndependentFinalSalary ||
-      (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
-        (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-        (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
-        // A correction such as "I mean 10,000 a month" inherits the payroll
-        // context rather than being routed to the statutory-advisory fallback.
-        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-          hasSalaryFigure &&
-          /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
-        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-          /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
-      ))
-    );
+    requestsIndependentFinalSalary ||
+    (!isAssetOrExpenseAcquisition && !(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
+      (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+      (hasBareCurrencyAmount && (q.includes('cpf') || q.includes('last day') || q.includes('prorat') || (hasPayrollPersonnel && hasExplicitPayrollTerm))) ||
+      (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+      // A correction such as "I mean 10,000 a month" inherits the payroll
+      // context rather than being routed to the statutory-advisory fallback.
+      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        isSingleMonthlySalaryAmendment(query)) ||
+      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+        /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
+    ));
 
   if (isPayrollSalaryQuery) {
     if (requestsIndependentFinalSalary && (!payrollSalaryAmountMatch || hasAmbiguousPayrollEmployeeOwnership)) {
@@ -2072,7 +2071,7 @@ export async function parseAccountingQuery(
   // invoice/payable entry and label that assumption clearly; a later payment
   // can be recorded as its own settlement event.
   const isBusinessEquipmentAcquisition =
-    /\b(equipment|computer server|server|computer|laptops?|printers?|machinery|plant)\b/i.test(query) &&
+    /\b(equipment|computer server|server|computer|laptops?|monitors?|printers?|machinery|plant|furniture|desks?|chairs?|workstations?|hardware)\b/i.test(query) &&
     /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query);
   if (isBusinessEquipmentAcquisition) {
     const match = query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);

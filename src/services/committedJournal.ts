@@ -59,7 +59,8 @@ export function selectAccountingScenarioForRequest(
   const isNarrowPayrollSalaryAmendment = committedScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
     amendments.length === 1 && amendments[0].field === 'monthlySalary' && isSingleMonthlySalaryAmendment(query);
   if (isNarrowPayrollSalaryAmendment) return committedScenario;
-  const requestsSupportedAmendment = Boolean(amendments.length) &&
+  const requestsSupportedAmendment = committedScenario.scenarioType !== 'PAYROLL_CPF_SALARY' &&
+    Boolean(amendments.length) &&
     (!classification.taxAnalysisRequired && !classification.regulatoryAnalysisRequired);
   if (!explicitJournalRequest && !requestsSupportedAmendment) return activeScenario;
 

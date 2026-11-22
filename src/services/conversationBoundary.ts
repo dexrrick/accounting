@@ -193,6 +193,27 @@ const CLAUSE_NEGATION_PATTERN =
 function hasNegationInClausePrefix(prefix: string): boolean {
   return CLAUSE_NEGATION_PATTERN.test(prefix);
 }
+
+function isActionVerbNegated(normalizedActionLead: string): boolean {
+  const localClause = normalizedActionLead
+    .split(/[,;:]|\b(?:and|but|yet|however|instead|whereas|when|while|before|after|until|once)\b/i)
+    .at(-1) ?? '';
+  if (!hasNegationInClausePrefix(localClause)) return false;
+
+  const subjectMatches = [...localClause.matchAll(/\b(?:i|we|you|they|he|she|it|the\s+company|our\s+company)\b/gi)];
+  if (subjectMatches.length > 0) {
+    const lastSubject = subjectMatches[subjectMatches.length - 1];
+    const lastSubjectIndex = lastSubject.index ?? 0;
+    const afterLastSubject = localClause.slice(lastSubjectIndex + lastSubject[0].length);
+    if (hasNegationInClausePrefix(afterLastSubject)) return true;
+
+    const beforeLastSubject = localClause.slice(0, lastSubjectIndex);
+    return /\b(?:not|never|[a-z]+n['’]?t|cannot|can['’]?t|dont|doesnt|didnt|wont|wouldnt|shouldnt|couldnt|isnt|arent|wasnt|werent|havent|hasnt|hadnt)\b[^,;:]*\b(?:that|say|said|claim|claimed|mean|meant|imply|implied|suggest|suggested|assume|assumed|think|thought|believe|believed)\s+(?:that\s+)?$/i.test(beforeLastSubject);
+  }
+
+  return !/^\s*without\s+(?:a|an|the|any|our|their|his|her|its)?\s*[a-z]+\b/i.test(localClause);
+}
+
 /** Detects an affirmative instruction to ignore, disregard, or forget prior conversation context. */
 export function hasAffirmativeResetDirective(query: string): boolean {
   const withoutQuotedSpans = query
@@ -205,8 +226,13 @@ export function hasAffirmativeResetDirective(query: string): boolean {
   const directivePattern = /\b(ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/gi;
   for (const match of collapsedCoordinatedVerbs.matchAll(directivePattern)) {
     const matchIndex = match.index ?? 0;
-    let clausePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/[.!?;,:]/).at(-1) ?? '';
-    if (/\b(?:if|when|where|unless)\b/i.test(clausePrefix) || /\bwithout\b.*\b(?:please|then)\b/i.test(clausePrefix)) {
+    const sentencePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/(?<!\d)[.!?;](?!\d)/).at(-1) ?? '';
+    if (/\b(?:if|unless|when|where|suppose|assuming|provided|in\s+case)\b/i.test(sentencePrefix) ||
+        /(?:^|[,;:]\s*)\b(?:should|can|could|would|may|might|shall|do|does|did)\s+(?:i|we|you|they|he|she|it|the\s+company|our\s+company)\b/i.test(sentencePrefix)) {
+      continue;
+    }
+    let clausePrefix = sentencePrefix.split(/[,;:]/).at(-1) ?? '';
+    if (/\bwithout\b.*\b(?:please|then)\b/i.test(clausePrefix)) {
       clausePrefix = clausePrefix.split(/\b(?:please|then)\b/i).at(-1) ?? '';
     }
     if (!hasNegationInClausePrefix(clausePrefix)) return true;
@@ -451,10 +477,9 @@ function evaluateTransactionAction(q: string, action: RegExpMatchArray): Analyze
   const rawActionLead = q.slice(0, actionIndex).split(/(?<!\d)[.!?;](?!\d)/).at(-1) ?? '';
   const actionLead = maskIndirectQuestionIf(rawActionLead);
   const normalizedActionLead = actionLead.replace(/(?<=\d),(?=\d)/g, '');
-  const negationClauseBeforeAction = normalizedActionLead.split(/[,;:]|\b(?:but|yet|however|instead|whereas)\b/i).at(-1) ?? '';
   const conditionalClauseBeforeAction = normalizedActionLead.split(/[,;:]|\b(?:and|or|but|yet|however|instead|whereas)\b/i).at(-1) ?? '';
 
-  const isNegated = hasNegationInClausePrefix(negationClauseBeforeAction);
+  const isNegated = isActionVerbNegated(normalizedActionLead);
   const isHypothetical = !isNegated && isHypotheticalAction(normalizedActionLead, conditionalClauseBeforeAction);
   const isAffirmative = !isNegated && !isHypothetical;
   const { clauseText, subjectBeforeVerb, objectAfterAction } = extractActionClauseParts(q, actionIndex, actionEnd);

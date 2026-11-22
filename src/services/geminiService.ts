@@ -652,6 +652,9 @@ export function createGroundedSynthesisFailureResponse(
     directGroups: safeDirectGroups,
     committedDirectGroups: safeCommittedGroups,
     projectedGroups: safeProjectedGroups,
+    ...(response.scenarioState.factAmendments?.length
+      ? { factAmendments: response.scenarioState.factAmendments }
+      : {}),
     isComplete: Boolean(baseScenario.isComplete && engineMissingFields.length === 0)
   };
   let messageText: string;
@@ -915,7 +918,11 @@ async function processAccountingQueryCore(
   // it here also prevents grounding and provider prompts from seeing stale
   // balances on a complete new transaction.
   let activeScenario = isNewAccountingScenario ? null : currentScenario;
-  let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  const rawAmendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  let amendmentResolution = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+    !isSingleMonthlySalaryAmendment(userInput)
+    ? { intent: 'QUESTION' as const }
+    : rawAmendmentResolution;
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let authorityEvidenceMessage: string | undefined;
   let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
@@ -951,6 +958,9 @@ async function processAccountingQueryCore(
       ...(authorityMessage || authorityEvidenceMessage ? { messageText: authorityMessage || authorityEvidenceMessage } : {}),
       scenarioState: amendmentResolution.amendments?.length ? {
         ...scenarioWithCompleteness,
+        ...(typeof deterministicScenario?.amount === 'number' && scenarioWithCompleteness.amount === undefined
+          ? { amount: deterministicScenario.amount }
+          : {}),
         factAmendments: [
           ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
@@ -1194,14 +1204,14 @@ async function processAccountingQueryCore(
     hasImages,
     isShortSemanticFollowUp: isContextualFollowUp
   });
-  const authorityEvidenceRuntimeEnabled = shouldUseAuthorityEvidenceRuntime({
+  const authorityEvidenceRuntimeEnabled = !isPayrollSalaryAmendment && (shouldUseAuthorityEvidenceRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
     explicitIrasEvidenceRequest,
     hasImages,
     questionUnderstanding,
     rawQuery: userInput
-  }) || unsupportedAccountingRuleExplanationRuntimeEnabled;
+  }) || unsupportedAccountingRuleExplanationRuntimeEnabled);
   if (authorityEvidenceRuntimeEnabled) {
     authorityEvidenceQueryIntent = classification.intent;
     const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {

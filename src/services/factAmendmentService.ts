@@ -19,11 +19,12 @@ export interface FollowUpResolution {
 }
 
 const CORRECTION_MARKER = /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead|not\s+\S+\s+but)\b/i;
-const SINGLE_MONTHLY_SALARY_DECLARATION = /^\s*(?:(?:actually|i mean|correction|correct(?:ion|ed)?|rather|instead)\s*,?\s*)?(?:(?:the|my|our|his|her|their|employee['’]s|worker['’]s|staff['’]s)\s+)?(?:(?:monthly|basic|gross)\s+)?(?:salary|wages?|pay)(?:\s+for\s+cpf)?\s+(?:is|was|should\s+be)\s+(?:(?:sgd|s\$|usd|eur|gbp|\$)\s*)?\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|thousand|million))?(?:\s+(?:per\s+month|a\s+month|monthly))?[.!?]?\s*$/i;
+const SINGLE_MONTHLY_SALARY_DECLARATION = /^\s*(?:(?:actually|i mean|correction|correct(?:ion|ed)?|rather|instead)\s*,?\s*)?(?:(?:the|my|our|his|her|their|employee['’]s|worker['’]s|staff['’]s)\s+)?(?:(?:monthly|basic|gross)\s+)?(?:salary|wages?|pay)(?:\s+for\s+cpf)?\s+(?:is|was|should\s+be)\s+(?:(?:sgd|s\$|usd|eur|gbp|\$)\s*)?\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|thousand|million))?(?:\s*(?:per\s+month|a\s+month|\/month|monthly))?[.!?]?\s*$/i;
+const MONTHLY_RATE_CORRECTION_DECLARATION = /^\s*(?:actually|i mean|correction|correct(?:ion|ed)?|rather|instead)\s*,?\s*(?:(?:it|that|the\s+amount)\s+(?:is|was|should\s+be)\s+)?(?:(?:sgd|s\$|usd|eur|gbp|\$)\s*)?\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?\s*(?:per\s+month|a\s+month|\/month|monthly)[.!?]?\s*$/i;
 
 /** Recognizes a standalone salary value that can safely amend a payroll scenario. */
 export function isSingleMonthlySalaryAmendment(query: string): boolean {
-  return SINGLE_MONTHLY_SALARY_DECLARATION.test(query);
+  return SINGLE_MONTHLY_SALARY_DECLARATION.test(query) || MONTHLY_RATE_CORRECTION_DECLARATION.test(query);
 }
 
 function parseAmount(query: string): number | undefined {

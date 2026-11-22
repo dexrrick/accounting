@@ -929,13 +929,13 @@ for (const call of calls) {
 
     for (const affirmativeResetQuery of [
       'Does that CPF rule apply? Forget that she is a second-year Singapore PR.',
-      'Without further discussion please forget the previous transaction.',
-      'If that is not relevant please forget the previous transaction.'
+      'Without further discussion please forget the previous transaction.'
     ]) {
       assert.equal(hasAffirmativeResetDirective(affirmativeResetQuery), true);
       assert.equal(isShortSemanticFollowUp(affirmativeResetQuery), false);
       assert.equal(assessConversationRelation(affirmativeResetQuery, employeeSetupScenario, employeeSetupScenario), 'NEW');
     }
+    assert.equal(hasAffirmativeResetDirective('If that is not relevant please forget the previous transaction.'), false);
     for (const [index, affirmativeResetQuery] of [
       'Does that CPF rule apply? Forget that she is a second-year Singapore PR.',
       'Does that CPF rule apply? Without further discussion please forget the previous transaction.'
@@ -1603,6 +1603,55 @@ for (const call of calls) {
       'BUSINESS_EQUIPMENT_ACQUISITION',
       'staff laptop bought for payroll parses as BUSINESS_EQUIPMENT_ACQUISITION rather than PAYROLL_CPF_SALARY'
     );
+    // Finding 1: Negation on an earlier clause/attribute must not suppress a coordinated or subsequent affirmative acquisition.
+    const nonGstLaptopQuery = 'We are not GST-registered and bought a laptop for SGD 2,000.';
+    assert.equal(
+      (await parseAccountingQuery(nonGstLaptopQuery)).scenarioType,
+      'BUSINESS_EQUIPMENT_ACQUISITION',
+      'non-GST laptop acquisition parses as BUSINESS_EQUIPMENT_ACQUISITION'
+    );
+    const nonGstLaptopTurn = { id: 'boundary-non-gst-laptop', sender: 'user', timestamp: '', text: nonGstLaptopQuery };
+    const callsBeforeNonGstLaptop = boundaryCalls.length;
+    const nonGstLaptopResponse = await processAccountingQuery(
+      nonGstLaptopQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        nonGstLaptopTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(nonGstLaptopResponse.conversationBoundaryMessageId, nonGstLaptopTurn.id,
+      'non-GST laptop acquisition sets conversationBoundaryMessageId to the user turn id');
+    const nonGstLaptopPrompt = boundaryCalls.slice(callsBeforeNonGstLaptop).map(call => call.prompt).join('\n');
+    assert.ok(
+      !nonGstLaptopPrompt.includes('58 years old'),
+      'non-GST laptop acquisition excludes prior employee age from provider prompt'
+    );
+    // Finding 3: Staff/employee equipment and furniture acquisitions must parse as BUSINESS_EQUIPMENT_ACQUISITION with balanced deterministic journals.
+    for (const [equipmentQuery, expectedAmount] of [
+      ['We bought a staff monitor for SGD 600.', 600],
+      ['We purchased desks and chairs for our employees for SGD 3,500.', 3500]
+    ]) {
+      const parsedEquipment = await parseAccountingQuery(equipmentQuery);
+      assert.equal(
+        parsedEquipment.scenarioType,
+        'BUSINESS_EQUIPMENT_ACQUISITION',
+        `equipment acquisition parses as BUSINESS_EQUIPMENT_ACQUISITION: ${equipmentQuery}`
+      );
+      assert.equal(parsedEquipment.directGroups[0]?.totalDebit, expectedAmount);
+      assert.equal(parsedEquipment.directGroups[0]?.isBalanced, true);
+    }
+    const mixedEquipmentFinalSalary = await parseAccountingQuery(
+      "We bought equipment for SGD 2,000; calculate the departing employee's final salary."
+    );
+    assert.equal(mixedEquipmentFinalSalary.scenarioType, 'PAYROLL_CPF_SALARY',
+      'mixed equipment purchase with final-salary request preserves separate-facts missingFields guard');
+    assert.equal(mixedEquipmentFinalSalary.isComplete, false);
+    assert.ok(mixedEquipmentFinalSalary.missingFields.length > 0);
 
     for (const [index, softwareLicenceQuery] of [
       'We purchased a payroll software licence for SGD 3,000.',
@@ -1661,7 +1710,7 @@ for (const call of calls) {
     }
 
     for (const [index, practicalNewBoundaryQuery] of [
-      'Does that CPF rule apply? If that is not relevant please forget the previous transaction.',
+      'Does that CPF rule apply? Please forget the previous transaction.',
       'If the candidate accepts, we hired a second employee for SGD 4,500.'
     ].entries()) {
       const practicalTurn = { id: `boundary-practical-new-${index}`, sender: 'user', timestamp: '', text: practicalNewBoundaryQuery };
@@ -1689,6 +1738,30 @@ for (const call of calls) {
         `practical workflow excludes prior employee facts from provider prompt: ${practicalNewBoundaryQuery}`
       );
     }
+
+    const conditionalResetFollowUpQuery = 'Does that CPF rule apply? If that is not relevant please forget the previous transaction.';
+    const conditionalResetTurn = { id: 'boundary-conditional-reset-followup', sender: 'user', timestamp: '', text: conditionalResetFollowUpQuery };
+    const callsBeforeConditionalReset = boundaryCalls.length;
+    const conditionalResetResponse = await processAccountingQuery(
+      conditionalResetFollowUpQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        conditionalResetTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(conditionalResetResponse.conversationBoundaryMessageId, undefined,
+      'conditional reset clause retains existing conversation boundary');
+    const conditionalResetPrompt = boundaryCalls.slice(callsBeforeConditionalReset).map(call => call.prompt).join('\n');
+    assert.ok(
+      conditionalResetPrompt.includes('58 years old') &&
+      conditionalResetPrompt.includes('second-year Singapore PR'),
+      'conditional reset clause preserves prior employee context in provider prompt'
+    );
 
     const settleInvoiceFollowUpQuery = 'What if we settle that unpaid invoice in cash today?';
     assert.equal(
@@ -1737,12 +1810,31 @@ for (const call of calls) {
     );
     assert.equal(salaryCorrectionResponse.conversationBoundaryMessageId, undefined,
       'salary correction referring to existing employee retains existing conversation boundary');
+    assert.equal(salaryCorrectionResponse.scenarioState.amount, 6500);
+    assert.equal(salaryCorrectionResponse.scenarioState.factAmendments?.[0]?.value, 6500);
     const salaryCorrectionPrompt = boundaryCalls.slice(callsBeforeSalaryCorrection).map(call => call.prompt).join('\n');
     assert.ok(
       salaryCorrectionPrompt.includes('58 years old') &&
       salaryCorrectionPrompt.includes('second-year Singapore PR'),
       'salary correction retains existing employee age and PR context in provider prompt'
     );
+    const cpfPayCorrection = 'Actually, his monthly pay for CPF is $6,500.';
+    const cpfPayCorrectionTurn = { id: 'boundary-cpf-pay-correction', sender: 'user', timestamp: '', text: cpfPayCorrection };
+    const cpfPayCorrectionResponse = await processAccountingQuery(
+      cpfPayCorrection,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        cpfPayCorrectionTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(cpfPayCorrectionResponse.conversationBoundaryMessageId, undefined);
+    assert.equal(cpfPayCorrectionResponse.scenarioState.amount, 6500);
+    assert.equal(cpfPayCorrectionResponse.scenarioState.factAmendments?.[0]?.value, 6500);
     const nonSalaryPayrollAgeFollowUp = await parseAccountingQuery('Actually, he is 58 years old.', employeeSetupScenario);
     assert.notEqual(
       nonSalaryPayrollAgeFollowUp.amount,
@@ -1753,6 +1845,58 @@ for (const call of calls) {
       nonSalaryPayrollAgeFollowUp.factAmendments,
       undefined,
       'non-salary payroll correction does not emit a monthlySalary factAmendment'
+    );
+    assert.equal(
+      selectAccountingScenarioForRequest('Actually, he is 58 years old.', null, employeeSetupScenario),
+      null,
+      'non-salary payroll correction does not re-attach committedScenario in selectAccountingScenarioForRequest'
+    );
+    const nonSalaryPayrollAgeTurn = { id: 'boundary-non-salary-age-correction', sender: 'user', timestamp: '', text: 'Actually, he is 58 years old.' };
+    const nonSalaryPayrollAgeResponse = await processAccountingQuery(
+      'Actually, he is 58 years old.',
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        nonSalaryPayrollAgeTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(nonSalaryPayrollAgeResponse.scenarioState.factAmendments, undefined,
+      'processAccountingQuery does not emit factAmendments for non-salary payroll correction');
+    assert.notEqual(nonSalaryPayrollAgeResponse.scenarioState.amount, 58,
+      'processAccountingQuery does not overwrite monthly salary with 58 on non-salary payroll correction');
+
+    const shorthandSalaryCorrection = 'I mean 10,000 a month.';
+    assert.equal(isSingleMonthlySalaryAmendment(shorthandSalaryCorrection), true);
+    assert.equal(assessConversationRelation(shorthandSalaryCorrection, employeeSetupScenario, employeeSetupScenario), 'RELATED');
+    assert.equal(selectAccountingScenarioForRequest(shorthandSalaryCorrection, null, employeeSetupScenario), employeeSetupScenario);
+    const parsedShorthandSalaryCorrection = await parseAccountingQuery(shorthandSalaryCorrection, employeeSetupScenario);
+    assert.equal(parsedShorthandSalaryCorrection.amount, 10000);
+    const shorthandSalaryTurn = { id: 'boundary-shorthand-salary-correction', sender: 'user', timestamp: '', text: shorthandSalaryCorrection };
+    const callsBeforeShorthandSalary = boundaryCalls.length;
+    const shorthandSalaryResponse = await processAccountingQuery(
+      shorthandSalaryCorrection,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        shorthandSalaryTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(shorthandSalaryResponse.conversationBoundaryMessageId, undefined);
+    assert.equal(shorthandSalaryResponse.scenarioState.amount, 10000);
+    assert.equal(shorthandSalaryResponse.scenarioState.factAmendments?.[0]?.value, 10000);
+    const shorthandSalaryPrompt = boundaryCalls.slice(callsBeforeShorthandSalary).map(call => call.prompt).join('\n');
+    assert.ok(
+      shorthandSalaryPrompt.includes('58 years old') &&
+      shorthandSalaryPrompt.includes('second-year Singapore PR'),
+      'shorthand monthly salary correction retains employee context in provider prompt'
     );
 
     const pronounLeaseVariationQuery = 'What if we leased it instead?';
