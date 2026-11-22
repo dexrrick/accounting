@@ -9,6 +9,8 @@ import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { createGroundedSynthesisFailureResponse, hasUnverifiedStatutoryClaim, processAccountingQuery } from '../../src/services/geminiService.ts';
 import { postProcessAIResponse } from '../../src/services/groundingContextBuilder.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
+import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
+import { getDisplayableUncommittedJournalGroups } from '../../src/services/committedJournal.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
@@ -457,6 +459,30 @@ try {
   const unresolvedFallback = createGroundedSynthesisFailureResponse(
     contaminatedResponse, mixedQuery, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE', trustedEngineScenario
   );
+  const equipmentQuery = 'My company incurred SGD 80,000 on a piece of equipment. How should we account for it?';
+  const equipment = await parseAccountingQuery(equipmentQuery, null);
+  const equipmentFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, equipmentQuery, 'SFRS_I', undefined, undefined, 'OTHER', equipment
+  );
+  const [equipmentGroup, ...extraEquipmentGroups] = getDisplayableUncommittedJournalGroups(equipmentFallback.scenarioState, 'SFRS_I');
+  assert.equal(extraEquipmentGroups.length, 0);
+  assert.equal(equipmentGroup.authorityStatus, 'CONDITIONAL');
+  assert.deepEqual(equipmentGroup.lines.map(line => [line.category, line.debit, line.credit]),
+    [['ASSET', 80000, 0], ['LIABILITY', 0, 80000]]);
+  assert.match(equipmentGroup.lines[0].accountName, /Equipment/);
+  assert.equal(equipmentGroup.lines[1].accountName, 'Trade Payables');
+  assert.deepEqual(equipmentGroup.citations, []);
+  assert.match(equipmentFallback.messageText, /paid immediately, or is it still payable/);
+  assert.doesNotMatch(equipmentFallback.messageText, /Statutory evidence unresolved/);
+  assert.equal(equipmentFallback.scenarioState.committedDirectGroups, undefined);
+  const unpaidEquipmentQuery = 'My company incurred SGD 80,000 on a piece of equipment and has not yet paid the supplier. How should we account for it?';
+  const unpaidEquipment = await parseAccountingQuery(unpaidEquipmentQuery, null);
+  const unpaidFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, unpaidEquipmentQuery, 'SFRS_I', undefined, undefined, 'OTHER', unpaidEquipment
+  );
+  const [unpaidGroup] = getDisplayableUncommittedJournalGroups(unpaidFallback.scenarioState, 'SFRS_I');
+  assert.equal(unpaidGroup.lines.find(line => line.credit === 80000)?.accountName, 'Trade Payables');
+  assert.deepEqual(unpaidFallback.scenarioState.assumptions, []);
   assert.equal(unresolvedFallback.displayFullAnswer, true);
   assert.doesNotMatch(unresolvedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
   assert.doesNotMatch(JSON.stringify(unresolvedFallback.scenarioState), /UNSAFE_ORIGINAL_ADVISORY/,
@@ -828,7 +854,8 @@ try {
   accountingOnlyMode = false;
 
   const motorCarQuery = 'Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.';
-  const motorCarList = readFileSync(new URL('../fixtures/iras-motor-car-qualified-list.txt', import.meta.url), 'utf8').trim();
+  const motorCarList = readFileSync(new URL('../fixtures/iras-motor-car-qualified-list.txt', import.meta.url), 'utf8')
+    .replace(/\r\n/g, '\n').trim();
   const motorCarUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses';
   const irasConditionsUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
   const motorCarEligibilityIssue = {

@@ -46,4 +46,19 @@ assert.equal(mixedConditionalDisplay.scenarioState.directGroups?.length, 2);
 assert.equal(mixedConditionalDisplay.scenarioState.committedDirectGroups, undefined,
   'a mixed conditional collection is not promoted to committed state');
 assert.deepEqual(mixedConditionalDisplay.scenarioState.directGroups?.map(group => group.totalDebit), [50000, 1000]);
+
+const equipmentFacts = 'My company incurred SGD 80,000 on a piece of equipment';
+for (const settlement of ['has partially paid the supplier, with the balance outstanding', 'has paid SGD 10,000 to the supplier', 'has paid 10,000 to the supplier', 'has paid a deposit of 10,000 to the supplier']) {
+  const partial = await parseAccountingQuery(`${equipmentFacts} and ${settlement}. How should we account for it?`, null);
+  assert.equal(partial.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+  assert.equal(partial.isComplete, false);
+  assert.deepEqual(partial.directGroups, []);
+  assert.match(partial.missingFields[0].prompt, /How much was paid/);
+}
+const futurePayment = await parseAccountingQuery(`${equipmentFacts} and will be paid by bank transfer next month. How should we account for it?`, null);
+assert.equal(futurePayment.directGroups?.[0].lines[1].accountName, 'Trade Payables');
+assert.equal(futurePayment.directGroups?.[0].lines[1].credit, 80000);
+const fullPayment = await parseAccountingQuery(`${equipmentFacts} and has paid SGD 80,000 to the supplier. How should we account for it?`, null);
+assert.equal(fullPayment.directGroups?.[0].lines[1].accountName, 'Cash at Bank');
+assert.equal(fullPayment.directGroups?.[0].lines[1].credit, 80000);
 console.log('PASS | Equipment acquisition returns a measured journal and capital-allowance treatment');

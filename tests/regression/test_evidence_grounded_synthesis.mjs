@@ -2882,12 +2882,11 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     ] };
   }, ({ prompt }) => {
     supportPacket = packetFrom(prompt);
-    assert.ok(!supportPacket.claims.some(item => item.claimId === 'mom-unqualified-14-day-deadline'),
-      'the unqualified deadline is rejected by deterministic claim validation before the support model can accept it');
-    const qualified = supportPacket.claims.find(item => item.claimId === 'mom-qualified-14-day-deadline');
-    assert.ok(qualified);
-    assert.ok(qualified.citedPassages.some(item => item.completeAdmittedPassage === coverageQuote),
-      'support review receives the deadline claim with its same-issue Part 4 qualification');
+    assert.ok(!supportPacket.claims.some(item => item.claimId === 'mom-unqualified-14-day-deadline' ||
+      item.claimId === 'mom-qualified-14-day-deadline'),
+    'both deadline claims are withheld before support review for an employee outside Part 4');
+    assert.ok(supportPacket.claims.some(item => item.claimId === 'mom-contract-scope'),
+      'the separate contract treatment remains eligible for official-source support review');
     return { verdicts: supportPacket.claims.map(item => ({
       claimId: item.claimId, support: 'SUPPORTED',
       claimType: item.kind === 'APPLICATION' ? 'CONDITIONAL_APPLICATION' : 'RULE'
@@ -2896,7 +2895,7 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   const result = await tryGenerateGroundedSynthesis(makeInput({
     query: queryText,
     history: [
-      { id: 'mom-covered-user', sender: 'user', timestamp: '', text: 'The employee is covered by the Employment Act and works overtime.' },
+      { id: 'mom-covered-user', sender: 'user', timestamp: '', text: 'Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.' },
       { id: 'mom-covered-assistant', sender: 'ai', timestamp: '', text: 'The overtime rules apply.' }
     ],
     issues, issuePlanIssues,
@@ -2905,15 +2904,132 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
   assert.ok(result);
   assert.match(result.messageText, /ordinary salary at least once a month and within 7 days/);
   assert.match(result.messageText, /apply only to those covered under Part 4 of the Employment Act/);
-  assert.match(result.messageText, /within 14 days after the last day of the salary period/);
   assert.match(result.messageText, /terms and conditions of employment will be according to your employment contract/);
   assert.match(result.messageText, /Whether the employment contract provides overtime pay/);
+  assert.doesNotMatch(result.messageText, /within 14 days after the last day of the salary period/i,
+    'the outside-Part-4 response does not present the 14-day rule as applicable');
   assert.doesNotMatch(result.messageText, /the 14-day deadline does not apply|Section 21\(2\) never applies/i);
   assert.ok(result.verification.withheldClaimIds.includes('mom-unqualified-14-day-deadline'));
-  assert.ok(result.verification.admittedClaimIds.includes('mom-qualified-14-day-deadline'));
+  assert.ok(result.verification.withheldClaimIds.includes('mom-qualified-14-day-deadline'));
+  assert.ok(result.verification.admittedClaimIds.includes('mom-contract-scope'));
   assert.ok(result.verification.admittedClaimIds.includes('mom-ordinary-salary-7-day-rule'));
+  assert.ok(generationPacket.facts.some(fact => fact.origin === 'PRIOR_USER_STATEMENT' &&
+    fact.text.includes('covered by the Employment Act and the overtime provisions')),
+  'the follow-up synthesis receives the parent user statement containing the supplied coverage facts');
+  assert.deepEqual(result.verification.requestedIssues.map(issue => issue.issueId), issues.map(issue => issue.issueId));
+  assert.ok(result.verification.requestedIssues.every(issue => issue.admittedPassageIds.length > 0),
+    'the run diagnostics expose which issue-owned source passages reached synthesis');
   assert.equal(result.verification.providerCalls, 2,
     'the deterministic scope check adds no extra model pass and the existing selective support call handles valid claims');
+
+  const coveredIssue = makeCurrentAdmittedNarrativeIssue({
+    issueId: 'issue-mom-part4-covered-deadline-control', authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'overtime payment deadline for an employee covered under Part 4', population: 'EMPLOYEE',
+    source: momSource, legacyQuote: coverageQuote
+  });
+  coveredIssue.applicationStatus = 'NOT_REQUIRED';
+  let coveredDeadline;
+  const coveredDeadlineScript = scriptedCall(({ prompt }) => {
+    const packet = packetFrom(prompt);
+    const coverage = packet.evidencePassages.find(item => item.issueId === coveredIssue.issueId &&
+      item.completeAdmittedPassage === coverageQuote);
+    coveredDeadline = packet.evidencePassages.find(item => item.issueId === coveredIssue.issueId &&
+      item.completeAdmittedPassage === deadlineQuote);
+    assert.ok(coverage && coveredDeadline);
+    return { claims: [claim('mom-part4-covered-14-day-deadline', `${coverageQuote} ${deadlineQuote}`,
+      [coveredDeadline.id, coverage.id], { issueId: coveredIssue.issueId })] };
+  });
+  const coveredDeadlineResult = await tryGenerateGroundedSynthesis(makeInput({
+    query: 'The employee is covered under Part 4 of the Employment Act. What is the overtime payment deadline?',
+    issues: [coveredIssue], issuePlanIssues: [plannedNarrativeIssue(coveredIssue)],
+    evidenceQuality: { eligibleRecords: [momSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: coveredDeadlineScript.call });
+  assert.ok(coveredDeadlineResult);
+  assert.match(coveredDeadlineResult.messageText, /within 14 days after the last day of the salary period/,
+    'the outside-Part-4 gate preserves the qualified deadline for a Part 4-covered employee');
+  assert.ok(coveredDeadlineResult.verification.admittedClaimIds.includes('mom-part4-covered-14-day-deadline'));
+
+  const followUpQuery = 'Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.';
+  const followUpContractSource = makeAdmittedNarrativeSource({
+    id: 'LIVE_TOPIC_mom_follow_up_contract_scope', authority: 'MOM',
+    title: 'Hours of work, overtime and rest day', url: momUrl,
+    domain: 'MOM_EMPLOYMENT', topicId: 'mom_overtime', sourceText: contractQuote
+  });
+  const followUpDeadlineSource = makeCapturedOfficialSource({
+    id: 'LIVE_TOPIC_mom_follow_up_overtime_deadline', authority: 'MOM',
+    title: 'Paying salary', url: 'https://www.mom.gov.sg/employment-practices/salary/paying-salary',
+    quote: deadlineQuote
+  });
+  const followUpOvertimeIssue = makeCurrentAdmittedNarrativeIssue({
+    issueId: overtimeIssueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: 'overtime payment terms for an employee outside Part 4', population: 'EMPLOYEE',
+    source: followUpContractSource, legacyQuote: contractQuote
+  });
+  followUpOvertimeIssue.applicationStatus = 'UNRESOLVED';
+  followUpOvertimeIssue.gaps = [{ issueId: overtimeIssueId, authority: 'MOM', domain: 'MOM_EMPLOYMENT',
+    subject: followUpOvertimeIssue.subject, operation: 'COMPARE', stage: 'covered', code: 'MISSING_FACT',
+    reason: 'Whether the employment contract provides overtime pay and what payment terms it sets.' }];
+  followUpOvertimeIssue.sources.push(followUpDeadlineSource);
+  followUpOvertimeIssue.verifiedClaims.push({
+    recordId: followUpDeadlineSource.id, quote: deadlineQuote, text: deadlineQuote,
+    supportKind: 'EXACT_SOURCE_QUOTE', canonicalUrl: followUpDeadlineSource.canonicalSourceUrl,
+    sourceAdmissionOptions: { targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  });
+  const followUpIssues = [salaryIssue, followUpOvertimeIssue];
+  const followUpIssuePlan = followUpIssues.map(plannedNarrativeIssue);
+  let followUpPacket;
+  let followUpContractPassageId;
+  const followUpScript = scriptedCall(({ prompt }) => {
+    followUpPacket = packetFrom(prompt);
+    const salary = followUpPacket.evidencePassages.find(item => item.issueId === salaryIssueId &&
+      item.completeAdmittedPassage === salaryQuote);
+    const contract = followUpPacket.evidencePassages.find(item => item.issueId === overtimeIssueId &&
+      item.completeAdmittedPassage === contractQuote);
+    const deadline = followUpPacket.evidencePassages.find(item => item.issueId === overtimeIssueId &&
+      item.completeAdmittedPassage === deadlineQuote);
+    assert.ok(salary && contract && deadline, 'the routed follow-up retains its approved MOM passages');
+    assert.notEqual(contract.sourceRecordId, deadline.sourceRecordId,
+      'the contract qualification and 14-day deadline come from distinct MOM source records');
+    followUpContractPassageId = contract.id;
+    return { claims: [
+      claim('saved-shape-ordinary-salary', salaryQuote, [salary.id], { issueId: salaryIssueId }),
+      claim('saved-shape-outside-part4-14-day-deadline', deadlineQuote, [deadline.id], { issueId: overtimeIssueId })
+    ] };
+  });
+  const followUpResult = await tryGenerateGroundedSynthesis(makeInput({
+    query: followUpQuery,
+    history: [
+      { id: 'mom-follow-up-parent-user', sender: 'user', timestamp: '',
+        text: 'Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.' },
+      { id: 'mom-follow-up-parent-assistant', sender: 'ai', timestamp: '',
+        text: 'Ordinary salary is due within 7 days. Overtime is due within 14 days.' }
+    ],
+    issues: followUpIssues, issuePlanIssues: followUpIssuePlan,
+    evidenceQuality: { eligibleRecords: [salarySource, followUpDeadlineSource, followUpContractSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
+  }), { call: followUpScript.call });
+  assert.ok(followUpResult);
+  assert.match(followUpResult.messageText, /ordinary salary at least once a month and within 7 days/,
+    'the parent Employment Act coverage remains available for the ordinary-salary rule');
+  assert.match(followUpResult.messageText, /terms and conditions of employment will be according to your employment contract/,
+    'the missing follow-up rule is bound directly to the admitted MOM contract-scope passage');
+  assert.doesNotMatch(followUpResult.messageText, /14\s+days?/i,
+    'an employee outside Part 4 is not given the 14-day rule as the operative answer');
+  assert.ok(followUpResult.verification.admittedClaimIds.includes('mom-contract-scope-1'));
+  assert.ok(followUpResult.verification.admittedClaimIds.includes('saved-shape-ordinary-salary'));
+  assert.ok(followUpResult.verification.withheldClaimIds.includes('saved-shape-outside-part4-14-day-deadline'),
+    'an exact deadline claim from a separate MOM source is withheld for the routed outside-Part-4 issue');
+  assert.deepEqual(followUpResult.verification.claims.find(item =>
+    item.claimId === 'saved-shape-outside-part4-14-day-deadline')?.admittedPassageIds, [],
+  'the withheld claim receives no deadline source citation');
+  assert.deepEqual(followUpResult.verification.claims.find(item => item.claimId === 'mom-contract-scope-1')?.admittedPassageIds,
+    [followUpContractPassageId], 'the source fallback binds only the contract quote from its own issue/source');
+  assert.ok(followUpResult.officialAnswerLinks.some(link => link.url === momUrl),
+    'the deterministic source quote retains its official MOM source link');
+  assert.ok(followUpPacket.facts.some(fact => fact.origin === 'PRIOR_USER_STATEMENT' &&
+    fact.text.includes('covered by the Employment Act and the overtime provisions')),
+  'the fallback preserves parent facts without converting an assistant statement into evidence');
+  assert.equal(followUpResult.verification.providerCalls, 1,
+    'binding an exact admitted MOM scope quote adds no provider call');
 
   const contractOnlySource = makeAdmittedNarrativeSource({
     id: 'LIVE_TOPIC_mom_overtime_contract_scope_fallback_test', authority: 'MOM',

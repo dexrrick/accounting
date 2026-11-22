@@ -2063,26 +2063,50 @@ export async function parseAccountingQuery(
     /\b(equipment|computer server|server|computer|machinery|plant)\b/i.test(query) &&
     /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query);
   if (isBusinessEquipmentAcquisition) {
-    const match = query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);
-    let amount = match?.[1] ? Number(match[1].replace(/,/g, '')) : undefined;
-    const unit = match?.[2]?.toLowerCase();
-    if (unit === 'k' || unit === 'thousand') amount = (amount || 0) * 1000;
-    if (unit === 'm' || unit === 'million') amount = (amount || 0) * 1000000;
-    const paidImmediately = /\b(paid|cash|bank transfer|paid by bank)\b/i.test(query);
-    const complete = Boolean(amount && amount > 0);
-    const creditAccount = paidImmediately ? 'Cash at Bank' : 'Trade Payables';
+    const toEquipmentAmount = ([, value, suffix]: RegExpMatchArray) => {
+      const unit = suffix?.toLowerCase();
+      const scale = unit === 'million' || unit === 'm' ? 1_000_000 : unit === 'thousand' || unit === 'k' ? 1_000 : 1;
+      return Number(value.replace(/,/g, '')) * scale;
+    };
+    const [amount, ...additionalAmounts] = Array.from(query.matchAll(
+      /(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(million|thousand|k|m)\b)?/gi
+    ), toEquipmentAmount);
+    const statedPaymentMatch = query.match(/\bpaid\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(million|thousand|k|m)\b)?/i);
+    const statedPayment = statedPaymentMatch ? toEquipmentAmount(statedPaymentMatch) : undefined;
+    const { paymentStatus } = defaultTransactionUnderstandingService.understandTransactionSync(query, functionalCurrency);
+    const futureSettlement = /\b(?:will|shall)\s+(?:be\s+)?(?:pay|paid|settle|settled)\b/i.test(query);
+    const cashPayment = /\b(?:for cash|paid in cash)\b/i.test(query);
+    const fullPaymentStated = statedPayment !== undefined ? statedPayment === amount :
+      cashPayment || /\b(?:paid in full|fully paid|paid the full amount|paid by bank transfer|paid from (?:the )?(?:business )?bank)\b/i.test(query);
+    const partialPaymentIndicated = /\b(?:deposit|install?ments?|balance (?:due|outstanding))\b/i.test(query);
+    const paidImmediately = !futureSettlement && ((paymentStatus === 'paid' && fullPaymentStated) ||
+      (paymentStatus === 'unknown' && cashPayment));
+    const multipleAmounts = additionalAmounts.some(value => value !== amount);
+    const splitUnknown = paymentStatus === 'partially_paid' || (paymentStatus === 'paid' &&
+      (multipleAmounts || partialPaymentIndicated || (!futureSettlement && !paidImmediately)));
+    const paymentUnstated = !futureSettlement && !paidImmediately && paymentStatus === 'unknown';
+    const complete = Boolean(amount && amount > 0 && !splitUnknown);
+    const creditAccount = paidImmediately ? (cashPayment ? 'Cash' : 'Cash at Bank') : 'Trade Payables';
+    const settlementExplanation = splitUnknown ? 'Confirm the amount paid and the amount still due.' :
+      paidImmediately ? `The stated payment is credited to ${creditAccount}.` :
+      paymentUnstated ? 'The entry assumes the supplier invoice remains payable.' : 'The cost remains payable to the supplier.';
+    const settlementAssumption = paymentUnstated ? [{ id: 'equipment-payment-status', field: 'payment timing', assumedValue: 'Unpaid supplier invoice', basisOrRationale: 'The query says the cost was incurred but does not state that it was paid.', materiality: 'HIGH' as const, userClarificationPrompt: 'Was the equipment paid immediately, or is it still payable to the supplier?' }] : [];
     return {
       scenarioType: 'BUSINESS_EQUIPMENT_ACQUISITION', authorityStatus: complete ? 'CONDITIONAL' : 'CONDITIONAL', queryIntent: 'HYBRID', primaryDomain: 'IRAS_TAX', rawQuery: query,
-      transactionTitle: 'Business Equipment Acquisition', functionalCurrency, transactionCurrency: functionalCurrency, amount,
-      accountingTreatmentSummary: `Recognise the equipment as property, plant and equipment at cost. ${paidImmediately ? 'The stated payment is credited to bank.' : 'As payment timing was not stated, this entry assumes the supplier invoice remains payable.'}`,
+      transactionTitle: 'Business Equipment Acquisition', functionalCurrency, transactionCurrency: functionalCurrency,
+      amount: splitUnknown && multipleAmounts ? undefined : amount,
+      accountingTreatmentSummary: `Recognise the equipment as property, plant and equipment at cost. ${settlementExplanation}`,
       singaporeTaxTreatmentSummary: 'The acquisition is capital expenditure, not an immediate Section 14 revenue-expense deduction. Review eligibility for capital allowances under Sections 19 and 19A instead of claiming accounting depreciation.',
       uncertaintyDisclaimer: 'Confirm whether the quoted amount is GST-exclusive, whether the supplier is GST-registered, and whether the equipment has been paid. Input GST and capital-allowance eligibility depend on those facts.',
-      assumptions: paidImmediately ? [] : [{ id: 'equipment-payment-status', field: 'payment timing', assumedValue: 'Unpaid supplier invoice', basisOrRationale: 'The query says the cost was incurred but does not state that it was paid.', materiality: 'HIGH', userClarificationPrompt: 'Was the equipment paid immediately, or is it still payable to the supplier?' }],
+      assumptions: settlementAssumption,
       directGroups: complete ? [{ id: 'grp-business-equipment', eventDate: formatSingaporeDate(new Date()), title: 'Business Equipment Acquisition', summary: `Capitalise equipment of ${functionalCurrency} ${amount!.toLocaleString()}`, totalDebit: amount!, totalCredit: amount!, isBalanced: true, authorityStatus: 'CONDITIONAL', citations: [convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC15_PROHIBITED_DEDUCTIONS), convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.ITA_SEC19_19A_CAPITAL_ALLOWANCES)], rationalePoints: ['Equipment with enduring business use is capitalised under SFRS(I); tax relief is considered through capital allowances rather than a direct expense deduction.'], lines: [
         { id: 'dr-equipment', accountCode: '1500', accountName: 'Property, Plant and Equipment — Equipment', category: 'ASSET', debit: amount!, credit: 0, lineExplanation: 'Capitalise the business equipment at cost.' },
-        { id: paidImmediately ? 'cr-bank' : 'cr-payable', accountCode: paidImmediately ? '1010' : '2000', accountName: creditAccount, category: paidImmediately ? 'ASSET' : 'LIABILITY', debit: 0, credit: amount!, lineExplanation: paidImmediately ? 'Immediate payment for the equipment.' : 'Supplier invoice assumed unpaid pending confirmation.', ...(paidImmediately ? {} : { assumptionId: 'equipment-payment-status', assumptionMateriality: 'HIGH' as const }) }
+        { id: paidImmediately ? (cashPayment ? 'cr-cash' : 'cr-bank') : 'cr-payable', accountCode: paidImmediately ? (cashPayment ? '1000' : '1010') : '2000', accountName: creditAccount, category: paidImmediately ? 'ASSET' : 'LIABILITY', debit: 0, credit: amount!, lineExplanation: settlementExplanation, ...(paymentUnstated ? { assumptionId: 'equipment-payment-status', assumptionMateriality: 'HIGH' as const } : {}) }
       ] }] : [],
-      isComplete: complete, missingFields: complete ? [] : [{ fieldKey: 'amount', fieldName: 'Equipment cost', prompt: 'What is the equipment cost?', whyNeeded: 'The acquisition journal cannot be measured without the cost.' }]
+      isComplete: complete, missingFields: [
+        ...(!amount || amount <= 0 ? [{ fieldKey: 'amount', fieldName: 'Equipment cost', prompt: 'What is the equipment cost?', whyNeeded: 'The acquisition journal cannot be measured without the cost.' }] : []),
+        ...(splitUnknown ? [{ fieldKey: 'paymentStatus', fieldName: 'Equipment settlement', prompt: 'How much was paid for the equipment and how much is still payable?', whyNeeded: 'The journal must reflect the amount actually paid and the outstanding balance.' }] : [])
+      ]
     };
   }
 

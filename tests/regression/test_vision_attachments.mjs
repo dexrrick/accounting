@@ -50,7 +50,7 @@ const correctionImageTurn = {
 };
 const correctionVision = { imageEvidence: [{
   imageIndex: 1, documentType: 'supplier_invoice', confidence: 0.6,
-  fields: { documentTitle: 'Supplier Invoice', invoiceNo: 'INV-202', invoiceDate: '20/01/2025', total: 500, currency: 'SGD' }
+  fields: { documentTitle: 'Supplier Invoice', invoiceNo: 'INV-202', invoiceDate: '20/01/2025', itemDescription: 'Maintenance Expense', total: 500, currency: 'SGD' }
 }] };
 const invoiceProposal = (total, eventDate = '20/01/2025', foreignCurrency) => ({
   messageText: 'Proposed invoice journal.',
@@ -98,6 +98,8 @@ try {
   assert.match(imageExtractionInstruction, /copy the exact visible document heading into fields\.documentTitle/i);
   assert.match(imageExtractionInstruction, /supplier_invoice only when the printed title or type explicitly says/i);
   assert.match(imageExtractionInstruction, /customer sales invoices and credit notes/i);
+  assert.match(imageExtractionInstruction, /copy each visible goods or service line into fields\.itemDescription/i,
+    'invoice account evidence must come from the printed line description, not the supplier heading');
 
   const correctionCases = [
     { text: 'S$500 is not correct, please use S$600', amount: 600 },
@@ -137,7 +139,7 @@ try {
       assert.match(result.messageText, /low-confidence.*Verify it before posting/i);
       assert.match(result.messageText, /remains uncommitted/i);
       assert.equal(result.displayFullAnswer, true);
-      assert.ok(correctionProviderRequests.length > 0);
+      assert.equal(correctionProviderRequests.length, 0);
       assert.ok(correctionProviderRequests.every(request => !JSON.stringify(request).includes('S$500 is not correct')),
         'the original correction wording stays out of the canonical provider context');
     } else {
@@ -188,13 +190,232 @@ try {
     'the visible invoice heading remains retained as image-origin evidence');
   assert.equal(capturedCorrection.scenarioState.imageEvidence[0].fields.find(field => field.field === 'totalAmount').value, 500,
     'correcting the invoice does not rewrite the original screenshot evidence');
+  assert.equal(capturedCorrectionGroups[0].title, 'Supplier invoice INV-202 for Maintenance Expense');
+  assert.equal(capturedCorrectionGroups[0].authorityStatus, 'CONDITIONAL',
+    'the payable proposal is conditional when settlement was not stated');
   assert.equal(capturedCorrectionGroups.length, 1);
+  assert.equal(capturedCorrectionGroups[0].eventDate, '20/01/2025',
+    'the invoice date is preserved exactly after date validation');
   assert.equal(capturedCorrectionGroups[0].totalDebit, 600);
   assert.equal(capturedCorrectionGroups[0].totalCredit, 600);
   assert.equal(validateJournalGroups(capturedCorrectionGroups).isValid, true);
   assert.equal(capturedCorrection.scenarioState.committedDirectGroups?.length || 0, 0);
   assert.equal(correctionProviderRequests.filter(request => JSON.stringify(request).includes('Extract only visible document evidence')).length, 0,
     'the correction uses retained image evidence without re-extracting the screenshot');
+  assert.equal(correctionProviderRequests.length, 0,
+    'the grounded invoice description and user-corrected total construct the uncommitted proposal without another model journal attempt');
+
+  const goodsInvoiceState = structuredClone(capturedInvoiceState);
+  goodsInvoiceState.imageEvidence[0].fields.find(field => field.field === 'description').value = 'Office equipment';
+  goodsInvoiceState.evidence = flattenImageEvidence(goodsInvoiceState.imageEvidence);
+  const unsupportedEquipmentCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    goodsInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'unclassified-equipment-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(unsupportedEquipmentCorrection.scenarioState, 'SFRS_I'), [],
+    'a goods description alone cannot be presumed to be a capital asset');
+  assert.match(unsupportedEquipmentCorrection.messageText, /corrected invoice total of SGD 600 is retained.*does not establish a consistent expense, inventory, or fixed-asset account/i);
+
+  const assetPurchaseState = structuredClone(goodsInvoiceState);
+  assetPurchaseState.imageEvidence[0].fields.push(
+    { source: 'image', imageId: 'image-202', field: 'transactionType', value: 'equipment_purchase', confidence: 0.95 },
+    { source: 'image', imageId: 'image-202', field: 'assetName', value: 'Office Equipment', confidence: 0.95 }
+  );
+  assetPurchaseState.evidence = flattenImageEvidence(assetPurchaseState.imageEvidence);
+  const equipmentCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    assetPurchaseState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'unclassified-goods-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  const equipmentGroups = getDisplayableUncommittedJournalGroups(equipmentCorrection.scenarioState, 'SFRS_I');
+  assert.equal(equipmentGroups.length, 1);
+  assert.deepEqual(equipmentGroups[0].lines.map(line => [line.category, line.debit, line.credit]), [
+    ['ASSET', 600, 0], ['LIABILITY', 0, 600]
+  ]);
+  assert.equal(equipmentGroups[0].authorityStatus, 'CONDITIONAL',
+    'the equipment proposal requires review of capitalisation policy');
+
+  const inventoryPurchaseState = structuredClone(goodsInvoiceState);
+  inventoryPurchaseState.imageEvidence[0].fields.push(
+    { source: 'image', imageId: 'image-202', field: 'transactionType', value: 'inventory_purchase', confidence: 0.95 },
+    { source: 'image', imageId: 'image-202', field: 'assetName', value: 'Inventory', confidence: 0.95 }
+  );
+  inventoryPurchaseState.evidence = flattenImageEvidence(inventoryPurchaseState.imageEvidence);
+  const inventoryPurchaseCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    inventoryPurchaseState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'inventory-purchase-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  const inventoryPurchaseGroups = getDisplayableUncommittedJournalGroups(inventoryPurchaseCorrection.scenarioState, 'SFRS_I');
+  assert.equal(inventoryPurchaseGroups.length, 1, 'an explicit inventory purchase type and asset identity permit the supported inventory path');
+  assert.deepEqual(inventoryPurchaseGroups[0].lines.map(line => [line.accountName, line.category, line.debit, line.credit]), [
+    ['Inventory', 'ASSET', 600, 0], ['Trade Payables', 'LIABILITY', 0, 600]
+  ]);
+
+  for (const serviceDescription of ['Equipment Maintenance', 'Computer Repair', 'Machinery Rental']) {
+    const serviceInvoiceState = structuredClone(capturedInvoiceState);
+    serviceInvoiceState.imageEvidence[0].fields.find(field => field.field === 'description').value = serviceDescription;
+    serviceInvoiceState.evidence = flattenImageEvidence(serviceInvoiceState.imageEvidence);
+    const serviceCorrection = await processAccountingQuery(
+      capturedCorrectionText,
+      serviceInvoiceState,
+      'SFRS_I',
+      correctionProviderKey,
+      'gemini-3.5-flash-lite',
+      [correctionImageTurn, { id: `service-invoice-${serviceDescription}`, sender: 'user', timestamp: '', text: capturedCorrectionText }]
+    );
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(serviceCorrection.scenarioState, 'SFRS_I'), [],
+      `${serviceDescription} must not be classified as PPE from a keyword alone`);
+    assert.equal(serviceCorrection.scenarioState.amount, 600);
+    assert.equal(serviceCorrection.scenarioState.missingFields[0].fieldKey, 'invoiceAccountClassification');
+  }
+  const serviceAccountState = structuredClone(capturedInvoiceState);
+  serviceAccountState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'accountName', value: 'Computer Repair', confidence: 0.95
+  });
+  serviceAccountState.evidence = flattenImageEvidence(serviceAccountState.imageEvidence);
+  const serviceAccountCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    serviceAccountState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'service-account-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(serviceAccountCorrection.scenarioState, 'SFRS_I'), [],
+    'a computer-repair account label cannot be capitalized because it contains a computer keyword');
+
+  const ambiguousGoodsState = structuredClone(goodsInvoiceState);
+  ambiguousGoodsState.imageEvidence[0].fields.find(field => field.field === 'description').value = 'Office items';
+  ambiguousGoodsState.evidence = flattenImageEvidence(ambiguousGoodsState.imageEvidence);
+  const unclassifiedGoodsCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    ambiguousGoodsState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'unclassified-goods-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(unclassifiedGoodsCorrection.scenarioState, 'SFRS_I'), []);
+  assert.match(unclassifiedGoodsCorrection.messageText, /corrected invoice total of SGD 600 is retained.*does not establish a consistent expense, inventory, or fixed-asset account/i);
+  assert.equal(unclassifiedGoodsCorrection.scenarioState.amount, 600);
+  assert.ok(unclassifiedGoodsCorrection.scenarioState.evidence.some(field => field.source === 'user_text' && field.value === 600));
+  assert.equal(unclassifiedGoodsCorrection.scenarioState.imageEvidence[0].fields.find(field => field.field === 'totalAmount').value, 500);
+  assert.equal(unclassifiedGoodsCorrection.scenarioState.missingFields[0].fieldKey, 'invoiceAccountClassification');
+
+  correctionProviderRequests.length = 0;
+  const accountClassificationText = 'Classify this as fixed asset: Office Equipment.';
+  const classifiedGoodsCorrection = await processAccountingQuery(
+    accountClassificationText,
+    unclassifiedGoodsCorrection.scenarioState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn,
+      { id: 'unclassified-goods-correction', sender: 'user', timestamp: '', text: capturedCorrectionText },
+      { id: 'account-classification-followup', sender: 'user', timestamp: '', text: accountClassificationText }]
+  );
+  const classifiedGoodsGroups = getDisplayableUncommittedJournalGroups(classifiedGoodsCorrection.scenarioState, 'SFRS_I');
+  assert.equal(classifiedGoodsGroups.length, 1, 'a definite classification reply resumes the same invoice correction');
+  assert.deepEqual(classifiedGoodsGroups[0].lines.map(line => [line.accountName, line.category, line.debit, line.credit]), [
+    ['Office Equipment', 'ASSET', 600, 0], ['Trade Payables', 'LIABILITY', 0, 600]
+  ]);
+  assert.equal(classifiedGoodsGroups[0].eventDate, '20/01/2025');
+  assert.equal(classifiedGoodsCorrection.scenarioState.imageEvidence[0].fields.find(field => field.field === 'totalAmount').value, 500,
+    'the classification reply remains separate from the original S$500 image amount');
+  assert.ok(classifiedGoodsCorrection.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'invoiceAccountName' && field.value === 'Office Equipment'));
+  assert.ok(classifiedGoodsCorrection.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'invoiceAccountCategory' && field.value === 'ASSET'));
+  assert.equal(classifiedGoodsCorrection.scenarioState.amount, 600);
+  assert.equal(correctionProviderRequests.length, 0, 'the retained amount and explicit classification bind without another Gemini request');
+
+  correctionProviderRequests.length = 0;
+  const restatedAccountTotalText = 'S$600 is not correct, please use S$650';
+  const restatedAccountCorrection = await processAccountingQuery(
+    restatedAccountTotalText,
+    unclassifiedGoodsCorrection.scenarioState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn,
+      { id: 'unclassified-goods-correction', sender: 'user', timestamp: '', text: capturedCorrectionText },
+      { id: 'restated-account-total', sender: 'user', timestamp: '', text: restatedAccountTotalText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(restatedAccountCorrection.scenarioState, 'SFRS_I'), []);
+  assert.equal(restatedAccountCorrection.scenarioState.amount, 650,
+    'an explicit replacement can update the retained total after the account clarification');
+  assert.equal(restatedAccountCorrection.scenarioState.missingFields[0].fieldKey, 'invoiceAccountClassification');
+  assert.equal(correctionProviderRequests.length, 0);
+
+  const gstInvoiceState = structuredClone(capturedInvoiceState);
+  gstInvoiceState.imageEvidence[0].fields.push({
+    source: 'image', imageId: 'image-202', field: 'gst', value: 54, confidence: 0.95
+  });
+  gstInvoiceState.evidence = flattenImageEvidence(gstInvoiceState.imageEvidence);
+  const unassessedGstCorrection = await processAccountingQuery(
+    capturedCorrectionText,
+    gstInvoiceState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn, { id: 'unassessed-gst-correction', sender: 'user', timestamp: '', text: capturedCorrectionText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(unassessedGstCorrection.scenarioState, 'SFRS_I'), []);
+  assert.match(unassessedGstCorrection.messageText, /corrected invoice total of SGD 600 is retained.*cannot safely construct a GST split/i);
+  assert.equal(unassessedGstCorrection.scenarioState.amount, 600);
+  assert.ok(unassessedGstCorrection.scenarioState.evidence.some(field => field.source === 'user_text' && field.value === 600));
+  assert.equal(unassessedGstCorrection.scenarioState.missingFields[0].fieldKey, 'invoiceGstTreatment');
+
+  correctionProviderRequests.length = 0;
+  const unverifiedGstReplyText = 'Recoverable GST is SGD 54.';
+  const unverifiedGstReply = await processAccountingQuery(
+    unverifiedGstReplyText,
+    unassessedGstCorrection.scenarioState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn,
+      { id: 'unassessed-gst-correction', sender: 'user', timestamp: '', text: capturedCorrectionText },
+      { id: 'unverified-gst-reply', sender: 'user', timestamp: '', text: unverifiedGstReplyText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(unverifiedGstReply.scenarioState, 'SFRS_I'), [],
+    'a GST recovery statement cannot authorize a split journal in this flow');
+  assert.equal(unverifiedGstReply.scenarioState.amount, 600);
+  assert.ok(unverifiedGstReply.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'unverifiedGstRecoveryStatement' && field.value === 54));
+  assert.match(unverifiedGstReply.messageText, /cannot use a GST recovery statement alone.*no journal is shown/i);
+  assert.equal(correctionProviderRequests.length, 0, 'GST treatment stays on the guarded invoice path without a model journal call');
+
+  correctionProviderRequests.length = 0;
+  const restatedTotalText = 'The invoice total is SGD 650.';
+  const restatedGstCorrection = await processAccountingQuery(
+    restatedTotalText,
+    unassessedGstCorrection.scenarioState,
+    'SFRS_I',
+    correctionProviderKey,
+    'gemini-3.5-flash-lite',
+    [correctionImageTurn,
+      { id: 'unassessed-gst-correction', sender: 'user', timestamp: '', text: capturedCorrectionText },
+      { id: 'restated-total-after-gst-clarification', sender: 'user', timestamp: '', text: restatedTotalText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(restatedGstCorrection.scenarioState, 'SFRS_I'), []);
+  assert.equal(restatedGstCorrection.scenarioState.amount, 650,
+    'a restated total remains routable after the GST clarification state');
+  assert.ok(restatedGstCorrection.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal' && field.value === 650));
+  assert.equal(restatedGstCorrection.scenarioState.missingFields[0].fieldKey, 'invoiceGstTreatment');
+  assert.equal(correctionProviderRequests.length, 0);
 
   const retainedCommittedGroups = invoiceProposal(750).directGroups.map(group => ({
     ...group,
@@ -354,7 +575,7 @@ try {
   assert.equal(explicitInvoiceTypeGroups.length, 1, 'a visible explicit invoiceType can establish direction');
   assert.equal(explicitInvoiceTypeGroups[0].totalDebit, 600);
   assert.equal(explicitInvoiceTypeGroups[0].totalCredit, 600);
-  assert.ok(correctionProviderRequests.length > 0);
+  assert.equal(correctionProviderRequests.length, 0);
 
   for (const uncertainType of ['sales/purchase', 'possible purchase invoice', 'purchase?']) {
     const uncertainInvoiceTypeState = structuredClone(descriptionOnlyInvoiceState);
@@ -435,7 +656,7 @@ try {
     ['EXPENSE', 600, 0], ['LIABILITY', 0, 600]
   ]);
   assert.equal(validateJournalGroups(confirmedNoNumberGroups).isValid, true);
-  assert.ok(correctionProviderRequests.length > 0);
+  assert.equal(correctionProviderRequests.length, 0);
 
   const numberedHeadingState = structuredClone(noNumberInvoiceState);
   numberedHeadingState.imageEvidence[0].fields.find(field => field.field === 'documentTitle').value = 'Supplier Invoice No. INV-202';
@@ -463,7 +684,7 @@ try {
     assert.equal(numberedHeadingGroups[0].totalDebit, 600);
     assert.equal(numberedHeadingGroups[0].totalCredit, 600);
     assert.equal(validateJournalGroups(numberedHeadingGroups).isValid, true);
-    assert.ok(correctionProviderRequests.length > 0);
+    assert.equal(correctionProviderRequests.length, 0);
   }
 
   for (const { title, invoiceNumber } of [
@@ -651,11 +872,10 @@ try {
   assert.equal(fullPayableGroups.length, 1);
   assert.ok(fullPayableGroups[0].lines.some(line => /payable/i.test(line.accountName) && line.credit === 600));
   assert.ok(!fullPayableGroups[0].lines.some(line => /(?:cash|bank)/i.test(line.accountName) && line.credit > 0));
+  assert.match(fullPayableGroups[0].lines.find(line => /payable/i.test(line.accountName)).lineExplanation,
+    /screenshot shows the full corrected amount remains payable/i,
+    'the payable explanation reflects the explicit full-payable image facts');
 
-  proposedInvoice = invoiceProposal(600);
-  proposedInvoice.directGroups[0].lines[1] = {
-    accountName: 'Bank', category: 'ASSET', debit: 0, credit: 600
-  };
   correctionProviderRequests.length = 0;
   const incorrectBankCredit = await processAccountingQuery(
     capturedCorrectionText,
@@ -665,19 +885,11 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'reject-bank-credit-for-full-payable', sender: 'user', timestamp: '', text: capturedCorrectionText }]
   );
-  assert.match(incorrectBankCredit.messageText, /explicitly shows no amount paid and a full remaining payable/i);
-  assert.match(incorrectBankCredit.messageText, /No journal proposal is shown/i);
-  assert.deepEqual(incorrectBankCredit.scenarioState.directGroups, []);
-  assert.equal(getDisplayableUncommittedJournalGroups(incorrectBankCredit.scenarioState, 'SFRS_I').length, 0);
-  assert.ok(correctionProviderRequests.length > 0, 'the validated mock response is checked against explicit all-payable evidence');
+  const incorrectBankCreditGroups = getDisplayableUncommittedJournalGroups(incorrectBankCredit.scenarioState, 'SFRS_I');
+  assert.equal(incorrectBankCreditGroups.length, 1);
+  assert.ok(incorrectBankCreditGroups[0].lines.some(line => /payable/i.test(line.accountName) && line.credit === 600));
+  assert.equal(correctionProviderRequests.length, 0, 'the accounting service builds the payable from the extracted settlement facts');
 
-  proposedInvoice = invoiceProposal(600);
-  proposedInvoice.directGroups[0].lines[1] = {
-    accountName: 'Trade Payables', category: 'LIABILITY', debit: 0, credit: 100
-  };
-  proposedInvoice.directGroups[0].lines.push({
-    accountName: 'Deferred Revenue', category: 'LIABILITY', debit: 0, credit: 500
-  });
   correctionProviderRequests.length = 0;
   const splitLiabilityCredit = await processAccountingQuery(
     capturedCorrectionText,
@@ -687,11 +899,13 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'reject-other-liability-split', sender: 'user', timestamp: '', text: capturedCorrectionText }]
   );
-  assert.match(splitLiabilityCredit.messageText, /does not preserve that payable treatment/i);
-  assert.match(splitLiabilityCredit.messageText, /No journal proposal is shown/i);
-  assert.deepEqual(splitLiabilityCredit.scenarioState.directGroups, []);
-  assert.equal(getDisplayableUncommittedJournalGroups(splitLiabilityCredit.scenarioState, 'SFRS_I').length, 0,
-    'deferred revenue does not count toward the explicitly documented payable balance');
+  const splitLiabilityGroups = getDisplayableUncommittedJournalGroups(splitLiabilityCredit.scenarioState, 'SFRS_I');
+  assert.equal(splitLiabilityGroups.length, 1);
+  assert.deepEqual(splitLiabilityGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Maintenance Expense', 600, 0], ['Trade Payables', 0, 600]
+  ]);
+  assert.equal(correctionProviderRequests.length, 0,
+    'the accounting service does not accept model-generated account splits for a corrected invoice');
   proposedInvoice = invoiceProposal(600);
 
   const capturedConflictCases = [
@@ -794,8 +1008,9 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'mismatched-correction', sender: 'user', timestamp: '', text: mismatchedCorrection }]
   );
-  assert.deepEqual(getDisplayableUncommittedJournalGroups(mismatchedResult.scenarioState, 'SFRS_I'), []);
-  assert.match(mismatchedResult.messageText, /did not produce one balanced journal that reconciles to SGD 600/i);
+  assert.equal(getDisplayableUncommittedJournalGroups(mismatchedResult.scenarioState, 'SFRS_I')[0].totalDebit, 600,
+    'the model journal amount cannot override the user correction');
+  assert.equal(correctionProviderRequests.length, 0);
   assert.equal(mismatchedResult.scenarioState.committedDirectGroups?.length || 0, 0);
 
   proposedInvoice = invoiceProposal(600, '21/01/2025');
@@ -807,8 +1022,8 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'date-mismatch', sender: 'user', timestamp: '', text: mismatchedCorrection }]
   );
-  assert.deepEqual(getDisplayableUncommittedJournalGroups(dateMismatch.scenarioState, 'SFRS_I'), []);
-  assert.match(dateMismatch.messageText, /did not produce one balanced journal/i);
+  assert.equal(getDisplayableUncommittedJournalGroups(dateMismatch.scenarioState, 'SFRS_I')[0].eventDate, '20/01/2025',
+    'the model journal date cannot override the invoice date evidence');
 
   proposedInvoice = invoiceProposal(600, '20/01/2025', 'USD');
   const foreignCurrency = await processAccountingQuery(
@@ -819,8 +1034,8 @@ try {
     'gemini-3.5-flash-lite',
     [correctionImageTurn, { id: 'foreign-currency', sender: 'user', timestamp: '', text: mismatchedCorrection }]
   );
-  assert.deepEqual(getDisplayableUncommittedJournalGroups(foreignCurrency.scenarioState, 'SFRS_I'), []);
-  assert.match(foreignCurrency.messageText, /did not produce one balanced journal/i);
+  assert.equal(getDisplayableUncommittedJournalGroups(foreignCurrency.scenarioState, 'SFRS_I')[0].lines.every(line => !line.foreignCurrency), true,
+    'the model cannot introduce a foreign currency that conflicts with the invoice evidence');
 
   const multipleInvoiceState = structuredClone(initialCorrectionState.scenarioState);
   multipleInvoiceState.imageEvidence.push({ imageId: 'image-203', documentType: 'supplier_invoice', fields: [

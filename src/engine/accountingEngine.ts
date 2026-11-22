@@ -9,6 +9,59 @@ import type {
 import { getCitation } from '../standards/standardsKnowledge';
 import { formatSingaporeDate } from '../utils/dateUtils';
 
+export interface SupplierInvoiceJournalFacts {
+  invoiceReference: string;
+  eventDate: string;
+  debitAccountName: string;
+  debitCategory: 'ASSET' | 'EXPENSE';
+  totalAmount: number;
+  fullAmountPayable: boolean;
+}
+
+/** Build the balanced, uncommitted accrual proposal for a corrected supplier invoice. */
+export function buildSupplierInvoiceCorrectionJournal(facts: SupplierInvoiceJournalFacts): JournalEntryGroup {
+  const amount = facts.totalAmount;
+  const reference = facts.invoiceReference.trim();
+  const payableEvidence = facts.fullAmountPayable
+    ? 'The screenshot shows the full corrected amount remains payable.'
+    : 'Confirm the unpaid status before posting the Trade Payables balance.';
+  return {
+    id: `supplier-invoice-correction-${reference || 'unreferenced'}`,
+    eventDate: facts.eventDate,
+    title: `Supplier invoice${reference ? ` ${reference}` : ''} for ${facts.debitAccountName}`,
+    summary: `Conditional accrual of SGD ${amount.toLocaleString()} for ${facts.debitAccountName}`,
+    lines: [
+      {
+        id: 'supplier-invoice-debit',
+        accountCode: 'IMAGE',
+        accountName: facts.debitAccountName,
+        category: facts.debitCategory,
+        debit: amount,
+        credit: 0,
+        lineExplanation: `Account classification is based on the explicit invoice evidence for ${facts.debitAccountName}.`
+      },
+      {
+        id: 'supplier-invoice-payable',
+        accountCode: 'IMAGE',
+        accountName: 'Trade Payables',
+        category: 'LIABILITY',
+        debit: 0,
+        credit: amount,
+        lineExplanation: payableEvidence
+      }
+    ],
+    totalDebit: amount,
+    totalCredit: amount,
+    isBalanced: true,
+    citations: [],
+    rationalePoints: [
+      'The corrected invoice amount comes from the retained image evidence and user correction.',
+      payableEvidence
+    ],
+    authorityStatus: 'CONDITIONAL'
+  };
+}
+
 export function calculateDoubleEntries(
   scenario: AccountingScenarioState,
   standard: AccountingStandard

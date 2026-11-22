@@ -4,7 +4,7 @@ import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
-import { calculateDoubleEntries } from '../engine/accountingEngine';
+import { buildSupplierInvoiceCorrectionJournal, calculateDoubleEntries } from '../engine/accountingEngine';
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { validateJournalGroups } from '../verification/journalIntegrity';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
@@ -265,8 +265,17 @@ export function flattenImageEvidence(imageEvidence: ExtractedImageEvidence[]): E
 }
 
 type PendingImageCorrection =
-  | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices' | 'supplier_direction_confirmation' | 'individual_invoice_required'; prompt: string }
-  | { kind: 'correction'; source: 'explicit_replacement' | 'invoice_total_statement' | 'confirmed_supplier_invoice_total_statement'; amount: number; imageIndex: number; fieldIndex: number; imageId: string };
+  | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices' | 'supplier_direction_confirmation' | 'individual_invoice_required' | 'gst_treatment_unverified'; prompt: string }
+  | {
+      kind: 'correction';
+      source: 'explicit_replacement' | 'invoice_total_statement' | 'confirmed_supplier_invoice_total_statement' | 'retained_invoice_total';
+      amount: number;
+      imageIndex: number;
+      fieldIndex: number;
+      imageId: string;
+      accountClassification?: { name: string; category: 'ASSET' | 'EXPENSE' };
+      supplierDirectionConfirmed?: boolean;
+    };
 
 const IMAGE_SUBTOTAL_FIELD_ALIASES = new Set(['subtotal', 'subtotalamount', 'invoicesubtotal', 'netsubtotal', 'subtotalbeforetax', 'amountbeforetax']);
 const IMAGE_GST_AMOUNT_FIELD_ALIASES = new Set(['gst', 'gstamount', 'gsttax', 'gsttotal', 'tax', 'taxamount', 'taxvalue', 'taxtotal', 'totaltax', 'gstvalue', 'salestax', 'salestaxamount']);
@@ -373,6 +382,67 @@ function getImageTotalFields(scenario: AccountingScenarioState): Array<{ imageIn
     : []);
 }
 
+function getRetainedInvoiceCorrection(scenario: AccountingScenarioState): Extract<PendingImageCorrection, { kind: 'correction' }> | undefined {
+  const acceptedCorrection = [...(scenario.evidence || [])].reverse().find(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal' && field.imageId
+  );
+  if (!acceptedCorrection || !scenario.imageEvidence) return undefined;
+  const acceptedCents = parseImageAmountCents(acceptedCorrection.value);
+  if (acceptedCents === undefined || scenario.amount === undefined ||
+      Math.round(scenario.amount * 100) !== acceptedCents) return undefined;
+  const imageIndex = scenario.imageEvidence.findIndex(image =>
+    image.imageId === acceptedCorrection.imageId && isInvoiceCorrectionCandidate(image)
+  );
+  if (imageIndex < 0) return undefined;
+  const matchingTotal = getImageTotalFields(scenario).filter(field => field.imageIndex === imageIndex);
+  if (matchingTotal.length !== 1) return undefined;
+  const directionConfirmed = scenario.evidence?.some(field =>
+    field.source === 'user_text' && field.imageId === acceptedCorrection.imageId &&
+    field.field === 'confirmedSupplierInvoiceDirection' && field.value === 'supplier purchase invoice'
+  ) || false;
+  return {
+    kind: 'correction',
+    source: 'retained_invoice_total',
+    amount: acceptedCents / 100,
+    ...matchingTotal[0],
+    supplierDirectionConfirmed: directionConfirmed
+  };
+}
+
+function parseInvoiceAccountClassification(
+  query: string,
+  scenario: AccountingScenarioState,
+  imageIndex: number
+): { name: string; category: 'ASSET' | 'EXPENSE' } | undefined {
+  if (query.includes('?') || /\b(?:maybe|perhaps|possibly|might|could|not sure|uncertain)\b/i.test(query)) return undefined;
+  const declaration = query.match(/^\s*(?:classify\s+(?:this|the invoice|this invoice)\s+as|treat\s+(?:it|this|the invoice)\s+as)\s+(.+?)[.!]?\s*$/i);
+  if (!declaration) return undefined;
+  const classification = declaration[1].trim().replace(/^(?:an?\s+|the\s+)/i, '');
+  if (/^(?:inventory|goods?)\s+for\s+resale$/i.test(classification)) {
+    return { name: 'Inventory', category: 'ASSET' };
+  }
+  const fixedAsset = classification.match(/^(?:fixed\s+asset|capital\s+asset|ppe|property,?\s*plant(?:,?\s*and)?\s+equipment)(?:\s*[:,-]\s*(.*))?$/i);
+  if (fixedAsset) {
+    const imageDescription = scenario.imageEvidence?.[imageIndex]?.fields.find(field =>
+      /^(?:itemdescription|linedescription|description)$/i.test(normalizeImageMoneyFieldName(field.field)) &&
+      typeof field.value === 'string' && field.value.trim().length > 0
+    )?.value;
+    return {
+      name: fixedAsset[1]?.trim() || (typeof imageDescription === 'string' ? imageDescription.trim() : 'Fixed Assets'),
+      category: 'ASSET'
+    };
+  }
+  const expenseAccount = classification.match(/^expense\s+account\s*[:,-]\s*(.+)$/i);
+  if (expenseAccount) return { name: expenseAccount[1].trim(), category: 'EXPENSE' };
+  if (/\bexpense\b/i.test(classification)) return { name: classification, category: 'EXPENSE' };
+  return undefined;
+}
+
+function isGstTreatmentReply(query: string): boolean {
+  return /\b(?:gst|input\s+tax|recoverable|recover|claimable|claim)\b/i.test(query) &&
+    /\b(?:gst|input\s+tax|recover\w*|claim\w*)\b/i.test(query);
+}
+
 function getInvoiceCorrectionDirectionClarification(
   image: ExtractedImageEvidence,
   userConfirmedSupplierPurchase: boolean
@@ -452,6 +522,45 @@ function checkInvoiceSettlement(image: ExtractedImageEvidence, correctedTotal: n
   return { allPayable: paid === 0 && payable === correctedCents };
 }
 
+function getInvoiceDebitAccount(image: ExtractedImageEvidence): { name: string; category: 'EXPENSE' | 'ASSET' } | undefined {
+  const fields = image.fields.filter((field): field is typeof field & { value: string } =>
+    typeof field.value === 'string' && field.value.trim().length > 0
+  );
+  const valueFor = (names: RegExp) => fields.find(field => names.test(normalizeImageMoneyFieldName(field.field)))?.value.trim();
+  const description = valueFor(/^(?:itemdescription|linedescription|description|expensedescription|servicedescription)$/i);
+  const transactionType = valueFor(/^(?:transactiontype|transactionnature)$/i) || '';
+  const assetName = valueFor(/^(?:assetname|inventoryname|ppename)$/i);
+  const hasExplicitAssetPurchase = Boolean(assetName &&
+    /^(?:assetpurchase|equipmentpurchase|inventorypurchase|ppepurchase)$/i.test(normalizeImageMoneyFieldName(transactionType)));
+  const describesService = Boolean(description && /\b(?:repair|maintenance|rental|rent|service|installation)\b/i.test(description));
+  const explicitExpenseAccount = valueFor(/^(?:expenseaccount|expenseaccountname)$/i);
+  const explicitAssetAccount = valueFor(/^(?:assetaccount|assetaccountname|inventoryaccount|inventoryaccountname|ppeaccount|fixedassetaccount)$/i);
+  if (explicitExpenseAccount && explicitAssetAccount) return undefined;
+  if (describesService && (explicitAssetAccount || hasExplicitAssetPurchase) && !/\bexpense\b/i.test(description || '')) return undefined;
+  if (explicitExpenseAccount) return { name: explicitExpenseAccount, category: 'EXPENSE' };
+  if (explicitAssetAccount) return { name: explicitAssetAccount, category: 'ASSET' };
+
+  const accountName = valueFor(/^(?:account|accountname|ledgeraccount)$/i);
+  if (accountName) {
+    if (/\bexpense\b/i.test(accountName)) {
+      return { name: accountName, category: 'EXPENSE' };
+    }
+    if (/\b(?:repair|maintenance|rental|rent|service|installation)\b/i.test(accountName)) return undefined;
+    if (/\b(?:inventory|asset|equipment|machinery|computer|ppe)\b/i.test(accountName)) {
+      return { name: accountName, category: 'ASSET' };
+    }
+  }
+
+  if (hasExplicitAssetPurchase && !describesService && assetName) {
+    return { name: assetName, category: 'ASSET' };
+  }
+
+  if (!description) return undefined;
+  if (/\bexpense\b/i.test(description)) return { name: description, category: 'EXPENSE' };
+  if (/\bgoods?\s+for\s+resale\b/i.test(description)) return { name: 'Inventory', category: 'ASSET' };
+  return undefined;
+}
+
 function getMultipleInvoiceClarification(supplierInvoiceImages: ExtractedImageEvidence[]): PendingImageCorrection {
   const invoiceNumbers = supplierInvoiceImages.flatMap(image => image.fields
     .filter(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field) && typeof field.value === 'string')
@@ -495,7 +604,11 @@ function findPendingImageCorrection(
     scenario.missingFields?.some(field =>
       field.fieldKey.startsWith('guardrail-') && field.fieldName === 'Accounting guardrail validation'
     );
-  if (!hasPendingVerification && !hasRejectedProposal) return undefined;
+  const hasInvoiceCorrectionClarification = scenario.missingFields?.some(field =>
+    field.fieldKey === 'invoiceGstTreatment' || field.fieldKey === 'invoiceAccountClassification'
+  ) || false;
+  if (!hasPendingVerification && !hasRejectedProposal && !hasInvoiceCorrectionClarification) return undefined;
+  const retainedCorrection = hasInvoiceCorrectionClarification ? getRetainedInvoiceCorrection(scenario) : undefined;
 
   const confirmedSupplierInvoice = query.match(CONFIRMED_SUPPLIER_INVOICE_PREFIX);
   const amountStatement = confirmedSupplierInvoice ? query.slice(confirmedSupplierInvoice[0].length) : query;
@@ -542,7 +655,10 @@ function findPendingImageCorrection(
         .filter((amount): amount is number => amount !== undefined)
       : [];
     const uniqueReplacementAmounts = [...new Set(replacementAmounts)];
-    if (rejectedAmount === undefined || !imageTotalFields.some(field => field.value === rejectedAmount)) {
+    const matchesImageOrRetainedTotal = rejectedAmount !== undefined && (
+      imageTotalFields.some(field => field.value === rejectedAmount) || retainedCorrection?.amount === rejectedAmount
+    );
+    if (rejectedAmount === undefined || !matchesImageOrRetainedTotal) {
       return {
         kind: 'clarification',
         reason: 'explicit_replacement',
@@ -619,45 +735,74 @@ function findPendingImageCorrection(
     const prompt = 'Please identify the corrected invoice total. Use the form “The invoice total is SGD [correct amount].” No journal proposal is shown until the corrected total is clear.';
     return { kind: 'clarification', reason: 'amount_correction', prompt };
   }
-  return undefined;
-}
 
-function getImageCorrectionProvider(
-  providerOrApiKey: ProviderSettings | string | undefined,
-  modelName: string
-): { apiKey: string; modelName: string } | undefined {
-  const apiKey = typeof providerOrApiKey === 'string'
-    ? providerOrApiKey.trim()
-    : providerOrApiKey?.activeProvider === 'gemini'
-      ? providerOrApiKey.gemini.apiKey.trim()
-      : '';
-  const selectedModel = typeof providerOrApiKey === 'object' && providerOrApiKey?.activeProvider === 'gemini'
-    ? providerOrApiKey.gemini.model || modelName
-    : modelName;
-  return apiKey.length > 10 ? { apiKey, modelName: selectedModel } : undefined;
+  if (hasInvoiceCorrectionClarification && retainedCorrection && supplierInvoiceImages.length === 1) {
+    const accountClarificationPending = scenario.missingFields?.some(field => field.fieldKey === 'invoiceAccountClassification') || false;
+    if (accountClarificationPending) {
+      const accountClassification = parseInvoiceAccountClassification(query, scenario, retainedCorrection.imageIndex);
+      if (accountClassification) return { ...retainedCorrection, accountClassification };
+    }
+    const gstClarificationPending = scenario.missingFields?.some(field => field.fieldKey === 'invoiceGstTreatment') || false;
+    if (gstClarificationPending && isGstTreatmentReply(query)) {
+      return {
+        kind: 'clarification',
+        reason: 'gst_treatment_unverified',
+        prompt: `The corrected invoice total of SGD ${retainedCorrection.amount.toLocaleString()} remains retained. I cannot use a GST recovery statement alone to create a GST journal in this correction flow, so no journal is shown. The subtotal and GST must reconcile to the total, and input-tax recoverability must be verified through your GST-supported posting process before recording the GST split.`
+      };
+    }
+  }
+  return undefined;
 }
 
 function createImageCorrectionClarification(
   scenario: AccountingScenarioState,
   userInput: string,
-  prompt: string
+  prompt: string,
+  detail?: {
+    fieldKey: string;
+    fieldName: string;
+    missingFact: string;
+    correction: Extract<PendingImageCorrection, { kind: 'correction' }>;
+    additionalEvidence?: ExtractedEvidence[];
+  }
 ): GeminiResponse {
   const clarification: MissingFieldInfo = {
-    fieldKey: 'imageVerification',
-    fieldName: 'Corrected invoice total',
+    fieldKey: detail?.fieldKey || 'imageVerification',
+    fieldName: detail?.fieldName || 'Corrected invoice total',
     prompt,
-    whyNeeded: 'The supplier invoice amount must be clear before a journal can be proposed.'
+    whyNeeded: detail?.missingFact || 'The supplier invoice amount must be clear before a journal can be proposed.'
   };
+  const correctionEvidence: ExtractedEvidence[] = detail ? [{
+    source: 'user_text',
+    imageId: scenario.imageEvidence?.[detail.correction.imageIndex]?.imageId,
+    field: 'correctedInvoiceTotal',
+    value: detail.correction.amount,
+    confidence: 1
+  }, ...(detail.correction.source === 'confirmed_supplier_invoice_total_statement' || detail.correction.supplierDirectionConfirmed
+    ? [{
+      source: 'user_text' as const,
+      imageId: scenario.imageEvidence?.[detail.correction.imageIndex]?.imageId,
+      field: 'confirmedSupplierInvoiceDirection',
+      value: 'supplier purchase invoice',
+      confidence: 1
+    }]
+    : []), ...(detail.additionalEvidence || [])] : [];
   return {
     messageText: `### Screenshot journal clarification required\n\n${prompt}`,
     displayFullAnswer: true,
     scenarioState: {
       ...scenario,
       rawQuery: userInput,
+      ...(detail ? {
+        amount: detail.correction.amount,
+        transactionCurrency: 'SGD',
+        functionalCurrency: scenario.functionalCurrency || 'SGD',
+        evidence: [...(scenario.evidence || flattenImageEvidence(scenario.imageEvidence || [])), ...correctionEvidence]
+      } : {}),
       directGroups: [],
       projectedGroups: undefined,
       missingFields: [clarification],
-      missingFacts: ['corrected invoice total'],
+      missingFacts: [detail?.missingFact || 'corrected invoice total'],
       isComplete: false,
       queryIntent: 'TRANSACTION',
       statutoryAdvisory: [],
@@ -671,12 +816,27 @@ function createImageCorrectionClarification(
 async function respondToPendingImageCorrection(
   userInput: string,
   scenario: AccountingScenarioState,
-  correction: PendingImageCorrection,
-  standard: AccountingStandard,
-  providerOrApiKey: ProviderSettings | string | undefined,
-  modelName: string
+  correction: PendingImageCorrection
 ): Promise<GeminiResponse> {
   if (correction.kind === 'clarification') {
+    const retainedCorrection = getRetainedInvoiceCorrection(scenario);
+    if (correction.reason === 'gst_treatment_unverified' && retainedCorrection) {
+      const gstEvidence = userInput.match(/\b(?:recoverable\s+gst|gst\s+recoverable|recoverable\s+input\s+tax|input\s+tax\s+recoverable)\s*(?:is|of|:|=)?\s*(?:sgd|s\$)?\s*([\d,]+(?:\.\d{1,2})?)/i);
+      const unverifiedEvidence: ExtractedEvidence[] = [{
+        source: 'user_text',
+        imageId: retainedCorrection.imageId,
+        field: 'unverifiedGstRecoveryStatement',
+        value: gstEvidence ? Number(gstEvidence[1].replace(/,/g, '')) : userInput,
+        confidence: 1
+      }];
+      return createImageCorrectionClarification(scenario, userInput, correction.prompt, {
+        fieldKey: 'invoiceGstTreatment',
+        fieldName: 'GST treatment',
+        missingFact: 'reconciled invoice figures and verified GST recovery treatment',
+        correction: retainedCorrection,
+        additionalEvidence: unverifiedEvidence
+      });
+    }
     return createImageCorrectionClarification(scenario, userInput, correction.prompt);
   }
 
@@ -694,7 +854,9 @@ async function respondToPendingImageCorrection(
       'The supplier invoice currency is not confirmed as SGD. Please confirm the invoice currency and corrected total before I prepare a journal. No journal proposal is shown.');
   }
   const invoiceDate = invoiceImage.fields.find(field => /date/i.test(field.field))?.value;
-  const formattedInvoiceDate = typeof invoiceDate === 'string' ? formatSingaporeDate(invoiceDate) : '';
+  const formattedInvoiceDate = typeof invoiceDate === 'string'
+    ? sanitizeJournalEventDate(formatSingaporeDate(invoiceDate))
+    : '';
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formattedInvoiceDate)) {
     return createImageCorrectionClarification(scenario, userInput,
       `You supplied a corrected invoice total of SGD ${correction.amount.toLocaleString()}. Please confirm the invoice date using DD/MM/YYYY before I prepare a journal. No journal proposal is shown.`);
@@ -740,7 +902,7 @@ async function respondToPendingImageCorrection(
 
   const directionClarification = getInvoiceCorrectionDirectionClarification(
     invoiceImage,
-    correction.source === 'confirmed_supplier_invoice_total_statement'
+    correction.source === 'confirmed_supplier_invoice_total_statement' || correction.supplierDirectionConfirmed === true
   );
   if (directionClarification) return createImageCorrectionClarification(scenario, userInput, directionClarification);
 
@@ -749,127 +911,91 @@ async function respondToPendingImageCorrection(
     return createImageCorrectionClarification(scenario, userInput, settlementCheck.clarification);
   }
 
-  const provider = getImageCorrectionProvider(providerOrApiKey, modelName);
-  if (!provider) {
-    return createImageCorrectionClarification(
-      scenario,
-      userInput,
-      `You supplied a corrected total of SGD ${correction.amount.toLocaleString()}, but a Gemini model is required to prepare and validate the journal. Please select Gemini and retry. No journal proposal is shown.`
-    );
+  const gstEvidence = invoiceImage.fields.find(field => IMAGE_GST_AMOUNT_FIELD_ALIASES.has(
+    normalizeImageMoneyFieldName(field.field)
+  ) && parseImageAmountCents(field.value) !== 0);
+  const subtotalEvidence = invoiceImage.fields.find(field => IMAGE_SUBTOTAL_FIELD_ALIASES.has(
+    normalizeImageMoneyFieldName(field.field)
+  ));
+  if (gstEvidence || (subtotalEvidence && parseImageAmountCents(subtotalEvidence.value) !== Math.round(correction.amount * 100))) {
+    return createImageCorrectionClarification(scenario, userInput,
+      `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained. This image-correction flow cannot safely construct a GST split from the screenshot alone, so no journal proposal is shown. Before posting a GST-inclusive entry, have the subtotal and GST reconciled to the total and confirm the recoverable input-tax amount under your GST process. Restate the corrected total only if it changes.`,
+      { fieldKey: 'invoiceGstTreatment', fieldName: 'GST treatment', missingFact: 'GST recoverability and net expense amount', correction });
+  }
+
+  const imageDebitAccount = getInvoiceDebitAccount(invoiceImage);
+  const debitAccount = correction.accountClassification
+    ? imageDebitAccount && imageDebitAccount.category !== correction.accountClassification.category
+      ? undefined
+      : correction.accountClassification
+    : imageDebitAccount;
+  if (!debitAccount) {
+    return createImageCorrectionClarification(scenario, userInput,
+      `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained, but the image or your reply does not establish a consistent expense, inventory, or fixed-asset account. Reply in one of these forms: “Classify this as Maintenance Expense,” “Classify this as inventory for resale,” or “Classify this as fixed asset: Office Equipment.” Restate the total only if it changes. No journal proposal is shown until the account is clear.`,
+      { fieldKey: 'invoiceAccountClassification', fieldName: 'Invoice account classification', missingFact: 'invoice account classification', correction });
   }
 
   const invoiceNumber = invoiceImage.fields.find(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field))?.value;
-  const invoiceReference = typeof invoiceNumber === 'string' ? ` ${invoiceNumber}` : '';
-  const canonicalQuery = `Prepare a supplier invoice journal for${invoiceReference} dated ${formattedInvoiceDate}. The invoice total was explicitly corrected by the user to SGD ${correction.amount.toLocaleString()}. Keep the proposed journal uncommitted.`;
-  const userEvidence: ExtractedEvidence = {
-    source: 'user_text',
-    imageId: invoiceImage.imageId,
-    field: correctedField.field,
-    value: correction.amount,
-    confidence: 1
-  };
-  const providerImageEvidence = [{
-    ...invoiceImage,
-    fields: invoiceImage.fields.map((field, fieldIndex) => fieldIndex === correction.fieldIndex
-      ? { ...field, source: 'user_text' as const, value: correction.amount, confidence: 1 }
-      : field)
-  }];
-  const baseEvidence = scenario.evidence || flattenImageEvidence(rawImageEvidence);
-  const providerEvidence = [
-    ...baseEvidence.filter(evidence => evidence.imageId === invoiceImage.imageId &&
-      !(evidence.source === 'image' && evidence.field === correctedField.field && evidence.value === correctedField.value)),
-    userEvidence
-  ];
-  const providerScenario: AccountingScenarioState = {
-    ...scenario,
-    rawQuery: canonicalQuery,
-    transactionTitle: `Supplier invoice${invoiceReference}`,
-    amount: correction.amount,
-    transactionCurrency: 'SGD',
-    functionalCurrency: scenario.functionalCurrency || 'SGD',
-    directGroups: [],
-    committedDirectGroups: undefined,
-    projectedGroups: undefined,
-    missingFields: [],
-    missingFacts: [],
-    isComplete: false,
-    evidence: providerEvidence,
-    imageEvidence: providerImageEvidence,
-    queryIntent: 'TRANSACTION',
-    primaryDomain: 'ACCOUNTING_SFRS',
-    statutoryAdvisory: [],
-    officialAnswerLinks: [],
-    authorityEvidencePresentation: undefined,
-    irasEvidencePresentation: undefined
-  };
-
-  let providerResponse: GeminiResponse;
-  try {
-    const groundedContext = await buildGroundedReasoningContext(canonicalQuery, providerScenario, undefined, provider.apiKey);
-    providerResponse = await callGeminiAPI(
-      canonicalQuery,
-      providerScenario,
-      standard,
-      provider.apiKey,
-      provider.modelName,
-      [{ id: 'image-correction', sender: 'user', timestamp: '', text: canonicalQuery }],
-      groundedContext,
-      null
-    );
-  } catch {
+  const invoiceReference = typeof invoiceNumber === 'string' ? invoiceNumber.trim() : '';
+  const proposal = buildSupplierInvoiceCorrectionJournal({
+    invoiceReference,
+    eventDate: formattedInvoiceDate,
+    debitAccountName: debitAccount.name,
+    debitCategory: debitAccount.category,
+    totalAmount: correction.amount,
+    fullAmountPayable: settlementCheck.allPayable
+  });
+  const integrity = validateJournalGroups([proposal], {
+    rawQuery: userInput,
+    hasPriorContextAmount: correction.source === 'retained_invoice_total'
+  });
+  if (!integrity.isValid || proposal.totalDebit <= 0 || proposal.totalDebit !== proposal.totalCredit) {
     return createImageCorrectionClarification(scenario, userInput,
-      `You supplied a corrected total of SGD ${correction.amount.toLocaleString()}, but I could not prepare a validated journal proposal. Please retry or confirm the corrected invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`);
-  }
-
-  const groups = providerResponse.scenarioState.directGroups || [];
-  const integrity = validateJournalGroups(groups, { rawQuery: canonicalQuery });
-  const expectedCents = Math.round(correction.amount * 100);
-  const reconcilesToCorrection = groups.length === 1 && groups.every(group =>
-    formatSingaporeDate(group.eventDate) === formattedInvoiceDate &&
-    group.lines.every(line => line.foreignCurrency === undefined ||
-      (typeof line.foreignCurrency === 'string' && line.foreignCurrency.toUpperCase() === 'SGD')) &&
-    Math.round(group.totalDebit * 100) === expectedCents && Math.round(group.totalCredit * 100) === expectedCents);
-  if (!integrity.isValid || !reconcilesToCorrection) {
-    return createImageCorrectionClarification(scenario, userInput,
-      `The response did not produce one balanced journal that reconciles to SGD ${correction.amount.toLocaleString()}. Please confirm the corrected invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.`);
-  }
-  if (settlementCheck.allPayable && groups.some(group => {
-    const payableCreditsCents = group.lines.reduce((sum, line) =>
-      line.category === 'LIABILITY' && /(?:accounts? payable|trade payable|creditors?)/i.test(line.accountName)
-        ? sum + Math.round(line.credit * 100)
-        : sum,
-      0
-    );
-    return group.lines.some(line => line.credit > 0 && /(?:cash|bank)/i.test(line.accountName)) ||
-      payableCreditsCents !== expectedCents;
-  })) {
-    return createImageCorrectionClarification(scenario, userInput,
-      'The screenshot explicitly shows no amount paid and a full remaining payable, but the generated journal does not preserve that payable treatment. Please confirm the corrected invoice total and payment/payable facts. No journal proposal is shown.');
+      `The corrected invoice total is SGD ${correction.amount.toLocaleString()}, but the accounting engine could not validate the invoice proposal. Please review the invoice details. No journal proposal is shown.`);
   }
 
   const dateEvidence = invoiceImage.fields.find(field => /date/i.test(field.field));
   const dateWarning = dateEvidence?.confidence !== undefined && dateEvidence.confidence < 0.9
     ? `The invoice date extracted from the screenshot (${formattedInvoiceDate}) is low-confidence. Verify it before posting.`
     : '';
-  const correctedGroups = groups.map(group => ({
-    ...group,
-    authorityStatus: dateWarning || group.authorityStatus === 'CONDITIONAL' ? 'CONDITIONAL' as const : 'AI_PROPOSED' as const
-  }));
-  const resultEvidence = [...baseEvidence, userEvidence];
+  const payableQualification = settlementCheck.allPayable
+    ? ''
+    : ' This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.';
+  const resultEvidence = [...(scenario.evidence || flattenImageEvidence(rawImageEvidence)), {
+    source: 'user_text' as const,
+    imageId: invoiceImage.imageId,
+    field: correctedField.field,
+    value: correction.amount,
+    confidence: 1
+  }, ...(correction.accountClassification ? [
+    {
+      source: 'user_text' as const,
+      imageId: invoiceImage.imageId,
+      field: 'invoiceAccountName',
+      value: correction.accountClassification.name,
+      confidence: 1
+    },
+    {
+      source: 'user_text' as const,
+      imageId: invoiceImage.imageId,
+      field: 'invoiceAccountCategory',
+      value: correction.accountClassification.category,
+      confidence: 1
+    }
+  ] : [])];
   return {
-    ...providerResponse,
-    messageText: `### Corrected invoice journal proposal\n\nThe invoice total was corrected to SGD ${correction.amount.toLocaleString()}. The proposed journal passed journal integrity validation and remains uncommitted.\n\n${dateWarning || 'Review the invoice date before posting.'}`,
+    messageText: `### Corrected invoice journal proposal\n\n${correction.accountClassification
+      ? `The retained corrected invoice total is SGD ${correction.amount.toLocaleString()}, and your explicit account classification is ${debitAccount.name}.`
+      : `The invoice total was corrected to SGD ${correction.amount.toLocaleString()}.`} The proposed journal is balanced and remains uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`,
     displayFullAnswer: true,
-    clarifications: undefined,
     scenarioState: {
-      ...providerResponse.scenarioState,
       ...scenario,
       rawQuery: userInput,
-      transactionTitle: providerResponse.scenarioState.transactionTitle || `Supplier invoice${invoiceReference}`,
+      transactionTitle: `Supplier invoice${invoiceReference ? ` ${invoiceReference}` : ''}`,
       amount: correction.amount,
       functionalCurrency: 'SGD',
       transactionCurrency: 'SGD',
-      directGroups: correctedGroups,
+      directGroups: [proposal],
       committedDirectGroups: scenario.committedDirectGroups,
       projectedGroups: undefined,
       missingFields: [],
@@ -883,9 +1009,11 @@ async function respondToPendingImageCorrection(
       officialAnswerLinks: [],
       authorityEvidencePresentation: undefined,
       irasEvidencePresentation: undefined,
-      uncertaintyDisclaimer: dateWarning || undefined
+      uncertaintyDisclaimer: `${payableQualification}${dateWarning ? ` ${dateWarning}` : ''}`.trim() || undefined
     }
   };
+
+
 }
 
 const MATERIAL_IMAGE_FIELDS = /amount|subtotal|total|gst|tax|date|rate|percent|percentage|quantity|principal|interest|value/i;
@@ -944,7 +1072,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. For invoices, copy the exact visible document heading into fields.documentTitle, including generic labels such as "Invoice". Set documentType to supplier_invoice only when the printed title or type explicitly says "supplier invoice", "purchase invoice", "payable invoice", or "expense invoice"; otherwise use accounting_transaction. Copy an explicit invoice direction into fields.invoiceType when visible, including customer sales invoices and credit notes. Do not infer direction from a name, item description, file name, user text, or accounting treatment. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. For invoices, copy the exact visible document heading into fields.documentTitle, including generic labels such as "Invoice". Set documentType to supplier_invoice only when the printed title or type explicitly says "supplier invoice", "purchase invoice", "payable invoice", or "expense invoice"; otherwise use accounting_transaction. Copy an explicit invoice direction into fields.invoiceType when visible, including customer sales invoices and credit notes. Copy each visible goods or service line into fields.itemDescription, preserving its wording. Do not infer invoice direction from a name, item description, file name, user text, or accounting treatment. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -1288,6 +1416,21 @@ export function createGroundedSynthesisFailureResponse(
   deterministicScenario?: AccountingScenarioState
 ): GeminiResponse {
   const baseScenario = deterministicScenario || getUntrustedFallbackScenario(response.scenarioState);
+  const equipmentClassification = deterministicScenario?.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION' &&
+    deterministicScenario.rawQuery === userInput
+    ? classifyQuestion(userInput) : undefined;
+  const equipmentPurchase = equipmentClassification && !equipmentClassification.taxAnalysisRequired &&
+    !equipmentClassification.regulatoryAnalysisRequired ? deterministicScenario : undefined;
+  const equipmentGroups = (equipmentPurchase?.directGroups ?? [])
+    .filter(group => validateJournalGroups([group]).isValid)
+    .map(group => ({
+      ...group,
+      citations: [],
+      summary: '',
+      taxSummary: undefined,
+      rationalePoints: [],
+      lines: group.lines.map(line => ({ ...line, lineExplanation: '' }))
+    }));
   const snapshotGroups = [
     ...(deterministicScenario?.directGroups || []),
     ...(deterministicScenario?.committedDirectGroups || []),
@@ -1330,7 +1473,7 @@ export function createGroundedSynthesisFailureResponse(
     regulatoryMandatesSummary: undefined,
     queryIntent: 'TRANSACTION',
     primaryDomain: undefined,
-    assumptions: [],
+    assumptions: equipmentPurchase?.assumptions ?? [],
     effectiveDateOrTiming: undefined,
     missingFacts: deterministicScenario?.missingFacts,
     missingFields: engineMissingFields,
@@ -1339,9 +1482,9 @@ export function createGroundedSynthesisFailureResponse(
     officialAnswerLinks: [],
     authorityEvidencePresentation: undefined,
     irasEvidencePresentation: undefined,
-    directGroups: safeDirectGroups,
-    committedDirectGroups: safeCommittedGroups,
-    projectedGroups: safeProjectedGroups,
+    directGroups: equipmentPurchase ? equipmentGroups : safeDirectGroups,
+    committedDirectGroups: equipmentPurchase ? undefined : safeCommittedGroups,
+    projectedGroups: equipmentPurchase ? undefined : safeProjectedGroups,
     isComplete: Boolean(baseScenario.isComplete && engineMissingFields.length === 0)
   };
   let messageText: string;
@@ -1394,6 +1537,17 @@ export function createGroundedSynthesisFailureResponse(
     officialAnswerLinks = irasEvidencePresentation?.sourceGroups.flatMap(source =>
       source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
     ) || [];
+  } else if (equipmentPurchase) {
+    const questions = [...engineMissingFields.map(field => field.prompt),
+      ...(equipmentPurchase.assumptions ?? []).flatMap(assumption =>
+        assumption.userClarificationPrompt ? [assumption.userClarificationPrompt] : [])];
+    messageText = equipmentGroups.length
+      ? 'The equipment acquisition journal is available for review in the Double Entry Journal tab.'
+      : 'More information is needed to prepare the equipment acquisition journal.';
+    if (equipmentGroups.length && equipmentPurchase.assumptions?.length) {
+      messageText += '\n\nThe proposed credit is to Trade Payables on the assumption that the supplier invoice is unpaid.';
+    }
+    if (questions.length) messageText += `\n\n${questions.join('\n')}`;
   } else {
     messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
       (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
@@ -1412,7 +1566,8 @@ export function createGroundedSynthesisFailureResponse(
       authorityEvidencePresentation,
       irasEvidencePresentation,
       ...(irasEvidencePresentation ? { primaryDomain: irasPrimaryDomain, queryIntent: irasQueryIntent } : {}),
-      uncertaintyDisclaimer: 'The original advisory response was not retained because its claims did not pass verification.' ,
+      uncertaintyDisclaimer: equipmentPurchase && !authorityEvidencePresentation && !irasEvidencePresentation
+        ? undefined : 'The original advisory response was not retained because its claims did not pass verification.',
       officialAnswerLinks: [...new Map(officialAnswerLinks.map(link => [link.url, link])).values()]
     },
     clarifications: engineMissingFields
@@ -1772,17 +1927,15 @@ async function processAccountingQueryCore(
   if (pendingImageCorrection && activeScenario &&
       (!independentStatutoryRequest ||
         (pendingImageCorrection.kind === 'correction' &&
-          ['explicit_replacement', 'invoice_total_statement', 'confirmed_supplier_invoice_total_statement'].includes(pendingImageCorrection.source)) ||
+          ['explicit_replacement', 'invoice_total_statement', 'confirmed_supplier_invoice_total_statement', 'retained_invoice_total'].includes(pendingImageCorrection.source)) ||
         (pendingImageCorrection.kind === 'clarification' &&
           (['conflicting_fields', 'explicit_replacement', 'supplier_direction_confirmation'].includes(pendingImageCorrection.reason) ||
+            pendingImageCorrection.reason === 'gst_treatment_unverified' ||
             (pendingImageCorrection.reason === 'amount_correction' && EXPLICIT_WRONG_AMOUNT.test(userInput) && !userInput.includes('?')))))) {
     return respondToPendingImageCorrection(
       userInput,
       activeScenario,
-      pendingImageCorrection,
-      standard,
-      providerOrApiKey,
-      modelName
+      pendingImageCorrection
     );
   }
   if (independentStatutoryRequest) {

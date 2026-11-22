@@ -237,12 +237,15 @@ try {
   const sourceUrl = IRAS_SOURCE_MAP_DEFINITIONS.find(record => record.id === 'IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP').canonicalSourceUrl;
   const lateExample = 'In this scenario, Company B claims capital allowances of $10,000 over the remaining one year.';
   const followingRule = 'Both parties must complete a Section 24 notice of election for the transferred assets.';
+  const qualifyingAssetRule = 'Your company can instead claim capital allowances for the wear and tear of qualifying fixed assets bought and used in its trade or business.';
+  const disposalRule = 'When a fixed asset is sold, converted to trading stock or written off, you need to calculate balancing allowance (BA) or balancing charge (BC) if capital allowances have been claimed on the cost of the asset previously. BA is tax-deductible and BC is taxable as income.';
+  const disposalCalculationRule = 'BA or BC is derived by calculating the difference between the sale proceeds and the tax written down value (TWDV) of the asset disposed. TWDV is the cost of the asset less the amount of capital allowances allowed previously.';
   // Model the IRAS page's native headings and tables, with enough earlier material to require excerpt selection.
   const otherSections = Array.from({ length: 140 }, (_, index) =>
     `<p>Reference ${index + 1} explains a separate administrative form and gives general background about record keeping.</p>`).join('');
   const page = `<html><head><title>Capital Allowances</title></head><body><main>
     <h1>Capital Allowances</h1>${otherSections}
-    <p>Companies can claim capital allowances under Section 19 or Section 19A on qualifying plant and machinery.</p>
+    <h3>Qualifying Fixed Assets</h3><p>${qualifyingAssetRule}</p>
     <h3>Implications of a Section 24 Election</h3>
     <p>When the election applies, the transfer uses the asset's tax written-down value.</p>
     <h4>Example</h4>
@@ -256,9 +259,12 @@ try {
     <h5>Scenario B: Section 24 is Not Elected</h5>
     <p>The example uses the selling price to determine the buyer's basis.</p>
     <h3>How to Elect for Section 24</h3><p>${followingRule}</p>
+    <h3>Sale / Disposal / Conversion of Fixed Assets</h3><p>${disposalRule}</p>
+    <h4>Calculating BA / BC</h4><p>${disposalCalculationRule}</p>
   </main></body></html>`;
-  const sourceContext = await buildGroundedReasoningContext(
-    'How do capital allowances under Section 19A work for qualifying plant and machinery?',
+  const secondMachinePurchaseQuery = 'Regarding our previous machine purchase, we bought a machine for SGD 80,000. We subsequently purchased another machine for SGD 100,000. What IRAS rules apply to the second purchase?';
+  const loadCapitalAllowanceContext = (queryText, questionUnderstanding) => buildGroundedReasoningContext(
+    queryText,
     null,
     { retrieveSources: async () => [], getSourceById: id => UNIFIED_SOURCE_REGISTRY[id], findSourcesByStandardOrAct: () => [] },
     undefined,
@@ -266,6 +272,7 @@ try {
       authorityLevelDiscovery: false,
       discoveryAdapter: { discoverOfficialSourceCandidates: async () => [] },
       officialDomainSearchAdapter: { searchOfficialDomainCandidates: async () => [], getLastSearchTrace: () => [] },
+      ...(questionUnderstanding ? { questionUnderstanding } : {}),
       fetchOptions: {
         useCache: false,
         customFetch: async input => String(input) === sourceUrl
@@ -274,6 +281,12 @@ try {
       }
     }
   );
+  // Keep the original generic query for the capped-excerpt assertion. The
+  // machine-purchase route is exercised separately below against the same page.
+  const sourceContext = await loadCapitalAllowanceContext(
+    'How do capital allowances under Section 19A work for qualifying plant and machinery?');
+  assert.ok(sourceContext.classification.topicIds.includes('iras-capital-allowances'),
+    'A machine purchase question routed to IRAS reaches the existing capital-allowances source map.');
   const pageRecord = sourceContext.evidenceQuality?.eligibleRecords.find(record =>
     record.provenance === 'LIVE_EXTERNAL' && record.canonicalSourceUrl === sourceUrl);
   assert.ok(pageRecord, 'the mapped Capital Allowances page yields an eligible official excerpt');
@@ -285,6 +298,93 @@ try {
     'the official excerpt retains example scope from the full native section, across table rows and nested headings');
   assert.ok(pageRecord.workedExampleSourceText.every(section => !section.includes(followingRule)),
     'the next peer or enclosing heading ends the worked example');
+  const hypotheticalQuery = 'Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?';
+  const actualMachinePurchase = classifyQuestion(secondMachinePurchaseQuery);
+  assert.ok(!actualMachinePurchase.topicIds.includes('iras-capital-allowances'),
+    'The machine-purchase alias does not create a global lexical route.');
+  const pureAccountingMachinePurchase = classifyQuestion('How should we account for our machine purchase?');
+  assert.ok(!pureAccountingMachinePurchase.topicIds.includes('iras-capital-allowances') &&
+    !pureAccountingMachinePurchase.domains.includes('IRAS_CORPORATE_TAX'),
+    'A machine-purchase bookkeeping question does not route to corporate tax.');
+  const gstMachinePurchase = classifyQuestion('Can our GST-registered company recover input GST on a machine purchase?');
+  assert.ok(!gstMachinePurchase.topicIds.includes('iras-capital-allowances'),
+    'A machine-purchase GST question does not inherit capital-allowance coverage.');
+  const secondPurchaseUnderstanding = {
+    mode: 'SEMANTIC_PLUS_RULES', assessmentStatus: 'PASSED',
+    interpretation: {
+      jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: [],
+      domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'machine purchase IRAS rules',
+      concepts: [
+        { concept: 'machine purchase', role: 'CONTEXT_ONLY' },
+        { concept: 'IRAS rules', role: 'PRIMARY' }
+      ],
+      requestedOperation: 'EXPLAIN_RULE', requiresUserSpecificFacts: true, calculationRequested: false,
+      factsExplicitlyProvided: ['purchased a machine for SGD 80000 previously', 'purchased another machine for SGD 100000 subsequently'],
+      confidence: 0.9,
+      issues: [{
+        subject: 'IRAS rules on machine purchase', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+        governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+        evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.9
+      }]
+    }
+  };
+  const acquisitionContext = await loadCapitalAllowanceContext(secondMachinePurchaseQuery, secondPurchaseUnderstanding);
+  assert.ok(acquisitionContext.classification.topicIds.includes('iras-capital-allowances'),
+    'A second machine purchase routes to the existing IRAS capital-allowances topic.');
+  const acquisitionRecord = acquisitionContext.evidenceQuality?.eligibleRecords.find(record =>
+    record.provenance === 'LIVE_EXTERNAL' && record.canonicalSourceUrl === sourceUrl);
+  assert.ok(acquisitionRecord?.sourceText.includes(qualifyingAssetRule),
+    'The actual second-purchase question receives the official qualifying-asset acquisition rule.');
+  const acquisitionFallback = renderIrasEvidenceResponse({}, acquisitionContext, secondMachinePurchaseQuery, null, 'SFRS_I', 'LOCAL');
+  assert.ok(acquisitionFallback.claimVerification.accepted.some(claim =>
+    claim.recordId === acquisitionRecord.id && claim.text.includes('qualifying fixed assets bought and used')),
+    'The rendered actual purchase answer includes general acquisition guidance.');
+  assert.ok(!acquisitionFallback.claimVerification.accepted.some(claim =>
+    /balancing allowance|balancing charge|sale proceeds|asset disposed/i.test(claim.text)),
+    'An acquisition-only question does not quote the unrelated disposal trigger or calculation.');
+  const hypotheticalUnderstanding = {
+    mode: 'SEMANTIC_PLUS_RULES', assessmentStatus: 'PASSED',
+    interpretation: {
+      jurisdiction: ['Singapore'], authorityCandidates: ['IRAS'], contextualAuthorities: ['ACCOUNTING_STANDARDS'],
+      domain: 'IRAS_INCOME_TAX', population: 'COMPANY', primarySubject: 'capital allowances claim eligibility',
+      concepts: [
+        { concept: 'capital allowances', role: 'PRIMARY' },
+        { concept: 'machine disposal', role: 'RELATED' },
+        { concept: 'subsequent machine purchase', role: 'RELATED' }
+      ],
+      requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true, calculationRequested: false,
+      factsExplicitlyProvided: ['sold the old machine', 'subsequently purchased another machine for SGD 100000', 'previous machine purchase'],
+      confidence: 0.9,
+      issues: [{
+        subject: 'capital allowances claim eligibility', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+        governingAuthorities: ['IRAS'], contextualAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'CHECK_ELIGIBILITY',
+        mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.9
+      }]
+    }
+  };
+  const hypotheticalContext = await loadCapitalAllowanceContext(hypotheticalQuery, hypotheticalUnderstanding);
+  const hypotheticalRecord = hypotheticalContext.evidenceQuality?.eligibleRecords.find(record =>
+    record.provenance === 'LIVE_EXTERNAL' && record.canonicalSourceUrl === sourceUrl);
+  assert.ok(hypotheticalRecord?.sourceText.includes(qualifyingAssetRule) &&
+    hypotheticalRecord.sourceText.includes(disposalRule) && hypotheticalRecord.sourceText.includes(disposalCalculationRule),
+    'The hypothetical retains both official general acquisition and disposal extracts.');
+  const hypotheticalFallback = renderIrasEvidenceResponse({}, hypotheticalContext, hypotheticalQuery, null, 'SFRS_I', 'LOCAL');
+  const acquisitionClaim = hypotheticalFallback.claimVerification.accepted.find(claim =>
+    claim.recordId === hypotheticalRecord.id && claim.text.includes('qualifying fixed assets bought and used'));
+  assert.ok(acquisitionClaim, 'The hypothetical receives the official general acquisition rule.');
+  const disposalClaim = hypotheticalFallback.claimVerification.accepted.find(claim =>
+    claim.recordId === hypotheticalRecord.id && claim.text.includes('balancing allowance (BA) or balancing charge (BC)'));
+  assert.ok(disposalClaim,
+    'The hypothetical receives the official general disposal rule.');
+  assert.equal(hypotheticalFallback.applicationConclusions.length, 0,
+    'Without business-use, prior-allowance, sale-proceeds and tax-written-down-value facts, neither transaction receives a case-specific conclusion.');
+  assert.ok(hypotheticalFallback.claimVerification.accepted.every(claim =>
+    !hypotheticalRecord.workedExampleSourceText.some(example => example.replace(/\s+/g, ' ').includes(claim.text.replace(/\s+/g, ' ')))),
+    'General-rule fallback does not apply captured company-specific worked examples to the hypothetical.');
+  assert.match(hypotheticalFallback.messageText, /does not by itself confirm that every condition is met in this case/i,
+    'The answer states that general rules do not establish the facts for this case.');
+  assert.doesNotMatch(hypotheticalFallback.messageText, /Company A|Company B|\$25,000|\$30,000|Section 24/,
+    'Company-specific worked-example amounts and conditions are not applied to this transaction.');
 }
 
 const ir21Map = IRAS_SOURCE_MAP_DEFINITIONS.find(item => item.id === 'IRAS_IR21_SOURCE_MAP');

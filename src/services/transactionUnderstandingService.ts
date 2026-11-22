@@ -1200,6 +1200,16 @@ export class DeterministicSemanticExtractor {
   }
 
   private extractPaymentStatus(q: string): 'paid' | 'unpaid' | 'partially_paid' | 'unknown' {
+    // A partially paid purchase can also have an outstanding balance.
+    if (
+      q.includes('partially paid') ||
+      q.includes('part paid') ||
+      q.includes('half paid') ||
+      q.includes('deposit paid')
+    ) {
+      return 'partially_paid';
+    }
+
     if (
       q.includes('unpaid') ||
       q.includes("hasn't paid") ||
@@ -1211,15 +1221,6 @@ export class DeterministicSemanticExtractor {
       q.includes('not yet paid')
     ) {
       return 'unpaid';
-    }
-
-    if (
-      q.includes('partially paid') ||
-      q.includes('part paid') ||
-      q.includes('half paid') ||
-      q.includes('deposit paid')
-    ) {
-      return 'partially_paid';
     }
 
     if (

@@ -65,6 +65,13 @@ export interface GroundedSynthesisVerification {
   admittedClaimIds: string[];
   withheldClaimIds: string[];
   claims: GroundedSynthesisClaimVerification[];
+  requestedIssues: Array<{
+    issueId: string;
+    subject: string;
+    scopeConflict: boolean;
+    admittedPassageIds: string[];
+    factRequests: string[];
+  }>;
 }
 
 export interface GroundedSynthesisResult {
@@ -173,6 +180,8 @@ interface SynthesisClaim {
   supportIds: string[];
   factRefs: string[];
   issueId?: string;
+  /** Added only by deterministic binding of an admitted, exact source passage. */
+  sourceQuoteFallback?: boolean;
 }
 
 interface InvalidClaim {
@@ -321,15 +330,11 @@ function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassag
   const coveragePassages = passages.filter(passage => isMomScopePassage(passage) &&
     /\b(?:apply|applies)\s+only\s+to\b/i.test(passage.verifiedQuote) &&
     /\b(?:covered under|Part\s+4)\b/i.test(passage.verifiedQuote));
-  const contractExclusionPassages = passages.filter(passage => isMomScopePassage(passage) &&
-    /\bnot covered under Part\s+4\b/i.test(passage.verifiedQuote) &&
-    /\bterms and conditions of employment\b/i.test(passage.verifiedQuote) &&
-    /\baccording to (?:your|the) employment contract\b/i.test(passage.verifiedQuote));
+  const contractExclusionPassages = passages.filter(isMomContractExclusionPassage);
   const scopePassages = [...coveragePassages, ...contractExclusionPassages];
   if (!scopePassages.length) return passages;
   return passages.map(passage => {
-    if (!isMomScopePassage(passage) || !/\bovertime\b/i.test(passage.verifiedQuote) ||
-        !/\b14\s+days?\b/i.test(passage.verifiedQuote)) return passage;
+    if (!isMomFourteenDayOvertimePassage(passage)) return passage;
     const sameIssueAndSource = (scope: EvidencePassage) => scope.id !== passage.id &&
       scope.issueId === passage.issueId && scope.sourceRecordId === passage.sourceRecordId;
     const scope = coveragePassages.find(sameIssueAndSource) || contractExclusionPassages.find(sameIssueAndSource);
@@ -339,6 +344,23 @@ function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassag
       candidate.issueId !== passage.issueId);
     return scopeExistsOnlyInAnotherIssue ? { ...passage, requiredScopeUnavailable: true } : passage;
   });
+}
+
+function isMomFourteenDayOvertimePassage(passage: EvidencePassage): boolean {
+  return passage.authority === 'MOM' && passage.domain === 'MOM_EMPLOYMENT' &&
+    /\bovertime\b/i.test(passage.verifiedQuote) && /\b14\s+days?\b/i.test(passage.verifiedQuote);
+}
+
+function isMomOutsidePartFourIssue(issue: RequestedIssue | undefined): boolean {
+  return Boolean(issue?.domain === 'MOM_EMPLOYMENT' && issue.authorities?.includes('MOM') && issue.applicationStatus === 'UNRESOLVED' &&
+    (/\bnot covered\b/i.test(issue.subject) || /\b(?:outside|excluded from)\s+(?:the scope of\s+)?Part\s+(?:4|IV)\b/i.test(issue.subject)));
+}
+
+function isMomContractExclusionPassage(passage: EvidencePassage): boolean {
+  return passage.authority === 'MOM' && passage.domain === 'MOM_EMPLOYMENT' &&
+    /\bnot covered under Part\s+4\b/i.test(passage.verifiedQuote) &&
+    /\bterms and conditions of employment\b/i.test(passage.verifiedQuote) &&
+    /\baccording to (?:your|the) employment contract\b/i.test(passage.verifiedQuote);
 }
 
 function applyAdmittedExampleScope(
@@ -1852,6 +1874,19 @@ function validateBundle(
     let reason = isExactValidatedJournalSummary(claim, packet) ? undefined : unsupportedText(text, journalSummaries);
     if (!reason && (!supportIds || !factRefs)) reason = 'Claim references an unknown or duplicate packet ID.';
     if (!reason && issueId && !issueIds.has(issueId)) reason = 'Claim references an issue outside the admitted packet.';
+    if (!reason && kind !== 'LIMITATION' && supportIds) {
+      const outsidePartFourIssueIds = new Set(packet.requestedIssues
+        .filter(isMomOutsidePartFourIssue).map(issue => issue.id));
+      const claimIssueIds = new Set([
+        ...(issueId ? [issueId] : []),
+        ...supportIds.flatMap(id => packet.passages.find(passage => passage.id === id)?.issueId || [])
+      ]);
+      if ([...claimIssueIds].some(claimIssueId => outsidePartFourIssueIds.has(claimIssueId) &&
+          supportIds.some(id => packet.passages.some(passage => passage.id === id &&
+            passage.issueId === claimIssueId && isMomFourteenDayOvertimePassage(passage))))) {
+        reason = 'The 14-day overtime deadline is withheld for an issue described as outside Part 4.';
+      }
+    }
     if (!reason && kind !== 'LIMITATION' && supportIds?.some(id =>
       packet.trustedOutputs.some(output => output.id === id && output.kind === 'EVIDENCE_GAP')
     )) reason = 'Evidence-gap markers can support only explicit limitation claims.';
@@ -1981,6 +2016,35 @@ function isExactSourceRule(claim: SynthesisClaim, packet: ReturnType<typeof buil
   });
 }
 
+function appendMOMContractScopeFallbacks(
+  claims: SynthesisClaim[],
+  packet: ReturnType<typeof buildPacket>
+): SynthesisClaim[] {
+  const completedClaims = [...claims];
+  for (const issue of packet.requestedIssues) {
+    if (!isMomOutsidePartFourIssue(issue)) continue;
+    for (const contractPassage of packet.passages.filter(passage =>
+      passage.issueId === issue.id && isMomContractExclusionPassage(passage))) {
+      const hasBoundContractRule = completedClaims.some(claim => claim.kind === 'RULE' && claim.issueId === issue.id &&
+        claim.supportIds.includes(contractPassage.id) &&
+        normalizeAdvisoryText(claim.text).includes(normalizeAdvisoryText(contractPassage.verifiedQuote)));
+      if (hasBoundContractRule) continue;
+      let suffix = 1;
+      while (completedClaims.some(claim => claim.id === `mom-contract-scope-${suffix}`)) suffix += 1;
+      completedClaims.push({
+        id: `mom-contract-scope-${suffix}`,
+        kind: 'RULE',
+        text: contractPassage.verifiedQuote,
+        supportIds: [contractPassage.id],
+        factRefs: [],
+        issueId: issue.id,
+        sourceQuoteFallback: true
+      });
+    }
+  }
+  return completedClaims;
+}
+
 function claimRequiresSemanticVerification(claim: SynthesisClaim, packet: ReturnType<typeof buildPacket>): boolean {
   if (isExactValidatedJournalSummary(claim, packet)) return false;
   const isAccountingPassage = (passage: EvidencePassage) => /^ACCOUNTING/.test(passage.domain) ||
@@ -1993,6 +2057,7 @@ function claimRequiresSemanticVerification(claim: SynthesisClaim, packet: Return
       ['IRAS', 'CPF', 'MOM', 'ACRA', 'MAS', 'AGC'].includes(authority)));
   if (!hasStatutoryScope) return false;
   const citedPassages = packet.passages.filter(passage => claim.supportIds.includes(passage.id));
+  if (claim.sourceQuoteFallback && isExactSourceRule(claim, packet)) return false;
   if (citedPassages.some(passage => passage.needsSemanticSupport || passage.sourceScope === 'WORKED_EXAMPLE')) return true;
   if (isExactSourceRule(claim, packet)) return false;
   if (citedPassages.some(passage => !isAccountingPassage(passage))) return true;
@@ -2245,6 +2310,7 @@ export async function tryGenerateGroundedSynthesis(
   const initialPayload = await callForJson(packetPrompt,
     generationSystem, input.provider as ProviderSettings | string, 'generation', dependencies, diagnostics);
   const initial = validateBundle(initialPayload, packet, issueIds);
+  initial.claims = appendMOMContractScopeFallbacks(initial.claims, packet);
   const selectedClaims = initial.claims.filter(claim => claimRequiresSemanticVerification(claim, packet));
   const callsBeforeSemanticVerification = diagnostics.calls;
   const semanticVerdicts = await verifySelectedClaimSupport(selectedClaims, packet,
@@ -2297,7 +2363,14 @@ export async function tryGenerateGroundedSynthesis(
       providerElapsedMs: diagnostics.elapsedMs,
       admittedClaimIds: finalClaims.map(claim => claim.id),
       withheldClaimIds: verificationClaims.filter(claim => claim.outcome === 'WITHHELD').map(claim => claim.claimId),
-      claims: verificationClaims
+      claims: verificationClaims,
+      requestedIssues: packet.requestedIssues.map(issue => ({
+        issueId: issue.id,
+        subject: issue.subject,
+        scopeConflict: Boolean(issue.scopeConflict),
+        admittedPassageIds: packet.passages.filter(passage => passage.issueId === issue.id).map(passage => passage.id),
+        factRequests: packet.issueFactRequests[issue.id] || []
+      }))
     }
   };
 }

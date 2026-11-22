@@ -583,6 +583,20 @@ function provisionalIrasConceptTopics(
   });
 }
 
+function getValidatedIrasAliasTopicIds(
+  semanticContext?: ReturnType<typeof getSemanticIrasDiscoveryContext>
+): string[] {
+  if (semanticContext?.domainId !== 'IRAS_CORPORATE_TAX' || semanticContext.population !== 'COMPANY') return [];
+  const issueText = [semanticContext.primarySubject, ...semanticContext.concepts]
+    .map(normalizeEvidenceText).filter(Boolean);
+  if (issueText.length === 0) return [];
+  return SINGAPORE_COVERAGE_REGISTRY.filter(topic => topic.domainId === semanticContext.domainId && !topic.routingOnly &&
+    (topic.aliases || []).some(alias => {
+      const normalizedAlias = normalizeEvidenceText(alias);
+      return normalizedAlias.length >= 8 && issueText.some(value => value.includes(normalizedAlias));
+    })).map(topic => topic.id);
+}
+
 /**
  * The query-only evidence scope may be closed by the deterministic GST
  * calculator only when the sole requested outcome is the output GST and
@@ -3052,7 +3066,7 @@ export async function buildGroundedReasoningContext(
     userInput, deterministicClassification, initialQuestionUnderstanding, requestCompletenessContext
   );
   requestCompletenessContext = reconciledQuestion.requestCompletenessContext;
-  const classification = retrievalOptions.evidenceScope
+  let classification = retrievalOptions.evidenceScope
     ? {
       ...reconciledQuestion.classification,
       primaryDomain: retrievalOptions.evidenceScope.domain === 'IRAS_GST' ? 'GST' as const : 'TAX' as const,
@@ -3088,19 +3102,8 @@ export async function buildGroundedReasoningContext(
     conversationContext
   );
 
-  // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
-  const retrievalHints = buildClassificationRetrievalHints(classification);
-  // The governed response covers IRAS evidence only. Keep mixed-domain
-  // classification for the answer, but rank local candidates inside the IRAS
-  // topic/authority scope before the retriever applies its result limit.
-  const evidenceTopicIds = getCoverageTopicsByIds(retrievalOptions.evidenceScope?.topicIds || retrievalHints.topicIds || [])
-    .filter(topic => topicMatchesEvidenceScope(topic, retrievalOptions.evidenceScope))
-    .filter(topic => !topic.routingOnly).map(topic => topic.id);
-  const irasTopicIds = getCoverageTopicsByIds(evidenceTopicIds)
-    .filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id);
-  // Keep a transient full-query scope beside any registered routing topics.
-  // The registry is a routing aid: a lexical topic hit can cover one concept
-  // while the rest of the user's IRAS question still needs discovery.
+  // Keep validated semantic issue aliases inside IRAS evidence routing. These
+  // aliases do not participate in global question classification.
   const semanticIrasContext = irasPolicy ? retrievalOptions.evidenceScope ? {
     domainId: retrievalOptions.evidenceScope.context.domainId,
     population: retrievalOptions.evidenceScope.context.population,
@@ -3110,6 +3113,28 @@ export async function buildGroundedReasoningContext(
     mappedTopicIds: retrievalOptions.evidenceScope.topicIds,
     requestedOperation: retrievalOptions.evidenceScope.context.requestedOperation
   } : getSemanticIrasDiscoveryContext(questionUnderstanding, userInput) : undefined;
+  const semanticAliasTopicIds = getValidatedIrasAliasTopicIds(semanticIrasContext)
+    .filter(topicId => topicMatchesEvidenceScope(getCoverageTopicsByIds([topicId])[0], retrievalOptions.evidenceScope));
+  if (semanticAliasTopicIds.length > 0) {
+    classification = { ...classification, topicIds: [...new Set([...classification.topicIds, ...semanticAliasTopicIds])] };
+  }
+
+  // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
+  const retrievalHints = buildClassificationRetrievalHints(classification);
+  // The governed response covers IRAS evidence only. Keep mixed-domain
+  // classification for the answer, but rank local candidates inside the IRAS
+  // topic/authority scope before the retriever applies its result limit.
+  const evidenceTopicIds = getCoverageTopicsByIds([...new Set([
+    ...(retrievalOptions.evidenceScope?.topicIds || retrievalHints.topicIds || []),
+    ...semanticAliasTopicIds
+  ])])
+    .filter(topic => topicMatchesEvidenceScope(topic, retrievalOptions.evidenceScope))
+    .filter(topic => !topic.routingOnly).map(topic => topic.id);
+  const irasTopicIds = getCoverageTopicsByIds(evidenceTopicIds)
+    .filter(topic => topic.domainId.startsWith('IRAS_')).map(topic => topic.id);
+  // Keep a transient full-query scope beside any registered routing topics.
+  // The registry is a routing aid: a lexical topic hit can cover one concept
+  // while the rest of the user's IRAS question still needs discovery.
   const scopedEvidenceRuleInput = {
     ...(retrievalOptions.evidenceScope?.context.primarySubject.trim()
       ? { scopedSubject: retrievalOptions.evidenceScope.context.primarySubject }

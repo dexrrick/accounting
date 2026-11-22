@@ -36,6 +36,7 @@ import {
   completeVisibleEvidenceListSpan,
   isEvidenceHeadingTransition,
   isVisibleEvidenceListItem,
+  normalizeEvidenceText,
   splitEvidenceTextBlocks,
   startsStrongAttachedEvidenceQualification
 } from '../utils/evidenceTextBoundaries';
@@ -597,6 +598,9 @@ function selectEvidenceOnlyQuotes(
   const bonusTimingRequested = selectedTopicIds.includes('iras-employee-bonus-timing');
   const records = context.evidenceQuality?.eligibleRecords || [];
   const selected: Array<{ text: string; quote: string; recordId: string; kind: 'RULE'; score: number; recordOrder: number; paragraphOrder: number; sourceUrl: string; topicIds: string[]; requestedSupportConceptIds: string[]; requestedSupportTopicIds: string[] }> = [];
+  const capitalAllowanceDisposalRequested = requestedConcepts.some(concept =>
+    [concept.label, ...concept.terms].some(value =>
+      /\b(?:disposals?|dispos(?:e|ed|es|ing)|sales?|sold|selling|scrap(?:ped|ping)?|write[ -]off)\b/i.test(value)));
   const compareCandidates = (
     left: typeof selected[number],
     right: typeof selected[number],
@@ -615,6 +619,7 @@ function selectEvidenceOnlyQuotes(
   records.forEach((record, recordOrder) => {
     const liveExtractionCandidate = record.provenance === 'LIVE_EXTERNAL';
     const sourceBlocks = splitEvidenceTextBlocks(record.sourceText);
+    const workedExamples = record.workedExampleSourceText?.map(normalizeEvidenceText) ?? [];
     const paragraphs: string[] = [];
     for (let index = 0; index < sourceBlocks.length;) {
       const block = sourceBlocks[index];
@@ -655,8 +660,14 @@ function selectEvidenceOnlyQuotes(
         attachedEnd += 1;
       }
       const text = paragraphs.slice(paragraphOrder, attachedEnd + 1).join(' ');
+      const belongsToWorkedExample = workedExamples.length > 0 && paragraphs.slice(paragraphOrder, attachedEnd + 1)
+        .some(paragraph => workedExamples.some(example => example.includes(normalizeEvidenceText(paragraph))));
+      const isUnrequestedCapitalAllowanceDisposalRule = selectedTopicIds.includes('iras-capital-allowances') &&
+        !capitalAllowanceDisposalRequested &&
+        /\b(?:balancing allowance|balancing charge|sale proceeds|asset disposed|fixed asset is sold|fixed assets? disposals?)\b/i.test(text);
       const maximumLength = attachedEnd > paragraphOrder ? 3_200 : 1_600;
-      if ((liveExtractionCandidate && text.length < 40) || text.length > maximumLength ||
+      if (belongsToWorkedExample || isUnrequestedCapitalAllowanceDisposalRule ||
+          (liveExtractionCandidate && text.length < 40) || text.length > maximumLength ||
           (liveExtractionCandidate && !paragraphs.slice(paragraphOrder, attachedEnd + 1).every(isFallbackEvidenceParagraph)) ||
           (liveExtractionCandidate && isGovernmentEmploymentScopedPassage(record.sourceText, text, query))) {
         paragraphOrder = attachedEnd + 1;
