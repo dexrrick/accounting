@@ -53,7 +53,7 @@ import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 import { buildAdvisoryConversation, classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
   isHighRiskStatutoryClaim } from './aiFirstAdvisory';
-import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
+import { prepareAuthorityWorkstreamsForPresentation, tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
@@ -1515,7 +1515,9 @@ export function createGroundedSynthesisFailureResponse(
     messageText += `\n\n### Additional admitted IRAS evidence\n\n${fallback.messageText}`;
   };
   if (authorityWorkstreams?.query === userInput) {
-    const presentation = createAuthorityEvidencePresentation(authorityWorkstreams);
+    const presentation = createAuthorityEvidencePresentation(
+      prepareAuthorityWorkstreamsForPresentation(authorityWorkstreams)
+    );
     authorityEvidencePresentation = presentation;
     messageText = renderAuthorityEvidenceResponseText(
       presentation, balancedJournalAvailable
@@ -2089,7 +2091,8 @@ async function processAccountingQueryCore(
       requestCompletenessContext
     });
     diagnostics?.onAuthorityWorkstreams?.(authorityResult);
-    authorityEvidencePresentation = createAuthorityEvidencePresentation(authorityResult);
+    const presentationAuthorityResult = prepareAuthorityWorkstreamsForPresentation(authorityResult);
+    authorityEvidencePresentation = createAuthorityEvidencePresentation(presentationAuthorityResult);
     authorityEvidenceMessage = renderAuthorityEvidenceResponseText(
       authorityEvidencePresentation,
       classification.intent === 'HYBRID' && Boolean(activeScenario?.directGroups?.some(group => group.isBalanced && group.lines.length > 0))

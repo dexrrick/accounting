@@ -302,6 +302,7 @@ const supportedRule = quote;
   const capturedHistory = JSON.parse(readFileSync(new URL('../fixtures/mom-salary-overtime-history.json', import.meta.url), 'utf8'));
   const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
   const exclusionQuote = 'Note: Part 4 of the Employment Act does not cover managers and executives.';
+  const contractQuote = 'If you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract.';
   const salaryQuote = 'For employees covered by the Employment Act, the employer must pay ordinary salary at least once a month and within 7 days after the end of the salary period.';
   assert.ok(momSourceText.includes(coverageQuote) && momSourceText.includes(exclusionQuote));
   assert.equal(momDocumentContext.length, 9283);
@@ -403,7 +404,12 @@ const supportedRule = quote;
   assert.ok(result);
   assert.ok(result.messageText.includes('The hours-of-work guidelines apply only to employees covered under Part 4 of the Employment Act'));
   assert.ok(result.messageText.includes('ordinary salary at least once a month and within 7 days'));
-  assert.deepEqual(result.verification.admittedClaimIds, ['captured-overtime-scope', 'captured-ordinary-salary']);
+  assert.ok(result.messageText.includes('terms and conditions of employment will be according to your employment contract'),
+    'the verified contract qualification is recovered for the outside-Part-4 overtime issue');
+  assert.doesNotMatch(result.messageText, /within 14 days after the last day of the salary period/i,
+    'the outside-Part-4 answer never presents the 14-day deadline as applicable');
+  assert.deepEqual(result.verification.admittedClaimIds,
+    ['captured-overtime-scope', 'captured-ordinary-salary', 'mom-contract-scope-1']);
   assert.deepEqual(result.verification.claims.find(item => item.claimId === 'captured-overtime-scope')?.admittedPassageIds,
     reboundPassageIds);
   assert.equal(result.verification.providerCalls, 2, 'the unique rebind reuses the existing generation and support-verification calls');
@@ -418,9 +424,11 @@ const supportedRule = quote;
     'overtime payment deadline for employee not covered by overtime provisions', 'EMPLOYEE', mismatchedTargetSource);
   mismatchedTargetIssue.admittedDocumentContexts[0].sourceText = changedContext;
   mismatchedTargetIssue.admissionDiagnostics.candidates[0].documentHash = changedContextHash;
+  let mismatchGenerationPacket;
   let mismatchSupportClaims;
   const mismatchScript = scriptedCall(({ prompt }) => {
     const packet = packetFrom(prompt);
+    mismatchGenerationPacket = packet;
     const foreignCoverage = packet.evidencePassages.find(item => item.issueId === salaryIssueId && item.completeAdmittedPassage === coverageQuote);
     const foreignExclusion = packet.evidencePassages.find(item => item.issueId === salaryIssueId && item.completeAdmittedPassage === exclusionQuote);
     assert.ok(foreignCoverage && foreignExclusion);
@@ -434,11 +442,27 @@ const supportedRule = quote;
       'an identical quote is not rebound when the complete admitted document context differs');
     return { verdicts: packet.claims.map(item => ({ claimId: item.claimId, support: 'SUPPORTED', claimType: 'RULE' })) };
   });
-  await assert.rejects(tryGenerateGroundedSynthesis(makeInput({
+  const mismatchResult = await tryGenerateGroundedSynthesis(makeInput({
     query: queryText, history: [], issues: [salaryIssue, mismatchedTargetIssue],
     issuePlanIssues: [salaryIssue, mismatchedTargetIssue].map(plannedNarrativeIssue),
     evidenceQuality: { eligibleRecords: [...salaryIssue.sources, mismatchedTargetSource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
-  }), { call: mismatchScript.call }), /no supportable claims/);
+  }), { call: mismatchScript.call });
+  assert.deepEqual(mismatchResult?.verification.admittedClaimIds, ['mom-contract-scope-1'],
+    'only the independently supported contract qualification survives the changed-context alias');
+  assert.deepEqual(mismatchResult?.verification.withheldClaimIds, ['changed-full-context-alias']);
+  assert.deepEqual(mismatchResult?.verification.claims.find(item => item.claimId === 'changed-full-context-alias')?.admittedPassageIds, []);
+  assert.equal(mismatchResult?.verification.semanticVerificationCalls, 0,
+    'the unsupported changed-context alias never reaches semantic review');
+  assert.equal(mismatchResult?.verification.providerCalls, 1,
+    'the contract quote is appended without another provider call');
+  const contractFallbackClaim = mismatchResult?.verification.claims.find(item => item.claimId === 'mom-contract-scope-1');
+  const contractFallbackPassage = mismatchGenerationPacket?.evidencePassages.find(item =>
+    item.id === contractFallbackClaim?.admittedPassageIds[0]);
+  assert.equal(contractFallbackPassage?.issueId, overtimeIssueId,
+    'the recovered contract qualification remains owned by the overtime issue');
+  assert.equal(contractFallbackPassage?.sourceRecordId, mismatchedTargetSource.id,
+    'the recovered contract qualification uses the same issue’s currently admitted source record');
+  assert.equal(contractFallbackPassage?.completeAdmittedPassage, contractQuote);
   assert.equal(mismatchSupportClaims, undefined, 'a rejected foreign reference never reaches semantic review');
   assert.equal(mismatchScript.calls.length, 1, 'a complete-context mismatch requires no support or repair call');
 }

@@ -157,6 +157,31 @@ export interface AuthorityEvidencePresentation {
   gaps: string[];
 }
 
+export function isMomPartFourExcludedForQuestion(
+  query: string,
+  issueSubject: string,
+  applicationStatus?: AuthorityApplicationStatus,
+  relatedIssueSubjects: string[] = []
+): boolean {
+  const describesExclusion = (text: string) =>
+    /\b(?:not covered (?:under|by)|outside|excluded from)\s+(?:(?:the\s+)?scope of\s+)?(?:the\s+)?(?:Part\s+(?:4|IV)\b|overtime\s+provisions?\b)/i.test(text);
+  const explicitlyScopedInCurrentQuestion = describesExclusion(query) && describesExclusion(issueSubject);
+  const previouslyRecognizedUnresolvedScope = applicationStatus === 'UNRESOLVED' &&
+    /\bnot covered\b|\b(?:outside|excluded from)\s+(?:the\s+)?(?:scope of\s+)?Part\s+(?:4|IV)\b/i.test(issueSubject);
+  const hasRelatedExcludedOvertimeIssue = relatedIssueSubjects.some(subject => subject !== issueSubject &&
+    (describesExclusion(query) && describesExclusion(subject) ||
+      /\bnot covered\b|\b(?:outside|excluded from)\s+(?:the\s+)?(?:scope of\s+)?Part\s+(?:4|IV)\b/i.test(subject)) &&
+    /\bovertime\b/i.test(subject) && !/\bordinary\s+salary\b/i.test(subject));
+  const isSeparatelyPartFourCovered = /\bcovered (?:under|by)\s+(?:the\s+)?Part\s+(?:4|IV)\b|\bcovered by\s+(?:the\s+)?overtime\s+provisions?\b/i.test(issueSubject);
+  const affectedByRelatedExclusion = hasRelatedExcludedOvertimeIssue && !isSeparatelyPartFourCovered &&
+    /\b(?:overtime|ordinary\s+salary|regular\s+salary)\b/i.test(issueSubject);
+  return explicitlyScopedInCurrentQuestion || previouslyRecognizedUnresolvedScope || affectedByRelatedExclusion;
+}
+
+export function isMomFourteenDayOvertimeText(text: string): boolean {
+  return /\bovertime\b/i.test(text) && /\b14\s+days?\b/i.test(text);
+}
+
 function authorityLabel(authority: SemanticAuthority): string {
   switch (authority) {
     case 'IRAS': return 'IRAS';

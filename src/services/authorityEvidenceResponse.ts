@@ -1,5 +1,5 @@
 import type { AuthorityEvidencePresentation, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
-import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
+import { hasCompleteRequestRepresentation, isMomPartFourExcludedForQuestion } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { getMomSalaryPaymentRuleEvidence } from '../retrieval/momSalaryPaymentRule';
 import { getIrasAcraPracticalRuleEvidence } from '../retrieval/irasAcraPracticalRules';
@@ -49,11 +49,17 @@ export function renderAuthorityEvidenceResponseText(
   const evidenceVerified = presentation.evidenceStatus === 'VERIFIED';
   const issueExplanations = presentation.workstreams.map(stream => ({
     stream,
-    issues: stream.issues.map(issue => ({
-      issue,
-      practicalRule: practicalRuleForIssue(presentation.query, stream, issue),
-      momSalaryRule: getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue)
-    }))
+    issues: stream.issues.map(issue => {
+      const momSalaryRule = getMomSalaryPaymentRuleEvidence(presentation.query, stream, issue);
+      return {
+        issue,
+        practicalRule: practicalRuleForIssue(presentation.query, stream, issue),
+        momSalaryRule: momSalaryRule?.kind === 'OVERTIME_SALARY' &&
+          isMomPartFourExcludedForQuestion(presentation.query, issue.subject, issue.applicationStatus,
+            stream.issues.map(candidate => candidate.subject))
+          ? undefined : momSalaryRule
+      };
+    })
   }));
   const hasVerifiedGeneralGuidance = issueExplanations.some(({ issues }) =>
     issues.some(({ practicalRule, momSalaryRule }) => Boolean(practicalRule || momSalaryRule)));

@@ -13,6 +13,8 @@ import type { GroundedReasoningContext } from './groundingContextBuilder';
 import { isCurrentRequestCompletenessContext } from './requestCompleteness';
 import { verifyEvidenceClaims, type VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
 import { completeVisibleEvidenceListSpan, isWorkedExampleHeading, normalizeEvidenceText, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
+import { isMomFourteenDayOvertimeText, isMomPartFourExcludedForQuestion } from '../utils/authorityEvidencePresentation';
+import { MOM_OVERTIME_URL } from '../retrieval/acraMomPracticalRules20261027';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
 import { validateJournalGroups } from '../verification/journalIntegrity';
@@ -328,8 +330,7 @@ function isEligibleLiveWorkedExample(record: AuthoritativeSourceRecord, quote: s
 function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassage[] {
   const isMomScopePassage = (passage: EvidencePassage) => passage.authority === 'MOM' && passage.domain === 'MOM_EMPLOYMENT';
   const coveragePassages = passages.filter(passage => isMomScopePassage(passage) &&
-    /\b(?:apply|applies)\s+only\s+to\b/i.test(passage.verifiedQuote) &&
-    /\b(?:covered under|Part\s+4)\b/i.test(passage.verifiedQuote));
+    isMomPartFourCoverageText(passage.verifiedQuote));
   const contractExclusionPassages = passages.filter(isMomContractExclusionPassage);
   const scopePassages = [...coveragePassages, ...contractExclusionPassages];
   if (!scopePassages.length) return passages;
@@ -348,19 +349,38 @@ function applyRequiredScopePassages(passages: EvidencePassage[]): EvidencePassag
 
 function isMomFourteenDayOvertimePassage(passage: EvidencePassage): boolean {
   return passage.authority === 'MOM' && passage.domain === 'MOM_EMPLOYMENT' &&
-    /\bovertime\b/i.test(passage.verifiedQuote) && /\b14\s+days?\b/i.test(passage.verifiedQuote);
+    isMomFourteenDayOvertimeText(passage.verifiedQuote);
 }
 
-function isMomOutsidePartFourIssue(issue: RequestedIssue | undefined): boolean {
-  return Boolean(issue?.domain === 'MOM_EMPLOYMENT' && issue.authorities?.includes('MOM') && issue.applicationStatus === 'UNRESOLVED' &&
-    (/\bnot covered\b/i.test(issue.subject) || /\b(?:outside|excluded from)\s+(?:the scope of\s+)?Part\s+(?:4|IV)\b/i.test(issue.subject)));
+function isMomOutsidePartFourIssue(issue: RequestedIssue | undefined, query: string): boolean {
+  return Boolean(issue?.domain === 'MOM_EMPLOYMENT' && issue.authorities?.includes('MOM') &&
+    isMomPartFourExcludedForQuestion(query, issue.subject, issue.applicationStatus));
+}
+
+function isMomOvertimePaymentIssue(subject: string): boolean {
+  return /\bovertime\b/i.test(subject) && /\b(?:pay|payment|deadline|terms|entitlement)\b/i.test(subject) &&
+    !/\bordinary\s+salary\b/i.test(subject);
+}
+
+function isMomContractExclusionText(text: string): boolean {
+  return /\bnot covered under Part\s+4\b/i.test(text) &&
+    /\bterms and conditions of employment\b/i.test(text) &&
+    /\baccording to (?:your|the) employment contract\b/i.test(text);
+}
+
+function isMomPartFourCoverageText(text: string): boolean {
+  return /\b(?:apply|applies)\s+only\s+to\b/i.test(text) &&
+    /\b(?:covered (?:under|by)\s+(?:the\s+)?(?:Part\s+(?:4|IV)|overtime\s+provisions?)|Part\s+(?:4|IV))\b/i.test(text);
 }
 
 function isMomContractExclusionPassage(passage: EvidencePassage): boolean {
   return passage.authority === 'MOM' && passage.domain === 'MOM_EMPLOYMENT' &&
-    /\bnot covered under Part\s+4\b/i.test(passage.verifiedQuote) &&
-    /\bterms and conditions of employment\b/i.test(passage.verifiedQuote) &&
-    /\baccording to (?:your|the) employment contract\b/i.test(passage.verifiedQuote);
+    isMomContractExclusionText(passage.verifiedQuote);
+}
+
+function isMomHoursOfWorkClaim(issue: AuthorityIssueEvidence, claim: VerifiedEvidenceClaim): boolean {
+  return claim.canonicalUrl === MOM_OVERTIME_URL || issue.sources.some(source =>
+    source.id === claim.recordId && source.canonicalSourceUrl === MOM_OVERTIME_URL);
 }
 
 function applyAdmittedExampleScope(
@@ -555,6 +575,117 @@ function buildWorkstreamPassages(
     }
   }
   return { verifiedPassages: passages, admittedDocumentPassages: documentPassages };
+}
+
+/** Keeps the fallback and its displayed source panel within the stated MOM scope. */
+export function prepareAuthorityWorkstreamsForPresentation(
+  workstreams: AuthorityWorkstreamsResult
+): AuthorityWorkstreamsResult {
+  if (!workstreams.query) return workstreams;
+  return {
+    ...workstreams,
+    workstreams: workstreams.workstreams.map(stream => {
+      if (stream.authority !== 'MOM' || stream.domain !== 'MOM_EMPLOYMENT') return stream;
+      const relatedIssueSubjects = stream.issues.map(issue => issue.subject);
+      const excludedOvertimeIssues = stream.issues.filter(issue =>
+        issueMatchesCurrentWorkstreamPlan(workstreams, workstreams.query, stream.authority, issue) &&
+        isMomPartFourExcludedForQuestion(workstreams.query, issue.subject, issue.applicationStatus) &&
+        isMomOvertimePaymentIssue(issue.subject)
+      );
+      if (excludedOvertimeIssues.length === 0) return stream;
+      return {
+        ...stream,
+        issues: stream.issues.map(issue => {
+          if (!issueMatchesCurrentWorkstreamPlan(workstreams, workstreams.query, stream.authority, issue)) return issue;
+          const issueExplicitlyExcluded = isMomPartFourExcludedForQuestion(
+            workstreams.query, issue.subject, issue.applicationStatus
+          );
+          const issueAffectedByExclusion = excludedOvertimeIssues.length > 0 &&
+            isMomPartFourExcludedForQuestion(workstreams.query, issue.subject, issue.applicationStatus, relatedIssueSubjects);
+          if (!issueExplicitlyExcluded && !issueAffectedByExclusion) return issue;
+
+          const isOrdinarySalaryIssue = /\b(?:ordinary|regular)\s+salary\b/i.test(issue.subject);
+          const isOvertimeIssue = isMomOvertimePaymentIssue(issue.subject);
+          const overtimeExclusionApplies = isOvertimeIssue && issueAffectedByExclusion;
+          const verifiedClaims = issue.verifiedClaims.filter(claim => {
+            if (isMomFourteenDayOvertimeText(claim.quote)) return false;
+            if (!isMomHoursOfWorkClaim(issue, claim)) return true;
+            return overtimeExclusionApplies &&
+              (isMomPartFourCoverageText(claim.quote) || isMomContractExclusionText(claim.quote));
+          });
+          if (verifiedClaims.length === issue.verifiedClaims.length && !issueExplicitlyExcluded) return issue;
+
+          if (!overtimeExclusionApplies) {
+            if (isOrdinarySalaryIssue && verifiedClaims.length > 0) {
+              return { ...issue, verifiedClaims };
+            }
+            return {
+              ...issue,
+              verifiedClaims,
+              evidenceStatus: 'INSUFFICIENT' as const,
+              lifecycle: { ...issue.lifecycle, covered: false },
+              ...(isOrdinarySalaryIssue ? {
+                gaps: [...issue.gaps, {
+                  issueId: issue.issueId,
+                  authority: issue.governingAuthority,
+                  domain: issue.domain,
+                  subject: issue.subject,
+                  operation: issue.operation,
+                  stage: 'covered' as const,
+                  code: 'MISSING_EVIDENCE',
+                  reason: 'The available evidence does not separately establish the ordinary salary payment deadline for this employee.'
+                }]
+              } : {})
+            };
+          }
+
+          const verifiedPassages = buildAdmittedDocumentPassages(issue, issue.admittedDocumentTargetDate, 0, new Set<string>());
+          const contractPassages = verifiedPassages.filter(isMomContractExclusionPassage);
+          const sources = [...issue.sources];
+          for (const passage of contractPassages) {
+            if (verifiedClaims.some(claim => claim.recordId === passage.sourceRecordId && claim.quote === passage.verifiedQuote)) continue;
+            const source = issue.admittedDocumentSources?.find(record => record.id === passage.sourceRecordId);
+            if (!source) continue;
+            verifiedClaims.push({
+              recordId: passage.sourceRecordId,
+              quote: passage.verifiedQuote,
+              text: passage.verifiedQuote,
+              supportKind: passage.supportKind,
+              ...(passage.canonicalUrl ? { canonicalUrl: passage.canonicalUrl } : {}),
+              ...(passage.sourceBinding ? { sourceBinding: passage.sourceBinding } : {}),
+              ...(passage.sourceAdmissionOptions ? { sourceAdmissionOptions: passage.sourceAdmissionOptions } : {})
+            });
+            if (!sources.some(candidate => candidate.id === source.id)) sources.push(source);
+          }
+
+          const hasVerifiedContractQualification = contractPassages.length > 0 ||
+            verifiedClaims.some(claim => isMomContractExclusionText(claim.quote));
+          const contractTermsGap = hasVerifiedContractQualification
+            ? 'The employee’s employment contract and its overtime payment terms are not available, so the specific overtime entitlement and deadline cannot be established.'
+            : 'The available evidence does not state the overtime terms for employees outside Part 4. The employee’s employment contract is needed to establish the specific overtime entitlement and deadline.';
+          const gaps = issue.gaps.some(gap => /employment contract/i.test(gap.reason) && /overtime/i.test(gap.reason))
+            ? issue.gaps : [...issue.gaps, {
+                issueId: issue.issueId,
+                authority: issue.governingAuthority,
+                domain: issue.domain,
+                subject: issue.subject,
+                operation: issue.operation,
+                stage: 'covered' as const,
+                code: 'MISSING_FACT' as const,
+                reason: contractTermsGap
+              }];
+          return {
+            ...issue,
+            verifiedClaims,
+            sources,
+            evidenceStatus: 'INSUFFICIENT' as const,
+            lifecycle: { ...issue.lifecycle, covered: false },
+            gaps
+          };
+        })
+      };
+    })
+  };
 }
 
 function buildClaimVerificationPassages(
@@ -923,6 +1054,7 @@ function requestedIssues(input: GroundedSynthesisInput): RequestedIssue[] {
 }
 
 function buildPacket(input: GroundedSynthesisInput, conversation: AdvisoryConversation): {
+  query: string;
   passages: EvidencePassage[];
   facts: PacketFact[];
   trustedOutputs: TrustedOutput[];
@@ -993,6 +1125,7 @@ function buildPacket(input: GroundedSynthesisInput, conversation: AdvisoryConver
     issueEvidenceGaps.set(gap.issueId, current);
   }
   return {
+    query: input.query,
     passages, facts, trustedOutputs, gaps: [...new Set(gapEntries.map(gap => gap.text))],
     factRequests: [...new Set(gapEntries.filter(gap => gap.renderAs === 'FACT_REQUEST').map(gap => gap.text))],
     gapDetails: gapDetailsForPrompt(gapEntries), issueGaps, issueFactRequests,
@@ -1876,7 +2009,9 @@ function validateBundle(
     if (!reason && issueId && !issueIds.has(issueId)) reason = 'Claim references an issue outside the admitted packet.';
     if (!reason && kind !== 'LIMITATION' && supportIds) {
       const outsidePartFourIssueIds = new Set(packet.requestedIssues
-        .filter(isMomOutsidePartFourIssue).map(issue => issue.id));
+        .filter(issue => isMomPartFourExcludedForQuestion(packet.query, issue.subject, issue.applicationStatus,
+          packet.requestedIssues.map(candidate => candidate.subject)))
+        .map(issue => issue.id));
       const claimIssueIds = new Set([
         ...(issueId ? [issueId] : []),
         ...supportIds.flatMap(id => packet.passages.find(passage => passage.id === id)?.issueId || [])
@@ -2022,7 +2157,7 @@ function appendMOMContractScopeFallbacks(
 ): SynthesisClaim[] {
   const completedClaims = [...claims];
   for (const issue of packet.requestedIssues) {
-    if (!isMomOutsidePartFourIssue(issue)) continue;
+    if (!isMomOutsidePartFourIssue(issue, packet.query) || !isMomOvertimePaymentIssue(issue.subject)) continue;
     for (const contractPassage of packet.passages.filter(passage =>
       passage.issueId === issue.id && isMomContractExclusionPassage(passage))) {
       const hasBoundContractRule = completedClaims.some(claim => claim.kind === 'RULE' && claim.issueId === issue.id &&

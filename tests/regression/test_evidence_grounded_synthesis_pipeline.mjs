@@ -7,6 +7,7 @@ import { ComplianceRationale } from '../../src/components/ComplianceRationale.ts
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { createGroundedSynthesisFailureResponse, hasUnverifiedStatutoryClaim, processAccountingQuery } from '../../src/services/geminiService.ts';
+import { prepareAuthorityWorkstreamsForPresentation } from '../../src/services/evidenceGroundedSynthesis.ts';
 import { postProcessAIResponse } from '../../src/services/groundingContextBuilder.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
@@ -223,8 +224,8 @@ async function runPhase2ApplicationCase(testCase, queryText, history = []) {
     const result = await processAccountingQuery(queryText, null, 'SFRS_I', provider, 'unused', history, undefined, {
       onAuthorityWorkstreams: value => { authorityWorkstreams = value; }
     });
-    if (mockFailure) throw mockFailure;
-    return { result, authorityWorkstreams, stages: [...providerStages], officialFetches: [...phase2OfficialFetches] };
+    if (mockFailure && !testCase.expectSynthesisFailure) throw mockFailure;
+    return { result, authorityWorkstreams, stages: [...providerStages], officialFetches: [...phase2OfficialFetches], synthesisFailure: mockFailure };
   } finally {
     phase2Case = undefined;
     defaultSourceCache.clear();
@@ -1034,6 +1035,8 @@ try {
     .replace(/\r\n?/g, '\n').trim();
   const coverageQuote = 'The hours of work guidelines apply only to those covered under Part 4 of the Employment Act.';
   const exclusionQuote = 'Note: Part 4 of the Employment Act does not cover managers and executives.';
+  const contractQuote = 'If you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract.';
+  const rateCapQuote = 'The overtime rate payable for non-workmen is capped at the salary level of $2,600, or an hourly rate of $13.60.';
   let followupSalaryIssueId;
   let followupOvertimeIssueId;
   let followupUsedAlias = false;
@@ -1112,6 +1115,179 @@ try {
   }
   assert.deepEqual(followupRun.stages.filter(stage => ['existing-pipeline', 'synthesis', 'support-check'].includes(stage)),
     ['existing-pipeline', 'synthesis', 'support-check']);
+
+  const capturedFallbackInterpretation = makePhase2Interpretation({
+    domain: 'MOM_EMPLOYMENT', population: 'EMPLOYEE', authorities: ['MOM'],
+    subject: 'ordinary salary and overtime terms for an employee not covered by overtime provisions', operation: 'OTHER',
+    issues: [
+      { subject: 'ordinary salary payment deadline for employee not covered by overtime provisions', population: 'EMPLOYEE',
+        domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE' },
+      { subject: 'overtime payment deadline for employee not covered by overtime provisions', population: 'EMPLOYEE',
+        domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE' },
+      { subject: 'practical payroll steps for salary and overtime', population: 'EMPLOYER',
+        domain: 'MOM_EMPLOYMENT', governingAuthorities: ['MOM'], operation: 'EXPLAIN_RULE' }
+    ]
+  });
+  assert.ok(validateSemanticQuestionInterpretation(capturedFallbackInterpretation, followupQuery));
+  const capturedFallbackMomHoursText = [coverageQuote, exclusionQuote, contractQuote, rateCapQuote,
+    'For overtime work, your employer must pay you at least 1.5 times the hourly basic rate of pay. Payment must be made within 14 days after the last day of the salary period.'].join('\n\n');
+  const capturedFallbackSalaryText = [
+    'In accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.',
+    'Salary must be paid:\n\n• Within 7 days after the end of the salary period\n\n• For overtime work, within 14 days after the end of the salary period'
+  ].join('\n\n');
+  const contextLimitFallback = await runPhase2ApplicationCase({
+    expectSynthesisFailure: true,
+    interpretation: capturedFallbackInterpretation,
+    pages: new Map([
+      [momSalaryUrl, officialFixturePage('Paying salary', 'Ministry of Manpower', capturedFallbackSalaryText)],
+      [overtimeUrl, count => officialFixturePage('Hours of work, overtime and rest days', 'Ministry of Manpower', capturedFallbackMomHoursText, String(count))]
+    ]),
+    generate: packet => {
+      const overtimeIssue = packet.requestedIssues.find(issue => /overtime payment deadline for employee not covered by overtime provisions/i.test(issue.subject));
+      const salaryIssue = packet.requestedIssues.find(issue => /ordinary salary payment deadline for employee not covered by overtime provisions/i.test(issue.subject));
+      assert.ok(overtimeIssue && salaryIssue, 'the captured follow-up resolves into separate scoped salary and overtime issues');
+      assert.ok(packet.evidencePassages.some(passage => passage.issueId === overtimeIssue.id && passage.completeAdmittedPassage === contractQuote),
+        'the admitted captured MOM page supplies the exact employment-contract qualification');
+      assert.ok(packet.evidencePassages.some(passage => passage.issueId === overtimeIssue.id && /overtime work.*14 days/i.test(passage.completeAdmittedPassage)),
+        'the captured evidence also reproduces the 14-day passage rejected in live acceptance');
+      assert.ok(packet.evidencePassages.some(passage => passage.issueId === salaryIssue.id && /within 7 days/i.test(passage.completeAdmittedPassage)),
+        'the ordinary salary obligation remains independently supported');
+      throw new Error('The complete question and relevant context exceed the advisory context budget.');
+    }
+  }, followupQuery, followupHistory);
+  assert.equal(contextLimitFallback.result.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  assert.equal(contextLimitFallback.synthesisFailure?.message, 'The complete question and relevant context exceed the advisory context budget.');
+  assert.equal(contextLimitFallback.result.advisoryFailureStatus, 'CONTEXT_LIMIT');
+  assert.match(contextLimitFallback.result.messageText, /terms and conditions of employment will be according to your employment contract/,
+    'the failure answer retains the verified contract qualification');
+  assert.match(contextLimitFallback.result.messageText, /ordinary salary.*within 7 days|regular salary.*within 7 days/i,
+    'the failure answer retains the separately verified ordinary salary obligation');
+  assert.match(contextLimitFallback.result.messageText, /employment contract and its overtime payment terms are not available/i,
+    'the failure answer explains that the employee contract terms are unknown');
+  assert.doesNotMatch(contextLimitFallback.result.messageText, /overtime pay must be paid within 14 days/i,
+    'the failure answer does not present the 14-day deadline as applicable outside Part 4');
+
+  const fallbackPresentation = contextLimitFallback.result.scenarioState.authorityEvidencePresentation;
+  assert.ok(fallbackPresentation, 'the failure answer retains structured evidence for the displayed compliance panel');
+  const fallbackMom = fallbackPresentation.workstreams.find(stream => stream.authority === 'MOM');
+  const fallbackSalaryIssue = fallbackMom?.issues.find(issue => /ordinary salary payment deadline/i.test(issue.subject));
+  const fallbackOvertimeIssue = fallbackMom?.issues.find(issue => /overtime payment deadline/i.test(issue.subject));
+  assert.equal(fallbackSalaryIssue?.evidenceStatus, 'VERIFIED', 'the separate ordinary salary evidence remains verified');
+  assert.ok(fallbackOvertimeIssue?.claims.some(claim => claim.text === contractQuote),
+    'the structured overtime issue carries the verified contract qualification');
+  assert.ok(fallbackOvertimeIssue?.gaps.some(gap => /employment contract and its overtime payment terms are not available/i.test(gap)),
+    'the structured overtime issue records the missing employee-specific contract terms');
+  assert.ok(!fallbackSalaryIssue?.claims.some(claim => claim.text === contractQuote),
+    'the contract qualification is attached only to the overtime issue');
+  assert.doesNotMatch(JSON.stringify(fallbackPresentation.workstreams.flatMap(stream => stream.sources.flatMap(source => source.claims))),
+    /overtime work.*14 days/i, 'the displayed evidence and citation labels omit the excluded deadline excerpt');
+
+  const rawFallbackMom = contextLimitFallback.authorityWorkstreams.workstreams.find(stream => stream.authority === 'MOM');
+  const rawFallbackOvertime = rawFallbackMom?.issues.find(issue => /overtime payment deadline/i.test(issue.subject));
+  assert.ok(rawFallbackOvertime, 'the captured workstream contains the overtime owner');
+
+  const mixedScopeWorkstreams = structuredClone(contextLimitFallback.authorityWorkstreams);
+  const mixedScopeMom = mixedScopeWorkstreams.workstreams.find(stream => stream.authority === 'MOM');
+  const excludedOwner = mixedScopeMom?.issues.find(issue => /overtime payment deadline/i.test(issue.subject));
+  assert.ok(excludedOwner, 'the captured workstream contains the excluded overtime owner');
+  const oldOwnerPlan = mixedScopeWorkstreams.issuePlan.issues.find(issue => issue.id === excludedOwner.issueId);
+  assert.ok(oldOwnerPlan, 'the excluded owner is present in the captured issue plan');
+  const paySubject = 'overtime pay deadline for employee not covered by overtime provisions';
+  excludedOwner.subject = paySubject;
+  oldOwnerPlan.subject = paySubject;
+  const hoursSource = excludedOwner.sources.find(source => source.canonicalSourceUrl === overtimeUrl);
+  const hoursClaimTemplate = excludedOwner.verifiedClaims.find(claim => claim.recordId === hoursSource?.id);
+  assert.ok(hoursSource && hoursClaimTemplate, 'the rate-cap control binds to the captured canonical MOM source');
+  const capturedRateCapClaim = { ...hoursClaimTemplate, text: rateCapQuote, quote: rateCapQuote, canonicalUrl: overtimeUrl };
+  excludedOwner.verifiedClaims.push(capturedRateCapClaim);
+  for (const issue of mixedScopeMom.issues.filter(candidate =>
+    /ordinary salary payment deadline|practical payroll steps/i.test(candidate.subject))) {
+    issue.sources.push(hoursSource);
+    issue.verifiedClaims.push({ ...capturedRateCapClaim });
+  }
+  const coveredSubject = 'overtime pay deadline for employee covered by the overtime provisions';
+  const coveredOwner = structuredClone(excludedOwner);
+  coveredOwner.issueId = 'mom-overtime-covered-control';
+  coveredOwner.subject = coveredSubject;
+  coveredOwner.applicationStatus = 'NOT_REQUIRED';
+  mixedScopeMom.issues.push(coveredOwner);
+  mixedScopeWorkstreams.issuePlan.issues.push({ ...structuredClone(oldOwnerPlan), id: coveredOwner.issueId, subject: coveredSubject });
+  const mixedScopePresentation = prepareAuthorityWorkstreamsForPresentation(mixedScopeWorkstreams);
+  const mixedScopeIssues = mixedScopePresentation.workstreams.find(stream => stream.authority === 'MOM')?.issues || [];
+  const projectedExcludedOwner = mixedScopeIssues.find(issue => issue.subject === paySubject);
+  const projectedCoveredOwner = mixedScopeIssues.find(issue => issue.subject === coveredSubject);
+  const projectedSalaryRow = mixedScopeIssues.find(issue => /ordinary salary payment deadline/i.test(issue.subject));
+  const projectedPayrollRow = mixedScopeIssues.find(issue => /practical payroll steps/i.test(issue.subject));
+  assert.ok(projectedExcludedOwner && !projectedExcludedOwner.verifiedClaims.some(claim => /overtime work.*14 days/i.test(claim.quote)),
+    'an excluded overtime pay issue is recognized and its 14-day source passage is removed');
+  assert.ok(projectedCoveredOwner?.verifiedClaims.some(claim => /overtime work.*14 days/i.test(claim.quote)),
+    'a sibling explicitly covered by the overtime provisions retains its valid deadline evidence');
+  assert.ok(!projectedExcludedOwner?.verifiedClaims.some(claim => /overtime rate payable.*capped at the salary level of \$2,600/i.test(claim.quote)),
+    'the excluded overtime pay row does not retain the captured Part 4 cap');
+  assert.ok(projectedCoveredOwner?.verifiedClaims.some(claim => /overtime rate payable.*capped at the salary level of \$2,600/i.test(claim.quote)),
+    'the covered overtime pay row retains the captured Part 4 cap evidence');
+  assert.ok(!projectedSalaryRow?.verifiedClaims.some(claim => /overtime rate payable.*capped at the salary level of \$2,600/i.test(claim.quote)),
+    'an excluded ordinary-salary row does not retain the Part 4 cap');
+  assert.ok(projectedSalaryRow?.verifiedClaims.some(claim => /within 7 days/i.test(claim.quote)),
+    'the ordinary-salary row keeps the independent Paying Salary evidence');
+  assert.ok(!projectedPayrollRow?.verifiedClaims.some(claim => /overtime rate payable.*capped at the salary level of \$2,600/i.test(claim.quote)),
+    'an affected payroll row does not retain the Part 4 cap');
+
+  const fallbackPanelMarkup = renderToStaticMarkup(React.createElement(ComplianceRationale, {
+    citations: [], standard: 'SFRS_I', rawQuery: followupQuery,
+    authorityEvidencePresentation: fallbackPresentation
+  }));
+  assert.doesNotMatch(fallbackPanelMarkup, /overtime work.*14 days/i,
+    'the rendered evidence panel does not label the 14-day excerpt as supporting this case');
+  assert.ok(fallbackPanelMarkup.includes(contractQuote), 'the panel positively displays the verified contract qualification');
+  assert.match(fallbackPanelMarkup,
+    /Supports: overtime payment deadline for employee not covered by overtime provisions/i,
+    'the contract excerpt is labeled as supporting the overtime issue');
+  assert.match(fallbackPanelMarkup,
+    /href="https:\/\/www\.mom\.gov\.sg\/employment-practices\/hours-of-work-overtime-and-rest-days"/i,
+    'the panel links the excerpt to the canonical MOM Hours of Work source');
+
+  const missingContractWorkstreams = structuredClone(contextLimitFallback.authorityWorkstreams);
+  for (const stream of missingContractWorkstreams.workstreams) {
+    for (const issue of stream.issues) {
+      if (!/overtime payment deadline/i.test(issue.subject)) continue;
+      issue.admittedDocumentSources = [];
+      issue.admittedDocumentContexts = [];
+      issue.verifiedClaims = issue.verifiedClaims.filter(claim => claim.quote !== contractQuote);
+    }
+  }
+  const missingContractFallback = createGroundedSynthesisFailureResponse(
+    contextLimitFallback.result, followupQuery, 'SFRS_I', missingContractWorkstreams, undefined,
+    'CONTEXT_LIMIT'
+  );
+  assert.match(missingContractFallback.messageText,
+    /available evidence does not state the overtime terms.*employment contract is needed/i,
+    'without a verified qualification excerpt, the fallback states the evidence limitation and requests the contract');
+  assert.doesNotMatch(missingContractFallback.messageText, /overtime pay must be paid within 14 days/i);
+
+  const selectedContractWithoutDocument = structuredClone(contextLimitFallback.authorityWorkstreams);
+  for (const stream of selectedContractWithoutDocument.workstreams) {
+    for (const issue of stream.issues) {
+      if (!/overtime payment deadline/i.test(issue.subject)) continue;
+      const contractSource = issue.admittedDocumentSources?.find(source => source.canonicalSourceUrl === overtimeUrl);
+      const selectedSourceClaim = issue.verifiedClaims.find(claim => claim.recordId === contractSource?.id);
+      assert.ok(contractSource && selectedSourceClaim, 'the selected-claim control has a source-bound MOM record');
+      issue.verifiedClaims.push({ ...selectedSourceClaim, text: contractQuote, quote: contractQuote,
+        canonicalUrl: contractSource.canonicalSourceUrl });
+      issue.admittedDocumentSources = [];
+      issue.admittedDocumentContexts = [];
+    }
+  }
+  const selectedContractFallback = createGroundedSynthesisFailureResponse(
+    contextLimitFallback.result, followupQuery, 'SFRS_I', selectedContractWithoutDocument, undefined,
+    'CONTEXT_LIMIT'
+  );
+  assert.match(selectedContractFallback.messageText,
+    /employment contract and its overtime payment terms are not available/i,
+    'an exact selected contract claim counts as verified evidence while preserving the missing employee-specific terms limitation');
+  assert.doesNotMatch(selectedContractFallback.messageText,
+    /available evidence does not state the overtime terms/i,
+    'a selected exact contract qualification is not mislabeled as absent source evidence');
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);
