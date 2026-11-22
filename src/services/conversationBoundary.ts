@@ -224,11 +224,20 @@ export function hasAffirmativeResetDirective(query: string): boolean {
     'forget'
   );
   const directivePattern = /\b(ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/gi;
+  const postDirectiveConditionalPattern =
+    /\b(?:if|unless|provided(?:\s+that)?|assuming(?:\s+that)?|in\s+case|on\s+condition(?:\s+that)?|as\s+long\s+as|so\s+long\s+as)\b|,\s*\b(?:when|where)\b|\b(?:when|where)\s+(?:it|that|this|they|those|these)\s+(?:is|are|isn['’]?t|aren['’]?t|does|do|doesn['’]?t|don['’]?t|seems?|appears?|turns?\s+out|proves?|happens?|becomes?|may|might|could|would|should)\b|\b(?:should|were)\s+(?:it|that|this|they|those|these)\b/i;
   for (const match of collapsedCoordinatedVerbs.matchAll(directivePattern)) {
     const matchIndex = match.index ?? 0;
+    const verbEndIndex = matchIndex + match[1].length;
     const sentencePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/(?<!\d)[.!?;](?!\d)/).at(-1) ?? '';
+    const sentenceSuffix = collapsedCoordinatedVerbs.slice(verbEndIndex).split(/(?<!\d)[.!?;](?!\d)/, 1)[0] ?? '';
+    const resetClauseSuffix = sentenceSuffix.split(
+      /,?\s*\b(?:and|then)\s+(?:please\s+)?(?:tell|explain|show|calculate|compute|check|let|start|answer|what|how|which|who|when|where|why|can|could|would|should|does|do|did|is|are)\b|,\s*\b(?:what|how|which|who|why|can|could|would|should|does|do|did|is|are)\b/i,
+      1
+    )[0] ?? '';
     if (/\b(?:if|unless|when|where|suppose|assuming|provided|in\s+case)\b/i.test(sentencePrefix) ||
-        /(?:^|[,;:]\s*)\b(?:should|can|could|would|may|might|shall|do|does|did)\s+(?:i|we|you|they|he|she|it|the\s+company|our\s+company)\b/i.test(sentencePrefix)) {
+        /(?:^|[,;:]\s*)\b(?:should|were|can|could|would|may|might|shall|do|does|did)\s+(?:i|we|you|they|he|she|it|that|this|these|those|the\s+company|our\s+company)\b/i.test(sentencePrefix) ||
+        postDirectiveConditionalPattern.test(resetClauseSuffix)) {
       continue;
     }
     let clausePrefix = sentencePrefix.split(/[,;:]/).at(-1) ?? '';

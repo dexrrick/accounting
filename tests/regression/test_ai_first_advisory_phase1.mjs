@@ -1653,6 +1653,96 @@ for (const call of calls) {
     assert.equal(mixedEquipmentFinalSalary.isComplete, false);
     assert.ok(mixedEquipmentFinalSalary.missingFields.length > 0);
 
+    const leasedStaffLaptopQuery = 'We leased a staff laptop for SGD 2,000 per month.';
+    const parsedLeasedStaffLaptop = await parseAccountingQuery(leasedStaffLaptopQuery);
+    assert.notEqual(
+      parsedLeasedStaffLaptop.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'leased staff laptop with monthly amount does not parse as PAYROLL_CPF_SALARY'
+    );
+    assert.equal(
+      parsedLeasedStaffLaptop.directGroups.length,
+      0,
+      'leased staff laptop without lease term does not emit payroll directGroups'
+    );
+    assert.equal(
+      assessConversationRelation(leasedStaffLaptopQuery, employeeSetupScenario, employeeSetupScenario),
+      'NEW',
+      'leased staff laptop query is classified as NEW against prior payroll scenario'
+    );
+    const leasedStaffLaptopTurn = { id: 'boundary-leased-staff-laptop', sender: 'user', timestamp: '', text: leasedStaffLaptopQuery };
+    const callsBeforeLeasedStaffLaptop = boundaryCalls.length;
+    const leasedStaffLaptopResponse = await processAccountingQuery(
+      leasedStaffLaptopQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        leasedStaffLaptopTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(
+      leasedStaffLaptopResponse.conversationBoundaryMessageId,
+      leasedStaffLaptopTurn.id,
+      'leased staff laptop query sets conversationBoundaryMessageId to the user turn id'
+    );
+    assert.notEqual(
+      leasedStaffLaptopResponse.scenarioState?.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'leased staff laptop response scenarioState is not PAYROLL_CPF_SALARY'
+    );
+    const leasedStaffLaptopPrompt = boundaryCalls.slice(callsBeforeLeasedStaffLaptop).map(call => call.prompt).join('\n');
+    assert.ok(
+      !leasedStaffLaptopPrompt.includes('58 years old') &&
+      !leasedStaffLaptopPrompt.includes('second-year Singapore PR'),
+      'leased staff laptop query excludes prior employee facts from provider prompt'
+    );
+
+    const threeYearStaffLaptopLease = await parseAccountingQuery(
+      'We entered into a 3-year lease for a staff laptop at SGD 2,000 per month.'
+    );
+    assert.equal(threeYearStaffLaptopLease.scenarioType, 'LEASE_IFRS16',
+      '3-year staff laptop lease parses as LEASE_IFRS16');
+    assert.equal(threeYearStaffLaptopLease.leasePaymentMonthly, 2000,
+      '3-year staff laptop lease preserves monthly lease payment');
+
+    const hiredEmployeeMonthlySalary = await parseAccountingQuery(
+      'We hired an employee for SGD 5,000 per month.'
+    );
+    assert.equal(hiredEmployeeMonthlySalary.scenarioType, 'PAYROLL_CPF_SALARY',
+      'hired employee with monthly salary parses as PAYROLL_CPF_SALARY');
+    assert.equal(hiredEmployeeMonthlySalary.amount, 5000,
+      'hired employee with monthly salary preserves amount');
+
+    for (const nonPayrollCoordinatedRentQuery of [
+      'We hired an employee and paid SGD 2,000 per month to rent a staff laptop.',
+      'We hired an employee who paid SGD 2,000 per month to rent a laptop.'
+    ]) {
+      const parsedCoordinatedRent = await parseAccountingQuery(nonPayrollCoordinatedRentQuery);
+      assert.notEqual(
+        parsedCoordinatedRent.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `rent/acquisition clause does not parse as PAYROLL_CPF_SALARY: ${nonPayrollCoordinatedRentQuery}`
+      );
+      assert.equal(
+        parsedCoordinatedRent.directGroups.length,
+        0,
+        `rent/acquisition clause does not emit payroll directGroups: ${nonPayrollCoordinatedRentQuery}`
+      );
+    }
+
+    const mixedLaptopAndEmployeeHire = await parseAccountingQuery(
+      'We bought a staff laptop for SGD 2,000 and hired an employee for SGD 5,000 per month.'
+    );
+    assert.equal(
+      mixedLaptopAndEmployeeHire.amount,
+      5000,
+      'mixed acquisition and employee hire parses employee salary 5000 rather than laptop 2000'
+    );
+
     for (const [index, softwareLicenceQuery] of [
       'We purchased a payroll software licence for SGD 3,000.',
       'What if we bought a licence for payroll software?'
@@ -1761,6 +1851,83 @@ for (const call of calls) {
       conditionalResetPrompt.includes('58 years old') &&
       conditionalResetPrompt.includes('second-year Singapore PR'),
       'conditional reset clause preserves prior employee context in provider prompt'
+    );
+
+    const trailingConditionalResetFollowUpQuery = 'Does that CPF rule apply? Please forget the previous transaction if it is irrelevant.';
+    assert.equal(
+      hasAffirmativeResetDirective(trailingConditionalResetFollowUpQuery),
+      false,
+      'trailing "if it is irrelevant" conditional reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Does that CPF rule apply? Please forget the previous transaction if that is irrelevant.'),
+      false,
+      'trailing "if that is irrelevant" conditional reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Please forget the previous transaction unless it still applies.'),
+      false,
+      'trailing "unless it still applies" conditional reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      isShortSemanticFollowUp(trailingConditionalResetFollowUpQuery, employeeSetupScenario),
+      true,
+      'trailing conditional reset follow-up retains short semantic follow-up status'
+    );
+    assert.equal(
+      assessConversationRelation(trailingConditionalResetFollowUpQuery, employeeSetupScenario, employeeSetupScenario),
+      'RELATED',
+      'trailing conditional reset follow-up is classified as RELATED'
+    );
+    const trailingConditionalResetTurn = { id: 'boundary-trailing-conditional-reset-followup', sender: 'user', timestamp: '', text: trailingConditionalResetFollowUpQuery };
+    const callsBeforeTrailingConditionalReset = boundaryCalls.length;
+    const trailingConditionalResetResponse = await processAccountingQuery(
+      trailingConditionalResetFollowUpQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        trailingConditionalResetTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(
+      trailingConditionalResetResponse.conversationBoundaryMessageId,
+      undefined,
+      'trailing conditional reset clause retains existing conversation boundary'
+    );
+    const trailingConditionalResetPrompt = boundaryCalls.slice(callsBeforeTrailingConditionalReset).map(call => call.prompt).join('\n');
+    assert.ok(
+      trailingConditionalResetPrompt.includes('58 years old') &&
+      trailingConditionalResetPrompt.includes('second-year Singapore PR'),
+      'trailing conditional reset clause preserves prior employee context in provider prompt'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Forget the earlier case where we bought a laptop.'),
+      true,
+      'unconditional reset mentioning earlier case with restrictive "where" remains an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Forget the previous transaction, and tell me what CPF rate applies if an employee is 60.'),
+      true,
+      'unconditional reset followed by separate conditional question remains an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Forget the previous transaction should it prove irrelevant.'),
+      false,
+      'inverted conditional "should it prove irrelevant" reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Were it irrelevant, forget the previous transaction.'),
+      false,
+      'leading inverted conditional "Were it irrelevant" reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Please forget the previous transaction in case it is irrelevant.'),
+      false,
+      'trailing "in case it is irrelevant" conditional reset is not an affirmative reset directive'
     );
 
     const settleInvoiceFollowUpQuery = 'What if we settle that unpaid invoice in cash today?';
