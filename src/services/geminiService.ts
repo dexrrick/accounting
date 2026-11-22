@@ -47,6 +47,7 @@ import {
   projectQuestionUnderstandingDiagnostics,
   reconcileQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
+import { isSemanticUnderstandingDisjointFromScenario } from './semanticScenarioResolver';
 import { buildAuthorityWorkstreams } from './authorityWorkstreams';
 import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
 import {
@@ -1192,6 +1193,16 @@ async function processAccountingQueryCore(
   profiler.recordClassification(performance.now() - classificationStarted);
   profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
   if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
+  if (!retainConversationContext && isSemanticUnderstandingDisjointFromScenario(questionUnderstanding, activeScenario)) {
+    const currentUserTurn = [...chatHistory].reverse().find(message =>
+      message.sender === 'user' && message.text.trim() === userInput.trim());
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    activeScenario = null;
+    amendmentResolution = resolveFactAmendment(userInput, null);
+    onConversationScope?.(relevantChatHistory);
+  }
   const explicitIrasEvidenceRequest = usesIrasEvidencePolicy(classification, userInput);
   const unsupportedAccountingRuleExplanationRuntimeEnabled = shouldUseUnmappedAccountingRuleExplanationRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
@@ -1380,7 +1391,7 @@ async function processAccountingQueryCore(
     }
   }
   const tDet0 = Date.now();
-  deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
+  deterministicScenario = await parseAccountingQuery(userInput, activeScenario, questionUnderstanding);
   onDeterministicScenario?.(deterministicScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 

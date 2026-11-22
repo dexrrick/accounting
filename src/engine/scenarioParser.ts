@@ -18,6 +18,8 @@ import { applyFactAmendments, buildAmendedQuery, isSingleMonthlySalaryAmendment,
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
 import { matchBasicTransaction, resolveBasicOwnerDrawingsFollowUp } from './basicTransactions';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
+import type { SemanticQuestionUnderstanding } from '../services/semanticQuestionUnderstanding';
+import { isSemanticallyNonPayroll } from '../services/semanticScenarioResolver';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -225,12 +227,13 @@ function buildGstRegistrationMeasurementBasisScenario(query: string): Accounting
 
 export async function parseAccountingQuery(
   query: string,
-  currentScenario?: AccountingScenarioState | null
+  currentScenario?: AccountingScenarioState | null,
+  questionUnderstanding?: SemanticQuestionUnderstanding
 ): Promise<AccountingScenarioState> {
   // Apply the boundary before any scenario-specific follow-up or missing-field
   // resolution, so a new narrative cannot satisfy an old workflow by accident.
   if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
-    return parseAccountingQuery(query, null);
+    return parseAccountingQuery(query, null, questionUnderstanding);
   }
 
   const basicOwnerDrawingsFollowUp = resolveBasicOwnerDrawingsFollowUp(query, currentScenario);
@@ -622,33 +625,53 @@ export async function parseAccountingQuery(
     /(?<!\d)[.!?;](?!\d)|(?:,\s*)?\b(?:and|but|while|whereas)\b(?=\s+(?:(?:we|i|they|he|she|it|you|the\s+company|our\s+company)\s+)?(?:(?:also|then|separately)\s+)?(?:buy|buys|buying|bought|purchas(?:e|es|ed|ing)|acquir(?:e|es|ed|ing)|leas(?:e|es|ed|ing)|rent(?:s|ed|ing)?|subscrib(?:e|es|ed|ing)|hir(?:e|es|ed|ing)|employ(?:s|ed|ing)?|paid|pay|pays|paying)\b)/i;
   const splitTransactionClauses = (text: string): string[] =>
     text.split(transactionClauseBoundaryPattern).map(clause => clause.trim()).filter(Boolean);
-  const queryClauses = splitTransactionClauses(q);
-  const clauseHasAcquisitionPredicate = (clause: string): boolean => nonPayrollAcquisitionPattern.test(clause);
+  const parseCapturedAmount = (rawNum?: string, rawMagnitude?: string): number | undefined => {
+    if (!rawNum) return undefined;
+    let parsed = parseFloat(rawNum.replace(/,/g, ''));
+    const magnitude = rawMagnitude?.toLowerCase();
+    if (magnitude === 'k' || magnitude === 'thousand') parsed *= 1000;
+    if (magnitude === 'm' || magnitude === 'million') parsed *= 1000000;
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  };
   const hiredSalaryAmountPattern =
     /\b(?:hired|hire|hiring|employ(?:s|ed|ing)?)\s+(?:a|an|the|one|\d+|another|second|new)?\s*(?:(?:singaporean|local|foreign|pr|full[- ]time|part[- ]time|new|second|another)\s+){0,3}(?:employee|worker|staff(?:\s+member)?|person)(?=\s+(?:at|for|on|with|in|under|who|whose|named|called|aged|earning|working|starting|joining|as|from|to|today|yesterday|recently|last|this|next)\b|[,.;:!?]|$)[^.!?;]{0,80}?(?:(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?|([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b)/i;
-  const clauseHasExplicitSalaryFigure = (clause: string): boolean =>
-    /\b(?:earning|earns|earned|(?:monthly\s+|basic\s+|gross\s+|annual\s+|prorated\s+|contractual\s+|fixed\s+|ordinary\s+)?(?:salary|wages?|remuneration))\s*(?:rate\s*)?(?:of|is|at|was|:|=)?\s*(?:sgd|s\$|\$)?\s*\d+/i.test(clause) ||
-    /\b(?:(?:basic|monthly|gross|final|last|annual|his|her|their|employee(?:'s)?|staff(?:'s)?|worker(?:'s)?)\s+pay\s*(?:rate\s*)?(?:of|is|at|was|:|=)?|pay\s+(?:rate\s+)?(?:of|is|at|was|:|=))\s*(?:sgd|s\$|\$)?\s*\d+/i.test(clause) ||
-    /\b(?:paid|paying|pay|pays)\s+(?:him|her|them|(?:a|an|the|our|my|this|that|each|every)?\s*(?:(?:new|second|another|singaporean|local|foreign|pr|full[- ]time|part[- ]time)\s+){0,2}(?:employee|worker|staff(?:\s+member)?))\s+(?:(?:a\s+)?(?:monthly\s+|basic\s+)?(?:salary|wages?|pay|remuneration)\s+(?:of\s+)?)?(?:sgd|s\$|\$)?\s*\d+/i.test(clause) ||
-    /(?:(?:sgd|s\$|\$)\s*\d+[\d,]*(?:\.\d+)?\s*(?:k|m|million|thousand)?\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|\b\d+[\d,]*(?:\.\d+)?\s*(?:(?:k|m|million|thousand)\b\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|(?:a\s*month|\/month|monthly|per\s*month)\s+))(?:basic\s+|gross\s+|ordinary\s+|monthly\s+)?(?:salary|wages?|remuneration|pay\s+rate)\b/i.test(clause) ||
-    (!clauseHasAcquisitionPredicate(clause) && hiredSalaryAmountPattern.test(clause));
-  const clauseHasBareMonthlyFigure = (clause: string): boolean =>
-    /(?:(?:sgd|s\$|\$)\s*)?\d+[\d,]*(?:\.\d+)?\s*(?:k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b/i.test(clause);
-  const clauseHasBareCurrencyAmount = (clause: string): boolean =>
-    /(?:sgd|s\$|\$)\s*\d+[\d,]*(?:\.\d+)?/i.test(clause);
+  const explicitClauseSalaryPatterns: RegExp[] = [
+    /\b(?:earning|earns|earned|(?:monthly\s+|basic\s+|gross\s+|annual\s+|prorated\s+|contractual\s+|fixed\s+|ordinary\s+)?(?:salary|wages?|remuneration))\s*(?:rate\s*)?(?:of|is|at|was|:|=)?\s*(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
+    /\b(?:(?:basic|monthly|gross|final|last|annual|his|her|their|employee(?:'s)?|staff(?:'s)?|worker(?:'s)?)\s+pay\s*(?:rate\s*)?(?:of|is|at|was|:|=)?|pay\s+(?:rate\s+)?(?:of|is|at|was|:|=))\s*(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
+    /\b(?:paid|paying|pay|pays)\s+(?:him|her|them|(?:a|an|the|our|my|this|that|each|every)?\s*(?:(?:new|second|another|singaporean|local|foreign|pr|full[- ]time|part[- ]time)\s+){0,2}(?:employee|worker|staff(?:\s+member)?))\s+(?:(?:a\s+)?(?:monthly\s+|basic\s+)?(?:salary|wages?|pay|remuneration)\s+(?:of\s+)?)?(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
+    /(?:(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|\b([\d,]+(?:\.\d+)?)\s*(?:(k|m|million|thousand)\b\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|(?:a\s*month|\/month|monthly|per\s*month)\s+))(?:basic\s+|gross\s+|ordinary\s+|monthly\s+)?(?:salary|wages?|remuneration|pay\s+rate)\b/i
+  ];
+  const extractClauseRemunerationAmount = (clause: string): number | undefined => {
+    for (const pattern of explicitClauseSalaryPatterns) {
+      const m = clause.match(pattern);
+      if (m) {
+        const val = parseCapturedAmount(m[1] || m[3], m[2] || m[4]);
+        if (val !== undefined) return val;
+      }
+    }
+    if (nonPayrollAcquisitionPattern.test(clause)) return undefined;
+    const hiredMatch = clause.match(hiredSalaryAmountPattern);
+    if (hiredMatch) {
+      const val = parseCapturedAmount(hiredMatch[1] || hiredMatch[3], hiredMatch[2] || hiredMatch[4]);
+      if (val !== undefined) return val;
+    }
+    const hasRemunerationBasis = /\b(?:cpf|last\s+day|prorat\w*|salary|wages?|remuneration|bonus|allowance|final\s+pay)\b/i.test(clause);
+    const isNonRemunerationOutlay = /\b(?:paid|pay|pays|paying)\s+(?:sgd|s\$|\$)?\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\b/i.test(clause);
+    if (hasRemunerationBasis && !isNonRemunerationOutlay) {
+      const currencyOrMonthlyMatch =
+        clause.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
+        clause.match(/\b([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b/i);
+      const val = parseCapturedAmount(currencyOrMonthlyMatch?.[1], currencyOrMonthlyMatch?.[2]);
+      if (val !== undefined) return val;
+    }
+    return undefined;
+  };
 
-  const hasExplicitSalaryFigure = queryClauses.some(clauseHasExplicitSalaryFigure);
-  const hasNonAcquisitionMonthlyFigure = queryClauses.some(
-    clause => clauseHasBareMonthlyFigure(clause) && !clauseHasAcquisitionPredicate(clause)
-  );
-  const hasNonAcquisitionCurrencyAmount = queryClauses.some(
-    clause => clauseHasBareCurrencyAmount(clause) && !clauseHasAcquisitionPredicate(clause)
-  );
-  const hasAcquisitionClause = queryClauses.some(clauseHasAcquisitionPredicate);
-  const hasExplicitPayrollTerm = /\b(?:cpf|salary|wages?|payroll|remuneration|bonus|allowance|last\s+day|prorat|final\s+pay|earning|earns|earned)\b/i.test(q);
-  const hasSalaryFigure =
-    hasExplicitSalaryFigure ||
-    (hasNonAcquisitionMonthlyFigure && hasExplicitPayrollTerm);
+  const rawClauses = splitTransactionClauses(query);
+  const hasAcquisitionClause = rawClauses.some(clause => nonPayrollAcquisitionPattern.test(clause));
+  const ownedSalaryAmount = rawClauses
+    .map(extractClauseRemunerationAmount)
+    .find((amount): amount is number => amount !== undefined);
 
   // Pronouns occur in many commercial transactions (for example, "his own
   // company"). They are payroll evidence only when paired with payroll terms.
@@ -661,19 +684,21 @@ export async function parseAccountingQuery(
     (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
     (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
 
+  const semanticallyNonPayroll = isSemanticallyNonPayroll(questionUnderstanding);
   const isPayrollSalaryQuery =
-    requestsIndependentFinalSalary ||
-    (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
-      (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-      (hasNonAcquisitionCurrencyAmount && (q.includes('cpf') || q.includes('last day') || q.includes('prorat') || (hasPayrollPersonnel && hasExplicitPayrollTerm))) ||
-      (!hasAcquisitionClause && hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
-      // A correction such as "I mean 10,000 a month" inherits the payroll
-      // context rather than being routed to the statutory-advisory fallback.
-      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-        isSingleMonthlySalaryAmendment(query)) ||
-      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-        /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
-    ));
+    !semanticallyNonPayroll && (
+      requestsIndependentFinalSalary ||
+      (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
+        (ownedSalaryAmount !== undefined && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+        (!hasAcquisitionClause && hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+        // A correction such as "I mean 10,000 a month" inherits the payroll
+        // context rather than being routed to the statutory-advisory fallback.
+        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+          isSingleMonthlySalaryAmendment(query)) ||
+        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+          /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
+      ))
+    );
 
   if (isPayrollSalaryQuery) {
     if (requestsIndependentFinalSalary && (!payrollSalaryAmountMatch || hasAmbiguousPayrollEmployeeOwnership)) {
@@ -709,23 +734,15 @@ export async function parseAccountingQuery(
     let baseSalary = priorBasicSalary?.[0]
       ? Number(priorBasicSalary[0].replace(/,/g, ''))
       : (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? (currentScenario.amount || 3200) : 3200);
-    const nonAcquisitionQueryText = splitTransactionClauses(query)
-      .filter(clause => !nonPayrollAcquisitionPattern.test(clause))
-      .join('. ');
-    const salaryMatch = requestsIndependentFinalSalary ? payrollSalaryAmountMatch :
-      payrollSalaryAmountMatch ||
-      query.match(/(?:earning|earns|earned|(?:monthly\s+|basic\s+|gross\s+|annual\s+|prorated\s+|ordinary\s+)?(?:salary|wages?|remuneration)\s*(?:rate\s*)?(?:of|is|at|was|:|=)?|(?:basic|monthly|gross|final|last|annual|his|her|their|employee(?:'s)?|staff(?:'s)?|worker(?:'s)?)\s+pay\s*(?:rate\s*)?(?:of|is|at|was|:|=)?|pay\s+(?:rate\s+)?(?:of|is|at|was|:|=))\s*(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i) ||
-      query.match(/\b(?:paid|paying|pay|pays)\s+(?:him|her|them|(?:a|an|the|our|my|this|that|each|every)?\s*(?:(?:new|second|another|singaporean|local|foreign|pr|full[- ]time|part[- ]time)\s+){0,2}(?:employee|worker|staff(?:\s+member)?))\s+(?:(?:a\s+)?(?:monthly\s+|basic\s+)?(?:salary|wages?|pay|remuneration)\s+(?:of\s+)?)?(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i) ||
-      query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?(?:basic\s+|gross\s+|ordinary\s+|monthly\s+)?(?:salary|wages?|remuneration|pay\s+rate)\b/i) ||
-      nonAcquisitionQueryText.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
-      nonAcquisitionQueryText.match(/([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)/i);
-    if (salaryMatch && salaryMatch[1]) {
-      let parsedSalary = parseFloat(salaryMatch[1].replace(/,/g, ''));
-      const magnitude = salaryMatch[2]?.toLowerCase();
-      if (magnitude === 'k' || magnitude === 'thousand') parsedSalary *= 1000;
-      if (magnitude === 'm' || magnitude === 'million') parsedSalary *= 1000000;
-      if (parsedSalary > 0) baseSalary = parsedSalary;
-    }
+    const amendmentSalaryMatch = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' && isSingleMonthlySalaryAmendment(query)
+      ? query.match(/(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i)
+      : null;
+    const resolvedSalary = requestsIndependentFinalSalary
+      ? parseCapturedAmount(payrollSalaryAmountMatch?.[1], payrollSalaryAmountMatch?.[2])
+      : parseCapturedAmount(payrollSalaryAmountMatch?.[1], payrollSalaryAmountMatch?.[2]) ??
+        ownedSalaryAmount ??
+        parseCapturedAmount(amendmentSalaryMatch?.[1], amendmentSalaryMatch?.[2]);
+    if (resolvedSalary !== undefined) baseSalary = resolvedSalary;
 
     if (requestsIndependentFinalSalary) {
       return {
@@ -2102,12 +2119,30 @@ export async function parseAccountingQuery(
     /\b(equipment|computer server|server|computer|laptops?|monitors?|printers?|machinery|plant|furniture|desks?|chairs?|workstations?|hardware)\b/i.test(query) &&
     /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query);
   if (isBusinessEquipmentAcquisition) {
-    const match = query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);
+    const equipmentClauseIndex = rawClauses.findIndex(clause =>
+      /\b(equipment|computer server|server|computer|laptops?|monitors?|printers?|machinery|plant|furniture|desks?|chairs?|workstations?|hardware)\b/i.test(clause) &&
+      /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(clause)
+    );
+    let equipmentClause = equipmentClauseIndex >= 0 ? rawClauses[equipmentClauseIndex] : query;
+    const nextClause = equipmentClauseIndex >= 0 ? rawClauses[equipmentClauseIndex + 1] : undefined;
+    const equipmentClauseHasAmount = /(?:sgd|s\$|\$)\s*[\d,]+(?:\.\d+)?/i.test(equipmentClause);
+    const nextClauseHasAmount = Boolean(nextClause && /(?:sgd|s\$|\$)\s*[\d,]+(?:\.\d+)?/i.test(nextClause));
+    const isSettlementContinuation = Boolean(
+      nextClause &&
+      /^(?:(?:we|i|the\s+company|our\s+company)\s+)?paid\b/i.test(nextClause) &&
+      !/(?:\ba\s*month|\/month|\bmonthly|\bper\s*month)\b/i.test(nextClause) &&
+      !/\bfor\s+(?!it\b|them\b|this\b|that\b|the\s+(?:equipment|server|computer|laptops?|monitors?|printers?|machinery|plant|furniture|desks?|chairs?|workstations?|hardware)\b)/i.test(nextClause) &&
+      (!equipmentClauseHasAmount || !nextClauseHasAmount)
+    );
+    if (isSettlementContinuation && nextClause) {
+      equipmentClause = `${equipmentClause} ${nextClause}`;
+    }
+    const match = equipmentClause.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);
     let amount = match?.[1] ? Number(match[1].replace(/,/g, '')) : undefined;
     const unit = match?.[2]?.toLowerCase();
     if (unit === 'k' || unit === 'thousand') amount = (amount || 0) * 1000;
     if (unit === 'm' || unit === 'million') amount = (amount || 0) * 1000000;
-    const paidImmediately = /\b(paid|cash|bank transfer|paid by bank)\b/i.test(query);
+    const paidImmediately = /\b(paid|cash|bank transfer|paid by bank)\b/i.test(equipmentClause);
     const complete = Boolean(amount && amount > 0);
     const creditAccount = paidImmediately ? 'Cash at Bank' : 'Trade Payables';
     return {

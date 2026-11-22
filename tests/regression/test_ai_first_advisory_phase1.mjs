@@ -1743,6 +1743,134 @@ for (const call of calls) {
       'mixed acquisition and employee hire parses employee salary 5000 rather than laptop 2000'
     );
 
+    const laptopWithSupportFeeQuery = 'We bought a staff laptop for payroll for SGD 2,000 and pay SGD 100 per month for support.';
+    const parsedLaptopWithSupportFee = await parseAccountingQuery(laptopWithSupportFeeQuery);
+    assert.equal(
+      parsedLaptopWithSupportFee.scenarioType,
+      'BUSINESS_EQUIPMENT_ACQUISITION',
+      'staff laptop acquisition with separate monthly support fee parses as BUSINESS_EQUIPMENT_ACQUISITION'
+    );
+    assert.equal(
+      parsedLaptopWithSupportFee.amount,
+      2000,
+      'staff laptop acquisition with separate monthly support fee preserves laptop amount 2000'
+    );
+    assert.equal(parsedLaptopWithSupportFee.directGroups[0]?.totalDebit, 2000);
+    assert.equal(parsedLaptopWithSupportFee.directGroups[0]?.isBalanced, true);
+
+    const reversedSupportFeeAndLaptop = await parseAccountingQuery(
+      'We pay SGD 100 per month for support and bought a staff laptop for payroll for SGD 2,000.'
+    );
+    assert.equal(
+      reversedSupportFeeAndLaptop.scenarioType,
+      'BUSINESS_EQUIPMENT_ACQUISITION',
+      'reversed support fee followed by staff laptop acquisition parses as BUSINESS_EQUIPMENT_ACQUISITION'
+    );
+    assert.equal(
+      reversedSupportFeeAndLaptop.amount,
+      2000,
+      'reversed support fee followed by staff laptop acquisition extracts laptop amount 2000'
+    );
+
+    const laptopPaidInSecondClause = await parseAccountingQuery(
+      'We bought a staff laptop and paid SGD 2,000 by bank.'
+    );
+    assert.equal(laptopPaidInSecondClause.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+    assert.equal(laptopPaidInSecondClause.amount, 2000);
+    assert.equal(laptopPaidInSecondClause.isComplete, true);
+    assert.equal(
+      laptopPaidInSecondClause.directGroups[0]?.lines.some(line => line.accountName === 'Cash at Bank' && line.credit === 2000),
+      true,
+      'equipment purchase paid in coordinated clause credits Cash at Bank for 2000'
+    );
+
+    const laptopWithSeparatePaymentClause = await parseAccountingQuery(
+      'We bought a staff laptop for SGD 2,000 and paid by bank.'
+    );
+    assert.equal(laptopWithSeparatePaymentClause.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+    assert.equal(laptopWithSeparatePaymentClause.amount, 2000);
+    assert.equal(
+      laptopWithSeparatePaymentClause.directGroups[0]?.lines.some(line => line.accountName === 'Cash at Bank' && line.credit === 2000),
+      true,
+      'equipment purchase with coordinated bank payment credits Cash at Bank'
+    );
+
+    assert.equal(
+      assessConversationRelation(laptopWithSupportFeeQuery, employeeSetupScenario, employeeSetupScenario),
+      'NEW',
+      'staff laptop acquisition with support fee is classified as NEW against prior payroll scenario'
+    );
+    const laptopWithSupportFeeTurn = { id: 'boundary-laptop-with-support-fee', sender: 'user', timestamp: '', text: laptopWithSupportFeeQuery };
+    const callsBeforeLaptopWithSupportFee = boundaryCalls.length;
+    const laptopWithSupportFeeResponse = await processAccountingQuery(
+      laptopWithSupportFeeQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        laptopWithSupportFeeTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(
+      laptopWithSupportFeeResponse.conversationBoundaryMessageId,
+      laptopWithSupportFeeTurn.id,
+      'staff laptop acquisition with support fee sets conversationBoundaryMessageId to user turn id'
+    );
+    assert.notEqual(
+      laptopWithSupportFeeResponse.scenarioState?.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'staff laptop acquisition with support fee response scenarioState is not PAYROLL_CPF_SALARY'
+    );
+    const laptopWithSupportFeePrompt = boundaryCalls.slice(callsBeforeLaptopWithSupportFee).map(call => call.prompt).join('\n');
+    assert.ok(
+      !laptopWithSupportFeePrompt.includes('58 years old') &&
+      !laptopWithSupportFeePrompt.includes('second-year Singapore PR'),
+      'staff laptop acquisition with support fee excludes prior employee facts from provider prompt'
+    );
+
+    const parsedSemanticNonPayrollSupport = await parseAccountingQuery(
+      'We pay SGD 100 per month for staff support with CPF notes.',
+      null,
+      {
+        mode: 'SEMANTIC_INTERPRETATION',
+        assessmentStatus: 'PASSED',
+        transportAttempts: [],
+        interpretation: {
+          jurisdiction: ['Singapore'],
+          authorityCandidates: ['ACCOUNTING_STANDARDS'],
+          contextualAuthorities: [],
+          domain: 'ACCOUNTING',
+          population: 'COMPANY',
+          primarySubject: 'monthly support fee expense',
+          concepts: [{ concept: 'operating expense', role: 'PRIMARY' }],
+          requestedOperation: 'DETERMINE_TREATMENT',
+          calculationRequested: false,
+          requiresUserSpecificFacts: true,
+          factsExplicitlyProvided: [],
+          confidence: 0.92,
+          issues: [{
+            subject: 'monthly support fee expense',
+            population: 'COMPANY',
+            domain: 'ACCOUNTING',
+            governingAuthorities: ['ACCOUNTING_STANDARDS'],
+            contextualAuthorities: [],
+            operation: 'DETERMINE_TREATMENT',
+            mappedTopicIds: [],
+            evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+            confidence: 0.92
+          }]
+        }
+      }
+    );
+    assert.notEqual(
+      parsedSemanticNonPayrollSupport.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'validated non-payroll AI interpretation prevents routing support fee to PAYROLL_CPF_SALARY'
+    );
+
     for (const [index, softwareLicenceQuery] of [
       'We purchased a payroll software licence for SGD 3,000.',
       'What if we bought a licence for payroll software?'
@@ -1928,6 +2056,70 @@ for (const call of calls) {
       hasAffirmativeResetDirective('Please forget the previous transaction in case it is irrelevant.'),
       false,
       'trailing "in case it is irrelevant" conditional reset is not an affirmative reset directive'
+    );
+
+    const unconditionalResetWithConditionalSupplierQuery =
+      'Forget the previous transaction and if possible show the journal for a supplier invoice of SGD 1,000.';
+    assert.equal(
+      hasAffirmativeResetDirective(unconditionalResetWithConditionalSupplierQuery),
+      true,
+      'unconditional reset coordinated with separate conditional request remains an affirmative reset directive'
+    );
+    assert.equal(
+      isShortSemanticFollowUp(unconditionalResetWithConditionalSupplierQuery, employeeSetupScenario),
+      false,
+      'unconditional reset coordinated with new supplier invoice is not a short semantic follow-up'
+    );
+    assert.equal(
+      assessConversationRelation(unconditionalResetWithConditionalSupplierQuery, employeeSetupScenario, employeeSetupScenario),
+      'NEW',
+      'unconditional reset coordinated with new supplier invoice is classified as NEW'
+    );
+    const unconditionalResetSupplierTurn = {
+      id: 'boundary-unconditional-reset-conditional-supplier',
+      sender: 'user',
+      timestamp: '',
+      text: unconditionalResetWithConditionalSupplierQuery
+    };
+    const callsBeforeUnconditionalResetSupplier = boundaryCalls.length;
+    const unconditionalResetSupplierResponse = await processAccountingQuery(
+      unconditionalResetWithConditionalSupplierQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        unconditionalResetSupplierTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId)
+    );
+    assert.equal(
+      unconditionalResetSupplierResponse.conversationBoundaryMessageId,
+      unconditionalResetSupplierTurn.id,
+      'unconditional reset coordinated with new supplier invoice sets conversationBoundaryMessageId to user turn id'
+    );
+    const unconditionalResetSupplierPrompt = boundaryCalls.slice(callsBeforeUnconditionalResetSupplier).map(call => call.prompt).join('\n');
+    assert.ok(
+      !unconditionalResetSupplierPrompt.includes('58 years old') &&
+      !unconditionalResetSupplierPrompt.includes('second-year Singapore PR'),
+      'unconditional reset coordinated with new supplier invoice excludes prior employee facts from provider prompt'
+    );
+
+    assert.equal(
+      hasAffirmativeResetDirective('Forget the previous transaction, should it prove irrelevant.'),
+      false,
+      'comma-separated inverted conditional "should it prove irrelevant" reset is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Please forget the previous transaction and the earlier employee if they are irrelevant.'),
+      false,
+      'coordinated reset object with trailing conditional clause is not an affirmative reset directive'
+    );
+    assert.equal(
+      hasAffirmativeResetDirective('Please forget the previous transaction and ignore the earlier employee if it is irrelevant.'),
+      false,
+      'coordinated reset verbs with trailing conditional clause is not an affirmative reset directive'
     );
 
     const settleInvoiceFollowUpQuery = 'What if we settle that unpaid invoice in cash today?';
