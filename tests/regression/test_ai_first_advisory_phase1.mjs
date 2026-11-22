@@ -1831,6 +1831,29 @@ for (const call of calls) {
       'staff laptop acquisition with support fee excludes prior employee facts from provider prompt'
     );
 
+    const paidStaffSalaryQuery = 'We paid SGD 5,000 for staff salary this month.';
+    const parsedPaidStaffSalary = await parseAccountingQuery(paidStaffSalaryQuery);
+    assert.equal(parsedPaidStaffSalary.scenarioType, 'PAYROLL_CPF_SALARY');
+    assert.equal(parsedPaidStaffSalary.amount, 5000);
+    assert.equal(parsedPaidStaffSalary.isComplete, true);
+    assert.equal(parsedPaidStaffSalary.directGroups.length, 1);
+    assert.equal(parsedPaidStaffSalary.directGroups[0]?.isBalanced, true);
+    assert.equal(
+      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === 5000),
+      true,
+      'paid staff salary debits Staff Salaries & Wages (5010) for 5000'
+    );
+    assert.equal(
+      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
+      true,
+      'paid staff salary includes credit to CPF Payable (2050)'
+    );
+    assert.equal(
+      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
+      true,
+      'paid staff salary includes credit to Net Salaries Payable (2060)'
+    );
+
     const parsedSemanticNonPayrollSupport = await parseAccountingQuery(
       'We pay SGD 100 per month for staff support with CPF notes.',
       null,

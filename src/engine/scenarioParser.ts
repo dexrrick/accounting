@@ -635,7 +635,10 @@ export async function parseAccountingQuery(
   };
   const hiredSalaryAmountPattern =
     /\b(?:hired|hire|hiring|employ(?:s|ed|ing)?)\s+(?:a|an|the|one|\d+|another|second|new)?\s*(?:(?:singaporean|local|foreign|pr|full[- ]time|part[- ]time|new|second|another)\s+){0,3}(?:employee|worker|staff(?:\s+member)?|person)(?=\s+(?:at|for|on|with|in|under|who|whose|named|called|aged|earning|working|starting|joining|as|from|to|today|yesterday|recently|last|this|next)\b|[,.;:!?]|$)[^.!?;]{0,80}?(?:(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?|([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b)/i;
+  const paidForRemunerationPattern =
+    /\b(?:paid|paying|pay|pays)\s+(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\s+(?:(?:our|the|this|that|monthly|basic|gross|annual|prorated|contractual|fixed|ordinary|final|last|his|her|their|staff(?:'s)?|employees?(?:'s)?|workers?(?:'s)?)\s+){0,3}(?:salaries|salary|wages?|remuneration|bonus(?:es)?|allowances?|(?:final|last|monthly|basic|gross|staff|employee|worker|his|her|their)\s+pay|payroll(?!\s+(?:software|system|service|support|vendor|provider|outsourcing|subscription|licen[cs]e|fee|equipment|laptop|computer|hardware|tool|platform|app|application|portal)))\b/i;
   const explicitClauseSalaryPatterns: RegExp[] = [
+    paidForRemunerationPattern,
     /\b(?:earning|earns|earned|(?:monthly\s+|basic\s+|gross\s+|annual\s+|prorated\s+|contractual\s+|fixed\s+|ordinary\s+)?(?:salary|wages?|remuneration))\s*(?:rate\s*)?(?:of|is|at|was|:|=)?\s*(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
     /\b(?:(?:basic|monthly|gross|final|last|annual|his|her|their|employee(?:'s)?|staff(?:'s)?|worker(?:'s)?)\s+pay\s*(?:rate\s*)?(?:of|is|at|was|:|=)?|pay\s+(?:rate\s+)?(?:of|is|at|was|:|=))\s*(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
     /\b(?:paid|paying|pay|pays)\s+(?:him|her|them|(?:a|an|the|our|my|this|that|each|every)?\s*(?:(?:new|second|another|singaporean|local|foreign|pr|full[- ]time|part[- ]time)\s+){0,2}(?:employee|worker|staff(?:\s+member)?))\s+(?:(?:a\s+)?(?:monthly\s+|basic\s+)?(?:salary|wages?|pay|remuneration)\s+(?:of\s+)?)?(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
@@ -656,7 +659,9 @@ export async function parseAccountingQuery(
       if (val !== undefined) return val;
     }
     const hasRemunerationBasis = /\b(?:cpf|last\s+day|prorat\w*|salary|wages?|remuneration|bonus|allowance|final\s+pay)\b/i.test(clause);
-    const isNonRemunerationOutlay = /\b(?:paid|pay|pays|paying)\s+(?:sgd|s\$|\$)?\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\b/i.test(clause);
+    const isNonRemunerationOutlay =
+      !paidForRemunerationPattern.test(clause) &&
+      /\b(?:paid|pay|pays|paying)\s+(?:sgd|s\$|\$)?\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\b/i.test(clause);
     if (hasRemunerationBasis && !isNonRemunerationOutlay) {
       const currencyOrMonthlyMatch =
         clause.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
