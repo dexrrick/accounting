@@ -1854,6 +1854,21 @@ for (const call of calls) {
       'paid staff salary includes credit to Net Salaries Payable (2060)'
     );
 
+    const paidPayrollProcessingQuery = 'We paid SGD 1,000 for staff payroll processing.';
+    const parsedPaidPayrollProcessing = await parseAccountingQuery(paidPayrollProcessingQuery);
+    assert.notEqual(
+      parsedPaidPayrollProcessing.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'staff payroll processing expense is not misclassified as PAYROLL_CPF_SALARY'
+    );
+    assert.equal(
+      parsedPaidPayrollProcessing.directGroups.some(group =>
+        group.lines.some(line => ['5010', '2050', '2060'].includes(line.accountCode))
+      ),
+      false,
+      'staff payroll processing expense does not post salary or CPF journal lines'
+    );
+
     const parsedSemanticNonPayrollSupport = await parseAccountingQuery(
       'We pay SGD 100 per month for staff support with CPF notes.',
       null,
