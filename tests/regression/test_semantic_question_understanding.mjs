@@ -23,6 +23,7 @@ import { selectAccountingScenarioForRequest, updateCommittedJournalScenario } fr
 import {
   assessConversationRelation,
   hasAffirmativeResetDirective,
+  hasConflictingPriorSubject,
   hasExplicitPriorFactReference,
   startsNewAccountingScenario
 } from '../../src/services/conversationBoundary.ts';
@@ -1827,6 +1828,31 @@ for (const compatibleVehicleFollowUp of [
   assert.equal(assessConversationRelation(compatibleVehicleFollowUp, carExpenseScenario), 'RELATED',
     `compatible subject stays RELATED against carExpenseScenario: ${compatibleVehicleFollowUp}`);
 }
+
+for (const { turn1, turn2New, turn2Ambiguous } of [
+  {
+    turn1: await parseAccountingQuery('We bought a staff laptop for SGD 2,000.'),
+    turn2New: 'What if we hired an employee for SGD 5,000?',
+    turn2Ambiguous: 'What is the CPF treatment for our previous employee?'
+  },
+  {
+    turn1: await parseAccountingQuery('We purchased a payroll software licence for SGD 3,000.'),
+    turn2New: 'What if we hired an employee for SGD 5,000?',
+    turn2Ambiguous: 'What is the CPF treatment for our previous employee?'
+  },
+  {
+    turn1: await parseAccountingQuery('We leased a laptop for SGD 2,000.'),
+    turn2New: 'What if we bought a new machine for SGD 5,000?',
+    turn2Ambiguous: 'What is the depreciation on our previous machine?'
+  }
+]) {
+  assert.equal(startsNewAccountingScenario(turn2New, turn1), true,
+    `Turn 2 starts new scenario after "${turn1.rawQuery}": ${turn2New}`);
+  assert.equal(assessConversationRelation(turn2New, turn1, turn1), 'NEW',
+    `Turn 2 relation is NEW after "${turn1.rawQuery}": ${turn2New}`);
+  assert.equal(assessConversationRelation(turn2Ambiguous, turn1, turn1), 'AMBIGUOUS',
+    `Turn 2 conflicting prior subject is AMBIGUOUS after "${turn1.rawQuery}": ${turn2Ambiguous}`);
+}
 assert.equal(assessConversationRelation(priorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(previousYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
 assert.equal(assessConversationRelation(unhyphenatedPriorYearInvoiceTx, employeeCpfScenario), 'AMBIGUOUS');
@@ -2035,6 +2061,62 @@ assert.ok(longSeparateNewEmployeeQuery.length > 300);
 assert.equal(hasExplicitPriorFactReference(longSeparateNewEmployeeQuery), false);
 assert.equal(startsNewAccountingScenario(longSeparateNewEmployeeQuery, employeeCpfScenario), true);
 assert.equal(assessConversationRelation(longSeparateNewEmployeeQuery, employeeCpfScenario), 'NEW');
+
+// Latest review findings (1–3): New laptop lease after machinery purchase, separate staff laptop purchase,
+// and payroll software licence purchase after unrelated supplier invoice.
+for (const leasedLaptopQuery of [
+  'We leased a laptop for SGD 2,000.',
+  'What if we leased a laptop for SGD 2,000?',
+  'What if we leased a new laptop instead?'
+]) {
+  assert.equal(startsNewAccountingScenario(leasedLaptopQuery, ppeMachineScenario), true,
+    `new laptop lease starts a new scenario after machinery purchase: ${leasedLaptopQuery}`);
+  assert.equal(assessConversationRelation(leasedLaptopQuery, ppeMachineScenario, ppeMachineScenario), 'NEW',
+    `new laptop lease is classified as NEW after machinery purchase: ${leasedLaptopQuery}`);
+}
+assert.equal(startsNewAccountingScenario('What if we leased that machine instead?', ppeMachineScenario), false);
+assert.equal(assessConversationRelation('What if we leased that machine instead?', ppeMachineScenario, ppeMachineScenario), 'RELATED');
+
+for (const staffLaptopQuery of [
+  'We bought a staff laptop for SGD 2,000.',
+  'We purchased an employee computer for SGD 2,500.',
+  'What if we bought a staff laptop?'
+]) {
+  assert.equal(startsNewAccountingScenario(staffLaptopQuery, employeeCpfScenario), true,
+    `staff laptop purchase starts a new scenario against payroll: ${staffLaptopQuery}`);
+  assert.equal(assessConversationRelation(staffLaptopQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `staff laptop purchase is NEW against payroll: ${staffLaptopQuery}`);
+}
+const priorStaffLaptopQuery = 'What is the GST treatment for our previous staff laptop purchase?';
+assert.equal(hasConflictingPriorSubject(priorStaffLaptopQuery, employeeCpfScenario), true);
+assert.equal(hasExplicitPriorFactReference(priorStaffLaptopQuery, employeeCpfScenario), false);
+assert.equal(isShortSemanticFollowUp(priorStaffLaptopQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(priorStaffLaptopQuery, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(hasConflictingPriorSubject(priorStaffLaptopQuery, ppeMachineScenario), false);
+assert.equal(hasExplicitPriorFactReference(priorStaffLaptopQuery, ppeMachineScenario), true);
+assert.equal(assessConversationRelation(priorStaffLaptopQuery, ppeMachineScenario, ppeMachineScenario), 'RELATED');
+
+for (const softwareLicenceQuery of [
+  'We purchased a payroll software licence for SGD 3,000.',
+  'We bought a licence for payroll software.',
+  'What if we bought a licence for payroll software?',
+  'What if we bought a software subscription for our staff?'
+]) {
+  assert.equal(startsNewAccountingScenario(softwareLicenceQuery, unpaidSupplierInvoiceScenario), true,
+    `payroll software licence purchase starts a new scenario after unpaid invoice: ${softwareLicenceQuery}`);
+  assert.equal(assessConversationRelation(softwareLicenceQuery, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario), 'NEW',
+    `payroll software licence purchase is NEW after unpaid invoice: ${softwareLicenceQuery}`);
+  assert.equal(startsNewAccountingScenario(softwareLicenceQuery, employeeCpfScenario), true,
+    `payroll software licence purchase starts a new scenario against payroll: ${softwareLicenceQuery}`);
+  assert.equal(assessConversationRelation(softwareLicenceQuery, employeeCpfScenario, employeeCpfScenario), 'NEW',
+    `payroll software licence purchase is NEW against payroll: ${softwareLicenceQuery}`);
+}
+const priorSoftwareLicenceQuery = 'What is the GST treatment for our previous payroll software licence?';
+assert.equal(hasConflictingPriorSubject(priorSoftwareLicenceQuery, employeeCpfScenario), true);
+assert.equal(hasExplicitPriorFactReference(priorSoftwareLicenceQuery, employeeCpfScenario), false);
+assert.equal(assessConversationRelation(priorSoftwareLicenceQuery, employeeCpfScenario, employeeCpfScenario), 'AMBIGUOUS');
+assert.equal(hasAffirmativeResetDirective('Please proceed without letting us forget the earlier employee details.'), false);
+assert.equal(startsNewAccountingScenario('If the candidate accepts, we hired a second employee for SGD 4,500.', employeeCpfScenario), true);
 const followUpUnderstanding = semantic({ domain: 'IRAS_GST', population: 'COMPANY', primarySubject: 'input tax eligibility for the purchase',
   concepts: [{ concept: 'GST input tax', role: 'PRIMARY' }], requestedOperation: 'CHECK_ELIGIBILITY', requiresUserSpecificFacts: true });
 const followUpContext = await buildGroundedReasoningContext(shortAnaphoricFollowUp, priorPpe, {

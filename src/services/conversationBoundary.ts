@@ -11,8 +11,8 @@ export function isJournalDisplayRequest(query: string): boolean {
 }
 
 const DISCOURSE_SUBJECT_NOUNS = '(?:facts?|details?|scenario|scenarios|situation|situations|case|cases|example|examples|calculation|calculations|journal|journals|entry|entries|answer|discussion|conversation|analysis)';
-const ACCOUNTING_SUBJECT_NOUNS = '(?:transaction|expense|purchase|supply|invoice|amount|asset|equipment|machine|machinery|vehicle|salary|payroll|employee|worker|staff|payment|contract|lease|arrangement|deadline|rate)';
-export const PRIOR_SUBJECT_NOUNS = `(?:${DISCOURSE_SUBJECT_NOUNS}|${ACCOUNTING_SUBJECT_NOUNS}|transactions|expenses|purchases|supplies|invoices|amounts|assets|vehicles|salaries|employees|workers|payments|contracts|leases|arrangements|deadlines|rates)`;
+const ACCOUNTING_SUBJECT_NOUNS = '(?:transaction|expense|purchase|supply|invoice|amount|asset|equipment|machine|machinery|laptop|computer|software|licen[cs]e|subscription|vehicle|salary|payroll|employee|worker|staff|payment|contract|lease|arrangement|deadline|rate)';
+export const PRIOR_SUBJECT_NOUNS = `(?:${DISCOURSE_SUBJECT_NOUNS}|${ACCOUNTING_SUBJECT_NOUNS}|transactions|expenses|purchases|supplies|invoices|amounts|assets|laptops|computers|licen[cs]es|subscriptions|vehicles|salaries|employees|workers|payments|contracts|leases|arrangements|deadlines|rates)`;
 
 const MONTH_NAMES_SOURCE = 'january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec';
 const PERIOD_UNIT_LOOKAHEAD_WORDS = 'year|years|period|periods|month|months|quarter|quarters|week|weeks|day|days|decade|decades|half|halves|semester|semesters|trimester|trimesters|season|seasons|fy|ya|q[1-4]|h[1-2]';
@@ -39,7 +39,7 @@ export const SUBJECT_DISCUSSION_CLAUSE_SOURCE = `(?:the|our|my|this|that|these|t
 const SUBJECT_DOMAIN_PATTERNS: ReadonlyArray<{ domain: string; pattern: RegExp }> = [
   { domain: 'payroll', pattern: /\b(?:payroll|salar(?:y|ies)|wages?|cpf|employee|employees|worker|workers|staff|bonus(?:es)?|resignation)\b/i },
   { domain: 'asset_purchase', pattern: /\b(?:machines?|machinery|equipment|asset\s+purchase|capital\s+expenditure|ppe|property,\s*plant\s+and\s+equipment|(?:fixed|tangible)\s+assets?|computers?|laptops?|servers?|printers?|furniture|fixtures?)\b/i },
-  { domain: 'intangible_asset', pattern: /\b(?:software|intangible\s+assets?|patents?|trademarks?|copyrights?)\b/i },
+  { domain: 'intangible_asset', pattern: /\b(?:software|licen[cs]es?|subscriptions?|intangible\s+assets?|patents?|trademarks?|copyrights?)\b/i },
   { domain: 'vehicle', pattern: /\b(?:car|cars|vehicle|vehicles|motor\s+car|motor\s+vehicle|s[- ]?plate)\b/i },
   { domain: 'lease', pattern: /\b(?:lease|leases|leased|leasing|rou|right[- ]of[- ]use|rental|rent(?:ed|ing)?)\b/i },
   { domain: 'share_capital', pattern: /\b(?:share\s+capital|shareholders?|subscribers?|allotment|ordinary\s+shares?|own\s+shares?)\b/i },
@@ -71,11 +71,38 @@ export function extractSubjectDomains(text: string): Set<string> {
   return domains;
 }
 
+function resolveHeadNounDomains(phrase: string): Set<string> {
+  const domains = extractSubjectDomains(phrase);
+  if (domains.has('lease')) return new Set(['lease']);
+  if (domains.has('intangible_asset')) return new Set(['intangible_asset']);
+  if (domains.has('asset_purchase') || domains.has('vehicle')) {
+    domains.delete('payroll');
+  }
+  return domains;
+}
+
 function hasDomainOverlap(a: Set<string>, b: Set<string>): boolean {
   for (const domain of a) {
     if (b.has(domain)) return true;
   }
   return false;
+}
+
+function extractDescriptiveDomains(text: string): Set<string> {
+  const domains = new Set<string>();
+  for (const rawSegment of text.split(/[.!?;\n]+|(?<!\d),(?!\d)|\b(?:and|&)\b/i)) {
+    const segment = rawSegment.trim();
+    if (!segment) continue;
+    const { transactionActions } = analyzeTransactionActions(segment.toLowerCase());
+    if (transactionActions.length > 0) {
+      for (const action of transactionActions) {
+        for (const domain of action.domains) domains.add(domain);
+      }
+    } else {
+      for (const domain of resolveHeadNounDomains(segment)) domains.add(domain);
+    }
+  }
+  return domains;
 }
 
 /** Resolves the active accounting domains for the current scenario and context. */
@@ -98,7 +125,8 @@ export function resolveActiveScenarioDomains(
     if (!tag) continue;
     if (tag === 'PAYROLL_CPF_SALARY' || tag === 'CPF_BOARD' || tag === 'MOM_EMPLOYMENT') {
       domains.add('payroll');
-    } else if (tag === 'PPE_ASSET_PURCHASE' || tag === 'CAPITALISATION_THRESHOLD' || tag.startsWith('PPE_')) {
+    } else if (tag === 'PPE_ASSET_PURCHASE' || tag === 'BUSINESS_EQUIPMENT_ACQUISITION' ||
+      tag === 'ASSET_PURCHASE_DISCOUNT' || tag === 'CAPITALISATION_THRESHOLD' || tag.startsWith('PPE_')) {
       domains.add('asset_purchase');
     } else if (tag.startsWith('SHARE_CAPITAL')) {
       domains.add('share_capital');
@@ -114,13 +142,16 @@ export function resolveActiveScenarioDomains(
   }
 
   const isUnclassifiedStub = currentScenario?.scenarioType === 'UNRECOGNIZED' && !currentScenario.rawQuery?.trim();
-  const descriptiveText = [
+  const descriptiveFields = [
     context?.underlyingTransaction?.subject,
     isUnclassifiedStub ? undefined : currentScenario?.transactionTitle,
     currentScenario?.rawQuery
-  ].filter(Boolean).join(' ');
-  for (const domain of extractSubjectDomains(descriptiveText)) {
-    domains.add(domain);
+  ];
+  for (const field of descriptiveFields) {
+    if (!field) continue;
+    for (const domain of extractDescriptiveDomains(field)) {
+      domains.add(domain);
+    }
   }
   return domains;
 }
@@ -151,35 +182,17 @@ export function hasConflictingPriorSubject(
   const activeDomains = resolveActiveScenarioDomains(currentScenario);
   if (activeDomains.size === 0) return false;
   return getPriorModifierMatches(text).some(({ phrase }) => {
-    const phraseDomains = extractSubjectDomains(phrase);
+    const phraseDomains = resolveHeadNounDomains(phrase);
     return phraseDomains.size > 0 && !hasDomainOverlap(phraseDomains, activeDomains);
   });
 }
 
-const GENERAL_LY_ADVERB = '(?!(?:only|early|apply|comply|imply|rely|reply|supply|multiply|family|likely|friendly|ugly|holy|lonely|lovely|silly)\\b)[a-z]+ly';
-const PREFERENCE_NEGATION_ADVERB = '(?:rather|sooner)';
-const RESET_ADVERBS = `(?:(?:please|ever|just|still|even|yet|also|${GENERAL_LY_ADVERB})\\s+)*`;
-const STRICT_RESET_ADVERBS = `(?:(?:ever|just|still|even|yet|also|${GENERAL_LY_ADVERB})\\s+)*`;
-const OPTIONAL_LY_NOT = `(?:(?:(?:${GENERAL_LY_ADVERB}|${PREFERENCE_NEGATION_ADVERB})\\s+)?not)`;
-const DIRECT_RESET_NEGATOR = `(?:do\\s+${OPTIONAL_LY_NOT}|don['’]?t|dont|does\\s+${OPTIONAL_LY_NOT}|doesn['’]?t|doesnt|did\\s+${OPTIONAL_LY_NOT}|didn['’]?t|didnt|cannot|can['’]?t|cant|should\\s+${OPTIONAL_LY_NOT}|shouldn['’]?t|shouldnt|must\\s+${OPTIONAL_LY_NOT}|mustn['’]?t|mustnt|need\\s+${OPTIONAL_LY_NOT}|needn['’]?t|neednt|would\\s+${OPTIONAL_LY_NOT}|wouldn['’]?t|wouldnt|could\\s+${OPTIONAL_LY_NOT}|couldn['’]?t|couldnt|will\\s+${OPTIONAL_LY_NOT}|won['’]?t|wont|may\\s+${OPTIONAL_LY_NOT}|might\\s+${OPTIONAL_LY_NOT}|shall\\s+${OPTIONAL_LY_NOT}|shan['’]?t|shant|never)`;
-const CONTRACTED_STATE_OR_PERFECT_NEGATOR = `(?:i['’]?m|im|you['’]?re|youre|we['’]re|they['’]?re|theyre|he['’]?s|she['’]?s|it['’]?s|that['’]?s|there['’]?s|i['’]?ve|ive|you['’]?ve|youve|we['’]?ve|weve|they['’]?ve|theyve|i['’]d|you['’]?d|we['’]d|they['’]?d|he['’]d|she['’]d|i['’]ll|you['’]?ll|we['’]ll|they['’]?ll|he['’]ll|she['’]ll)\\s+${OPTIONAL_LY_NOT}`;
-const STATE_OR_PERFECT_NEGATOR = `(?:(?:is|are|am|was|were|have|has|had)\\s+${OPTIONAL_LY_NOT}|isn['’]?t|isnt|aren['’]?t|arent|wasn['’]?t|wasnt|weren['’]?t|werent|haven['’]?t|havent|hasn['’]?t|hasnt|hadn['’]?t|hadnt|${CONTRACTED_STATE_OR_PERFECT_NEGATOR})`;
-const RESET_TARGET_OBJECT = "(?:you|us|me|them|him|her|it|anyone|anybody|someone|somebody|everyone|everybody|yourself|ourselves|myself|(?:the|this|that|my|our|your)\\s+(?:assistant|model|system|ai))";
-const BARE_CAUSATIVE_RESET_PART = `(?:let|letting|make|making|have|having|help|helping)\\s+(?:${RESET_TARGET_OBJECT}(?:\\s+to)?|['’]?s)`;
-const TO_INFINITIVE_RESET_VERBS = '(?:want|need|have|try|attempt|intend|mean|plan|expect|wish|like|choose|decide|agree|ask|tell|instruct|direct|require|allow|permit|advise|recommend|remind|warn|caution|encourage|going|supposed|meant|intended|trying|attempting|asking|telling|instructing|planning|expecting|wishing|needing|having|able|ready|willing|prepared)';
-const RESET_CLAUSE_NEGATION_PATTERNS = [
-  new RegExp(`\\b${DIRECT_RESET_NEGATOR}\\s+${RESET_ADVERBS}$`, 'i'),
-  new RegExp(`(?:\\bnot\\s+to\\s+${RESET_ADVERBS}|\\b(?:let['’]?s|let\\s+us|you|we|they|i|he|she|it)\\s+not\\s+${STRICT_RESET_ADVERBS}|^\\s*(?:please\\s+)?not\\s+${STRICT_RESET_ADVERBS}|\\bnor\\s+${RESET_ADVERBS}|\\bwithout\\s+(?:to\\s+)?${STRICT_RESET_ADVERBS}(?:${BARE_CAUSATIVE_RESET_PART}\\s+)?)$`, 'i'),
-  new RegExp(`(?:\\b(?:${DIRECT_RESET_NEGATOR}|${STATE_OR_PERFECT_NEGATOR})\\s+${STRICT_RESET_ADVERBS}(?:going\\s+to\\s+|about\\s+to\\s+)?(?:${TO_INFINITIVE_RESET_VERBS}(?:\\s+${RESET_TARGET_OBJECT})?\\s+to|${BARE_CAUSATIVE_RESET_PART})|\\bno\\s+(?:need|reason|call|cause|grounds?|basis)(?:\\s+for\\s+${RESET_TARGET_OBJECT})?\\s+to|\\b(?:${DIRECT_RESET_NEGATOR}|${STATE_OR_PERFECT_NEGATOR})\\s+${STRICT_RESET_ADVERBS}(?:say|saying|said|tell|telling|told|write|writing|state|stating|assume|assuming|think|thinking|imply|implying|suggest|suggesting)(?:\\s+(?:me|us|you|them))?(?:\\s+to|\\s+(?:that\\s+)?(?:i|we|you|they)\\s+(?:should|must|need\\s+to|ought\\s+to|have\\s+to))?)\\s+${RESET_ADVERBS}$`, 'i'),
-  new RegExp(`(?:^\\s*|[,;:]\\s*)\\bnot\\s+${STRICT_RESET_ADVERBS}(?:(?:asking|telling|wanting|trying|intending|meaning|planning|expecting|going|supposed|meant|intended)(?:\\s+${RESET_TARGET_OBJECT})?\\s+to|(?:letting|making|having|helping)\\s+(?:${RESET_TARGET_OBJECT}(?:\\s+to)?|['’]?s))\\s+${RESET_ADVERBS}$`, 'i'),
-  new RegExp(`\\b(?:${DIRECT_RESET_NEGATOR}|not\\s+to)\\s+${STRICT_RESET_ADVERBS}[a-z]+(?:\\s+[a-z'’]+){0,4}\\s+or\\s+${STRICT_RESET_ADVERBS}$`, 'i'),
-  new RegExp(`(?:^\\s*|\\b(?:would|['’]?d|had)\\s+|\\b)${PREFERENCE_NEGATION_ADVERB}\\s+not(?:\\s+to)?\\s+${RESET_ADVERBS}$`, 'i')
-];
+const CLAUSE_NEGATION_PATTERN =
+  /\b(?:not|never|no|nobody|none|neither|nor|without|[a-z]+n['’]?t|cannot|can['’]?t|dont|doesnt|didnt|wont|wouldnt|shouldnt|couldnt|isnt|arent|wasnt|werent|havent|hasnt|hadnt)\b/i;
 
-function isNegatedResetClausePrefix(clausePrefix: string): boolean {
-  return RESET_CLAUSE_NEGATION_PATTERNS.some(pattern => pattern.test(clausePrefix));
+function hasNegationInClausePrefix(prefix: string): boolean {
+  return CLAUSE_NEGATION_PATTERN.test(prefix);
 }
-
 /** Detects an affirmative instruction to ignore, disregard, or forget prior conversation context. */
 export function hasAffirmativeResetDirective(query: string): boolean {
   const withoutQuotedSpans = query
@@ -192,8 +205,11 @@ export function hasAffirmativeResetDirective(query: string): boolean {
   const directivePattern = /\b(ignore|disregard|forget)\b[^.!?]{0,100}\b(?:earlier|previous|prior|above|last|case|scenario|situation|question|context|transaction|example|employee|employees|worker|workers|staff|discussion|analysis|discussed|mentioned|that|this|these|those)\b/gi;
   for (const match of collapsedCoordinatedVerbs.matchAll(directivePattern)) {
     const matchIndex = match.index ?? 0;
-    const clausePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/[.!?;,:]/).at(-1) ?? '';
-    if (!isNegatedResetClausePrefix(clausePrefix)) return true;
+    let clausePrefix = collapsedCoordinatedVerbs.slice(0, matchIndex).split(/[.!?;,:]/).at(-1) ?? '';
+    if (/\b(?:if|when|where|unless)\b/i.test(clausePrefix) || /\bwithout\b.*\b(?:please|then)\b/i.test(clausePrefix)) {
+      clausePrefix = clausePrefix.split(/\b(?:please|then)\b/i).at(-1) ?? '';
+    }
+    if (!hasNegationInClausePrefix(clausePrefix)) return true;
   }
   return false;
 }
@@ -228,7 +244,7 @@ function matchesCompatibleExplicitPriorReference(
     const matchEnd = matchStart + match[0].length;
     const coveredByDiscussion = discussionRanges.some(range => matchStart >= range.start && matchEnd <= range.end);
     if (!coveredByDiscussion && activeDomains.size > 0 && priorModifierOnlyPattern.test(match[0])) {
-      const phraseDomains = extractSubjectDomains(match[0]);
+      const phraseDomains = resolveHeadNounDomains(match[0]);
       if (phraseDomains.size > 0 && !hasDomainOverlap(phraseDomains, activeDomains)) {
         continue;
       }
@@ -293,21 +309,14 @@ const HAS_TRANSACTION_ACTION_PATTERN = new RegExp(`\\b${TRANSACTION_ACTION_VERB_
 const ELIDED_VP_CONTINUATION_PATTERN =
   /^\s*(?:(?:then|also|subsequently|later|next)\s+)?(?:bought|purchased|acquired|sold|disposed\s+of|entered\s+into|signed|leased|issued|subscribed|borrowed|took\s+out|hired)\b/i;
 const TRANSACTION_DETAIL_PATTERN = /(?:\b(?:sgd|usd|eur|s\$)\s*[\d,]+|\$\s*[\d,]+|\b\d+(?:\.\d+)?\s*(?:k|million|years?|months?|%))\b/;
-const NEW_SUBJECT_PATTERN = /\b((?:new|another|additional|second|different)\s+(?:[a-z]+\s+)?(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff)|machine|machinery|equipment|vehicle|lease|premises|share capital|payroll|salary|customer|supplier)\b/;
+const TRANSACTION_SUBJECT_NOUNS =
+  'machines?|machinery|equipment|laptops?|computers?|servers?|printers?|furniture|software|licen[cs]es?|subscriptions?|vehicles?|cars?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|invoices?|bills?|employees?|workers?|staff';
+const NEW_SUBJECT_PATTERN = new RegExp(
+  `\\b((?:new|another|additional|second|different|separate)\\s+(?:[a-z]+\\s+)?(?:${TRANSACTION_SUBJECT_NOUNS})|machines?|machinery|equipment|laptops?|computers?|servers?|printers?|furniture|software|licen[cs]es?|subscriptions?|vehicles?|cars?|leases?|premises|share\\s+capital|payroll|salar(?:y|ies)|customers?|suppliers?)\\b`,
+  'i'
+);
 
-const NEGATION_MODIFIER_TOKEN =
-  '(?:have|has|had|having|been|be|was|were|is|are|am|did|do|does|' +
-  '(?!(?:only|early|apply|comply|imply|rely|reply|supply|multiply|family|likely|friendly|ugly|holy|lonely|lovely|silly)\\b)[a-z]+ly|' +
-  'ever|yet|even|still|also|just|already|before|prior|either|later|afterwards|then|again|longer|anymore|' +
-  'at\\s+all|so\\s+far|to\\s+date|in\\s+(?:fact|effect|reality|practice)|as\\s+yet|by\\s+then|up\\s+to\\s+now|any\\s+longer)';
-const COORDINATED_NEGATION_MODIFIERS = `(?:(?:\\s+(?:and|or))?\\s+${NEGATION_MODIFIER_TOKEN})*`;
-const OPTIONAL_PRECEDING_NEGATED_VERB = `(?:(?:[a-z]+(?:ed|en|t)|bought|sold|hired|leased|signed|issued|borrowed|acquired|purchased|entered\\s+into|disposed\\s+of|took\\s+out)\\s+(?:or|nor)\\s+(?:${NEGATION_MODIFIER_TOKEN}\\s+)*)?`;
 
-const NEGATED_ACTION_PATTERNS = [
-  new RegExp(`\\b(?:never|neither|nor|not|no\\s+one|nobody|none\\s+of\\s+us|haven['’]?t|havent|hasn['’]?t|hasnt|hadn['’]?t|hadnt|didn['’]?t|didnt|don['’]?t|dont|doesn['’]?t|doesnt|wasn['’]?t|wasnt|weren['’]?t|werent|isn['’]?t|isnt|aren['’]?t|arent|cannot|can['’]?t|cant|couldn['’]?t|couldnt|wouldn['’]?t|wouldnt|shouldn['’]?t|shouldnt|mustn['’]?t|mustnt|won['’]?t|wont|(?:(?:would|['’]?d|had)\\s+)?(?:rather|sooner)\\s+not)\\b${COORDINATED_NEGATION_MODIFIERS}\\s+${OPTIONAL_PRECEDING_NEGATED_VERB}$`, 'i'),
-  new RegExp(`\\b(?:not|never|didn['’]?t|didnt|don['’]?t|dont|doesn['’]?t|doesnt|isn['’]?t|isnt|aren['’]?t|arent|wasn['’]?t|wasnt|weren['’]?t|werent)\\b[^,;:]*\\b(?:that|say|said|claim|claimed|mean|meant|imply|implied|suggest|suggested|assume|assumed)\\s+(?:that\\s+)?(?:i|we|they|he|she|it|the\\s+company|our\\s+company)${COORDINATED_NEGATION_MODIFIERS}\\s+${OPTIONAL_PRECEDING_NEGATED_VERB}$`, 'i'),
-  new RegExp(`(?:^\\s*|\\b(?:and|but|or)\\s+)(?:no|neither)\\s+(?:[a-z]+\\s+){0,3}(?:was|were|has\\s+been|have\\s+been|had\\s+been)?\\s*(?:${NEGATION_MODIFIER_TOKEN}(?:\\s+(?:and|or)\\s+${NEGATION_MODIFIER_TOKEN})*\\s+)*$`, 'i')
-];
 
 const CLAUSE_COORDINATION_BOUNDARY = /(?:,\s*)?\b(?:and|but|however|whereas)\b(?=\s+(?:(?:we|i|they|he|she|it|you|the\s+company|our\s+company)\s+)?(?:[a-z]+\s+){0,2}(?:bought|purchased|acquired|sold|disposed|entered|signed|leased|issued|subscribed|borrowed|took|hired)\b)/gi;
 
@@ -340,126 +349,66 @@ const PRICE_CONSIDERATION_PHRASE_PATTERN =
   /\b(?:for|at|of|worth)\s+(?:(?:sgd|usd|eur|s\$)\s*[\d,]+(?:\.\d+)?|\$\s*[\d,]+(?:\.\d+)?|\d+(?:\.\d+)?\s*(?:k|million|thousand))\b(?:\s*(?:per|a|each)\s+(?:month|year|annum|week|day)|\s*monthly|\s*annually)?/gi;
 const STANDALONE_AMOUNT_PHRASE_PATTERN =
   /(?:\b(?:sgd|usd|eur|s\$)\s*[\d,]+(?:\.\d+)?|\$\s*[\d,]+(?:\.\d+)?|\b\d+(?:\.\d+)?\s*(?:k|million|thousand))\b(?:\s*(?:per|a|each)\s+(?:month|year|annum|week|day)|\s*monthly|\s*annually)?/gi;
-const IMMEDIATE_OBJECT_ADJUNCT_PATTERN =
-  /(?<!\d)[,;:](?!\d)|\b(?:in\s+order\s+to|so\s+as\s+to|because|since|while|when|where|which|that|who)\b/i;
-const PREPOSITIONAL_OBJECT_ADJUNCT_PATTERN =
-  /^(.*?)(?:^|\s+)(?:to\s+[a-z]+\b|(?:for|from|via|through|using)\b)/i;
-const GENERIC_CONTAINER_OBJECT_PATTERN =
-  /^(?:a|an|the|new|another|additional|second|different)?\s*(?:[a-z]+\s+)?(?:contract|agreement|arrangement|plan|policy|licen[cs]e|subscription)\b/i;
-const COMPLEMENT_ADJUNCT_PATTERNS = [
-  IMMEDIATE_OBJECT_ADJUNCT_PATTERN,
-  /\bto\s+(?!(?:buy|purchase|acquire|lease|rent|hire)\b)[a-z]+\b/i,
-  /\bfor\s+(?:our|the|their|his|her|its)?\s*(?:payroll|staff|employees?|workers?|team|department|company)\b/i
-];
+const ACTION_OBJECT_TRUNCATION_PATTERN =
+  /(?<!\d)[,;:](?!\d)|\b(?:in\s+order\s+to|so\s+as\s+to|to\s+(?:assist|manage|operate|support|run|use|help|process|handle|replace|pay|settle)|for\s+(?:our|the|their|his|her|its)\s+(?:payroll|staff|employees?|workers?|team|department|company|office|business)|from\s+(?:a|an|the|our|their|his|her|its|my|your)|because|since|while|when|where|which|that|who)\b/i;
 
-/** Resolves the primary accounting domains of a transaction action from its direct object before purpose/adjunct clauses. */
-function extractPrimaryActionDomains(
+/** Resolves the primary accounting domains of a transaction action from its verb, direct object, or subject. */
+function resolveActionDomains(
   actionVerb: string,
   objectAfterAction: string,
   clauseText: string,
-  subjectBeforeVerb?: string
+  subjectBeforeVerb: string
 ): Set<string> {
+  if (/^leased$/i.test(actionVerb) || /\b(?:entered\s+into|signed)\s+(?:a|an|the|our|new|another)?\s*(?:[a-z]+\s+){0,2}lease\b/i.test(clauseText)) {
+    return new Set(['lease']);
+  }
+  if (/^hired$/i.test(actionVerb)) return new Set(['payroll']);
+  if (/^(?:borrowed|took\s+out)$/i.test(actionVerb)) return new Set(['financing']);
+
   const strippedObject = objectAfterAction
     .replace(PRICE_CONSIDERATION_PHRASE_PATTERN, ' ')
     .replace(STANDALONE_AMOUNT_PHRASE_PATTERN, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  const cutoffMatch = ACTION_OBJECT_TRUNCATION_PATTERN.exec(strippedObject);
+  const objectSpan = (cutoffMatch ? strippedObject.slice(0, cutoffMatch.index) : strippedObject).trim();
+  const objectDomains = resolveHeadNounDomains(objectSpan);
+  if (objectDomains.size > 0) return objectDomains;
 
-  let cutoff = strippedObject.length;
-  const immediateAdjunct = IMMEDIATE_OBJECT_ADJUNCT_PATTERN.exec(strippedObject);
-  if (immediateAdjunct) {
-    cutoff = Math.min(cutoff, immediateAdjunct.index);
-  }
-  const prepositionalAdjunct = PREPOSITIONAL_OBJECT_ADJUNCT_PATTERN.exec(strippedObject);
-  if (prepositionalAdjunct) {
-    cutoff = Math.min(cutoff, prepositionalAdjunct[1].length);
-  }
-
-  const primaryObjectSpan = strippedObject.slice(0, cutoff).trim();
-  const primaryObjectDomains = extractSubjectDomains(primaryObjectSpan);
-  if (primaryObjectDomains.size > 0) {
-    return primaryObjectDomains;
-  }
-
-  if (GENERIC_CONTAINER_OBJECT_PATTERN.test(primaryObjectSpan)) {
-    let complementCutoff = strippedObject.length;
-    for (const pattern of COMPLEMENT_ADJUNCT_PATTERNS) {
-      const match = pattern.exec(strippedObject);
-      if (match) {
-        complementCutoff = Math.min(complementCutoff, match.index);
-      }
-    }
-    const complementSpan = strippedObject.slice(0, complementCutoff).trim();
-    const complementDomains = extractSubjectDomains(complementSpan);
-    if (complementDomains.size > 0) {
-      return complementDomains;
-    }
-  }
-
-  const resolvedSubjectBeforeVerb = subjectBeforeVerb ??
-    clauseText.slice(0, Math.max(0, clauseText.length - objectAfterAction.length - actionVerb.length));
-  const subjectDomains = extractSubjectDomains(resolvedSubjectBeforeVerb);
-  if (subjectDomains.size > 0) {
-    return subjectDomains;
-  }
-
-  if (/^hired$/i.test(actionVerb)) return new Set(['payroll']);
-  if (/^leased$/i.test(actionVerb)) return new Set(['lease']);
-  if (/^(?:borrowed|took\s+out)$/i.test(actionVerb)) return new Set(['financing']);
-
-  return cutoff >= strippedObject.length ? extractSubjectDomains(clauseText) : new Set<string>();
+  return resolveHeadNounDomains(subjectBeforeVerb);
 }
 
-function isScopeOpenAfterIntro(afterIntro: string): boolean {
-  if (/[;:]/.test(afterIntro)) return false;
-  if (/\b(?:but\s+(?:actually|in\s+reality|in\s+fact|really|we\s+actually)|however|whereas|on\s+the\s+other\s+hand)\b/i.test(afterIntro)) {
+const HYPOTHETICAL_CONDITIONAL_PATTERN =
+  /\b(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|say(?:\s+that)?|imagine(?:\s+that)?)\b/i;
+const HYPOTHETICAL_MODAL_PATTERN =
+  /(?:\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s*$|^\s*\bhad\s+(?:i|we|they|he|she|it|the\s+company|our\s+company)\b)/i;
+const HYPOTHETICAL_SCOPE_INTRO_PATTERN =
+  /(?:^|[,;:]\s*|\b(?:and|or|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|say(?:\s+that)?|imagine(?:\s+that)?|(?:what|how|which|where|who|when|would|could|should)\b[^.!?;,:]*\b(?:if|suppose(?:\s+that)?|assuming(?:\s+that)?)|(?:could|would|should|might|may|can)\s+(?:i|we|they|he|she|it|the\s+company|our\s+company)\s+(?:not\s+)?(?:have|be))\b/gi;
+
+function isHypotheticalAction(sentenceBeforeAction: string, immediateClauseBeforeAction: string): boolean {
+  if (HYPOTHETICAL_CONDITIONAL_PATTERN.test(immediateClauseBeforeAction) ||
+      HYPOTHETICAL_MODAL_PATTERN.test(immediateClauseBeforeAction)) {
+    return true;
+  }
+  let lastIntroEnd = -1;
+  for (const match of sentenceBeforeAction.matchAll(HYPOTHETICAL_SCOPE_INTRO_PATTERN)) {
+    lastIntroEnd = Math.max(lastIntroEnd, (match.index ?? 0) + match[0].length);
+  }
+  if (lastIntroEnd < 0) return false;
+  const afterIntro = sentenceBeforeAction.slice(lastIntroEnd);
+  if (/[;:]|\b(?:but\s+(?:actually|in\s+reality|in\s+fact|really|we\s+actually)|however|whereas|on\s+the\s+other\s+hand|(?:and|or)\s+(?:actually|in\s+fact|in\s+reality))\b/i.test(afterIntro)) {
     return false;
   }
-  for (const commaMatch of afterIntro.matchAll(/(?<!\d),(?!\d)/g)) {
-    const commaIndex = commaMatch.index ?? 0;
-    const beforeComma = afterIntro.slice(0, commaIndex);
-    const afterComma = afterIntro.slice(commaIndex + 1);
-    const isCoordinatingConjunction =
-      /^\s*(?:and|or)\b/i.test(afterComma) &&
-      !/^\s*(?:and|or)\s+(?:actually|in\s+fact|in\s+reality)\b/i.test(afterComma);
-    const isElidedVpContinuation =
-      HAS_TRANSACTION_ACTION_PATTERN.test(beforeComma) &&
+  for (const commaMatch of afterIntro.matchAll(/,/g)) {
+    const idx = commaMatch.index ?? 0;
+    const beforeComma = afterIntro.slice(0, idx);
+    const afterComma = afterIntro.slice(idx + 1);
+    const isCoordinating = /^\s*(?:and|or)\b/i.test(afterComma);
+    const isElidedVp = HAS_TRANSACTION_ACTION_PATTERN.test(beforeComma) &&
       (afterComma.trim().length === 0 || ELIDED_VP_CONTINUATION_PATTERN.test(afterComma));
-    if (!isCoordinatingConjunction && !isElidedVpContinuation) {
-      return false;
-    }
+    if (!isCoordinating && !isElidedVp) return false;
   }
   return true;
-}
-
-/** Checks whether a conditional hypothetical introducer remains open across coordinated clauses before the action. */
-function hasActiveConditionalScope(actionLead: string): boolean {
-  const lead = actionLead.replace(/(?<=\d),(?=\d)/g, '');
-  const introPatterns = [
-    /(?:^|(?<!\d)[,;:]\s*|\b(?:and|or|but)\s+)(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|say(?:\s+that)?|imagine(?:\s+that)?)\b/gi,
-    /(?:^|(?<!\d)[,;:]\s*)\b(?:what|how|which|where|who|when|would|could|should)\b[^.!?;,:]*\b(?:if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b/gi
-  ];
-  let lastMatchEnd = -1;
-  for (const pattern of introPatterns) {
-    for (const match of lead.matchAll(pattern)) {
-      lastMatchEnd = Math.max(lastMatchEnd, (match.index ?? 0) + match[0].length);
-    }
-  }
-  if (lastMatchEnd < 0) return false;
-  return isScopeOpenAfterIntro(lead.slice(lastMatchEnd));
-}
-
-/** Checks whether a modal hypothetical introducer remains open across coordinated clauses before the action. */
-function hasActiveModalScope(actionLead: string): boolean {
-  const lead = actionLead.replace(/(?<=\d),(?=\d)/g, '');
-  const modalIntroPattern =
-    /(?:^|(?<!\d)[,;:]\s*|\b(?:and|or|but)\s+)(?:could|would|should|might|may|can)\s+(?:i|we|they|he|she|it|the\s+company|our\s+company)\s+(?:not\s+)?(?:have|be)\b/gi;
-  let lastMatchEnd = -1;
-  for (const match of lead.matchAll(modalIntroPattern)) {
-    lastMatchEnd = Math.max(lastMatchEnd, (match.index ?? 0) + match[0].length);
-  }
-  if (lastMatchEnd < 0) return false;
-  return isScopeOpenAfterIntro(lead.slice(lastMatchEnd));
 }
 
 function extractActionClauseParts(q: string, actionIndex: number, actionEnd: number): ExtractedActionClause {
@@ -505,21 +454,8 @@ function evaluateTransactionAction(q: string, action: RegExpMatchArray): Analyze
   const negationClauseBeforeAction = normalizedActionLead.split(/[,;:]|\b(?:but|yet|however|instead|whereas)\b/i).at(-1) ?? '';
   const conditionalClauseBeforeAction = normalizedActionLead.split(/[,;:]|\b(?:and|or|but|yet|however|instead|whereas)\b/i).at(-1) ?? '';
 
-  const isNegated = NEGATED_ACTION_PATTERNS.some(pattern => pattern.test(negationClauseBeforeAction));
-
-  const activeConditionalScope = hasActiveConditionalScope(actionLead);
-  const isConditionalAction =
-    /\b(?:what\s+if|if|suppose(?:\s+that)?|assuming(?:\s+that)?|provided(?:\s+that)?|in\s+case|say(?:\s+that)?|imagine(?:\s+that)?)\b/i.test(conditionalClauseBeforeAction) ||
-    activeConditionalScope;
-  const isInterrogativeConditionalAction =
-    /\b(?:what|how|which|where|who|when|would|could|should)\b[^.!?;,:]*\b(?:if|suppose(?:\s+that)?|assuming(?:\s+that)?)\b[^.!?;,:]*$/i.test(conditionalClauseBeforeAction) ||
-    activeConditionalScope;
-  const isModalAction =
-    /\b(?:could|would|should|might|may|can)(?:\s+(?:i|we|they|he|she|it|the\s+company|our\s+company))?(?:\s+not)?(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s+(?:have|be)(?:\s+(?:subsequently|later|afterwards|then|possibly|potentially|still|instead|also))*\s*$/i.test(conditionalClauseBeforeAction) ||
-    /(?:^\s*|[,;:]\s*)\bhad\s+(?:i|we|they|he|she|it|the\s+company|our\s+company)\s+(?:(?:subsequently|later|afterwards|then|also|instead|ever)\s+)*$/i.test(conditionalClauseBeforeAction) ||
-    hasActiveModalScope(actionLead);
-
-  const isHypothetical = !isNegated && (isConditionalAction || isInterrogativeConditionalAction || isModalAction);
+  const isNegated = hasNegationInClausePrefix(negationClauseBeforeAction);
+  const isHypothetical = !isNegated && isHypotheticalAction(normalizedActionLead, conditionalClauseBeforeAction);
   const isAffirmative = !isNegated && !isHypothetical;
   const { clauseText, subjectBeforeVerb, objectAfterAction } = extractActionClauseParts(q, actionIndex, actionEnd);
 
@@ -529,7 +465,7 @@ function evaluateTransactionAction(q: string, action: RegExpMatchArray): Analyze
     isHypothetical,
     isAffirmative,
     clauseText,
-    domains: extractPrimaryActionDomains(action[0], objectAfterAction, clauseText, subjectBeforeVerb),
+    domains: resolveActionDomains(action[0], objectAfterAction, clauseText, subjectBeforeVerb),
     hasTransactionDetail: TRANSACTION_DETAIL_PATTERN.test(clauseText),
     hasNewSubject: NEW_SUBJECT_PATTERN.test(clauseText)
   };
@@ -599,6 +535,7 @@ export function startsNewAccountingScenario(
   if (!currentScenario && !context?.underlyingTransaction) return false;
 
   if (isDeferredTaxInquiry(query)) return true;
+  if (hasAffirmativeResetDirective(query)) return true;
 
   const q = query.toLowerCase();
   const activeDomains = resolveActiveScenarioDomains(currentScenario, context);
@@ -627,8 +564,8 @@ export function startsNewAccountingScenario(
       const actionObject = q.slice(actionEnd);
       const actionClauseAfter = actionObject.split(/(?<!\d)[.!?;](?!\d)/, 1)[0];
       const actionLead = q.slice(0, actionIndex).split(/(?<!\d)[.!?;](?!\d)/).at(-1) ?? '';
-      const hasSeparateObject = /\b(?:new|another|additional|second|different)\s+(?:[a-z]+\s+)?(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter.split(/[,:]/, 1)[0]);
-      const hasIndefiniteOrQuantifiedObject = /^\s+(?:(?:a|an|some|new|more|additional|two|three|four|five|\d+)\s+)?(?:[a-z]+\s+){0,2}(?:machines?|machinery|equipment|vehicles?|assets?|leases?|premises|loans?|shares?|customers?|suppliers?|employees?|workers?|staff|purchases?|acquisitions?|transactions?)\b/i.test(actionClauseAfter);
+      const hasSeparateObject = new RegExp(`\\b(?:new|another|additional|second|different|separate)\\s+(?:[a-z]+\\s+)?(?:${TRANSACTION_SUBJECT_NOUNS}|purchases?|acquisitions?|transactions?)\\b`, 'i').test(actionClauseAfter.split(/[,:]/, 1)[0]);
+      const hasIndefiniteOrQuantifiedObject = new RegExp(`^\\s+(?:(?:a|an|some|new|more|additional|two|three|four|five|\\d+)\\s+)?(?:[a-z]+\\s+){0,2}(?:${TRANSACTION_SUBJECT_NOUNS}|purchases?|acquisitions?|transactions?)\\b`, 'i').test(actionClauseAfter);
       const hasSubsequentOrAdditiveAction = /\b(?:(?:we|the company|our company|i)\s+)?(?:subsequently|later|afterwards|then|again|also|additionally|separately)(?:,\s*)?\s+(?:(?:we|the company|our company|i)\s+)?$/i.test(actionLead);
       if (hasSeparateObject && (item.hasTransactionDetail || item.hasNewSubject || hasSubsequentOrAdditiveAction)) return true;
       if ((hasSubsequentOrAdditiveAction || hasSubsequentFollowUpReference) && hasIndefiniteOrQuantifiedObject) return true;

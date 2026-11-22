@@ -1496,6 +1496,324 @@ for (const call of calls) {
       'unpaid invoice follow-up excludes employee facts from provider prompt'
     );
 
+    // Latest review findings (1–3) & practical acceptance workflows (end-to-end processAccountingQuery + scenarioState)
+    const machinePurchaseScenario = {
+      scenarioType: 'PPE_IAS16',
+      rawQuery: 'We bought a machine for SGD 50,000.',
+      transactionTitle: 'Machine purchase',
+      amount: 50000,
+      functionalCurrency: 'SGD',
+      transactionCurrency: 'SGD',
+      directGroups: [],
+      missingFields: [],
+      isComplete: true
+    };
+    const machineInitTurn = { id: 'boundary-machine-init', sender: 'user', timestamp: '', text: machinePurchaseScenario.rawQuery };
+    const machineAnswerTurn = { id: 'boundary-machine-answer', sender: 'assistant', timestamp: '', text: 'Recorded machine purchase of SGD 50,000.' };
+
+    for (const [index, laptopLeaseQuery] of [
+      'We leased a laptop for SGD 2,000.',
+      'What if we leased a laptop for SGD 2,000?'
+    ].entries()) {
+      assert.equal(assessConversationRelation(laptopLeaseQuery, machinePurchaseScenario, machinePurchaseScenario), 'NEW');
+      const laptopLeaseTurn = { id: `boundary-laptop-lease-${index}`, sender: 'user', timestamp: '', text: laptopLeaseQuery };
+      const callsBeforeLaptopLease = boundaryCalls.length;
+      const laptopLeaseResponse = await processAccountingQuery(
+        laptopLeaseQuery,
+        machinePurchaseScenario,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        [machineInitTurn, machineAnswerTurn, laptopLeaseTurn]
+      );
+      assert.equal(laptopLeaseResponse.conversationBoundaryMessageId, laptopLeaseTurn.id,
+        `new laptop lease establishes a new boundary after machinery purchase: ${laptopLeaseQuery}`);
+      const laptopLeasePrompt = boundaryCalls.slice(callsBeforeLaptopLease).map(call => call.prompt).join('\n');
+      assert.ok(
+        !laptopLeasePrompt.includes('50,000') && !laptopLeasePrompt.includes('Machine purchase'),
+        `new laptop lease excludes prior machinery facts from provider prompt: ${laptopLeaseQuery}`
+      );
+      assert.ok(
+        laptopLeasePrompt.includes(laptopLeaseQuery),
+        `new laptop lease retains its own query in provider prompt: ${laptopLeaseQuery}`
+      );
+    }
+
+    const anaphoricLeaseQuery = 'What if we leased that machine instead?';
+    assert.equal(assessConversationRelation(anaphoricLeaseQuery, machinePurchaseScenario, machinePurchaseScenario), 'RELATED');
+    const anaphoricLeaseTurn = { id: 'boundary-anaphoric-machine-lease', sender: 'user', timestamp: '', text: anaphoricLeaseQuery };
+    const callsBeforeAnaphoricLease = boundaryCalls.length;
+    const anaphoricLeaseResponse = await processAccountingQuery(
+      anaphoricLeaseQuery,
+      machinePurchaseScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [machineInitTurn, machineAnswerTurn, anaphoricLeaseTurn]
+    );
+    assert.equal(anaphoricLeaseResponse.conversationBoundaryMessageId, undefined,
+      'anaphoric machine lease variation retains prior machinery boundary');
+    const anaphoricLeasePrompt = boundaryCalls.slice(callsBeforeAnaphoricLease).map(call => call.prompt).join('\n');
+    assert.ok(
+      anaphoricLeasePrompt.includes('50,000') || anaphoricLeasePrompt.includes('Machine purchase'),
+      'anaphoric machine lease variation retains prior machinery context in provider prompt'
+    );
+
+    for (const [index, staffLaptopQuery] of [
+      'What if we bought a staff laptop?',
+      'We bought a staff laptop for SGD 2,000.',
+      'What is the GST treatment for our previous staff laptop purchase?'
+    ].entries()) {
+      const expectedRelation = index === 2 ? 'AMBIGUOUS' : 'NEW';
+      assert.equal(assessConversationRelation(staffLaptopQuery, employeeSetupScenario, employeeSetupScenario), expectedRelation);
+      const staffLaptopTurn = { id: `boundary-staff-laptop-${index}`, sender: 'user', timestamp: '', text: staffLaptopQuery };
+      const scopedStaffLaptopHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        staffLaptopTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeStaffLaptop = boundaryCalls.length;
+      const staffLaptopResponse = await processAccountingQuery(
+        staffLaptopQuery,
+        employeeSetupScenario,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        scopedStaffLaptopHistory
+      );
+      assert.equal(staffLaptopResponse.conversationBoundaryMessageId, staffLaptopTurn.id,
+        `staff laptop query establishes a new boundary against payroll: ${staffLaptopQuery}`);
+      if (index === 1) {
+        assert.equal(
+          staffLaptopResponse.scenarioState?.scenarioType,
+          'BUSINESS_EQUIPMENT_ACQUISITION',
+          'staff laptop purchase parses as BUSINESS_EQUIPMENT_ACQUISITION rather than PAYROLL_CPF_SALARY'
+        );
+      }
+      const staffLaptopPrompt = boundaryCalls.slice(callsBeforeStaffLaptop).map(call => call.prompt).join('\n');
+      assert.ok(
+        !staffLaptopPrompt.includes('58 years old') &&
+        !staffLaptopPrompt.includes('second-year Singapore PR') &&
+        !staffLaptopPrompt.includes(employeeSetupScenario.transactionTitle),
+        `staff laptop query excludes prior employee facts from provider prompt: ${staffLaptopQuery}`
+      );
+    }
+    assert.equal(
+      (await parseAccountingQuery('We bought a staff laptop for payroll for SGD 2,000.')).scenarioType,
+      'BUSINESS_EQUIPMENT_ACQUISITION',
+      'staff laptop bought for payroll parses as BUSINESS_EQUIPMENT_ACQUISITION rather than PAYROLL_CPF_SALARY'
+    );
+
+    for (const [index, softwareLicenceQuery] of [
+      'We purchased a payroll software licence for SGD 3,000.',
+      'What if we bought a licence for payroll software?'
+    ].entries()) {
+      assert.equal(assessConversationRelation(softwareLicenceQuery, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario), 'NEW');
+      const licenceTurn = { id: `boundary-software-licence-inv-${index}`, sender: 'user', timestamp: '', text: softwareLicenceQuery };
+      const callsBeforeLicenceInv = boundaryCalls.length;
+      const licenceInvResponse = await processAccountingQuery(
+        softwareLicenceQuery,
+        unpaidSupplierInvoiceScenario,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        [unpaidInvoiceInitTurn, unpaidInvoiceAnswerTurn, licenceTurn]
+      );
+      assert.equal(licenceInvResponse.conversationBoundaryMessageId, licenceTurn.id,
+        `payroll software licence purchase sets a new boundary after unpaid invoice: ${softwareLicenceQuery}`);
+      assert.equal(licenceInvResponse.scenarioState.rawQuery, softwareLicenceQuery,
+        `parsed scenarioState preserves the software licence query rather than the prior invoice: ${softwareLicenceQuery}`);
+      const licenceInvPrompt = boundaryCalls.slice(callsBeforeLicenceInv).map(call => call.prompt).join('\n');
+      assert.ok(
+        !licenceInvPrompt.includes('SGD 1,200') && !licenceInvPrompt.includes('Unpaid supplier invoice'),
+        `payroll software licence purchase excludes unpaid invoice facts from provider prompt: ${softwareLicenceQuery}`
+      );
+      assert.ok(
+        licenceInvPrompt.includes(softwareLicenceQuery),
+        `payroll software licence purchase retains its own subject in provider prompt: ${softwareLicenceQuery}`
+      );
+
+      assert.equal(assessConversationRelation(softwareLicenceQuery, employeeSetupScenario, employeeSetupScenario), 'NEW');
+      const licenceEmpTurn = { id: `boundary-software-licence-emp-${index}`, sender: 'user', timestamp: '', text: softwareLicenceQuery };
+      const scopedLicenceEmpHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        licenceEmpTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforeLicenceEmp = boundaryCalls.length;
+      const licenceEmpResponse = await processAccountingQuery(
+        softwareLicenceQuery,
+        employeeSetupScenario,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        scopedLicenceEmpHistory
+      );
+      assert.equal(licenceEmpResponse.conversationBoundaryMessageId, licenceEmpTurn.id,
+        `payroll software licence purchase sets a new boundary against payroll: ${softwareLicenceQuery}`);
+      const licenceEmpPrompt = boundaryCalls.slice(callsBeforeLicenceEmp).map(call => call.prompt).join('\n');
+      assert.ok(
+        !licenceEmpPrompt.includes('58 years old') &&
+        !licenceEmpPrompt.includes('second-year Singapore PR') &&
+        !licenceEmpPrompt.includes(employeeSetupScenario.transactionTitle),
+        `payroll software licence purchase excludes employee facts from provider prompt: ${softwareLicenceQuery}`
+      );
+    }
+
+    for (const [index, practicalNewBoundaryQuery] of [
+      'Does that CPF rule apply? If that is not relevant please forget the previous transaction.',
+      'If the candidate accepts, we hired a second employee for SGD 4,500.'
+    ].entries()) {
+      const practicalTurn = { id: `boundary-practical-new-${index}`, sender: 'user', timestamp: '', text: practicalNewBoundaryQuery };
+      const scopedPracticalHistory = buildAnalysisConversationHistory([
+        ...employeeSetupHistory,
+        employeeSetupAnswerTurn,
+        practicalTurn
+      ], employeeSetupResponse.conversationBoundaryMessageId);
+      const callsBeforePractical = boundaryCalls.length;
+      const practicalResponse = await processAccountingQuery(
+        practicalNewBoundaryQuery,
+        employeeSetupScenario,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        scopedPracticalHistory
+      );
+      assert.equal(practicalResponse.conversationBoundaryMessageId, practicalTurn.id,
+        `practical workflow sets a new boundary: ${practicalNewBoundaryQuery}`);
+      const practicalPrompt = boundaryCalls.slice(callsBeforePractical).map(call => call.prompt).join('\n');
+      assert.ok(
+        !practicalPrompt.includes('58 years old') &&
+        !practicalPrompt.includes('second-year Singapore PR') &&
+        !practicalPrompt.includes(employeeSetupScenario.transactionTitle),
+        `practical workflow excludes prior employee facts from provider prompt: ${practicalNewBoundaryQuery}`
+      );
+    }
+
+    const settleInvoiceFollowUpQuery = 'What if we settle that unpaid invoice in cash today?';
+    assert.equal(
+      assessConversationRelation(settleInvoiceFollowUpQuery, unpaidSupplierInvoiceScenario, unpaidSupplierInvoiceScenario),
+      'RELATED',
+      'valid follow-up relating to an existing unpaid invoice is classified as RELATED'
+    );
+    const settleInvoiceTurn = { id: 'boundary-settle-unpaid-invoice', sender: 'user', timestamp: '', text: settleInvoiceFollowUpQuery };
+    const callsBeforeSettleInvoice = boundaryCalls.length;
+    const settleInvoiceResponse = await processAccountingQuery(
+      settleInvoiceFollowUpQuery,
+      unpaidSupplierInvoiceScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [unpaidInvoiceInitTurn, unpaidInvoiceAnswerTurn, settleInvoiceTurn]
+    );
+    assert.equal(settleInvoiceResponse.conversationBoundaryMessageId, undefined,
+      'cash settlement follow-up on unpaid invoice retains existing conversation boundary');
+    const settleInvoicePrompt = boundaryCalls.slice(callsBeforeSettleInvoice).map(call => call.prompt).join('\n');
+    assert.ok(
+      settleInvoicePrompt.includes('SGD 1,200') || settleInvoicePrompt.includes('Unpaid supplier invoice'),
+      'cash settlement follow-up retains unpaid invoice context in provider prompt'
+    );
+
+    const salaryCorrectionFollowUpQuery = 'Actually, his monthly salary is $6,500.';
+    assert.equal(
+      assessConversationRelation(salaryCorrectionFollowUpQuery, employeeSetupScenario, employeeSetupScenario),
+      'RELATED',
+      'salary correction referring to existing employee is classified as RELATED'
+    );
+    const salaryCorrectionTurn = { id: 'boundary-salary-correction-employee', sender: 'user', timestamp: '', text: salaryCorrectionFollowUpQuery };
+    const scopedSalaryCorrectionHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      salaryCorrectionTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeSalaryCorrection = boundaryCalls.length;
+    const salaryCorrectionResponse = await processAccountingQuery(
+      salaryCorrectionFollowUpQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      scopedSalaryCorrectionHistory
+    );
+    assert.equal(salaryCorrectionResponse.conversationBoundaryMessageId, undefined,
+      'salary correction referring to existing employee retains existing conversation boundary');
+    const salaryCorrectionPrompt = boundaryCalls.slice(callsBeforeSalaryCorrection).map(call => call.prompt).join('\n');
+    assert.ok(
+      salaryCorrectionPrompt.includes('58 years old') &&
+      salaryCorrectionPrompt.includes('second-year Singapore PR'),
+      'salary correction retains existing employee age and PR context in provider prompt'
+    );
+    const nonSalaryPayrollAgeFollowUp = await parseAccountingQuery('Actually, he is 58 years old.', employeeSetupScenario);
+    assert.notEqual(
+      nonSalaryPayrollAgeFollowUp.amount,
+      58,
+      'non-salary payroll correction ("Actually, he is 58 years old.") does not overwrite monthly salary amount with 58'
+    );
+    assert.equal(
+      nonSalaryPayrollAgeFollowUp.factAmendments,
+      undefined,
+      'non-salary payroll correction does not emit a monthlySalary factAmendment'
+    );
+
+    const pronounLeaseVariationQuery = 'What if we leased it instead?';
+    assert.equal(
+      assessConversationRelation(pronounLeaseVariationQuery, machinePurchaseScenario, machinePurchaseScenario),
+      'RELATED',
+      'hypothetical variation of current transaction is classified as RELATED'
+    );
+    const pronounLeaseTurn = { id: 'boundary-pronoun-machine-lease', sender: 'user', timestamp: '', text: pronounLeaseVariationQuery };
+    const callsBeforePronounLease = boundaryCalls.length;
+    const pronounLeaseResponse = await processAccountingQuery(
+      pronounLeaseVariationQuery,
+      machinePurchaseScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      [machineInitTurn, machineAnswerTurn, pronounLeaseTurn]
+    );
+    assert.equal(pronounLeaseResponse.conversationBoundaryMessageId, undefined,
+      'hypothetical variation of current transaction retains prior machinery boundary');
+    const pronounLeasePrompt = boundaryCalls.slice(callsBeforePronounLease).map(call => call.prompt).join('\n');
+    assert.ok(
+      pronounLeasePrompt.includes('50,000') || pronounLeasePrompt.includes('Machine purchase'),
+      'hypothetical variation of current transaction retains machinery context in provider prompt'
+    );
+
+    const forgetBankChargeQuery = 'Forget the previous transaction. How do we record a SGD 500 bank charge?';
+    assert.equal(
+      assessConversationRelation(forgetBankChargeQuery, employeeSetupScenario, employeeSetupScenario),
+      'NEW',
+      'explicit forget with new independent facts is classified as NEW'
+    );
+    const forgetBankChargeTurn = { id: 'boundary-forget-bank-charge', sender: 'user', timestamp: '', text: forgetBankChargeQuery };
+    const scopedForgetBankChargeHistory = buildAnalysisConversationHistory([
+      ...employeeSetupHistory,
+      employeeSetupAnswerTurn,
+      forgetBankChargeTurn
+    ], employeeSetupResponse.conversationBoundaryMessageId);
+    const callsBeforeForgetBankCharge = boundaryCalls.length;
+    const forgetBankChargeResponse = await processAccountingQuery(
+      forgetBankChargeQuery,
+      employeeSetupScenario,
+      'SFRS_I',
+      adapters[2].settings,
+      'unused',
+      scopedForgetBankChargeHistory
+    );
+    assert.equal(forgetBankChargeResponse.conversationBoundaryMessageId, forgetBankChargeTurn.id,
+      'explicit forget with new independent facts establishes a new conversation boundary');
+    const forgetBankChargePrompt = boundaryCalls.slice(callsBeforeForgetBankCharge).map(call => call.prompt).join('\n');
+    assert.ok(
+      !forgetBankChargePrompt.includes('58 years old') &&
+      !forgetBankChargePrompt.includes('second-year Singapore PR') &&
+      !forgetBankChargePrompt.includes(employeeSetupScenario.transactionTitle),
+      'explicit forget with new independent facts excludes prior employee facts from provider prompt'
+    );
+    assert.ok(
+      forgetBankChargePrompt.includes('SGD 500') && forgetBankChargePrompt.includes('bank charge'),
+      'explicit forget with new independent facts retains the new bank charge query in provider prompt'
+    );
+
     const payrollInitTurn = {
       id: 'boundary-payroll-init-user',
       sender: 'user',

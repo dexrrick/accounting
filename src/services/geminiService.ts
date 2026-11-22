@@ -1058,7 +1058,7 @@ async function processAccountingQueryCore(
     !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
     !journalRequested && !outputJournalRequested && !retainConversationContext;
   const conflictingPriorSubject = !retainConversationContext && hasConflictingPriorSubject(userInput, activeScenario);
-  if (independentStatutoryRequest || conflictingPriorSubject) {
+  if (explicitNewQuestion || independentStatutoryRequest || conflictingPriorSubject) {
     const currentUserTurn = [...chatHistory].reverse().find(message =>
       message.sender === 'user' && message.text.trim() === userInput.trim());
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];

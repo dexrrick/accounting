@@ -14,7 +14,7 @@ import { defaultTransactionUnderstandingService } from '../services/transactionU
 import { extractAccountingContext, calculateAccountingDelta, commitAccountingEvent } from '../services/conversationAccountingState';
 import { isDeferredTaxInquiry, startsNewAccountingScenario } from '../services/conversationBoundary';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
-import { applyFactAmendments, buildAmendedQuery, resolveFactAmendment } from '../services/factAmendmentService';
+import { applyFactAmendments, buildAmendedQuery, isSingleMonthlySalaryAmendment, resolveFactAmendment } from '../services/factAmendmentService';
 import { assessCorporateTaxTreatment } from '../services/corporateTaxTreatment';
 import { matchBasicTransaction, resolveBasicOwnerDrawingsFollowUp } from './basicTransactions';
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
@@ -364,7 +364,12 @@ export async function parseAccountingQuery(
     currentScenario &&
     /\b(fvoci|fvtpl|fair value through other comprehensive income|fair value through profit or loss)\b/i.test(query)
   );
-  const amendmentResolution = isMeasurementBasisFollowUp
+  const isNonSalaryPayrollCorrection = Boolean(
+    currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+    !isSingleMonthlySalaryAmendment(query) &&
+    !/\b(?:salary|wages?|monthly|per\s+month|a\s+month)\b|(?:sgd|s\$|usd|eur|gbp|\$)\s*\d/i.test(query)
+  );
+  const amendmentResolution = (isMeasurementBasisFollowUp || isNonSalaryPayrollCorrection)
     ? { intent: 'QUESTION' as const }
     : resolveFactAmendment(query, currentScenario);
   if (currentScenario && amendmentResolution.intent === 'FACT_AMENDMENT' && amendmentResolution.clarificationNeeded) {
@@ -628,19 +633,26 @@ export async function parseAccountingQuery(
     (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
     (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
 
+  const isNonPayrollAssetOrLicenceAcquisition =
+    /\b(?:bought|purchased|acquired|leased|rented)\b/i.test(q) &&
+    /\b(?:laptops?|computers?|servers?|printers?|equipment|machinery|plant|furniture|vehicles?|cars?|vans?|trucks?|software|licen[cs]es?|subscriptions?)\b/i.test(q) &&
+    !/\b(?:cpf|salary|wages?|final\s+pay|prorat|earning|earns)\b/i.test(q);
+
   const isPayrollSalaryQuery =
-    requestsIndependentFinalSalary ||
-    (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
-      (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-      (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
-      // A correction such as "I mean 10,000 a month" inherits the payroll
-      // context rather than being routed to the statutory-advisory fallback.
-      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-        hasSalaryFigure &&
-        /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
-      (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-        /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
-    ));
+    !isNonPayrollAssetOrLicenceAcquisition && (
+      requestsIndependentFinalSalary ||
+      (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
+        (hasSalaryFigure && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+        (hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+        // A correction such as "I mean 10,000 a month" inherits the payroll
+        // context rather than being routed to the statutory-advisory fallback.
+        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+          hasSalaryFigure &&
+          /\b(i mean|actually|correction|correct(?:ion|ed)?|rather|instead)\b/i.test(query)) ||
+        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+          /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
+      ))
+    );
 
   if (isPayrollSalaryQuery) {
     if (requestsIndependentFinalSalary && (!payrollSalaryAmountMatch || hasAmbiguousPayrollEmployeeOwnership)) {
@@ -2060,7 +2072,7 @@ export async function parseAccountingQuery(
   // invoice/payable entry and label that assumption clearly; a later payment
   // can be recorded as its own settlement event.
   const isBusinessEquipmentAcquisition =
-    /\b(equipment|computer server|server|computer|machinery|plant)\b/i.test(query) &&
+    /\b(equipment|computer server|server|computer|laptops?|printers?|machinery|plant)\b/i.test(query) &&
     /\b(incurred|purchased|bought|acquired|purchase)\b/i.test(query);
   if (isBusinessEquipmentAcquisition) {
     const match = query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|million|thousand))?/i);
