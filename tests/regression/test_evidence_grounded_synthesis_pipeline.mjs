@@ -1247,6 +1247,55 @@ try {
     /href="https:\/\/www\.mom\.gov\.sg\/employment-practices\/hours-of-work-overtime-and-rest-days"/i,
     'the panel links the excerpt to the canonical MOM Hours of Work source');
 
+  const scopeCases = [
+    {
+      query: 'The employee is outside Part 4 of the Employment Act. When are ordinary salary and overtime pay due?',
+      overtimeSubject: 'overtime payment deadline',
+      applicationStatus: 'NOT_REQUIRED',
+      expected: { deadlineInAnswer: false, deadlineInEvidence: false, contractInAnswer: true, contractInEvidence: true }
+    },
+    {
+      query: 'The employee is covered under Part 4, but overtime is not covered by the company handbook. When are ordinary salary and overtime pay due?',
+      overtimeSubject: 'overtime payment deadline for overtime not covered by the company handbook',
+      applicationStatus: 'UNRESOLVED',
+      expected: { deadlineInAnswer: true, deadlineInEvidence: true, contractInAnswer: false, contractInEvidence: false }
+    }
+  ];
+  const checkedScopes = scopeCases.map(({ query, overtimeSubject, applicationStatus }) => {
+    const workstreams = structuredClone(contextLimitFallback.authorityWorkstreams);
+    workstreams.query = query;
+    const mom = workstreams.workstreams.find(stream => stream.authority === 'MOM');
+    const overtime = mom.issues.find(issue => /^overtime payment deadline/.test(issue.subject));
+    const salary = mom.issues.find(issue => /^ordinary salary payment deadline/.test(issue.subject));
+    for (const [issue, subject] of [[overtime, overtimeSubject], [salary, 'ordinary salary payment deadline']]) {
+      workstreams.issuePlan.issues.find(planned => planned.id === issue.issueId).subject = subject;
+      issue.subject = subject;
+    }
+    overtime.applicationStatus = applicationStatus;
+    assert.ok(overtime.verifiedClaims.some(claim => /\b14 days\b/.test(claim.quote)),
+      'the scope controls start with source-backed overtime deadline evidence');
+    const fallback = createGroundedSynthesisFailureResponse(
+      contextLimitFallback.result, query, 'SFRS_I', workstreams, undefined, 'CONTEXT_LIMIT'
+    );
+    assert.equal(fallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+    assert.match(fallback.messageText, /salary at least once a month and within 7 days/i);
+    const sources = fallback.scenarioState.authorityEvidencePresentation.workstreams
+      .find(stream => stream.authority === 'MOM').sources;
+    const overtimeEvidence = sources.filter(source => source.officialUrl === overtimeUrl)
+      .flatMap(source => source.claims.filter(claim => claim.issueIds.includes(overtime.issueId)));
+    assert.ok(sources.some(source => source.officialUrl === momSalaryUrl &&
+      source.claims.some(claim => claim.issueIds.includes(salary.issueId) && /within 7 days/i.test(claim.text))),
+      'ordinary-salary evidence stays with the salary issue');
+    return {
+      deadlineInAnswer: /\b14 days\b/.test(fallback.messageText),
+      deadlineInEvidence: overtimeEvidence.some(claim => /\b14 days\b/.test(claim.text)),
+      contractInAnswer: fallback.messageText.includes(contractQuote),
+      contractInEvidence: overtimeEvidence.some(claim => claim.text === contractQuote)
+    };
+  });
+  assert.deepEqual(checkedScopes, scopeCases.map(testCase => testCase.expected),
+    'current Part 4 exclusions apply to neutral overtime topics and unrelated handbook wording preserves covered evidence');
+
   const missingContractWorkstreams = structuredClone(contextLimitFallback.authorityWorkstreams);
   for (const stream of missingContractWorkstreams.workstreams) {
     for (const issue of stream.issues) {

@@ -3092,7 +3092,8 @@ async function runNumericProductionClaims({ query: queryText, issues, candidates
     })) };
   });
   const fallbackResult = await tryGenerateGroundedSynthesis(makeInput({
-    query: queryText, issues: [contractOnlyIssue], issuePlanIssues: fallbackPlan,
+    query: 'What should a payroll team check before using the Part 4 overtime payment deadline?',
+    issues: [contractOnlyIssue], issuePlanIssues: fallbackPlan,
     evidenceQuality: { eligibleRecords: [contractOnlySource], missingFacts: [], targetDate: ADMITTED_DOCUMENT_TEST_DATE }
   }), { call: fallbackScript.call });
   assert.ok(fallbackResult);

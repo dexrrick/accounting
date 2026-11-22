@@ -13,7 +13,7 @@ import type { GroundedReasoningContext } from './groundingContextBuilder';
 import { isCurrentRequestCompletenessContext } from './requestCompleteness';
 import { verifyEvidenceClaims, type VerifiedEvidenceClaim } from '../verification/claimEvidenceVerifier';
 import { completeVisibleEvidenceListSpan, isWorkedExampleHeading, normalizeEvidenceText, splitEvidenceTextBlocks, visibleEvidenceListSpan } from '../utils/evidenceTextBoundaries';
-import { isMomFourteenDayOvertimeText, isMomPartFourExcludedForQuestion } from '../utils/authorityEvidencePresentation';
+import { isMomFourteenDayOvertimeText, isMomOvertimePaymentIssue, isMomPartFourExcludedForQuestion } from '../utils/authorityEvidencePresentation';
 import { MOM_OVERTIME_URL } from '../retrieval/acraMomPracticalRules20261027';
 import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
 import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
@@ -352,14 +352,13 @@ function isMomFourteenDayOvertimePassage(passage: EvidencePassage): boolean {
     isMomFourteenDayOvertimeText(passage.verifiedQuote);
 }
 
-function isMomOutsidePartFourIssue(issue: RequestedIssue | undefined, query: string): boolean {
+function isMomOutsidePartFourIssue(
+  issue: RequestedIssue | undefined,
+  query: string,
+  relatedIssueSubjects: string[]
+): boolean {
   return Boolean(issue?.domain === 'MOM_EMPLOYMENT' && issue.authorities?.includes('MOM') &&
-    isMomPartFourExcludedForQuestion(query, issue.subject, issue.applicationStatus));
-}
-
-function isMomOvertimePaymentIssue(subject: string): boolean {
-  return /\bovertime\b/i.test(subject) && /\b(?:pay|payment|deadline|terms|entitlement)\b/i.test(subject) &&
-    !/\bordinary\s+salary\b/i.test(subject);
+    isMomPartFourExcludedForQuestion(query, issue.subject, issue.applicationStatus, relatedIssueSubjects));
 }
 
 function isMomContractExclusionText(text: string): boolean {
@@ -586,10 +585,12 @@ export function prepareAuthorityWorkstreamsForPresentation(
     ...workstreams,
     workstreams: workstreams.workstreams.map(stream => {
       if (stream.authority !== 'MOM' || stream.domain !== 'MOM_EMPLOYMENT') return stream;
-      const relatedIssueSubjects = stream.issues.map(issue => issue.subject);
+      const relatedIssueSubjects = stream.issues
+        .filter(issue => issueMatchesCurrentWorkstreamPlan(workstreams, workstreams.query, stream.authority, issue))
+        .map(issue => issue.subject);
       const excludedOvertimeIssues = stream.issues.filter(issue =>
         issueMatchesCurrentWorkstreamPlan(workstreams, workstreams.query, stream.authority, issue) &&
-        isMomPartFourExcludedForQuestion(workstreams.query, issue.subject, issue.applicationStatus) &&
+        isMomPartFourExcludedForQuestion(workstreams.query, issue.subject, issue.applicationStatus, relatedIssueSubjects) &&
         isMomOvertimePaymentIssue(issue.subject)
       );
       if (excludedOvertimeIssues.length === 0) return stream;
@@ -613,7 +614,7 @@ export function prepareAuthorityWorkstreamsForPresentation(
             return overtimeExclusionApplies &&
               (isMomPartFourCoverageText(claim.quote) || isMomContractExclusionText(claim.quote));
           });
-          if (verifiedClaims.length === issue.verifiedClaims.length && !issueExplicitlyExcluded) return issue;
+          if (verifiedClaims.length === issue.verifiedClaims.length && !overtimeExclusionApplies && !issueExplicitlyExcluded) return issue;
 
           if (!overtimeExclusionApplies) {
             if (isOrdinarySalaryIssue && verifiedClaims.length > 0) {
@@ -1982,6 +1983,11 @@ function validateBundle(
   const claims: SynthesisClaim[] = [];
   const invalidClaims: InvalidClaim[] = [];
   const seen = new Set<string>();
+  const momIssues = packet.requestedIssues.filter(issue => issue.domain === 'MOM_EMPLOYMENT' && issue.authorities?.includes('MOM'));
+  const momIssueSubjects = momIssues.map(issue => issue.subject);
+  const outsidePartFourIssueIds = new Set(momIssues
+    .filter(issue => isMomPartFourExcludedForQuestion(packet.query, issue.subject, issue.applicationStatus, momIssueSubjects))
+    .map(issue => issue.id));
   for (const item of rawClaims) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('Evidence-grounded synthesis response contract could not be validated.');
     const raw = item as Record<string, unknown>;
@@ -2008,10 +2014,6 @@ function validateBundle(
     if (!reason && (!supportIds || !factRefs)) reason = 'Claim references an unknown or duplicate packet ID.';
     if (!reason && issueId && !issueIds.has(issueId)) reason = 'Claim references an issue outside the admitted packet.';
     if (!reason && kind !== 'LIMITATION' && supportIds) {
-      const outsidePartFourIssueIds = new Set(packet.requestedIssues
-        .filter(issue => isMomPartFourExcludedForQuestion(packet.query, issue.subject, issue.applicationStatus,
-          packet.requestedIssues.map(candidate => candidate.subject)))
-        .map(issue => issue.id));
       const claimIssueIds = new Set([
         ...(issueId ? [issueId] : []),
         ...supportIds.flatMap(id => packet.passages.find(passage => passage.id === id)?.issueId || [])
@@ -2156,8 +2158,12 @@ function appendMOMContractScopeFallbacks(
   packet: ReturnType<typeof buildPacket>
 ): SynthesisClaim[] {
   const completedClaims = [...claims];
+  const requestedIssueSubjects = packet.requestedIssues.filter(candidate =>
+    candidate.domain === 'MOM_EMPLOYMENT' && candidate.authorities?.includes('MOM')
+  ).map(candidate => candidate.subject);
   for (const issue of packet.requestedIssues) {
-    if (!isMomOutsidePartFourIssue(issue, packet.query) || !isMomOvertimePaymentIssue(issue.subject)) continue;
+    if (!isMomOutsidePartFourIssue(issue, packet.query, requestedIssueSubjects) ||
+        !isMomOvertimePaymentIssue(issue.subject)) continue;
     for (const contractPassage of packet.passages.filter(passage =>
       passage.issueId === issue.id && isMomContractExclusionPassage(passage))) {
       const hasBoundContractRule = completedClaims.some(claim => claim.kind === 'RULE' && claim.issueId === issue.id &&

@@ -157,6 +157,11 @@ export interface AuthorityEvidencePresentation {
   gaps: string[];
 }
 
+export function isMomOvertimePaymentIssue(subject: string): boolean {
+  return /\bovertime\b/i.test(subject) && /\b(?:pay|payment|deadline|terms|entitlement)\b/i.test(subject) &&
+    !/\bordinary\s+salary\b/i.test(subject);
+}
+
 export function isMomPartFourExcludedForQuestion(
   query: string,
   issueSubject: string,
@@ -165,17 +170,23 @@ export function isMomPartFourExcludedForQuestion(
 ): boolean {
   const describesExclusion = (text: string) =>
     /\b(?:not covered (?:under|by)|outside|excluded from)\s+(?:(?:the\s+)?scope of\s+)?(?:the\s+)?(?:Part\s+(?:4|IV)\b|overtime\s+provisions?\b)/i.test(text);
-  const explicitlyScopedInCurrentQuestion = describesExclusion(query) && describesExclusion(issueSubject);
-  const previouslyRecognizedUnresolvedScope = applicationStatus === 'UNRESOLVED' &&
-    /\bnot covered\b|\b(?:outside|excluded from)\s+(?:the\s+)?(?:scope of\s+)?Part\s+(?:4|IV)\b/i.test(issueSubject);
-  const hasRelatedExcludedOvertimeIssue = relatedIssueSubjects.some(subject => subject !== issueSubject &&
-    (describesExclusion(query) && describesExclusion(subject) ||
-      /\bnot covered\b|\b(?:outside|excluded from)\s+(?:the\s+)?(?:scope of\s+)?Part\s+(?:4|IV)\b/i.test(subject)) &&
-    /\bovertime\b/i.test(subject) && !/\bordinary\s+salary\b/i.test(subject));
-  const isSeparatelyPartFourCovered = /\bcovered (?:under|by)\s+(?:the\s+)?Part\s+(?:4|IV)\b|\bcovered by\s+(?:the\s+)?overtime\s+provisions?\b/i.test(issueSubject);
-  const affectedByRelatedExclusion = hasRelatedExcludedOvertimeIssue && !isSeparatelyPartFourCovered &&
-    /\b(?:overtime|ordinary\s+salary|regular\s+salary)\b/i.test(issueSubject);
-  return explicitlyScopedInCurrentQuestion || previouslyRecognizedUnresolvedScope || affectedByRelatedExclusion;
+  const hasAffirmativeCoverage = (text: string) =>
+    [...text.matchAll(/\b(?:(not|never|isn't|aren't|wasn't|weren't)\s+)?covered (?:under|by)\s+(?:the\s+)?(?:Part\s+(?:4|IV)\b|overtime\s+provisions?\b)/gi)]
+      .some(match => !match[1]);
+  if (hasAffirmativeCoverage(issueSubject)) return false;
+  const questionExcludes = describesExclusion(query);
+  if (describesExclusion(issueSubject) && (questionExcludes || applicationStatus === 'UNRESOLVED')) return true;
+
+  const paymentIssues = relatedIssueSubjects.filter(isMomOvertimePaymentIssue);
+  const solePaymentIssue = paymentIssues.length === 1 ? paymentIssues[0] : undefined;
+  const inferredOwner = solePaymentIssue && questionExcludes &&
+    !hasAffirmativeCoverage(query) && !hasAffirmativeCoverage(solePaymentIssue) ? solePaymentIssue : undefined;
+  if (isMomOvertimePaymentIssue(issueSubject)) return inferredOwner === issueSubject;
+
+  // Companion salary and payroll rows can carry the same mixed source excerpt.
+  return /\b(?:overtime|ordinary\s+salary|regular\s+salary)\b/i.test(issueSubject) &&
+    paymentIssues.some(subject => subject === inferredOwner ||
+      (describesExclusion(subject) && !hasAffirmativeCoverage(subject)));
 }
 
 export function isMomFourteenDayOvertimeText(text: string): boolean {
