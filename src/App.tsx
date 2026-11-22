@@ -22,7 +22,7 @@ import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEviden
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
-import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
+import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -260,7 +260,8 @@ export const App: React.FC = () => {
     : currentUncommittedGroups.length > 0
       ? { ...computed, groups: currentUncommittedGroups }
       : committedJournal;
-  const hasJournal = displayedJournal.groups.some((group) => group.lines.length > 0);
+  const hasJournal = !isCurrentJournalPreparationFailure(scenario) &&
+    displayedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
   const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(

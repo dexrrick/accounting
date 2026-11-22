@@ -76,20 +76,20 @@ export function repairAndParseAIJson(rawJsonText: string): any {
 
   // 7. Resilient Schema Extractor Fallback (Guaranteed to succeed)
   const fallback = extractAccountingSchemaFallback(text);
-  if (containsStructuredPayloadStart(text)) {
-    // A partially salvaged structured response is not safe to display or use
-    // as tax evidence. Keep the fallback schema for existing callers, but
-    // mark it so policy renderers can fail closed on provider-supplied content.
-    malformedJsonFallbacks.add(fallback);
-  }
+  schemaFallbacks.set(fallback, containsStructuredPayloadStart(text));
   return fallback;
 }
 
-const malformedJsonFallbacks = new WeakSet<object>();
+const schemaFallbacks = new WeakMap<object, boolean>();
 
 /** True only for objects produced by the malformed structured-JSON fallback. */
 export function isMalformedAIJsonFallback(value: unknown): boolean {
-  return value !== null && typeof value === 'object' && malformedJsonFallbacks.has(value);
+  return value !== null && typeof value === 'object' && schemaFallbacks.get(value) === true;
+}
+
+/** True for any object recovered by the schema extractor after JSON parsing failed. */
+export function isAIJsonSchemaFallback(value: unknown): boolean {
+  return value !== null && typeof value === 'object' && schemaFallbacks.has(value);
 }
 
 function containsStructuredPayloadStart(text: string): boolean {

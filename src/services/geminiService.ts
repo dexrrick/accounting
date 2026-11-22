@@ -8,7 +8,7 @@ import { buildSupplierInvoiceCorrectionJournal, calculateDoubleEntries } from '.
 import { defaultAccountingGuardrails, type GuardrailViolation } from '../engine/accountingGuardrails';
 import { validateJournalGroups } from '../verification/journalIntegrity';
 import { appendStatutorySourceFooter } from '../utils/statutoryLinkResolver';
-import { repairAndParseAIJson } from '../utils/jsonRepair';
+import { isAIJsonSchemaFallback, repairAndParseAIJson } from '../utils/jsonRepair';
 import { callAzureOpenAI, callStandardOpenAI } from './azureOpenAiService';
 import { toSafeProviderError } from './aiTransport';
 import { fetchGemini } from './geminiProxyTransport';
@@ -25,7 +25,7 @@ import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManag
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 import { evaluateAccountingScenarioBoundary, isJournalDisplayRequest } from './conversationBoundary';
-import { getDisplayableUncommittedJournalGroups } from './committedJournal';
+import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -1727,6 +1727,20 @@ function contextualIrasIssueMatchesWorkstreams(
       contextualIssue.governingAuthorities.includes('IRAS')));
 }
 
+function renderJournalPreparationFailure(
+  scenarioState: AccountingScenarioState,
+  modelResponseIncomplete = false
+): GeminiResponse {
+  return {
+    messageText: modelResponseIncomplete
+      ? '### Journal Not Prepared\n\nThe model returned an incomplete response for the current transaction. Please retry the original journal request.'
+      : '### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.',
+    scenarioState,
+    displayFullAnswer: true,
+    answerPath: 'ACCOUNTING_JOURNAL_PREPARATION_FAILURE'
+  };
+}
+
 async function processAccountingQueryCore(
   userInput: string,
   currentScenario: AccountingScenarioState | null,
@@ -1817,10 +1831,15 @@ async function processAccountingQueryCore(
   };
 
   // A request to reveal or repeat the already-calculated journal must not be
-  // reclassified as a new transaction and sent to a model.  Preserve the last
-  // committed journal exactly; if none exists, say so rather than inventing
-  // one from generic expense defaults.
+  // reclassified as a new transaction and sent to a model. Keep a failed
+  // current journal request in scope, or recall the selected validated journal.
   if (isJournalDisplayRequest(userInput)) {
+    if (isCurrentJournalPreparationFailure(currentScenario)) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return renderJournalPreparationFailure(currentScenario);
+    }
     const hasRetainedCommittedSnapshot = Boolean(currentScenario?.committedDirectGroups?.length);
     const candidateGroups = currentScenario?.committedDirectGroups?.length
       ? currentScenario.committedDirectGroups
@@ -2411,7 +2430,8 @@ async function processAccountingQueryCore(
             groundedContext,
             deterministicScenario,
             profiler,
-            imageAttachments
+            imageAttachments,
+            journalRequested
           )));
         } catch (err: any) {
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -2447,7 +2467,8 @@ async function processAccountingQueryCore(
           groundedContext,
           deterministicScenario,
           profiler,
-          imageAttachments
+          imageAttachments,
+          journalRequested
         )));
       } catch (err: any) {
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
@@ -3094,7 +3115,8 @@ export async function callGeminiAPI(
   groundedContext?: GroundedReasoningContext,
   deterministicScenario?: AccountingScenarioState | null,
   existingProfiler?: RequestProfiler,
-  imageAttachments: ChatImageAttachment[] = []
+  imageAttachments: ChatImageAttachment[] = [],
+  isJournalRequest?: boolean
 ): Promise<GeminiResponse> {
   if (imageAttachments.length > 0 && !supportsGeminiVision(modelName)) {
     throw new Error('The selected Gemini model cannot analyse images.');
@@ -3299,6 +3321,29 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
 
   const tPost0 = Date.now();
   const parsed = repairAndParseAIJson(rawJsonText);
+  const textJournalRequest = (isJournalRequest ?? context.classification.journalEntryRequired) &&
+    imageAttachments.length === 0 && !context.evidenceQuality;
+  if (textJournalRequest && isAIJsonSchemaFallback(parsed)) {
+    const failureScenario: AccountingScenarioState = {
+      scenarioType: deterministicScenario?.scenarioType || 'UNRECOGNIZED',
+      rawQuery: userInput,
+      transactionTitle: deterministicScenario?.rawQuery === userInput
+        ? deterministicScenario.transactionTitle
+        : 'Current journal request',
+      functionalCurrency: deterministicScenario?.functionalCurrency || 'SGD',
+      transactionCurrency: deterministicScenario?.transactionCurrency || 'SGD',
+      directGroups: [],
+      isComplete: false,
+      isHypothetical: context.semanticUnderstanding?.isHypothetical ?? deterministicScenario?.isHypothetical,
+      semanticUnderstanding: context.semanticUnderstanding,
+      journalPreparationFailed: true,
+      missingFields: []
+    };
+    profiler.recordStage('assembly', Date.now() - tPost0);
+    profiler.recordFirstVisibleResponse();
+    profiler.logSummary();
+    return renderJournalPreparationFailure(failureScenario, true);
+  }
   const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
   if (imageEvidence.length > 0) {
@@ -3385,6 +3430,10 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.`;
       }
     }
+  }
+
+  if (textJournalRequest && context.semanticUnderstanding?.isHypothetical && !result.scenarioState.isComplete) {
+    result.scenarioState.journalPreparationFailed = true;
   }
 
   profiler.recordStage('assembly', Date.now() - tPost0);

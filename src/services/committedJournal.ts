@@ -42,6 +42,13 @@ export function getDisplayableUncommittedJournalGroups(
   return groups.some(group => group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') ? groups : [];
 }
 
+/** True while the active, incomplete result has no prepared journal to recall. */
+export function isCurrentJournalPreparationFailure(
+  candidate: AccountingScenarioState | null
+): candidate is AccountingScenarioState & { journalPreparationFailed: true; isComplete: false } {
+  return Boolean(candidate?.journalPreparationFailed && !candidate.isComplete);
+}
+
 /** Select prior accounting context only for an accounting operation that needs it. */
 export function selectAccountingScenarioForRequest(
   query: string,
@@ -50,7 +57,11 @@ export function selectAccountingScenarioForRequest(
   separateAnalysis = false
 ): AccountingScenarioState | null {
   if (separateAnalysis) return null;
-  if (isJournalDisplayRequest(query)) return committedScenario;
+  if (isJournalDisplayRequest(query)) {
+    const explicitlyRequestsLast = /\blast\b/i.test(query);
+    if (isCurrentJournalPreparationFailure(activeScenario) && !explicitlyRequestsLast) return activeScenario;
+    return committedScenario;
+  }
   if (!committedScenario) return activeScenario;
 
   const classification = classifyQuestion(query);

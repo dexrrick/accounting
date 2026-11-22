@@ -247,6 +247,8 @@ export interface AccountingScenarioState {
   directGroups?: JournalEntryGroup[];
   committedDirectGroups?: JournalEntryGroup[];
   projectedGroups?: JournalEntryGroup[];
+  /** Current text journal request has no complete result available for recall. */
+  journalPreparationFailed?: boolean;
   factAmendments?: import('../services/factAmendmentService').FactAmendment[];
   /** Exact-query request representation diagnostics; never evidence or application status. */
   requestCompletenessContext?: import('../services/requestCompleteness').RequestCompletenessContext;
