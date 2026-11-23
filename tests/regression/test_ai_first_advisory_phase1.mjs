@@ -2693,6 +2693,153 @@ try {
     directGroups: [capturedPayrollGroup], committedDirectGroups: [capturedPayrollGroup]
   };
   const geminiSettings = adapters[0].settings;
+  const unverifiedEquipmentClaim = 'The fictional Singapore Equipment Registry requires this company to file a permit by 30 June 2026.';
+  const replayedModelAnswer = {
+    messageText: unverifiedEquipmentClaim,
+    transactionTitle: 'Conditional illustrative journal',
+    singaporeTaxTreatmentSummary: unverifiedEquipmentClaim,
+    directGroups: [{
+      ...makeGroup('phase2-failed-equipment-proposal', 'Office equipment acquisition', 'CONDITIONAL', 1200),
+      eventDate: '2026-11-22',
+      lines: [
+        { id: 'phase2-equipment-debit', accountCode: '1600', accountName: 'Office Equipment', category: 'ASSET', debit: 1200, credit: 0, lineExplanation: 'Record the equipment acquisition' },
+        { id: 'phase2-equipment-credit', accountCode: '2100', accountName: 'Accounts Payable', category: 'LIABILITY', debit: 0, credit: 1200, lineExplanation: 'Record the unpaid supplier balance' }
+      ]
+    }]
+  };
+  const replayedProviderCalls = [];
+  const replayedProviderResponses = [];
+  const replayedExternalCalls = [];
+  const fallbackReplayFetch = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    if (url.hostname !== 'generativelanguage.googleapis.com') {
+      replayedExternalCalls.push(`${url.origin}${url.pathname}`);
+      throw new Error('Offline captured fallback replay blocked a non-Gemini network request');
+    }
+    const request = JSON.parse(init.body);
+    const system = (request.systemInstruction?.parts || []).map(part => part.text || '').join('\n');
+    const userContent = (request.contents || []).flatMap(turn => turn.parts || []).map(part => part.text || '').join('\n');
+    const requestNumber = replayedProviderCalls.length;
+    const endpoint = url.pathname.split(':').at(-1);
+    replayedProviderCalls.push({ endpoint, system, userContent });
+    const scriptedResponses = [
+      JSON.stringify({
+        schemaVersion: 2, jurisdiction: ['SG'], authorityCandidates: ['ACCOUNTING_STANDARDS'],
+        contextualAuthorities: [], domain: 'ACCOUNTING', population: 'COMPANY',
+        primarySubject: 'office equipment acquisition', concepts: [{ concept: 'office equipment', role: 'PRIMARY' }],
+        requestedOperation: 'PREPARE_JOURNAL', factsExplicitlyProvided: ['SGD 1,200', 'on credit'], confidence: 0.95,
+        issues: [{
+          subject: 'office equipment acquisition', population: 'COMPANY', domain: 'ACCOUNTING',
+          governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'PREPARE_JOURNAL',
+          mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95
+        }]
+      }),
+      JSON.stringify({ events: [] }),
+      JSON.stringify({
+        reportingEntity: { type: 'company' }, transactionType: 'purchase_of_office_equipment_on_credit',
+        subject: 'office equipment', currency: { value: 'SGD', source: 'explicit', confidence: 1 },
+        factsMissing: [], assumptions: [], confidence: 0.95
+      }),
+      JSON.stringify(replayedModelAnswer)
+    ];
+    const responseText = scriptedResponses[requestNumber];
+    assert.ok(responseText, 'the captured four-call replay made no additional provider requests');
+    replayedProviderResponses.push(responseText);
+    if (endpoint === 'streamGenerateContent') {
+      const event = {
+        candidates: [{ content: { role: 'model', parts: [{ text: responseText }] } }],
+        usageMetadata: { promptTokenCount: 2748, candidatesTokenCount: 388 }
+      };
+      return new Response(`data: ${JSON.stringify(event)}\n\n`, {
+        status: 200, headers: { 'Content-Type': 'text/event-stream' }
+      });
+    }
+    return Response.json({ candidates: [{ content: { parts: [{ text: responseText }] } }] });
+  };
+  try {
+    const replayedFallback = await processAccountingQuery(
+      equipmentCreditQuestion, null, 'SFRS_I', geminiSettings, geminiSettings.gemini.model,
+      [{ id: 'conditional-journal', sender: 'user', timestamp: '', text: equipmentCreditQuestion }],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.equal(replayedProviderCalls.length, 4,
+      'the captured first turn uses semantic interpretation, event extraction, transaction understanding and streamed Gemini response');
+    assert.ok(replayedProviderCalls.slice(0, 3).every(call => call.endpoint === 'generateContent'));
+    assert.match(replayedProviderCalls[0].system, /Interpret the user question only/);
+    assert.match(replayedProviderCalls[1].userContent, /Extract chronological accounting EVENT FACTS/);
+    assert.match(replayedProviderCalls[2].system, /expert economic and accounting transaction classifier/);
+    assert.equal(replayedProviderCalls[3].endpoint, 'streamGenerateContent');
+    assert.match(replayedProviderResponses[2], /purchase_of_office_equipment_on_credit/,
+      'the invalid transaction-type response from the captured trace fails schema validation');
+    assert.equal(replayedFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+      'the replay reaches the captured statutory synthesis fallback');
+    assert.equal(replayedFallback.scenarioState.isComplete, false);
+    assert.equal(replayedFallback.scenarioState.journalPreparationFailed, true,
+      'a failed journal request stays marked as an unavailable current preparation after statutory fallback');
+    assert.match(replayedFallback.messageText, /Journal Not Prepared/);
+    assert.match(replayedFallback.messageText, /(?:incomplete|unavailable|could not prepare|unable to prepare)/i,
+      'the fallback explains that preparation of the current journal failed');
+    assert.doesNotMatch(replayedFallback.messageText, /fictional Singapore Equipment Registry|30 June 2026/);
+    assert.doesNotMatch(JSON.stringify(replayedFallback.scenarioState), /fictional Singapore Equipment Registry|30 June 2026/,
+      'unchecked statutory claims from the failed synthesis are discarded');
+    assert.deepEqual(replayedFallback.scenarioState.directGroups.map(group => group.authorityStatus), ['CONDITIONAL']);
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(replayedFallback.scenarioState, 'SFRS_I'), [],
+      'the incomplete hypothetical fallback does not expose its unverified proposal as a ready journal');
+    assert.equal(isCurrentJournalPreparationFailure(replayedFallback.scenarioState), true,
+      'the statutory fallback remains identifiable as the failed active journal request');
+    assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, replayedFallback.scenarioState, 'SFRS_I'), retainedPayrollScenario,
+      'the incomplete fallback preserves the committed payroll without promoting its equipment proposal');
+    assert.strictEqual(selectAccountingScenarioForRequest('show the double entry', replayedFallback.scenarioState, retainedPayrollScenario), replayedFallback.scenarioState,
+      'plain recall stays on the failed equipment request after synthesis fallback');
+    const plainFallbackRecall = await processAccountingQuery(
+      'show the double entry', replayedFallback.scenarioState, 'SFRS_I', geminiSettings, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.equal(replayedProviderCalls.length, 4,
+      'plain journal recall after the fallback makes no additional provider call');
+    assert.match(plainFallbackRecall.messageText, /Journal Not Prepared/);
+    assert.doesNotMatch(plainFallbackRecall.messageText, /payroll|73,?291\.25|fictional Singapore Equipment Registry/i,
+      'plain recall explains the equipment preparation failure without showing payroll or unverified claims');
+    assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, plainFallbackRecall.scenarioState, 'SFRS_I'), retainedPayrollScenario,
+      'plain recall never commits the incomplete equipment proposal');
+    const explicitLastScenario = selectAccountingScenarioForRequest(
+      'show last journal', replayedFallback.scenarioState, retainedPayrollScenario
+    );
+    assert.strictEqual(explicitLastScenario, retainedPayrollScenario,
+      'explicit last-journal recall can still select the committed payroll');
+    const explicitLastRecall = await processAccountingQuery(
+      'show last journal', explicitLastScenario, 'SFRS_I', geminiSettings, 'unused', []
+    );
+    assert.equal(replayedProviderCalls.length, 4,
+      'explicit last-journal recall does not need a provider call');
+    assert.match(explicitLastRecall.messageText, /Committed payroll journal/);
+    assert.equal(explicitLastRecall.scenarioState.directGroups[0].totalDebit, 73291.25);
+    assert.deepEqual(updateCommittedJournalScenario(retainedPayrollScenario, explicitLastRecall.scenarioState, 'SFRS_I').committedDirectGroups,
+      retainedPayrollScenario.committedDirectGroups,
+      'explicit display of the committed payroll preserves the existing committed journal contents');
+    replayedProviderCalls.splice(0);
+    replayedProviderResponses.splice(0);
+    const journalToggleOnlyQuestion = 'If we buy office equipment for SGD 1,200 on credit, how should we account for it? This is hypothetical only.';
+    const journalToggleOnlyFallback = await processAccountingQuery(
+      journalToggleOnlyQuestion, null, 'SFRS_I', geminiSettings, geminiSettings.gemini.model,
+      [{ id: 'journal-toggle-equipment', sender: 'user', timestamp: '', text: journalToggleOnlyQuestion }],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.equal(replayedProviderCalls.length, 4,
+      'the journal-toggle-only equipment wording follows the same four scripted provider stages');
+    assert.equal(journalToggleOnlyFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+    assert.equal(journalToggleOnlyFallback.scenarioState.journalPreparationFailed, true,
+      'journal output preference alone marks the current transaction as an unsuccessful journal preparation');
+    assert.match(journalToggleOnlyFallback.messageText, /Journal Not Prepared/);
+    assert.strictEqual(selectAccountingScenarioForRequest(
+      'show the double entry', journalToggleOnlyFallback.scenarioState, retainedPayrollScenario
+    ), journalToggleOnlyFallback.scenarioState,
+    'journal-toggle-only failure remains active for plain journal recall');
+    assert.deepEqual(replayedExternalCalls, [], 'the captured service and recall replay remains fully offline');
+  } finally {
+    globalThis.fetch = fallbackReplayFetch;
+  }
   const replayCapturedEquipmentRequest = async (
     activeScenario,
     responseText = capturedIncompleteJournalJson,

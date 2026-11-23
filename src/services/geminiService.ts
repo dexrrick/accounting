@@ -1380,7 +1380,8 @@ export async function processAccountingQuery(
       ));
       if (hasConfiguredProvider(providerOrApiKey) && statutoryRequest) {
         return createGroundedSynthesisFailureResponse(
-          response, userInput, standard, authorityWorkstreams, groundedContext, 'OTHER', deterministicScenario
+          response, userInput, standard, authorityWorkstreams, groundedContext, 'OTHER', deterministicScenario,
+          outputPreference?.journal
         );
       }
       return response;
@@ -1400,7 +1401,8 @@ export async function processAccountingQuery(
     const advisoryFailureStatus = classifyAdvisoryFailure(error);
     console.warn('[Evidence-grounded synthesis] Re-rendering admitted evidence after synthesis failure.', advisoryFailureStatus);
     return createGroundedSynthesisFailureResponse(
-      response, userInput, standard, authorityWorkstreams, groundedContext, advisoryFailureStatus, deterministicScenario
+      response, userInput, standard, authorityWorkstreams, groundedContext, advisoryFailureStatus, deterministicScenario,
+      outputPreference?.journal
     );
   }
 }
@@ -1413,7 +1415,8 @@ export function createGroundedSynthesisFailureResponse(
   authorityWorkstreams: AuthorityWorkstreamsResult | undefined,
   groundedContext: GroundedReasoningContext | undefined,
   advisoryFailureStatus: AdvisoryFailureStatus,
-  deterministicScenario?: AccountingScenarioState
+  deterministicScenario?: AccountingScenarioState,
+  journalOutputRequested = false
 ): GeminiResponse {
   const baseScenario = deterministicScenario || getUntrustedFallbackScenario(response.scenarioState);
   const equipmentClassification = deterministicScenario?.scenarioType === 'BUSINESS_EQUIPMENT_ACQUISITION' &&
@@ -1452,11 +1455,11 @@ export function createGroundedSynthesisFailureResponse(
   const currentCompletenessContext = [deterministicScenario?.requestCompletenessContext,
     authorityWorkstreams?.requestCompletenessContext, groundedContext?.requestCompletenessContext]
     .find(candidate => candidate && isCurrentRequestCompletenessContext(candidate, userInput));
-  const balancedJournalAvailable = Boolean(trustedGroups.some(group =>
-    group.authorityStatus === 'DETERMINISTIC' && group.isHypothetical !== true &&
-    deterministicScenario?.isHypothetical !== true && group.lines?.length > 0 &&
+  const validatedEngineGroups = trustedGroups.filter(group =>
     group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
-  ));
+  );
+  const balancedJournalAvailable = deterministicScenario?.isHypothetical !== true &&
+    validatedEngineGroups.some(group => group.isHypothetical !== true);
   const sanitizedScenario: AccountingScenarioState = {
     ...baseScenario,
     // Keep only transaction structure and amounts from the accounting engine.
@@ -1554,6 +1557,14 @@ export function createGroundedSynthesisFailureResponse(
     messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
       (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
   }
+  // Sanitized proposals record an attempted preparation. Keep historical journal access explicit.
+  const journalPreparationFailed = !sanitizedScenario.isComplete &&
+    validatedEngineGroups.length === 0 && equipmentGroups.length === 0 &&
+    (journalOutputRequested || isCurrentJournalPreparationFailure(response.scenarioState) ||
+      groundedContext?.classification.journalEntryRequired || classifyQuestion(userInput).journalEntryRequired);
+  if (journalPreparationFailed) {
+    messageText = `${renderJournalPreparationFailure(sanitizedScenario).messageText}\n\n${messageText}`;
+  }
   return {
     ...response,
     messageText,
@@ -1562,6 +1573,7 @@ export function createGroundedSynthesisFailureResponse(
     advisoryFailureStatus,
     scenarioState: {
       ...sanitizedScenario,
+      ...(journalPreparationFailed ? { journalPreparationFailed: true } : {}),
       missingFacts: fallbackMissingFacts?.length ? fallbackMissingFacts : sanitizedScenario.missingFacts,
       isComplete: Boolean(sanitizedScenario.isComplete && !engineMissingFields.length && !fallbackMissingFacts?.length),
       statutoryAdvisory,
