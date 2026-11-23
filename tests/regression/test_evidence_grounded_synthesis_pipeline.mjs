@@ -11,7 +11,7 @@ import { prepareAuthorityWorkstreamsForPresentation } from '../../src/services/e
 import { postProcessAIResponse } from '../../src/services/groundingContextBuilder.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
-import { getDisplayableUncommittedJournalGroups } from '../../src/services/committedJournal.ts';
+import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
@@ -213,7 +213,7 @@ function officialFixturePage(title, publisher, text, nonce = '') {
   return `<!doctype html><html lang="en"><head><title>${title} | ${publisher}</title><meta name="site_name" content="${publisher}"><meta name="capture-run" content="${nonce}"></head><body><main><h1>${title}</h1><article>${paragraphs}</article><footer>${publisher}</footer></main></body></html>`;
 }
 
-async function runPhase2ApplicationCase(testCase, queryText, history = []) {
+async function runPhase2ApplicationCase(testCase, queryText, history = [], currentScenario = null, outputPreference = undefined) {
   mockFailure = undefined;
   defaultSourceCache.clear();
   providerStages.length = 0;
@@ -221,7 +221,7 @@ async function runPhase2ApplicationCase(testCase, queryText, history = []) {
   phase2Case = testCase;
   let authorityWorkstreams;
   try {
-    const result = await processAccountingQuery(queryText, null, 'SFRS_I', provider, 'unused', history, undefined, {
+    const result = await processAccountingQuery(queryText, currentScenario, 'SFRS_I', provider, 'unused', history, outputPreference, {
       onAuthorityWorkstreams: value => { authorityWorkstreams = value; }
     });
     if (mockFailure && !testCase.expectSynthesisFailure) throw mockFailure;
@@ -1337,6 +1337,173 @@ try {
   assert.doesNotMatch(selectedContractFallback.messageText,
     /available evidence does not state the overtime terms/i,
     'a selected exact contract qualification is not mislabeled as absent source evidence');
+
+  const retainedPayrollQuery = 'I have staff is 60 years old Singaporean earning 10k a month what is the double entry for all salary related journal';
+  const retainedPayrollParsed = await parseAccountingQuery(retainedPayrollQuery);
+  const retainedPayroll = updateCommittedJournalScenario(null, retainedPayrollParsed, 'SFRS_I');
+  assert.ok(retainedPayroll?.committedDirectGroups?.length, 'the retained-history boundary starts from a validated payroll snapshot');
+  const retainedPayrollGroups = structuredClone(retainedPayroll.committedDirectGroups);
+  const retainedHistoryPrefix = [
+    { id: 'retained-payroll-question', sender: 'user', timestamp: '', text: retainedPayrollQuery },
+    { id: 'retained-payroll-answer', sender: 'assistant', timestamp: '', text: 'The payroll journal was prepared.' }
+  ];
+  const resignationJournalQuery = 'Please prepare the double entry for the staff resignation. What CPF rules apply?';
+  const cpfResignationIssue = {
+    subject: 'CPF contribution duties for a resigning employee', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+    governingAuthorities: ['CPF'], operation: 'EXPLAIN_RULE', mappedTopicIds: ['cpf_contribution_rates'],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE'
+  };
+  const cpfResignationInterpretation = makePhase2Interpretation({
+    domain: 'CPF_PAYROLL', population: 'EMPLOYER', authorities: ['CPF'],
+    subject: cpfResignationIssue.subject, operation: 'EXPLAIN_RULE', issues: [cpfResignationIssue]
+  });
+  assert.ok(validateSemanticQuestionInterpretation(cpfResignationInterpretation, resignationJournalQuery));
+  const cpfContributionUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+  const resignationSynthesisRun = await runPhase2ApplicationCase({
+    interpretation: cpfResignationInterpretation,
+    pages: new Map([[cpfContributionUrl, officialFixturePage('How Much CPF Contributions to Pay', 'Central Provident Fund Board',
+      'The applicable employer and employee CPF contribution rates depend on the employee’s citizenship or permanent-resident status, permanent-resident year, age band and wages. Employers need the correct contribution-year table and the employee’s relevant wage amount before calculating contributions. This general explanation gives no universal rate or contribution amount.')]]),
+    generate: packet => {
+      const passage = packet.evidencePassages.find(item => item.authority === 'CPF' &&
+        /contribution rates depend on the employee/i.test(item.completeAdmittedPassage));
+      assert.ok(passage, 'the current CPF advice is grounded in an admitted CPF Board passage');
+      return [{ id: 'current-cpf-resignation-rules', kind: 'RULE', text: passage.completeAdmittedPassage,
+        supportIds: [passage.id], factRefs: [], issueId: passage.issueId }];
+    },
+    verify: packet => ({ verdicts: packet.claims.map(claim => ({
+      claimId: claim.claimId, support: 'SUPPORTED', claimType: 'RULE'
+    })) })
+  }, resignationJournalQuery, [
+    ...retainedHistoryPrefix,
+    { id: 'current-resignation-question', sender: 'user', timestamp: '', text: resignationJournalQuery }
+  ], retainedPayroll, { journal: true, statutory: false, shareStructure: false });
+  const incompleteResignation = resignationSynthesisRun.result;
+  assert.equal(incompleteResignation.answerPath, 'AI_GROUNDED_SYNTHESIS',
+    'the incomplete mixed request reaches successful evidence-grounded synthesis');
+  assert.match(incompleteResignation.messageText, /Journal Not Prepared/,
+    'successful CPF synthesis explicitly states that the current resignation journal was not prepared');
+  assert.match(incompleteResignation.messageText, /contribution rates depend on the employee/i,
+    'the journal failure notice preserves the source-grounded CPF advice');
+  assert.ok(incompleteResignation.scenarioState.officialAnswerLinks.some(link => link.url.includes('cpf.gov.sg')),
+    'the successful incomplete request preserves the CPF Board source link');
+  assert.equal(incompleteResignation.scenarioState.isComplete, false);
+  assert.equal(incompleteResignation.scenarioState.missingFields?.some(field => field.fieldKey === 'resignationDate'), true,
+    'the current resignation result retains its missing last day');
+  assert.deepEqual(incompleteResignation.scenarioState.directGroups, [],
+    'the current resignation result has no journal groups');
+  assert.deepEqual(incompleteResignation.scenarioState.committedDirectGroups, retainedPayrollGroups,
+    'successful synthesis preserves only the payroll snapshot for explicit last-journal recall');
+  assert.equal(incompleteResignation.scenarioState.journalPreparationFailed, true);
+  assert.equal(resignationSynthesisRun.stages.filter(stage => stage === 'synthesis').length, 1,
+    'the current mixed question still uses one synthesis generation');
+
+  const equipmentJournalQuery = 'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?';
+  const equipmentInterpretation = {
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['UNKNOWN'], contextualAuthorities: [],
+    domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: 'office equipment purchase accounting and capital allowances',
+    concepts: [
+      { concept: 'office equipment purchase', role: 'PRIMARY' },
+      { concept: 'capital allowances', role: 'PRIMARY' },
+      { concept: 'double entry bookkeeping', role: 'RELATED' }
+    ],
+    requestedOperation: 'OTHER', requiresUserSpecificFacts: true,
+    factsExplicitlyProvided: ['bought office equipment for SGD 1200 on credit from a supplier on 23 November 2026', 'GST was not charged'],
+    confidence: 0.95,
+    issues: [
+      { subject: 'office equipment purchase journal entry', population: 'COMPANY', domain: 'ACCOUNTING',
+        governingAuthorities: ['ACCOUNTING_STANDARDS'], contextualAuthorities: [], operation: 'PREPARE_JOURNAL',
+        mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 },
+      { subject: 'capital allowances eligibility on office equipment', population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+        governingAuthorities: ['IRAS'], contextualAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'CHECK_ELIGIBILITY',
+        mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+    ]
+  };
+  assert.ok(validateSemanticQuestionInterpretation(equipmentInterpretation, equipmentJournalQuery));
+  let equipmentCapitalAllowanceText;
+  const equipmentSynthesisRun = await runPhase2ApplicationCase({
+    interpretation: equipmentInterpretation,
+    pages: new Map(),
+    generate: packet => {
+      const passage = packet.evidencePassages.find(item => item.sourceRecordId === 'ITA_SEC19_19A_CAPITAL_ALLOWANCES');
+      assert.ok(passage, 'the capital-allowance answer uses the admitted statutory source record');
+      equipmentCapitalAllowanceText = passage.completeAdmittedPassage;
+      return [{ id: 'equipment-capital-allowance-rule', kind: 'RULE', text: passage.completeAdmittedPassage,
+        supportIds: [passage.id], factRefs: [], issueId: passage.issueId }];
+    },
+    verify: packet => ({ verdicts: packet.claims.map(claim => ({
+      claimId: claim.claimId, support: 'SUPPORTED', claimType: 'RULE'
+    })) })
+  }, equipmentJournalQuery, [
+    ...retainedHistoryPrefix,
+    { id: 'current-equipment-question', sender: 'user', timestamp: '', text: equipmentJournalQuery }
+  ], retainedPayroll, { journal: true, statutory: false, shareStructure: false });
+  const completeEquipmentSynthesis = equipmentSynthesisRun.result;
+  assert.equal(completeEquipmentSynthesis.answerPath, 'AI_GROUNDED_SYNTHESIS',
+    'the complete equipment request reaches successful evidence-grounded synthesis');
+  assert.ok(equipmentCapitalAllowanceText && completeEquipmentSynthesis.messageText.includes(equipmentCapitalAllowanceText),
+    'the successful equipment answer retains the admitted capital-allowance guidance');
+  assert.equal(completeEquipmentSynthesis.scenarioState.isComplete, false,
+    'advisory evidence completeness remains separate from the prepared current journal');
+  assert.equal(completeEquipmentSynthesis.scenarioState.journalPreparedForQuery, equipmentJournalQuery,
+    'journal readiness is bound to the exact complete current request');
+  assert.doesNotMatch(completeEquipmentSynthesis.messageText,
+    /supported accounting assessment of office equipment purchase journal entry was not established/i,
+    'the prepared current journal does not receive an unavailable-journal limitation');
+  assert.match(completeEquipmentSynthesis.messageText,
+    /balanced current journal is available.*remains conditional and has not been committed/i,
+    'the deterministic answer identifies the current journal as conditional and uncommitted');
+  const preparedEquipmentGroups = getDisplayableUncommittedJournalGroups(completeEquipmentSynthesis.scenarioState, 'SFRS_I');
+  assert.equal(preparedEquipmentGroups.length, 1,
+    'the incomplete advisory response still exposes the validated current conditional equipment journal');
+  assert.deepEqual(preparedEquipmentGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Property, Plant and Equipment — Equipment', 1200, 0], ['Trade Payables', 0, 1200]
+  ], 'the current equipment journal keeps the engine accounts, directions and exact amount');
+  assert.equal(preparedEquipmentGroups[0].authorityStatus, 'CONDITIONAL',
+    'the mixed response does not promote its conditional journal');
+  assert.deepEqual(updateCommittedJournalScenario(retainedPayroll, completeEquipmentSynthesis.scenarioState, 'SFRS_I'), retainedPayroll,
+    'the conditional current equipment journal does not replace the committed payroll snapshot');
+
+  providerStages.length = 0;
+  const fetchBeforeJournalRecall = globalThis.fetch;
+  let journalRecallProviderCalls = 0;
+  globalThis.fetch = async () => { journalRecallProviderCalls += 1; throw new Error('Journal recall must not call a provider.'); };
+  try {
+    const ordinaryResignationScenario = selectAccountingScenarioForRequest(
+      'show the double entry', incompleteResignation.scenarioState, retainedPayroll
+    );
+    const ordinaryResignationRecall = await processAccountingQuery(
+      'show the double entry', ordinaryResignationScenario, 'SFRS_I', provider, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.match(ordinaryResignationRecall.messageText, /Journal Not Prepared/);
+    assert.deepEqual(ordinaryResignationRecall.scenarioState.missingFields?.map(field => field.fieldKey), ['resignationDate']);
+    assert.doesNotMatch(ordinaryResignationRecall.messageText, /payroll|73,?291.25/i,
+      'ordinary resignation recall does not substitute the retained payroll journal');
+
+    const ordinaryEquipmentRecall = await processAccountingQuery(
+      'show the double entry', null, 'SFRS_I', provider, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }, undefined, completeEquipmentSynthesis.scenarioState
+    );
+    assert.match(ordinaryEquipmentRecall.messageText, /Conditional Journal \(Unconfirmed\)/);
+    assert.deepEqual(ordinaryEquipmentRecall.scenarioState.directGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
+      ['Property, Plant and Equipment — Equipment', 1200, 0], ['Trade Payables', 0, 1200]
+    ], 'ordinary equipment recall returns the current request journal');
+
+    const explicitLastScenario = selectAccountingScenarioForRequest(
+      'show last journal', completeEquipmentSynthesis.scenarioState, retainedPayroll
+    );
+    assert.strictEqual(explicitLastScenario, retainedPayroll,
+      'explicit last-journal selection still chooses the committed payroll after a current conditional result');
+    const explicitLastRecall = await processAccountingQuery(
+      'show last journal', explicitLastScenario, 'SFRS_I', provider, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.deepEqual(explicitLastRecall.scenarioState.directGroups, retainedPayrollGroups);
+    assert.equal(journalRecallProviderCalls, 0, 'ordinary and explicit journal recalls make zero provider calls');
+    assert.equal(providerStages.length, 0, 'ordinary and explicit journal recalls add no provider stages');
+  } finally {
+    globalThis.fetch = fetchBeforeJournalRecall;
+  }
 
   providerStages.length = 0;
   const offline = await processAccountingQuery(query, null, 'SFRS_I', undefined, 'unused', []);

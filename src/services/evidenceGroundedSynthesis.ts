@@ -2409,11 +2409,25 @@ function issueApplicationGapDescription(issue: RequestedIssue, packet: ReturnTyp
 }
 
 function addUncoveredIssueLimitations(
+  input: GroundedSynthesisInput,
   packet: ReturnType<typeof buildPacket>,
   claims: SynthesisClaim[]
 ): string[] {
   const limitations: string[] = [];
+  const currentScenario = input.response.scenarioState;
+  const currentJournalPrepared = currentScenario.journalPreparedForQuery === input.query &&
+    currentScenario.rawQuery === input.query && Boolean(currentScenario.directGroups?.length) &&
+    !(currentScenario.missingFields?.length) && !(currentScenario.projectedGroups?.length) &&
+    !currentScenario.isHypothetical && currentScenario.directGroups!.every(group =>
+      group.authorityStatus === 'CONDITIONAL' && !group.isHypothetical && validateJournalGroups([group]).isValid) &&
+    validateJournalGroups(currentScenario.directGroups!).isValid;
+  const journalIssues = packet.requestedIssues.filter(issue =>
+    issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL');
+  const preparedJournalIssue = journalIssues.length === 1 && !journalIssues[0].scopeConflict
+    ? journalIssues[0]
+    : undefined;
   for (const issue of packet.requestedIssues) {
+    if (currentJournalPrepared && preparedJournalIssue?.id === issue.id) continue;
     const needsApplication = issueNeedsApplicationConclusion(issue);
     const addressed = claims.some(claim => claim.issueId === issue.id && (
       claim.kind === 'LIMITATION' || (issue.domain === 'ACCOUNTING'
@@ -2481,7 +2495,7 @@ export async function tryGenerateGroundedSynthesis(
   for (const claim of finalClaims) {
     claim.issueId = applicationIssueId(claim, packet);
   }
-  const issueLimitations = addUncoveredIssueLimitations(packet, finalClaims);
+  const issueLimitations = addUncoveredIssueLimitations(input, packet, finalClaims);
   const rendered = renderSynthesis(finalClaims, packet, withheldCount, issueLimitations);
   const verificationClaims: GroundedSynthesisClaimVerification[] = [...initial.claims, ...initial.invalidClaims.map(item => item.claim)]
     .filter((claim, index, all) => all.findIndex(candidate => candidate.id === claim.id) === index)

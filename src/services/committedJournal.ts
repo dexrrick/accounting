@@ -36,9 +36,14 @@ export function getDisplayableUncommittedJournalGroups(
   candidate: AccountingScenarioState | null,
   standard: AccountingStandard
 ) {
-  if (!candidate?.isComplete || candidate.isHypothetical) return [];
+  if (!candidate || candidate.isHypothetical) return [];
+  const exactCurrentJournalPrepared = candidate.journalPreparedForQuery === candidate.rawQuery &&
+    Boolean(candidate.rawQuery.trim()) && Boolean(candidate.directGroups?.length) &&
+    !(candidate.missingFields?.length);
+  if (!candidate.isComplete && !exactCurrentJournalPrepared) return [];
   const groups = calculateDoubleEntries(candidate, standard).groups;
   if (groups.length === 0 || groups.some(group => group.isHypothetical) || !validateJournalGroups(groups).isValid) return [];
+  if (exactCurrentJournalPrepared && !candidate.isComplete && groups.some(group => group.authorityStatus !== 'CONDITIONAL')) return [];
   return groups.some(group => group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') ? groups : [];
 }
 
@@ -47,6 +52,10 @@ export function isCurrentJournalPreparationFailure(
   candidate: AccountingScenarioState | null
 ): candidate is AccountingScenarioState & { journalPreparationFailed: true; isComplete: false } {
   return Boolean(candidate?.journalPreparationFailed && !candidate.isComplete);
+}
+
+export function isExplicitLastJournalRequest(query: string): boolean {
+  return /\blast\b/i.test(query);
 }
 
 /** Select prior accounting context only for an accounting operation that needs it. */
@@ -58,7 +67,7 @@ export function selectAccountingScenarioForRequest(
 ): AccountingScenarioState | null {
   if (separateAnalysis) return null;
   if (isJournalDisplayRequest(query)) {
-    const explicitlyRequestsLast = /\blast\b/i.test(query);
+    const explicitlyRequestsLast = isExplicitLastJournalRequest(query);
     if (isCurrentJournalPreparationFailure(activeScenario) && !explicitlyRequestsLast) return activeScenario;
     return committedScenario;
   }

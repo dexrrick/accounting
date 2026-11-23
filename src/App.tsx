@@ -22,7 +22,7 @@ import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEviden
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
 import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
-import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
+import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, isExplicitLastJournalRequest, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -107,7 +107,9 @@ export const App: React.FC = () => {
       const journalRecallGroups = isJournalRecall
         ? getDisplayableUncommittedJournalGroups(activeScenario, standard)
         : [];
-      const journalRecallProposal = journalRecallGroups.length > 0 ? activeScenario || undefined : undefined;
+      const journalRecallProposal = journalRecallGroups.length > 0 && !isExplicitLastJournalRequest(text)
+        ? activeScenario || undefined
+        : undefined;
       const requestScenario = journalRecallProposal
         ? null
         : options?.useProvidedScenario

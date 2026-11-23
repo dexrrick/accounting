@@ -1331,6 +1331,14 @@ export async function processAccountingQuery(
   if (response.displayFullAnswer || response.advisoryFailureStatus || response.providerStatus === 'FAILED' ||
       getCurrentImageAttachments(chatHistory).length > 0 || isJournalDisplayRequest(userInput)) return response;
   if (response.calculation && isStandaloneOutputGstCalculationRequest(userInput)) return response;
+  const journalOutputRequested = Boolean(outputPreference?.journal || classifyQuestion(userInput).journalEntryRequired);
+  const currentJournalGroupsPrepared = isCurrentRenderedConditionalJournal(
+    userInput, journalOutputRequested, response.scenarioState, deterministicScenario
+  );
+  const responseForSynthesis = currentJournalGroupsPrepared ? {
+    ...response,
+    scenarioState: { ...response.scenarioState, journalPreparedForQuery: userInput }
+  } : response;
   try {
     // An unmapped issue is an answer-completeness gap, not proof that the
     // existing retrieval policy cannot establish any useful source passages.
@@ -1365,7 +1373,7 @@ export async function processAccountingQuery(
     }
     const synthesis = await tryGenerateGroundedSynthesis({
       query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
-      response, context: groundedContext, workstreams: authorityWorkstreams
+      response: responseForSynthesis, context: groundedContext, workstreams: authorityWorkstreams
     });
     if (!synthesis) {
       const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
@@ -1386,14 +1394,49 @@ export async function processAccountingQuery(
       }
       return response;
     }
+    const currentEngineGroups = deterministicScenario?.directGroups || [];
+    const engineMatchesCurrentQuery = deterministicScenario?.rawQuery === userInput;
+    const currentJournalResponseGroups = [
+      ...(response.scenarioState.directGroups || []),
+      ...(response.scenarioState.projectedGroups || [])
+    ];
+    const existingCurrentJournalFailure = response.scenarioState.rawQuery === userInput &&
+      isCurrentJournalPreparationFailure(response.scenarioState);
+    const currentJournalPreparationFailed = journalOutputRequested && !currentJournalGroupsPrepared &&
+      (existingCurrentJournalFailure || (engineMatchesCurrentQuery &&
+        !deterministicScenario?.isComplete && Boolean(deterministicScenario?.missingFields?.length) &&
+          currentEngineGroups.length === 0 && !(deterministicScenario?.projectedGroups?.length) &&
+          currentJournalResponseGroups.length === 0));
+    const retainedCommittedGroups = deterministicScenario?.committedDirectGroups;
+    const safeRetainedCommittedGroups = currentJournalPreparationFailed &&
+      !response.scenarioState.committedDirectGroups?.length && engineMatchesCurrentQuery && retainedCommittedGroups?.length &&
+      retainedCommittedGroups.every(group => group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical) &&
+      validateJournalGroups(retainedCommittedGroups).isValid ? retainedCommittedGroups : undefined;
+    const journalFailureState = currentJournalPreparationFailed ? {
+      ...response.scenarioState,
+      directGroups: [],
+      projectedGroups: [],
+      isComplete: false,
+      journalPreparationFailed: true,
+      missingFields: deterministicScenario?.missingFields || response.scenarioState.missingFields
+    } : undefined;
     return {
       ...response,
-      messageText: synthesis.messageText,
+      messageText: journalFailureState
+        ? `${renderJournalPreparationFailure(journalFailureState).messageText}\n\n${synthesis.messageText}`
+        : currentJournalGroupsPrepared
+          ? `${synthesis.messageText}\n\n### Double Entry Journal\n\nA balanced current journal is available in the Double Entry Journal tab under the current assumptions. It remains conditional and has not been committed.`
+          : synthesis.messageText,
       displayFullAnswer: true,
       answerPath: 'AI_GROUNDED_SYNTHESIS',
       synthesisVerification: synthesis.verification,
       scenarioState: {
-        ...response.scenarioState,
+        ...responseForSynthesis.scenarioState,
+        ...(journalFailureState || {}),
+        ...(safeRetainedCommittedGroups ? { committedDirectGroups: safeRetainedCommittedGroups } : {}),
+        journalPreparationFailed: currentJournalGroupsPrepared ? undefined :
+          currentJournalPreparationFailed ? true : response.scenarioState.journalPreparationFailed,
+        journalPreparedForQuery: currentJournalGroupsPrepared ? userInput : undefined,
         officialAnswerLinks: synthesis.officialAnswerLinks
       }
     };
@@ -1405,6 +1448,46 @@ export async function processAccountingQuery(
       outputPreference?.journal
     );
   }
+}
+
+function isCurrentRenderedConditionalJournal(
+  query: string,
+  journalRequested: boolean,
+  renderedScenario: AccountingScenarioState,
+  engineScenario?: AccountingScenarioState
+): boolean {
+  const engineGroups = engineScenario?.directGroups || [];
+  const renderedGroups = renderedScenario.directGroups || [];
+  return journalRequested && engineScenario?.rawQuery === query && engineScenario.isComplete &&
+    !engineScenario.isHypothetical && !(engineScenario.missingFields?.length) &&
+    !(engineScenario.projectedGroups?.length) && engineGroups.length > 0 &&
+    engineGroups.every(group => group.authorityStatus === 'CONDITIONAL' && !group.isHypothetical &&
+      validateJournalGroups([group], { rawQuery: query }).isValid) &&
+    renderedScenario.rawQuery === query && !renderedScenario.isHypothetical &&
+    !(renderedScenario.missingFields?.length) && !(renderedScenario.projectedGroups?.length) &&
+    journalGroupsMatch(engineGroups, renderedGroups) &&
+    renderedGroups.every(group => group.authorityStatus === 'CONDITIONAL' && !group.isHypothetical) &&
+    validateJournalGroups(renderedGroups, { rawQuery: query }).isValid;
+}
+
+function journalGroupsMatch(engineGroups: JournalEntryGroup[], renderedGroups: JournalEntryGroup[]): boolean {
+  if (engineGroups.length === 0 || engineGroups.length !== renderedGroups.length) return false;
+  const signature = (groups: JournalEntryGroup[]) => JSON.stringify(groups.map(group => ({
+    id: group.id,
+    title: group.title,
+    eventDate: group.eventDate,
+    authorityStatus: group.authorityStatus,
+    isHypothetical: group.isHypothetical,
+    totalDebit: group.totalDebit,
+    totalCredit: group.totalCredit,
+    lines: group.lines.map(line => ({
+      id: line.id, accountCode: line.accountCode, accountName: line.accountName, category: line.category,
+      debit: line.debit, credit: line.credit,
+      foreignCurrency: line.foreignCurrency, foreignDebit: line.foreignDebit,
+      foreignCredit: line.foreignCredit, exchangeRate: line.exchangeRate
+    }))
+  })));
+  return signature(engineGroups) === signature(renderedGroups);
 }
 
 /** Rebuild the visible answer from admitted evidence after synthesis fails. */

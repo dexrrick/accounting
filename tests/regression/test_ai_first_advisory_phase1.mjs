@@ -20,7 +20,7 @@ import { hasVerifiedSourceUrlProvenance } from '../../src/standards/approvedSour
 import { ChatPanel } from '../../src/components/ChatPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, evaluateAccountingScenarioBoundary, hasExplicitPriorFactReference, startsNewAccountingScenario } from '../../src/services/conversationBoundary.ts';
-import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
+import { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, isExplicitLastJournalRequest, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { resolveFactAmendment, isSingleMonthlySalaryAmendment } from '../../src/services/factAmendmentService.ts';
 import { isAIJsonSchemaFallback, isMalformedAIJsonFallback, repairAndParseAIJson } from '../../src/utils/jsonRepair.ts';
 
@@ -3039,7 +3039,7 @@ try {
     react: reactExports,
     './services/geminiService': serviceStub,
     './services/conversationBoundary': boundaryModule.exports,
-    './services/committedJournal': { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, selectAccountingScenarioForRequest, updateCommittedJournalScenario },
+    './services/committedJournal': { getDisplayableUncommittedJournalGroups, isCurrentJournalPreparationFailure, isExplicitLastJournalRequest, selectAccountingScenarioForRequest, updateCommittedJournalScenario },
     './types/provider': { loadProviderSettings: () => ({ activeProvider: 'openai', openai: {}, azure: {}, gemini: { model: 'test' } }), saveProviderSettings() {} },
     './engine/accountingEngine': { calculateDoubleEntries: scenario => ({ groups: scenario.directGroups || [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: scenario.functionalCurrency || 'SGD' } }) },
     './utils/dateUtils': { getSingaporeTimestamp: () => '' },
@@ -3374,6 +3374,39 @@ try {
   appUi = renderApp();
   assert.strictEqual(appCalls.at(-1)[1], retainedPayrollScenario,
     'App preserves explicit access to the last committed payroll journal');
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll journal']);
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 73291.25);
+
+  const exactEquipmentQuery = 'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?';
+  const advisoryIncompleteEquipment = await parseAccountingQuery(exactEquipmentQuery);
+  advisoryIncompleteEquipment.isComplete = false;
+  advisoryIncompleteEquipment.journalPreparedForQuery = exactEquipmentQuery;
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(advisoryIncompleteEquipment, 'SFRS_I')
+    .map(group => group.lines.map(line => [line.accountName, line.debit, line.credit])), [[
+      ['Property, Plant and Equipment — Equipment', 1200, 0], ['Trade Payables', 0, 1200]
+    ]], 'an exact-query-bound validated conditional journal remains displayable when advisory completeness is false');
+  stateSlots[3] = advisoryIncompleteEquipment;
+  stateSlots[4] = retainedPayrollScenario;
+  stateSlots[6] = 'entries';
+  stateSlots[8] = { journal: false, statutory: false };
+  stateSlots[9] = { journal: false, statutory: false };
+  journalProps = undefined;
+  appUi = renderApp();
+  assert.deepEqual(appUi.journalProps.groups.map(group => [group.totalDebit, group.totalCredit]), [[1200, 1200]],
+    'App displays the current equipment journal while retaining the older committed payroll separately');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.strictEqual(appCalls.at(-1)[8], advisoryIncompleteEquipment,
+    'ordinary App recall supplies the exact current equipment proposal to the read-only journal path');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Conditional Journal \(Unconfirmed\)/);
+  assert.deepEqual(appUi.journalProps.groups.map(group => [group.totalDebit, group.totalCredit]), [[1200, 1200]]);
+
+  await appUi.chatProps.onSendMessage('show last journal');
+  appUi = renderApp();
+  assert.strictEqual(appCalls.at(-1)[1], retainedPayrollScenario,
+    'explicit last-journal recall bypasses the current conditional proposal and selects committed payroll');
+  assert.equal(appCalls.at(-1)[8], undefined,
+    'App does not pass the conditional equipment proposal as an override for explicit last recall');
   assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll journal']);
   assert.equal(appUi.journalProps.groups[0].totalDebit, 73291.25);
 } finally {

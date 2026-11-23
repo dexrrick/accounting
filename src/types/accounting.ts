@@ -249,6 +249,8 @@ export interface AccountingScenarioState {
   projectedGroups?: JournalEntryGroup[];
   /** Current text journal request has no complete result available for recall. */
   journalPreparationFailed?: boolean;
+  /** Current engine-backed journal passed the output policy for this exact query. */
+  journalPreparedForQuery?: string;
   factAmendments?: import('../services/factAmendmentService').FactAmendment[];
   /** Exact-query request representation diagnostics; never evidence or application status. */
   requestCompletenessContext?: import('../services/requestCompleteness').RequestCompletenessContext;
