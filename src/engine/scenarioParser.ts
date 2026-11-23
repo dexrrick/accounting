@@ -644,6 +644,11 @@ export async function parseAccountingQuery(
     /\b(?:paid|paying|pay|pays)\s+(?:him|her|them|(?:a|an|the|our|my|this|that|each|every)?\s*(?:(?:new|second|another|singaporean|local|foreign|pr|full[- ]time|part[- ]time)\s+){0,2}(?:employee|worker|staff(?:\s+member)?))\s+(?:(?:a\s+)?(?:monthly\s+|basic\s+)?(?:salary|wages?|pay|remuneration)\s+(?:of\s+)?)?(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i,
     /(?:(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|\b([\d,]+(?:\.\d+)?)\s*(?:(k|m|million|thousand)\b\s*(?:(?:a\s*month|\/month|monthly|per\s*month)\s+)?|(?:a\s*month|\/month|monthly|per\s*month)\s+))(?:basic\s+|gross\s+|ordinary\s+|monthly\s+)?(?:salary|wages?|remuneration|pay\s+rate)\b/i
   ];
+  const isNonRemunerationOutlayClause = (clause: string): boolean =>
+    !paidForRemunerationPattern.test(clause) && (
+      /\b(?:paid|pay|pays|paying)\s+(?:sgd|s\$|\$)?\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\b/i.test(clause) ||
+      /\b(?:payroll\s+(?:processing|outsourcing|service|services|support|system|software|administration|admin|vendor|provider|subscription|licen[cs]e|platform|portal|tool|app|application|fee|fees)|(?:processing|outsourcing|service|support|subscription|software|licen[cs]e|administration|admin|maintenance|hosting|vendor|provider)\s+(?:fee|fees|cost|costs|charge|charges|expense|expenses))\b/i.test(clause)
+    );
   const extractClauseRemunerationAmount = (clause: string): number | undefined => {
     for (const pattern of explicitClauseSalaryPatterns) {
       const m = clause.match(pattern);
@@ -652,17 +657,14 @@ export async function parseAccountingQuery(
         if (val !== undefined) return val;
       }
     }
-    if (nonPayrollAcquisitionPattern.test(clause)) return undefined;
+    if (nonPayrollAcquisitionPattern.test(clause) || isNonRemunerationOutlayClause(clause)) return undefined;
     const hiredMatch = clause.match(hiredSalaryAmountPattern);
     if (hiredMatch) {
       const val = parseCapturedAmount(hiredMatch[1] || hiredMatch[3], hiredMatch[2] || hiredMatch[4]);
       if (val !== undefined) return val;
     }
     const hasRemunerationBasis = /\b(?:cpf|last\s+day|prorat\w*|salary|wages?|remuneration|bonus|allowance|final\s+pay)\b/i.test(clause);
-    const isNonRemunerationOutlay =
-      !paidForRemunerationPattern.test(clause) &&
-      /\b(?:paid|pay|pays|paying)\s+(?:sgd|s\$|\$)?\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?(?:\s*(?:a\s*month|\/month|monthly|per\s*month))?\s+for\b/i.test(clause);
-    if (hasRemunerationBasis && !isNonRemunerationOutlay) {
+    if (hasRemunerationBasis) {
       const currencyOrMonthlyMatch =
         clause.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)?/i) ||
         clause.match(/\b([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)\b/i);
@@ -674,6 +676,7 @@ export async function parseAccountingQuery(
 
   const rawClauses = splitTransactionClauses(query);
   const hasAcquisitionClause = rawClauses.some(clause => nonPayrollAcquisitionPattern.test(clause));
+  const hasNonRemunerationOutlayClause = rawClauses.some(isNonRemunerationOutlayClause);
   const ownedSalaryAmount = rawClauses
     .map(extractClauseRemunerationAmount)
     .find((amount): amount is number => amount !== undefined);
@@ -689,20 +692,44 @@ export async function parseAccountingQuery(
     (q.includes('calculat') || q.includes('compute') || q.includes('what is his') || q.includes('what is her') || q.includes('how much') || q.includes('entry') || q.includes('journal')) &&
     (q.includes('salary') || q.includes('cpf') || q.includes('wage'));
 
+  const priorBasicSalary = currentScenario?.keyParameters
+    ?.find(p => p.label === 'Basic Monthly Salary')?.value.match(/[\d,]+(?:\.\d+)?/);
+  const priorPayrollSalary =
+    currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
+      ? (priorBasicSalary?.[0]
+          ? Number(priorBasicSalary[0].replace(/,/g, ''))
+          : (typeof currentScenario.amount === 'number' && Number.isFinite(currentScenario.amount) && currentScenario.amount > 0
+              ? currentScenario.amount
+              : undefined))
+      : undefined;
+  const amendmentSalaryMatch = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' && isSingleMonthlySalaryAmendment(query)
+    ? query.match(/(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i)
+    : null;
+  const queryRemunerationAmount =
+    ownedSalaryAmount ??
+    (!hasAcquisitionClause && !hasNonRemunerationOutlayClause
+      ? parseCapturedAmount(payrollSalaryAmountMatch?.[1], payrollSalaryAmountMatch?.[2])
+      : undefined) ??
+    parseCapturedAmount(amendmentSalaryMatch?.[1], amendmentSalaryMatch?.[2]);
+  const establishedRemunerationAmount =
+    queryRemunerationAmount ??
+    (!hasAcquisitionClause && !hasNonRemunerationOutlayClause ? priorPayrollSalary : undefined);
+
   const semanticallyNonPayroll = isSemanticallyNonPayroll(questionUnderstanding);
   const isPayrollSalaryQuery =
     !semanticallyNonPayroll && (
       requestsIndependentFinalSalary ||
-      (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) && (
-        (ownedSalaryAmount !== undefined && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
-        (!hasAcquisitionClause && hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
-        // A correction such as "I mean 10,000 a month" inherits the payroll
-        // context rather than being routed to the statutory-advisory fallback.
-        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-          isSingleMonthlySalaryAmendment(query)) ||
-        (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
-          /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
-      ))
+      (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) &&
+        establishedRemunerationAmount !== undefined && (
+          (queryRemunerationAmount !== undefined && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+          (!hasAcquisitionClause && !hasNonRemunerationOutlayClause && hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
+          // A correction such as "I mean 10,000 a month" inherits the payroll
+          // context rather than being routed to the statutory-advisory fallback.
+          (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+            isSingleMonthlySalaryAmendment(query)) ||
+          (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+            /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(query))
+        ))
     );
 
   if (isPayrollSalaryQuery) {
@@ -734,20 +761,31 @@ export async function parseAccountingQuery(
         }, separateTransactionMissingField]
       };
     }
-    const priorBasicSalary = currentScenario?.keyParameters
-      ?.find(p => p.label === 'Basic Monthly Salary')?.value.match(/[\d,]+(?:\.\d+)?/);
-    let baseSalary = priorBasicSalary?.[0]
-      ? Number(priorBasicSalary[0].replace(/,/g, ''))
-      : (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? (currentScenario.amount || 3200) : 3200);
-    const amendmentSalaryMatch = currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' && isSingleMonthlySalaryAmendment(query)
-      ? query.match(/(?:sgd|s\$|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i)
-      : null;
-    const resolvedSalary = requestsIndependentFinalSalary
+    const baseSalary = requestsIndependentFinalSalary
       ? parseCapturedAmount(payrollSalaryAmountMatch?.[1], payrollSalaryAmountMatch?.[2])
-      : parseCapturedAmount(payrollSalaryAmountMatch?.[1], payrollSalaryAmountMatch?.[2]) ??
-        ownedSalaryAmount ??
-        parseCapturedAmount(amendmentSalaryMatch?.[1], amendmentSalaryMatch?.[2]);
-    if (resolvedSalary !== undefined) baseSalary = resolvedSalary;
+      : establishedRemunerationAmount;
+    if (baseSalary === undefined) {
+      return {
+        scenarioType: 'PAYROLL_CPF_SALARY',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'CPF_BOARD',
+        rawQuery: query,
+        transactionTitle: 'Payroll Calculation Requires Confirmed Salary',
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        projectedGroups: [],
+        committedDirectGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'salaryRate',
+          fieldName: 'Employee salary rate',
+          prompt: 'What is the employee’s monthly salary rate?',
+          whyNeeded: 'A salary or CPF journal cannot be calculated without an explicitly stated remuneration amount.'
+        }]
+      };
+    }
 
     if (requestsIndependentFinalSalary) {
       return {

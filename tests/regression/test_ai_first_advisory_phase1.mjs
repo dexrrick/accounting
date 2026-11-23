@@ -1854,20 +1854,25 @@ for (const call of calls) {
       'paid staff salary includes credit to Net Salaries Payable (2060)'
     );
 
-    const paidPayrollProcessingQuery = 'We paid SGD 1,000 for staff payroll processing.';
-    const parsedPaidPayrollProcessing = await parseAccountingQuery(paidPayrollProcessingQuery);
-    assert.notEqual(
-      parsedPaidPayrollProcessing.scenarioType,
-      'PAYROLL_CPF_SALARY',
-      'staff payroll processing expense is not misclassified as PAYROLL_CPF_SALARY'
-    );
-    assert.equal(
-      parsedPaidPayrollProcessing.directGroups.some(group =>
-        group.lines.some(line => ['5010', '2050', '2060'].includes(line.accountCode))
-      ),
-      false,
-      'staff payroll processing expense does not post salary or CPF journal lines'
-    );
+    for (const nonRemunerationPayrollQuery of [
+      'We paid SGD 1,000 for staff payroll processing.',
+      'We paid SGD 1,000 for staff payroll processing. How much CPF?',
+      'Staff payroll processing fee is SGD 1,000. How much CPF?'
+    ]) {
+      const parsedNonRemunerationPayroll = await parseAccountingQuery(nonRemunerationPayrollQuery);
+      assert.notEqual(
+        parsedNonRemunerationPayroll.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `non-remuneration payroll processing/fee query is not misclassified as PAYROLL_CPF_SALARY: ${nonRemunerationPayrollQuery}`
+      );
+      assert.equal(
+        parsedNonRemunerationPayroll.directGroups.some(group =>
+          group.lines.some(line => ['5010', '5020', '5030', '2050', '2055', '2060'].includes(line.accountCode))
+        ),
+        false,
+        `non-remuneration payroll processing/fee query does not post salary or CPF journal lines: ${nonRemunerationPayrollQuery}`
+      );
+    }
 
     const parsedSemanticNonPayrollSupport = await parseAccountingQuery(
       'We pay SGD 100 per month for staff support with CPF notes.',
