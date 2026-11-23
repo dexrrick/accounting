@@ -1,0 +1,52 @@
+{
+  "testedCommit": "bb5f12635350cbd08c6b3e502c32b4641cc6893a",
+  "verificationStatus": "PASS",
+  "journalRecallBlocker": "CLOSED",
+  "phase2Decision": "NO-GO",
+  "model": "gemini-3.5-flash-lite",
+  "previousAttempts": 21,
+  "attemptCap": 25,
+  "cumulativeAttempts": 25,
+  "retriesEnabled": false,
+  "stopReason": "COMPLETED",
+  "turns": [
+    {
+      "id": "conditional-journal",
+      "prompt": "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+      "status": "ANSWERED",
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "scenario": "UNRECOGNIZED",
+      "preparationFailed": true,
+      "displayedJournalCount": 0,
+      "retainedJournalMatchesFixture": true,
+      "geminiAttempts": 4,
+      "answer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.\n\n### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+      "officialCitationCount": 0
+    },
+    {
+      "id": "recall-journal",
+      "prompt": "show the double entry",
+      "status": "ANSWERED",
+      "answerPath": "ACCOUNTING_JOURNAL_PREPARATION_FAILURE",
+      "scenario": "UNRECOGNIZED",
+      "preparationFailed": true,
+      "displayedJournalCount": 0,
+      "retainedJournalMatchesFixture": true,
+      "geminiAttempts": 0,
+      "answer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request."
+    },
+    {
+      "id": "explicit-last-journal",
+      "prompt": "show last journal",
+      "status": "ANSWERED",
+      "scenario": "PAYROLL_CPF_SALARY",
+      "preparationFailed": false,
+      "displayedJournalCount": 1,
+      "retainedJournalMatchesFixture": true,
+      "geminiAttempts": 0,
+      "answerSummary": "The assistant identified and displayed the committed payroll journal.",
+      "displayedJournalMatchesFixture": true,
+      "displayedJournalBalanced": true
+    }
+  ]
+}

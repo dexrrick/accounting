@@ -1,0 +1,12 @@
+{"id":"conditional-journal","attempt":22,"turnAttempt":1,"event":"dispatch","at":"2026-11-23T00:49:26.609Z","retry":false}
+{"id":"conditional-journal","attempt":22,"turnAttempt":1,"event":"response","at":"2026-11-23T00:49:26.609Z","retry":false,"status":200}
+{"id":"conditional-journal","attempt":22,"turnAttempt":1,"event":"usage","promptTokens":1951,"outputTokens":349,"finishReasons":["STOP"]}
+{"id":"conditional-journal","attempt":23,"turnAttempt":2,"event":"dispatch","at":"2026-11-23T00:49:31.720Z","retry":false}
+{"id":"conditional-journal","attempt":23,"turnAttempt":2,"event":"response","at":"2026-11-23T00:49:31.720Z","retry":false,"status":200}
+{"id":"conditional-journal","attempt":23,"turnAttempt":2,"event":"usage","promptTokens":256,"outputTokens":83,"finishReasons":["STOP"]}
+{"id":"conditional-journal","attempt":24,"turnAttempt":3,"event":"dispatch","at":"2026-11-23T00:49:36.828Z","retry":false}
+{"id":"conditional-journal","attempt":24,"turnAttempt":3,"event":"response","at":"2026-11-23T00:49:36.828Z","retry":false,"status":200}
+{"id":"conditional-journal","attempt":24,"turnAttempt":3,"event":"usage","promptTokens":1729,"outputTokens":418,"finishReasons":["STOP"]}
+{"id":"conditional-journal","attempt":25,"turnAttempt":4,"event":"dispatch","at":"2026-11-23T00:49:41.945Z","retry":false}
+{"id":"conditional-journal","attempt":25,"turnAttempt":4,"event":"response","at":"2026-11-23T00:49:41.945Z","retry":false,"status":200}
+{"id":"conditional-journal","attempt":25,"turnAttempt":4,"event":"usage","promptTokens":2748,"outputTokens":407,"finishReasons":["STOP"]}
