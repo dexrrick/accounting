@@ -3377,6 +3377,13 @@ try {
   assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll journal']);
   assert.equal(appUi.journalProps.groups[0].totalDebit, 73291.25);
 
+  journalProps = undefined;
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Journal Not Prepared/,
+    'viewing payroll preserves the active journal preparation failure for ordinary recall');
+  assert.equal(appUi.journalProps, undefined);
+
   const exactEquipmentQuery = 'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?';
   const advisoryIncompleteEquipment = await parseAccountingQuery(exactEquipmentQuery);
   advisoryIncompleteEquipment.isComplete = false;
@@ -3409,6 +3416,18 @@ try {
     'App does not pass the conditional equipment proposal as an override for explicit last recall');
   assert.deepEqual(appUi.journalProps.groups.map(group => group.title), ['Committed payroll journal']);
   assert.equal(appUi.journalProps.groups[0].totalDebit, 73291.25);
+  assert.equal(appUi.inputProps.scenario.rawQuery, exactEquipmentQuery,
+    'viewing committed payroll preserves the active equipment scenario');
+
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[8]?.rawQuery, exactEquipmentQuery,
+    'ordinary recall still uses the current equipment proposal after viewing payroll');
+  assert.match(appUi.chatProps.messages.at(-1).fullText, /Conditional Journal \(Unconfirmed\)/);
+  assert.deepEqual(appUi.journalProps.groups.map(group => group.lines.map(line =>
+    [line.accountName, line.debit, line.credit])), [[
+    ['Property, Plant and Equipment — Equipment', 1200, 0], ['Trade Payables', 0, 1200]
+  ]]);
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;

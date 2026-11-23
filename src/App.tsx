@@ -92,6 +92,7 @@ export const App: React.FC = () => {
       text: 'Hello! Ask me about a transaction, payroll, tax, or compliance question. I can work through follow-ups with you and show the journal and sources alongside our chat.'
     }
   ]);
+  const [showLastCommittedJournal, setShowLastCommittedJournal] = useState(false);
 
   const processMessage = async (
     text: string,
@@ -102,12 +103,13 @@ export const App: React.FC = () => {
   ) => {
     setIsLoading(true);
     const isJournalRecall = isJournalDisplayRequest(text);
+    const isLastJournalRecall = isJournalRecall && isExplicitLastJournalRequest(text);
     setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
     try {
       const journalRecallGroups = isJournalRecall
         ? getDisplayableUncommittedJournalGroups(activeScenario, standard)
         : [];
-      const journalRecallProposal = journalRecallGroups.length > 0 && !isExplicitLastJournalRequest(text)
+      const journalRecallProposal = journalRecallGroups.length > 0 && !isLastJournalRecall
         ? activeScenario || undefined
         : undefined;
       const requestScenario = journalRecallProposal
@@ -140,13 +142,16 @@ export const App: React.FC = () => {
         ...response.scenarioState,
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
-      if (response.conversationBoundaryMessageId) {
-        setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      setShowLastCommittedJournal(isLastJournalRecall);
+      if (!isLastJournalRecall) {
+        if (response.conversationBoundaryMessageId) {
+          setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+        }
+        setScenario(answerState);
+        setCommittedJournalScenario(previous => updateCommittedJournalScenario(
+          previous, answerState, standard, options?.startNewScenario
+        ));
       }
-      setScenario(answerState);
-      setCommittedJournalScenario(previous => updateCommittedJournalScenario(
-        previous, answerState, standard, options?.startNewScenario
-      ));
 
       if (isJournalRecall) setActiveTab('entries');
       else if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
@@ -235,12 +240,14 @@ export const App: React.FC = () => {
   };
 
   const handleScenarioChange = (updated: AccountingScenarioState) => {
+    setShowLastCommittedJournal(false);
     setScenario(updated);
     setCommittedJournalScenario(previous => updateCommittedJournalScenario(previous, updated, standard));
   };
 
   const handleResetToDefaults = () => {
     if (isLoading) return;
+    setShowLastCommittedJournal(false);
     setScenario(null);
     setCommittedJournalScenario(null);
     setAnalysisStartMessageId(null);
@@ -254,15 +261,14 @@ export const App: React.FC = () => {
     ? calculateDoubleEntries(committedJournalScenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
   const currentUncommittedGroups = getDisplayableUncommittedJournalGroups(scenario, standard);
-  const displayedJournalScenario = scenario?.isHypothetical || currentUncommittedGroups.length > 0
+  const showCurrentJournal = !showLastCommittedJournal && (scenario?.isHypothetical || currentUncommittedGroups.length > 0);
+  const displayedJournalScenario = showCurrentJournal
     ? scenario
     : committedJournalScenario;
-  const displayedJournal = scenario?.isHypothetical
-    ? computed
-    : currentUncommittedGroups.length > 0
-      ? { ...computed, groups: currentUncommittedGroups }
-      : committedJournal;
-  const hasJournal = !isCurrentJournalPreparationFailure(scenario) &&
+  const displayedJournal = showCurrentJournal
+    ? scenario?.isHypothetical ? computed : { ...computed, groups: currentUncommittedGroups }
+    : committedJournal;
+  const hasJournal = (showLastCommittedJournal || !isCurrentJournalPreparationFailure(scenario)) &&
     displayedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
