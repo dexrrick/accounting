@@ -3381,4 +3381,105 @@ try {
   delete globalThis.localStorage;
 }
 
+{
+  const payrollQuestion = 'I have staff is 60 years old Singaporean earning 10k a month what\'s the double entry for all salary related journal';
+  const resignationQuestion = 'Please prepare the double entry for the staff resignation. What CPF rules apply?';
+  const payrollState = await parseAccountingQuery(payrollQuestion);
+  const committedPayroll = updateCommittedJournalScenario(null, payrollState, 'SFRS_I');
+  assert.ok(committedPayroll?.committedDirectGroups?.length, 'the preceding payroll request creates a committed journal fixture');
+  const originalCommittedGroups = structuredClone(committedPayroll.committedDirectGroups);
+  const currentScenario = selectAccountingScenarioForRequest(resignationQuestion, committedPayroll, committedPayroll);
+  let providerRequestCount = 0;
+  const fetchBeforeEmbeddedHistoryReplay = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === 'string' || input instanceof URL ? String(input) : input.url);
+    if (url.hostname !== 'generativelanguage.googleapis.com') {
+      throw new Error('Offline embedded-history replay blocked an external fetch');
+    }
+    const body = JSON.parse(init.body || '{}');
+    const system = (body.systemInstruction?.parts || []).map(part => part.text || '').join('\n');
+    const content = (body.contents || []).flatMap(turn => turn.parts || []).map(part => part.text || '').join('\n');
+    providerRequestCount += 1;
+    if (/Interpret the user question only/.test(system)) {
+      return Response.json({ candidates: [{ content: { parts: [{ text: '{}' }] } }] });
+    }
+    if (/Extract chronological accounting EVENT FACTS/.test(content)) {
+      return Response.json({ candidates: [{ content: { parts: [{ text: '{"events":[]}' }] } }] });
+    }
+    return Response.json({ candidates: [{ content: { parts: [{ text: '{}' }] } }] });
+  };
+
+  let incompleteResignation;
+  try {
+    incompleteResignation = await processAccountingQuery(
+      resignationQuestion, currentScenario, 'SFRS_I', adapters[0].settings, adapters[0].settings.gemini.model,
+      [
+        { id: 'p2-payroll', sender: 'user', timestamp: '', text: payrollQuestion },
+        { id: 'p2-payroll-answer', sender: 'assistant', timestamp: '', text: 'The committed payroll journal is available.' },
+        { id: 'p2-resignation', sender: 'user', timestamp: '', text: resignationQuestion }
+      ],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+  } finally {
+    globalThis.fetch = fetchBeforeEmbeddedHistoryReplay;
+  }
+
+  assert.equal(incompleteResignation.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  assert.equal(incompleteResignation.scenarioState.isComplete, false);
+  assert.equal(incompleteResignation.scenarioState.missingFields?.some(field => field.fieldKey === 'resignationDate'), true,
+    'the current resignation journal still identifies the missing last day');
+  assert.match(incompleteResignation.scenarioState.missingFields.find(field => field.fieldKey === 'resignationDate').prompt, /last day/i);
+  assert.deepEqual(incompleteResignation.scenarioState.committedDirectGroups, originalCommittedGroups,
+    'fallback retains the original committed payroll groups in state for explicit recall');
+  assert.equal(isCurrentJournalPreparationFailure(incompleteResignation.scenarioState), true,
+    'historical committed payroll groups do not hide the failed current journal preparation');
+  assert.match(incompleteResignation.messageText, /Journal Not Prepared/);
+  assert.doesNotMatch(incompleteResignation.messageText, /deterministic journal remains available/i,
+    'fallback does not promise the historical payroll journal as the current resignation journal');
+  assert.ok(providerRequestCount > 0, 'the incomplete mixed request followed the mocked provider path');
+
+  const recallCalls = [];
+  const fetchBeforeRecall = globalThis.fetch;
+  globalThis.fetch = async input => {
+    recallCalls.push(String(input));
+    throw new Error('The offline embedded-history recall must not call a provider');
+  };
+  try {
+    const ordinaryScenario = selectAccountingScenarioForRequest(
+      'show the double entry', incompleteResignation.scenarioState, committedPayroll
+    );
+    assert.strictEqual(ordinaryScenario, incompleteResignation.scenarioState,
+      'ordinary journal recall stays on the incomplete resignation request');
+    const ordinaryRecall = await processAccountingQuery(
+      'show the double entry', ordinaryScenario, 'SFRS_I', adapters[0].settings, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.equal(ordinaryRecall.answerPath, 'ACCOUNTING_JOURNAL_PREPARATION_FAILURE');
+    assert.match(ordinaryRecall.messageText, /Journal Not Prepared/);
+    assert.doesNotMatch(ordinaryRecall.messageText, /most recent committed journal|monthly payroll|salary/i,
+      'ordinary recall does not substitute the historical payroll journal');
+    assert.deepEqual(ordinaryRecall.scenarioState.missingFields?.map(field => field.fieldKey), ['resignationDate']);
+
+    const explicitScenario = selectAccountingScenarioForRequest(
+      'show last journal', incompleteResignation.scenarioState, committedPayroll
+    );
+    assert.strictEqual(explicitScenario, committedPayroll,
+      'explicit last-journal recall continues to select the committed payroll scenario');
+    const explicitRecall = await processAccountingQuery(
+      'show last journal', explicitScenario, 'SFRS_I', adapters[0].settings, 'unused', [],
+      { journal: true, statutory: false, shareStructure: false }
+    );
+    assert.match(explicitRecall.messageText, /most recent committed journal/i);
+    assert.deepEqual(explicitRecall.scenarioState.directGroups, originalCommittedGroups,
+      'explicit recall returns the original committed payroll journal');
+    assert.ok(originalCommittedGroups.every(group => group.isBalanced && group.totalDebit === group.totalCredit),
+      'the original committed payroll fixture is balanced');
+    assert.deepEqual(updateCommittedJournalScenario(committedPayroll, explicitRecall.scenarioState, 'SFRS_I').committedDirectGroups,
+      originalCommittedGroups, 'explicit recall preserves the balanced committed payroll unchanged');
+  } finally {
+    globalThis.fetch = fetchBeforeRecall;
+  }
+  assert.equal(recallCalls.length, 0, 'both recall paths use zero provider calls');
+}
+
 console.log('AI-first advisory regression passed: scoped analysis history, proposal display, salary correction, provider-safe failures, offline fallback and retry.');

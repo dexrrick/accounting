@@ -1452,11 +1452,19 @@ export function createGroundedSynthesisFailureResponse(
     deterministicScenario?.projectedGroups || [], (deterministicScenario?.projectedGroups || []).filter(group => group.authorityStatus === 'DETERMINISTIC'),
     trustedGroupIds, trustedAccountNames);
   const engineMissingFields = deterministicScenario?.missingFields || [];
+  const currentEngineGroups = deterministicScenario &&
+      (!deterministicScenario.isComplete || engineMissingFields.length > 0)
+    ? [
+        ...(deterministicScenario.directGroups || []),
+        ...(deterministicScenario.projectedGroups || [])
+      ]
+    : snapshotGroups;
   const currentCompletenessContext = [deterministicScenario?.requestCompletenessContext,
     authorityWorkstreams?.requestCompletenessContext, groundedContext?.requestCompletenessContext]
     .find(candidate => candidate && isCurrentRequestCompletenessContext(candidate, userInput));
-  const validatedEngineGroups = trustedGroups.filter(group =>
-    group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
+  const validatedEngineGroups = currentEngineGroups.filter(group =>
+    group.authorityStatus === 'DETERMINISTIC' && group.totalDebit > 0 && group.totalCredit > 0 &&
+    validateJournalGroups([group]).isValid
   );
   const balancedJournalAvailable = deterministicScenario?.isHypothetical !== true &&
     validatedEngineGroups.some(group => group.isHypothetical !== true);
