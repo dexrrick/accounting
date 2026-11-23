@@ -1831,33 +1831,55 @@ for (const call of calls) {
       'staff laptop acquisition with support fee excludes prior employee facts from provider prompt'
     );
 
-    const paidStaffSalaryQuery = 'We paid SGD 5,000 for staff salary this month.';
-    const parsedPaidStaffSalary = await parseAccountingQuery(paidStaffSalaryQuery);
-    assert.equal(parsedPaidStaffSalary.scenarioType, 'PAYROLL_CPF_SALARY');
-    assert.equal(parsedPaidStaffSalary.amount, 5000);
-    assert.equal(parsedPaidStaffSalary.isComplete, true);
-    assert.equal(parsedPaidStaffSalary.directGroups.length, 1);
-    assert.equal(parsedPaidStaffSalary.directGroups[0]?.isBalanced, true);
-    assert.equal(
-      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === 5000),
-      true,
-      'paid staff salary debits Staff Salaries & Wages (5010) for 5000'
-    );
-    assert.equal(
-      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
-      true,
-      'paid staff salary includes credit to CPF Payable (2050)'
-    );
-    assert.equal(
-      parsedPaidStaffSalary.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
-      true,
-      'paid staff salary includes credit to Net Salaries Payable (2060)'
-    );
+    for (const [positiveRemunerationQuery, expectedSalary] of [
+      ['We paid SGD 5,000 for staff salary this month.', 5000],
+      ['We paid SGD 5,000 for staff salary payment.', 5000],
+      ['Staff salary expense is SGD 5,000. How much CPF?', 5000],
+      ['Our payroll administration staff earns SGD 4,000 a month. How much CPF?', 4000]
+    ]) {
+      const parsedPositiveRemuneration = await parseAccountingQuery(positiveRemunerationQuery);
+      assert.equal(
+        parsedPositiveRemuneration.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `genuine remuneration query parses as PAYROLL_CPF_SALARY: ${positiveRemunerationQuery}`
+      );
+      assert.equal(
+        parsedPositiveRemuneration.amount,
+        expectedSalary,
+        `genuine remuneration query preserves salary ${expectedSalary}: ${positiveRemunerationQuery}`
+      );
+      assert.equal(parsedPositiveRemuneration.isComplete, true);
+      assert.equal(parsedPositiveRemuneration.directGroups.length, 1);
+      assert.equal(parsedPositiveRemuneration.directGroups[0]?.isBalanced, true);
+      assert.equal(
+        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === expectedSalary),
+        true,
+        `genuine remuneration debits Staff Salaries & Wages (5010) for ${expectedSalary}: ${positiveRemunerationQuery}`
+      );
+      assert.equal(
+        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
+        true,
+        `genuine remuneration includes credit to CPF Payable (2050): ${positiveRemunerationQuery}`
+      );
+      assert.equal(
+        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
+        true,
+        `genuine remuneration includes credit to Net Salaries Payable (2060): ${positiveRemunerationQuery}`
+      );
+    }
 
     for (const nonRemunerationPayrollQuery of [
       'We paid SGD 1,000 for staff payroll processing.',
       'We paid SGD 1,000 for staff payroll processing. How much CPF?',
-      'Staff payroll processing fee is SGD 1,000. How much CPF?'
+      'Staff payroll processing fee is SGD 1,000. How much CPF?',
+      'We paid SGD 1,000 for staff salary processing fees. How much CPF?',
+      'We paid SGD 1,000 for staff salary processing. How much CPF?',
+      'We paid SGD 1,000 for staff salary administration services. How much CPF?',
+      'We paid SGD 1,000 for staff wage disbursement fees. How much CPF?',
+      'Staff salary processing is SGD 1,000. How much CPF?',
+      'Processing fee for staff salary is SGD 1,000. How much CPF?',
+      'SGD 1,000 monthly salary processing fee. How much CPF?',
+      'We paid SGD 1,000 for staff salary and processing fees. How much CPF?'
     ]) {
       const parsedNonRemunerationPayroll = await parseAccountingQuery(nonRemunerationPayrollQuery);
       assert.notEqual(
@@ -1871,6 +1893,72 @@ for (const call of calls) {
         ),
         false,
         `non-remuneration payroll processing/fee query does not post salary or CPF journal lines: ${nonRemunerationPayrollQuery}`
+      );
+    }
+
+    const parsedSalaryProcessingWithPriorPayroll = await parseAccountingQuery(
+      'We paid SGD 1,000 for staff salary processing fees. How much CPF?',
+      employeeSetupScenario
+    );
+    assert.notEqual(
+      parsedSalaryProcessingWithPriorPayroll.scenarioType,
+      'PAYROLL_CPF_SALARY',
+      'salary processing fee query does not inherit prior PAYROLL_CPF_SALARY context'
+    );
+    assert.equal(
+      parsedSalaryProcessingWithPriorPayroll.directGroups.some(group =>
+        group.lines.some(line => ['5010', '5020', '5030', '2050', '2055', '2060'].includes(line.accountCode))
+      ),
+      false,
+      'salary processing fee query with prior payroll context does not post salary or CPF journal lines'
+    );
+
+    const mixedProcessingFeeFinalSalary = await parseAccountingQuery(
+      "Processing fee for staff salary is SGD 1,000; calculate the departing employee's final salary."
+    );
+    assert.equal(mixedProcessingFeeFinalSalary.isComplete, false,
+      'processing fee with final-salary request remains incomplete when employee salary rate is unstated');
+    assert.equal(mixedProcessingFeeFinalSalary.directGroups.length, 0,
+      'processing fee with final-salary request emits no payroll journal without salary rate');
+    assert.ok(
+      mixedProcessingFeeFinalSalary.missingFields.some(field => field.fieldKey === 'salaryRate'),
+      'processing fee with final-salary request asks for employee salaryRate'
+    );
+
+    for (const mixedSalaryAndProcessingFeeQuery of [
+      'We paid SGD 1,000 for staff salary processing fees and SGD 5,000 for staff salary. How much CPF?',
+      'We paid SGD 5,000 for staff salary and SGD 1,000 for staff salary processing fees. How much CPF?',
+      'We paid SGD 1,000 for staff salary processing fees. Our employee earns SGD 5,000 per month. How much CPF?',
+      'Staff salary processing fee is SGD 1,000 and staff salary is SGD 5,000. How much CPF?'
+    ]) {
+      const parsedMixedSalaryAndFee = await parseAccountingQuery(mixedSalaryAndProcessingFeeQuery);
+      assert.equal(
+        parsedMixedSalaryAndFee.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `mixed salary and processing fee query parses genuine salary as PAYROLL_CPF_SALARY: ${mixedSalaryAndProcessingFeeQuery}`
+      );
+      assert.equal(
+        parsedMixedSalaryAndFee.amount,
+        5000,
+        `mixed salary and processing fee query uses genuine salary 5000 rather than 1000 or 6000: ${mixedSalaryAndProcessingFeeQuery}`
+      );
+      assert.equal(parsedMixedSalaryAndFee.isComplete, true);
+      assert.equal(parsedMixedSalaryAndFee.directGroups.length, 1);
+      assert.equal(parsedMixedSalaryAndFee.directGroups[0]?.isBalanced, true);
+      assert.equal(
+        parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === 5000),
+        true,
+        `mixed salary and processing fee query debits Staff Salaries & Wages (5010) for 5000: ${mixedSalaryAndProcessingFeeQuery}`
+      );
+      assert.equal(
+        parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
+        true,
+        `mixed salary and processing fee query includes credit to CPF Payable (2050): ${mixedSalaryAndProcessingFeeQuery}`
+      );
+      assert.equal(
+        parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
+        true,
+        `mixed salary and processing fee query includes credit to Net Salaries Payable (2060): ${mixedSalaryAndProcessingFeeQuery}`
       );
     }
 
