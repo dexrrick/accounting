@@ -603,31 +603,8 @@ export async function parseAccountingQuery(
     /\b(?:buy|buys|buying|bought|purchas(?:e|es|ed|ing)|acquir(?:e|es|ed|ing)|leas(?:e|es|ed|ing)|rent(?:s|ed|ing|al)?|subscrib(?:e|es|ed|ing)|subscription|tenancy|hire\s+purchase)\b/i;
   const transactionClauseBoundaryPattern =
     /(?<!\d)[.!?;](?!\d)|(?:,\s*)?\b(?:and|but|while|whereas)\b(?=\s+(?:(?:we|i|they|he|she|it|you|the\s+company|our\s+company)\s+)?(?:(?:also|then|separately)\s+)?(?:buy|buys|buying|bought|purchas(?:e|es|ed|ing)|acquir(?:e|es|ed|ing)|leas(?:e|es|ed|ing)|rent(?:s|ed|ing)?|subscrib(?:e|es|ed|ing)|hir(?:e|es|ed|ing)|employ(?:s|ed|ing)?|paid|pay|pays|paying|incur(?:s|red|ring)?|earn(?:s|ed|ing)?)\b)|(?:,\s*)?\b(?:and|plus|along\s+with|as\s+well\s+as)\b(?=\s+(?:(?:a|an|another|the|separately|also)\s+){0,2}(?:sgd|s\$|\$)\s*\d)|(?:,\s*)?\b(?:and|but|while|whereas|plus|along\s+with|as\s+well\s+as)\b(?=\s+[^.!?;]{1,80}?\b(?:is|was|are|were|of|at|costs?|charges?|earns?|earning|earned)\s+(?:(?:a|an|about|around|approximately)\s+)?(?:(?:sgd|s\$|\$)\s*\d|\d[\d,]*(?:\.\d+)?\s*(?:k|m|million|thousand)?\s*(?:a\s*month|\/month|monthly|per\s*month)))/i;
-  const hasMonetaryAmountPattern =
-    /(?:sgd|s\$|\$)\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?|\b\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|million|thousand))?\s*(?:a\s*month|\/month|monthly|per\s*month)\b/i;
-  const monetaryAmountTokenPattern = new RegExp(hasMonetaryAmountPattern.source, 'gi');
-  const withSeparateMonetaryAmountPattern =
-    /(?:,\s*)?(?:together\s+)?\bwith\b(?=\s+(?:(?:a|an|another|the|separately|also|additional)\s+){0,2}(?:sgd|s\$|\$)\s*\d|\s+[^.!?;]{1,80}?\b(?:is|was|are|were|of|at|costs?|charges?)\s+(?:(?:a|an|about|around|approximately)\s+)?(?:sgd|s\$|\$)\s*\d)/gi;
-  const splitTransactionClauses = (text: string): string[] => {
-    const clauses: string[] = [];
-    for (const clause of text.split(transactionClauseBoundaryPattern).map(part => part.trim()).filter(Boolean)) {
-      let segmentStart = 0;
-      for (const match of clause.matchAll(withSeparateMonetaryAmountPattern)) {
-        if (match.index !== undefined && hasMonetaryAmountPattern.test(clause.slice(segmentStart, match.index))) {
-          const segment = clause.slice(segmentStart, match.index).trim();
-          if (segment) {
-            clauses.push(segment);
-          }
-          segmentStart = match.index + match[0].length;
-        }
-      }
-      const trailingSegment = clause.slice(segmentStart).trim();
-      if (trailingSegment) {
-        clauses.push(trailingSegment);
-      }
-    }
-    return clauses;
-  };
+  const splitTransactionClauses = (text: string): string[] =>
+    text.split(transactionClauseBoundaryPattern).map(clause => clause.trim()).filter(Boolean);
   // Service/fee tails demote a preceding payroll/salary noun into a modifier of
   // a non-remuneration outlay (e.g., "staff salary processing fees"), while
   // guarding against employee role titles like "payroll administration staff".
@@ -716,40 +693,12 @@ export async function parseAccountingQuery(
   } => {
     const isAcquisition = nonPayrollAcquisitionPattern.test(clause);
     const isNonRemunerationOutlay = isNonRemunerationOutlayClause(clause);
-    if (isAcquisition) {
+    // Do not deterministically extract remuneration from an acquisition clause
+    // or a clause containing a non-remuneration outlay (e.g. processing fees
+    // mixed with inclusive totals or hypothetical salaries); delegate ambiguous
+    // single-clause remuneration classification to the existing AI reasoning path.
+    if (isAcquisition || isNonRemunerationOutlay) {
       return { clause, isAcquisition, isNonRemunerationOutlay };
-    }
-    if (isNonRemunerationOutlay) {
-      const monetaryAmountCount = clause.match(monetaryAmountTokenPattern)?.length ?? 0;
-      if (monetaryAmountCount < 2) {
-        return { clause, isAcquisition: false, isNonRemunerationOutlay: true };
-      }
-      for (const pattern of explicitClauseSalaryPatterns) {
-        const m = clause.match(pattern);
-        if (m && m.index !== undefined) {
-          const prefix = clause.slice(0, m.index);
-          const suffix = clause.slice(m.index + m[0].length);
-          if (
-            /(?:fee|fees|charge|charges|retainer|retainers|cost|costs|expense|expenses|bill|bills|invoice|invoices|processing|outsourc(?:e|ed|ing)|administering|handling)\s+(?:for|on|of)\s+(?:[a-z'-]+\s+){0,4}$/i.test(
-              prefix
-            )
-          ) {
-            continue;
-          }
-          if (
-            /^[\s,]*(?:(?:and|&|\+)\s+(?:(?:a|an|the|any|related|associated|applicable|monthly|bank|payroll|salary)\s+){0,3}(?:processing|outsourc(?:e|ed|ing)|admin(?:istration|istrative)?|handling|disbursement|transfer|service|services|fee|fees|charge|charges|retainer|retainers)\b(?!\s*(?:is|was|are|were|of|at|:|=)\s*(?:sgd|s\$|\$)\s*\d)|(?:including|incl\.?|inclusive\s+of)\b)/i.test(
-              suffix
-            )
-          ) {
-            continue;
-          }
-          const val = parseCapturedAmount(m[1] || m[3], m[2] || m[4]);
-          if (val !== undefined) {
-            return { clause, isAcquisition: false, isNonRemunerationOutlay: true, remunerationAmount: val };
-          }
-        }
-      }
-      return { clause, isAcquisition: false, isNonRemunerationOutlay: true };
     }
     for (const pattern of explicitClauseSalaryPatterns) {
       const m = clause.match(pattern);

@@ -1930,8 +1930,7 @@ for (const call of calls) {
       'We paid SGD 1,000 for staff salary processing fees and SGD 5,000 for staff salary. How much CPF?',
       'We paid SGD 5,000 for staff salary and SGD 1,000 for staff salary processing fees. How much CPF?',
       'We paid SGD 1,000 for staff salary processing fees. Our employee earns SGD 5,000 per month. How much CPF?',
-      'Staff salary processing fee is SGD 1,000 and staff salary is SGD 5,000. How much CPF?',
-      'We paid SGD 5,000 for staff salary with SGD 100 processing fee. How much CPF?'
+      'Staff salary processing fee is SGD 1,000 and staff salary is SGD 5,000. How much CPF?'
     ]) {
       const parsedMixedSalaryAndFee = await parseAccountingQuery(mixedSalaryAndProcessingFeeQuery);
       assert.equal(
@@ -1961,6 +1960,73 @@ for (const call of calls) {
         parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
         true,
         `mixed salary and processing fee query includes credit to Net Salaries Payable (2060): ${mixedSalaryAndProcessingFeeQuery}`
+      );
+    }
+
+    for (const [index, ambiguousMixedSalaryAndFeeQuery] of [
+      'We paid SGD 5,000 for staff salary with SGD 100 of that total for processing fees. How much CPF?',
+      'We paid SGD 1,000 for staff salary processing fees calculated using a hypothetical salary of SGD 5,000. How much CPF on the fee?',
+      'We paid SGD 5,000 for staff salary with SGD 100 processing fee. How much CPF?'
+    ].entries()) {
+      const parsedAmbiguous = await parseAccountingQuery(ambiguousMixedSalaryAndFeeQuery);
+      assert.equal(
+        parsedAmbiguous.scenarioType,
+        'UNRECOGNIZED',
+        `ambiguous single-clause mixed salary/fee query avoids deterministic payroll routing: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+      assert.equal(
+        parsedAmbiguous.directGroups.length,
+        0,
+        `ambiguous single-clause mixed salary/fee query emits no deterministic journal lines: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+
+      const parsedAmbiguousWithPrior = await parseAccountingQuery(ambiguousMixedSalaryAndFeeQuery, employeeSetupScenario);
+      assert.notEqual(
+        parsedAmbiguousWithPrior.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `ambiguous single-clause mixed salary/fee query does not inherit prior payroll scenario: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+      assert.equal(
+        parsedAmbiguousWithPrior.directGroups.length,
+        0,
+        `ambiguous single-clause mixed salary/fee query with prior payroll context emits no payroll journal lines: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+
+      const ambiguousTurn = {
+        id: `boundary-ambiguous-payroll-fee-${index}`,
+        sender: 'user',
+        timestamp: '',
+        text: ambiguousMixedSalaryAndFeeQuery
+      };
+      const callsBeforeAmbiguous = boundaryCalls.length;
+      const ambiguousResponse = await processAccountingQuery(
+        ambiguousMixedSalaryAndFeeQuery,
+        null,
+        'SFRS_I',
+        adapters[2].settings,
+        'unused',
+        [ambiguousTurn]
+      );
+      assert.ok(
+        boundaryCalls.length > callsBeforeAmbiguous,
+        `ambiguous single-clause mixed salary/fee query delegates to the AI reasoning path: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+      const ambiguousPrompt = boundaryCalls.slice(callsBeforeAmbiguous).map(call => call.prompt).join('\n');
+      assert.ok(
+        ambiguousPrompt.includes(ambiguousMixedSalaryAndFeeQuery),
+        `ambiguous single-clause mixed salary/fee query preserves full user query in provider prompt: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+      assert.notEqual(
+        ambiguousResponse.scenarioState?.scenarioType,
+        'PAYROLL_CPF_SALARY',
+        `ambiguous single-clause mixed salary/fee response scenarioState is not PAYROLL_CPF_SALARY: ${ambiguousMixedSalaryAndFeeQuery}`
+      );
+      assert.equal(
+        (ambiguousResponse.scenarioState?.directGroups || []).some(group =>
+          group.lines.some(line => ['5010', '5020', '5030', '2050', '2055', '2060'].includes(line.accountCode))
+        ),
+        false,
+        `ambiguous single-clause mixed salary/fee response posts no payroll or CPF journal lines: ${ambiguousMixedSalaryAndFeeQuery}`
       );
     }
 
