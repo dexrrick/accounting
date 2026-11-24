@@ -1,0 +1,616 @@
+{
+  "head": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-24T03:30:47.175Z",
+  "quota": {
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "max503Retries": 1,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceGenerationAttempts": 8,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "statutory-follow-up",
+      "turns": [
+        {
+          "id": "mom-parent",
+          "query": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+          "mode": "advisory",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "mom-parent"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            []
+          ],
+          "analysisStartMessageId": "mom-parent",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Ministry of Manpower — Employment requirements\n\n**Status:** Evidence verified\n\n**salary and overtime payment deadlines** (party in scope: Employee)\n\n**Source:** Hours of work, overtime and rest day (live external)\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): The overtime rate payable for non-workmen is capped at the salary level of $2,600, or an hourly rate of $13.60.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): For overtime work, your employer must pay you at least 1.5 times the hourly basic rate of pay. Payment must be made within 14 days after the last day of the salary period.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): At the employer&rsquo;s request | 1 day&rsquo;s salary | 2 days&rsquo; salary | 2 days&rsquo; salary + overtime pay\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): At the employee&rsquo;s request | Half day&rsquo;s salary | 1 day&rsquo;s salary | 1 day&rsquo;s salary + overtime pay\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): You can claim overtime if you are:\n\n• A non-workman earning a monthly basic salary of $2,600 or less.\n\n• A workman earning a monthly basic salary of $4,500 or less.\n- Official source: [Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\n**Source:** Paying salary (live external)\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): In accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): Non-payment of salary is an offence.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): Salary must be paid:\n\n• Within 7 days after the end of the salary period\n\n• For overtime work, within 14 days after the end of the salary period\n- Official source: [Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- Salary Periods, Payment and Deductions: A taxonomy topic remained unresolved because no validated requested issue claimed it.\n- salary payment deadline: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- overtime payment deadline: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- Salary Periods, Payment and Deductions: A requested issue was not assigned to a supported topic",
+          "displayedAnswer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Ministry of Manpower — Employment requirements\n\n**Status:** Evidence verified\n\n**salary and overtime payment deadlines** (party in scope: Employee)\n\n**Source:** Hours of work, overtime and rest day (live external)\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): The overtime rate payable for non-workmen is capped at the salary level of $2,600, or an hourly rate of $13.60.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): For overtime work, your employer must pay you at least 1.5 times the hourly basic rate of pay. Payment must be made within 14 days after the last day of the salary period.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): At the employer&rsquo;s request | 1 day&rsquo;s salary | 2 days&rsquo; salary | 2 days&rsquo; salary + overtime pay\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): At the employee&rsquo;s request | Half day&rsquo;s salary | 1 day&rsquo;s salary | 1 day&rsquo;s salary + overtime pay\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): You can claim overtime if you are:\n\n• A non-workman earning a monthly basic salary of $2,600 or less.\n\n• A workman earning a monthly basic salary of $4,500 or less.\n- Official source: [Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\n**Source:** Paying salary (live external)\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): In accordance with the Employment Act, your employer must pay your salary at least once a month and within 7 days after the end of the salary period. There are exceptions for overtime, resignation without notice and other situations.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): Non-payment of salary is an offence.\n- **Verified official source excerpt** (supports salary and overtime payment deadlines): Salary must be paid:\n\n• Within 7 days after the end of the salary period\n\n• For overtime work, within 14 days after the end of the salary period\n- Official source: [Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- Salary Periods, Payment and Deductions: A taxonomy topic remained unresolved because no validated requested issue claimed it.\n- salary payment deadline: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- overtime payment deadline: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- Salary Periods, Payment and Deductions: A requested issue was not assigned to a supported topic",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": "mom-parent",
+          "sourceAnalysisBoundary": "mom-parent",
+          "scenario": "AUTHORITY_ADVISORY",
+          "scenarioComplete": false,
+          "rawQuery": "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "AUTHORITY_ADVISORY",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [
+            {
+              "title": "Hours of work, overtime and rest day",
+              "url": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+            },
+            {
+              "title": "Paying salary",
+              "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+            }
+          ],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "0ace022bd7bb84239ecf049ea71d852275cd27e8bfb967b235eafda4d0991145",
+              "estimatedInputTokens": 13295,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+              "fingerprint": "ceaa841f0642de30d2da1b529a20f5707d1725504173d1641ec9584d435ecb49",
+              "estimatedInputTokens": 55099,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "0ace022bd7bb84239ecf049ea71d852275cd27e8bfb967b235eafda4d0991145",
+              "estimatedInputTokens": 13295,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "mom-parent",
+              "workflow": "statutory-follow-up",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:30:47.206Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+              "fingerprint": "ceaa841f0642de30d2da1b529a20f5707d1725504173d1641ec9584d435ecb49",
+              "estimatedInputTokens": 55099,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "mom-parent",
+              "workflow": "statutory-follow-up",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:30:52.312Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [
+            "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+            "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+          ],
+          "attempts": 2,
+          "cumulativeAttempts": 2,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "mom-follow-up",
+          "query": "Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.",
+          "mode": "advisory",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "mom-parent",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "AUTHORITY_ADVISORY",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "AUTHORITY_ADVISORY",
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "mom-parent",
+            "mom-parent-answer",
+            "mom-follow-up"
+          ],
+          "historyMarkersRequested": [
+            "Our employee is covered by the Employment Act and the overtime provisions."
+          ],
+          "markersInProviderPayload": [
+            [
+              {
+                "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                "markerLength": 74,
+                "included": true
+              }
+            ],
+            [
+              {
+                "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                "markerLength": 74,
+                "included": true
+              }
+            ]
+          ],
+          "analysisStartMessageId": "mom-parent",
+          "incomingAnalysisBoundary": "mom-parent",
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "# Answer\n\nIf you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract. [MOM: Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\n### Conditions and unresolved points\n\nSome claims could not be established from the admitted evidence and stated facts, so they have been withheld.\n\n- The available admitted evidence does not establish a supported explanation of ordinary salary payment deadline.\n\n- The general rule is supported above; for overtime payment deadline, a supported case-specific application was not established.",
+          "displayedAnswer": "# Answer\n\nIf you are not covered under Part 4 of the Employment Act, your terms and conditions of employment will be according to your employment contract. [MOM: Hours of work, overtime and rest day](https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days)\n\n### Conditions and unresolved points\n\nSome claims could not be established from the admitted evidence and stated facts, so they have been withheld.\n\n- The available admitted evidence does not establish a supported explanation of ordinary salary payment deadline.\n\n- The general rule is supported above; for overtime payment deadline, a supported case-specific application was not established.",
+          "answerPath": "AI_GROUNDED_SYNTHESIS",
+          "boundary": "mom-parent",
+          "sourceAnalysisBoundary": "mom-parent",
+          "scenario": "AUTHORITY_ADVISORY",
+          "scenarioComplete": false,
+          "rawQuery": "Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "AUTHORITY_ADVISORY",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [
+            {
+              "title": "MOM: Hours of work, overtime and rest day",
+              "url": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+            }
+          ],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "verification": {
+            "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+            "claimValidation": "DETERMINISTIC_PACKET_CHECKS",
+            "semanticVerificationCalls": 0,
+            "providerCalls": 1,
+            "providerAttempts": 1,
+            "providerElapsedMs": 1638,
+            "admittedClaimIds": [
+              "mom-contract-scope-1"
+            ],
+            "withheldClaimIds": [
+              "c1",
+              "c2",
+              "c3"
+            ],
+            "claims": [
+              {
+                "claimId": "mom-contract-scope-1",
+                "kind": "RULE",
+                "outcome": "ADMITTED",
+                "admittedPassageIds": [
+                  "passage-41"
+                ]
+              },
+              {
+                "claimId": "c1",
+                "kind": "RULE",
+                "outcome": "WITHHELD",
+                "admittedPassageIds": []
+              },
+              {
+                "claimId": "c2",
+                "kind": "RULE",
+                "outcome": "WITHHELD",
+                "admittedPassageIds": []
+              },
+              {
+                "claimId": "c3",
+                "kind": "RULE",
+                "outcome": "WITHHELD",
+                "admittedPassageIds": []
+              }
+            ],
+            "requestedIssues": [
+              {
+                "issueId": "issue_9c2a49cb",
+                "subject": "ordinary salary payment deadline",
+                "scopeConflict": false,
+                "admittedPassageIds": [
+                  "passage-1",
+                  "passage-2",
+                  "passage-3",
+                  "passage-4",
+                  "passage-5",
+                  "passage-7",
+                  "passage-8",
+                  "passage-9",
+                  "passage-10",
+                  "passage-11",
+                  "passage-12",
+                  "passage-13",
+                  "passage-14",
+                  "passage-15",
+                  "passage-16",
+                  "passage-17",
+                  "passage-18",
+                  "passage-19",
+                  "passage-20",
+                  "passage-21",
+                  "passage-22",
+                  "passage-23",
+                  "passage-24",
+                  "passage-25",
+                  "passage-26",
+                  "passage-27",
+                  "passage-28",
+                  "passage-29",
+                  "passage-30",
+                  "passage-31",
+                  "passage-32",
+                  "passage-33",
+                  "passage-34",
+                  "passage-35",
+                  "passage-36"
+                ],
+                "factRequests": []
+              },
+              {
+                "issueId": "issue_280db884",
+                "subject": "overtime payment deadline",
+                "scopeConflict": false,
+                "admittedPassageIds": [
+                  "passage-6",
+                  "passage-37",
+                  "passage-38",
+                  "passage-39",
+                  "passage-40",
+                  "passage-41",
+                  "passage-42",
+                  "passage-43",
+                  "passage-44",
+                  "passage-45",
+                  "passage-46",
+                  "passage-47",
+                  "passage-48",
+                  "passage-49",
+                  "passage-50",
+                  "passage-51",
+                  "passage-52",
+                  "passage-53",
+                  "passage-54",
+                  "passage-55",
+                  "passage-56",
+                  "passage-57",
+                  "passage-58",
+                  "passage-59",
+                  "passage-60",
+                  "passage-61",
+                  "passage-62",
+                  "passage-63",
+                  "passage-64",
+                  "passage-65",
+                  "passage-66",
+                  "passage-67",
+                  "passage-68",
+                  "passage-69",
+                  "passage-70",
+                  "passage-71",
+                  "passage-72",
+                  "passage-73",
+                  "passage-74",
+                  "passage-75",
+                  "passage-76",
+                  "passage-77",
+                  "passage-78",
+                  "passage-79",
+                  "passage-80",
+                  "passage-81",
+                  "passage-82",
+                  "passage-83",
+                  "passage-84",
+                  "passage-85",
+                  "passage-86",
+                  "passage-87",
+                  "passage-88",
+                  "passage-89",
+                  "passage-90",
+                  "passage-91"
+                ],
+                "factRequests": []
+              }
+            ]
+          },
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 3,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "350c4ea5dddf5fa7d2bb3822053c4baa390d5ec213d4101f8528b640b2fee320",
+              "estimatedInputTokens": 16771,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [
+                {
+                  "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                  "markerLength": 74,
+                  "included": true
+                }
+              ],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 4,
+              "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+              "fingerprint": "6831f72dd5a126c365347df1395a9d149ec51a4842bd018ee09f708bfd001c25",
+              "estimatedInputTokens": 46493,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [
+                {
+                  "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                  "markerLength": 74,
+                  "included": true
+                }
+              ],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "350c4ea5dddf5fa7d2bb3822053c4baa390d5ec213d4101f8528b640b2fee320",
+              "estimatedInputTokens": 16771,
+              "repeatedInTurn": false,
+              "markersIncluded": [
+                {
+                  "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                  "markerLength": 74,
+                  "included": true
+                }
+              ],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "mom-follow-up",
+              "workflow": "statutory-follow-up",
+              "attempt": 3,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:31:07.343Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+              "fingerprint": "6831f72dd5a126c365347df1395a9d149ec51a4842bd018ee09f708bfd001c25",
+              "estimatedInputTokens": 46493,
+              "repeatedInTurn": false,
+              "markersIncluded": [
+                {
+                  "markerHash": "7ef8e6f77c4c4f8ae300e825e2d985ce8689d6ca21978ccbc8c2cd5f8e5d4f6c",
+                  "markerLength": 74,
+                  "included": true
+                }
+              ],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "mom-follow-up",
+              "workflow": "statutory-follow-up",
+              "attempt": 4,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:31:12.507Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [
+            "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+          ],
+          "attempts": 2,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-24T03:31:14.523Z",
+  "totalAttempts": 4,
+  "stopReason": "COMPLETED",
+  "usageSummary": {
+    "dispatchedRequests": 4,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 131658,
+    "providerReportedPromptTokens": 29020,
+    "providerReportedTotalTokens": 30461,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}

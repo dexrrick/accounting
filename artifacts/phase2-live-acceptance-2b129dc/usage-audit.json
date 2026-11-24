@@ -1,0 +1,147 @@
+{
+  "testedCommit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+  "recommendation": "NO-GO",
+  "maxRequestsPerBatch": 24,
+  "maxDelayed503RetriesPerBatch": 1,
+  "batches": [
+    {
+      "batch": "cash-final",
+      "commit": "37f9d16b19a5877660e301fde2f4fdf06d5978ba",
+      "startedAt": "2026-11-24T03:54:43.309Z",
+      "finishedAt": "2026-11-24T03:54:59.946Z",
+      "dispatches": 2,
+      "responseStatusCounts": {
+        "200": 2
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "equipment-cash-control"
+      ]
+    },
+    {
+      "batch": "cash-retest",
+      "commit": "229fc0e17793fffab12f91443cd81152d509015a",
+      "startedAt": "2026-11-24T03:38:06.785Z",
+      "finishedAt": "2026-11-24T03:38:23.302Z",
+      "dispatches": 2,
+      "responseStatusCounts": {
+        "200": 2
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "equipment-cash-control"
+      ]
+    },
+    {
+      "batch": "invoice",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:28:17.871Z",
+      "finishedAt": "2026-11-24T03:29:11.030Z",
+      "dispatches": 8,
+      "responseStatusCounts": {
+        "200": 8
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "invoice-simple",
+        "invoice-replace",
+        "invoice-alternatives",
+        "invoice-subtotals",
+        "invoice-with-gst",
+        "invoice-conflicting-total"
+      ]
+    },
+    {
+      "batch": "iras",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:29:37.402Z",
+      "finishedAt": "2026-11-24T03:30:45.442Z",
+      "dispatches": 10,
+      "responseStatusCounts": {
+        "200": 9,
+        "503": 1
+      },
+      "retriesDispatched": 0,
+      "stopReason": "HTTP_503_RETRY_WINDOW_EXPIRED",
+      "turns": [
+        "complete-independent",
+        "machine-parent",
+        "second-purchase",
+        "conditional-purchase"
+      ]
+    },
+    {
+      "batch": "mom",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:30:47.175Z",
+      "finishedAt": "2026-11-24T03:31:14.523Z",
+      "dispatches": 4,
+      "responseStatusCounts": {
+        "200": 4
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "mom-parent",
+        "mom-follow-up"
+      ]
+    },
+    {
+      "batch": "payroll",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:30:30.467Z",
+      "finishedAt": "2026-11-24T03:31:14.718Z",
+      "dispatches": 4,
+      "responseStatusCounts": {
+        "200": 4
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "payroll-parent",
+        "salary-correction"
+      ]
+    },
+    {
+      "batch": "priority",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:26:39.378Z",
+      "finishedAt": "2026-11-24T03:27:44.751Z",
+      "dispatches": 6,
+      "responseStatusCounts": {
+        "200": 6
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "conditional-journal",
+        "recall-journal",
+        "equipment-explicit-last",
+        "equipment-current-after-last",
+        "embedded-resignation",
+        "equipment-cash-control"
+      ]
+    },
+    {
+      "batch": "shares",
+      "commit": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+      "startedAt": "2026-11-24T03:30:46.509Z",
+      "finishedAt": "2026-11-24T03:31:10.213Z",
+      "dispatches": 1,
+      "responseStatusCounts": {
+        "200": 1
+      },
+      "retriesDispatched": 0,
+      "stopReason": "COMPLETED",
+      "turns": [
+        "holdings-parent",
+        "continuing-trade",
+        "reset-trade"
+      ]
+    }
+  ],
+  "totalProviderRequests": 37
+}

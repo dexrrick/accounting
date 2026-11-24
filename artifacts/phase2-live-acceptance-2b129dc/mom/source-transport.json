@@ -1,0 +1,86 @@
+[
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/sitemap.xml",
+    "status": 200,
+    "ms": 131
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://mom.gov.sg/passes-and-permits.xml",
+    "status": 301,
+    "ms": 107
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/passes-and-permits.xml",
+    "status": 200,
+    "ms": 22
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://mom.gov.sg/employment-practices.xml",
+    "status": 301,
+    "ms": 67
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/employment-practices.xml",
+    "status": 200,
+    "ms": 22
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+    "status": 301,
+    "ms": 86
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+    "status": 200,
+    "ms": 120
+  },
+  {
+    "id": "mom-parent",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+    "status": 200,
+    "ms": 126
+  },
+  {
+    "id": "mom-follow-up",
+    "workflow": "statutory-follow-up",
+    "target": "https://mom.gov.sg/employment-practices/salary/salary-deductions",
+    "status": 301,
+    "ms": 80
+  },
+  {
+    "id": "mom-follow-up",
+    "workflow": "statutory-follow-up",
+    "target": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+    "status": 301,
+    "ms": 90
+  },
+  {
+    "id": "mom-follow-up",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+    "status": 200,
+    "ms": 172
+  },
+  {
+    "id": "mom-follow-up",
+    "workflow": "statutory-follow-up",
+    "target": "https://www.mom.gov.sg/employment-practices/salary/salary-deductions",
+    "status": 200,
+    "ms": 185
+  }
+]

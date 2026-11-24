@@ -1,0 +1,737 @@
+{
+  "head": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-24T03:30:30.467Z",
+  "quota": {
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "max503Retries": 1,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceGenerationAttempts": 8,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "correction",
+      "turns": [
+        {
+          "id": "payroll-parent",
+          "query": "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal",
+          "mode": "journal",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "payroll-parent"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            []
+          ],
+          "analysisStartMessageId": "payroll-parent",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+          "displayedAnswer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": null,
+          "sourceAnalysisBoundary": "payroll-parent",
+          "scenario": "PAYROLL_CPF_SALARY",
+          "scenarioComplete": true,
+          "rawQuery": "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal",
+          "preparationFailed": false,
+          "activeScenarioAfter": "PAYROLL_CPF_SALARY",
+          "explicitLast": false,
+          "missing": [],
+          "amount": 10000,
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "displayHasJournal": true,
+          "committedJournals": [],
+          "retainedJournalsAfter": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalChanged": true,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "7d22a0011ecf38c51719337211b9b350f537810fc79313d8ed915d72ca156c83",
+              "estimatedInputTokens": 13142,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "user content",
+              "fingerprint": "3f32487d638f88ad9fbf7da4ca1c9401756e4fe26a28574706a6351e161281d6",
+              "estimatedInputTokens": 1307,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "7d22a0011ecf38c51719337211b9b350f537810fc79313d8ed915d72ca156c83",
+              "estimatedInputTokens": 13142,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "payroll-parent",
+              "workflow": "correction",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:30:30.491Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "3f32487d638f88ad9fbf7da4ca1c9401756e4fe26a28574706a6351e161281d6",
+              "estimatedInputTokens": 1307,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "payroll-parent",
+              "workflow": "correction",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:30:35.597Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 2,
+          "cumulativeAttempts": 2,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "salary-correction",
+          "query": "Actually the monthly salary for CPF is 72k a month",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "payroll-parent",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "PAYROLL_CPF_SALARY",
+          "selectedHistoricalJournal": true,
+          "activeScenarioBefore": "PAYROLL_CPF_SALARY",
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "historyMessageIds": [
+            "payroll-parent",
+            "payroll-parent-answer",
+            "salary-correction"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            []
+          ],
+          "analysisStartMessageId": "payroll-parent",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+          "displayedAnswer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe deterministic journal remains available in the Double Entry Journal tab.",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": null,
+          "sourceAnalysisBoundary": "payroll-parent",
+          "scenario": "PAYROLL_CPF_SALARY",
+          "scenarioComplete": true,
+          "rawQuery": "Corrected monthly salary is SGD 72,000. Original transaction context: I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal",
+          "preparationFailed": false,
+          "activeScenarioAfter": "PAYROLL_CPF_SALARY",
+          "explicitLast": false,
+          "missing": [],
+          "amount": 72000,
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 73291.25,
+              "credit": 73291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 72000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 70560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 73291.25,
+              "credit": 73291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 72000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 70560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "displayHasJournal": true,
+          "committedJournals": [],
+          "retainedJournalsAfter": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 73291.25,
+              "credit": 73291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 72000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 70560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalChanged": true,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 3,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "135d5a9ae80c083cd1545aeca84cfda7abde04f43d700dfdf021cf36a15c8805",
+              "estimatedInputTokens": 13625,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": true,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 4,
+              "stage": "user content",
+              "fingerprint": "037ab0ceb236593f189bd6c72ddd1dbb62935b6da42903386730ab5d8c41051d",
+              "estimatedInputTokens": 1242,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": true,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "135d5a9ae80c083cd1545aeca84cfda7abde04f43d700dfdf021cf36a15c8805",
+              "estimatedInputTokens": 13625,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": true,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "salary-correction",
+              "workflow": "correction",
+              "attempt": 3,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:31:08.067Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "037ab0ceb236593f189bd6c72ddd1dbb62935b6da42903386730ab5d8c41051d",
+              "estimatedInputTokens": 1242,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": true,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "salary-correction",
+              "workflow": "correction",
+              "attempt": 4,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:31:13.185Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 2,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-24T03:31:14.718Z",
+  "totalAttempts": 4,
+  "stopReason": "COMPLETED",
+  "usageSummary": {
+    "dispatchedRequests": 4,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 29316,
+    "providerReportedPromptTokens": 4491,
+    "providerReportedTotalTokens": 5267,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}

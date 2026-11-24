@@ -1,0 +1,2177 @@
+{
+  "head": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-24T03:28:17.871Z",
+  "quota": {
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "max503Retries": 1,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceGenerationAttempts": 8,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "image",
+      "turns": [
+        {
+          "id": "invoice-simple",
+          "query": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "mode": "journal",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-simple"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            [],
+            [],
+            []
+          ],
+          "analysisStartMessageId": "invoice-simple",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "groundedContext": {
+            "classification": {
+              "primaryDomain": "ACCOUNTING",
+              "domains": [
+                "ACCOUNTING_SFRS"
+              ],
+              "topicIds": [],
+              "authorities": [
+                "ACRA"
+              ],
+              "multiAuthority": false,
+              "currentInformationRequired": false,
+              "accountingAnalysisRequired": true,
+              "taxAnalysisRequired": false,
+              "regulatoryAnalysisRequired": false,
+              "calculationRequired": true,
+              "journalEntryRequired": true,
+              "missingFacts": [
+                "Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26",
+                "Enforceable lease duration / term"
+              ],
+              "intent": "TRANSACTION",
+              "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+            },
+            "userFacts": [
+              "Numerical quantities stated: 202"
+            ],
+            "missingFacts": [
+              "Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26",
+              "Enforceable lease duration / term",
+              "Reporting entity perspective is unspecified",
+              "Transaction currency is unspecified"
+            ],
+            "assumptions": [],
+            "primaryEvidence": [],
+            "officialGuidance": [],
+            "curatedSummaries": [
+              {
+                "id": "IAS21_INITIAL_FOREIGN_CURRENCY",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-21 §21 The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "documentTitle": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "standardOrActCode": "SFRS(I) 1-21",
+                "paragraphOrSection": "§21",
+                "sourceText": "A foreign currency transaction shall be recorded, on initial recognition in the functional currency, by applying the spot exchange rate at the transaction date.",
+                "principleSummary": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "the effects of changes in foreign exchange rates - initial spot rate",
+                  "§21",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "provisionHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SFRS_I_1_10_EVENTS_AFTER_REPORTING",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-10 §3, §8, §10 & §12 Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "documentTitle": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "standardOrActCode": "SFRS(I) 1-10",
+                "paragraphOrSection": "§3, §8, §10 & §12",
+                "sourceText": "Events after the reporting period are those events, favourable and unfavourable, that occur between the end of the reporting period and the date when the financial statements are authorised for issue (§3). An entity shall adjust the amounts recognized in its financial statements to reflect adjusting events (evidence of conditions that existed at the end of the reporting period, §8). An entity shall not adjust amounts for non-adjusting events (indicative of conditions that arose after the reporting period, §10). If an entity declares dividends to holders of equity instruments after the reporting period, the entity shall not recognize those dividends as a liability at the end of the reporting period (§12).",
+                "principleSummary": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "effectiveDate": "2018-01-01",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "events after the reporting period - adjusting vs non-adjusting events & dividends",
+                  "§3, §8, §10 & §12",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "validFrom": "2018-01-01",
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "provisionHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS16_TRADE_DISCOUNT",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-16 §16(a) PPE - Deductibility of Trade Discounts from Cost",
+                "documentTitle": "PPE - Deductibility of Trade Discounts from Cost",
+                "standardOrActCode": "SFRS(I) 1-16",
+                "paragraphOrSection": "§16(a)",
+                "sourceText": "The cost of an item of property, plant and equipment comprises its purchase price, including import duties and non-refundable purchase taxes, after deducting trade discounts and rebates. Trade discounts are not recognized as income or expense.",
+                "principleSummary": "PPE - Deductibility of Trade Discounts from Cost",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "ppe - deductibility of trade discounts from cost",
+                  "§16(a)",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "200aae25038d6d1411cdcf1ef93196ef8b19eeeae851c31b69682c1c0040d975",
+                "provisionHash": "200aae25038d6d1411cdcf1ef93196ef8b19eeeae851c31b69682c1c0040d975",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SFRS_I_15_REVENUE",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 15 §31 Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "documentTitle": "Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "standardOrActCode": "SFRS(I) 15",
+                "paragraphOrSection": "§31",
+                "sourceText": "An entity shall recognise revenue when (or as) the entity satisfies a performance obligation by transferring a promised good or service (control of an asset) to a customer. Revenue is recognized either over time (§35) or at a point in time (§38) following the 5-step recognition model.",
+                "principleSummary": "Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "revenue from contracts with customers - 5-step model & transfer of control",
+                  "§31",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "5245dce08e29ee8e377ac433e34136fcc6c22d4840edd2fff254148e9a22b3c1",
+                "provisionHash": "5245dce08e29ee8e377ac433e34136fcc6c22d4840edd2fff254148e9a22b3c1",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS1_EXPENSE_RECOGNITION",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-1 §27-§28 Accrual Basis & Operating Expense Recognition",
+                "documentTitle": "Accrual Basis & Operating Expense Recognition",
+                "standardOrActCode": "SFRS(I) 1-1",
+                "paragraphOrSection": "§27-§28",
+                "sourceText": "An entity shall prepare its financial statements using the accrual basis of accounting. Expenses are recognized in profit or loss when a decrease in future economic benefits related to a decrease in an asset or an increase of a liability has arisen that can be measured reliably.",
+                "principleSummary": "Accrual Basis & Operating Expense Recognition",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "accrual basis & operating expense recognition",
+                  "§27-§28",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "71b7bc21db9a23d1e2465afffd09b3e18c5be79b187bdcf947c504d43f2e0a15",
+                "provisionHash": "71b7bc21db9a23d1e2465afffd09b3e18c5be79b187bdcf947c504d43f2e0a15",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS16_DERECOGNITION",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-16 §67-§71 PPE - Derecognition and Gain or Loss on Disposal",
+                "documentTitle": "PPE - Derecognition and Gain or Loss on Disposal",
+                "standardOrActCode": "SFRS(I) 1-16",
+                "paragraphOrSection": "§67-§71",
+                "sourceText": "The carrying amount of an item of property, plant and equipment shall be derecognised on disposal. The gain or loss arising from the derecognition shall be included in profit or loss when the item is derecognised. The gain or loss is determined as the difference between net disposal proceeds and carrying amount.",
+                "principleSummary": "PPE - Derecognition and Gain or Loss on Disposal",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "ppe - derecognition and gain or loss on disposal",
+                  "§67-§71",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "f8ad0eebda5436b4ba7d5df72f15685d63f3e92f2bb0cf861bb441780baf8194",
+                "provisionHash": "f8ad0eebda5436b4ba7d5df72f15685d63f3e92f2bb0cf861bb441780baf8194",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              }
+            ],
+            "applicationRules": [
+              "Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places."
+            ],
+            "currentInformationRequired": false,
+            "semanticUnderstanding": {
+              "extractionSource": "deterministic_fallback",
+              "provenance": {
+                "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+                "isFallback": true,
+                "engine": "heuristic_pattern_matcher",
+                "appliedRules": [],
+                "confidenceCapped": true,
+                "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+                "timestamp": "2026-11-24T03:28:25.468Z"
+              },
+              "reportingEntity": {
+                "type": "unknown"
+              },
+              "transactionType": "unclassified_transaction",
+              "ownershipContext": "unknown",
+              "paymentStatus": "unknown",
+              "currency": {
+                "value": null,
+                "source": "unknown",
+                "confidence": 0,
+                "rationale": "No currency specified in query"
+              },
+              "transactionDate": null,
+              "jurisdiction": "SG",
+              "factsMissing": [
+                "Reporting entity perspective is unspecified",
+                "Transaction currency is unspecified"
+              ],
+              "assumptions": [],
+              "confidence": 0.3,
+              "actualMeasurementBasis": "UNKNOWN",
+              "measurementBasis": "UNKNOWN",
+              "isHypothetical": false
+            },
+            "questionUnderstanding": {
+              "mode": "SEMANTIC_PLUS_RULES",
+              "assessmentStatus": "PASSED",
+              "transportAttempts": [
+                {
+                  "attempt": 1,
+                  "status": 200,
+                  "elapsedMs": 2303,
+                  "retryScheduled": false
+                }
+              ],
+              "interpretation": {
+                "jurisdiction": [
+                  "Singapore"
+                ],
+                "authorityCandidates": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "domain": "ACCOUNTING",
+                "population": "COMPANY",
+                "primarySubject": "invoice journal preparation",
+                "concepts": [
+                  {
+                    "concept": "journal entry",
+                    "role": "PRIMARY"
+                  },
+                  {
+                    "concept": "invoice",
+                    "role": "CONTEXT_ONLY"
+                  }
+                ],
+                "requestedOperation": "PREPARE_JOURNAL",
+                "requiresUserSpecificFacts": true,
+                "calculationRequested": false,
+                "factsExplicitlyProvided": [
+                  "Attached invoice INV-202"
+                ],
+                "confidence": 0.95,
+                "issues": [
+                  {
+                    "subject": "prepare journal from invoice INV-202",
+                    "population": "COMPANY",
+                    "domain": "ACCOUNTING",
+                    "governingAuthorities": [
+                      "ACCOUNTING_STANDARDS"
+                    ],
+                    "contextualAuthorities": [],
+                    "operation": "PREPARE_JOURNAL",
+                    "mappedTopicIds": [],
+                    "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                    "confidence": 0.95
+                  }
+                ]
+              }
+            },
+            "requestCompletenessContext": {
+              "contractVersion": 1,
+              "identity": "[1,\"Attached invoice INV-202. Please prepare the journal from the screenshot.\"]",
+              "rawQuery": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+              "inputLength": 73,
+              "inventory": {
+                "state": "UNCERTAIN",
+                "fullyConsumed": false,
+                "outcomes": [],
+                "facts": [],
+                "findings": [
+                  {
+                    "stage": "INVENTORY",
+                    "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                    "span": {
+                      "start": 0,
+                      "end": 73
+                    }
+                  }
+                ],
+                "inputLength": 73
+              },
+              "declaredFacts": [],
+              "excludedSpans": [],
+              "observationSnapshot": {
+                "hasWrapper": true,
+                "mode": "SEMANTIC_INTERPRETATION",
+                "format": "STORED_NORMALIZED_OR_LEGACY",
+                "normalizedInterpretation": {
+                  "jurisdiction": [
+                    "Singapore"
+                  ],
+                  "authorityCandidates": [
+                    "ACCOUNTING_STANDARDS"
+                  ],
+                  "contextualAuthorities": [],
+                  "domain": "ACCOUNTING",
+                  "population": "COMPANY",
+                  "primarySubject": "invoice journal preparation",
+                  "concepts": [
+                    {
+                      "concept": "journal entry",
+                      "role": "PRIMARY"
+                    },
+                    {
+                      "concept": "invoice",
+                      "role": "CONTEXT_ONLY"
+                    }
+                  ],
+                  "requestedOperation": "PREPARE_JOURNAL",
+                  "requiresUserSpecificFacts": true,
+                  "calculationRequested": false,
+                  "factsExplicitlyProvided": [
+                    "Attached invoice INV-202"
+                  ],
+                  "confidence": 0.95,
+                  "issues": [
+                    {
+                      "subject": "prepare journal from invoice INV-202",
+                      "population": "COMPANY",
+                      "domain": "ACCOUNTING",
+                      "governingAuthorities": [
+                        "ACCOUNTING_STANDARDS"
+                      ],
+                      "contextualAuthorities": [],
+                      "operation": "PREPARE_JOURNAL",
+                      "mappedTopicIds": [],
+                      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                      "confidence": 0.95
+                    }
+                  ]
+                },
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "observedConfidence": 0.95
+              },
+              "evaluation": {
+                "status": "UNCERTAIN",
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "minimumConfidence": 0.72,
+                "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+                "observedConfidence": 0.95,
+                "findings": [
+                  {
+                    "stage": "BRIDGE",
+                    "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                    "issueIndex": 0,
+                    "subject": "prepare journal from invoice INV-202"
+                  }
+                ],
+                "matches": [],
+                "issues": [
+                  {
+                    "subject": "prepare journal from invoice INV-202",
+                    "population": "COMPANY",
+                    "operation": "PREPARE_JOURNAL"
+                  }
+                ]
+              }
+            },
+            "sourceMapFallbackTrace": {
+              "path": "NOT_NEEDED",
+              "sourceMapIds": [],
+              "selectedRecordIds": [],
+              "finalVerifiedUrls": [],
+              "candidateOnly": false,
+              "attempts": [],
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "SKIPPED",
+                  "reason": "No fallback was requested for a routed topic."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SKIPPED",
+                  "reason": "A source-map fetch was not needed."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "Sitemap discovery was not needed."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "Official-domain search was not needed."
+                }
+              ]
+            }
+          },
+          "answer": "### AI-Proposed Journal Rejected\n\n### Accounting Validation Issue\n\nThe proposed journal failed one or more accounting safety checks:\n- DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).\n\nThis entry has been rejected to prevent an incorrect accounting record.\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.",
+          "displayedAnswer": "I need one detail to continue: DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-simple",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "guardrail-DOUBLE_ENTRY_IMBALANCE",
+              "fieldName": "Accounting guardrail validation",
+              "prompt": "DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).",
+              "whyNeeded": "The AI-proposed journal violates an accounting safety check and cannot be posted automatically."
+            }
+          ],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "be4ac3928a5e733f395db7f6f2d2ad53abf5ba4f468e4087588aa33e1a19099b",
+              "estimatedInputTokens": 13100,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "1420a8bf74edbba4d37296a6a610a8f2db92c982fdd21ed3023cd1ed16afa0f3",
+              "estimatedInputTokens": 7939,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 3,
+              "stage": "user content",
+              "fingerprint": "654b84373e7a8c744c1e1503c2490b34aa285e5acea8237c0df3ebeee3c2147b",
+              "estimatedInputTokens": 18399,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 4,
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "51c110b6fdc60898495a4e8c2fc142fc146ae50c8e77f18a0227d3a9395a9a59",
+              "estimatedInputTokens": 12014,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "be4ac3928a5e733f395db7f6f2d2ad53abf5ba4f468e4087588aa33e1a19099b",
+              "estimatedInputTokens": 13100,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-simple",
+              "workflow": "image",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:28:17.893Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "1420a8bf74edbba4d37296a6a610a8f2db92c982fdd21ed3023cd1ed16afa0f3",
+              "estimatedInputTokens": 7939,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-simple",
+              "workflow": "image",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:28:23.011Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "654b84373e7a8c744c1e1503c2490b34aa285e5acea8237c0df3ebeee3c2147b",
+              "estimatedInputTokens": 18399,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-simple",
+              "workflow": "image",
+              "attempt": 3,
+              "turnAttempt": 3,
+              "retry": false,
+              "at": "2026-11-24T03:28:28.129Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "51c110b6fdc60898495a4e8c2fc142fc146ae50c8e77f18a0227d3a9395a9a59",
+              "estimatedInputTokens": 12014,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-simple",
+              "workflow": "image",
+              "attempt": 4,
+              "turnAttempt": 4,
+              "retry": false,
+              "at": "2026-11-24T03:28:33.244Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 4,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "invoice-replace",
+          "query": "S$500 is not correct, please use S$600",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "invoice-simple",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "UNIVERSAL",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "UNIVERSAL",
+          "activeCommittedGroupsBefore": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-simple",
+            "invoice-simple-answer",
+            "invoice-replace"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "invoice-simple",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Corrected invoice journal proposal\n\nThe invoice total was corrected to SGD 600. The proposed journal is balanced and remains uncommitted. This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.\n\nReview the invoice date before posting.",
+          "displayedAnswer": "### Corrected invoice journal proposal\n\nThe invoice total was corrected to SGD 600. The proposed journal is balanced and remains uncommitted. This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.\n\nReview the invoice date before posting.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-simple",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": true,
+          "hypothetical": false,
+          "rawQuery": "S$500 is not correct, please use S$600",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [],
+          "amount": 600,
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [
+            {
+              "title": "Supplier invoice INV-202 for Maintenance Expense",
+              "status": "CONDITIONAL",
+              "date": "20/01/2025",
+              "debit": 600,
+              "credit": 600,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 600,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 600
+                }
+              ]
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [
+            {
+              "title": "Supplier invoice INV-202 for Maintenance Expense",
+              "status": "CONDITIONAL",
+              "date": "20/01/2025",
+              "debit": 600,
+              "credit": 600,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 600,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 600
+                }
+              ]
+            }
+          ],
+          "displayedJournals": [
+            {
+              "title": "Supplier invoice INV-202 for Maintenance Expense",
+              "status": "CONDITIONAL",
+              "date": "20/01/2025",
+              "debit": 600,
+              "credit": 600,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 600,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 600
+                }
+              ]
+            }
+          ],
+          "displayHasJournal": true,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "invoice-alternatives",
+          "query": "S$500 is not correct, please use S$600 or S$700",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "invoice-simple",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "UNIVERSAL",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "UNIVERSAL",
+          "activeCommittedGroupsBefore": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-simple",
+            "invoice-simple-answer",
+            "invoice-alternatives"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "invoice-simple",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Screenshot journal clarification required\n\nThe screenshot correction has multiple replacement totals, SGD 600 or SGD 700. Please confirm one value using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+          "displayedAnswer": "### Screenshot journal clarification required\n\nThe screenshot correction has multiple replacement totals, SGD 600 or SGD 700. Please confirm one value using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-simple",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "S$500 is not correct, please use S$600 or S$700",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "imageVerification",
+              "fieldName": "Corrected invoice total",
+              "prompt": "The screenshot correction has multiple replacement totals, SGD 600 or SGD 700. Please confirm one value using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+              "whyNeeded": "The supplier invoice amount must be clear before a journal can be proposed."
+            }
+          ],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "invoice-subtotals",
+          "query": "The subtotal is S$600, GST is S$54, total is S$654, and subtotal is S$650.",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "invoice-simple",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "UNIVERSAL",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "UNIVERSAL",
+          "activeCommittedGroupsBefore": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-simple",
+            "invoice-simple-answer",
+            "invoice-subtotals"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "invoice-simple",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Screenshot journal clarification required\n\nThe invoice details contain conflicting subtotal values SGD 600 and SGD 650. Please check which amount is correct on the invoice, then confirm the invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+          "displayedAnswer": "### Screenshot journal clarification required\n\nThe invoice details contain conflicting subtotal values SGD 600 and SGD 650. Please check which amount is correct on the invoice, then confirm the invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-simple",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "The subtotal is S$600, GST is S$54, total is S$654, and subtotal is S$650.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "imageVerification",
+              "fieldName": "Corrected invoice total",
+              "prompt": "The invoice details contain conflicting subtotal values SGD 600 and SGD 650. Please check which amount is correct on the invoice, then confirm the invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.",
+              "whyNeeded": "The supplier invoice amount must be clear before a journal can be proposed."
+            }
+          ],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Trade Payables",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 4,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "invoice-with-gst",
+          "query": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "mode": "journal",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-with-gst"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            [],
+            [],
+            []
+          ],
+          "analysisStartMessageId": "invoice-with-gst",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "groundedContext": {
+            "classification": {
+              "primaryDomain": "ACCOUNTING",
+              "domains": [
+                "ACCOUNTING_SFRS"
+              ],
+              "topicIds": [],
+              "authorities": [
+                "ACRA"
+              ],
+              "multiAuthority": false,
+              "currentInformationRequired": false,
+              "accountingAnalysisRequired": true,
+              "taxAnalysisRequired": false,
+              "regulatoryAnalysisRequired": false,
+              "calculationRequired": true,
+              "journalEntryRequired": true,
+              "missingFacts": [
+                "Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26",
+                "Enforceable lease duration / term"
+              ],
+              "intent": "TRANSACTION",
+              "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+            },
+            "userFacts": [
+              "Numerical quantities stated: 202"
+            ],
+            "missingFacts": [
+              "Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26",
+              "Enforceable lease duration / term",
+              "Reporting entity perspective is unspecified",
+              "Transaction currency is unspecified"
+            ],
+            "assumptions": [],
+            "primaryEvidence": [],
+            "officialGuidance": [],
+            "curatedSummaries": [
+              {
+                "id": "IAS21_INITIAL_FOREIGN_CURRENCY",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-21 §21 The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "documentTitle": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "standardOrActCode": "SFRS(I) 1-21",
+                "paragraphOrSection": "§21",
+                "sourceText": "A foreign currency transaction shall be recorded, on initial recognition in the functional currency, by applying the spot exchange rate at the transaction date.",
+                "principleSummary": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "the effects of changes in foreign exchange rates - initial spot rate",
+                  "§21",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "provisionHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SFRS_I_1_10_EVENTS_AFTER_REPORTING",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-10 §3, §8, §10 & §12 Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "documentTitle": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "standardOrActCode": "SFRS(I) 1-10",
+                "paragraphOrSection": "§3, §8, §10 & §12",
+                "sourceText": "Events after the reporting period are those events, favourable and unfavourable, that occur between the end of the reporting period and the date when the financial statements are authorised for issue (§3). An entity shall adjust the amounts recognized in its financial statements to reflect adjusting events (evidence of conditions that existed at the end of the reporting period, §8). An entity shall not adjust amounts for non-adjusting events (indicative of conditions that arose after the reporting period, §10). If an entity declares dividends to holders of equity instruments after the reporting period, the entity shall not recognize those dividends as a liability at the end of the reporting period (§12).",
+                "principleSummary": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "effectiveDate": "2018-01-01",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "events after the reporting period - adjusting vs non-adjusting events & dividends",
+                  "§3, §8, §10 & §12",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "validFrom": "2018-01-01",
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "provisionHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS16_TRADE_DISCOUNT",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-16 §16(a) PPE - Deductibility of Trade Discounts from Cost",
+                "documentTitle": "PPE - Deductibility of Trade Discounts from Cost",
+                "standardOrActCode": "SFRS(I) 1-16",
+                "paragraphOrSection": "§16(a)",
+                "sourceText": "The cost of an item of property, plant and equipment comprises its purchase price, including import duties and non-refundable purchase taxes, after deducting trade discounts and rebates. Trade discounts are not recognized as income or expense.",
+                "principleSummary": "PPE - Deductibility of Trade Discounts from Cost",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "ppe - deductibility of trade discounts from cost",
+                  "§16(a)",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "200aae25038d6d1411cdcf1ef93196ef8b19eeeae851c31b69682c1c0040d975",
+                "provisionHash": "200aae25038d6d1411cdcf1ef93196ef8b19eeeae851c31b69682c1c0040d975",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SFRS_I_15_REVENUE",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 15 §31 Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "documentTitle": "Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "standardOrActCode": "SFRS(I) 15",
+                "paragraphOrSection": "§31",
+                "sourceText": "An entity shall recognise revenue when (or as) the entity satisfies a performance obligation by transferring a promised good or service (control of an asset) to a customer. Revenue is recognized either over time (§35) or at a point in time (§38) following the 5-step recognition model.",
+                "principleSummary": "Revenue from Contracts with Customers - 5-Step Model & Transfer of Control",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "revenue from contracts with customers - 5-step model & transfer of control",
+                  "§31",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "5245dce08e29ee8e377ac433e34136fcc6c22d4840edd2fff254148e9a22b3c1",
+                "provisionHash": "5245dce08e29ee8e377ac433e34136fcc6c22d4840edd2fff254148e9a22b3c1",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS1_EXPENSE_RECOGNITION",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-1 §27-§28 Accrual Basis & Operating Expense Recognition",
+                "documentTitle": "Accrual Basis & Operating Expense Recognition",
+                "standardOrActCode": "SFRS(I) 1-1",
+                "paragraphOrSection": "§27-§28",
+                "sourceText": "An entity shall prepare its financial statements using the accrual basis of accounting. Expenses are recognized in profit or loss when a decrease in future economic benefits related to a decrease in an asset or an increase of a liability has arisen that can be measured reliably.",
+                "principleSummary": "Accrual Basis & Operating Expense Recognition",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "accrual basis & operating expense recognition",
+                  "§27-§28",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "71b7bc21db9a23d1e2465afffd09b3e18c5be79b187bdcf947c504d43f2e0a15",
+                "provisionHash": "71b7bc21db9a23d1e2465afffd09b3e18c5be79b187bdcf947c504d43f2e0a15",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS16_DERECOGNITION",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-16 §67-§71 PPE - Derecognition and Gain or Loss on Disposal",
+                "documentTitle": "PPE - Derecognition and Gain or Loss on Disposal",
+                "standardOrActCode": "SFRS(I) 1-16",
+                "paragraphOrSection": "§67-§71",
+                "sourceText": "The carrying amount of an item of property, plant and equipment shall be derecognised on disposal. The gain or loss arising from the derecognition shall be included in profit or loss when the item is derecognised. The gain or loss is determined as the difference between net disposal proceeds and carrying amount.",
+                "principleSummary": "PPE - Derecognition and Gain or Loss on Disposal",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "ppe - derecognition and gain or loss on disposal",
+                  "§67-§71",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "f8ad0eebda5436b4ba7d5df72f15685d63f3e92f2bb0cf861bb441780baf8194",
+                "provisionHash": "f8ad0eebda5436b4ba7d5df72f15685d63f3e92f2bb0cf861bb441780baf8194",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              }
+            ],
+            "applicationRules": [
+              "Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places."
+            ],
+            "currentInformationRequired": false,
+            "semanticUnderstanding": {
+              "extractionSource": "deterministic_fallback",
+              "provenance": {
+                "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+                "isFallback": true,
+                "engine": "heuristic_pattern_matcher",
+                "appliedRules": [],
+                "confidenceCapped": true,
+                "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+                "timestamp": "2026-11-24T03:28:59.581Z"
+              },
+              "reportingEntity": {
+                "type": "unknown"
+              },
+              "transactionType": "unclassified_transaction",
+              "ownershipContext": "unknown",
+              "paymentStatus": "unknown",
+              "currency": {
+                "value": null,
+                "source": "unknown",
+                "confidence": 0,
+                "rationale": "No currency specified in query"
+              },
+              "transactionDate": null,
+              "jurisdiction": "SG",
+              "factsMissing": [
+                "Reporting entity perspective is unspecified",
+                "Transaction currency is unspecified"
+              ],
+              "assumptions": [],
+              "confidence": 0.3,
+              "actualMeasurementBasis": "UNKNOWN",
+              "measurementBasis": "UNKNOWN",
+              "isHypothetical": false
+            },
+            "questionUnderstanding": {
+              "mode": "SEMANTIC_PLUS_RULES",
+              "assessmentStatus": "PASSED",
+              "transportAttempts": [
+                {
+                  "attempt": 1,
+                  "status": 200,
+                  "elapsedMs": 2015,
+                  "retryScheduled": false
+                }
+              ],
+              "interpretation": {
+                "jurisdiction": [
+                  "Singapore"
+                ],
+                "authorityCandidates": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "domain": "ACCOUNTING",
+                "population": "COMPANY",
+                "primarySubject": "invoice journal preparation",
+                "concepts": [
+                  {
+                    "concept": "journal entry",
+                    "role": "PRIMARY"
+                  },
+                  {
+                    "concept": "invoice",
+                    "role": "CONTEXT_ONLY"
+                  }
+                ],
+                "requestedOperation": "PREPARE_JOURNAL",
+                "requiresUserSpecificFacts": true,
+                "calculationRequested": false,
+                "factsExplicitlyProvided": [
+                  "Attached invoice INV-202"
+                ],
+                "confidence": 0.95,
+                "issues": [
+                  {
+                    "subject": "prepare journal from invoice",
+                    "population": "COMPANY",
+                    "domain": "ACCOUNTING",
+                    "governingAuthorities": [
+                      "ACCOUNTING_STANDARDS"
+                    ],
+                    "contextualAuthorities": [],
+                    "operation": "PREPARE_JOURNAL",
+                    "mappedTopicIds": [],
+                    "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                    "confidence": 0.95
+                  }
+                ]
+              }
+            },
+            "requestCompletenessContext": {
+              "contractVersion": 1,
+              "identity": "[1,\"Attached invoice INV-202. Please prepare the journal from the screenshot.\"]",
+              "rawQuery": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+              "inputLength": 73,
+              "inventory": {
+                "state": "UNCERTAIN",
+                "fullyConsumed": false,
+                "outcomes": [],
+                "facts": [],
+                "findings": [
+                  {
+                    "stage": "INVENTORY",
+                    "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                    "span": {
+                      "start": 0,
+                      "end": 73
+                    }
+                  }
+                ],
+                "inputLength": 73
+              },
+              "declaredFacts": [],
+              "excludedSpans": [],
+              "observationSnapshot": {
+                "hasWrapper": true,
+                "mode": "SEMANTIC_INTERPRETATION",
+                "format": "STORED_NORMALIZED_OR_LEGACY",
+                "normalizedInterpretation": {
+                  "jurisdiction": [
+                    "Singapore"
+                  ],
+                  "authorityCandidates": [
+                    "ACCOUNTING_STANDARDS"
+                  ],
+                  "contextualAuthorities": [],
+                  "domain": "ACCOUNTING",
+                  "population": "COMPANY",
+                  "primarySubject": "invoice journal preparation",
+                  "concepts": [
+                    {
+                      "concept": "journal entry",
+                      "role": "PRIMARY"
+                    },
+                    {
+                      "concept": "invoice",
+                      "role": "CONTEXT_ONLY"
+                    }
+                  ],
+                  "requestedOperation": "PREPARE_JOURNAL",
+                  "requiresUserSpecificFacts": true,
+                  "calculationRequested": false,
+                  "factsExplicitlyProvided": [
+                    "Attached invoice INV-202"
+                  ],
+                  "confidence": 0.95,
+                  "issues": [
+                    {
+                      "subject": "prepare journal from invoice",
+                      "population": "COMPANY",
+                      "domain": "ACCOUNTING",
+                      "governingAuthorities": [
+                        "ACCOUNTING_STANDARDS"
+                      ],
+                      "contextualAuthorities": [],
+                      "operation": "PREPARE_JOURNAL",
+                      "mappedTopicIds": [],
+                      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                      "confidence": 0.95
+                    }
+                  ]
+                },
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "observedConfidence": 0.95
+              },
+              "evaluation": {
+                "status": "UNCERTAIN",
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "minimumConfidence": 0.72,
+                "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+                "observedConfidence": 0.95,
+                "findings": [
+                  {
+                    "stage": "BRIDGE",
+                    "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                    "issueIndex": 0,
+                    "subject": "prepare journal from invoice"
+                  }
+                ],
+                "matches": [],
+                "issues": [
+                  {
+                    "subject": "prepare journal from invoice",
+                    "population": "COMPANY",
+                    "operation": "PREPARE_JOURNAL"
+                  }
+                ]
+              }
+            },
+            "sourceMapFallbackTrace": {
+              "path": "NOT_NEEDED",
+              "sourceMapIds": [],
+              "selectedRecordIds": [],
+              "finalVerifiedUrls": [],
+              "candidateOnly": false,
+              "attempts": [],
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "SKIPPED",
+                  "reason": "No fallback was requested for a routed topic."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SKIPPED",
+                  "reason": "A source-map fetch was not needed."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "Sitemap discovery was not needed."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "Official-domain search was not needed."
+                }
+              ]
+            }
+          },
+          "answer": "### AI-Proposed Journal Rejected\n\n### Accounting Validation Issue\n\nThe proposed journal failed one or more accounting safety checks:\n- DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice INV-202 for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).\n\nThis entry has been rejected to prevent an incorrect accounting record.\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.",
+          "displayedAnswer": "I need one detail to continue: DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice INV-202 for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-with-gst",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "guardrail-DOUBLE_ENTRY_IMBALANCE",
+              "fieldName": "Accounting guardrail validation",
+              "prompt": "DOUBLE_ENTRY_IMBALANCE: Group 'Supplier invoice INV-202 for maintenance expense' is imbalanced: Total Dr (0.00) != Total Cr (0.00).",
+              "whyNeeded": "The AI-proposed journal violates an accounting safety check and cannot be posted automatically."
+            }
+          ],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice INV-202 for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "GST Input Tax / Tax Receivable",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Accounts Payable",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 5,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "be4ac3928a5e733f395db7f6f2d2ad53abf5ba4f468e4087588aa33e1a19099b",
+              "estimatedInputTokens": 13100,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 6,
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "1420a8bf74edbba4d37296a6a610a8f2db92c982fdd21ed3023cd1ed16afa0f3",
+              "estimatedInputTokens": 7939,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 7,
+              "stage": "user content",
+              "fingerprint": "1ddd0fbdba55510bfdffb2dd99c84f69b732550a68581f54d80c928f9fde927e",
+              "estimatedInputTokens": 18399,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 8,
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "d16d2646d5a1469176e21f763b634aadc2d95ab433df2fc6c748aec5e5bf3299",
+              "estimatedInputTokens": 12042,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "be4ac3928a5e733f395db7f6f2d2ad53abf5ba4f468e4087588aa33e1a19099b",
+              "estimatedInputTokens": 13100,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-with-gst",
+              "workflow": "image",
+              "attempt": 5,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:28:52.625Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "1420a8bf74edbba4d37296a6a610a8f2db92c982fdd21ed3023cd1ed16afa0f3",
+              "estimatedInputTokens": 7939,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-with-gst",
+              "workflow": "image",
+              "attempt": 6,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:28:57.732Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "1ddd0fbdba55510bfdffb2dd99c84f69b732550a68581f54d80c928f9fde927e",
+              "estimatedInputTokens": 18399,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-with-gst",
+              "workflow": "image",
+              "attempt": 7,
+              "turnAttempt": 3,
+              "retry": false,
+              "at": "2026-11-24T03:29:02.843Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "d16d2646d5a1469176e21f763b634aadc2d95ab433df2fc6c748aec5e5bf3299",
+              "estimatedInputTokens": 12042,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "invoice-with-gst",
+              "workflow": "image",
+              "attempt": 8,
+              "turnAttempt": 4,
+              "retry": false,
+              "at": "2026-11-24T03:29:07.954Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 4,
+          "cumulativeAttempts": 8,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "invoice-conflicting-total",
+          "query": "S$545 is not correct, please use S$600",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "invoice-with-gst",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "UNIVERSAL",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "UNIVERSAL",
+          "activeCommittedGroupsBefore": [
+            {
+              "title": "Supplier invoice INV-202 for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "GST Input Tax / Tax Receivable",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Accounts Payable",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "invoice-with-gst",
+            "invoice-with-gst-answer",
+            "invoice-conflicting-total"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "invoice-with-gst",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Screenshot journal clarification required\n\nThe extracted subtotal (SGD 500) plus GST (SGD 45) does not reconcile to the corrected invoice total SGD 600. Please verify the subtotal and GST against the invoice, then upload a clearer or corrected invoice image showing those confirmed figures and the invoice total. No journal proposal is shown.",
+          "displayedAnswer": "### Screenshot journal clarification required\n\nThe extracted subtotal (SGD 500) plus GST (SGD 45) does not reconcile to the corrected invoice total SGD 600. Please verify the subtotal and GST against the invoice, then upload a clearer or corrected invoice image showing those confirmed figures and the invoice total. No journal proposal is shown.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "invoice-with-gst",
+          "scenario": "UNIVERSAL",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "S$545 is not correct, please use S$600",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNIVERSAL",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "imageVerification",
+              "fieldName": "Corrected invoice total",
+              "prompt": "The extracted subtotal (SGD 500) plus GST (SGD 45) does not reconcile to the corrected invoice total SGD 600. Please verify the subtotal and GST against the invoice, then upload a clearer or corrected invoice image showing those confirmed figures and the invoice total. No journal proposal is shown.",
+              "whyNeeded": "The supplier invoice amount must be clear before a journal can be proposed."
+            }
+          ],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Supplier invoice INV-202 for maintenance expense",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 0,
+              "credit": 0,
+              "markedBalanced": false,
+              "lines": [
+                {
+                  "account": "Maintenance Expense",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "GST Input Tax / Tax Receivable",
+                  "debit": 0,
+                  "credit": 0
+                },
+                {
+                  "account": "Accounts Payable",
+                  "debit": 0,
+                  "credit": 0
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 8,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-24T03:29:11.030Z",
+  "totalAttempts": 8,
+  "stopReason": "COMPLETED",
+  "usageSummary": {
+    "dispatchedRequests": 8,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 102932,
+    "providerReportedPromptTokens": 15835,
+    "providerReportedTotalTokens": 18184,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}

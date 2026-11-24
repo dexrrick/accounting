@@ -1,0 +1,325 @@
+{
+  "head": "2b129dcd41ef0142f162367a5a113f353e50b0cb",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-24T03:30:46.509Z",
+  "quota": {
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "max503Retries": 1,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceGenerationAttempts": 8,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "reset",
+      "turns": [
+        {
+          "id": "holdings-parent",
+          "query": "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.",
+          "mode": "shares",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "holdings-parent"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "holdings-parent",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Group Share Transfer — Stated Holding Changes\n\nThe stated holdings have been loaded into the Group Share-Transfer Calculator below.\n\n> ⚠️ **Counterparty leg is missing.** The request says Company A transfers 500 Company C shares to Company B, but does not state how Company A obtains the 500 Company B shares. Percentages cannot be calculated without each company’s issued shares and the other holders’ positions.\n\nThis is a share-structure analysis only; no journal has been created.",
+          "displayedAnswer": "### Group Share Transfer — Stated Holding Changes\n\nThe stated holdings have been loaded into the Group Share-Transfer Calculator below.\n\n> ⚠️ **Counterparty leg is missing.** The request says Company A transfers 500 Company C shares to Company B, but does not state how Company A obtains the 500 Company B shares. Percentages cannot be calculated without each company’s issued shares and the other holders’ positions.\n\nThis is a share-structure analysis only; no journal has been created.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "holdings-parent",
+          "scenario": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "scenarioComplete": false,
+          "rawQuery": "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "shares": [
+            {
+              "company": "Company C",
+              "holder": "Company A",
+              "beforeShares": 1000,
+              "afterShares": 500,
+              "beforePercent": 0,
+              "afterPercent": 0
+            },
+            {
+              "company": "Company B",
+              "holder": "Company A",
+              "beforeShares": 0,
+              "afterShares": 500,
+              "beforePercent": 0,
+              "afterPercent": 0
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 0,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "continuing-trade",
+          "query": "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "mode": "shares",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "holdings-parent",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "holdings-parent",
+            "holdings-parent-answer",
+            "continuing-trade"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [],
+          "analysisStartMessageId": "holdings-parent",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Share Structure Follow-up Applied\n\nThe trade has been added to the active group share structure. The updated holdings are shown in the Group Share-Transfer Calculator below.\n\nNo journal entry or statutory conclusion has been created.",
+          "displayedAnswer": "### Share Structure Follow-up Applied\n\nThe trade has been added to the active group share structure. The updated holdings are shown in the Group Share-Transfer Calculator below.\n\nNo journal entry or statutory conclusion has been created.",
+          "boundary": null,
+          "sourceAnalysisBoundary": "holdings-parent",
+          "scenario": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "scenarioComplete": false,
+          "rawQuery": "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "GROUP_SHARE_TRANSFER_ANALYSIS",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "shares": [
+            {
+              "company": "Company C",
+              "holder": "Company A",
+              "beforeShares": 1000,
+              "afterShares": 490,
+              "beforePercent": 0,
+              "afterPercent": 0
+            },
+            {
+              "company": "Company B",
+              "holder": "Company A",
+              "beforeShares": 0,
+              "afterShares": 505,
+              "beforePercent": 0,
+              "afterPercent": 0
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [],
+          "providerCalls": [],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 0,
+          "cumulativeAttempts": 0,
+          "acceptanceFailures": []
+        },
+        {
+          "id": "reset-trade",
+          "query": "New question: Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "mode": "shares",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": "holdings-parent",
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "reset-trade"
+          ],
+          "historyMarkersRequested": [
+            "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B."
+          ],
+          "markersInProviderPayload": [
+            [
+              {
+                "markerHash": "aa3efdadec5645b7539e7089cc2dbe08eee0dd34e02e69d3a136845d6e92ee27",
+                "markerLength": 175,
+                "included": false
+              }
+            ]
+          ],
+          "analysisStartMessageId": "reset-trade",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence incomplete\n\n**tax treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For tax treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**accounting treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For accounting treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- trading of shares: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- tax treatment of share exchange: No reviewed topic was resolved for this issue\n- accounting treatment of share exchange: No reviewed topic was resolved for this issue",
+          "displayedAnswer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### IRAS — Corporate income tax\n\n**Status:** Evidence incomplete\n\n**tax treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For tax treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**accounting treatment of share exchange** (party in scope: Company)\n- **Application unresolved:** For accounting treatment of share exchange, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- trading of shares: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- tax treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- accounting treatment of share exchange: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- tax treatment of share exchange: No reviewed topic was resolved for this issue\n- accounting treatment of share exchange: No reviewed topic was resolved for this issue",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": "reset-trade",
+          "sourceAnalysisBoundary": "reset-trade",
+          "scenario": "UNRECOGNIZED",
+          "scenarioComplete": false,
+          "rawQuery": "New question: Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "UNRECOGNIZED",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "d83a6ffd1a070fb5141156cee4742822ed03eb56fb025d66f66c3f0c842e58d8",
+              "estimatedInputTokens": 13127,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [
+                {
+                  "markerHash": "aa3efdadec5645b7539e7089cc2dbe08eee0dd34e02e69d3a136845d6e92ee27",
+                  "markerLength": 175,
+                  "included": false
+                }
+              ],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "d83a6ffd1a070fb5141156cee4742822ed03eb56fb025d66f66c3f0c842e58d8",
+              "estimatedInputTokens": 13127,
+              "repeatedInTurn": false,
+              "markersIncluded": [
+                {
+                  "markerHash": "aa3efdadec5645b7539e7089cc2dbe08eee0dd34e02e69d3a136845d6e92ee27",
+                  "markerLength": 175,
+                  "included": false
+                }
+              ],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "reset-trade",
+              "workflow": "reset",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:31:07.093Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 1,
+          "cumulativeAttempts": 1,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-24T03:31:10.213Z",
+  "totalAttempts": 1,
+  "stopReason": "COMPLETED",
+  "usageSummary": {
+    "dispatchedRequests": 1,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 13127,
+    "providerReportedPromptTokens": 1951,
+    "providerReportedTotalTokens": 2396,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}

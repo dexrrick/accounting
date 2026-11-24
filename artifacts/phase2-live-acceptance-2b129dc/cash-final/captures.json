@@ -1,0 +1,287 @@
+{
+  "head": "37f9d16b19a5877660e301fde2f4fdf06d5978ba",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-24T03:54:43.309Z",
+  "quota": {
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "max503Retries": 1,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceGenerationAttempts": 8,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "cash-control",
+      "turns": [
+        {
+          "id": "equipment-cash-control",
+          "query": "We bought office equipment for SGD 1,200 for cash, not on credit. The supplier did not charge GST. Please prepare the double entry.",
+          "mode": "journal",
+          "uiRelation": "NEW",
+          "uiResetApplied": true,
+          "deliberateHistoryOverride": false,
+          "parentId": null,
+          "retainedId": null,
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [],
+          "historyMessageIds": [
+            "equipment-cash-control"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            []
+          ],
+          "analysisStartMessageId": "equipment-cash-control",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe current equipment acquisition journal is available for review in the Double Entry Journal tab and remains conditional and uncommitted.",
+          "displayedAnswer": "### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.\n\nThe current equipment acquisition journal is available for review in the Double Entry Journal tab and remains conditional and uncommitted.",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": null,
+          "sourceAnalysisBoundary": "equipment-cash-control",
+          "scenario": "BUSINESS_EQUIPMENT_ACQUISITION",
+          "scenarioComplete": true,
+          "rawQuery": "We bought office equipment for SGD 1,200 for cash, not on credit. The supplier did not charge GST. Please prepare the double entry.",
+          "preparationFailed": false,
+          "activeScenarioAfter": "BUSINESS_EQUIPMENT_ACQUISITION",
+          "explicitLast": false,
+          "missing": [],
+          "amount": 1200,
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [
+            {
+              "title": "Business Equipment Acquisition",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 1200,
+              "credit": 1200,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Property, Plant and Equipment — Equipment",
+                  "debit": 1200,
+                  "credit": 0
+                },
+                {
+                  "account": "Cash",
+                  "debit": 0,
+                  "credit": 1200
+                }
+              ]
+            }
+          ],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [
+            {
+              "title": "Business Equipment Acquisition",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 1200,
+              "credit": 1200,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Property, Plant and Equipment — Equipment",
+                  "debit": 1200,
+                  "credit": 0
+                },
+                {
+                  "account": "Cash",
+                  "debit": 0,
+                  "credit": 1200
+                }
+              ]
+            }
+          ],
+          "displayedJournals": [
+            {
+              "title": "Business Equipment Acquisition",
+              "status": "CONDITIONAL",
+              "date": "24/11/2026",
+              "debit": 1200,
+              "credit": 1200,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Property, Plant and Equipment — Equipment",
+                  "debit": 1200,
+                  "credit": 0
+                },
+                {
+                  "account": "Cash",
+                  "debit": 0,
+                  "credit": 1200
+                }
+              ]
+            }
+          ],
+          "displayHasJournal": true,
+          "committedJournals": [],
+          "retainedJournalsAfter": [],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "394b71473da2b6089e6824a8277c03d0720997b43195ed5730c2e4fe414094fb",
+              "estimatedInputTokens": 13158,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "user content",
+              "fingerprint": "c918fa057f11814d910538ba84b3a6b101f056fe873d4c02a4ee9e91dcd0e78d",
+              "estimatedInputTokens": 1323,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "394b71473da2b6089e6824a8277c03d0720997b43195ed5730c2e4fe414094fb",
+              "estimatedInputTokens": 13158,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "equipment-cash-control",
+              "workflow": "cash-control",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-24T03:54:43.355Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "c918fa057f11814d910538ba84b3a6b101f056fe873d4c02a4ee9e91dcd0e78d",
+              "estimatedInputTokens": 1323,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "equipment-cash-control",
+              "workflow": "cash-control",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-24T03:54:48.462Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 2,
+          "cumulativeAttempts": 2,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-24T03:54:59.946Z",
+  "totalAttempts": 2,
+  "stopReason": "COMPLETED",
+  "usageSummary": {
+    "dispatchedRequests": 2,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 14481,
+    "providerReportedPromptTokens": 2215,
+    "providerReportedTotalTokens": 2649,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}
