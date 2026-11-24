@@ -1389,7 +1389,7 @@ export async function processAccountingQuery(
       if (hasConfiguredProvider(providerOrApiKey) && statutoryRequest) {
         return createGroundedSynthesisFailureResponse(
           response, userInput, standard, authorityWorkstreams, groundedContext, 'OTHER', deterministicScenario,
-          outputPreference?.journal
+          journalOutputRequested
         );
       }
       return response;
@@ -1445,7 +1445,7 @@ export async function processAccountingQuery(
     console.warn('[Evidence-grounded synthesis] Re-rendering admitted evidence after synthesis failure.', advisoryFailureStatus);
     return createGroundedSynthesisFailureResponse(
       response, userInput, standard, authorityWorkstreams, groundedContext, advisoryFailureStatus, deterministicScenario,
-      outputPreference?.journal
+      journalOutputRequested
     );
   }
 }
@@ -1507,7 +1507,16 @@ export function createGroundedSynthesisFailureResponse(
     ? classifyQuestion(userInput) : undefined;
   const equipmentPurchase = equipmentClassification && !equipmentClassification.taxAnalysisRequired &&
     !equipmentClassification.regulatoryAnalysisRequired ? deterministicScenario : undefined;
-  const equipmentGroups = (equipmentPurchase?.directGroups ?? [])
+  const equipmentJournalSourceGroups = journalOutputRequested && equipmentClassification &&
+    deterministicScenario?.isComplete === true && deterministicScenario.isHypothetical !== true &&
+    deterministicScenario.missingFields?.length === 0 && !deterministicScenario.assumptions?.length
+    ? deterministicScenario.directGroups ?? [] : [];
+  const useCurrentEquipmentJournal = equipmentJournalSourceGroups.length > 0 && equipmentJournalSourceGroups.every(group =>
+    group.authorityStatus === 'CONDITIONAL' && group.isHypothetical !== true &&
+    group.totalDebit > 0 && group.totalDebit === group.totalCredit && validateJournalGroups([group]).isValid
+  );
+  const equipmentGroups = (equipmentPurchase?.directGroups ??
+    (useCurrentEquipmentJournal ? equipmentJournalSourceGroups : []))
     .filter(group => validateJournalGroups([group]).isValid)
     .map(group => ({
       ...group,
@@ -1576,7 +1585,7 @@ export function createGroundedSynthesisFailureResponse(
     officialAnswerLinks: [],
     authorityEvidencePresentation: undefined,
     irasEvidencePresentation: undefined,
-    directGroups: equipmentPurchase ? equipmentGroups : safeDirectGroups,
+    directGroups: equipmentPurchase || useCurrentEquipmentJournal ? equipmentGroups : safeDirectGroups,
     committedDirectGroups: equipmentPurchase ? undefined : safeCommittedGroups,
     projectedGroups: equipmentPurchase ? undefined : safeProjectedGroups,
     isComplete: Boolean(baseScenario.isComplete && engineMissingFields.length === 0)
@@ -1647,6 +1656,9 @@ export function createGroundedSynthesisFailureResponse(
   } else {
     messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
       (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
+    if (useCurrentEquipmentJournal && equipmentGroups.length) {
+      messageText += '\n\nThe current equipment acquisition journal is available for review in the Double Entry Journal tab and remains conditional and uncommitted.';
+    }
   }
   // Sanitized proposals record an attempted preparation. Keep historical journal access explicit.
   const journalPreparationFailed = !sanitizedScenario.isComplete &&

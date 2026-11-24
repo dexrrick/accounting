@@ -17,6 +17,7 @@ import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolve
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
 const query = 'Can my client claim GST input tax on an office expense, and what is the accounting treatment?';
 const verifiedLink = { title: 'IRAS guidance', url: 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)' };
@@ -1510,6 +1511,72 @@ try {
     'the mixed response does not promote its conditional journal');
   assert.deepEqual(updateCommittedJournalScenario(retainedPayroll, completeEquipmentSynthesis.scenarioState, 'SFRS_I'), retainedPayroll,
     'the conditional current equipment journal does not replace the committed payroll snapshot');
+
+  const cashEquipmentQuery = 'We bought office equipment for SGD 1,200 for cash, not on credit. The supplier did not charge GST. Please prepare the double entry.';
+  const cashEquipmentClassification = classifyQuestion(cashEquipmentQuery);
+  assert.equal(cashEquipmentClassification.taxAnalysisRequired, true,
+    'the no-GST fact enters the mixed tax-context fallback path that previously sanitized engine accounts');
+  const cashEquipmentScenario = await parseAccountingQuery(cashEquipmentQuery, null);
+  assert.equal(cashEquipmentScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+  assert.equal(cashEquipmentScenario.isComplete, true);
+  const cashEquipmentFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, cashEquipmentQuery, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE', cashEquipmentScenario, true
+  );
+  assert.equal(cashEquipmentFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  const [fallbackCashGroup] = getDisplayableUncommittedJournalGroups(cashEquipmentFallback.scenarioState, 'SFRS_I');
+  assert.ok(fallbackCashGroup, 'the current validated engine equipment journal survives synthesis failure');
+  assert.equal(validateJournalGroups([fallbackCashGroup]).isValid, true);
+  assert.equal(fallbackCashGroup.authorityStatus, 'CONDITIONAL');
+  assert.deepEqual(fallbackCashGroup.lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Property, Plant and Equipment — Equipment', 1200, 0], ['Cash', 0, 1200]
+  ], 'the fallback keeps the validated engine Equipment debit and Cash credit');
+  assert.match(cashEquipmentFallback.messageText, /Statutory evidence unresolved/,
+    'the mixed fallback retains its unresolved statutory-evidence notice');
+  assert.match(cashEquipmentFallback.messageText, /current equipment acquisition journal.*conditional and uncommitted/i,
+    'journal availability is appended without replacing the statutory-evidence notice');
+  assert.deepEqual(fallbackCashGroup.citations, [], 'the fallback does not retain unchecked statutory citations on the journal');
+  assert.equal(cashEquipmentFallback.scenarioState.singaporeTaxTreatmentSummary, undefined);
+  assert.deepEqual(cashEquipmentFallback.scenarioState.statutoryAdvisory, []);
+  assert.deepEqual(cashEquipmentFallback.scenarioState.officialAnswerLinks, []);
+  assert.doesNotMatch(cashEquipmentFallback.messageText, /GST|IRAS|capital allowance|Section 19|tax deduction/i,
+    'the fallback preserves the journal without asserting an unsupported statutory conclusion');
+  assert.doesNotMatch(JSON.stringify(cashEquipmentFallback.scenarioState), /UNSAFE_ORIGINAL_ADVISORY|Fictional filing deadline/i,
+    'untrusted model and statutory metadata remain sanitized');
+  assert.strictEqual(updateCommittedJournalScenario(retainedPayroll, cashEquipmentFallback.scenarioState, 'SFRS_I'), retainedPayroll,
+    'the conditional cash-equipment proposal does not replace the committed payroll snapshot');
+
+  const cashFallbackInterpretation = makePhase2Interpretation({
+    domain: 'UNKNOWN', population: 'COMPANY', authorities: ['ACCOUNTING_STANDARDS', 'IRAS'],
+    subject: 'office equipment purchase journal and supplier GST fact', operation: 'OTHER',
+    issues: [
+      { subject: 'office equipment purchase journal entry', population: 'COMPANY', domain: 'ACCOUNTING',
+        governingAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'PREPARE_JOURNAL',
+        evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS' },
+      { subject: 'supplier did not charge GST on office equipment', population: 'COMPANY', domain: 'IRAS_GST',
+        governingAuthorities: ['IRAS'], operation: 'EXPLAIN_RULE', evidenceRequirement: 'AUTHORITATIVE_SOURCE' }
+    ]
+  });
+  cashFallbackInterpretation.factsExplicitlyProvided = ['SGD 1,200', 'for cash', 'supplier did not charge GST'];
+  assert.ok(validateSemanticQuestionInterpretation(cashFallbackInterpretation, cashEquipmentQuery));
+  const cashFallbackAppRun = await runPhase2ApplicationCase({
+    interpretation: cashFallbackInterpretation,
+    pages: new Map(),
+    expectSynthesisFailure: true,
+    generate: () => { throw new Error('scripted acceptance synthesis failure'); },
+    verify: packet => ({ verdicts: packet.claims.map(claim => ({
+      claimId: claim.claimId, support: 'UNSUPPORTED', claimType: 'RULE'
+    })) })
+  }, cashEquipmentQuery, [
+    ...retainedHistoryPrefix,
+    { id: 'current-cash-equipment-question', sender: 'user', timestamp: '', text: cashEquipmentQuery }
+  ], retainedPayroll, { journal: false, statutory: false, shareStructure: false });
+  assert.equal(cashFallbackAppRun.result.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+  const [cashOptionFallbackGroup] = getDisplayableUncommittedJournalGroups(cashFallbackAppRun.result.scenarioState, 'SFRS_I');
+  assert.deepEqual(cashOptionFallbackGroup?.lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Property, Plant and Equipment — Equipment', 1200, 0], ['Cash', 0, 1200]
+  ], 'explicit journal wording requests the conditional equipment group even when the UI toggle is false');
+  assert.strictEqual(updateCommittedJournalScenario(retainedPayroll, cashFallbackAppRun.result.scenarioState, 'SFRS_I'), retainedPayroll,
+    'the text-requested conditional cash journal preserves the prior committed payroll');
 
   providerStages.length = 0;
   const fetchBeforeJournalRecall = globalThis.fetch;
