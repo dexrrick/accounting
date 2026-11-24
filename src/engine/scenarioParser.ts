@@ -2075,17 +2075,18 @@ export async function parseAccountingQuery(
     const statedPayment = statedPaymentMatch ? toEquipmentAmount(statedPaymentMatch) : undefined;
     const { paymentStatus } = defaultTransactionUnderstandingService.understandTransactionSync(query, functionalCurrency);
     const futureSettlement = /\b(?:will|shall)\s+(?:be\s+)?(?:pay|paid|settle|settled)\b/i.test(query);
-    const cashPayment = /\b(?:for cash|paid in cash)\b/i.test(query);
+    const cashPayment = /\b(?:for cash|paid in cash)\b/i.test(query) &&
+      !/\b(?:not|never|isn['’]?t|wasn['’]?t|weren['’]?t)\s+(?:for cash|paid in cash)\b/i.test(query);
     const creditTermsUnclear = /\b(?:not sure|unsure|uncertain|unclear|unknown)\s+(?:whether|if)\b.{0,40}\bon\s+credit\b/i.test(query);
     const negatedCreditPurchase = /\b(?:not|never|isn['’]?t|wasn['’]?t|weren['’]?t)\s+(?:(?:bought|purchased)\s+)?on\s+credit\b/i.test(query);
     const creditCardPayment = /\bcredit\s+card\b/i.test(query);
-    const settlementWordingAmbiguous = paymentStatus === 'unknown' &&
-      (creditTermsUnclear || negatedCreditPurchase || creditCardPayment);
     const fullPaymentStated = statedPayment !== undefined ? statedPayment === amount :
       cashPayment || /\b(?:paid in full|fully paid|paid the full amount|paid by bank transfer|paid from (?:the )?(?:business )?bank)\b/i.test(query);
     const partialPaymentIndicated = /\b(?:deposit|install?ments?|balance (?:due|outstanding))\b/i.test(query);
     const paidImmediately = !futureSettlement && ((paymentStatus === 'paid' && fullPaymentStated) ||
       (paymentStatus === 'unknown' && cashPayment));
+    const settlementWordingAmbiguous = paymentStatus === 'unknown' &&
+      (creditTermsUnclear || creditCardPayment || (negatedCreditPurchase && !paidImmediately));
     const multipleAmounts = additionalAmounts.some(value => value !== amount);
     const splitUnknown = paymentStatus === 'partially_paid' || (paymentStatus === 'paid' &&
       (multipleAmounts || partialPaymentIndicated || (!futureSettlement && !paidImmediately)));

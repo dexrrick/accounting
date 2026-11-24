@@ -348,6 +348,35 @@ async function runTests() {
   assert.strictEqual(explicitlyPaidEquipmentScenario.isComplete, true);
   assert.match(explicitlyPaidEquipmentScenario.directGroups[0].lines[1].accountName, /bank/i,
     'explicit bank payment remains paid even when credit wording also appears');
+  const explicitlyCashEquipmentScenario = await parseAccountingQuery(
+    'We bought office equipment for SGD 1,200 for cash, not on credit. The supplier did not charge GST. Please prepare the double entry.'
+  );
+  assert.strictEqual(explicitlyCashEquipmentScenario.isComplete, true,
+    'explicit cash payment resolves settlement despite the negated on-credit phrase');
+  assert.deepStrictEqual(explicitlyCashEquipmentScenario.missingFields, []);
+  assert.deepStrictEqual(explicitlyCashEquipmentScenario.assumptions, []);
+  assert.strictEqual(explicitlyCashEquipmentScenario.directGroups?.length, 1);
+  assert.strictEqual(explicitlyCashEquipmentScenario.directGroups[0].totalDebit, 1200);
+  assert.strictEqual(explicitlyCashEquipmentScenario.directGroups[0].totalCredit, 1200);
+  assert.deepStrictEqual(explicitlyCashEquipmentScenario.directGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Property, Plant and Equipment — Equipment', 1200, 0], ['Cash', 0, 1200]
+  ]);
+  const negatedCashEquipmentScenario = await parseAccountingQuery(
+    'We bought office equipment for SGD 1,200, not for cash and not on credit; the settlement method is unclear.'
+  );
+  assert.strictEqual(negatedCashEquipmentScenario.isComplete, false,
+    'negated cash wording does not resolve an otherwise unclear settlement');
+  assert.ok(negatedCashEquipmentScenario.missingFields.some(field => field.fieldKey === 'paymentStatus'));
+  assert.deepStrictEqual(negatedCashEquipmentScenario.assumptions, []);
+  assert.deepStrictEqual(negatedCashEquipmentScenario.directGroups, []);
+  const uncertainCashOrCreditScenario = await parseAccountingQuery(
+    'We bought office equipment for SGD 1,200; not sure whether it was for cash or on credit.'
+  );
+  assert.strictEqual(uncertainCashOrCreditScenario.isComplete, false,
+    'an explicit cash-or-credit uncertainty blocks the cash phrase from resolving settlement');
+  assert.ok(uncertainCashOrCreditScenario.missingFields.some(field => field.fieldKey === 'paymentStatus'));
+  assert.deepStrictEqual(uncertainCashOrCreditScenario.assumptions, []);
+  assert.deepStrictEqual(uncertainCashOrCreditScenario.directGroups, []);
   const retainedPayrollScenario = {
     scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'Committed payroll', transactionTitle: 'Committed payroll',
     amount: 1000, functionalCurrency: 'SGD', transactionCurrency: 'SGD', isComplete: true, missingFields: [],
