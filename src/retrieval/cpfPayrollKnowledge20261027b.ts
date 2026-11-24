@@ -1,0 +1,1351 @@
+import type {
+  AuthorityPresentedIssue,
+  AuthorityPresentedSource,
+  AuthorityPresentedWorkstream
+} from '../utils/authorityEvidencePresentation';
+import { groupExactIssueClaimsByDocument } from '../utils/authorityEvidencePresentation';
+import { formatSingaporeDate } from '../utils/dateUtils';
+import { defaultTargetDateResolver, hasOnlyDerivedCpfPrAnniversaryBoundaryYears, TargetDateResolver } from './targetDateResolver';
+import { isIrasCpfQualitativeRateFactorRequest } from './irasCpfCoverageRules';
+
+const CPF_RATE_TABLE_URL =
+  'https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf';
+const CPF_COMPUTATION_URL =
+  'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+const CPF_OW_CEILING_URL =
+  'https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr';
+const CPF_AW_CEILING_URL =
+  'https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1';
+const CPF_PR_STATUS_URL =
+  'https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions';
+const CPF_NEW_PR_STATUS_URL =
+  'https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status';
+
+export interface CpfPayrollKnowledgeRequest {
+  authority: string;
+  topicId: string;
+  query: string;
+  subject: string;
+  sourceText: string;
+  officialUrl?: string;
+}
+
+export type CpfPayrollKnowledgeRuleId =
+  | 'CPF_2026_CONTRIBUTION_TABLES'
+  | 'CPF_CONTRIBUTION_METHOD'
+  | 'CPF_ORDINARY_WAGE_CEILINGS'
+  | 'CPF_2026_ADDITIONAL_WAGE_CEILING'
+  | 'CPF_PERMANENT_RESIDENT_YEAR'
+  | 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES';
+
+export interface CpfPayrollKnowledgeRule {
+  id: CpfPayrollKnowledgeRuleId;
+  authority: 'CPF';
+  topicIds: readonly string[];
+  officialUrl: string;
+  title: string;
+  fixtureFile: string;
+  fixtureKind: 'WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT' | 'NATIVE_OFFICIAL_PDF';
+  excerptFile: string;
+  population: string;
+  rule: string;
+  provisions: readonly string[];
+  conditions: readonly string[];
+  exceptions: readonly string[];
+  requiredFacts: readonly string[];
+  effectiveDateEvidence: string;
+  limitations: readonly string[];
+}
+
+export interface CpfPayrollKnowledgeEvidence {
+  authority: 'CPF';
+  ruleId: CpfPayrollKnowledgeRuleId;
+  text: string;
+  title: string;
+  officialUrl: string;
+}
+
+const RATE_TOPICS = [
+  'cpf_contribution_rates',
+  'cpf-pr-contribution-rates',
+  'cpf-contribution-computation',
+  'cpf-contribution-rounding'
+] as const;
+
+/**
+ * Source text retained from official CPF Board web-visible HTML/PDF content.
+ * Each file is a transparently labelled excerpt, not a claim to be the
+ * underlying server response or original PDF bytes.
+ */
+export const CPF_PAYROLL_KNOWLEDGE_RULES_20261027B: readonly CpfPayrollKnowledgeRule[] = Object.freeze([
+  {
+    id: 'CPF_2026_CONTRIBUTION_TABLES', authority: 'CPF', topicIds: RATE_TOPICS,
+    officialUrl: CPF_RATE_TABLE_URL, title: 'CPF Contribution Rate Table from 1 January 2026',
+    fixtureFile: 'cpf-rates-native-2026.pdf', fixtureKind: 'NATIVE_OFFICIAL_PDF',
+    excerptFile: 'cpf-rate-tables-2026-extract.txt',
+    population: 'Employees of private-sector employers and non-pensionable employees of ministries, statutory bodies and aided schools who are Singapore Citizens or Permanent Residents',
+    rule: 'The official 2026 table has five schedules: full rates for Singapore Citizens and third-year-onward SPRs; graduated employer/graduated employee rates for first- and second-year SPRs; and, after CPF Board approval, full employer/graduated employee schedules for first- and second-year SPRs. Each schedule varies by the table’s age bands and monthly total-wage bands, with Ordinary Wages capped at S$8,000 and Additional Wages capped separately.',
+    provisions: ['CPF Act 1953 First Schedule contribution rates, as presented in CPF Board’s Tables 1–5; this module does not independently interpret the Schedule text.'],
+    conditions: ['The retained table states rates from 1 January 2026.', 'Use the first-year or second-year PR schedule only within the corresponding PR-status year.', 'Full employer/graduated employee or full employer/full employee options for first/second year require a joint higher-rate application and CPF Board approval.', 'The PDF expressly scopes its tables to private-sector and non-pensionable employees.'],
+    exceptions: ['Pensionable public-service employees, platform workers, self-employed persons, wages not classified as CPF-payable OW/AW, and rates outside the 2026 table are not calculated by this module.', 'The 2027 update notice means 2026 rates must not be reused for 2027 payroll.'],
+    requiredFacts: ['Contribution month in 2026.', 'Singapore Citizen or SPR status; for an SPR, conversion date and applicable table/election.', 'Date of birth, since an age-group rate changes from the first day of the month after a 55th, 60th, 65th or 70th birthday.', 'Private-sector or non-pensionable employment scope.', 'The classified OW and AW amounts payable for the month.'],
+    effectiveDateEvidence: 'The document titles all five tables “from 1 January 2026”. CPF Board’s computation page, retained separately, states that senior-employee rates increase from 1 January 2027. The source does not establish a single end date for every age group.',
+    limitations: ['Only the 2026 tables are retained. Do not apply them to 2025 or 2027.', 'The retained text excerpt is extracted from the retained original official PDF bytes; its digest is recorded separately from the PDF digest.']
+  },
+  {
+    id: 'CPF_CONTRIBUTION_METHOD', authority: 'CPF', topicIds: RATE_TOPICS,
+    officialUrl: CPF_COMPUTATION_URL, title: 'How much CPF contributions to pay',
+    fixtureFile: 'cpf-computation-guidance-extract.txt', fixtureKind: 'WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT',
+    excerptFile: 'cpf-computation-guidance-extract.txt',
+    population: 'CPF-contributing employers and employees; private-sector / non-pensionable table computations',
+    rule: 'Choose a contribution table from citizenship or SPR year, then age group and monthly wage band; compute on Total Wages made up of Ordinary Wages and Additional Wages, subject to their separate ceilings. Where monthly total wages are above S$50 and at or below S$500, the employee share is nil while the employer share is payable. Round the combined total contribution to the nearest dollar (50 cents rounds up), discard cents from the employee share, and calculate employer share as total less employee share.',
+    provisions: ['CPF Board’s published employer computation sequence; the public page identifies the Central Provident Fund Act contribution framework but does not set out a paragraph number in the retained passage.'],
+    conditions: ['The 2026 summary rate table applies to Singaporeans and SPRs from year three onward with monthly wages above S$750.', 'Select the correct full or graduated SPR table and age group before calculating.', 'When OW and AW are both payable, calculate and sum the contributions for both before applying the rounding rules.'],
+    exceptions: ['An employee earning exactly S$50 or less is below the page’s contribution threshold.', 'The retained high-level page does not reproduce the full graduated rate schedules; consult the linked 2026 PDF for those rates.'],
+    requiredFacts: ['Contribution period, status/PR year, birthday, wage components, applicable ceilings and whether an SPR higher-rate election was approved.'],
+    effectiveDateEvidence: 'The page identifies the summary as rates from 1 January 2026 and separately reports that senior-worker contribution rates increase from 1 January 2027.',
+    limitations: ['A general method explanation does not determine a company’s actual payroll without employee and wage facts.', 'This retained excerpt does not support historical rates or the detailed contribution amount for cases outside the linked 2026 tables.']
+  },
+  {
+    id: 'CPF_ORDINARY_WAGE_CEILINGS', authority: 'CPF', topicIds: ['cpf-ordinary-wages', 'cpf-ordinary-wage-ceiling', 'cpf_wage_ceiling'],
+    officialUrl: CPF_OW_CEILING_URL, title: 'What is the Ordinary Wage (OW) ceiling?',
+    fixtureFile: 'cpf-ow-ceiling-extract.txt', fixtureKind: 'WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT',
+    excerptFile: 'cpf-ow-ceiling-extract.txt',
+    population: 'Employees subject to CPF contributions on Ordinary Wages',
+    rule: 'The monthly Ordinary Wage ceiling is S$8,000 from 1 January 2026; the official table also gives prior dated ceilings and keeps the annual salary ceiling at S$102,000 through the listed periods.',
+    provisions: ['CPF Board’s dated salary-ceiling table.'],
+    conditions: ['Apply the dated value for the payroll period rather than using the current amount for another year.', 'The S$8,000 ceiling is monthly and applies to OW, not to the independent AW ceiling.'],
+    exceptions: ['The retained page does not provide all possible exception or special-population rules for every public-service employment regime.'],
+    requiredFacts: ['The payroll year or date, employee/employment coverage and the amount classified as OW.'],
+    effectiveDateEvidence: 'The official table specifies S$7,400 for 1 January–31 December 2025 and S$8,000 from 1 January 2026.',
+    limitations: ['It gives the ceiling, not the amount or rate of an individual contribution.', 'The page was last updated 14 August 2026; that retrieval/update date is not used as a legal effective date.']
+  },
+  {
+    id: 'CPF_2026_ADDITIONAL_WAGE_CEILING', authority: 'CPF',
+    topicIds: ['cpf-additional-wages', 'cpf-additional-wage-ceiling', 'cpf-ordinary-wages', 'cpf-bonus-backpay'],
+    officialUrl: CPF_AW_CEILING_URL, title: 'Examples for computation of Additional Wage (AW) Ceiling',
+    fixtureFile: 'cpf-aw-ceiling-native-2026.pdf', fixtureKind: 'NATIVE_OFFICIAL_PDF',
+    excerptFile: 'cpf-aw-ceiling-2026-extract.txt',
+    population: 'Singapore Citizens and Singapore Permanent Residents, for each employer and calendar year',
+    rule: 'The annual AW ceiling equals S$102,000 minus Ordinary Wages subject to CPF for the year. At an AW payment, estimate the ceiling using the year’s expected OW, subtract AW already subject to CPF, and cap the current AW at the available remainder. Recalculate using actual OW in the last month of employment or December, whichever occurs first; adjust any shortfall and seek a refund for excess contributions.',
+    provisions: ['CPF Board AW-ceiling computation examples and employer instructions.'],
+    conditions: ['The ceiling is per employer, per year, and applies to Singapore Citizens and SPRs.', 'Use the year in which the AW is due and payable: a 2025 bonus payable in 2026 uses 2026 limits.', 'At non-final AW payments, use a supported estimate of OW expected for the whole year; at final settlement, use actual OW up through that payroll month.'],
+    exceptions: ['First-/second-year SPRs use their applicable contribution-rate tables even though the AW ceiling formula is the same.', 'A refund or shortfall on prior payments requires review of the payroll already submitted; this calculator only determines current eligible AW and does not submit adjustments.'],
+    requiredFacts: ['Due-and-payable year and date.', 'Current AW amount and prior AW already subject to CPF for this employer/year.', 'Actual prior OW subject to CPF and either the complete expected annual OW subject to CPF or an identified final month of employment/year.'],
+    effectiveDateEvidence: 'The official examples state that the AW payable-date year controls and expressly show the 2026 ceiling calculation using S$102,000 and the S$8,000 monthly OW ceiling.',
+    limitations: ['The retained text excerpt is extracted from the retained original official PDF bytes; its digest is recorded separately from the PDF digest.', 'A future OW estimate is a required input before final settlement and can change; a source retrieval date cannot supply it.']
+  },
+  {
+    id: 'CPF_PERMANENT_RESIDENT_YEAR', authority: 'CPF', topicIds: ['cpf-pr-contribution-rates', 'cpf_contribution_rates'],
+    officialUrl: CPF_PR_STATUS_URL, title: 'I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?',
+    fixtureFile: 'cpf-pr-year-status-extract.txt', fixtureKind: 'WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT',
+    excerptFile: 'cpf-pr-year-status-extract.txt',
+    population: 'Singapore Permanent Residents earning wages in Singapore',
+    rule: 'First-year rates apply from the date PR status is obtained to the last day of the month of the first anniversary. Second-year rates apply from the following month through the last day of the month of the second anniversary. Third-year rates start in the month after that second anniversary.',
+    provisions: ['CPF Board’s PR-year instructions, referring to the ICA Entry Permit Form 5/5A as the status-date evidence.'],
+    conditions: ['Use the Entry Permit date as the date status was obtained.', 'The year transitions occur by calendar month; the second and third years begin on the first day of the month following the relevant anniversary.'],
+    exceptions: ['The first calendar month may begin partway through the month on the actual PR-conversion date.', 'A jointly elected higher contribution basis during the first two years requires CPF Board approval; year calculation by itself does not prove an election.'],
+    requiredFacts: ['Date PR status was obtained.', 'Contribution month.', 'Whether a higher contribution option was jointly requested and approved, if applicable.'],
+    effectiveDateEvidence: 'The rule is described on a CPF Board page last updated 11 March 2026; the page does not identify a separate commencement date for the displayed PR-year method.',
+    limitations: ['This rule selects the PR year only; rates still require the official table for the payroll year and a supported election.', 'The example date is illustrative and does not establish retroactive rates for any other historical period.']
+  },
+  {
+    id: 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES', authority: 'CPF',
+    topicIds: ['cpf-pr-contribution-rates', 'cpf-employee-coverage', 'cpf-ordinary-wages', 'cpf-additional-wages', 'cpf-bonus-backpay'],
+    officialUrl: CPF_NEW_PR_STATUS_URL,
+    title: 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?',
+    fixtureFile: 'cpf-new-pr-visible.txt', fixtureKind: 'WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT',
+    excerptFile: 'cpf-new-pr-visible.txt',
+    population: 'Foreign employees obtaining Singapore Permanent Resident status while employed in Singapore',
+    rule: 'CPF contributions start when Singapore Permanent Resident status is obtained. OW is prorated from the status date; AW is CPF-subject according to when it is payable. First-year rates continue through the last day of the month of the first anniversary; second-year rates start the following month and third-year rates start the month after the second anniversary.',
+    provisions: ['CPF Board instructions for foreign employees newly obtaining SPR status.'],
+    conditions: ['Use the SPR status date shown on the ICA Entry Permit (Form 5/5A).', 'The OW and AW rules apply to wages payable to a current employee; a separate rule applies to AW paid to ex-employees.', 'Apply the contribution table and any approved higher-rate election for the applicable SPR year and payroll period.'],
+    exceptions: ['No contribution is payable on AW paid before SPR status is obtained.', 'This visible-text excerpt does not state an individual contribution amount or the annual AW ceiling formula.'],
+    requiredFacts: ['Date SPR status was obtained.', 'Whether each amount is OW or AW and its contractual payable date.', 'For a contribution amount: wage amount, calendar year, age, applicable rate table and election, and (for AW) remaining annual ceiling.'],
+    effectiveDateEvidence: 'The current CPF Board page was last updated 27 April 2026 and includes an expressly dated 2026 example; the page update date is not treated as a legal commencement date.',
+    limitations: ['The page supports the stated 2026 status-date example and general classification boundary; it does not by itself establish the law for an earlier year.', 'The page states no contribution percentage or remaining AW ceiling for an individual employee.']
+  }
+]);
+
+export const CPF_PAYROLL_KNOWLEDGE_SOURCE_CATALOG_20261027B = Object.freeze(
+  CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.map(rule => ({
+    authority: rule.authority,
+    topicIds: rule.topicIds,
+    ruleId: rule.id,
+    url: rule.officialUrl,
+    title: rule.title,
+    fixtureFile: rule.fixtureFile,
+    fixtureKind: rule.fixtureKind,
+    excerptFile: rule.excerptFile
+  }))
+);
+
+export interface CpfPayrollCalculationInput {
+  /** Only 2026 is calculated from this module’s retained rate tables. */
+  contributionMonth: string;
+  employmentScope: 'PRIVATE_SECTOR' | 'NON_PENSIONABLE_PUBLIC' | 'PENSIONABLE_PUBLIC' | 'OTHER';
+  citizenship: 'SINGAPORE_CITIZEN' | 'PERMANENT_RESIDENT' | 'OTHER';
+  dateOfBirth: string;
+  permanentResidentStartDate?: string;
+  /** Must be explicit for a first- or second-year SPR. */
+  prRateElection?: 'GRADUATED_GG' | 'FULL_EMPLOYER_GRADUATED_EMPLOYEE_APPROVED' | 'FULL_EMPLOYER_FULL_EMPLOYEE_APPROVED';
+  ordinaryWageCents: number;
+  additionalWageCents: number;
+  /** Previously-paid, CPF-subject 2026 OW for this employer, before this month. */
+  priorYearToDateOrdinaryWageSubjectCents: number;
+  /** Previously-paid, CPF-subject 2026 AW for this employer, before this payment. */
+  priorYearToDateAdditionalWageSubjectCents: number;
+  /** Expected full-year OW subject to CPF at a non-final AW payment. */
+  estimatedFullYearOrdinaryWageSubjectCents: number;
+  /** true if this is the employee’s last employment month in the year. December is always final. */
+  isLastMonthOfEmployment: boolean;
+  /** The wages above have already been classified as CPF-payable OW/AW by the employer. */
+  wagesAreCpfClassified: true;
+}
+
+export type CpfPayrollCalculationResult =
+  | {
+    status: 'CALCULATED';
+    period: string;
+    prYear?: 1 | 2 | 3;
+    ageBand: string;
+    rateSchedule: string;
+    ordinaryWageSubjectCents: number;
+    additionalWageSubjectCents: number;
+    /** AW limit available immediately before applying the current AW payment. */
+    availableAwCeilingBeforePaymentCents: number;
+    /** AW limit left after CPF-subject AW from the current payment is applied. */
+    remainingAwCeilingCents: number;
+    projectedAnnualOwSubjectCents: number;
+    totalContributionCents: number;
+    employeeContributionCents: number;
+    employerContributionCents: number;
+    explanation: string;
+  }
+  | {
+    status: 'REVIEW_REQUIRED';
+    reason: string;
+    period: string;
+  }
+  | {
+    status: 'UNSUPPORTED';
+    reason: string;
+  };
+
+type AgeRow = { ageBand: string; ceiling: number; lowerWageEmployerBps: number;
+  lowerWageEmployeeRampBps: number; employerBps: number; employeeBps: number };
+const RATE_SCHEDULES: Record<string, readonly AgeRow[]> = {
+  SC_OR_PR3: [
+    { ageBand: '55 and below', ceiling: 55, lowerWageEmployerBps: 1700, lowerWageEmployeeRampBps: 6000, employerBps: 1700, employeeBps: 2000 },
+    { ageBand: 'above 55 to 60', ceiling: 60, lowerWageEmployerBps: 1600, lowerWageEmployeeRampBps: 5400, employerBps: 1600, employeeBps: 1800 },
+    { ageBand: 'above 60 to 65', ceiling: 65, lowerWageEmployerBps: 1250, lowerWageEmployeeRampBps: 3750, employerBps: 1250, employeeBps: 1250 },
+    { ageBand: 'above 65 to 70', ceiling: 70, lowerWageEmployerBps: 900, lowerWageEmployeeRampBps: 2250, employerBps: 900, employeeBps: 750 },
+    { ageBand: 'above 70', ceiling: Number.POSITIVE_INFINITY, lowerWageEmployerBps: 750, lowerWageEmployeeRampBps: 1500, employerBps: 750, employeeBps: 500 }
+  ],
+  PR1_GG: [
+    { ageBand: '55 and below', ceiling: 55, lowerWageEmployerBps: 400, lowerWageEmployeeRampBps: 1500, employerBps: 400, employeeBps: 500 },
+    { ageBand: 'above 55 to 60', ceiling: 60, lowerWageEmployerBps: 400, lowerWageEmployeeRampBps: 1500, employerBps: 400, employeeBps: 500 },
+    { ageBand: 'above 60 to 65', ceiling: 65, lowerWageEmployerBps: 350, lowerWageEmployeeRampBps: 1500, employerBps: 350, employeeBps: 500 },
+    { ageBand: 'above 65', ceiling: Number.POSITIVE_INFINITY, lowerWageEmployerBps: 350, lowerWageEmployeeRampBps: 1500, employerBps: 350, employeeBps: 500 }
+  ],
+  PR2_GG: [
+    { ageBand: '55 and below', ceiling: 55, lowerWageEmployerBps: 900, lowerWageEmployeeRampBps: 4500, employerBps: 900, employeeBps: 1500 },
+    { ageBand: 'above 55 to 60', ceiling: 60, lowerWageEmployerBps: 600, lowerWageEmployeeRampBps: 3750, employerBps: 600, employeeBps: 1250 },
+    { ageBand: 'above 60 to 65', ceiling: 65, lowerWageEmployerBps: 350, lowerWageEmployeeRampBps: 2250, employerBps: 350, employeeBps: 750 },
+    { ageBand: 'above 65', ceiling: Number.POSITIVE_INFINITY, lowerWageEmployerBps: 350, lowerWageEmployeeRampBps: 1500, employerBps: 350, employeeBps: 500 }
+  ],
+  PR1_FG: [
+    { ageBand: '55 and below', ceiling: 55, lowerWageEmployerBps: 1700, lowerWageEmployeeRampBps: 1500, employerBps: 1700, employeeBps: 500 },
+    { ageBand: 'above 55 to 60', ceiling: 60, lowerWageEmployerBps: 1600, lowerWageEmployeeRampBps: 1500, employerBps: 1600, employeeBps: 500 },
+    { ageBand: 'above 60 to 65', ceiling: 65, lowerWageEmployerBps: 1250, lowerWageEmployeeRampBps: 1500, employerBps: 1250, employeeBps: 500 },
+    { ageBand: 'above 65 to 70', ceiling: 70, lowerWageEmployerBps: 900, lowerWageEmployeeRampBps: 1500, employerBps: 900, employeeBps: 500 },
+    { ageBand: 'above 70', ceiling: Number.POSITIVE_INFINITY, lowerWageEmployerBps: 750, lowerWageEmployeeRampBps: 1500, employerBps: 750, employeeBps: 500 }
+  ],
+  PR2_FG: [
+    { ageBand: '55 and below', ceiling: 55, lowerWageEmployerBps: 1700, lowerWageEmployeeRampBps: 4500, employerBps: 1700, employeeBps: 1500 },
+    { ageBand: 'above 55 to 60', ceiling: 60, lowerWageEmployerBps: 1600, lowerWageEmployeeRampBps: 3750, employerBps: 1600, employeeBps: 1250 },
+    { ageBand: 'above 60 to 65', ceiling: 65, lowerWageEmployerBps: 1250, lowerWageEmployeeRampBps: 2250, employerBps: 1250, employeeBps: 750 },
+    { ageBand: 'above 65 to 70', ceiling: 70, lowerWageEmployerBps: 900, lowerWageEmployeeRampBps: 1500, employerBps: 900, employeeBps: 500 },
+    { ageBand: 'above 70', ceiling: Number.POSITIVE_INFINITY, lowerWageEmployerBps: 750, lowerWageEmployeeRampBps: 1500, employerBps: 750, employeeBps: 500 }
+  ]
+};
+
+const RATE_SCALE_BIGINT = 10_000n;
+const CENTS_PER_DOLLAR = 100;
+const CENTS_PER_DOLLAR_BIGINT = 100n;
+const CPF_MAX_OW_CENTS = 800_000;
+const CPF_ANNUAL_SALARY_CEILING_CENTS = 10_200_000;
+const CPF_2026_MINIMUM_WAGE_CENTS = 5_000;
+const CPF_2026_AW_CEILING_URL = CPF_AW_CEILING_URL;
+const CPF_2026_OW_CEILING_URL = CPF_OW_CEILING_URL;
+
+function isExactIsoDate(value: string | undefined): value is string {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function isValidMonth(value: string): boolean {
+  return /^2026-(0[1-9]|1[0-2])$/.test(value);
+}
+
+function ageOnDate(dateOfBirth: string, date: Date): number {
+  const birth = new Date(`${dateOfBirth}T00:00:00Z`);
+  let age = date.getUTCFullYear() - birth.getUTCFullYear();
+  if (date.getUTCMonth() < birth.getUTCMonth() ||
+      (date.getUTCMonth() === birth.getUTCMonth() && date.getUTCDate() < birth.getUTCDate())) age -= 1;
+  return age;
+}
+
+function ageForContributionMonth(dateOfBirth: string, month: string): number {
+  const [year, monthNumber] = month.split('-').map(Number);
+  const previousMonthEnd = new Date(Date.UTC(year, monthNumber - 1, 0));
+  return ageOnDate(dateOfBirth, previousMonthEnd);
+}
+
+function sprYearForMonth(startDate: string, month: string): 1 | 2 | 3 {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  const [monthYear, monthNumber] = month.split('-').map(Number);
+  const firstAnniversaryYear = start.getUTCFullYear() + 1;
+  const firstAnniversaryMonth = start.getUTCMonth() + 1;
+  const secondAnniversaryYear = start.getUTCFullYear() + 2;
+  const secondAnniversaryMonth = start.getUTCMonth() + 1;
+  const contributionIndex = monthYear * 12 + monthNumber - 1;
+  const firstSecondYearIndex = firstAnniversaryYear * 12 + firstAnniversaryMonth;
+  const secondThirdYearIndex = secondAnniversaryYear * 12 + secondAnniversaryMonth;
+  if (contributionIndex < firstSecondYearIndex) return 1;
+  if (contributionIndex < secondThirdYearIndex) return 2;
+  return 3;
+}
+
+function ageRow(rows: readonly AgeRow[], age: number): AgeRow {
+  return rows.find(row => age < row.ceiling) || rows[rows.length - 1];
+}
+
+function payrollSchedule(input: CpfPayrollCalculationInput): {
+  rows: readonly AgeRow[];
+  scheduleName: string;
+  prYear?: 1 | 2 | 3;
+  unsupported?: string;
+} {
+  if (input.citizenship === 'SINGAPORE_CITIZEN') {
+    if (input.prRateElection !== undefined) return { rows: [], scheduleName: '', unsupported: 'A PR contribution election was supplied for a Singapore Citizen.' };
+    return { rows: RATE_SCHEDULES.SC_OR_PR3, scheduleName: 'SC / third-year-onward SPR 2026 table' };
+  }
+  if (input.citizenship !== 'PERMANENT_RESIDENT') {
+    return { rows: [], scheduleName: '', unsupported: 'The retained payroll tables cover Singapore Citizens and Permanent Residents.' };
+  }
+  if (!isExactIsoDate(input.permanentResidentStartDate)) {
+    return { rows: [], scheduleName: '', unsupported: 'The Permanent Resident conversion date is required to choose the SPR year.' };
+  }
+  const prYear = sprYearForMonth(input.permanentResidentStartDate, input.contributionMonth);
+  if (input.prRateElection !== undefined && input.prRateElection !== 'GRADUATED_GG' &&
+      input.prRateElection !== 'FULL_EMPLOYER_GRADUATED_EMPLOYEE_APPROVED' &&
+      input.prRateElection !== 'FULL_EMPLOYER_FULL_EMPLOYEE_APPROVED') {
+    return { rows: [], scheduleName: '', prYear, unsupported: 'The supplied SPR contribution election is not recognized.' };
+  }
+  if (prYear === 3) {
+    if (input.prRateElection === 'FULL_EMPLOYER_GRADUATED_EMPLOYEE_APPROVED') {
+      return { rows: [], scheduleName: '', prYear, unsupported: 'The first- or second-year full-employer/graduated-employee election does not apply in the third year.' };
+    }
+    return { rows: RATE_SCHEDULES.SC_OR_PR3, scheduleName: 'third-year-onward SPR 2026 table', prYear };
+  }
+  if (!input.prRateElection) {
+    return { rows: [], scheduleName: '', prYear, unsupported: 'The SPR contribution basis must be confirmed as graduated or as a CPF Board approved higher-rate election.' };
+  }
+  if (input.prRateElection === 'FULL_EMPLOYER_FULL_EMPLOYEE_APPROVED') {
+    return { rows: RATE_SCHEDULES.SC_OR_PR3, scheduleName: 'CPF Board approved full/full 2026 table', prYear };
+  }
+  if (prYear === 1 && input.prRateElection === 'GRADUATED_GG') {
+    return { rows: RATE_SCHEDULES.PR1_GG, scheduleName: 'first-year SPR graduated/graduated 2026 table', prYear };
+  }
+  if (prYear === 2 && input.prRateElection === 'GRADUATED_GG') {
+    return { rows: RATE_SCHEDULES.PR2_GG, scheduleName: 'second-year SPR graduated/graduated 2026 table', prYear };
+  }
+  if (prYear === 1 && input.prRateElection === 'FULL_EMPLOYER_GRADUATED_EMPLOYEE_APPROVED') {
+    return { rows: RATE_SCHEDULES.PR1_FG, scheduleName: 'first-year SPR approved full/graduated 2026 table', prYear };
+  }
+  if (prYear === 2 && input.prRateElection === 'FULL_EMPLOYER_GRADUATED_EMPLOYEE_APPROVED') {
+    return { rows: RATE_SCHEDULES.PR2_FG, scheduleName: 'second-year SPR approved full/graduated 2026 table', prYear };
+  }
+  return { rows: [], scheduleName: '', prYear, unsupported: 'No 2026 rate schedule matches the provided SPR facts.' };
+}
+
+function centsNumerator(amountCents: number, rateBps: number): bigint {
+  return BigInt(amountCents) * BigInt(rateBps);
+}
+
+function floorDollarsFromNumerator(numerator: bigint): number {
+  return Number(numerator / (RATE_SCALE_BIGINT * CENTS_PER_DOLLAR_BIGINT));
+}
+
+function nearestDollarCentsFromNumerator(numerator: bigint): number {
+  return Number((numerator + RATE_SCALE_BIGINT * CENTS_PER_DOLLAR_BIGINT / 2n) /
+    (RATE_SCALE_BIGINT * CENTS_PER_DOLLAR_BIGINT) * CENTS_PER_DOLLAR_BIGINT);
+}
+
+function formatSgd(cents: number): string {
+  return `S$${Math.floor(cents / CENTS_PER_DOLLAR)}.${String(cents % CENTS_PER_DOLLAR).padStart(2, '0')}`;
+}
+
+/** Exact-cent deterministic 2026 CPF contribution estimate for a complete, scoped payroll line. */
+export function calculateCpfPayroll2026(input: CpfPayrollCalculationInput): CpfPayrollCalculationResult {
+  if (!isValidMonth(input.contributionMonth)) return { status: 'UNSUPPORTED', reason: 'Only contribution periods from January through December 2026 are supported.' };
+  if (!['PRIVATE_SECTOR', 'NON_PENSIONABLE_PUBLIC'].includes(input.employmentScope)) {
+    return { status: 'UNSUPPORTED', reason: 'The retained 2026 tables cover private-sector and non-pensionable employees.' };
+  }
+  if (input.wagesAreCpfClassified !== true) return { status: 'UNSUPPORTED', reason: 'Confirm that each amount has been classified as CPF-payable Ordinary Wages or Additional Wages.' };
+  if (!isExactIsoDate(input.dateOfBirth)) return { status: 'UNSUPPORTED', reason: 'A valid date of birth is needed to select the age-group rates.' };
+  const [payrollYear, payrollMonth] = input.contributionMonth.split('-').map(Number);
+  const payrollMonthEnd = new Date(Date.UTC(payrollYear, payrollMonth, 0)).toISOString().slice(0, 10);
+  if (input.dateOfBirth > payrollMonthEnd) {
+    return { status: 'UNSUPPORTED', reason: 'The supplied date of birth is after the end of the contribution month.' };
+  }
+  if (input.citizenship === 'PERMANENT_RESIDENT') {
+    if (!isExactIsoDate(input.permanentResidentStartDate)) {
+      return { status: 'UNSUPPORTED', reason: 'The Permanent Resident conversion date is required to choose the SPR year.' };
+    }
+    if (input.permanentResidentStartDate > payrollMonthEnd) {
+      return { status: 'UNSUPPORTED', reason: 'The employee did not hold Permanent Resident status during the contribution month.' };
+    }
+    if (input.permanentResidentStartDate > `${input.contributionMonth}-01`) {
+      return { status: 'REVIEW_REQUIRED', period: input.contributionMonth,
+        reason: 'Permanent Resident status began during this payroll month; wages before and from the conversion date must be separated before contribution rates can be calculated.' };
+    }
+  }
+  const amounts = [
+    input.ordinaryWageCents,
+    input.additionalWageCents,
+    input.priorYearToDateOrdinaryWageSubjectCents,
+    input.priorYearToDateAdditionalWageSubjectCents,
+    input.estimatedFullYearOrdinaryWageSubjectCents
+  ];
+  if (amounts.some(amount => !Number.isSafeInteger(amount) || amount < 0)) {
+    return { status: 'UNSUPPORTED', reason: 'All wage values must be non-negative integer cents.' };
+  }
+  if (typeof input.isLastMonthOfEmployment !== 'boolean') {
+    return { status: 'UNSUPPORTED', reason: 'Confirm whether this is the final employment month in the calendar year.' };
+  }
+  const monthNumber = Number(input.contributionMonth.slice(5));
+  const ordinaryWageSubjectCents = Math.min(input.ordinaryWageCents, CPF_MAX_OW_CENTS);
+  const actualOwThroughPeriod = input.priorYearToDateOrdinaryWageSubjectCents + ordinaryWageSubjectCents;
+  if (input.priorYearToDateOrdinaryWageSubjectCents > (monthNumber - 1) * CPF_MAX_OW_CENTS) {
+    return { status: 'UNSUPPORTED', reason: 'Prior-year-to-date CPF-subject Ordinary Wages exceed the 2026 monthly OW ceiling for elapsed periods.' };
+  }
+  if (input.priorYearToDateAdditionalWageSubjectCents >
+      Math.max(0, CPF_ANNUAL_SALARY_CEILING_CENTS - input.priorYearToDateOrdinaryWageSubjectCents)) {
+    return { status: 'UNSUPPORTED', reason: 'The supplied year-to-date CPF-subject OW and AW exceed the S$102,000 annual salary ceiling.' };
+  }
+  const [year] = input.contributionMonth.split('-').map(Number);
+  const expectedOwAnnual = input.estimatedFullYearOrdinaryWageSubjectCents;
+  const atFinalPeriod = monthNumber === 12 || input.isLastMonthOfEmployment;
+  const projectedAnnualOwSubjectCents = atFinalPeriod ? actualOwThroughPeriod : expectedOwAnnual;
+  if (expectedOwAnnual > 12 * CPF_MAX_OW_CENTS ||
+      (!atFinalPeriod && expectedOwAnnual < actualOwThroughPeriod) ||
+      projectedAnnualOwSubjectCents > 12 * CPF_MAX_OW_CENTS) {
+    return { status: 'UNSUPPORTED', reason: 'The annual OW estimate or prior AW subject to CPF is inconsistent with the 2026 ceilings.' };
+  }
+  if (year !== 2026) return { status: 'UNSUPPORTED', reason: 'The retained tables apply only to wages due and payable in 2026.' };
+  const payroll = payrollSchedule(input);
+  if (payroll.unsupported || !payroll.rows.length) return { status: 'UNSUPPORTED', reason: payroll.unsupported || 'Could not select a CPF rate table.' };
+  const selectedAge = ageRow(payroll.rows, ageForContributionMonth(input.dateOfBirth, input.contributionMonth));
+  let additionalWageSubjectCents = 0;
+  const annualAwCeiling = Math.max(0, CPF_ANNUAL_SALARY_CEILING_CENTS - projectedAnnualOwSubjectCents);
+  const availableAwCeilingBeforePaymentCents = Math.max(0, annualAwCeiling - input.priorYearToDateAdditionalWageSubjectCents);
+  if (input.priorYearToDateAdditionalWageSubjectCents > annualAwCeiling) {
+    return { status: 'REVIEW_REQUIRED', period: input.contributionMonth,
+      reason: 'Prior CPF-subject AW already exceeds the recalculated ceiling; stop current AW contributions and review prior submissions for a refund or adjustment.' };
+  }
+  if (input.additionalWageCents > 0) {
+    additionalWageSubjectCents = Math.min(input.additionalWageCents, availableAwCeilingBeforePaymentCents);
+  }
+  const remainingAwCeilingCents = availableAwCeilingBeforePaymentCents - additionalWageSubjectCents;
+  const totalSubjectCents = ordinaryWageSubjectCents + additionalWageSubjectCents;
+  if (totalSubjectCents === 0 || totalSubjectCents <= CPF_2026_MINIMUM_WAGE_CENTS) {
+    return {
+      status: 'CALCULATED', period: input.contributionMonth, prYear: payroll.prYear, ageBand: selectedAge.ageBand,
+      rateSchedule: payroll.scheduleName, ordinaryWageSubjectCents, additionalWageSubjectCents,
+      availableAwCeilingBeforePaymentCents, remainingAwCeilingCents, projectedAnnualOwSubjectCents,
+      totalContributionCents: 0, employeeContributionCents: 0, employerContributionCents: 0,
+      explanation: 'CPF contributions are nil when total wages subject to CPF are S$50 or less.'
+    };
+  }
+  let totalNumerator: bigint;
+  let employeeNumerator: bigint;
+  if (totalSubjectCents <= 75_000) {
+    const lowerWageCents = Math.min(totalSubjectCents, 50_000);
+    const excessWageCents = Math.max(0, totalSubjectCents - 50_000);
+    totalNumerator = centsNumerator(lowerWageCents, selectedAge.lowerWageEmployerBps) +
+      centsNumerator(excessWageCents, selectedAge.lowerWageEmployerBps + selectedAge.lowerWageEmployeeRampBps);
+    employeeNumerator = centsNumerator(excessWageCents, selectedAge.lowerWageEmployeeRampBps);
+  } else {
+    totalNumerator = centsNumerator(ordinaryWageSubjectCents, selectedAge.employerBps) +
+      centsNumerator(additionalWageSubjectCents, selectedAge.employerBps) +
+      centsNumerator(ordinaryWageSubjectCents, selectedAge.employeeBps) +
+      centsNumerator(additionalWageSubjectCents, selectedAge.employeeBps);
+    employeeNumerator = centsNumerator(ordinaryWageSubjectCents, selectedAge.employeeBps) +
+      centsNumerator(additionalWageSubjectCents, selectedAge.employeeBps);
+  }
+  const totalContributionCents = nearestDollarCentsFromNumerator(totalNumerator);
+  const employeeContributionCents = floorDollarsFromNumerator(employeeNumerator) * CENTS_PER_DOLLAR;
+  const employerContributionCents = totalContributionCents - employeeContributionCents;
+  return {
+    status: 'CALCULATED', period: input.contributionMonth, prYear: payroll.prYear, ageBand: selectedAge.ageBand,
+    rateSchedule: payroll.scheduleName, ordinaryWageSubjectCents, additionalWageSubjectCents,
+    availableAwCeilingBeforePaymentCents, remainingAwCeilingCents, projectedAnnualOwSubjectCents, totalContributionCents,
+    employeeContributionCents, employerContributionCents,
+    explanation: `2026 ${payroll.scheduleName}; ${selectedAge.ageBand}; Ordinary Wages subject to CPF ${formatSgd(ordinaryWageSubjectCents)}, Additional Wages subject to CPF ${formatSgd(additionalWageSubjectCents)}. The total is rounded to the nearest dollar; employee cents are discarded and the employer share is the residual.`
+  };
+}
+
+function cleanSourceText(value: string): string {
+  return value.replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;|&#160;|&#x0*a0;/gi, ' ')
+    .replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"').replace(/&#39;|&#x27;|&apos;/gi, "'")
+    .replace(/[\t\f\v ]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+}
+
+function hasContradictoryAwCeilingInstruction(value: string): boolean {
+  return /\b(?:do not|don't|must not|should not|need not)\s+(?:re-?calculate|calculate|pay any shortfall|submit a refund application|apply for a refund)\b/i.test(value) ||
+    /\b(?:not required|not necessary|not needed)\s+to\s+(?:re-?calculate|calculate|pay|submit|apply)\b/i.test(value);
+}
+
+function scopeRule(request: CpfPayrollKnowledgeRequest): CpfPayrollKnowledgeRule | undefined {
+  if (request.authority !== 'CPF') return undefined;
+  if (request.officialUrl !== CPF_NEW_PR_STATUS_URL && isIrasCpfQualitativeRateFactorRequest(request)) return undefined;
+  if (!identifyEvidenceRule(request.query, request.subject)) return undefined;
+  const text = `${request.query}\n${request.subject}`;
+  const topic = request.topicId;
+  if (request.officialUrl) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.officialUrl === request.officialUrl &&
+      rule.topicIds.includes(topic as never));
+  }
+  if (topic === 'cpf-additional-wage-ceiling' &&
+      /\b(?:ceiling|limit|formula|calculate|calculation|bonus|additional wages?)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING');
+  }
+  if (['cpf-ordinary-wages', 'cpf_wage_ceiling'].includes(topic) && /\b(?:ceiling|limit|ordinary wages?|monthly salary cap)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_ORDINARY_WAGE_CEILINGS');
+  }
+  if (topic === 'cpf-pr-contribution-rates' &&
+      /\b(?:first|1st|second|2nd|third|3rd|year of pr|year of spr|permanent resident|spr conversion|conversion date|anniversary)\b/i.test(text)) {
+    if (/\b(?:foreign employee|wages?|salary|bonus|payable|prorat)\b/i.test(text)) {
+      return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES');
+    }
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_PERMANENT_RESIDENT_YEAR');
+  }
+  if (RATE_TOPICS.includes(topic as typeof RATE_TOPICS[number]) &&
+      /\b(?:contribut\w*|rate table|rates?|percentages?|birthday|rounding|calculat\w*|payroll|how much|ordinary wages?|additional wages?)\b/i.test(text)) {
+    const sourceHint = cleanSourceText(request.sourceText).toLowerCase();
+    if (/\btable\s+[1-5]\b[\s\S]*from 1 january 2026/.test(sourceHint)) {
+      return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_CONTRIBUTION_TABLES');
+    }
+    if (/the first year begins on the day of spr conversion/.test(sourceHint)) {
+      return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_CONTRIBUTION_METHOD');
+    }
+    if (/please round off your total cpf contributions to the nearest dollar/.test(sourceHint)) {
+      return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_CONTRIBUTION_METHOD');
+    }
+  }
+  return undefined;
+}
+
+function currentOrExplicit2026Question(query: string, rule: CpfPayrollKnowledgeRule): boolean {
+  const currentYear = TargetDateResolver.CURRENT_SYSTEM_DATE.slice(0, 4);
+  const years = [...query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]);
+  if (rule.id === 'CPF_ORDINARY_WAGE_CEILINGS' && years.length > 0) {
+    return years.every(year => Number(year) >= 2016 && Number(year) <= 2026);
+  }
+  if (rule.id === 'CPF_PERMANENT_RESIDENT_YEAR') {
+    return !/\b(?:historical|historic|superseded|past rate|previous rate|former rate)\b/i.test(query);
+  }
+  if (rule.id === 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES') {
+    if (/\b(?:historical|historic|superseded|past rate|previous rate|former rate|law in \d{4}|rules? applied in \d{4})\b/i.test(query)) return false;
+    if (years.length === 0) return currentYear === '2026';
+    if (years.every(year => year === '2026')) return true;
+    const conversionDate = statedPrConversionDate(query);
+    const grantYear = conversionDate?.slice(0, 4);
+    const onlyDerivedAnniversaryYears = grantYear === currentYear &&
+      hasOnlyDerivedCpfPrAnniversaryBoundaryYears(query, grantYear, currentYear) &&
+      !/\b(?:rates?|percentages?|rate table|contribution rate|which table)\b/i.test(query);
+    return onlyDerivedAnniversaryYears;
+  }
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING' &&
+      /\b(?:historical|historic|past rate|previous rate|former rate|superseded|rules? applied in 20\d{2}|law in 20\d{2})\b/i.test(query)) return false;
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING' && years.includes('2026') &&
+      /\b(?:due and payable|payable|due)\b[^.!?;]{0,70}\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+2026\b/i.test(query)) return true;
+  if (years.some(year => year !== '2026')) return false;
+  if (/\b(?:historical|historic|past|previous|prior|former|superseded|last year|next year|future)\b/i.test(query)) return false;
+  return years.includes('2026') || (years.length === 0 && currentYear === '2026');
+}
+
+function requiredSourceFacts(rule: CpfPayrollKnowledgeRule, rawText: string, query = ''): boolean {
+  const text = cleanSourceText(rawText).replace(/\s+/g, ' ').toLowerCase();
+  switch (rule.id) {
+    case 'CPF_2026_CONTRIBUTION_TABLES': {
+      const tableNumber = requestedRateTableNumber(query);
+      const tableText = extractRateTableText(rawText, tableNumber);
+      if (!tableText) return false;
+      const selected = cleanSourceText(tableText).replace(/\s+/g, ' ').toLowerCase();
+      const tableHeaders: Record<number, RegExp[]> = {
+        1: [/from 1 january 2026/, /singapore citizens or singapore permanent residents/],
+        2: [/from 1 january 2026/, /singapore permanent residents \(spr\) during 1\s*st year/, /graduated contribution rates \(g\/g\)/],
+        3: [/from 1 january 2026/, /singapore permanent residents \(spr\) during 2\s*nd year/, /graduated contribution rates \(g\/g\)/],
+        4: [/from 1 january 2026/, /singapore permanent residents \(spr\) during 1\s*st year/, /full employer & graduated employee contribution rates/],
+        5: [/from 1 january 2026/, /singapore permanent residents \(spr\) during 2\s*nd year/, /full employer & graduated employee contribution rates/]
+      };
+      if (!tableHeaders[tableNumber].every(fact => fact.test(selected))) return false;
+      const firstOrSecondYearFullFull = tableNumber === 1 &&
+        /\b(?:first|1st|second|2nd)\s*(?:year|spr)|\b(?:first|second)-year\b/i.test(query) &&
+        /\b(?:full employer\s*(?:and|\+)\s*full employee|full employer\s*[-/]\s*full employee|full\/full|both at full rates)\b/i.test(query);
+      if (firstOrSecondYearFullFull &&
+          !/these rates are also applicable to 1st and 2nd year singapore permanent resident \(spr\) employees and their employers after cpf board approves their joint application to contribute to cpf at full employer- full employee rates/i.test(selected)) return false;
+      const expectedRows: Record<number, Array<{
+        label: string; base: string; ramp: string; total: string; employee: string; maxTotal: string; maxEmployee: string
+      }>> = {
+        1: [
+          { label: '55 & below', base: '17', ramp: '0.6', total: '37', employee: '20', maxTotal: '2,960', maxEmployee: '1,600' },
+          { label: 'above 55 - 60', base: '16', ramp: '0.54', total: '34', employee: '18', maxTotal: '2,720', maxEmployee: '1,440' },
+          { label: 'above 60 - 65', base: '12.5', ramp: '0.375', total: '25', employee: '12.5', maxTotal: '2,000', maxEmployee: '1,000' },
+          { label: 'above 65 - 70', base: '9', ramp: '0.225', total: '16.5', employee: '7.5', maxTotal: '1,320', maxEmployee: '600' },
+          { label: 'above 70', base: '7.5', ramp: '0.15', total: '12.5', employee: '5', maxTotal: '1,000', maxEmployee: '400' }
+        ],
+        2: [
+          { label: '55 & below', base: '4', ramp: '0.15', total: '9', employee: '5', maxTotal: '720', maxEmployee: '400' },
+          { label: 'above 55 - 60', base: '4', ramp: '0.15', total: '9', employee: '5', maxTotal: '720', maxEmployee: '400' },
+          { label: 'above 60 - 65', base: '3.5', ramp: '0.15', total: '8.5', employee: '5', maxTotal: '680', maxEmployee: '400' },
+          { label: 'above 65', base: '3.5', ramp: '0.15', total: '8.5', employee: '5', maxTotal: '680', maxEmployee: '400' }
+        ],
+        3: [
+          { label: '55 & below', base: '9', ramp: '0.45', total: '24', employee: '15', maxTotal: '1,920', maxEmployee: '1,200' },
+          { label: 'above 55 - 60', base: '6', ramp: '0.375', total: '18.5', employee: '12.5', maxTotal: '1,480', maxEmployee: '1,000' },
+          { label: 'above 60 - 65', base: '3.5', ramp: '0.225', total: '11', employee: '7.5', maxTotal: '880', maxEmployee: '600' },
+          { label: 'above 65', base: '3.5', ramp: '0.15', total: '8.5', employee: '5', maxTotal: '680', maxEmployee: '400' }
+        ],
+        4: [
+          { label: '55 & below', base: '17', ramp: '0.15', total: '22', employee: '5', maxTotal: '1,760', maxEmployee: '400' },
+          { label: 'above 55 - 60', base: '16', ramp: '0.15', total: '21', employee: '5', maxTotal: '1,680', maxEmployee: '400' },
+          { label: 'above 60 - 65', base: '12.5', ramp: '0.15', total: '17.5', employee: '5', maxTotal: '1,400', maxEmployee: '400' },
+          { label: 'above 65 - 70', base: '9', ramp: '0.15', total: '14', employee: '5', maxTotal: '1,120', maxEmployee: '400' },
+          { label: 'above 70', base: '7.5', ramp: '0.15', total: '12.5', employee: '5', maxTotal: '1,000', maxEmployee: '400' }
+        ],
+        5: [
+          { label: '55 & below', base: '17', ramp: '0.45', total: '32', employee: '15', maxTotal: '2,560', maxEmployee: '1,200' },
+          { label: 'above 55 - 60', base: '16', ramp: '0.375', total: '28.5', employee: '12.5', maxTotal: '2,280', maxEmployee: '1,000' },
+          { label: 'above 60 - 65', base: '12.5', ramp: '0.225', total: '20', employee: '7.5', maxTotal: '1,600', maxEmployee: '600' },
+          { label: 'above 65 - 70', base: '9', ramp: '0.15', total: '14', employee: '5', maxTotal: '1,120', maxEmployee: '400' },
+          { label: 'above 70', base: '7.5', ramp: '0.15', total: '12.5', employee: '5', maxTotal: '1,000', maxEmployee: '400' }
+        ]
+      };
+      const rows = expectedRows[tableNumber];
+      const rowStarts = rows.map(row => selected.indexOf(row.label));
+      if (rowStarts.some(start => start < 0) || rowStarts.some((start, index) => index > 0 && start <= rowStarts[index - 1])) return false;
+      const rowText = rows.map((_, index) => selected.slice(rowStarts[index], rowStarts[index + 1] ?? selected.length));
+      const escape = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const checkedRows = rows.map((row, index) => {
+        const rowPattern = new RegExp(
+          `>\\s*\\$50 to \\$500\\s+${escape(row.base)}%\\s*\\(tw\\)\\s+nil` +
+          `.*?>\\s*\\$500 to \\$750\\s+${escape(row.base)}%\\s*\\(tw\\)\\s*\\+\\s*${escape(row.ramp)}\\s*\\(tw\\s*-\\s*\\$500\\)\\s+${escape(row.ramp)}\\s*\\(tw\\s*-\\s*\\$500\\)` +
+          `.*?>\\s*\\$750\\s+\\[${escape(row.total)}%\\s*\\(ow\\)\\]\\s*\\*\\s*\\+\\s*${escape(row.total)}%\\s*\\(aw\\)` +
+          `.*?max\\.?\\s+of\\s+\\$${escape(row.maxTotal)}` +
+          `.*?\\[${escape(row.employee)}%\\s*\\(ow\\)\\]\\s*\\*\\s*\\+\\s*${escape(row.employee)}%\\s*\\(aw\\)` +
+          `.*?max\\.?\\s+of\\s+\\$${escape(row.maxEmployee)}`,
+          'i'
+        );
+        return rowPattern.test(rowText[index]);
+      });
+      const ceilingProof = /ordinary wages \(capped at ow ceiling of \$8,000/.test(selected);
+      if (checkedRows.every(Boolean)) return ceilingProof;
+      if (!selected.includes('|')) return false;
+      const countMatches = (pattern: string): number => [...selected.matchAll(new RegExp(pattern, 'gi'))].length;
+      const lowBandsValid = rows.every(row => {
+        const duplicateCount = rows.filter(candidate => candidate.base === row.base).length;
+        const pattern = `>\\s*\\$50 to \\$500\\s*\\|\\s*${escape(row.base)}%\\s*\\(tw\\)\\s*\\|\\s*nil`;
+        return countMatches(pattern) === duplicateCount;
+      });
+      const middleBandsValid = rows.every(row => {
+        const duplicateCount = rows.filter(candidate => candidate.base === row.base && candidate.ramp === row.ramp).length;
+        const pattern = `>\\s*\\$500 to \\$750\\s*\\|\\s*${escape(row.base)}%\\s*\\(tw\\)\\s*\\+\\s*${escape(row.ramp)}\\s*\\(tw\\s*-\\s*\\$500\\)\\s*\\|\\s*${escape(row.ramp)}\\s*\\(tw\\s*-\\s*\\$500\\)`;
+        return countMatches(pattern) === duplicateCount;
+      });
+      const pdfJsHighBandsValid = rows.every((row, index) => {
+        const pattern = new RegExp(
+          `\\[${escape(row.total)}%\\s*\\(ow\\)\\]\\s*\\*\\s*\\+\\s*${escape(row.total)}%\\s*\\(aw\\)\\s*\\|\\s*` +
+          `\\[${escape(row.employee)}%\\s*\\(ow\\)\\]\\s*\\*\\s*\\+\\s*${escape(row.employee)}%\\s*\\(aw\\)` +
+          `\\s*>\\s*\\$750\\s+\\*?\\s*max\\.?\\s+of\\s+\\$${escape(row.maxTotal)}\\s*\\|\\s*\\*?\\s*max\\.?\\s+of\\s+\\$${escape(row.maxEmployee)}`,
+          'i'
+        );
+        return pattern.test(rowText[index]);
+      });
+      return lowBandsValid && middleBandsValid && pdfJsHighBandsValid && ceilingProof;
+    }
+    case 'CPF_CONTRIBUTION_METHOD':
+      return [/cpf contribution rates vary based on your employee[’']s citizenship status, age group, and total wages/,
+        /as an employer, you are required to pay cpf contributions for your employees who are singapore citizens or singapore permanent residents and who are earning total wages of more than \$50 per month/,
+        /first year begins on the day of spr conversion/,
+        /second year begins on the first day of the month after the first anniversary of spr conversion/,
+        /third year begins on the first day of the month after the second anniversary of spr conversion/,
+        /new contribution rates apply from the first day of the month after the employee[’']s 55th, 60th, 65th or 70th birthday/,
+        /total wages are made up of an employee[’']s ordinary wages and additional wages/,
+        /different ceilings apply to ordinary wages and additional wages/,
+        /above \$50 but not more than \$500 per month, there is no employee[’']s share/,
+        /you will still need to pay the employer[’']s share/,
+        /round off the total cpf contributions to the nearest dollar/,
+        /cents should always be dropped for the employee[’']s share/,
+        /increase to the cpf contribution rates from 1 jan 2027/].every(fact => fact.test(text));
+    case 'CPF_ORDINARY_WAGE_CEILINGS':
+      return [/ordinary wage \(ow\) ceiling sets the maximum amount of ow that attracts cpf contributions in a calendar month for all employees\./,
+        /it was gradually raised and has reached \$8,000 in 2026\./,
+        /the increase took place in four steps, as shown in the table below, to allow employers and employees to adjust to the changes\./,
+        /table: changes in cpf salary ceilings/,
+        /from 1 jan 2016 to 31 aug 2023\s*\|\s*\$6,000\s*\|\s*\$102,000 \(no change\)/,
+        /from 1 sep to 31 dec 2023\s*\|\s*\$6,300 \(\+\$300\)/,
+        /from 1 jan to 31 dec 2024\s*\|\s*\$6,800 \(\+\$500\)/,
+        /from 1 jan to 31 dec 2025\s*\|\s*\$7,400 \(\+\$600\)/,
+        /from 1 jan 2026\s*\|\s*\$8,000 \(\+\$600\)/].every(fact => fact.test(text));
+    case 'CPF_2026_ADDITIONAL_WAGE_CEILING':
+      if (hasContradictoryAwCeilingInstruction(text)) return false;
+      return [/aw ceiling is computed on a per employer, per year basis/, /applies to all singapore citizens and singapore permanent residents/,
+        /\$102,000 - total ordinary wages \(ow\) subject to cpf for the year/, /for the year 2026, the aw ceiling is/,
+        /\$8,000.{0,12}x 12/, /due and payable date of the aw/,
+        /in the last month of employment or end of the year in december \(whichever is earlier\),\s*employers should re-?calculate the aw ceiling based on the actual ow subject to cpf paid up till the last month of employment or in december and pay any shortfall in cpf contributions together with the employee[’']s contributions for his last month of employment or in december\s*\./,
+        /if there are any excess cpf contributions, you should submit a refund application online\./,
+        /first or second year of spr status, please use the applicable monthly contribution rates/].every(fact => fact.test(text));
+    case 'CPF_PERMANENT_RESIDENT_YEAR':
+      return [/as a singapore permanent resident \(spr\), you are required to make cpf contributions on wages earned in singapore\./,
+        /cpf contributions are not payable for employees who are neither singapore citizens nor sprs\./,
+        /your cpf contribution rates as an spr depend on how long you have held permanent resident status\./,
+        /first-year rate: applies from the day you obtain your spr status, \[i\.e\. the date indicated on your entry permit \(form 5\/5a\) issued by the immigration & checkpoints authority \(ica\)\] until the last day of the month of your first anniversary of spr\./,
+        /second-year rate: applies from the month following your first anniversary as an spr until the last day of the month of your second anniversary\./,
+        /third-year rate: applies from the month following your second anniversary as an spr onwards\./,
+        /if you have obtained your spr status on 15 january 2026, the start and end dates for first, second and third year of obtaining spr status are shown in the table below:/,
+        /first year\s*\|\s*15 january 2026\s*\|\s*31 january 2027/,
+        /second year\s*\|\s*1 february 2027\s*\|\s*31 january 2028/,
+        /third year\s*\|\s*1 february 2028\s*\|\s*not applicable/].every(fact => fact.test(text));
+    case 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES':
+      return [/cpf contributions are payable once your foreign employee obtains his singapore permanent resident \(spr\) status/,
+        /first-year rate: applies from the day your employee obtains his spr status until the last day of the month of his first anniversary/,
+        /second-year rate: applies from the month following his first anniversary as an spr until the last day of the month of his second anniversary/,
+        /third-year rate: applies from the month following his second anniversary as an spr onwards/,
+        /for ordinary wages \(ow\), you will need to pay cpf contributions on the pro-rated ow/,
+        /for additional wages \(aw\), cpf contributions are required depending on when the aw is payable to your employee/,
+        /assuming your employee obtains his spr status on 15 march 2026/,
+        /cpf contribution is required on the pro-rated wages from 15 to 31 march 2026/,
+        /cpf contribution is not required on the aw if it is payable while the employee was a foreigner i\.e\. before 15 march 2026/,
+        /cpf contribution is required on the aw if it is payable on or after 15 march 2026/].every(fact => fact.test(text));
+  }
+}
+
+function requestedRateTableNumber(query: string): number {
+  const text = query.toLowerCase();
+  const first = /\b(?:first|1st)\s*(?:year|spr)|\bfirst-year\b/.test(text);
+  const second = /\b(?:second|2nd)\s*(?:year|spr)|\bsecond-year\b/.test(text);
+  const fullEmployerFullEmployee = /\b(?:full employer\s*(?:and|\+)\s*full employee|full employer\s*[-/]\s*full employee|full\/full|both at full rates)\b/.test(text);
+  if ((first || second) && fullEmployerFullEmployee) return 1;
+  const approvedFullEmployerGraduatedEmployee = /\b(?:approved|approval|higher rate|higher contribution|full employer|f\/g)\b/.test(text) &&
+    /\b(?:graduated employee|employee.*graduated|f\/g|higher rate|higher contribution)\b/.test(text);
+  if (first) return approvedFullEmployerGraduatedEmployee ? 4 : 2;
+  if (second) return approvedFullEmployerGraduatedEmployee ? 5 : 3;
+  return 1;
+}
+
+function extractRateTableText(sourceText: string, tableNumber: number): string | undefined {
+  const clean = cleanSourceText(sourceText);
+  const startMatch = new RegExp(`\\bTable\\s*${tableNumber}\\b`, 'i').exec(clean);
+  if (!startMatch || startMatch.index === undefined) return undefined;
+  const tail = clean.slice(startMatch.index + startMatch[0].length);
+  const nextMatch = new RegExp(`\\bTable\\s*${tableNumber + 1}\\b`, 'i').exec(tail);
+  const end = nextMatch?.index === undefined ? clean.length : startMatch.index + startMatch[0].length + nextMatch.index;
+  return clean.slice(startMatch.index, end).trim();
+}
+
+function extractAwCeilingRuleExcerpts(
+  sourceText: string,
+  rule: CpfPayrollKnowledgeRule,
+  query: string
+): string[] | undefined {
+  const phrasePattern = (phrase: string): RegExp => new RegExp(
+    phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'gi'
+  );
+  const titleMatches = [...sourceText.matchAll(phrasePattern('Examples for computation of Additional Wage (AW) Ceiling'))];
+  const firstExampleMatches = [...sourceText.matchAll(phrasePattern('1. Employee earns more than $8,000 of Ordinary Wage (OW)'))];
+  if (titleMatches.length !== 1 || firstExampleMatches.length !== 1 ||
+      firstExampleMatches[0].index === undefined || titleMatches[0].index === undefined ||
+      firstExampleMatches[0].index <= titleMatches[0].index) return undefined;
+  const pageText = sourceText.slice(titleMatches[0].index, firstExampleMatches[0].index).trim()
+    .replace(/(?:\r?\n[\t ]*)+\d+\s*$/, '').trim();
+  const paragraphs = pageText.split(/\r?\n[\t ]*\r?\n+/).map(paragraph => paragraph.trim())
+    .filter(paragraph => paragraph && !/^\d+$/.test(paragraph));
+  if (paragraphs.length === 0 || paragraphs.some(paragraph => paragraph.length > 3_200)) return undefined;
+  return requiredSourceFacts(rule, paragraphs.join('\n\n'), query) ? paragraphs : undefined;
+}
+
+/** Returns undefined for unrelated requests and false for a recognized rule with inadequate proof. */
+export function supportCpfPayrollKnowledgeRule(request: CpfPayrollKnowledgeRequest): boolean | undefined {
+  const rule = scopeRule(request);
+  if (!rule) return undefined;
+  if (request.officialUrl && request.officialUrl !== rule.officialUrl) return false;
+  if (!currentOrExplicit2026Question(request.query, rule)) return false;
+  return requiredSourceFacts(rule, request.sourceText, `${request.query}\n${request.subject}`);
+}
+
+export function selectCpfPayrollKnowledgeQuotes(request: CpfPayrollKnowledgeRequest): string[] {
+  const rule = scopeRule(request);
+  if (!rule || supportCpfPayrollKnowledgeRule(request) !== true) return [];
+  if (rule.id === 'CPF_2026_CONTRIBUTION_TABLES') {
+    const tableText = extractRateTableText(request.sourceText, requestedRateTableNumber(`${request.query}\n${request.subject}`));
+    return tableText ? [tableText] : [];
+  }
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING') {
+    return extractAwCeilingRuleExcerpts(request.sourceText, rule, `${request.query}\n${request.subject}`) || [];
+  }
+  return [request.sourceText.trim()];
+}
+
+function querySubjectMatches(rule: CpfPayrollKnowledgeRule, query: string, subject: string): boolean {
+  const text = `${query}\n${subject}`;
+  if (!/\b(?:cpf|central provident fund|permanent resident|\bspr\b)\b/i.test(text)) return false;
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING') return /\b(?:aw|additional wages?|annual salary ceiling|bonus)\b/i.test(text);
+  if (rule.id === 'CPF_ORDINARY_WAGE_CEILINGS') return /\b(?:ordinary wages?|\bow\b|monthly salary ceiling|salary ceiling)\b/i.test(text);
+  if (rule.id === 'CPF_PERMANENT_RESIDENT_YEAR') return /\b(?:spr|permanent resident)\b/i.test(text);
+  return /\b(?:contribut\w*|rate table|rates?|percentages?|birthday|payroll|rounding|calculate|calculation|wage ceiling|\bow\b|\baw\b)\b/i.test(text);
+}
+
+function isLowWageShareIntent(query: string, subject: string): boolean {
+  const queryRequestsShares =
+    /\b(?:employee(?:[’']s)?[^.!?;]{0,45}\b(?:share|deduct\w*|deduction|contribut\w*|withhold\w*)|(?:deduct\w*|withhold\w*|share|contribut\w*)[^.!?;]{0,45}\bemployee(?:[’']s)?|employer(?:[’']s)?[^.!?;]{0,45}\b(?:share|contribut\w*|pay|owe)|(?:share|contribut\w*|pay)[^.!?;]{0,45}\bemployer(?:[’']s)?)\b/i.test(query);
+  const contextualIntent = /\blow[- ]wage\b/i.test(`${query}\n${subject}`);
+  return queryRequestsShares && contextualIntent;
+}
+
+function statedMonthlyTotalWages(query: string): number[] {
+  if (!/\b(?:monthly|per month|in (?:the )?month|each month)\b/i.test(query)) return [];
+  const pattern = /\b(?:total(?:\s+monthly)?\s+wages?|monthly\s+total\s+wages?)\b[^.!?;]{0,50}?\b(?:of|is|are|amounts?\s+to|=)\s*(?:sgd\s*\$?|s\$|\$)\s*(\d[\d,]*(?:\.\d{1,2})?)/gi;
+  return [...query.matchAll(pattern)].map(match => Number(match[1].replaceAll(',', '')));
+}
+
+function explicitlyStatesLowWageBand(query: string): boolean {
+  return /\b(?:above|over|more than)\s+(?:sgd\s*\$?|s\$|\$)?50(?:\.00)?\b[^.!?;]{0,55}\b(?:up to|at most|no more than|not more than)\s+(?:sgd\s*\$?|s\$|\$)?500(?:\.00)?\b/i.test(query);
+}
+
+function isCpfEligiblePopulation(query: string): boolean {
+  const citizen = /\b(?:singaporean|singapore citizen)\b/i.test(query) &&
+    !/\b(?:not|neither|non[- ]?)\s+(?:a\s+)?(?:singaporean|singapore citizen)\b/i.test(query);
+  const permanentResident = /\b(?:singapore permanent resident|permanent resident|singapore pr|spr)\b/i.test(query) &&
+    !/\b(?:not|nor|non[- ]?)\s+(?:a\s+)?(?:singapore permanent resident|permanent resident|singapore pr|spr)\b/i.test(query);
+  return citizen || permanentResident;
+}
+
+function explicitlyOutsideCpfPopulation(query: string): boolean {
+  const excludesBoth = /\b(?:neither (?:a )?(?:singapore )?citizen nor (?:a )?(?:singapore )?(?:permanent resident|pr|spr)|not (?:a )?(?:singapore )?citizen[^.!?;]{0,25}\b(?:or|nor)\b[^.!?;]{0,20}(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query);
+  if (excludesBoth) return true;
+  const excludesCitizen = /\b(?:non[- ]?citizen|not (?:a )?(?:singaporean|singapore citizen))\b/i.test(query);
+  const excludesPermanentResident = /\b(?:non[- ]?(?:pr|spr)|not (?:a )?(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query);
+  if (excludesCitizen && excludesPermanentResident) return true;
+  if (isCpfEligiblePopulation(query)) return false;
+  return /\b(?:foreigner|foreign employee|foreign worker|work permit holder|employment pass holder|s pass holder|not eligible for cpf|neither a singapore citizen nor (?:a )?(?:singapore )?(?:permanent resident|pr|spr))\b/i.test(query) ||
+    excludesCitizen || excludesPermanentResident;
+}
+
+function isNumericalContributionRequest(query: string): boolean {
+  return /\b(?:calculat\w*|comput\w*|work out|estimate\b|estimating\b|how much|how many (?:singapore )?(?:dollars?|cents?)|what amount|amount due|exact contribution|contribution amount|dollar amount|rate table|rates?|percentages?)\b/i.test(query) ||
+    /\b(?:employer|employee)?\s*cpf contribution\b[^.!?;\n]{0,40}\b(?:is|are)\s+(?:payable|due|owed)\b/i.test(query) ||
+    /\b(?:cpf|contribution) amount\b/i.test(query) ||
+    /\bamount\s+(?:due|owed|payable)\b/i.test(query) ||
+    /\b(?:owe|owing|owed)\b[^.!?;\n]{0,60}\b(?:cpf|contribution)\b/i.test(query);
+}
+
+export function isCpfLowWageShareQuestion(query: string): boolean {
+  if (!/\b(?:cpf|central provident fund)\b/i.test(query) ||
+      !isLowWageShareIntent(query, 'CPF low-wage employer and employee contribution shares') ||
+      explicitlyOutsideCpfPopulation(query) || isNumericalContributionRequest(query) ||
+      new Set(namedEmployeeReferences(query).map(reference => reference.id)).size > 1) return false;
+
+  const monthlyTotalWages = statedMonthlyTotalWages(query);
+  if (monthlyTotalWages.length > 1) return false;
+  if (monthlyTotalWages.length === 1) {
+    const [amount] = monthlyTotalWages;
+    return isCpfEligiblePopulation(query) && amount > 50 && amount <= 500;
+  }
+
+  return explicitlyStatesLowWageBand(query);
+}
+
+function identifyLowWageShareRule(query: string): CpfPayrollKnowledgeRule | undefined {
+  if (!isCpfLowWageShareQuestion(query)) return undefined;
+  return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_CONTRIBUTION_METHOD');
+}
+
+function identifyEvidenceRule(query: string, subject: string): CpfPayrollKnowledgeRule | undefined {
+  if (/\b(?:ordinary wages?|additional wages?|\bow\b|\baw\b)\b/i.test(query) &&
+      /\b(?:payable|payment date|due date|earned in|employment month)\b/i.test(query) &&
+      !/\b(?:permanent resident|singapore pr|spr|pr status)\b/i.test(query) &&
+      !/\b(?:ceiling|rate table|percentage|calculate|compute|how much)\b/i.test(query)) return undefined;
+  const text = `${query}\n${subject}`;
+  const lowWageShareRule = identifyLowWageShareRule(query);
+  if (isLowWageShareIntent(query, subject)) return lowWageShareRule;
+  if (/\b(?:aw|additional wages?|bonus)\b/i.test(text) &&
+      /\b(?:annual|yearly|year-end)\b.{0,45}\b(?:ceiling|limit|estimate|recalculat\w*)\b/i.test(text) &&
+      /\b(?:actual\s+(?:ordinary wages?|ow)|ordinary wages?|\bow\b)\b/i.test(text) &&
+      /\b(?:december|year[- ]end|last month of employment)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING');
+  }
+  if (/\b(?:aw|additional wages?)\s+ceilings?\b|\b(?:additional wages? limit|annual salary ceiling|bonus ceiling)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING');
+  }
+  if (/\b(?:ordinary wage ceiling|monthly salary ceiling|ordinary wage limit)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_ORDINARY_WAGE_CEILINGS');
+  }
+  if (/\b(?:spr|permanent resident|pr)\b/i.test(text) &&
+      /\b(?:foreign employee|wages?|salary|bonus|payable|prorat|owe|attract cpf)\b/i.test(text) &&
+      !/\b(?:ex-employee|former employee|left employment|after resignation|after termination)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES');
+  }
+  if (/\b(?:spr|permanent resident)\b/i.test(text) &&
+      /\b(?:first|1st|second|2nd|third|3rd|year|anniversary|conversion|convert)\b/i.test(text) &&
+      !/\b(?:rate table|rates by age|contribution rates?)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_PERMANENT_RESIDENT_YEAR');
+  }
+  if (/\b(?:rounding|round off|round off|drop cents|discard cents|employee share|employer share|calculate|calculation|compute)\b/i.test(text) &&
+      !/\b(?:rate table|rates by age|contribution rates)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_CONTRIBUTION_METHOD');
+  }
+  if (/\b(?:cpf|central provident fund)\b/i.test(text) &&
+      /\b(?:contribut\w*|rate table|rates?|percentages?|birthday|payroll|age group)\b/i.test(text)) {
+    return CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.id === 'CPF_2026_CONTRIBUTION_TABLES');
+  }
+  return undefined;
+}
+
+const EXPLICIT_PR_DATE = String.raw`(?:\d{1,2}[/-]\d{1,2}[/-]20\d{2}|20\d{2}-\d{2}-\d{2}|\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2})`;
+
+function exactPrConversionDate(dateText: string): string | undefined {
+  const resolution = defaultTargetDateResolver.resolveTargetDate(dateText);
+  if (resolution.source !== 'EXPLICIT' || !resolution.targetDate) return undefined;
+  const [year, month, day] = resolution.targetDate.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() + 1 !== month || parsed.getUTCDate() !== day) {
+    return undefined;
+  }
+  return resolution.targetDate;
+}
+
+function hasUnboundNamedPrGrantDate(query: string): boolean {
+  const employees = namedEmployeeReferences(query);
+  const employeeIds = [...new Set(employees.map(match => match.id))];
+  if (employeeIds.length < 2) return false;
+  const datePattern = new RegExp(String.raw`\b(?:obtained|became|was\s+granted|granted|converted\s+(?:to|into))\b[^.!?;]{0,100}\b(?:singapore\s+)?(?:permanent\s+resident|pr|spr)\b[^.!?;]{0,50}\b${EXPLICIT_PR_DATE}\b`, 'i');
+  if (!datePattern.test(query)) return false;
+
+  const statusOwners = employees.filter((mention, index) => {
+    const start = mention.index!;
+    const end = employees[index + 1]?.index ?? query.length;
+    return datePattern.test(query.slice(start, end));
+  }).map(match => match.id);
+  const clauses = query.split(/[.!?;]/).map(clause => clause.trim()).filter(Boolean);
+  const finalQuestion = clauses.slice().reverse().find(clause =>
+    /^(?:what|when|who|where|how|which|is|are|do|does|can|could|should|will|would|did|was|were)\b/i.test(clause)
+  ) || clauses.at(-1) || '';
+  const questionOwners = employeeIds.filter(id => {
+    const explicitAlias = namedEmployeeReferences(finalQuestion).some(reference => reference.id === id);
+    const idParts = id.match(/[A-Z]+|\d+/g) || [];
+    const idPattern = id.includes(' ') || id.includes('-') ? idParts.join('[- ]+') : idParts.join('[- ]*');
+    const explicitPossessive = idPattern.length > 0 && new RegExp(String.raw`\b${idPattern}['’]s\b`, 'i').test(finalQuestion);
+    return explicitAlias || explicitPossessive;
+  });
+  return statusOwners.length !== 1 || questionOwners.length !== 1 || statusOwners[0] !== questionOwners[0];
+}
+
+/** Recognize employee IDs and names when capitalization or nearby status context establishes an owner. */
+function namedEmployeeReferences(query: string): Array<{ id: string; index: number }> {
+  const nonNameWords = new Set([
+    'a', 'an', 'the', 'has', 'have', 'had', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+    'does', 'do', 'did', 'can', 'could', 'will', 'would', 'shall', 'should', 'may', 'might', 'must',
+    'remains', 'remain', 'stays', 'stay', 'turns', 'becomes', 'become', 'became', 'obtained', 'granted', 'converted',
+    'foreign', 'foreigner', 'employee', 'staff', 'worker', 'who', 'whom', 'whose', 'which', 'that',
+    'and', 'or', 'but', 'on', 'in', 'at', 'from', 'to', 'for', 'with', 'without', 'of', 'by',
+    'payroll', 'salary', 'wage', 'wages', 'bonus', 'ordinary', 'additional', 'cpf', 'pr', 'spr', 'sgd',
+    'company', 'singapore', 'employer'
+  ]);
+  const statusPredicate = /^(?:became|becomes|obtained|granted|converted|was|were|is|are|has|have|had|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)\b/i;
+  const employeePattern = /\b(?:employee|staff|worker)\s+([a-z0-9]+(?:[-'][a-z0-9]+)?)(?:\s+([a-z][a-z'-]*))?(?:\s+([a-z][a-z'-]*))?/gi;
+  const references: Array<{ id: string; index: number }> = [];
+  const labeledNameRanges: Array<{ start: number; end: number }> = [];
+
+  for (const match of query.matchAll(employeePattern)) {
+    const tokens = match.slice(1).filter((token): token is string => Boolean(token));
+    const first = tokens[0];
+    const keywordLength = /^(?:employee|staff|worker)\s+/i.exec(match[0])?.[0].length || 0;
+    let selectedId: string | undefined;
+    let selectedNameEnd: number | undefined;
+    for (let tokenCount = tokens.length; tokenCount > 0; tokenCount--) {
+      const nameTokens = tokens.slice(0, tokenCount);
+      const rawName = nameTokens.join(' ');
+      const name = rawName.replace(/['’]s$/i, '');
+      if (!/^[A-Za-z][A-Za-z'-]*(?:\s+[A-Za-z][A-Za-z'-]*)*$/.test(name)
+        || nameTokens.some(token => nonNameWords.has(token.replace(/['’]s$/i, '').toLowerCase()))) continue;
+
+      const nameEnd = match.index! + keywordLength + rawName.length;
+      const followingText = query.slice(nameEnd);
+      const hasPossessiveContext = /^['’]s\b/i.test(followingText) || /['’]s$/i.test(rawName);
+      const hasStatusContext = statusPredicate.test(followingText.trimStart());
+      const isConventionallyCapitalized = nameTokens.every(token => /^[A-Z][a-z]/.test(token));
+      if (hasPossessiveContext || hasStatusContext || isConventionallyCapitalized) {
+        selectedId = name.toUpperCase().replace(/\s+/g, ' ').trim();
+        selectedNameEnd = nameEnd;
+        break;
+      }
+    }
+
+    if (selectedId) {
+      references.push({ id: selectedId, index: match.index! });
+      labeledNameRanges.push({ start: match.index! + keywordLength, end: selectedNameEnd! });
+    }
+    else {
+      const compactId = /^[a-z]$/i.test(first) || /^\d+$/.test(first) || /^id[- ]?\d+$/i.test(first)
+        || (/^[A-Z][A-Z0-9-]*$/.test(first) && !nonNameWords.has(first.toLowerCase()));
+      if (compactId) references.push({ id: first.replace(/[-\s]/g, '').toUpperCase(), index: match.index! });
+    }
+  }
+
+  // A later clause may refer to another person by name without repeating the
+  // employee label (for example, "Bob remains a foreigner"). Keep that person
+  // in the ownership set so Alice's PR date cannot be borrowed for Bob's wages.
+  const bareNamedStatusPattern = /\b([A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?(?:\s+[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?){0,2})\s+(?=(?:became|becomes|obtained|was\s+granted|granted|converted|is|are|was|were|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)\b)/g;
+  for (const match of query.matchAll(bareNamedStatusPattern)) {
+    const index = match.index!;
+    const precedingText = query.slice(Math.max(0, index - 24), index);
+    if (/^(?:employee|staff|worker)\s/i.test(match[1]) || /\b(?:employee|staff|worker)\s+$/i.test(precedingText)
+      || labeledNameRanges.some(range => range.start <= index && index < range.end)) continue;
+    const id = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
+    if (!references.some(reference => reference.index === index && reference.id === id)) {
+      references.push({ id, index });
+    }
+  }
+
+  // A bare possessive in the final payroll question also establishes its
+  // owner (for example, "Bob's March Ordinary Wages").
+  const escapedNonNameTokens = [...nonNameWords]
+    .map(token => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  const lowercasePossessiveName = String.raw`(?!(?:${escapedNonNameTokens})\b)[a-z][a-z]+(?:-[a-z]+)?`;
+  const bareNamedPossessivePatterns = [
+    /\b([A-Z][A-Za-z]+(?:[-'][A-Za-z]+)?(?:\s+[A-Z][A-Za-z]+(?:[-'][A-Za-z]+)?){0,2})['’]s\b/g,
+    new RegExp(String.raw`\b(${lowercasePossessiveName}(?:\s+${lowercasePossessiveName}){0,2})['’]s\b`, 'g')
+  ];
+  const barePayrollOwners: Array<{ id: string; index: number }> = [];
+  for (const pattern of bareNamedPossessivePatterns) {
+    for (const match of query.matchAll(pattern)) {
+      const index = match.index!;
+      const precedingText = query.slice(Math.max(0, index - 24), index);
+      const afterPossessive = query.slice(index + match[0].length, index + match[0].length + 60).split(/[.!?;]/, 1)[0];
+      const payrollTarget = /^\s*(?:(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|this\s+(?:month|year)|last\s+(?:month|year)|next\s+(?:month|year)|current\s+(?:month|year)|annual|monthly|quarterly|20\d{2}|\d{1,2}(?:st|nd|rd|th)?)\s+){0,3}(?:ordinary\s+wages?|additional\s+wages?|wages?|ow|aw|salary|bonus|payroll)\b/i.test(afterPossessive);
+      const nameTokens = match[1].split(/\s+/).map(token => token.replace(/[-']/g, '').toLowerCase());
+      if (labeledNameRanges.some(range => range.start <= index && index < range.end)
+        || /\b(?:employee|staff|worker)\s+$/i.test(precedingText)
+        || !payrollTarget
+        || nameTokens.some(token => nonNameWords.has(token))) continue;
+      const id = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
+      if (!references.some(reference => reference.index === index && reference.id === id)) {
+        references.push({ id, index });
+      }
+      barePayrollOwners.push({ id, index });
+    }
+  }
+
+  // Lowercase person names are only admitted from an explicit possessive
+  // payroll target, then their matching status clause is tracked as an owner.
+  const bareStatusPredicate = String.raw`(?:became|becomes|obtained|was\s+granted|granted|converted|is|are|was|were|remains?|stays?|turns?|joined|left|works?|earned|paid|received|holds?)`;
+  for (const owner of barePayrollOwners) {
+    const escapedName = owner.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, String.raw`\s+`);
+    const statusReferencePattern = new RegExp(String.raw`\b${escapedName}\s+(?=${bareStatusPredicate}\b)`, 'gi');
+    for (const match of query.matchAll(statusReferencePattern)) {
+      const index = match.index!;
+      if (labeledNameRanges.some(range => range.start <= index && index < range.end)) continue;
+      if (!references.some(reference => reference.index === index && reference.id === owner.id)) {
+        references.push({ id: owner.id, index });
+      }
+    }
+  }
+
+  return references.sort((left, right) => left.index - right.index);
+}
+
+function statedPrConversionDate(query: string): string | undefined {
+  if (hasUnboundNamedPrGrantDate(query)) return undefined;
+  if (/\b(?:not|never|if|unless|whether|assuming|suppose|may\s+have|might\s+have|could\s+have|possibly|maybe|perhaps|uncertain|unclear|unconfirmed|retract\w*|incorrect|wrong|correction)\b/i.test(query)) {
+    return undefined;
+  }
+  const datePatterns = [
+    new RegExp(String.raw`\b(?:became|obtained|was\s+granted|granted|converted\s+(?:to|into))\s+(?:(?:a|an)\s+)?(?:(?:Singapore\s+)?(?:permanent\s+resident|PR|SPR))(?:\s+status)?\s+(?:on|from|as\s+of)\s+(${EXPLICIT_PR_DATE})\b`, 'gi'),
+    new RegExp(String.raw`\b(?:PR|SPR|permanent\s+resident)(?:\s+status)?\s+(?:conversion|start)(?:\s+date)?\s*(?:is|was|:|=|on|of)?\s*(${EXPLICIT_PR_DATE})\b`, 'gi'),
+    new RegExp(String.raw`\b(?:date\s+of\s+(?:PR|SPR|permanent\s+resident)\s+(?:conversion|status)|(?:PR|SPR)\s+status\s+date)\s*(?:is|was|:|=|on)?\s*(${EXPLICIT_PR_DATE})\b`, 'gi'),
+    new RegExp(String.raw`\b(?:PR|SPR|permanent\s+resident)\s+conversion\s+date\s*(?:is|was|:|=)?\s*(${EXPLICIT_PR_DATE})\b`, 'gi')
+  ];
+  const dateMatches = datePatterns.flatMap(pattern => [...query.matchAll(pattern)]);
+  if (dateMatches.length === 0 || dateMatches.some(match => !isAffirmativePrStatusPremise(query, match.index ?? 0, match[0].length))) {
+    return undefined;
+  }
+  const dates = dateMatches.map(match => exactPrConversionDate(match[1]));
+  if (dates.some(date => !date)) return undefined;
+  const uniqueDates = new Set(dates);
+  return uniqueDates.size === 1 ? [...uniqueDates][0] : undefined;
+}
+
+function isAffirmativePrStatusPremise(query: string, matchStart: number, matchLength: number): boolean {
+  const clauseStart = Math.max(
+    query.lastIndexOf('.', matchStart - 1),
+    query.lastIndexOf(';', matchStart - 1),
+    query.lastIndexOf('?', matchStart - 1),
+    query.lastIndexOf('!', matchStart - 1),
+    query.lastIndexOf('\n', matchStart - 1)
+  ) + 1;
+  const matchEnd = matchStart + matchLength;
+  const clauseEnds = ['.', ';', '?', '!', '\n']
+    .map(delimiter => query.indexOf(delimiter, matchEnd))
+    .filter(index => index >= 0);
+  const clauseEnd = clauseEnds.length > 0 ? Math.min(...clauseEnds) : query.length;
+  const clause = query.slice(clauseStart, clauseEnd).trim();
+  if (/^(?:did|was|were|has|have|is|are)\b/i.test(clause)) return false;
+  return !/\b(?:not|never|if|unless|whether|assuming|suppose|may\s+have|might\s+have|could\s+have|possibly|maybe|perhaps|uncertain|unclear|unconfirmed|retract\w*|incorrect|wrong)\b/i.test(clause);
+}
+
+function monthEndIso(year: number, month: number): string {
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+}
+
+function firstOfNextMonth(year: number, month: number): string {
+  return new Date(Date.UTC(year, month, 1)).toISOString().slice(0, 10);
+}
+
+function statedBonusPerformanceYear(query: string): string | undefined {
+  const matches = [
+    ...query.matchAll(/\b(?:annual\s+)?bonus\s+(?:for|earned in|earned during|relating to|in respect of)\s+(20\d{2})\b/gi),
+    ...query.matchAll(/\b(20\d{2})\s+(?:annual\s+)?bonus\b/gi)
+  ].map(match => match[1]);
+  const unique = [...new Set(matches)];
+  return unique.length === 1 ? unique[0] : undefined;
+}
+
+function statedOrdinaryWageAmounts(query: string): number[] {
+  const amount = String.raw`(?:s\$|sgd|\$)\s*([\d,]+(?:\.\d{1,2})?)`;
+  const patterns = [
+    new RegExp(String.raw`\b${amount}\s+(?:of\s+)?(?:monthly\s+)?(?:ordinary wages?|ow)\b`, 'gi'),
+    new RegExp(String.raw`\b(?:ordinary wages?|ow)\b[^.!?;]{0,25}(?:\b(?:of|is|are|amounts? to|at)\s*|=\s*)?${amount}`, 'gi')
+  ];
+  const matches = patterns.flatMap(pattern => [...query.matchAll(pattern)]);
+  return matches.map(match => Number(match[1].replaceAll(',', ''))).filter(Number.isFinite);
+}
+
+function statedOrdinaryWageAmount(query: string): number | undefined {
+  const values = statedOrdinaryWageAmounts(query);
+  const unique = [...new Set(values)];
+  const people = [...new Set(namedEmployeeReferences(query).map(match => match.id))];
+  const months = [...new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]
+    .map(match => match[0].toLowerCase()))];
+  if (people.length > 1 || unique.length > 1 || (values.length > 1 && months.length > 1)) return undefined;
+  return unique.length === 1 && Number.isFinite(unique[0]) ? unique[0] : undefined;
+}
+
+function additionalWageCeilingAnswer(query: string): string {
+  const payableIn2026 = /\b(?:due and payable|payable|due)\b[^.!?;]{0,70}\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+2026\b/i.test(query);
+  const ordinaryWages = statedOrdinaryWageAmount(query);
+  const namedPeople = new Set(namedEmployeeReferences(query).map(match => match.id));
+  const owAmounts = statedOrdinaryWageAmounts(query);
+  const hasDifferentOwAmounts = new Set(owAmounts).size > 1;
+  const namedMonths = new Set([...query.matchAll(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+20\d{2}\b/gi)]
+    .map(match => match[0].toLowerCase()));
+  const hasSeveralMonthAmounts = owAmounts.length > 1 && namedMonths.size > 1;
+  if ((namedPeople.size > 1 || hasDifferentOwAmounts || hasSeveralMonthAmounts) && /\b2026\b/.test(query)) {
+    return 'The 2026 OW ceiling is S$8,000 per employee per calendar month. This question includes more than one employee or OW amount, so a single employee’s monthly CPF OW base cannot be assigned safely. Check each employee and contribution month separately; the separate bonus is AW and uses its own annual ceiling.';
+  }
+  if (ordinaryWages !== undefined && /\b2026\b/.test(query)) {
+    const ordinaryWageBase = ordinaryWages > 8_000
+      ? `S$${ordinaryWages.toLocaleString('en-SG')} of OW is capped at S$8,000 for the monthly CPF OW base.`
+      : `The stated monthly OW base is S$${ordinaryWages.toLocaleString('en-SG')}, below the 2026 OW ceiling of S$8,000.`;
+    return `For the stated 2026 month, ${ordinaryWageBase} That does not prove the separate bonus is exempt: AW has its own annual ceiling of S$102,000 less the employee’s CPF-subject OW for the year, per employer. The CPF-subject bonus amount depends on the remaining ceiling, including the other OW/AW payable in that year.`;
+  }
+  if (payableIn2026) {
+    const performanceYear = statedBonusPerformanceYear(query);
+    const performanceContext = performanceYear && performanceYear !== '2026'
+      ? ` The bonus relates to the stated ${performanceYear} performance year, but that does not change the due-and-payable-year rule.` : '';
+    return 'The 2026 AW ceiling applies because the contractual due-and-payable year controls.' + performanceContext +
+      ' The ceiling is S$102,000 less the employee’s CPF-subject OW for 2026, per employer; an exact CPF-subject bonus amount also needs year-to-date AW and expected full-year OW.';
+  }
+  return 'CPF Board sets the AW ceiling per employer, per year at S$102,000 less that employee’s Ordinary Wages subject to CPF for the year. The 2026 examples use an OW ceiling of S$8,000 per month and say the year in which an AW is due and payable controls the ceiling. At each AW payment, estimate OW for the year and account for AW already subject to CPF. In the last month of employment or December, whichever is earlier, recalculate using actual OW subject to CPF through that period; pay any CPF shortfall with the last-month or December contributions, and apply for a refund if excess CPF contributions result. To compute the current payment’s CPF-subject AW, the employer must provide actual year-to-date OW/AW and either the expected full-year OW or confirm this is final settlement.';
+}
+
+function newPrStatusBoundaryAnswer(query: string): string {
+  const unboundEmployeeGrantDate = hasUnboundNamedPrGrantDate(query);
+  const conversionDate = statedPrConversionDate(query);
+  let timing: string;
+  if (unboundEmployeeGrantDate) {
+    timing = 'The SPR grant date stated for one employee cannot establish another employee’s first-year boundary. The employee who remains a foreigner has no SPR contribution-year boundary until that employee obtains SPR status; the employee’s own Entry Permit date is needed to calculate the boundary.';
+  } else if (conversionDate) {
+    const [year, month] = conversionDate.split('-').map(Number);
+    const firstYearEnd = monthEndIso(year + 1, month);
+    const secondYearStart = firstOfNextMonth(year + 1, month);
+    const secondYearEnd = monthEndIso(year + 2, month);
+    const thirdYearStart = firstOfNextMonth(year + 2, month);
+    timing = 'For the stated SPR date ' + formatSingaporeDate(conversionDate) +
+      ', the first-year boundary ends ' + formatSingaporeDate(firstYearEnd) +
+      '; second-year rates begin ' + formatSingaporeDate(secondYearStart) +
+      ' and run through ' + formatSingaporeDate(secondYearEnd) +
+      '; third-year rates begin ' + formatSingaporeDate(thirdYearStart) + '.';
+  } else {
+    timing = 'The first SPR year runs from the status-grant date through the last day of the month containing its first anniversary. The second starts on the first day of the next month; the third starts on the first day of the month after the second anniversary.';
+  }
+  const bonusBeforeAfter = /\b(?:bonus|additional wages?|\baw\b)\b/i.test(query) &&
+    /\b(?:before|prior to)\b[^.!?;]{0,70}\b(?:pr|spr|permanent resident)\b/i.test(query) &&
+    /\b(?:after|on or after)\b[^.!?;]{0,70}\b(?:pr|spr|permanent resident)\b/i.test(query);
+  const wageTreatment = unboundEmployeeGrantDate
+    ? 'CPF is not payable on the wages of an employee while that employee remains a foreigner. Do not apply another employee’s PR date to this employee’s March OW; a personal contribution amount or boundary is not determined without the employee’s own status date and relevant wage facts.'
+    : conversionDate
+    ? (() => {
+        const [year, month] = conversionDate.split('-').map(Number);
+        const monthEnd = monthEndIso(year, month);
+        return 'CPF begins when SPR status is obtained. OW in the conversion month is subject only on the pro-rated portion from ' +
+          formatSingaporeDate(conversionDate) + ' through ' + formatSingaporeDate(monthEnd) +
+          '. For AW, the payable date controls: amounts payable before SPR status are not subject; amounts payable on or after that date may attract CPF, subject to the applicable AW ceiling and contribution rates.';
+      })()
+      : bonusBeforeAfter
+      ? 'On the facts stated, AW payable before SPR status is not subject to CPF; AW payable on or after status is obtained may attract CPF, subject to the remaining annual AW ceiling and applicable contribution rate.'
+      : 'CPF starts when SPR status is obtained. The month’s OW is pro-rated from that date; AW treatment depends on whether each amount is payable before or on or after the status date.';
+  const missing = /\b(?:how much|calculate|amount of cpf|exact contribution|contribution amount)\b/i.test(query)
+    ? ' The contribution amount still requires the wage amounts, age, applicable payroll-year/SPR rate table, any approved higher-rate election, and remaining annual AW ceiling.'
+    : ' No contribution amount is inferred without those payroll and rate facts.';
+  return timing + ' ' + wageTreatment + missing;
+}
+
+function generalAnswer(rule: CpfPayrollKnowledgeRule, query: string): string {
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING') return additionalWageCeilingAnswer(query);
+  if (rule.id === 'CPF_NEW_PR_STATUS_WAGE_BOUNDARIES') return newPrStatusBoundaryAnswer(query);
+  switch (rule.id) {
+    case 'CPF_2026_CONTRIBUTION_TABLES': {
+      const tableNumber = requestedRateTableNumber(query);
+      if (tableNumber === 1 &&
+          /\b(?:first|1st|second|2nd)\s*(?:year|spr)|\b(?:first|second)-year\b/i.test(query) &&
+          /\b(?:full employer\s*(?:and|\+)\s*full employee|full employer\s*[-/]\s*full employee|full\/full|both at full rates)\b/i.test(query)) {
+        return 'For a first- or second-year SPR, CPF Board permits Table 1 full employer/full employee rates only after it approves the employer’s and employee’s joint application. Without that approval, use the applicable graduated SPR table. Confirm the SPR year, approval and age group before applying the 2026 rates; the 2026 table must not be used for another payroll year.';
+      }
+      if (tableNumber !== 1) {
+        const schedule = tableNumber === 2 ? 'first-year SPR graduated employer/employee' :
+          tableNumber === 3 ? 'second-year SPR graduated employer/employee' :
+            tableNumber === 4 ? 'first-year SPR approved full-employer/graduated-employee' :
+              'second-year SPR approved full-employer/graduated-employee';
+        return `For 2026, use CPF Board Table ${tableNumber} for the ${schedule} schedule. It varies by age band and monthly wage band; apply it only to the relevant CPF-subject wages and after confirming the SPR conversion date and any CPF Board-approved election. The exact Table ${tableNumber} rates are included in the source passage. The contribution period must be in 2026.`;
+      }
+      return 'CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year.';
+    }
+    case 'CPF_CONTRIBUTION_METHOD':
+      return 'CPF Board selects the contribution table from citizenship or SPR year, age group and wage band. Total wages combine Ordinary Wages (OW) and Additional Wages (AW), which have separate ceilings. For wages above S$50 and up to S$500 in a month, the employee share is nil but the employer share remains due. Round the combined total contribution to the nearest dollar (50 cents rounds up); drop cents from the employee share and set the employer share to total less employee. To determine the actual amount, supply the payroll month, date of birth, status/PR conversion date, rate election, CPF-classified OW/AW, year-to-date contributions and expected annual OW where an AW ceiling applies.';
+    case 'CPF_ORDINARY_WAGE_CEILINGS':
+      return 'CPF Board’s dated ceiling table sets the monthly OW ceiling at S$8,000 from 1 January 2026. It shows S$7,400 for 2025, S$6,800 for 2024, S$6,300 from September through December 2023, and S$6,000 from 1 January 2016 through 31 August 2023. The ceiling is monthly and applies to Ordinary Wages. Select the row for the payroll period; this ceiling alone does not determine a contribution rate or payroll amount.';
+    case 'CPF_PERMANENT_RESIDENT_YEAR':
+      {
+        const conversionDate = statedPrConversionDate(query);
+        const generalRule = 'CPF Board counts the first SPR contribution year from the date PR status is obtained through the last day of the month containing the first anniversary. The second year starts on the first day of the next month and runs through the last day of the month containing the second anniversary; the third starts on the first day of the following month. This timing selects the SPR year but does not establish a contribution rate without the applicable payroll-year table and any approved higher-rate election.';
+        if (!conversionDate) return `${generalRule} An exact PR status date is needed to calculate the dates for an individual.`;
+        const [year, month] = conversionDate.split('-').map(Number);
+        const firstYearEnd = monthEndIso(year + 1, month);
+        const secondYearStart = firstOfNextMonth(year + 1, month);
+        const secondYearEnd = monthEndIso(year + 2, month);
+        const thirdYearStart = firstOfNextMonth(year + 2, month);
+        return `For PR status obtained on ${formatSingaporeDate(conversionDate)}, first-year rates apply from that date through ${formatSingaporeDate(firstYearEnd)}; second-year rates apply from ${formatSingaporeDate(secondYearStart)} through ${formatSingaporeDate(secondYearEnd)}; third-year rates start ${formatSingaporeDate(thirdYearStart)}. This calculates the PR-year timing only; it does not establish a contribution rate without the applicable payroll-year table and any approved higher-rate election.`;
+      }
+  }
+}
+
+/** Show only an explanation backed by one current official source revision and issue-bound exact quotes. */
+export function getCpfPayrollKnowledgeEvidence(
+  query: string,
+  stream: AuthorityPresentedWorkstream,
+  issue: AuthorityPresentedIssue
+): CpfPayrollKnowledgeEvidence | undefined {
+  if (stream.authority !== 'CPF' || stream.domain !== 'CPF_PAYROLL' ||
+      !['Employee', 'Employer'].includes(issue.population) ||
+      !['NOT_REQUIRED', 'UNRESOLVED'].includes(issue.applicationStatus) ||
+      issue.evidenceStatus !== 'VERIFIED' ||
+      !['EXPLAIN_RULE', 'CHECK_ELIGIBILITY', 'FILING_REQUIREMENT', 'CALCULATE'].includes(issue.operation) ||
+      !stream.issues.some(candidate => candidate.id === issue.id && candidate.evidenceStatus === 'VERIFIED')) return undefined;
+  const rule = identifyEvidenceRule(query, issue.subject);
+  if (!rule || !rule.topicIds.some(topicId => topicId.toLowerCase().includes('cpf'))) return undefined;
+  if (!querySubjectMatches(rule, query, issue.subject) || !currentOrExplicit2026Question(query, rule)) return undefined;
+  if (!rule) return undefined;
+  const source = stream.sources.find(candidate => candidate.provenance === 'LIVE_EXTERNAL' &&
+    !candidate.validTo && candidate.officialUrl === rule.officialUrl &&
+    sourceSupportsRule(candidate, issue.id, rule, `${query}\n${issue.subject}`));
+  if (!source) return undefined;
+  return {
+    authority: 'CPF', ruleId: rule.id, title: source.title || rule.title, officialUrl: rule.officialUrl,
+    text: generalAnswer(rule, `${query}\n${issue.subject}`)
+  };
+}
+
+/** Flags explicit unsupported years, source-family substitution, or negated rule conclusions. */
+export function hasCpfPayrollKnowledgeContradiction(request: CpfPayrollKnowledgeRequest): boolean {
+  if (request.authority !== 'CPF') return false;
+  const knownSource = CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.find(rule => rule.officialUrl === request.officialUrl);
+  if (request.officialUrl && !knownSource) return false;
+  const rule = scopeRule(request);
+  if (!rule) return false;
+  const text = `${request.query}\n${request.subject}\n${cleanSourceText(request.sourceText)}`;
+  if (!currentOrExplicit2026Question(request.query, rule)) return true;
+  if (rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING' &&
+      hasContradictoryAwCeilingInstruction(cleanSourceText(request.sourceText))) return true;
+  const hasContradictoryNegation = /\b(?:not S\$?8,?000|not 37%|not 20%)\b/i.test(text)
+    || /cpf contributions are not payable for (?:singapore citizens|singapore permanent residents|sprs)\b/i.test(text);
+  if (hasContradictoryNegation) return true;
+  if (rule.id === 'CPF_ORDINARY_WAGE_CEILINGS') {
+    return /(?:2026|from 1 jan 2026)[^\n]{0,80}(?:ow ceiling|ordinary wage ceiling)[^\n]{0,30}(?:S\$?8,?001|S\$?7,?400)/i.test(text);
+  }
+  return false;
+}
+
+function sourceSupportsRule(
+  source: AuthorityPresentedSource,
+  issueId: string,
+  rule: CpfPayrollKnowledgeRule,
+  query: string
+): boolean {
+  return groupExactIssueClaimsByDocument(source, issueId).some(group => {
+    const text = group.map(claim => claim.text).join('\n\n');
+    return requiredSourceFacts(rule, text, query) && rule.topicIds.length > 0;
+  });
+}
+
+/**
+ * Safe display helper: the calculator still needs all facts, so this function
+ * renders a resolved amount only when the caller supplies the complete typed
+ * input and has not claimed a mixed or special-case population.
+ */
+export function renderCpfPayrollCalculation(input: CpfPayrollCalculationInput): string {
+  const result = calculateCpfPayroll2026(input);
+  if (result.status === 'UNSUPPORTED') return `CPF amount not determined: ${result.reason}`;
+  if (result.status === 'REVIEW_REQUIRED') return `CPF amount requires review: ${result.reason}`;
+  return `For ${result.period}, CPF-subject Ordinary Wages are ${formatSgd(result.ordinaryWageSubjectCents)} and CPF-subject Additional Wages are ${formatSgd(result.additionalWageSubjectCents)}. Total CPF contribution is ${formatSgd(result.totalContributionCents)}, consisting of employee share ${formatSgd(result.employeeContributionCents)} and employer share ${formatSgd(result.employerContributionCents)}. ${result.explanation}`;
+}
+
+export const CPF_PAYROLL_KNOWLEDGE_POINTERS_20261027B = Object.freeze(
+  CPF_PAYROLL_KNOWLEDGE_RULES_20261027B.map(rule => ({
+    authority: rule.authority,
+    topicIds: rule.topicIds,
+    url: rule.officialUrl,
+    title: rule.title,
+    effectiveFrom: rule.id === 'CPF_2026_CONTRIBUTION_TABLES' ||
+      rule.id === 'CPF_2026_ADDITIONAL_WAGE_CEILING' ? '2026-01-01' : undefined,
+    fixtureFile: rule.fixtureFile,
+    fixtureKind: rule.fixtureKind,
+    documentKind: rule.fixtureKind === 'NATIVE_OFFICIAL_PDF' ? 'PDF' : 'HTML_OR_TEXT',
+    excerptFile: rule.excerptFile
+  }))
+);
+
+export const CPF_PAYROLL_CEILING_CONSTANTS_2026 = Object.freeze({
+  ordinaryWageCeilingCents: CPF_MAX_OW_CENTS,
+  annualSalaryCeilingCents: CPF_ANNUAL_SALARY_CEILING_CENTS,
+  dueAndPayableYear: 2026,
+  ordinaryWageCeilingSourceUrl: CPF_2026_OW_CEILING_URL,
+  additionalWageCeilingSourceUrl: CPF_2026_AW_CEILING_URL
+});

@@ -1,0 +1,45 @@
+{
+  "capturedOnSingaporeDate": "27/10/2026",
+  "captureMethod": "Complete source responses were retrieved over HTTPS with validated TLS certificate verification. Fixture text is selected verbatim output from the repository sourceAdapters.cleanHtmlText helper applied to those retained response bytes; no rule wording was paraphrased into the fixtures.",
+  "rawSourceManifest": "D:/Accounting/artifacts/statutory-coverage-20261027/raw-sources/manifest.json",
+  "sources": [
+    {
+      "fixture": "acra-agm.txt",
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/holding-annual-general-meetings/due-dates-requirements/",
+      "pageTitle": "Due dates & requirements for annual general meetings (AGMs)",
+      "pageUpdated": "2026-02-11",
+      "rawResponseFile": "D:/Accounting/artifacts/statutory-coverage-20261027/raw-sources/acra-agm.html",
+      "rawResponseRetrievedAtUTC": "2026-10-26T23:24:39.486414Z",
+      "rawResponseSha256": "974d5bcbba0687b57db70d01370d0890c307bd1ecdc53e9469d126b1fadba5bf",
+      "fixtureSha256": "8c78d061f7448bc4c0ba14b0636ba1be647d9d33c353e97854e0dfdb8773d56f",
+      "selection": "From All Singapore companies must hold AGMs each year through What you must do: Hold a general meeting within 14 days of the request. Includes the 31 August 2018 applicability boundary, both general deadlines, both private-company exemption paths, unanimous-member dispensation, member and auditor safeguards, and application-before-due-date EOT evidence.",
+      "effectiveDateEvidence": "The official page labels the deadline table FY ending on or after 31 August 2018. It says extension applications must be made before the relevant AGM due date; this page does not establish duration or all eligibility conditions."
+    },
+    {
+      "fixture": "acra-annual-returns.txt",
+      "authority": "ACRA",
+      "url": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/deadline-requirements/",
+      "pageTitle": "Deadline & requirements for annual returns",
+      "pageUpdated": "2026-05-14",
+      "rawResponseFile": "D:/Accounting/artifacts/statutory-coverage-20261027/raw-sources/acra-annual-returns.html",
+      "rawResponseRetrievedAtUTC": "2026-10-26T23:24:39.738255Z",
+      "rawResponseSha256": "2787ad99aab27d06f5ab2a074b543988f267e70597bf4ff232216eee5572005f",
+      "fixtureSha256": "121e5a4b9e258afbee6e1f9f407f29cdc564da3b6c57a57a8799c2eb247c21ff",
+      "selection": "From An annual return is an online form you have to file with ACRA through You cannot change your FYE after the filing deadline has passed. Includes the exact live-company duty, dormant/inactive and IRAS-waiver treatment, factors and deadlines table, and information required in the return.",
+      "effectiveDateEvidence": "The page is current as retrieved and updated on 14 May 2026. Its displayed content does not provide complete historical applicability evidence, so year-specific past filings fail closed."
+    },
+    {
+      "fixture": "mom-overtime.txt",
+      "authority": "MOM",
+      "url": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+      "pageTitle": "Hours of work, overtime and rest day",
+      "rawResponseFile": "D:/Accounting/artifacts/statutory-coverage-20261027/raw-sources/mom-overtime.html",
+      "rawResponseRetrievedAtUTC": "2026-10-26T23:24:39.947453Z",
+      "rawResponseSha256": "86a610155f148a40ca0efb54fcba654dede682b03dfe353674c7db8e3f856979",
+      "fixtureSha256": "3c1371f0b51ad071a72689fa8b974ce42af9a771c10cb2d6661eb4a7f3336a45",
+      "selection": "From The hours of work guidelines apply only to those covered under Part 4 of the Employment Act through Such extra hours are included in the 72-hour limit. Includes exclusions, eligibility thresholds, workman definition, hourly-rate cap, pay rate and deadline, formula by pay basis, 12-hour exceptions, exemption and 72-hour limit.",
+      "effectiveDateEvidence": "Current visible guidance was retrieved on 27 October 2026 Singapore time. The page does not state the historical effective date of the displayed thresholds; historical threshold questions are unresolved."
+    }
+  ]
+}

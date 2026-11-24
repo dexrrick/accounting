@@ -1,0 +1,91 @@
+{
+  "dateSingapore": "25/10/2026",
+  "baseApplicationCommit": "c3783109de0c7a8d1574a9a10cd1f338fee4ff26",
+  "branch": "codex/statutory-practical-coverage-20261025",
+  "sourceVerification": "Bounded development research; direct TLS-verified source reads and separately identified official web read. No model calls or production request acceptance.",
+  "sourceActivationPerformed": false,
+  "liveAcceptance": "NOT_RUN",
+  "historicalAcraAcceptance": "UNCHANGED_SEPARATE",
+  "productionChanged": false,
+  "sources": [
+    {
+      "id": "iras-gst-filing",
+      "requestedUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+      "finalUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/filing-gst/gst-filing-due-dates-and-requests-for-extension",
+      "status": 200,
+      "sha256": "3A082F3EA0E93DD6728ED4DC8030622B91650EF4A7566ABB808E3C9A031C4270",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\iras-gst-filing.html",
+      "retrievedAtUTC": "2026-10-25T13:11:48.3929085Z",
+      "bodyEvidence": "VISIBLE_OFFICIAL_BODY_RETAINED",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/iras-gst-filing.html",
+      "fixtureSha256": "df21fce1c763a7919c03e0d35df1c2c859faac75f508b836562303a1fecef025",
+      "applicabilityScope": "Current general GST return deadline, nil-return duty, separate GIRO collection timetable, qualified extension procedure; no historical filing-date determination."
+    },
+    {
+      "id": "cpf-due-date",
+      "requestedUrl": "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions",
+      "finalUrl": "https://www.cpf.gov.sg/service/article/when-is-the-due-date-for-cpf-contributions",
+      "status": 200,
+      "sha256": "0A3E7B523AE17BC2C73E17280AF9B21960C5EEE4FC263A2EA9E589E7FC3CF3CB",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\cpf-due-date.html",
+      "retrievedAtUTC": "2026-10-25T13:11:48.8153773Z",
+      "bodyEvidence": "REJECTED_JAVASCRIPT_SHELL_SEPARATE_OFFICIAL_WEB_READ",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/cpf-due-date.txt",
+      "fixtureSha256": "771f1122b9e2817f8bf23297e7e890f69cb6bab0157f5d0af2d25ff3523dc122",
+      "applicabilityScope": "General monthly legal due date vs enforcement cutoff and late-payment interest; FAQ last updated25/06/2024 is not proof of all historical periods.",
+      "bodyEvidenceNote": "Official FAQ body separately read using web tool on25/10/2026; visible text retained exactly except superscript14th layout. Direct status200 raw capture contains shell only and does not prove the rule."
+    },
+    {
+      "id": "cpf-rate-factors",
+      "requestedUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "status": 200,
+      "sha256": "DD02D355CD51DD9452B97A71713E8302B376CCB07F8A43D80218DA9B79ABB91E",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\cpf-rate-factors.html",
+      "retrievedAtUTC": "2026-10-25T13:11:48.9788641Z",
+      "bodyEvidence": "VISIBLE_OFFICIAL_BODY_RETAINED",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/cpf-rate-factors.txt",
+      "fixtureSha256": "eb9283fc1dc720b89d9440f368f267f84b37f9be0e5ae021449f775b51021e07",
+      "applicabilityScope": "Qualitative current contribution-rate factors and joint higher-rate PR election; no numeric schedule or individual contribution calculation."
+    },
+    {
+      "id": "mom-final-salary",
+      "requestedUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "finalUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "status": 200,
+      "sha256": "AA4EDD3D719D1F9CA062BE624F0B96A886E9FCE64AE4C5F51325AF217230CADD",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\mom-final-salary.html",
+      "retrievedAtUTC": "2026-10-25T13:11:49.2488019Z",
+      "bodyEvidence": "VISIBLE_OFFICIAL_BODY_RETAINED",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/mom-final-salary.html",
+      "fixtureSha256": "fc4d2e6d7959a83c2293c5eabf6c27e7097a0167f1f5133f258845fc7f94acdc",
+      "applicabilityScope": "Current Employment Act final salary table with commission and foreign-employee tax-clearance qualifications; no determination of personal coverage or historic law."
+    },
+    {
+      "id": "acra-audit-exemption",
+      "requestedUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/preparing-financial-statements/audit-exemptions/",
+      "status": 200,
+      "sha256": "494CEAD2038E83671B472D42636597A1CB8BD32CF56B9E8DB00DC08A8205CFF3",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\acra-audit-exemption.html",
+      "retrievedAtUTC": "2026-10-25T13:11:49.5320094Z",
+      "bodyEvidence": "VISIBLE_OFFICIAL_BODY_RETAINED",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/acra-audit-exemption.txt",
+      "fixtureSha256": "58393fc0cac480dcb3813af1f656b3076d8fdb23d8211308101abfd7f57e5ad2",
+      "applicabilityScope": "General small-company criteria including newly-incorporated/group/continuation qualifications; source states FY beginning on/after01/07/2015; current page does not establish exact historic version."
+    },
+    {
+      "id": "mas-fund-management",
+      "requestedUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "finalUrl": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+      "status": 200,
+      "sha256": "A5DD14813F8E7865465DFC356409BE002C74CA4AD91852113D3C60A46D068D7E",
+      "path": "D:\\Accounting\\artifacts\\coverage-development-20261025\\official\\mas-fund-management.html",
+      "retrievedAtUTC": "2026-10-25T13:11:49.8224280Z",
+      "bodyEvidence": "VISIBLE_OFFICIAL_BODY_RETAINED",
+      "fixturePath": "tests/fixtures/statutoryCoverageSources/mas-fund-management.html",
+      "fixtureSha256": "71914fdc4b41df6711748b1d2db8ff0e38adc2a2d2e03f8be3113f5129498d38",
+      "applicabilityScope": "General VCFM application route and conditional class exemptions; detailed Appendix4 eligibility, particular exemptions and reporting duties remain outside this source proof."
+    }
+  ]
+}

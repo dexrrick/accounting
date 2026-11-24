@@ -1,0 +1,107 @@
+{
+  "scope": "No model or network calls. Direct observation of current production classification and eligibility functions; not another answer-quality sample.",
+  "rows": [
+    {
+      "caseId": "accounting-accrual",
+      "variants": [
+        {
+          "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; I am not asking for a journal entry.",
+          "classification": {
+            "primaryDomain": "ACCOUNTING",
+            "domains": [
+              "ACCOUNTING_SFRS"
+            ],
+            "topicIds": [],
+            "authorities": [
+              "ACRA"
+            ],
+            "multiAuthority": false,
+            "currentInformationRequired": false,
+            "accountingAnalysisRequired": true,
+            "taxAnalysisRequired": false,
+            "regulatoryAnalysisRequired": false,
+            "calculationRequired": false,
+            "journalEntryRequired": true,
+            "missingFacts": [],
+            "intent": "HYBRID",
+            "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+          },
+          "aiFirstEligible": false
+        },
+        {
+          "question": "Explain accrual accounting versus cash accounting for a small business with unpaid supplier invoices. Give a practical explanation; ",
+          "classification": {
+            "primaryDomain": "ACCOUNTING",
+            "domains": [
+              "ACCOUNTING_SFRS"
+            ],
+            "topicIds": [],
+            "authorities": [
+              "ACRA"
+            ],
+            "multiAuthority": false,
+            "currentInformationRequired": false,
+            "accountingAnalysisRequired": true,
+            "taxAnalysisRequired": false,
+            "regulatoryAnalysisRequired": false,
+            "calculationRequired": false,
+            "journalEntryRequired": false,
+            "missingFacts": [],
+            "intent": "STATUTORY_ADVISORY",
+            "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+          },
+          "aiFirstEligible": true
+        }
+      ]
+    },
+    {
+      "caseId": "accounting-asset-register",
+      "variants": [
+        {
+          "question": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? No journal amounts are needed.",
+          "classification": {
+            "primaryDomain": "ACCOUNTING",
+            "domains": [
+              "ACCOUNTING_SFRS"
+            ],
+            "topicIds": [],
+            "authorities": [
+              "ACRA"
+            ],
+            "multiAuthority": false,
+            "currentInformationRequired": false,
+            "accountingAnalysisRequired": true,
+            "taxAnalysisRequired": false,
+            "regulatoryAnalysisRequired": false,
+            "calculationRequired": false,
+            "journalEntryRequired": true,
+            "missingFacts": [],
+            "intent": "HYBRID",
+            "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+          },
+          "aiFirstEligible": false
+        },
+        {
+          "question": "Explain how the accountant should register an asset at cost in the fixed asset register and on acquisition in the general ledger. How do the register and ledger relate? ",
+          "classification": {
+            "primaryDomain": "GENERAL",
+            "domains": [],
+            "topicIds": [],
+            "authorities": [],
+            "multiAuthority": false,
+            "currentInformationRequired": false,
+            "accountingAnalysisRequired": false,
+            "taxAnalysisRequired": false,
+            "regulatoryAnalysisRequired": false,
+            "calculationRequired": false,
+            "journalEntryRequired": false,
+            "missingFacts": [],
+            "intent": "STATUTORY_ADVISORY",
+            "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+          },
+          "aiFirstEligible": true
+        }
+      ]
+    }
+  ]
+}

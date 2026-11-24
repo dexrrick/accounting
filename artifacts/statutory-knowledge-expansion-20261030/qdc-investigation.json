@@ -1,0 +1,11 @@
+{
+  "checkedOnSingaporeDate":"30/10/2026",
+  "status":"PRECISE_VCFM_QDC_REQUIREMENTS_NOT_ESTABLISHED",
+  "checks":[
+    {"url":"https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf","result":"Read current VCFM-specific toolkit; its introduction expressly excludes fund-level and outside-SFA requirements. No exact QDC form/scope/deadline established."},
+    {"url":"https://www.mas.gov.sg/statistics/survey-submissions","result":"Inspected public survey forms and submission directory; it does not establish the precise requested VCFM QDC requirements."},
+    {"url":"https://masnet.mas.gov.sg/dcg/","result":"Inspected official migration directory; it identifies migrated surveys but does not establish the requested VCFM QDC requirement."},
+    {"method":"Official-domain searches for QDC, VCFM QDC, and Quarterly Fund Data Collection","result":"No usable first-party source for precise VCFM applicability, form and deadline verified. Third-party claims were not admitted as statutory rules."}
+  ],
+  "limits":"No inferred exemption from toolkit/directory silence; no form, NAV threshold or deadline invented. Existing explicit unsupported result retained. No source activation."
+}

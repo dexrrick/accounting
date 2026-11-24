@@ -1,0 +1,225 @@
+{
+  "measurement": "Scripted identical-question synthesis comparison; no live model, legal quality, billed tokens or network latency measured.",
+  "results": [
+    {
+      "authority": "IRAS",
+      "query": "What input tax restrictions should our business check?",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "promptCharacters": 5005,
+          "estimatedInputTokens": 1252
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_REVIEW",
+          "promptCharacters": 4700,
+          "estimatedInputTokens": 1175
+        }
+      ],
+      "elapsedScriptedMs": 11.027800000000013,
+      "answer": "# Answer\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance. Business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)",
+      "citations": [
+        {
+          "title": "IRAS: GST (General) Regulations",
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "semanticReview": "INDEPENDENT_MODEL_ASSESSMENT",
+        "reviewedClaimCount": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "supportedClaimIds": [
+          "answer-1"
+        ],
+        "withheldClaimIds": [],
+        "revisionAttempts": 0,
+        "claims": [
+          {
+            "claimId": "answer-1",
+            "kind": "RULE",
+            "outcome": "SUPPORTED",
+            "semanticVerdict": "SUPPORTED",
+            "supportingPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "authority": "CPF",
+      "query": "Who is responsible for paying CPF contributions?",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "promptCharacters": 5168,
+          "estimatedInputTokens": 1292
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_REVIEW",
+          "promptCharacters": 4992,
+          "estimatedInputTokens": 1248
+        }
+      ],
+      "elapsedScriptedMs": 2.203199999999981,
+      "answer": "# Answer\n\nEvery employer of an employee shall pay monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule. In calculating the employee's share of contribution, any fraction of a dollar which is a cent or cents shall be discarded. Total contribution payable shall be rounded to the nearest dollar.",
+      "citations": [],
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "semanticReview": "INDEPENDENT_MODEL_ASSESSMENT",
+        "reviewedClaimCount": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 1,
+        "supportedClaimIds": [
+          "answer-1"
+        ],
+        "withheldClaimIds": [],
+        "revisionAttempts": 0,
+        "claims": [
+          {
+            "claimId": "answer-1",
+            "kind": "RULE",
+            "outcome": "SUPPORTED",
+            "semanticVerdict": "SUPPORTED",
+            "supportingPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "authority": "MOM",
+      "query": "When must salary and overtime be paid?",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "promptCharacters": 4992,
+          "estimatedInputTokens": 1248
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_REVIEW",
+          "promptCharacters": 4706,
+          "estimatedInputTokens": 1177
+        }
+      ],
+      "elapsedScriptedMs": 1.3168999999999755,
+      "answer": "# Answer\n\nSalary earned by an employee under a contract of service shall be paid before the expiry of the seventh day after the last day of the salary period. Payment for overtime work shall be made within 14 days after the end of the salary period.",
+      "citations": [],
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "semanticReview": "INDEPENDENT_MODEL_ASSESSMENT",
+        "reviewedClaimCount": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "supportedClaimIds": [
+          "answer-1"
+        ],
+        "withheldClaimIds": [],
+        "revisionAttempts": 0,
+        "claims": [
+          {
+            "claimId": "answer-1",
+            "kind": "RULE",
+            "outcome": "SUPPORTED",
+            "semanticVerdict": "SUPPORTED",
+            "supportingPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "authority": "ACRA",
+      "query": "Can a sole director also act as company secretary?",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "promptCharacters": 5158,
+          "estimatedInputTokens": 1290
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_REVIEW",
+          "promptCharacters": 4986,
+          "estimatedInputTokens": 1247
+        }
+      ],
+      "elapsedScriptedMs": 0.7271000000000072,
+      "answer": "# Answer\n\nEvery company shall have one or more secretaries each of whom shall be a natural person who has his principal or only place of residence in Singapore. The board of directors shall ensure that the office of secretary is not left vacant for more than 6 months at any one time. The sole director of a company shall not also be the secretary of the company.",
+      "citations": [],
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "semanticReview": "INDEPENDENT_MODEL_ASSESSMENT",
+        "reviewedClaimCount": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "supportedClaimIds": [
+          "answer-1"
+        ],
+        "withheldClaimIds": [],
+        "revisionAttempts": 0,
+        "claims": [
+          {
+            "claimId": "answer-1",
+            "kind": "RULE",
+            "outcome": "SUPPORTED",
+            "semanticVerdict": "SUPPORTED",
+            "supportingPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "authority": "MAS",
+      "query": "What should a Singapore fund manager establish before starting?",
+      "calls": [
+        {
+          "stage": "EVIDENCE_GROUNDED_SYNTHESIS",
+          "promptCharacters": 5048,
+          "estimatedInputTokens": 1263
+        },
+        {
+          "stage": "EVIDENCE_GROUNDED_REVIEW",
+          "promptCharacters": 4722,
+          "estimatedInputTokens": 1181
+        }
+      ],
+      "elapsedScriptedMs": 0.4712999999999852,
+      "answer": "# Answer\n\nA person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.",
+      "citations": [],
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "semanticReview": "INDEPENDENT_MODEL_ASSESSMENT",
+        "reviewedClaimCount": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "supportedClaimIds": [
+          "answer-1"
+        ],
+        "withheldClaimIds": [],
+        "revisionAttempts": 0,
+        "claims": [
+          {
+            "claimId": "answer-1",
+            "kind": "RULE",
+            "outcome": "SUPPORTED",
+            "semanticVerdict": "SUPPORTED",
+            "supportingPassageIds": [
+              "passage-1"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

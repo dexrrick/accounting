@@ -1,0 +1,9 @@
+{
+  "repository": "dexrrick/accounting",
+  "implementationCommit": "b2dbf2885d3b19655dc825fec017b3e2d624c8f2",
+  "combinedCommitStatus": { "statuses": [] },
+  "commitWorkflowRuns": { "workflow_runs": [] },
+  "limitation": "The workflow connector filters to pull-request-triggered runs and returns its first page only. Empty returned arrays are not a comprehensive all-event CI audit or a passing CI result.",
+  "workflowConfiguration": "The maintained CI workflow triggers on pushes to main/master and pull requests targeting main/master. This repair was pushed to its existing feature branch; no PR or CI dispatch was created.",
+  "liveAcceptance": "NOT_RUN"
+}

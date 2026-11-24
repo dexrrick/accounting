@@ -1,0 +1,107 @@
+{
+  "scope": "Synthetic application-entry replay using retained official-source fixtures; no live acceptance.",
+  "note": "Evidence statuses describe mapped issues. Full request coverage and individual applicability are separate; source labels in rendered responses do not establish live retrieval.",
+  "cases": [
+    {
+      "id": 1,
+      "question": "Employee A became a Singapore PR on 15 March 2026. Employee B remains a foreigner. Is CPF due on a foreigner’s March Ordinary Wages and what is the first-year boundary?",
+      "before": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF newly obtained PR status and OW/AW payable-date treatment",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** For the stated SPR date 15/03/2026, the first-year boundary ends 31/03/2027; second-year rates begin 01/04/2027 and run through 31/03/2028; third-year rates begin 01/04/2028. CPF begins when SPR status is obtained. OW in the conversion month is subject only on the pro-rated portion from 15/03/2026 through 31/03/2026. For AW, the payable date controls: amounts payable before SPR status are not subject; amounts payable on or after that date may attract CPF, subject to the applicable AW ceiling and contribution rates. No contribution amount is inferred without those payroll and rate facts."
+      },
+      "after": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF newly obtained PR status and OW/AW payable-date treatment",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** The SPR grant date stated for one employee cannot establish another employee’s first-year boundary. The employee who remains a foreigner has no SPR contribution-year boundary until that employee obtains SPR status; the employee’s own Entry Permit date is needed to calculate the boundary. CPF is not payable on the wages of an employee while that employee remains a foreigner. Do not apply another employee’s PR date to this employee’s March OW; a personal contribution amount or boundary is not determined without the employee’s own status date and relevant wage facts. No contribution amount is inferred without those payroll and rate facts."
+      }
+    },
+    {
+      "id": 2,
+      "question": "A foreign employee became a Singapore PR on 15 March 2026. The first year ends on 31 March 2027, when his bonus becomes payable. Does the bonus attract CPF?",
+      "before": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF newly obtained PR status and OW/AW payable-date treatment",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** For the stated SPR date 15/03/2026, the first-year boundary ends 31/03/2027; second-year rates begin 01/04/2027 and run through 31/03/2028; third-year rates begin 01/04/2028. CPF begins when SPR status is obtained. OW in the conversion month is subject only on the pro-rated portion from 15/03/2026 through 31/03/2026. For AW, the payable date controls: amounts payable before SPR status are not subject; amounts payable on or after that date may attract CPF, subject to the applicable AW ceiling and contribution rates. No contribution amount is inferred without those payroll and rate facts."
+      },
+      "after": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF newly obtained PR status and OW/AW payable-date treatment",
+            "evidenceStatus": "INSUFFICIENT"
+          }
+        ],
+        "response": "**Whole-question status:** Evidence is incomplete for one or more material issues.\n**Applicability limitation:** The available evidence does not establish the requested rule for 2027. An official source whose legal applicability covers that period is needed. A current page, its retrieval date, or a document's original issue date alone cannot establish the requirements for an earlier or later period."
+      }
+    },
+    {
+      "id": 3,
+      "question": "In October 2026, one employee has a separate annual bonus of S$20,000 and Ordinary Wages of S$5,000. The same employee is paid monthly. Is the CPF-able monthly OW base S$5,000, and does capping OW prove none of the bonus attracts CPF?",
+      "before": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF monthly OW and annual AW ceilings",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** The 2026 OW ceiling is S$8,000 per employee per calendar month. This question includes more than one employee or OW amount, so a single employee’s monthly CPF OW base cannot be assigned safely. Check each employee and contribution month separately; the separate bonus is AW and uses its own annual ceiling."
+      },
+      "after": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF monthly OW and annual AW ceilings",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** For the stated 2026 month, The stated monthly OW base is S$5,000, below the 2026 OW ceiling of S$8,000. That does not prove the separate bonus is exempt: AW has its own annual ceiling of S$102,000 less the employee’s CPF-subject OW for the year, per employer. The CPF-subject bonus amount depends on the remaining ceiling, including the other OW/AW payable in that year."
+      }
+    },
+    {
+      "id": 4,
+      "question": "In October 2026, one employee has a separate annual bonus of S$20,000 and Ordinary Wages of S$5,000. The employment income includes both amounts. Is the CPF-able monthly OW base S$5,000, and does capping OW prove none of the bonus attracts CPF?",
+      "before": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF monthly OW and annual AW ceilings",
+            "evidenceStatus": "VERIFIED"
+          },
+          {
+            "domain": "IRAS_INCOME_TAX",
+            "subject": "Auto-Inclusion Scheme and Employment Income Reporting",
+            "evidenceStatus": "INSUFFICIENT"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence is incomplete for one or more material issues.\n**Material evidence gaps:** See the evidence gaps and coverage limitations below.\n- **CPF rule explanation:** For the stated 2026 month, The stated monthly OW base is S$5,000, below the 2026 OW ceiling of S$8,000. That does not prove the separate bonus is exempt: AW has its own annual ceiling of S$102,000 less the employee’s CPF-subject OW for the year, per employer. The CPF-subject bonus amount depends on the remaining ceiling, including the other OW/AW payable in that year."
+      },
+      "after": {
+        "issues": [
+          {
+            "domain": "CPF_PAYROLL",
+            "subject": "CPF monthly OW and annual AW ceilings",
+            "evidenceStatus": "VERIFIED"
+          }
+        ],
+        "response": "**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n- **CPF rule explanation:** For the stated 2026 month, The stated monthly OW base is S$5,000, below the 2026 OW ceiling of S$8,000. That does not prove the separate bonus is exempt: AW has its own annual ceiling of S$102,000 less the employee’s CPF-subject OW for the year, per employer. The CPF-subject bonus amount depends on the remaining ceiling, including the other OW/AW payable in that year."
+      }
+    }
+  ]
+}

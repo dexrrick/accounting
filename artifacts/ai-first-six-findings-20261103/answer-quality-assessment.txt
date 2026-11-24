@@ -1,0 +1,35 @@
+AI-first statutory advisory: bounded before/after assessment, 03/11/2026
+
+The correction preserves model understanding, model-written application and a separate model support assessment. It does not replace these with a statutory answer table. Deterministic checks protect postings, issue ownership, known missing facts and numerical provenance. No statutory rates, approved registries, accounting calculations or journal-engine rules are changed.
+
+Before -> after
+
+- Verified evidence could receive synthetic fallback issue IDs -> evidence retains the original planned issue and is combined only within validated owner/scope metadata. This prevents a valid multi-passage answer from being treated as a different issue.
+- A missing fact elsewhere in the question could restrict every application -> known issue-owned gaps restrict that issue, preserving a supported conclusion for another authority. Unattributed material facts remain conservative rather than being assigned to a convenient issue.
+- Numerical explanations required full source-sentence wording -> faithful paraphrases can proceed to independent semantic assessment when their typed numerical facts, subject and timing remain supported. Calculated amounts still need the matching deterministic output field.
+- Conditional answers required repetitive uncertainty language and a particular modal order -> natural condition-first, can-if and negative-unless constructions remain available, while appended categorical conclusions are checked separately.
+- General generation guidance -> explicit instructions to answer the client directly, apply each supported rule, state verified conclusions confidently, give practical next steps, and separate genuinely unresolved issues.
+- A newly independent advisory request could receive stale facts -> the AI-first call uses the same relevant history selected by the existing conversation boundary; genuine follow-ups retain context.
+
+What the evidence establishes
+
+The regression tests exercise unsafe outputs against deliberately permissive scripted reviewers, plus positive controls showing that supported answers survive. A separate five-authority practical-answer suite uses existing source records and hand-authored client questions and answers. It proves acceptance and presentation of practical supported application claims, not that a real model independently produced or legally verified those answers.
+
+The existing frozen 75-question corpus and twelve newly authored practical questions were replayed against the published base and the corrected application with no provider. Every answer was byte-identical: 75/75 and 12/12. The new questions were written before their outputs were inspected and were not supplied as mapped topics or expected answers to the application. See independent-assessment-cases.json and answer-preservation-summary.json.
+
+The no-provider sample still contains incomplete, source-report-like replies and routing limitations, including questions with facts that are already stated. That is not evidence of improved live AI reasoning or comprehensive practical usefulness. These checks preserve the offline path; they do not establish source coverage, legal correctness across all cases or AI answer quality.
+
+Architecture and remaining limits
+
+Phase 2 supports the intended direction: complete admitted passages, explicit user facts and issue metadata feed generative application, then independent claim assessment and targeted repair retain supported portions. The numerical guard no longer requires sentence copying. Its lexical/temporal boundary checks are conservative, not a general proof of natural-language entailment.
+
+The separate Phase 1 conceptual-advisory path still uses local background records and withholds high-risk claims; it is not equivalent to fully verified statutory synthesis. Retrieval, source admission and issue identification can still limit the evidence offered to Phase 2. Broad source/routing expansion was deliberately outside this correction task. Unscoped missing facts can still cause a conservative conditional result until ownership is established. Model assessment can make mistakes and is not a legal proof.
+
+Real-model answer-quality grading, browser acceptance and production verification were not performed. The next quality acceptance step is a dated real-provider run of the frozen independent set, grading each material issue for legal accuracy, source support, numerical correctness, completeness and practical clarity. This report does not claim that step passed.
+
+First-party spot checks used to review new assessment criteria (03/11/2026; not a full source refresh):
+- IRAS input-tax conditions: https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax
+- CPF due-date versus enforcement timing: https://www.cpf.gov.sg/service/article/when-is-the-due-date-to-submit-cpf-contributions
+- MOM salary and final-salary timing: https://www.mom.gov.sg/employment-practices/salary/paying-salary
+- ACRA company officers: https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/
+- MAS fund-management licensing and exemptions: https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing

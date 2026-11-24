@@ -1,0 +1,22 @@
+{
+  "reviewer": "/root/final_acceptance_review",
+  "status": "FIXES_PENDING_FINAL_REVIEW",
+  "findings": [
+    {
+      "severity": "P2",
+      "file": "src/retrieval/acraMomKnowledge20261027b.ts",
+      "line": 609,
+      "finding": "Negated share-capital or branch-register facts choose extra month; explicit exclusion must defeat positive and facts require ownership."
+    },
+    {
+      "severity": "P2",
+      "file": "src/retrieval/externalSourceValidator.ts",
+      "line": 630,
+      "finding": "Hidden50employee company/group thresholds remain source proof. Strip hidden body content for bounded audit."
+    }
+  ],
+  "resolvedBeforeFinalCapture": [
+    "Unsupported5% shareholder audit exception removed from live rule."
+  ],
+  "verification": "Read-only independent review and targeted predicate/routing/source-mutation probes; final fixes unreviewed."
+}

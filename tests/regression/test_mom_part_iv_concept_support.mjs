@@ -288,8 +288,11 @@ const sharedReplay = await run({
   suppliedQuestionUnderstanding: sharedReplayUnderstanding,
   candidateRecord: canonicalRelatedTopicRecord
 });
-assert.equal(sharedReplay.status, 'VERIFIED',
-  'A fresh whole-question evaluation covers the legacy MOM alias through its canonical concept metadata.');
+assert.equal(sharedReplay.evidenceStatus, 'VERIFIED',
+  'Evidence covers the legacy MOM alias through its canonical concept metadata.');
+assert.notEqual(sharedReplay.requestCompletenessContext.evaluation.status, 'COMPLETE');
+assert.equal(sharedReplay.status, 'CONDITIONAL',
+  'Whole-question status remains conditional while request completeness is unconfirmed.');
 assert.equal(sharedReplay.workstreams[0].issues[0].lifecycle.covered, true);
 assert.equal(sharedReplay.workstreams[0].issues[0].gaps.some(gap => gap.code === 'ISSUE_CONCEPT_UNCOVERED'), false);
 assert.equal(sharedReplay.workstreams[0].issues[0].verifiedClaims[0].recordId, canonicalRelatedTopicRecord.id,

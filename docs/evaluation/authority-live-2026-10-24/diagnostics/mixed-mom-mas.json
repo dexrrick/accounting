@@ -1,0 +1,4957 @@
+{
+  "schemaVersion": 1,
+  "caseId": "mixed-mom-mas",
+  "answerStatus": "INSUFFICIENT",
+  "providerStatus": "NOT_EXPOSED",
+  "semanticPlanSource": "SEMANTIC_ISSUES",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "ae2b5fb96b4601460c393ddf854d23ddc0dab49340ba993bab7edbd3a8342141",
+      "encoding": "utf8",
+      "byteLength": 2437,
+      "artifactPath": "bodies/ae2b5fb96b4601460c393ddf854d23ddc0dab49340ba993bab7edbd3a8342141.gz",
+      "declaredResponseBodySha256": "ae2b5fb96b4601460c393ddf854d23ddc0dab49340ba993bab7edbd3a8342141",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 2437,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "encoding": "base64",
+      "byteLength": 0,
+      "artifactPath": "bodies/e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855.gz",
+      "declaredResponseBodySha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 0,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyBase64",
+      "sha256": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+      "encoding": "base64",
+      "byteLength": 67707,
+      "artifactPath": "bodies/f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e.gz",
+      "declaredResponseBodySha256": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 67707,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/1/bodyText",
+      "sha256": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+      "encoding": "utf8",
+      "byteLength": 67707,
+      "artifactPath": "bodies/f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e.gz",
+      "declaredResponseBodySha256": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 67707,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyBase64",
+      "sha256": "702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b",
+      "encoding": "base64",
+      "byteLength": 853817,
+      "artifactPath": "bodies/702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b.gz",
+      "declaredResponseBodySha256": "702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 853817,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/2/bodyText",
+      "sha256": "702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b",
+      "encoding": "utf8",
+      "byteLength": 853817,
+      "artifactPath": "bodies/702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b.gz",
+      "declaredResponseBodySha256": "702a1bd2d58d7478857868c610f53ae4e9ef981ac7b37455b5239c06f1e7360b",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 853817,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    }
+  ],
+  "issuePlan": {
+    "source": "SEMANTIC_ISSUES",
+    "issues": [
+      {
+        "subject": "MOM Employment Act Part IV coverage",
+        "population": "EMPLOYEE",
+        "domain": "MOM_EMPLOYMENT",
+        "governingAuthorities": [
+          "MOM"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [
+          "mom-part-iv-overtime",
+          "mom_overtime"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 0.95,
+        "id": "issue_4be504d7",
+        "status": "MAPPED"
+      },
+      {
+        "subject": "Capital Markets Services Licence general requirement",
+        "population": "COMPANY",
+        "domain": "MAS_FUNDS",
+        "governingAuthorities": [
+          "MAS"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [
+          "mas-cms-licence"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 0.95,
+        "id": "issue_29a8b13b",
+        "status": "MAPPED"
+      }
+    ],
+    "coverageEstablished": true,
+    "hasUnmappedResidual": false
+  },
+  "issues": [
+    {
+      "issueId": "issue_4be504d7",
+      "subject": "MOM Employment Act Part IV coverage",
+      "population": "EMPLOYEE",
+      "domain": "MOM_EMPLOYMENT",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "governingAuthority": "MOM",
+      "sourceSections": [
+        "MOM_EMPLOYMENT"
+      ],
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true
+      },
+      "applicationStatus": "NOT_REQUIRED",
+      "evidenceStatus": "VERIFIED",
+      "verifiedClaims": [
+        {
+          "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+          "quoteMetadata": {
+            "sha256": "5ca1c006d160cea87e449fbf670e727c148b0cba86d9dd37688e27c78f93e3ef",
+            "byteLength": 2595,
+            "characterLength": 2577,
+            "redacted": true
+          },
+          "canonicalUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "supportKind": "EXACT_SOURCE_QUOTE"
+        }
+      ],
+      "sources": [
+        {
+          "id": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+          "authority": "MOM",
+          "authorityName": "Ministry of Manpower (MOM)",
+          "sourcePublisher": "Ministry of Manpower (MOM)",
+          "legalOrStandardInstrument": "Part IV Working Hours and Overtime Eligibility",
+          "standardOrActCode": "Part IV Working Hours and Overtime Eligibility",
+          "paragraphOrSection": "Part IV Working Hours and Overtime Eligibility",
+          "principleSummary": "Part IV Working Hours and Overtime Eligibility",
+          "officialSourceUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "domain": "MOM_EMPLOYMENT",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "mom-part-iv-overtime"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+          "sourceAuthority": "MOM",
+          "retrievedAt": "2026-10-24T08:54:17.709Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+          "contentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "Hours of work, overtime and rest day",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "gaps": [],
+      "retrievalTrace": {
+        "stages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SUFFICIENT",
+            "reason": "The stage supplied reviewed evidence candidates."
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          }
+        ],
+        "attempts": [
+          {
+            "topicId": "mom_overtime",
+            "fetchStatus": "SUCCESS",
+            "pageTitle": "Hours of work, overtime and rest day"
+          },
+          {
+            "topicId": "mom-part-iv-overtime",
+            "fetchStatus": "SUCCESS",
+            "pageTitle": "Hours of work, overtime and rest day"
+          }
+        ]
+      },
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+            "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "mom_overtime",
+              "candidateUrl": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "pageTitle": "Hours of work, overtime and rest day",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            },
+            {
+              "topicId": "mom-part-iv-overtime",
+              "candidateUrl": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "pageTitle": "Hours of work, overtime and rest day",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "MOM_OVERTIME_PART_IV",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC38_OVERTIME",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC21_SALARY_TIMELINES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_MANDATORY_RETRENCHMENT_NOTIFICATION",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC36_37_REST_DAY_PAY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC22_PRORATED_SALARY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_ANNUAL_SICK_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC89_SICK_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC88A_ANNUAL_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_CDCA_PARENTAL_LEAVES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+            "documentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.boundedSubstantiveSupport",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "boundedSubstantiveSupport"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+            "documentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "subject": "Capital Markets Services Licence general requirement",
+      "population": "COMPANY",
+      "domain": "MAS_FUNDS",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "governingAuthority": "MAS",
+      "sourceSections": [
+        "MAS_FUND_MANAGEMENT"
+      ],
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": false,
+        "verified": false,
+        "covered": false
+      },
+      "applicationStatus": "NOT_REQUIRED",
+      "evidenceStatus": "INSUFFICIENT",
+      "verifiedClaims": [],
+      "sources": [],
+      "gaps": [
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "admitted",
+          "code": "CANDIDATE_REJECTED",
+          "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks."
+        },
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "admitted",
+          "code": "NO_ADMITTED_EVIDENCE",
+          "reason": "No candidate passed the evidence admission checks for this issue."
+        },
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "verified",
+          "code": "NO_VERIFIED_CLAIM",
+          "reason": "No complete source quotation passed claim verification for this issue."
+        },
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "covered",
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "reason": "Verified quotations do not support the requested topic mas-cms-licence."
+        },
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "covered",
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "reason": "Verified quotations do not support the requested concept mas_cms_licence_definition."
+        },
+        {
+          "issueId": "issue_29a8b13b",
+          "authority": "MAS",
+          "domain": "MAS_FUNDS",
+          "subject": "Capital Markets Services Licence general requirement",
+          "operation": "EXPLAIN_RULE",
+          "stage": "covered",
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "reason": "Verified quotations do not support the requested concept semantic_licensing_requirement."
+        }
+      ],
+      "retrievalTrace": {
+        "stages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "INSUFFICIENT",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          }
+        ],
+        "attempts": [
+          {
+            "topicId": "mas-cms-licence",
+            "fetchStatus": "NO_CANDIDATES"
+          },
+          {
+            "topicId": "mas-cms-licence",
+            "fetchStatus": "TOPIC_MISMATCH",
+            "pageTitle": "Maintenance"
+          }
+        ]
+      },
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "NO_VERIFIED_MAP",
+          "sourceMapIds": [],
+          "selectedRecordIds": [],
+          "finalVerifiedUrls": [],
+          "candidateOnly": false,
+          "attempts": [
+            {
+              "topicId": "mas-cms-licence",
+              "fetchStatus": "NO_CANDIDATES",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+              "searchQueryVariant": "FULL_QUERY",
+              "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+            },
+            {
+              "topicId": "mas-cms-licence",
+              "candidateUrl": "https://www.mas.gov.sg/regulation/guidelines/guideline-sfa-04-g01-licensing-criteria-for-cms-licensees-other-than-fund-and-reit-managers",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.mas.gov.sg/regulation/guidelines/guideline-sfa-04-g01-licensing-criteria-for-cms-licensees-other-than-fund-and-reit-managers",
+              "pageTitle": "Maintenance",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+              "error": "Fetched page title or content does not identify the mapped standard/source",
+              "searchQueryVariant": "TOPIC_HINT_3"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "EXHAUSTED",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "EXHAUSTED",
+              "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+            },
+            {
+              "stage": "INSUFFICIENT",
+              "status": "EXHAUSTED",
+              "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "MAS_FMC_CMS_LICENSING",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_PSA_DIGITAL_TOKENS_AML",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_SFO_13O_13U_MATERIAL_CHANGES",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_SFO_LICENSING_EXEMPTION_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_FUND_ADMIN_OUTSOURCING",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_ZERO_EXCHANGE_CONTROLS",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          }
+        ]
+      }
+    }
+  ],
+  "presentationIssues": [
+    {
+      "id": "issue_4be504d7",
+      "subject": "MOM Employment Act Part IV coverage",
+      "population": "Employee",
+      "operation": "EXPLAIN_RULE",
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "NOT_REQUIRED",
+      "claims": [
+        {
+          "supportKind": "EXACT_SOURCE_QUOTE",
+          "issueIds": [
+            "issue_4be504d7"
+          ],
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "gaps": []
+    },
+    {
+      "id": "issue_29a8b13b",
+      "subject": "Capital Markets Services Licence general requirement",
+      "population": "Company",
+      "operation": "EXPLAIN_RULE",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "claims": [],
+      "gaps": [
+        "Candidates failed authority, domain, provenance, date, topic, or source-text checks.",
+        "No candidate passed the evidence admission checks for this issue.",
+        "No complete source quotation passed claim verification for this issue.",
+        "Verified quotations do not support the requested topic mas-cms-licence.",
+        "Verified quotations do not support the requested concept mas_cms_licence_definition.",
+        "Verified quotations do not support the requested concept semantic_licensing_requirement."
+      ]
+    }
+  ],
+  "conceptOwnership": [
+    {
+      "issueId": "issue_4be504d7",
+      "authority": [
+        "MOM"
+      ],
+      "domain": "MOM_EMPLOYMENT",
+      "population": "EMPLOYEE",
+      "operation": "EXPLAIN_RULE",
+      "concepts": "UNOBSERVED"
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": [
+        "MAS"
+      ],
+      "domain": "MAS_FUNDS",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "concepts": "UNOBSERVED"
+    }
+  ],
+  "admissionDiagnostics": [
+    {
+      "issueId": "UNOBSERVED",
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+            "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "mom_overtime",
+              "candidateUrl": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "pageTitle": "Hours of work, overtime and rest day",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            },
+            {
+              "topicId": "mom-part-iv-overtime",
+              "candidateUrl": "https://mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.mom.gov.sg/employment-practices/hours-of-work-overtime-and-rest-days",
+              "pageTitle": "Hours of work, overtime and rest day",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                },
+                {
+                  "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Employment Act Part IV coverage"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "MOM_OVERTIME_PART_IV",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC38_OVERTIME",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC21_SALARY_TIMELINES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_MANDATORY_RETRENCHMENT_NOTIFICATION",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC36_37_REST_DAY_PAY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC22_PRORATED_SALARY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_ANNUAL_SICK_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC89_SICK_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_SEC88A_ANNUAL_LEAVE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "MOM_CDCA_PARENTAL_LEAVES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "LIVE_TOPIC_mom_overtime_f0d50efb7991",
+            "documentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+            "admitted": false,
+            "firstFailedPredicate": "topic:mom_overtime.boundedSubstantiveSupport",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "boundedSubstantiveSupport"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "LIVE_TOPIC_mom-part-iv-overtime_f0d50efb7991",
+            "documentHash": "f0d50efb79910bb9902cfb2bbff2245ea95ba8b7ed3f5cc6c877491356e4bd1e",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "mom_overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              },
+              {
+                "topicId": "mom-part-iv-overtime",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "issueId": "UNOBSERVED",
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "NO_VERIFIED_MAP",
+          "sourceMapIds": [],
+          "selectedRecordIds": [],
+          "finalVerifiedUrls": [],
+          "candidateOnly": false,
+          "attempts": [
+            {
+              "topicId": "mas-cms-licence",
+              "fetchStatus": "NO_CANDIDATES",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+              "searchQueryVariant": "FULL_QUERY",
+              "error": "No approved official HTTPS URL candidates were returned for this restricted query variant."
+            },
+            {
+              "topicId": "mas-cms-licence",
+              "candidateUrl": "https://www.mas.gov.sg/regulation/guidelines/guideline-sfa-04-g01-licensing-criteria-for-cms-licensees-other-than-fund-and-reit-managers",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.mas.gov.sg/regulation/guidelines/guideline-sfa-04-g01-licensing-criteria-for-cms-licensees-other-than-fund-and-reit-managers",
+              "pageTitle": "Maintenance",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "OFFICIAL_DOMAIN_SEARCH",
+              "error": "Fetched page title or content does not identify the mapped standard/source",
+              "searchQueryVariant": "TOPIC_HINT_3"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "Capital Markets Services Licence definition",
+                "licensing requirement"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "EXHAUSTED",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "EXHAUSTED",
+              "reason": "Official-domain search candidates were separately fetched and evidence-gated after sitemap discovery."
+            },
+            {
+              "stage": "INSUFFICIENT",
+              "status": "EXHAUSTED",
+              "reason": "Permitted official-source routes were exhausted without evidence covering every required topic scope."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "MAS_FMC_CMS_LICENSING",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_PSA_DIGITAL_TOKENS_AML",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_SFO_13O_13U_MATERIAL_CHANGES",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_SFO_LICENSING_EXEMPTION_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_FUND_ADMIN_OUTSOURCING",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "MAS_ZERO_EXCHANGE_CONTROLS",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          }
+        ]
+      }
+    }
+  ],
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"Under MOM guidance, which employees are covered by Part IV of the Employment Act for working hours and overtime? Explain the general coverage using official MOM guidance. Do not calculate pay or create journal entries. Separately, Under MAS guidance, what is a Capital Markets Services Licence and when is it generally required? Explain the general licensing requirement using official MAS guidance. Do not assess a particular business or create journal entries.\"]",
+    "inputLength": 462,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 462
+          }
+        }
+      ],
+      "inputLength": 462
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "MOM",
+          "MAS"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "MOM Employment Act Part IV coverage and MAS Capital Markets Services Licence requirement",
+        "concepts": [
+          {
+            "concept": "Employment Act Part IV coverage",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "working hours and overtime",
+            "role": "RELATED"
+          },
+          {
+            "concept": "Capital Markets Services Licence",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "licensing requirement",
+            "role": "RELATED"
+          }
+        ],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "MOM Employment Act Part IV coverage",
+            "population": "EMPLOYEE",
+            "domain": "MOM_EMPLOYMENT",
+            "governingAuthorities": [
+              "MOM"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          },
+          {
+            "subject": "Capital Markets Services Licence general requirement",
+            "population": "COMPANY",
+            "domain": "MAS_FUNDS",
+            "governingAuthorities": [
+              "MAS"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 0.95
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 0.95,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "MOM Employment Act Part IV coverage"
+        },
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 1,
+          "subject": "Capital Markets Services Licence general requirement"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "MOM Employment Act Part IV coverage",
+          "population": "EMPLOYEE",
+          "operation": "EXPLAIN_RULE"
+        },
+        {
+          "subject": "Capital Markets Services Licence general requirement",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE"
+        }
+      ]
+    }
+  },
+  "groundedContext": "UNOBSERVED",
+  "evidenceQuality": "UNOBSERVED",
+  "sourceMapFallbackTrace": "UNOBSERVED",
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "INSUFFICIENT",
+    "evidenceStatus": "INSUFFICIENT",
+    "applicationStatus": "NOT_REQUIRED",
+    "presentationStatus": "INSUFFICIENT",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": [
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "admitted",
+      "code": "CANDIDATE_REJECTED",
+      "reason": "Candidates failed authority, domain, provenance, date, topic, or source-text checks."
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "admitted",
+      "code": "NO_ADMITTED_EVIDENCE",
+      "reason": "No candidate passed the evidence admission checks for this issue."
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "verified",
+      "code": "NO_VERIFIED_CLAIM",
+      "reason": "No complete source quotation passed claim verification for this issue."
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "covered",
+      "code": "ISSUE_CONCEPT_UNCOVERED",
+      "reason": "Verified quotations do not support the requested topic mas-cms-licence."
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "covered",
+      "code": "ISSUE_CONCEPT_UNCOVERED",
+      "reason": "Verified quotations do not support the requested concept mas_cms_licence_definition."
+    },
+    {
+      "issueId": "issue_29a8b13b",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "subject": "Capital Markets Services Licence general requirement",
+      "operation": "EXPLAIN_RULE",
+      "stage": "covered",
+      "code": "ISSUE_CONCEPT_UNCOVERED",
+      "reason": "Verified quotations do not support the requested concept semantic_licensing_requirement."
+    }
+  ]
+}

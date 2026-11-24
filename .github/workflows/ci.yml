@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, codex/statutory-knowledge-expansion-20261030 ]
   pull_request:
     branches: [ main, master ]
 
@@ -18,6 +18,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          # The coverage benchmark reads its frozen baseline with git show.
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

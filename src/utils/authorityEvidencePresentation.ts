@@ -13,11 +13,20 @@ export interface AuthorityPresentedClaim {
   text: string;
   supportKind: VerifiedEvidenceClaim['supportKind'];
   sourceBinding?: VerifiedDocumentBinding;
+  fetchedSourceBinding?: FetchedSourceBinding;
   sourceAdmissionOptions?: VerifiedEvidenceClaim['sourceAdmissionOptions'];
   issueIds: string[];
   provenance: AuthoritativeSourceRecord['provenance'];
   validFrom?: string;
   validTo?: string;
+}
+
+/** Identifies the actual fetched page revision without implying shared admission. */
+export interface FetchedSourceBinding {
+  recordId: string;
+  documentHash: string;
+  canonicalUrl: string;
+  retrievedAt: string;
 }
 
 export interface AuthorityPresentedSource {
@@ -30,6 +39,86 @@ export interface AuthorityPresentedSource {
   validFrom?: string;
   validTo?: string;
   claims: AuthorityPresentedClaim[];
+}
+
+function canonicalizeClaimTextForComparison(text: string): string {
+  const entities: Record<string, string> = {
+    '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&apos;': "'",
+    '&rsquo;': '’', '&lsquo;': '‘', '&rdquo;': '”', '&ldquo;': '“',
+    '&ndash;': '–', '&mdash;': '—'
+  };
+  return text.replace(/&(amp|lt|gt|quot|apos|rsquo|lsquo|rdquo|ldquo|ndash|mdash);/gi,
+    (entity) => entities[entity.toLowerCase()] ?? entity);
+}
+
+/** Keep complete-rule premises inside one verified document revision and issue. */
+export function groupExactIssueClaimsByDocument(
+  source: AuthorityPresentedSource,
+  issueId: string
+): AuthorityPresentedClaim[][] {
+  const groups = new Map<string, AuthorityPresentedClaim[]>();
+  for (const claim of source.claims) {
+    if (!claim.issueIds.includes(issueId) || claim.supportKind !== 'EXACT_SOURCE_QUOTE' ||
+        claim.provenance !== 'LIVE_EXTERNAL' || claim.validTo) continue;
+    let key: string;
+    if (claim.sourceBinding !== undefined) {
+      const binding = validFormalSourceBinding(claim.sourceBinding);
+      if (!binding) continue;
+      key = JSON.stringify(['FORMAL', binding.recordId, binding.documentHash.toLowerCase(), binding.versionId]);
+    } else {
+      const binding = validFetchedSourceBinding(claim.fetchedSourceBinding);
+      if (!binding || !source.officialUrl || binding.canonicalUrl !== source.officialUrl) continue;
+      key = JSON.stringify(['FETCHED', binding.recordId, binding.documentHash.toLowerCase(),
+        binding.canonicalUrl, binding.retrievedAt]);
+    }
+    const group = groups.get(key) || [];
+    group.push(claim);
+    groups.set(key, group);
+  }
+  return [...groups.values()].map((claims) => {
+    const comparisonTexts = claims.map((claim) => canonicalizeClaimTextForComparison(claim.text));
+    return claims.filter((claim, index) => {
+    const sameScope = (other: AuthorityPresentedClaim) =>
+      other.validFrom === claim.validFrom && other.validTo === claim.validTo &&
+      JSON.stringify(other.sourceAdmissionOptions) === JSON.stringify(claim.sourceAdmissionOptions);
+    const currentText = comparisonTexts[index];
+    const earlierIdentical = claims.slice(0, index).some((other, otherIndex) =>
+      sameScope(other) && comparisonTexts[otherIndex] === currentText);
+    if (earlierIdentical) return false;
+    return !claims.some((other, otherIndex) => sameScope(other) && comparisonTexts[otherIndex].length > currentText.length &&
+      comparisonTexts[otherIndex].includes(currentText));
+    });
+  });
+}
+
+function isHexSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
+}
+
+function validFormalSourceBinding(value: unknown): VerifiedDocumentBinding | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const binding = value as Partial<VerifiedDocumentBinding>;
+  return typeof binding.recordId === 'string' && binding.recordId.trim() &&
+    typeof binding.versionId === 'string' && binding.versionId.trim() &&
+    isHexSha256(binding.documentHash) && isHexSha256(binding.provisionHash) &&
+    Boolean(binding.sourceLocator && typeof binding.sourceLocator === 'object')
+    ? binding as VerifiedDocumentBinding : undefined;
+}
+
+function validFetchedSourceBinding(value: unknown): FetchedSourceBinding | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  const binding = value as Partial<FetchedSourceBinding>;
+  if (typeof binding.recordId !== 'string' || !binding.recordId.trim() || !isHexSha256(binding.documentHash) ||
+      typeof binding.canonicalUrl !== 'string' || typeof binding.retrievedAt !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(binding.retrievedAt) ||
+      !Number.isFinite(Date.parse(binding.retrievedAt))) return undefined;
+  try {
+    const url = new URL(binding.canonicalUrl);
+    if (url.protocol !== 'https:' || url.username || url.password || url.port || url.hash) return undefined;
+  } catch {
+    return undefined;
+  }
+  return binding as FetchedSourceBinding;
 }
 
 export interface AuthorityPresentedIssue {
@@ -150,6 +239,38 @@ function sourceForClaim(
   return sources.find(source => source.id === claim.recordId);
 }
 
+function fetchedSourceBindingForClaim(
+  claim: VerifiedEvidenceClaim,
+  source: AuthoritativeSourceRecord,
+  displayedOfficialUrl?: string
+): FetchedSourceBinding | undefined {
+  if (claim.supportKind !== 'EXACT_SOURCE_QUOTE' || claim.recordId !== source.id ||
+      source.provenance !== 'LIVE_EXTERNAL' || source.validTo || !source.canonicalSourceUrl ||
+      !source.retrievedAt || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/i.test(source.retrievedAt) ||
+      !Number.isFinite(Date.parse(source.retrievedAt))) return undefined;
+
+  const documentHash = source.documentHash;
+  const contentHash = source.contentHash;
+  if (documentHash !== undefined && !isHexSha256(documentHash) ||
+      contentHash !== undefined && !isHexSha256(contentHash) ||
+      documentHash !== undefined && contentHash !== undefined && documentHash.toLowerCase() !== contentHash.toLowerCase()) return undefined;
+  const hash = documentHash || contentHash;
+  if (!isHexSha256(hash)) return undefined;
+
+  const canonicalUrl = getSafeOfficialUrl(source.canonicalSourceUrl, undefined, undefined, source.authority, [source]);
+  if (!canonicalUrl || canonicalUrl !== displayedOfficialUrl) return undefined;
+  if (claim.canonicalUrl) {
+    const claimCanonicalUrl = getSafeOfficialUrl(claim.canonicalUrl, undefined, undefined, source.authority, [source]);
+    if (claimCanonicalUrl !== canonicalUrl) return undefined;
+  }
+  return {
+    recordId: source.id,
+    documentHash: hash.toLowerCase(),
+    canonicalUrl,
+    retrievedAt: source.retrievedAt
+  };
+}
+
 function sourceMatchesAuthority(source: AuthoritativeSourceRecord, authority: SemanticAuthority): boolean {
   if (authority === 'ACCOUNTING_STANDARDS') return source.authority === 'ASC' || source.authority === 'ACRA';
   if (authority === 'IFRS_FOUNDATION') return /\bIFRS Foundation\b/i.test(source.sourcePublisher);
@@ -174,6 +295,8 @@ function workstreamStatus(stream: AuthorityWorkstreamResult): { evidenceStatus: 
 }
 
 function overallStatus(result: AuthorityWorkstreamsResult): AuthorityOverallStatus {
+  const requestRepresentationComplete = isCurrentRequestCompletenessContext(result.requestCompletenessContext, result.query) &&
+    result.requestCompletenessContext.evaluation.status === 'COMPLETE';
   const everyIssueCovered = result.workstreams.length > 0 &&
     result.workstreams.every(stream => stream.issues.length > 0 && stream.issues.every(isCovered));
   const resultIssueScopes = new Set(result.workstreams.flatMap(stream => stream.issues.map(issue =>
@@ -191,6 +314,7 @@ function overallStatus(result: AuthorityWorkstreamsResult): AuthorityOverallStat
     stream.applicationStatus === 'UNRESOLVED' || stream.issues.some(issue => issue.applicationStatus === 'UNRESOLVED'))) {
     return 'CONDITIONAL';
   }
+  if (!requestRepresentationComplete) return 'CONDITIONAL';
   return result.status === 'VERIFIED' ? 'VERIFIED' : 'INSUFFICIENT';
 }
 
@@ -226,14 +350,17 @@ function buildWorkstream(stream: AuthorityWorkstreamResult): AuthorityPresentedW
       // Editorial summaries are explicitly labeled and never presented as quotations.
       const text = verifiedClaim.supportKind === 'EXACT_SOURCE_QUOTE' ? verifiedClaim.quote : verifiedClaim.text;
       const bindingIdentity = verifiedClaim.sourceBinding ? JSON.stringify(verifiedClaim.sourceBinding) : '';
+      const fetchedBinding = fetchedSourceBindingForClaim(verifiedClaim, source, officialUrl);
+      const fetchedBindingIdentity = fetchedBinding ? JSON.stringify(fetchedBinding) : '';
       const admissionIdentity = verifiedClaim.sourceAdmissionOptions ? JSON.stringify(verifiedClaim.sourceAdmissionOptions) : '';
-      const identity = `${key}\n${verifiedClaim.supportKind}\n${text}\n${bindingIdentity}\n${admissionIdentity}`;
+      const identity = `${key}\n${verifiedClaim.supportKind}\n${text}\n${bindingIdentity}\n${fetchedBindingIdentity}\n${admissionIdentity}`;
       let presented = issueClaims.get(identity);
       if (!presented) {
         presented = {
           text,
           supportKind: verifiedClaim.supportKind,
           ...(verifiedClaim.sourceBinding ? { sourceBinding: structuredClone(verifiedClaim.sourceBinding) } : {}),
+          ...(fetchedBinding ? { fetchedSourceBinding: structuredClone(fetchedBinding) } : {}),
           ...(verifiedClaim.sourceAdmissionOptions ? { sourceAdmissionOptions: structuredClone(verifiedClaim.sourceAdmissionOptions) } : {}),
           issueIds: [],
           provenance: source.provenance,
@@ -246,9 +373,11 @@ function buildWorkstream(stream: AuthorityWorkstreamResult): AuthorityPresentedW
       if (!claims.some(candidate => candidate.text === text && candidate.supportKind === verifiedClaim.supportKind &&
         candidate.provenance === source.provenance && candidate.validFrom === source.validFrom && candidate.validTo === source.validTo &&
         JSON.stringify(candidate.sourceBinding || null) === JSON.stringify(verifiedClaim.sourceBinding || null) &&
+        JSON.stringify(candidate.fetchedSourceBinding || null) === JSON.stringify(fetchedBinding || null) &&
         JSON.stringify(candidate.sourceAdmissionOptions || null) === JSON.stringify(verifiedClaim.sourceAdmissionOptions || null))) claims.push(presented);
       const sourceClaim = sourceGroup.claims.find(candidate => candidate.text === text && candidate.supportKind === verifiedClaim.supportKind &&
         JSON.stringify(candidate.sourceBinding || null) === JSON.stringify(verifiedClaim.sourceBinding || null) &&
+        JSON.stringify(candidate.fetchedSourceBinding || null) === JSON.stringify(fetchedBinding || null) &&
         JSON.stringify(candidate.sourceAdmissionOptions || null) === JSON.stringify(verifiedClaim.sourceAdmissionOptions || null));
       if (sourceClaim) {
         if (!sourceClaim.issueIds.includes(issue.issueId)) sourceClaim.issueIds.push(issue.issueId);
@@ -257,6 +386,7 @@ function buildWorkstream(stream: AuthorityWorkstreamResult): AuthorityPresentedW
           text,
           supportKind: verifiedClaim.supportKind,
           ...(verifiedClaim.sourceBinding ? { sourceBinding: structuredClone(verifiedClaim.sourceBinding) } : {}),
+          ...(fetchedBinding ? { fetchedSourceBinding: structuredClone(fetchedBinding) } : {}),
           ...(verifiedClaim.sourceAdmissionOptions ? { sourceAdmissionOptions: structuredClone(verifiedClaim.sourceAdmissionOptions) } : {}),
           issueIds: [issue.issueId],
           provenance: source.provenance,
@@ -317,6 +447,12 @@ export function createAuthorityEvidencePresentation(result: AuthorityWorkstreams
   const frozen = freezeOwnedPresentation(presentation);
   if (requestCompletenessContext) trustedPresentations.add(frozen as object);
   return frozen;
+}
+
+/** True only when the presentation carries a trusted, exact-query COMPLETE evaluation. */
+export function hasCompleteRequestRepresentation(presentation: AuthorityEvidencePresentation): boolean {
+  return isCurrentRequestCompletenessContext(presentation.requestCompletenessContext, presentation.query) &&
+    presentation.requestCompletenessContext.evaluation.status === 'COMPLETE';
 }
 
 export function hasCurrentAuthorityEvidencePresentation(

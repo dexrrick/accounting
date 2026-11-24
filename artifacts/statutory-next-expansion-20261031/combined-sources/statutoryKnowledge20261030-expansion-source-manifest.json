@@ -1,0 +1,95 @@
+{
+  "capturedOnSingaporeDate": "30/10/2026",
+  "purpose": "Native first-party responses for bounded offline development; no source activation.",
+  "sources": [
+    {
+      "authority": "IRAS",
+      "title": "Tax Treatment of Business Expenses (A-F)",
+      "fixture": "iras-donations-native.html",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f)",
+      "finalResponseUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f)",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "retrievedAtUTC": "2026-10-30T05:27:43.929Z",
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "sha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "byteLength": 278562
+    },
+    {
+      "authority": "IRAS",
+      "title": "Donations and Tax Deductions",
+      "fixture": "iras-donations-conditions-native.html",
+      "url": "https://www.iras.gov.sg/taxes/other-taxes/charities/donations-tax-deductions",
+      "finalResponseUrl": "https://www.iras.gov.sg/taxes/other-taxes/charities/donations-tax-deductions",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "retrievedAtUTC": "2026-10-30T05:27:43.979Z",
+      "httpStatus": 200,
+      "contentType": "text/html; charset=utf-8",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "sha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "byteLength": 279805
+    },
+    {
+      "authority": "CPF",
+      "title": "Compliance and rectifications",
+      "fixture": "cpf-rectifications-native.html",
+      "url": "https://www.cpf.gov.sg/employer/compliance-and-rectifications",
+      "finalResponseUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications",
+      "topicIds": [
+        "cpf-adjustments-refunds"
+      ],
+      "retrievedAtUTC": "2026-10-30T05:27:44.081Z",
+      "httpStatus": 200,
+      "contentType": "text/html;charset=utf-8",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "sha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "byteLength": 216786
+    },
+    {
+      "authority": "ACRA",
+      "title": "Registering a local company via Bizfile",
+      "fixture": "acra-registered-office-native.html",
+      "url": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/",
+      "finalResponseUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/",
+      "topicIds": [
+        "acra_registered-office"
+      ],
+      "retrievedAtUTC": "2026-10-30T05:27:44.362Z",
+      "httpStatus": 200,
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "rawSourceRetained": true,
+      "sha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "byteLength": 822134
+    },
+    {
+      "authority": "MAS",
+      "title": "FAQs on the Misconduct Reporting Requirements under the FAA, IA and SFA (Effective 1 January 2027)",
+      "fixture": "mas-misconduct-faq-native.pdf",
+      "url": "https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf",
+      "finalResponseUrl": "https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "retrievedAtUTC": "2026-10-30T05:35:44.297Z",
+      "httpStatus": 200,
+      "contentType": "application/pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "captureMethod": "System Invoke-WebRequest native PDF capture; default headers; magic bytes checked",
+      "rawSourceRetained": true,
+      "sha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "byteLength": 412879
+    }
+  ],
+  "captureLimitations": [
+    "MAS FAQ applicability landing-page fetch returned maintenance HTML and was excluded; native PDF captured and FAQ13 independently verified."
+  ]
+}

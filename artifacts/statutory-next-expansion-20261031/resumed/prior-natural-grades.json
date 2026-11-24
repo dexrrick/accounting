@@ -1,0 +1,96 @@
+{
+  "reviewer": "/root/independent_review",
+  "scope": "Complete pre-resumption captured answers; changed answers require regrading.",
+  "Frozen75": {
+    "iras-09": "CORRECT",
+    "cpf-08": "CORRECT",
+    "mom-03": "CORRECT",
+    "mom-04": "CORRECT",
+    "mom-10": "CORRECT",
+    "mas-06": "CORRECT",
+    "acra-02": "PARTIAL",
+    "acra-04": "UNSUPPORTED",
+    "acra-07": "UNSUPPORTED",
+    "acra-08": "PARTIAL",
+    "acra-09": "UNSUPPORTED",
+    "acra-10": "UNSUPPORTED",
+    "acra-11": "PARTIAL",
+    "acra-12": "PARTIAL",
+    "acra-13": "PARTIAL",
+    "acra-14": "UNSUPPORTED",
+    "acra-15": "UNSUPPORTED"
+  },
+  "Earlier60": {
+    "hold-acra-01": "CORRECT",
+    "hold-acra-04": "UNSUPPORTED",
+    "fresh-acra-01": "CORRECT",
+    "fresh-acra-02": "UNSUPPORTED",
+    "reviewfresh-acra-02": "UNSUPPORTED",
+    "novel-acra-01": "CORRECT",
+    "novel-acra-02": "UNSUPPORTED",
+    "novel-mas-01": "CORRECT"
+  },
+  "fresh15": [
+    {
+      "id": "fresh31-acra-01",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-acra-02",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-acra-03",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-acra-04",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-acra-05",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-cpf-01",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-cpf-02",
+      "grade": "INCORRECT"
+    },
+    {
+      "id": "fresh31-cpf-03",
+      "grade": "CORRECT"
+    },
+    {
+      "id": "fresh31-mom-01",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-mom-02",
+      "grade": "CORRECT"
+    },
+    {
+      "id": "fresh31-iras-01",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-iras-02",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-iras-03",
+      "grade": "UNSUPPORTED"
+    },
+    {
+      "id": "fresh31-mas-01",
+      "grade": "CORRECT"
+    },
+    {
+      "id": "fresh31-mas-02",
+      "grade": "UNSUPPORTED"
+    }
+  ],
+  "knownCodeFinding": "ACRA AGM summary claimed unsupported60dayduration; remove or separately prove."
+}

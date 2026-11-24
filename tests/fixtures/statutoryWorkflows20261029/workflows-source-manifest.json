@@ -1,0 +1,84 @@
+{
+  "scope": "Development source captures only; no source activation",
+  "createdOn": "2026-10-29",
+  "sources": [
+    {
+      "retrievedAtUTC": "2026-10-28T14:30:27.6211494Z",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "contentType": "text/html; charset=utf-8",
+      "authority": "MOM",
+      "pageTitle": "Itemised pay slips",
+      "httpStatus": 200,
+      "fixture": "mom-payslips.html",
+      "url": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "fixtureSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6"
+    },
+    {
+      "retrievedAtUTC": "2026-10-28T14:30:28.1253565Z",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "contentType": "text/html; charset=utf-8",
+      "authority": "IRAS",
+      "pageTitle": "Record Keeping Requirements",
+      "httpStatus": 200,
+      "fixture": "iras-company-records.html",
+      "url": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements",
+      "fixtureSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f"
+    },
+    {
+      "retrievedAtUTC": "2026-10-28T14:30:28.6303103Z",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "contentType": "text/html",
+      "authority": "ACRA",
+      "pageTitle": "Updating entity information",
+      "httpStatus": 200,
+      "fixture": "acra-entity-updates.html",
+      "url": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+      "fixtureSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32"
+    },
+    {
+      "retrievedAtUTC": "2026-10-28T14:31:27.3386683Z",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "contentType": "text/html; charset=utf-8",
+      "authority": "CPF",
+      "pageTitle": "Applying for refund of CPF contributions",
+      "httpStatus": 200,
+      "fixture": "cpf-refunds.html",
+      "url": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+      "fixtureSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8"
+    },
+    {
+      "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "fixtureSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "fixture": "mas-lfmc-toolkit.pdf",
+      "originalCapture": {
+        "fixture": "mas-lfmc-native-extract.txt",
+        "authority": "MAS",
+        "url": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+        "pageTitle": "Compliance Toolkit for Licensed Fund Management Companies",
+        "fixtureKind": "NATIVE_PDF_EXTRACT",
+        "captureMethod": "TLS-validated official HTTPS binary response; genuine PDF passed the application ControlledWebRetriever and officialDocumentExtractor. Extracted text retains native row/column ordering and page-break continuation.",
+        "retrievedOn": "2026-10-27",
+        "documentPages": 17,
+        "documentVersion": "Issued 2020-10-02; last revised 2026-05-29; name-change row updated 2024-08.",
+        "rowLocators": [
+          "page 2 scope/disclaimer",
+          "page 3 version",
+          "page 7 requirement 13",
+          "pages 14-15 requirements 37-38"
+        ],
+        "sourceDocumentSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+        "fixtureSha256": "3a0139b256ec4c4e1c58eb2019683798a916e6aabb9f90e9cf618ecfa47dec45",
+        "effectiveDateEvidence": "The toolkit revision date and row update date identify the document version, not legal commencement dates for the requirements.",
+        "nativePdfFixture": "mas-lfmc-toolkit.pdf",
+        "httpStatus": 200,
+        "contentType": "application/pdf",
+        "byteLength": 507968,
+        "responseLastModified": "Fri, 29 May 2026 07:55:09 GMT"
+      },
+      "authority": "MAS",
+      "pageTitle": "Compliance Toolkit for Licensed Fund Management Companies",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF"
+    }
+  ],
+  "manifestVersion": 1
+}

@@ -1,0 +1,959 @@
+{
+  "scope": "Unchanged prior sixty cases, combined for offline preservation replay",
+  "cases": [
+    {
+      "id": "hold-acra-01",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "We are preparing an annual return now. Must we check the particulars of auditors as well as directors?",
+      "subject": "Annual return officer particulars confirmation",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Confirmation extends to auditors, directors, CEOs, secretaries and relevant members from 20 October 2026; current records must be accurate"
+      ],
+      "forbidden": [
+        "Only directors need confirmation"
+      ]
+    },
+    {
+      "id": "hold-acra-02",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "Does the October 2026 annual-return change ask whether somebody actually performs the CEO role?",
+      "subject": "Annual return officer particulars and CEO role question",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "The eform additionally asks whether any individual performs the CEO role"
+      ],
+      "forbidden": [
+        "CEO question applies only to an appointed CEO title"
+      ]
+    },
+    {
+      "id": "hold-acra-03",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "Our return was filed on 19 October 2026. Did the officer-confirmation change that commenced on 20 October already govern that filing?",
+      "subject": "Annual return officer particulars commencement applicability",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "Do not apply 20 October commencement retrospectively to 19 October; distinguish new rule from earlier requirements"
+      ],
+      "forbidden": [
+        "New 20 October requirement already governed the 19 October filing"
+      ]
+    },
+    {
+      "id": "hold-acra-04",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "Is a solvent exempt private company automatically required to upload Full XBRL financial statements?",
+      "subject": "XBRL filing exemption for a solvent exempt private company",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Solvent EPC can be exempt from filing financial statements; EPC and solvency criteria must be established; annual return remains separate"
+      ],
+      "forbidden": [
+        "Every solvent EPC must upload Full XBRL"
+      ]
+    },
+    {
+      "id": "hold-iras-01",
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "question": "Is GST on an employee medical examination for renewing a work permit recoverable simply because the employer had to arrange it?",
+      "subject": "GST input tax on staff medical expenses and exceptions",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Staff medical expenses generally blocked; mandatory arrangement alone is insufficient; IRAS expressly blocks work-permit-renewal medical examination input tax; exceptions need their own facts"
+      ],
+      "forbidden": [
+        "All mandatory staff medical costs are claimable"
+      ]
+    },
+    {
+      "id": "hold-iras-02",
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "question": "Can a business recover GST on a chauffeured point-to-point private-hire ride instead of buying or hiring the motor car itself?",
+      "subject": "GST input tax on private hire car transportation services",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Pay-per-trip passenger transport can qualify from 1 April 2022 subject to general input-tax conditions and GST invoice evidence; car acquisition/running costs remain distinct"
+      ],
+      "forbidden": [
+        "Private-hire ride treatment makes company car purchase GST claimable"
+      ]
+    },
+    {
+      "id": "hold-iras-03",
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "question": "We paid expenses for a subsidiary's car and recovered only half. Is every dollar of its input GST recoverable?",
+      "subject": "GST input tax on motor car used by a connected person",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Connected-person exception requires recovery and recovery not ancillary to primary supply; partial recovery limits input tax to recovered portion; general conditions still apply"
+      ],
+      "forbidden": [
+        "Full claim merely because some costs were recharged"
+      ]
+    },
+    {
+      "id": "hold-iras-04",
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "question": "If a treaty reduces withholding tax to zero, can we omit the WHT filing?",
+      "subject": "Withholding tax filing requirement when treaty rate is zero",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Filing remains required despite zero rate under DTA/ARI; distinguish payment amount from filing duty"
+      ],
+      "forbidden": [
+        "Zero WHT automatically removes filing duty"
+      ]
+    },
+    {
+      "id": "hold-cpf-01",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "What are the employer and employee CPF percentages in 2026 for a Singapore citizen aged over 60 to 65 earning more than S$750 per month?",
+      "subject": "CPF 2026 contribution rate table for age over 60 to 65",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "12.5 percent employer and 12.5 percent employee, 25 percent total in 2026; wage ceilings remain relevant"
+      ],
+      "forbidden": [
+        "2025 or 2027 rates applied as the 2026 table"
+      ]
+    },
+    {
+      "id": "hold-cpf-02",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "Does the employee CPF percentage fall on the exact date of a 60th birthday, or in the following month?",
+      "subject": "CPF age-band contribution rate change timing",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "New age-group rates begin first day of the month following the relevant birthday"
+      ],
+      "forbidden": [
+        "Change on birthday day within the month"
+      ]
+    },
+    {
+      "id": "hold-cpf-03",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "A worker became a permanent resident on 18 May 2025. When does the second PR contribution year begin?",
+      "subject": "CPF permanent resident contribution-year progression",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Second PR year begins 1 June 2026, first day of month following first anniversary; higher-rate election remains separate from year progression"
+      ],
+      "forbidden": [
+        "Second year begins 18 May 2026 or 1 January 2026"
+      ]
+    },
+    {
+      "id": "hold-cpf-04",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "Can payroll deduct the rounded total CPF contribution from the employee and then add an employer share on top?",
+      "subject": "CPF total contribution and employee share rounding",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Total nearest dollar, employee share cents dropped, employer residual; total is not employee deduction"
+      ],
+      "forbidden": [
+        "Deduct combined employer and employee total from salary"
+      ]
+    },
+    {
+      "id": "hold-mom-01",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "After four completed months with the employer, is statutory paid sick leave already the full 14 outpatient and 60 hospitalisation days?",
+      "subject": "Paid sick leave and hospitalisation entitlement by service length",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Four months gives 8 outpatient and 30 hospitalisation days if eligibility met; full 14 and 60 only after six months; hospitalisation total includes outpatient"
+      ],
+      "forbidden": [
+        "Four months automatically receives full 14 plus 60 additional days"
+      ]
+    },
+    {
+      "id": "hold-mom-02",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "Is the 60-day hospitalisation leave entitlement in addition to the 14 days of outpatient sick leave?",
+      "subject": "Paid sick leave and hospitalisation leave overlap",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "60-day hospitalisation entitlement includes the 14 outpatient days, subject to qualifying service and eligibility"
+      ],
+      "forbidden": [
+        "74 days combined statutory entitlement"
+      ]
+    },
+    {
+      "id": "hold-mom-03",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "What general salary-payment rule applies when the employer dismisses an employee, rather than the employee resigning?",
+      "subject": "Final salary payment timing when employer terminates employment",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Final salary on last employment day; if not possible within three working days, with relevant scope/IR21 caveats"
+      ],
+      "forbidden": [
+        "Employer dismissal automatically gets seven days like no-notice resignation"
+      ]
+    },
+    {
+      "id": "hold-mom-04",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "Do public holidays always entitle every employee to a day off with pay even after an unauthorised absence immediately before the holiday?",
+      "subject": "Public holiday entitlement and absence exceptions",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Employment Act entitlement has absence-without-consent/reasonable-excuse exceptions; preceding/succeeding working day matters"
+      ],
+      "forbidden": [
+        "Unconditional public-holiday pay for every employee regardless of absence"
+      ]
+    },
+    {
+      "id": "hold-mas-01",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Does filing an LFMC's quarterly financial returns discharge the reporting obligations of each investment fund it manages?",
+      "subject": "LFMC manager-level financial returns versus fund-level obligations",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "LFMC financial returns are manager-level; toolkit excludes fund-level and non-SFA obligations; do not conclude all fund duties discharged"
+      ],
+      "forbidden": [
+        "One manager return satisfies every fund's filings"
+      ]
+    },
+    {
+      "id": "hold-mas-02",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "What is the normal deadline for an LFMC's quarterly Forms 1 and 2?",
+      "subject": "LFMC quarterly financial return Forms 1 and 2 deadline",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Within 14 days after quarter end under FMR Regulation 27; current toolkit scope rather than historical commencement proof"
+      ],
+      "forbidden": [
+        "Five-month annual deadline applied to quarterly Forms 1 and 2"
+      ]
+    },
+    {
+      "id": "hold-mas-03",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Can the misconduct notice that takes effect on 1 January 2027 be treated as already governing an October 2026 report?",
+      "subject": "MAS misconduct reporting notice commencement and transitional applicability",
+      "expectedScope": "HISTORICAL_UNRESOLVED",
+      "expected": [
+        "Future notice does not generally replace 2026 duties; transitional rules require separate facts; avoid inferring old duty from retrieval date"
+      ],
+      "forbidden": [
+        "2027 notice automatically governs October 2026 reports"
+      ]
+    },
+    {
+      "id": "hold-mas-04",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Is the precise QDC form for our venture-capital fund established by the generic LFMC quarterly financial return table?",
+      "subject": "QDC return selection for venture capital manager and fund",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "No; QDC-specific official evidence and manager/fund scope needed; generic Forms 1 and 2 cannot establish precise QDC form"
+      ],
+      "forbidden": [
+        "QDC form inferred from ordinary LFMC financial returns"
+      ]
+    },
+    {
+      "id": "fresh-acra-01",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "When filing an annual return in Bizfile, do we still need to declare AGM details if our company was exempt from holding the meeting?",
+      "subject": "Annual return filing procedure and AGM declaration",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "AGM details must be declared even if exempt or dispensed with; if meeting held enter date"
+      ],
+      "forbidden": [
+        "AGM exemption means omit all AGM declaration"
+      ]
+    },
+    {
+      "id": "fresh-acra-02",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "Our company needs to file financial statements. For Simplified XBRL, is being non-publicly accountable enough, or do both revenue and total assets also have to be at most S$500,000?",
+      "subject": "XBRL filing template smaller and non-publicly accountable criteria",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Both current-year revenue and total assets must not exceed500000; also non-publicly accountable; simplifiedXBRL plus director-authorisedPDF; other company categories may differ"
+      ],
+      "forbidden": [
+        "Either revenue or assets test suffices",
+        "All non-publicly accountable companies may use simplified"
+      ]
+    },
+    {
+      "id": "fresh-iras-01",
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "question": "For an investment holding company's ECI filing waiver, do dividends and interest count as revenue, and does an accounting loss by itself establish nil ECI?",
+      "subject": "ECI filing waiver investment holding revenue and accounting loss",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Investment income is holding-company revenue; waiver requires annual revenue at most5million AND nilECI before exemptions; accounting loss alone insufficient"
+      ],
+      "forbidden": [
+        "All dividends and interest excluded from holding-company revenue",
+        "Book loss automatically establishes waiver"
+      ]
+    },
+    {
+      "id": "fresh-iras-02",
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "question": "A non-resident company provides consultancy services partly overseas and partly in Singapore. Is withholding tax charged on every dollar of the fee merely because our payer is in Singapore?",
+      "subject": "Withholding tax on cross-border non-resident company service fees",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Singapore-work portion subject to WHT; apportion overseas work; current default17percent on grossSingaporefees not finaltax; applicableDTA and facts may change outcome"
+      ],
+      "forbidden": [
+        "Entire fee taxable solely because payer Singapore",
+        "All overseas company service fees exempt"
+      ]
+    },
+    {
+      "id": "fresh-cpf-01",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "For a Singapore citizen in private-sector employment aged above 60 and up to 65, with monthly wages above S$750, what are the employer and employee CPF rates in the 2026 contribution table?",
+      "subject": "2026 CPF contribution rate table age band above60 to65",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Employer12.5percent employee12.5percent total25percent;2026 scope and wage ceilings"
+      ],
+      "forbidden": [
+        "Apply17percent employer20percent employee to all ages",
+        "Treat2026table as2027"
+      ]
+    },
+    {
+      "id": "fresh-cpf-02",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "For CPF Additional Wages, can we keep our estimated annual ceiling unchanged in December if the employee's actual Ordinary Wages turn out higher?",
+      "subject": "CPF Additional Wage ceiling final annual recalculation",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Recalculate in December or finalemploymentmonth whichever earlier using actualOW;102000minusactualCPFsubjectOW;settleshortfall orrefund excess;actualpayrollfactsneeded"
+      ],
+      "forbidden": [
+        "Estimate never changes",
+        "Always apply102000directly toAW"
+      ]
+    },
+    {
+      "id": "fresh-mom-01",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "For an Employment Act employee with an incomplete year of service, how is annual leave pro-rated and how are fractions of half a day rounded?",
+      "subject": "Statutory annual leave proration completed months and rounding",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "expected": [
+        "Eligibleafter3months;completedmonthsdivided12timesannualentitlement;belowhalfrounddown halfup;excludeapprovedunpaidleave;resignationnoticecounts"
+      ],
+      "forbidden": [
+        "Always round every fraction up",
+        "Only confirmed staff qualify"
+      ]
+    },
+    {
+      "id": "fresh-mom-02",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "For a five-day-week Employment Act employee, what is the difference if a public holiday falls on the non-working Saturday rather than the rest-day Sunday?",
+      "subject": "Public holiday falling on non-working day versus rest day",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Nonworkingday anotherdayoff orextragrossdaypay;restday nextworkingdaypaidholiday;SaturdaySundayexampleassumesstatedschedule"
+      ],
+      "forbidden": [
+        "Both automatically move toMonday",
+        "Only basicrate fornonworkingdaycompensation"
+      ]
+    },
+    {
+      "id": "fresh-mas-01",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Does MAS's LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?",
+      "subject": "LFMC manager-level submissions versus fund-level requirements",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Toolkit forLFMCmanagerSFAobligations;explicitlyexcludesfundlevelrequirements andreportingoutsideSFA;separatefundanalysisneeded"
+      ],
+      "forbidden": [
+        "Toolkit exhausts fundobligations",
+        "All managerreturns owedbyfund"
+      ]
+    },
+    {
+      "id": "fresh-mas-02",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Under the expressly future Notice SFA 04-N24 effective on 1 January 2027, who files the initial representative-misconduct report and what triggers its 21-calendar-day clock?",
+      "subject": "Notice SFA04-N24 future2027 misconduct initial reporting scope and trigger",
+      "expectedScope": "GENERAL_RULE",
+      "expected": [
+        "Explicitfutureeffective1Jan2027;CMSlicenceholder orS99(1)(a)-(d)exemptCMI;representative/formerrepresentativeduringtenure;firstreasonablegrounds notcompletedinvestigation;21calendardays orMASwrittenextension"
+      ],
+      "forbidden": [
+        "Rulealreadyapplies2026",
+        "Clockstarts onlywheninvestigationfinished",
+        "Everyfund isreportingentity"
+      ]
+    },
+    {
+      "id": "reviewfresh-acra-01",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "We lodged our annual return on 19 October 2026. Was the new question about a person carrying out the chief executive officer role already mandatory for that filing?",
+      "subject": "Annual-return CEO question commencement and pre-commencement filing",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "APPLICABILITY_BOUNDARY",
+      "expected": [
+        "The retained commencement notice states that the new annual-return requirements commence on 20 October 2026.",
+        "That commencement does not make the new CEO question applicable to a filing lodged on 19 October 2026.",
+        "The notice alone does not establish the complete requirements governing the earlier filing."
+      ],
+      "forbidden": [
+        "The new CEO question already applied on 19 October 2026.",
+        "No officer particulars or other annual-return duties existed before 20 October 2026."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/acra-officer-particulars.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-acra-02",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "question": "For ACRA financial-statement filing, is meeting the small-company size limits enough to use Simplified XBRL if the company is publicly accountable?",
+      "subject": "Simplified XBRL small and non-publicly-accountable conditions",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "The Simplified XBRL category requires the company to be both smaller and non-publicly accountable.",
+        "The smaller-company tests require both current-year revenue and total assets not to exceed S$500,000.",
+        "Meeting the size tests alone does not establish Simplified XBRL eligibility; applicable entity-specific filing categories still matter."
+      ],
+      "forbidden": [
+        "Every company below the size thresholds may use Simplified XBRL.",
+        "Every publicly accountable company must use Full XBRL regardless of the separate bank or insurance filing categories."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/acra-xbrl-requirements.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-iras-01",
+      "authority": "IRAS",
+      "domain": "IRAS_INCOME_TAX",
+      "question": "We transferred a payment to a non-resident on 14 October 2026. Does that transaction date change the general rule for when WHT must be filed and paid?",
+      "subject": "WHT filing deadline and transaction-date versus deemed-payment distinction",
+      "expectedScope": "GENERAL_WITH_MISSING_FACTS",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "The general filing and payment deadline is the 15th of the second month from the relevant date of payment.",
+        "For ordinary payments other than directors' fees, the relevant date is the earliest applicable contractual due date or invoice date in the absence of an agreement, account-credit date, or actual payment date.",
+        "If 14 October 2026 is the earliest relevant date, the general deadline is 15 December 2026; the bank-transfer date alone does not rule out an earlier deemed-payment date."
+      ],
+      "forbidden": [
+        "An explicit October 2026 transaction date makes the general WHT rule unsupported.",
+        "The deadline is invariably determined only by the bank-transfer date.",
+        "The filing deadline is 15 November 2026."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/iras-mas-wht-deadline-native.html"
+      ]
+    },
+    {
+      "id": "reviewfresh-iras-02",
+      "authority": "IRAS",
+      "domain": "IRAS_GST",
+      "question": "Our GST-registered business paid for staff medical examinations needed to renew their work permits. Does having a business reason make the GST deductible as input tax?",
+      "subject": "GST input tax restriction for medical examinations for work-permit renewal",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "IRAS expressly identifies medical examinations for renewing employees' work permits as blocked medical-expense input tax under Regulation 26.",
+        "A business purpose or the employer arranging the examination does not by itself override that restriction."
+      ],
+      "forbidden": [
+        "A valid tax invoice and business purpose automatically make this GST claimable.",
+        "All medical expenses are claimable whenever an employer is required to arrange them."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/iras-mas-input-tax-native.html"
+      ]
+    },
+    {
+      "id": "reviewfresh-cpf-01",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "A Singapore citizen on our payroll reaches age 65 in November 2026. For the CPF percentage age band, does the change start on the birthday itself or on the first day of the next month?",
+      "subject": "CPF age-band percentage change after the 65th birthday",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "The new CPF age-group rates apply from the first day of the month after the employee's 65th birthday.",
+        "For a November birthday, the new band starts on 1 December 2026, rather than on the birthday itself.",
+        "An individual contribution amount would require the relevant wages and other payroll facts."
+      ],
+      "forbidden": [
+        "The contribution percentage changes on the exact birthday.",
+        "A numerical employee or employer contribution amount can be established without wage facts."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/cpf-computation-guidance-extract.txt",
+        "tests/fixtures/statutoryKnowledge20261027b/cpf-rate-tables-2026-extract.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-cpf-02",
+      "authority": "CPF",
+      "domain": "CPF_PAYROLL",
+      "question": "An employee obtained SPR status on 7 August 2025. Is the move into the second CPF contribution year on 7 August 2026, or at the start of September?",
+      "subject": "CPF second SPR contribution year and conversion-date fact role",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "The first SPR year continues through the last day of the month of the first anniversary.",
+        "The second contribution year begins on 1 September 2026 for the stated conversion date.",
+        "The 2025 conversion date is an employee-status fact and does not itself request the 2025 contribution-rate table."
+      ],
+      "forbidden": [
+        "The second year starts on 7 August 2026.",
+        "The presence of a 2025 conversion date makes the PR-year timing question an unsupported historical-rate request."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/cpf-pr-year-status-extract.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-mom-01",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "For an Employment Act employee whose contract is ended by the employer, is the final-pay deadline the same seven-day deadline used when someone quits without serving notice?",
+      "subject": "Final salary employer termination versus resignation without notice",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "Employer termination ordinarily requires final salary on the last day of employment.",
+        "If payment then is not possible, it is due within three working days from termination.",
+        "The seven-day rule belongs to resignation without serving the required notice, rather than the stated employer-termination category."
+      ],
+      "forbidden": [
+        "Employer termination always permits payment within seven calendar days.",
+        "The employee is treated as resigning merely because the question compares the two situations."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/mom-final-salary.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-mom-02",
+      "authority": "MOM",
+      "domain": "MOM_EMPLOYMENT",
+      "question": "An Employment Act employee has Tuesday as a non-working day and Wednesday as the contractual rest day. What is the public-holiday entitlement if the holiday falls on Tuesday rather than Wednesday?",
+      "subject": "Public holiday on a non-working day versus contractual rest day",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "A public holiday on a non-working day gives another day off or an extra day's salary at the gross rate of pay.",
+        "A public holiday on the rest day makes the following working day a paid public holiday.",
+        "The distinction follows the stated work schedule rather than assuming Saturday and Sunday."
+      ],
+      "forbidden": [
+        "Both situations automatically move the holiday to Monday.",
+        "The compensation for the non-working-day holiday is only at the basic rate.",
+        "A rest day must be Sunday."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/mom-public-holidays.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-mas-01",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Can a licensed investment manager use the MAS LFMC compliance toolkit as a complete checklist for the funds it manages, including duties outside the Securities and Futures Act?",
+      "subject": "LFMC toolkit manager-level scope and fund-level or non-SFA exclusions",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "SUBSTANTIVE_GENERAL_RULE",
+      "expected": [
+        "The toolkit is a non-exhaustive reference for common LFMC applications, notifications and submissions under the SFA.",
+        "It expressly excludes fund-level requirements and reporting obligations outside the SFA.",
+        "It cannot establish a complete checklist of the managed funds' obligations."
+      ],
+      "forbidden": [
+        "The manager's toolkit exhaustively establishes all fund-level obligations.",
+        "All LFMC financial returns are obligations of every managed fund.",
+        "The general table establishes an exact QDC form or deadline."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryDevelopment20261027/mas-lfmc-native-extract.txt"
+      ]
+    },
+    {
+      "id": "reviewfresh-mas-02",
+      "authority": "MAS",
+      "domain": "MAS_FUNDS",
+      "question": "Notice SFA 04-N24 says it takes effect on 1 January 2027. Does its 21-day reporting rule already settle what a CMS licence holder had to do for misconduct first suspected in December 2026?",
+      "subject": "SFA04-N24 commencement and limits on earlier-period misconduct conclusions",
+      "expectedScope": "GENERAL_RULE",
+      "assessmentKind": "APPLICABILITY_BOUNDARY",
+      "expected": [
+        "The retained notice expressly takes effect on 1 January 2027.",
+        "Its future rule must not be treated as the governing December 2026 reporting requirement merely because the notice was already published.",
+        "The complete earlier reporting duties require evidence for that earlier regime; this answer does not establish those duties."
+      ],
+      "forbidden": [
+        "The new 21-day rule already governs the December 2026 incident.",
+        "There was no misconduct-reporting obligation before January 2027.",
+        "A refusal to apply the future rule proves complete historical-law coverage."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/iras-mas-misconduct.txt"
+      ]
+    },
+    {
+      "id": "fresh29-acra-01",
+      "authority": "ACRA",
+      "question": "Our Singapore-incorporated private company changed its business email ten days ago. Can the secretary wait until the next annual return to tell ACRA?",
+      "expected": [
+        "The email change must be filed with ACRA within 14 days from the change.",
+        "The annual return does not replace the change notification."
+      ],
+      "forbidden": [
+        "A 30-day deadline for this local company.",
+        "Permission to wait until the annual return."
+      ]
+    },
+    {
+      "id": "fresh29-acra-02",
+      "authority": "ACRA",
+      "question": "We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?",
+      "expected": [
+        "Foreign companies have 30 days from the change.",
+        "At twenty days, the stated notification deadline has not yet expired.",
+        "The general 14-day period has a foreign-company exception."
+      ],
+      "forbidden": [
+        "An unconditional conclusion that the company is already late.",
+        "No notification obligation for foreign companies."
+      ]
+    },
+    {
+      "id": "fresh29-iras-01",
+      "authority": "IRAS",
+      "question": "Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?",
+      "expected": [
+        "No: retention is at least five years from the relevant YA.",
+        "For YA 2025, retain through at least 31/12/2029.",
+        "Completed filing does not end the retention obligation."
+      ],
+      "forbidden": [
+        "Five years measured only from the financial year-end.",
+        "Permission to destroy the invoices on 01/10/2029."
+      ]
+    },
+    {
+      "id": "fresh29-iras-02",
+      "authority": "IRAS",
+      "question": "A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?",
+      "expected": [
+        "For a struck-off and dissolved company, a person who was an officer immediately before dissolution must ensure retention.",
+        "Books and papers must be retained for at least five years after dissolution.",
+        "For winding up, the liquidator bears the stated duty, with at least five years from dissolution."
+      ],
+      "forbidden": [
+        "Immediate disposal because old YA periods expired.",
+        "Treating winding-up commencement as the dissolution-date anchor."
+      ]
+    },
+    {
+      "id": "fresh29-cpf-01",
+      "authority": "CPF",
+      "question": "We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?",
+      "expected": [
+        "Apply immediately, no later than one year from contribution payment.",
+        "The recorded received date determines that payment date.",
+        "The outer deadline is 06/11/2026, rather than October 2027."
+      ],
+      "forbidden": [
+        "A fresh one-year period from discovery.",
+        "A guarantee that the entire amount will be refunded."
+      ]
+    },
+    {
+      "id": "fresh29-cpf-02",
+      "authority": "CPF",
+      "question": "CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board's refund before returning the employee's contribution share?",
+      "expected": [
+        "The conditional-wage clock runs from the date wages were supposed to be repaid.",
+        "Apply immediately and no later than 15/09/2027; indicate that repayment-due date.",
+        "Return the applicable employee share directly before submitting the application."
+      ],
+      "forbidden": [
+        "Rejecting timing solely because contributions were paid in 2024.",
+        "Using actual eventual repayment instead of the contractual or agreed due date.",
+        "Returning the employee share only after CPF Board pays the employer."
+      ]
+    },
+    {
+      "id": "fresh29-mom-01",
+      "authority": "MOM",
+      "question": "For staff covered by the Employment Act, our bank salary transfer succeeds but the payroll portal cannot generate the itemised statement that day. How long can we take to provide it, and may we email it?",
+      "expected": [
+        "Normally provide the payslip together with payment.",
+        "If unable, provide it within three working days of payment.",
+        "An electronic payslip is permitted."
+      ],
+      "forbidden": [
+        "A general seven-day allowance.",
+        "Treating the fallback as three calendar days.",
+        "Requiring paper only."
+      ]
+    },
+    {
+      "id": "fresh29-mom-02",
+      "authority": "MOM",
+      "question": "We dismissed an employee covered by the Employment Act and are now paying the outstanding salary. Payroll wants to send the itemised payslip three working days later under the usual fallback. Is that acceptable?",
+      "expected": [
+        "For termination or dismissal, provide the payslip together with outstanding salary.",
+        "The ordinary delayed-payslip fallback does not justify this proposed delay."
+      ],
+      "forbidden": [
+        "Allowing three working days after the outstanding salary payment.",
+        "Substituting only the general final-salary payment deadline for the payslip answer."
+      ]
+    },
+    {
+      "id": "fresh29-mas-01",
+      "authority": "MAS",
+      "question": "Our licensed fund management company has selected a new chief executive. Can she start first if we tell MAS about the appointment within fourteen days, or is there a form and approval needed beforehand?",
+      "expected": [
+        "Obtain MAS approval before the CEO appointment.",
+        "Use Form 11 for the appointment.",
+        "A post-appointment notification is insufficient."
+      ],
+      "forbidden": [
+        "Permission to appoint first and notify within fourteen days.",
+        "Treating submission of Form 11 alone as approval."
+      ]
+    },
+    {
+      "id": "fresh29-mas-02",
+      "authority": "MAS",
+      "question": "At our LFMC, an existing non-executive director will take an executive role. Since he is already on the board, can we simply notify MAS afterwards? Would moving an executive director into a non-executive role follow the same process?",
+      "expected": [
+        "Non-executive to executive requires prior MAS approval through Form 11.",
+        "Existing board membership does not remove that requirement.",
+        "Executive to non-executive is a notification under Notice of Change in Particulars, as soon as practicable."
+      ],
+      "forbidden": [
+        "Treating both directions as post-change notifications.",
+        "Applying the resignation-specific fourteen-day deadline universally.",
+        "Treating both directions as requiring Form 11 prior approval."
+      ]
+    },
+    {
+      "id": "novel-acra-01",
+      "authority": "ACRA",
+      "question": "Our Singapore private company was incorporated four months ago and has one director. Can that director also become the company secretary, or may we leave the secretary position empty until the first annual return?",
+      "expected": [
+        "The sole director cannot also be the company secretary.",
+        "Appoint a secretary within six months of registration; an annual return does not extend this deadline."
+      ],
+      "forbidden": [
+        "The sole director may fill both positions.",
+        "The appointment deadline runs from the first annual return."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/acra-company-secretary.txt"
+      ]
+    },
+    {
+      "id": "novel-acra-02",
+      "authority": "ACRA",
+      "question": "Our group has a Singapore-incorporated subsidiary and a foreign company registered in Singapore. Both changed their entity email addresses twelve days ago. Do they have the same ACRA notification deadline, and can either wait until its annual return?",
+      "expected": [
+        "Ordinarily fourteen days for the Singapore company and thirty days for the foreign company, each from its change.",
+        "An annual return is not a substitute for timely information updates."
+      ],
+      "forbidden": [
+        "Both entities have the same deadline.",
+        "Either entity may defer the update until its annual return."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryWorkflows20261029/acra-entity-updates.html"
+      ]
+    },
+    {
+      "id": "novel-iras-01",
+      "authority": "IRAS",
+      "question": "For our company's current ECI filing, annual revenue is S$4.8 million and the accounts show a loss. We have not completed the tax adjustments. Is that enough to claim the filing waiver, or what still needs checking?",
+      "expected": [
+        "Both revenue at most S$5 million and nil ECI are required.",
+        "An accounting loss does not establish nil ECI; confirm tax adjustments before partial/start-up exemption and relevant FY/YA.",
+        "Ordinarily file within three months of FYE if no waiver/exemption established."
+      ],
+      "forbidden": [
+        "Low revenue alone or an accounting loss alone establishes the waiver.",
+        "Inventing the missing tax computation."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/iras-mas-eci-native.html"
+      ]
+    },
+    {
+      "id": "novel-iras-02",
+      "authority": "IRAS",
+      "question": "Our GST-registered business paid for voluntary staff medical check-ups and repairs to a commercial delivery van. Neither the check-ups nor their provider was required by law, a collective agreement or a government advisory. We hold valid tax invoices. Does the business purpose make GST on both expenses recoverable?",
+      "expected": [
+        "Staff medical input tax is generally blocked; business purpose and an invoice alone do not overcome the restriction.",
+        "Assess the stated medical exceptions without inventing them.",
+        "A van outside the statutory motor-car definition is not automatically blocked; ordinary input-tax conditions still apply."
+      ],
+      "forbidden": [
+        "All business expenses are automatically claimable.",
+        "All motor vehicles are blocked motor cars."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/iras-mas-input-tax-native.html"
+      ]
+    },
+    {
+      "id": "novel-cpf-01",
+      "authority": "CPF",
+      "question": "We discovered an ordinary CPF overpayment last week, but cannot yet locate the payment record. May we use the discovery date to set our refund deadline, and can we wait for CPF Board to refund us before returning the employee's share?",
+      "expected": [
+        "Apply immediately and no later than one year from contribution payment; locate PAYMENTS RECEIVED ON.",
+        "Discovery does not restart the period; no calendar deadline without payment date.",
+        "Return employee share directly before applying, where applicable."
+      ],
+      "forbidden": [
+        "A year runs from discovery.",
+        "Inventing a calendar deadline.",
+        "Waiting for CPF Board's refund before returning employee share."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryWorkflows20261029/cpf-refunds.html"
+      ]
+    },
+    {
+      "id": "novel-cpf-02",
+      "authority": "CPF",
+      "question": "Our employee must repay a conditional bonus after failing its service condition. CPF was paid eighteen months ago, but the employment agreement does not state a repayment date and we have not agreed one with the employee. Is a CPF refund necessarily out of time?",
+      "expected": [
+        "Conditional-wage timing differs from ordinary payment-based timing.",
+        "Establish when those wages became due for repayment under employment terms or mutual agreement.",
+        "Facts do not establish a precise deadline or definite time bar."
+      ],
+      "forbidden": [
+        "Necessarily barred because CPF was paid eighteen months ago.",
+        "Inventing repayment date from resignation/discovery/application.",
+        "Guaranteeing acceptance."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryWorkflows20261029/cpf-refunds.html"
+      ]
+    },
+    {
+      "id": "novel-mom-01",
+      "authority": "MOM",
+      "question": "An employee covered by the Employment Act has completed four months of service, supplied the required medical certificate and informed us within twenty-four hours. Is the statutory entitlement already fourteen outpatient sick-leave days plus sixty hospitalisation days?",
+      "expected": [
+        "At four completed months: eight outpatient and thirty hospitalisation days.",
+        "Full fourteen/sixty schedule starts at six months; hospitalisation limit includes outpatient leave.",
+        "Remaining entitlement depends on leave used and qualifying certification."
+      ],
+      "forbidden": [
+        "Four months establishes the full fourteen/sixty entitlement.",
+        "The allowances are wholly additive."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/mom-sick-leave.txt"
+      ]
+    },
+    {
+      "id": "novel-mom-02",
+      "authority": "MOM",
+      "question": "Our Employment Act-covered employee is still on probation after five completed months. Their contract provides fourteen annual-leave days a year, and they took approved unpaid leave. Can we deny annual leave until confirmation, and can you determine the exact balance without knowing the unpaid-leave period or leave already used?",
+      "expected": [
+        "Eligibility after at least three months includes probation.",
+        "Pro-rate by completed service months using applicable annual entitlement, excluding approved unpaid-leave periods.",
+        "Missing unpaid-leave/used-leave facts prevent exact remaining balance."
+      ],
+      "forbidden": [
+        "Probation removes eligibility.",
+        "Inventing an exact balance."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryKnowledge20261027b/mom-annual-leave.txt"
+      ]
+    },
+    {
+      "id": "novel-mas-01",
+      "authority": "MAS",
+      "question": "At our LFMC, an existing director's residential address changes and the CEO resigns during the same week. Do both notifications have the same fourteen-day outer limit, and is changing the director's particulars treated as a fresh Form 11 appointment approval?",
+      "expected": [
+        "Distinguish row17 subsequent notifications from row3 appointment approval.",
+        "Both categories: as soon as practicable; additional fourteen-day outer limit specifically for resignation.",
+        "Particulars update alone is not fresh appointment approval."
+      ],
+      "forbidden": [
+        "Every row17 notification has a fourteen-day outer limit.",
+        "An address update automatically requires fresh appointment approval."
+      ],
+      "sourceFixturePaths": [
+        "tests/fixtures/statutoryWorkflows20261029/mas-lfmc-toolkit.pdf"
+      ]
+    },
+    {
+      "id": "novel-mas-02",
+      "authority": "MAS",
+      "question": "Our venture capital fund manager has not confirmed its financial year-end. Can we use the calendar-year nil-misconduct return deadline for Form 25A and assume that filing Form 25A also completes every reporting obligation of the funds we manage?",
+      "expected": [
+        "Form25A due within one month of manager FYE; specific date requires FYE.",
+        "Conditional nil-misconduct return has separate calendar-year basis and fourteen-day period.",
+        "Manager declaration does not establish every fund-level obligation."
+      ],
+      "forbidden": [
+        "Form25A uses nil-misconduct deadline.",
+        "Inventing FYE or calendar deadline.",
+        "Manager declaration is complete fund-level checklist."
+      ],
+      "sourceFixturePaths": []
+    }
+  ]
+}

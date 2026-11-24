@@ -1,0 +1,29 @@
+{
+  "ACRA": {
+    "findings": ["CONFIRMED: for filing was mistaken for a different filing owner.", "CONFIRMED: other filings suppressed valid company classification.", "Independent review additionally reproduced the combined purpose/multipart wording; corrected and re-reviewed."],
+    "correction": "Preserve owned FYE and private-company classification while retaining unrelated-owner, conflicting-type, ambiguous-date and historical safeguards. Withhold unconditional individual annual-return dates when application evidence remains unresolved.",
+    "retainedLimitation": "Explicit no-branch FYE 2025 still has a source target-date applicability hold. Conditional general periods do not establish a verified company-specific deadline."
+  },
+  "mixedAccountingAndMOM": {
+    "finding": "CONFIRMED P1: explicit sale-journal/final-pay wording could create a salary and CPF journal from S$10,000 sale proceeds.",
+    "beforeJournal": {"salaryExpenseDebit":10000,"employerCpfDebit":1360,"cpfPayableCredit":2960,"netSalaryPayableCredit":8400,"sdlDebitAndCredit":11.25},
+    "correction": "Interpret independent sale requests separately. Unowned currency, defaults and unrelated prior payroll facts cannot establish final salary. Unsupported mixed composites return empty current, projected and committed journal groups; explicit journal obligations remain unresolved.",
+    "controls": ["Both clause orders and ordinary sale word orders", "Tax-only mixed wording without unsolicited journals", "Prior payroll context", "Missing facts and ambiguous employee ownership", "Actual standalone supplies and payroll account/direction/amount checks"],
+    "retainedLimitations": ["No general sales engine or final-pay calculator was added.", "A fully specified independent sale can remain unresolved when the application lacks a supported composite path.", "Tax-only mixed wording discloses other authority requirements are unverified; no complete mixed-guidance claim is made."]
+  },
+  "CPF": {
+    "caseDiagnosis": {
+      "cpf-01": "Existing official OW definition was sufficient. Incorrect rate-topic routing, party scope and payable-date application prevented a practical answer. The corrected answer classifies March salary contractually payable 20 April as AW without treating AW as exempt.",
+      "cpf-04": "Existing AW PDF was sufficient. Incidental IRAS bonus routing and the performance year incorrectly displaced the contractual payable-year scope. The answer uses 2026 without inventing a contribution amount or performance year.",
+      "cpf-06": "Existing PR-year method alone did not establish conversion-month OW proration. Added official CPF Board PR wage-boundary evidence; corrected grant-date ownership and source admission. Anniversary dates and conversion-month proration are derived generically from established employee facts.",
+      "cpf-07": "Existing AW definition did not establish foreign-to-PR payable-date treatment. Added official before/after-grant AW evidence. The stated before/after relationship can be answered without inventing an exact grant date or contribution amount.",
+      "fresh31-cpf-01": "Existing OW/AW premises were sufficient. Factual payable dates were mistaken for legal date scope and employee facts were not independently applied. Each employee now uses their own employment month and payable date; missing dates remain unresolved.",
+      "fresh31-cpf-02": "Existing OW/AW ceiling evidence was sufficient, but topic/title admission and OW/AW amount binding prevented a complete answer. Monthly OW capping is separate from annual AW headroom, and a preceding bonus amount cannot be borrowed as OW."
+    },
+    "independentReviewCorrections": ["Restored the previously correct 2025 PR-anniversary case", "Same-month wages can satisfy the payable-by-following-14th condition", "Do not borrow A's payable date when B's date is absent", "Do not invent the bonus performance year", "Bind an OW amount separately from an earlier bonus", "Use generic conversion-month proration instead of a test-specific March case", "Do not borrow A's PR grant for B, who remains foreign"],
+    "sourceProvenance": "The new PR fixture is a hashed official visible-text excerpt, not retained native HTML. Retrieval/capture dates do not establish legal commencement. Historical law or rate requests still need applicable evidence.",
+    "retainedLimitations": ["No exact CPF amount without established employee status, age, rate/election, wage and ceiling facts.", "Whole-request coverage may remain unconfirmed by deterministic fallback even where independently assessed answers are practically correct.", "Original frozen source profiles do not include the new PR premise; cpf-06 remains PARTIAL and cpf-07 UNSUPPORTED there. Both are CORRECT in the separately expanded profile."]
+  },
+  "verificationBoundary": "Local deterministic/offline tests, answer grades, source-path coverage, CI and live/production acceptance are separate. No merge, deployment or source activation is authorized by a passing offline check.",
+  "nextPriorities": ["IRAS withholding tax practical application", "MOM salary deductions", "ACRA filing requirements and retained applicability gaps", "MAS reporting forms, periods and requirements"]
+}

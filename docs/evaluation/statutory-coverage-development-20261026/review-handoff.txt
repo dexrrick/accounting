@@ -1,0 +1,69 @@
+STATUTORY PRACTICAL COVERAGE — READ-ONLY REVIEW HANDOFF
+26/10/2026 (Singapore)
+
+GOAL AND STATUS
+Widen useful source-backed answers across IRAS, CPF, MOM, ACRA and MAS. This scoped development pass is implemented, independently reviewed and offline validated. Broad statutory coverage remains partial: 43 correct, 14 partial and 43 unsupported answers in the 100-question corpus. All 100 actual rendered answers were independently adjudicated. No merge, deployment, source activation or historical ACRA acceptance was performed.
+
+EXACT REVIEW TARGET
+Repository: https://github.com/dexrrick/accounting
+Branch: codex/statutory-practical-coverage-20261025
+Local HEAD/base for the uncommitted patch: 051f503f26b162038e19a5a0d2cd430e851f02cf
+Commit context: https://github.com/dexrrick/accounting/commit/051f503f26b162038e19a5a0d2cd430e851f02cf
+Application starting commit: c3783109de0c7a8d1574a9a10cd1f338fee4ff26
+PR: none. The implementation changes are UNCOMMITTED and UNPUSHED; GitHub alone does not contain this review target. Inspect the accompanying source snapshot and tracked-changes.patch against the local HEAD above. The source directory also contains new/untracked implementation, test and fixture files that are not in the patch.
+Exact source snapshot SHA-256: 175c0869b5802a76a50018e4d2d8576d34317e1490945085d1c71accc4b2d28e
+Exact replay SHA-256: 2cc8713050eb0d7c84d3b4541d94674ab587607f385afbfbb95a0e33220dae6f
+Bundle checksum: see review-bundle.sha256 beside the ZIP.
+
+BEHAVIOUR DELIVERED
+- Direct qualified GST filing/extension, CPF due-date and qualitative rate-factor, MOM final-salary, ACRA audit-exemption and MAS VCFM/class-exemption explanations from bounded official-source evidence.
+- Complete exact quotes remain bound to the same issue and one document revision. New bounded multi-paragraph admission is allowlisted by source/topic and requires full-source and quotation proof; generic quotation checks remain in force.
+- Source proofs reject reversed/negated mandatory premises, borrowed company/group thresholds and 150-versus-50 employee false matches. CPF qualitative evidence excludes numerical rate schedules; enforcement interest retains its same-source minimum qualification.
+- Existing-topic wording and issue associations were repaired without growing the routing catalog. A verified issue can answer within an incomplete compound stream while other gaps stay visible. Its own verification remains mandatory.
+- Corrected the 58-versus-57 baseline: the OW/AW compound question requires both topics; baseline had only OW. This is a resolver-catalog comparison, not a full earlier-application comparison.
+- Repaired the three prior regression failures using faithful native quote comparison and complete dated discovery fixtures; incomplete original fixtures remain negative controls.
+
+MAIN FILES
+src/retrieval/irasCpfCoverageRules.ts; src/retrieval/momAcraMasCoverageRules.ts
+src/services/authorityWorkstreams.ts; src/services/groundingContextBuilder.ts
+src/services/semanticQuestionUnderstanding.ts; src/services/authorityEvidenceResponse.ts
+src/verification/claimEvidenceVerifier.ts
+scripts/replay_statutory_coverage.mjs; scripts/run_all_tests.mjs
+tests/fixtures/statutoryCoverageVerifiedExcerpts.mjs; tests/fixtures/statutoryCoverageSources/
+Relevant focused coverage, sitemap, binding, benchmark and replay regressions are included in source/.
+
+VERIFICATION ACTUALLY RUN
+Node 22.23.3: preflight PASS; repository lint PASS; TypeScript build PASS; Vite build PASS; Worker build PASS; smoke 133/133 PASS; full 156/156 PASS. Direct underlying Node scripts were used because the normal launcher was unavailable. Focused rule/discovery/replay regressions and CRLF-aware git diff --check PASS. Final source hashes remained stable. The independent reviewer verified all 35 snapshot files and all 100 question/answer bindings and independently reproduced the repaired source-proof failures.
+GitHub CI: not confirmed for this uncommitted snapshot. Live model interpretation, live application source transport/acceptance, browser, R2 acceptance and production verification: NOT RUN. Public-source research reads are distinct from application acceptance.
+
+CORPUS RESULTS — EACH AUTHORITY HAS 20 QUESTIONS
+IRAS: routed 20/20; verified evidence 10/20; independently correct 8/20; partial 9; unsupported 3.
+CPF: routed 20/20; verified evidence 14/20; independently correct 12/20; partial 2; unsupported 6.
+MOM: routed 20/20; verified evidence 9/20; independently correct 9/20; partial 0; unsupported 11.
+ACRA: routed 20/20; verified evidence 5/20; independently correct 5/20; partial 0; unsupported 15.
+MAS: routed 20/20; verified evidence 12/20; independently correct 9/20; partial 3; unsupported 8.
+Independent total: 43 correct / 14 partial / 43 unsupported; zero unreviewed.
+Literal heuristic checklist: 30/100 PASS, reported separately. It is not the independent correctness result. Routing is 100/100; verified evidence is 50/100. Neither proves complete answers or authority-wide readiness.
+
+LIMITATIONS AND NEXT COVERAGE GAPS
+IRAS input-tax answers still omit the material Missing Trader Fraud reasonable-steps condition and remain partial. ECI/waiver and selected WHT answers remain incomplete. CPF historical/numeric schedules, bonus classifications, OW/AW compounds and specific-period cases remain limited. MOM still has timing, historical leave, deduction and overtime-eligibility gaps. ACRA AGM/annual-return/officer/secretary coverage remains limited; historical annual-return acceptance is a separate held workstream. MAS detailed exemption conditions, full VCFM/LFMC comparison, Appendix 4 eligibility, QDC and notifications remain unresolved.
+The replay uses selected official excerpts and clearly labelled retained paraphrases, with supplied semantic interpretations. Two MOM population labels were corrected in that offline oracle; live model interpretation was not tested. No independently validated numerical CPF schedule or new personal eligibility/calculation path was enabled.
+
+REVIEW FOCUS
+Check each static explanation against complete same-source premises, attached qualifications, exact-quote/document/issue binding, polarity and numeric threshold boundaries. Check compound scope and unknown populations, current-versus-historical applicability and numeric guards. Inspect the full rendered answers, not routing, status labels or checklist matches. Verify regression evidence against the exact source snapshot and state access/CI/live-verification limitations. Keep all review read-only.
+
+EVIDENCE IN THE BUNDLE
+source-snapshot.json — exact file hashes and commits.
+tracked-changes.patch and source/ — tracked diff plus complete changed/new source files.
+evidence/final-replay.json — full current/baseline offline replay, claims, citations and traces.
+evidence/final-answer-review-packet.json — exact rendered answers and question/answer hashes.
+evidence/independent-review.json — all 100 independent judgments and code-review findings.
+evidence/heuristic-checklists.json — separate literal checklist results.
+evidence/checkpoint.json — per-authority metrics, validation and remaining gaps.
+evidence/validation/ — individual build, smoke and full logs/results.
+source-manifest.json; evidence/official-source-captures/; evidence/cpf-enforcement-official-excerpt.txt — source provenance. The direct CPF FAQ response was a JavaScript shell; its separately web-read excerpt is explicitly distinguished.
+
+READY-TO-COPY REVIEW PROMPT
+Review repository https://github.com/dexrrick/accounting, branch codex/statutory-practical-coverage-20261025, using local base 051f503f26b162038e19a5a0d2cd430e851f02cf and the attached uncommitted source snapshot identified above. GitHub access alone cannot inspect the unpublished implementation; use the supplied bundle and disclose any inability to do so.
+
+Independently review the changes identified above using your GitHub access. Confirm the exact commit you inspected. Use the handoff as context and verify its claims against the code, diff, tests, and available CI evidence. Report actionable findings with severity, file and line references, impact, and suggested fixes. State any access or verification limitations. Keep the review read-only.

@@ -1,0 +1,81 @@
+{
+  "reviewedProductCommit": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+  "reviewedProductSourceTree": "1fc557fe1b8d683902d8b6bc11e6920688792088",
+  "branch": "codex/project-charter-simplification-20261103",
+  "productCodeChanges": 0,
+  "liveProviderCalls": 0,
+  "scope": "Acceptance report, validation summaries, unchanged case inputs and corrected acceptance harness only.",
+  "excluded": "Raw captures, local replay diagnostics, full retained regression log, unrelated artifacts and credentials.",
+  "files": [
+    {
+      "path": "ACCEPTANCE_REVIEW.md",
+      "bytes": 17377,
+      "sha256": "c690ccd597dac7d0b80534569d5c93696573770a9d3677f333f6547bda539da9"
+    },
+    {
+      "path": "acceptance-results.json",
+      "bytes": 9309,
+      "sha256": "5313ee5ed41a1e3706491605076814a969c6539dedc9e0cf109888ac0db4c572"
+    },
+    {
+      "path": "revision-verification.json",
+      "bytes": 1189,
+      "sha256": "b36abe0f087316260ff1572e77a0780fcbb2e19d5cb31a1c5e0fb52d1711a24f"
+    },
+    {
+      "path": "retained-validation-hashes.json",
+      "bytes": 325,
+      "sha256": "a688cf10fc2a43d5717788349b0ee55d07c4084c484ee9a278f28bb98284d823"
+    },
+    {
+      "path": "validation/checks.json",
+      "bytes": 1452,
+      "sha256": "aff4a8a1cd94fbcee3bc8d3fe74e3e100726d23955e48f492c400951410e5502"
+    },
+    {
+      "path": "harness-validation.json",
+      "bytes": 1460,
+      "sha256": "7d680e1a2c0d2c2d7ef710a1192564e35c5e6570dc927c52ae7ae51ca72c3b87"
+    },
+    {
+      "path": "review-notes.json",
+      "bytes": 1651,
+      "sha256": "d8b085fb0495e5707614fb05b20be84a38414cb8fe05599f2f25ebc7b534a776"
+    },
+    {
+      "path": "harness/README.md",
+      "bytes": 1524,
+      "sha256": "346205058774051d8a85105aaab4e46066271433fb1d8cde0ffb8b892fa7533e"
+    },
+    {
+      "path": "harness/run-live.mjs",
+      "bytes": 25132,
+      "sha256": "6e60ced8122ea7246952d919db4f87e85ddb9a35f9d76b50084f609942fd6a49"
+    },
+    {
+      "path": "harness/run-acceptance.ps1",
+      "bytes": 6886,
+      "sha256": "f190d7e11c029d7e38b8855d08ed87e95a54558d0af8dde7d85e6c79d0212b0c"
+    },
+    {
+      "path": "harness/offline-behavior.test.mjs",
+      "bytes": 5322,
+      "sha256": "810bda08922bd756ff3ef7a302063e2e279ab5c6874c8f5f93f5f1a8a075e142"
+    },
+    {
+      "path": "harness/expected-head.txt",
+      "bytes": 40,
+      "sha256": "93873ab6c9622ea890d9e6f6e8f08946da0b056d790caad62638e6f20ae41554"
+    },
+    {
+      "path": "harness/cases/cases.original-eight.json",
+      "bytes": 3972,
+      "sha256": "ffe87f621e80e4d77f36d4f076e1100e803df6ec5d5ac8f1f66ae0fd5b2f3b44"
+    },
+    {
+      "path": "harness/cases/cases.supplemental-followup.json",
+      "bytes": 509,
+      "sha256": "52f2c540bda3f59ecd1f7a0e07010555b649a2a88b22c37efc0eb01eccb388fa"
+    }
+  ]
+}

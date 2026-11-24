@@ -1,0 +1,3992 @@
+{
+  "schemaVersion": 1,
+  "caseId": "mixed-acra-cpf",
+  "answerStatus": "INSUFFICIENT",
+  "providerStatus": "NOT_EXPOSED",
+  "semanticPlanSource": "SEMANTIC_ISSUES",
+  "declaredCaptureStatus": "CAPTURE_WINDOW_SETTLED",
+  "captureWindow": {
+    "boundedWaitMs": 12000,
+    "timedOut": false,
+    "pendingCapturesAtDeadline": 0,
+    "inFlightFetchesAtDeadline": 0,
+    "cloneReadersCancelledAtDeadline": 0,
+    "inFlightFetchesAtReceipt": 0,
+    "pendingCapturesAtReceipt": 0
+  },
+  "payloadAvailability": "PRESENT_NO_TRUNCATION_RECORDED",
+  "bodyPayloads": [
+    {
+      "pointer": "/modelResponses/0/rawResponseBodyText",
+      "sha256": "4c521198fe44aeaa0060fe794c971aeec00bd4af981fb57265af712d183387ee",
+      "encoding": "utf8",
+      "byteLength": 2225,
+      "artifactPath": "bodies/4c521198fe44aeaa0060fe794c971aeec00bd4af981fb57265af712d183387ee.gz",
+      "declaredResponseBodySha256": "4c521198fe44aeaa0060fe794c971aeec00bd4af981fb57265af712d183387ee",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 2225,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyBase64",
+      "sha256": "07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763",
+      "encoding": "base64",
+      "byteLength": 426763,
+      "artifactPath": "bodies/07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763.gz",
+      "declaredResponseBodySha256": "07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 426763,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    },
+    {
+      "pointer": "/sourceResponses/0/bodyText",
+      "sha256": "07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763",
+      "encoding": "utf8",
+      "byteLength": 426763,
+      "artifactPath": "bodies/07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763.gz",
+      "declaredResponseBodySha256": "07cf8ac3a8091f65f7cfcddf7a0737f42c841ead8a0636324495694905b39763",
+      "declaredHashScope": "complete_response",
+      "declaredCapturedBytes": 426763,
+      "payloadStatus": "PRESENT_NO_TRUNCATION_RECORDED"
+    }
+  ],
+  "issuePlan": {
+    "source": "SEMANTIC_ISSUES",
+    "issues": [
+      {
+        "subject": "annual return filing duty for Singapore-incorporated companies",
+        "population": "COMPANY",
+        "domain": "ACRA_CORPORATE",
+        "governingAuthorities": [
+          "ACRA"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [
+          "acra_annual-returns"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 0.95,
+        "id": "issue_0570e5e2",
+        "status": "MAPPED"
+      },
+      {
+        "subject": "ordinary wages definition for CPF contributions",
+        "population": "EMPLOYER",
+        "domain": "CPF_PAYROLL",
+        "governingAuthorities": [
+          "CPF"
+        ],
+        "contextualAuthorities": [],
+        "operation": "EXPLAIN_RULE",
+        "mappedTopicIds": [
+          "cpf-ordinary-wages"
+        ],
+        "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+        "confidence": 0.95,
+        "id": "issue_10ad2669",
+        "status": "MAPPED"
+      }
+    ],
+    "coverageEstablished": true,
+    "hasUnmappedResidual": false
+  },
+  "issues": [
+    {
+      "issueId": "issue_0570e5e2",
+      "subject": "annual return filing duty for Singapore-incorporated companies",
+      "population": "COMPANY",
+      "domain": "ACRA_CORPORATE",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "governingAuthority": "ACRA",
+      "sourceSections": [
+        "ACRA_COMPANIES"
+      ],
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": false,
+        "covered": false
+      },
+      "applicationStatus": "NOT_REQUIRED",
+      "evidenceStatus": "INSUFFICIENT",
+      "verifiedClaims": [],
+      "sources": [],
+      "gaps": [
+        {
+          "issueId": "issue_0570e5e2",
+          "authority": "ACRA",
+          "domain": "ACRA_CORPORATE",
+          "subject": "annual return filing duty for Singapore-incorporated companies",
+          "operation": "EXPLAIN_RULE",
+          "stage": "verified",
+          "code": "NO_VERIFIED_CLAIM",
+          "reason": "No complete source quotation passed claim verification for this issue."
+        },
+        {
+          "issueId": "issue_0570e5e2",
+          "authority": "ACRA",
+          "domain": "ACRA_CORPORATE",
+          "subject": "annual return filing duty for Singapore-incorporated companies",
+          "operation": "EXPLAIN_RULE",
+          "stage": "covered",
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "reason": "Verified quotations do not support the requested topic acra_annual-returns."
+        },
+        {
+          "issueId": "issue_0570e5e2",
+          "authority": "ACRA",
+          "domain": "ACRA_CORPORATE",
+          "subject": "annual return filing duty for Singapore-incorporated companies",
+          "operation": "EXPLAIN_RULE",
+          "stage": "covered",
+          "code": "ISSUE_CONCEPT_UNCOVERED",
+          "reason": "Verified quotations do not support the requested concept semantic_annual_return_filing_duty."
+        }
+      ],
+      "retrievalTrace": {
+        "stages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SUFFICIENT",
+            "reason": "The stage supplied reviewed evidence candidates."
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          }
+        ],
+        "attempts": [
+          {
+            "topicId": "acra_annual-returns",
+            "fetchStatus": "TOPIC_MISMATCH",
+            "pageTitle": "Filing annual returns (ARs) for companies | Accounting and Corporate Regulatory Authority"
+          },
+          {
+            "topicId": "acra_annual-returns",
+            "fetchStatus": "TOPIC_MISMATCH",
+            "pageTitle": "Filing reminders and notifications for annual returns & declarations | Accounting and Corporate Regulatory Authority"
+          },
+          {
+            "topicId": "acra_annual-returns",
+            "fetchStatus": "TOPIC_MISMATCH",
+            "pageTitle": "Applying for an extension of time (EOT) to file annual returns | Accounting and Corporate Regulatory Authority"
+          },
+          {
+            "topicId": "acra_annual-returns",
+            "fetchStatus": "SUCCESS",
+            "pageTitle": "Penalties & enforcement action: Late annual return filing | Accounting and Corporate Regulatory Authority"
+          }
+        ]
+      },
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_acra_annual-returns_577aadb71826"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "pageTitle": "Filing annual returns (ARs) for companies | Accounting and Corporate Regulatory Authority",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/filing-reminders-and-notifications/",
+              "discoverySourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/filing-reminders-and-notifications/",
+              "pageTitle": "Filing reminders and notifications for annual returns & declarations | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched ACRA annual-return page lacks an operative company filing rule."
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+              "discoverySourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+              "pageTitle": "Applying for an extension of time (EOT) to file annual returns | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched ACRA annual-return page lacks an operative company filing rule."
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/",
+              "pageTitle": "Penalties & enforcement action: Late annual return filing | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "ACRA_SEC171_COMPANY_SECRETARY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC78B_CAPITAL_REDUCTION",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC175_197_AGM_ANNUAL_RETURN_TIMELINES",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC199_RECORD_RETENTION",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC142_143_RORC",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC68_NO_PAR_VALUE_SHARES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC145_RESIDENT_DIRECTOR",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+            "documentHash": "577aadb7182686bc463c8c75f33944699503559eb811fa6607c6b3c7665817f1",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "issueId": "issue_10ad2669",
+      "subject": "ordinary wages definition for CPF contributions",
+      "population": "EMPLOYER",
+      "domain": "CPF_PAYROLL",
+      "operation": "EXPLAIN_RULE",
+      "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+      "governingAuthority": "CPF",
+      "sourceSections": [
+        "CPF_CONTRIBUTIONS"
+      ],
+      "lifecycle": {
+        "requested": true,
+        "mapped": true,
+        "retrievalAttempted": true,
+        "evidenceFound": true,
+        "admitted": true,
+        "verified": true,
+        "covered": true
+      },
+      "applicationStatus": "NOT_REQUIRED",
+      "evidenceStatus": "VERIFIED",
+      "verifiedClaims": [
+        {
+          "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+          "quoteMetadata": {
+            "sha256": "9afa14055fa6966a0747756658861cb76ff703b0e4a0bc8595a808d60aeed25f",
+            "byteLength": 1045,
+            "characterLength": 997,
+            "redacted": true
+          },
+          "canonicalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "supportKind": "EXACT_SOURCE_QUOTE"
+        }
+      ],
+      "sources": [
+        {
+          "id": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+          "authority": "CPF",
+          "authorityName": "Central Provident Fund Board (CPF Board)",
+          "sourcePublisher": "Central Provident Fund Board (CPF Board)",
+          "legalOrStandardInstrument": "CPF Treatment of Ordinary Wages",
+          "standardOrActCode": "CPF Treatment of Ordinary Wages",
+          "paragraphOrSection": "CPF Treatment of Ordinary Wages",
+          "principleSummary": "CPF Treatment of Ordinary Wages",
+          "officialSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "domain": "CPF_BOARD",
+          "jurisdiction": "Singapore",
+          "tags": [
+            "cpf-ordinary-wages"
+          ],
+          "sourceStatus": "NEEDS_REVIEW",
+          "sourceType": "OFFICIAL_GUIDANCE",
+          "evidenceTier": "OFFICIAL_GUIDANCE",
+          "isVerbatimText": false,
+          "lastVerifiedDate": "2026-10-24",
+          "provenance": "LIVE_EXTERNAL",
+          "canonicalSourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+          "sourceAuthority": "CPF",
+          "retrievedAt": "2026-10-24T08:52:17.358Z",
+          "verificationMethod": "LIVE_OFFICIAL_TOPIC_VERIFIED",
+          "extractionStatus": "PARTIAL",
+          "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+          "contentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+          "lifecycleState": "CANDIDATE",
+          "recordRole": "DISCOVERED_EVIDENCE",
+          "groundingEligible": true,
+          "urlVerificationStatus": "VERIFIED",
+          "urlVerifiedDate": "2026-10-24",
+          "sourceLocator": {
+            "heading": "CPFB | What constitutes wages for CPF contributions",
+            "sourceType": "HTML"
+          }
+        }
+      ],
+      "gaps": [],
+      "retrievalTrace": {
+        "stages": [
+          {
+            "stage": "LOCAL_VERIFIED",
+            "status": "EXHAUSTED",
+            "reason": "The stage was exhausted without sufficient admitted evidence."
+          },
+          {
+            "stage": "MAPPED_SOURCE",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          },
+          {
+            "stage": "SITEMAP_DISCOVERY",
+            "status": "SUFFICIENT",
+            "reason": "The stage supplied reviewed evidence candidates."
+          },
+          {
+            "stage": "OFFICIAL_DOMAIN_SEARCH",
+            "status": "SKIPPED",
+            "reason": "This retrieval stage was skipped by the configured scope."
+          }
+        ],
+        "attempts": [
+          {
+            "topicId": "cpf-ordinary-wages",
+            "fetchStatus": "SUCCESS",
+            "pageTitle": "CPFB | What constitutes wages for CPF contributions"
+          }
+        ]
+      },
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "candidateUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "pageTitle": "CPFB | What constitutes wages for CPF contributions",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "CPF_WAGE_CEILINGS_2026",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_RATES_BY_AGE_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+            "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "presentationIssues": [
+    {
+      "id": "issue_0570e5e2",
+      "subject": "annual return filing duty for Singapore-incorporated companies",
+      "population": "Company",
+      "operation": "EXPLAIN_RULE",
+      "evidenceStatus": "INSUFFICIENT",
+      "applicationStatus": "NOT_REQUIRED",
+      "claims": [],
+      "gaps": [
+        "No complete source quotation passed claim verification for this issue.",
+        "Verified quotations do not support the requested topic acra_annual-returns.",
+        "Verified quotations do not support the requested concept semantic_annual_return_filing_duty."
+      ]
+    },
+    {
+      "id": "issue_10ad2669",
+      "subject": "ordinary wages definition for CPF contributions",
+      "population": "Employer",
+      "operation": "EXPLAIN_RULE",
+      "evidenceStatus": "VERIFIED",
+      "applicationStatus": "NOT_REQUIRED",
+      "claims": [
+        {
+          "supportKind": "EXACT_SOURCE_QUOTE",
+          "issueIds": [
+            "issue_10ad2669"
+          ],
+          "provenance": "LIVE_EXTERNAL"
+        }
+      ],
+      "gaps": []
+    }
+  ],
+  "conceptOwnership": [
+    {
+      "issueId": "issue_0570e5e2",
+      "authority": [
+        "ACRA"
+      ],
+      "domain": "ACRA_CORPORATE",
+      "population": "COMPANY",
+      "operation": "EXPLAIN_RULE",
+      "concepts": "UNOBSERVED"
+    },
+    {
+      "issueId": "issue_10ad2669",
+      "authority": [
+        "CPF"
+      ],
+      "domain": "CPF_PAYROLL",
+      "population": "EMPLOYER",
+      "operation": "EXPLAIN_RULE",
+      "concepts": "UNOBSERVED"
+    }
+  ],
+  "admissionDiagnostics": [
+    {
+      "issueId": "UNOBSERVED",
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_acra_annual-returns_577aadb71826"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "pageTitle": "Filing annual returns (ARs) for companies | Accounting and Corporate Regulatory Authority",
+              "titleMatched": false,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/filing-reminders-and-notifications/",
+              "discoverySourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/filing-reminders-and-notifications/",
+              "pageTitle": "Filing reminders and notifications for annual returns & declarations | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched ACRA annual-return page lacks an operative company filing rule."
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+              "discoverySourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/",
+              "fetchStatus": "TOPIC_MISMATCH",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/applying-for-an-extension-of-time/",
+              "pageTitle": "Applying for an extension of time (EOT) to file annual returns | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": false,
+              "discoveryStage": "SITEMAP_DISCOVERY",
+              "error": "Fetched ACRA annual-return page lacks an operative company filing rule."
+            },
+            {
+              "topicId": "acra_annual-returns",
+              "candidateUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/penalties-enforcement-late-annual-return-filing/",
+              "pageTitle": "Penalties & enforcement action: Late annual return filing | Accounting and Corporate Regulatory Authority",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "annual return filing duty"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "ACRA_SEC171_COMPANY_SECRETARY",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC156_DIRECTOR_INTEREST_DISCLOSURE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC78B_CAPITAL_REDUCTION",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC175_197_AGM_ANNUAL_RETURN_TIMELINES",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC199_RECORD_RETENTION",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC142_143_RORC",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC205C_SMALL_COMPANY_AUDIT_EXEMPTION",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "ACRA_SEC68_NO_PAR_VALUE_SHARES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:acra_annual-returns.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "ACRA_SEC145_RESIDENT_DIRECTOR",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_acra_annual-returns_577aadb71826",
+            "documentHash": "577aadb7182686bc463c8c75f33944699503559eb811fa6607c6b3c7665817f1",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "acra_annual-returns",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "issueId": "UNOBSERVED",
+      "admissionDiagnostics": {
+        "retrievalTraceStatus": "AVAILABLE",
+        "retrievalTraceOptionalMetadataStatus": "VALID",
+        "retrievalEvidenceQualityTrace": {
+          "path": "DISCOVERED_SOURCE",
+          "sourceMapIds": [],
+          "selectedRecordIds": [
+            "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e"
+          ],
+          "finalVerifiedUrls": [
+            "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+          ],
+          "candidateOnly": true,
+          "attempts": [
+            {
+              "topicId": "cpf-ordinary-wages",
+              "candidateUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "fetchStatus": "SUCCESS",
+              "finalUrl": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+              "pageTitle": "CPFB | What constitutes wages for CPF contributions",
+              "titleMatched": true,
+              "contentMatched": true,
+              "discoveryStage": "SITEMAP_DISCOVERY"
+            }
+          ],
+          "discoveryFetchAttempts": [],
+          "coverageDecisions": [
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            },
+            {
+              "scope": "REGISTERED",
+              "targetTopicIds": [],
+              "admissionTopicIds": [],
+              "eligibleRecordIds": [],
+              "rejectedRecords": [
+                {
+                  "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+                  "code": "IRAS_TOPIC_UNRESOLVED",
+                  "reason": "IRAS retrieval has no resolved IRAS topic; evidence scope is insufficient."
+                }
+              ],
+              "uncoveredTopicIds": [],
+              "uncoveredConcepts": [
+                "ordinary wages definition"
+              ]
+            }
+          ],
+          "stages": [
+            {
+              "stage": "LOCAL_VERIFIED",
+              "status": "EXHAUSTED",
+              "reason": "Local retrieval was insufficient for at least one routed topic."
+            },
+            {
+              "stage": "MAPPED_SOURCE",
+              "status": "SKIPPED",
+              "reason": "No applicable reviewed source-map pointer was available."
+            },
+            {
+              "stage": "SITEMAP_DISCOVERY",
+              "status": "SUFFICIENT",
+              "reason": "Official sitemap candidates were separately fetched and evidence-gated for each still-uncovered scope."
+            },
+            {
+              "stage": "OFFICIAL_DOMAIN_SEARCH",
+              "status": "SKIPPED",
+              "reason": "Official-domain search was not attempted for this request."
+            }
+          ]
+        },
+        "candidates": [
+          {
+            "recordId": "CPF_WAGE_CEILINGS_2026",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPFA_SEC7_FIRST_SCHEDULE",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_ACCOUNT_ALLOCATION_RATES",
+            "admitted": false,
+            "firstFailedPredicate": "topic:cpf-ordinary-wages.topicBoundToRecord",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": false,
+                "firstFailedPredicate": "topicBoundToRecord"
+              }
+            ]
+          },
+          {
+            "recordId": "CPF_RATES_BY_AGE_2026",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "CPF_SDL_SKILLS_DEVELOPMENT_LEVY",
+            "admitted": false,
+            "firstFailedPredicate": "recordEligibility",
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "liveExternal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "REVIEWED_LOCAL"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": false,
+                "result": "LOCAL_SOURCE_NOT_VERIFIED"
+              }
+            ],
+            "topics": []
+          },
+          {
+            "recordId": "LIVE_TOPIC_cpf-ordinary-wages_861d3810024e",
+            "documentHash": "861d3810024ef8f69758621b0a6a748e39b2b4a901e80dde2691e64cdd7b8969",
+            "admitted": true,
+            "provenancePaths": {
+              "reviewedLocal": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              },
+              "liveExternal": {
+                "attempted": true,
+                "admitted": true,
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED",
+                    "result": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ]
+              },
+              "managedDocument": {
+                "attempted": false,
+                "admitted": false,
+                "predicates": []
+              }
+            },
+            "predicates": [
+              {
+                "predicate": "provenance",
+                "passed": true,
+                "result": "VALIDATED_CURRENT_FETCH"
+              },
+              {
+                "predicate": "recordRole",
+                "passed": true,
+                "result": "EVIDENCE"
+              },
+              {
+                "predicate": "groundingEligible",
+                "passed": true,
+                "result": "ELIGIBLE"
+              },
+              {
+                "predicate": "requiredDeadlineEvidence",
+                "passed": true,
+                "result": "NOT_REQUIRED"
+              },
+              {
+                "predicate": "sourceTextPresent",
+                "passed": true,
+                "result": "PRESENT"
+              },
+              {
+                "predicate": "recordEligibility",
+                "passed": true,
+                "result": "ELIGIBLE"
+              }
+            ],
+            "topics": [
+              {
+                "topicId": "cpf-ordinary-wages",
+                "predicates": [
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  },
+                  {
+                    "predicate": "DEPTH_LIMIT_UNOBSERVED",
+                    "passed": "DEPTH_LIMIT_UNOBSERVED"
+                  }
+                ],
+                "admitted": true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "requestCompletenessContext": {
+    "contractVersion": 1,
+    "identity": "[1,\"Under ACRA guidance, must Singapore-incorporated companies file annual returns? Explain the general filing duty using official ACRA guidance. Do not calculate a deadline or create journal entries. Separately, Under CPF Board guidance, what makes a payment ordinary wages for CPF contributions? Explain the general definition using official CPF Board guidance. Do not calculate contribution rates or amounts and do not create journal entries.\"]",
+    "inputLength": 441,
+    "inventory": {
+      "state": "UNCERTAIN",
+      "fullyConsumed": false,
+      "outcomes": [],
+      "facts": [],
+      "findings": [
+        {
+          "stage": "INVENTORY",
+          "code": "UNKNOWN_PREFIX_OR_REQUEST",
+          "span": {
+            "start": 0,
+            "end": 441
+          }
+        }
+      ],
+      "inputLength": 441
+    },
+    "declaredFacts": [],
+    "excludedSpans": [],
+    "observationSnapshot": {
+      "hasWrapper": true,
+      "mode": "SEMANTIC_INTERPRETATION",
+      "format": "STORED_NORMALIZED_OR_LEGACY",
+      "normalizedInterpretation": {
+        "jurisdiction": [
+          "Singapore"
+        ],
+        "authorityCandidates": [
+          "UNKNOWN"
+        ],
+        "contextualAuthorities": [],
+        "domain": "UNKNOWN",
+        "population": "UNKNOWN",
+        "primarySubject": "ACRA annual return filing duty and CPF ordinary wages definition",
+        "concepts": [
+          {
+            "concept": "annual return filing duty",
+            "role": "PRIMARY"
+          },
+          {
+            "concept": "ordinary wages definition",
+            "role": "PRIMARY"
+          }
+        ],
+        "requestedOperation": "OTHER",
+        "requiresUserSpecificFacts": false,
+        "calculationRequested": false,
+        "factsExplicitlyProvided": [],
+        "confidence": 0.95,
+        "issues": [
+          {
+            "subject": "annual return filing duty for Singapore-incorporated companies",
+            "population": "COMPANY",
+            "domain": "ACRA_CORPORATE",
+            "governingAuthorities": [
+              "ACRA"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          },
+          {
+            "subject": "ordinary wages definition for CPF contributions",
+            "population": "EMPLOYER",
+            "domain": "CPF_PAYROLL",
+            "governingAuthorities": [
+              "CPF"
+            ],
+            "contextualAuthorities": [],
+            "operation": "EXPLAIN_RULE",
+            "mappedTopicIds": [],
+            "evidenceRequirement": "AUTHORITATIVE_SOURCE",
+            "confidence": 0.95
+          }
+        ]
+      },
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "observedConfidence": 0.95
+    },
+    "evaluation": {
+      "status": "UNCERTAIN",
+      "structuralAcceptance": "ACCEPTED",
+      "confidenceAcceptance": "ACCEPTED",
+      "minimumConfidence": 0.72,
+      "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+      "observedConfidence": 0.95,
+      "findings": [
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 0,
+          "subject": "annual return filing duty for Singapore-incorporated companies"
+        },
+        {
+          "stage": "BRIDGE",
+          "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+          "issueIndex": 1,
+          "subject": "ordinary wages definition for CPF contributions"
+        }
+      ],
+      "matches": [],
+      "issues": [
+        {
+          "subject": "annual return filing duty for Singapore-incorporated companies",
+          "population": "COMPANY",
+          "operation": "EXPLAIN_RULE"
+        },
+        {
+          "subject": "ordinary wages definition for CPF contributions",
+          "population": "EMPLOYER",
+          "operation": "EXPLAIN_RULE"
+        }
+      ]
+    }
+  },
+  "groundedContext": "UNOBSERVED",
+  "evidenceQuality": "UNOBSERVED",
+  "sourceMapFallbackTrace": "UNOBSERVED",
+  "directGroups": [],
+  "observedStatus": {
+    "workstreamStatus": "INSUFFICIENT",
+    "evidenceStatus": "INSUFFICIENT",
+    "applicationStatus": "NOT_REQUIRED",
+    "presentationStatus": "INSUFFICIENT",
+    "requestCompletenessEvaluation": "UNCERTAIN"
+  },
+  "gaps": [
+    {
+      "issueId": "issue_0570e5e2",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "subject": "annual return filing duty for Singapore-incorporated companies",
+      "operation": "EXPLAIN_RULE",
+      "stage": "verified",
+      "code": "NO_VERIFIED_CLAIM",
+      "reason": "No complete source quotation passed claim verification for this issue."
+    },
+    {
+      "issueId": "issue_0570e5e2",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "subject": "annual return filing duty for Singapore-incorporated companies",
+      "operation": "EXPLAIN_RULE",
+      "stage": "covered",
+      "code": "ISSUE_CONCEPT_UNCOVERED",
+      "reason": "Verified quotations do not support the requested topic acra_annual-returns."
+    },
+    {
+      "issueId": "issue_0570e5e2",
+      "authority": "ACRA",
+      "domain": "ACRA_CORPORATE",
+      "subject": "annual return filing duty for Singapore-incorporated companies",
+      "operation": "EXPLAIN_RULE",
+      "stage": "covered",
+      "code": "ISSUE_CONCEPT_UNCOVERED",
+      "reason": "Verified quotations do not support the requested concept semantic_annual_return_filing_duty."
+    }
+  ]
+}

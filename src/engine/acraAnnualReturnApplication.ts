@@ -6,6 +6,7 @@ import {
   getAcraAnnualReturnDeadlineMonths,
   supportsAcraAnnualReturnDeadlineEvidence
 } from '../retrieval/acraAnnualReturnFilingRule';
+import { parseCompanyFyeCompanyType } from '../retrieval/companyFyeDate';
 import { formatSingaporeDate, getSingaporeDateString } from '../utils/dateUtils';
 
 export interface AcraAnnualReturnCompanyFacts {
@@ -164,7 +165,20 @@ function shareCapitalStatus(query: string): { value?: boolean; error?: string } 
 
 export function identifyAcraAnnualReturnCompanyFacts(query: string): AcraAnnualReturnCompanyFacts {
   const fye = financialYearEnd(query);
-  const listing = listingStatus(query);
+  let listing = listingStatus(query);
+  const explicitlyOwnedPrivateFye = /\b(?:our|my|this|the)\s+(?:(?:local|singapore)\s+)?private\s+company(?:['’]s)?\s+(?:fye|financial\s+year\s+(?:end|ended))\b/i.test(query);
+  if (explicitlyOwnedPrivateFye) {
+    if (hasUnassertedFactMention(query, /\bprivate\b/gi)) {
+      listing = { error: 'listing status (private-company status is uncertain or conditional)' };
+    } else if (!listing.error) {
+      const parsedCompanyType = parseCompanyFyeCompanyType(query);
+      if (parsedCompanyType !== 'non-listed' || listing.value === 'LISTED') {
+        listing = { error: 'listing status (company type is conflicting or ownership is ambiguous)' };
+      } else {
+        listing = { value: 'NON_LISTED' };
+      }
+    }
+  }
   const branch = branchRegisterStatus(query);
   const shareCapital = shareCapitalStatus(query);
   const unresolvedFacts = [fye.error, listing.error, branch.error, shareCapital.error].filter((value): value is string => Boolean(value));

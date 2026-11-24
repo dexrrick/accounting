@@ -1,0 +1,242 @@
+{
+  "model": "gemini-3.5-flash-lite",
+  "baselineReplay": true,
+  "scopeRecheck": false,
+  "startedAt": "2026-11-04T23:51:42.036Z",
+  "scope": "Offline replay of captured live generations against f0b5d797a39ba0de6cff7cf603f21cf9abfdd14f with permissive scripted support verdicts. This checks deterministic withholding only; no network calls or model-quality claim.",
+  "cases": [
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "Our company purchased a private motor car within the blocked input tax category and no exception applies. Does business use alone allow recovery of the GST?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nBusiness use alone does not allow recovery of the GST when a company purchases a private motor car within the blocked input tax category and no exception applies. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [
+        {
+          "title": "IRAS: GST (General) Regulations",
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 12
+    },
+    {
+      "authority": "CPF",
+      "record": "CPFA_SEC7_FIRST_SCHEDULE",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CPFA1953?ProvIds=P12-#pr7-",
+      "query": "We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nEvery employer of an employee is required to pay monthly to the Fund in respect of each employee contributions at the respective rates prescribed in the First Schedule.\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.\n\n- Whether We employ a covered employee in Singapore. Who is responsible for paying the monthly CPF contribution to the Fund: the employer or the employee? applies to your circumstances remains unresolved from the available evidence.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1"
+        ],
+        "withheldClaimIds": [
+          "c2"
+        ],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "WITHHELD",
+            "admittedPassageIds": []
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 6
+    },
+    {
+      "authority": "MOM",
+      "record": "MOM_SEC21_SALARY_TIMELINES",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/EmA1968?ProvIds=P13-#pr21-",
+      "query": "Our covered employee worked overtime in the salary period. Should payroll track ordinary salary and overtime separately when arranging payment?",
+      "mode": "live-answer",
+      "calls": [],
+      "status": "ERROR_OR_WITHHELD",
+      "error": "Evidence-grounded synthesis produced no supportable claims.",
+      "elapsedMs": 2
+    },
+    {
+      "authority": "ACRA",
+      "record": "ACRA_SEC171_COMPANY_SECRETARY",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/CoA1967?ProvIds=P15-#pr171-",
+      "query": "She is the sole director of our Singapore company and wants to act as its secretary too. Can we appoint her as secretary?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nYour company cannot appoint her as the secretary because she is the sole director of the Singapore company.\n\n### Conditions and unresolved points\n\nSome requested conclusions could not be supported by the admitted passages and stated facts, so they have been withheld.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c2"
+        ],
+        "withheldClaimIds": [
+          "c1"
+        ],
+        "claims": [
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "WITHHELD",
+            "admittedPassageIds": []
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 2
+    },
+    {
+      "authority": "MAS",
+      "record": "MAS_FMC_CMS_LICENSING",
+      "sourceUrl": "https://sso.agc.gov.sg/Act/SFA2001",
+      "query": "Our Singapore company plans to start regulated fund management. What should it establish about licensing or exemptions before commencing?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nA person carrying on a regulated activity in Singapore must assess whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies before conducting fund management.\n\nBefore commencing regulated fund management, your Singapore company must establish whether a Capital Markets Services licence, registration, or a statutory or MAS exemption applies to its planned activities.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ]
+          },
+          {
+            "claimId": "c2",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 0
+    },
+    {
+      "authority": "IRAS",
+      "record": "GST_REG26_BLOCKED_INPUT_TAX",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "query": "A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?",
+      "mode": "live-answer",
+      "calls": [],
+      "messageText": "# Answer\n\nThe client is not currently established as eligible for GST recovery because the nature, purpose, documentation, and potential input tax restrictions of the incurred expense remain unresolved. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\nRegulations 26 and 27 generally disallow input tax on specified expenses, subject to the scope limits and exceptions in the regulations and IRAS guidance, and business purpose alone does not make a blocked claim recoverable. [IRAS: GST (General) Regulations](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n### Conditions and unresolved points\n\n- Applicability remains unresolved for A client incurred an expense. We have not established its nature, purpose, documentation or whether input tax restrictions apply. Is the client eligible for GST recovery today?.",
+      "verification": {
+        "sourceAdmission": "EXISTING_PIPELINE_ADMITTED",
+        "claimValidation": "DETERMINISTIC_AND_SELECTIVE_AI_SUPPORT_CHECK",
+        "semanticVerificationCalls": 1,
+        "providerCalls": 2,
+        "providerAttempts": 2,
+        "providerElapsedMs": 0,
+        "admittedClaimIds": [
+          "c1",
+          "c2"
+        ],
+        "withheldClaimIds": [],
+        "claims": [
+          {
+            "claimId": "c1",
+            "kind": "APPLICATION",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          },
+          {
+            "claimId": "c2",
+            "kind": "RULE",
+            "outcome": "ADMITTED",
+            "admittedPassageIds": [
+              "passage-1"
+            ],
+            "semanticSupport": "SUPPORTED"
+          }
+        ]
+      },
+      "officialAnswerLinks": [
+        {
+          "title": "IRAS: GST (General) Regulations",
+          "url": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+        }
+      ],
+      "status": "ANSWER_RETURNED",
+      "elapsedMs": 1
+    }
+  ],
+  "providerResponses": [],
+  "finishedAt": "2026-11-04T23:51:42.086Z"
+}

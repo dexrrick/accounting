@@ -45,6 +45,14 @@ export function requiresAcraAnnualReturnDeadlineEvidence(
 export function isAcraAnnualReturnDeadlineQuestion(query: string): boolean {
   const clauses = query.replace(/,\s*(?:and|but)\s+(?=(?:when|how|what\s+date|by\s+what\s+date)\b)/gi, '\n')
     .split(/[.!?;\n]+/).map(clause => normalizeEvidenceText(clause)).filter(Boolean);
+  const isAgmDeclarationProcessQuestion = /\bwhen filing\b/.test(query.toLowerCase()) &&
+    /\bannual returns?\b/i.test(query) && /\b(?:agm|annual general meetings?)\b/i.test(query) &&
+    /\b(?:declare|declaration|details|enter)\b/i.test(query) && /\b(?:exempt|dispensed|waiv\w*)\b/i.test(query);
+  const hasExplicitTimingRequest = /\b(?:deadline|due date|filing date|filing time|timeframe|time frame|within|how many months?|how long|how soon|what date|by what date)\b/i.test(query) ||
+    /\bwhen\s+(?:must|should|do|does|is|are|can|will|would)\b/i.test(query);
+  // "When filing ..." can introduce a filing step rather than ask when it is due.
+  // Keep the deadline evidence gate for any explicit timing request in the same query.
+  if (isAgmDeclarationProcessQuestion && !hasExplicitTimingRequest) return false;
   const asksForTiming = (clause: string) =>
     /\b(?:deadline|due date|filing date|filing time|timeframe|time frame|when|how many months?|how long|how soon|what date|by what date)\b/.test(clause) ||
     /\bwithin\b/.test(clause) || /\bmonths?\b.{0,30}\bafter\b|\bafter\b.{0,30}\bmonths?\b/.test(clause);

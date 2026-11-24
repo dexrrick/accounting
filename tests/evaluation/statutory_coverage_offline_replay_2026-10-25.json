@@ -1,0 +1,35 @@
+{
+  "captureMode": "OFFLINE_OFFICIAL_PAGE_FIXTURE_REPLAY",
+  "pipeline": "buildAuthorityWorkstreams + createAuthorityEvidencePresentation + renderAuthorityEvidenceResponseText",
+  "networkRequests": 0,
+  "modelRequests": 0,
+  "liveAcceptance": "NOT_RUN",
+  "cases": [
+    {
+      "id": "mas-fund-management-licence-01",
+      "question": "Does an LFMC need a CMS licence?",
+      "answer": "MAS rule explanation: A company conducting fund management activities regulated under the Securities and Futures Act 2001 must apply to be a licensed fund management company holding a Capital Markets Services licence. A company that can operate under an existing class exemption does not require a licence.",
+      "citations": [
+        {
+          "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+          "title": "Fund Management Licensing | Monetary Authority of Singapore"
+        }
+      ],
+      "evidence": [
+        {
+          "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+          "quote": "If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA), it must apply to be a licensed fund management company (LFMC) that holds a Capital Markets Services (CMS) licence."
+        },
+        {
+          "url": "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing",
+          "quote": "If your company is able to operate under an existing class exemption, it does not require a licence."
+        }
+      ],
+      "evaluationProvenance": "Observed from the existing offline fixture pipeline; answer text and both exact source quotations were reported by the implementation agent.",
+      "limitations": [
+        "This is an offline source-page replay, not an application live-transport or browser acceptance result.",
+        "The answer was not checked by an independent legal adjudicator."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "status": "IMPLEMENTATION_PUBLISHED_AND_REMOTE_VERIFIED",
+  "repository": "https://github.com/dexrrick/accounting",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "startingHead": "0c11ef10a2b52e92db6688598fa03e39e8e04554",
+  "implementationCommit": "b2dbf2885d3b19655dc825fec017b3e2d624c8f2",
+  "remoteVerifiedImplementationHead": "b2dbf2885d3b19655dc825fec017b3e2d624c8f2",
+  "verification": "Successful non-force push followed by git ls-remote of the exact branch ref",
+  "documentation": "This receipt and the final handoff are a documentation-only successor. The final documentation head is remote-verified separately in the delivery message.",
+  "localOnly": "Raw corpus and full before/after captures, logs, replay helpers, initial reserve checkpoint and unrelated pre-existing untracked archives remain outside publication scope.",
+  "merge": "NOT_PERFORMED",
+  "deployment": "NOT_PERFORMED",
+  "liveAcceptance": "NOT_RUN"
+}

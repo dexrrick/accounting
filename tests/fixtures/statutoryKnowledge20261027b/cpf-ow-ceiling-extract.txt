@@ -1,0 +1,16 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: What is the Ordinary Wage (OW) ceiling?
+Canonical official URL: https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr
+Capture date (Singapore): 2026-10-27
+Capture method: verbatim visible text excerpt returned by a read-only browser extraction of the official HTML page. This is not a raw HTML response; exact excerpt text is retained below.
+
+What is the Ordinary Wage (OW) ceiling?
+The Ordinary Wage (OW) ceiling sets the maximum amount of OW that attracts CPF contributions in a calendar month for all employees. It was gradually raised and has reached $8,000 in 2026. The increase took place in four steps, as shown in the table below, to allow employers and employees to adjust to the changes.
+Table: Changes in CPF salary ceilings
+CPF Ordinary Wage ceiling | CPF annual salary ceiling
+From 1 Jan 2016 to 31 Aug 2023 | $6,000 | $102,000 (no change)
+From 1 Sep to 31 Dec 2023 | $6,300 (+$300)
+From 1 Jan to 31 Dec 2024 | $6,800 (+$500)
+From 1 Jan to 31 Dec 2025 | $7,400 (+$600)
+From 1 Jan 2026 | $8,000 (+$600)

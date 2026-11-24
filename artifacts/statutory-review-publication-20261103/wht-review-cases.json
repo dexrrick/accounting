@@ -1,0 +1,12 @@
+{
+  "cases": [
+    {
+      "question": "How do tax treaties with Australia affect withholding tax on payments to non-residents?",
+      "id": "plural-australia"
+    },
+    {
+      "question": "In general, how does a tax treaty affect withholding tax for non-resident payments?",
+      "id": "general-for-non-resident"
+    }
+  ]
+}

@@ -9,6 +9,47 @@ import {
   type BoundedStatutoryAdvisoryRequest
 } from './statutoryAdvisorySupport';
 import { cleanHtmlText, cleanHtmlTextPreservingTableCells } from './sourceAdapters';
+import {
+  isAcraAuditExemptionContextRequest,
+  type AcraAuditExemptionContextRequest
+} from './acraMomKnowledge20261027b';
+
+/**
+ * Returns complete body text for restrictive same-document reasoning only.
+ * This deliberately keeps navigation, headings, disclosure text, hidden text,
+ * and other body chrome; none of it becomes positive evidence by inclusion.
+ * Missing or ambiguous body boundaries, incomplete non-content elements, and
+ * oversized pages fail closed instead of producing a partial context.
+ */
+export function extractCompleteHtmlBodyContext(rawDocument: string): string | undefined {
+  if (typeof rawDocument !== 'string' || !rawDocument.trim()) return undefined;
+
+  let markup = rawDocument.replace(/<!--[\s\S]*?-->/g, ' ');
+  if (/<!--|-->/i.test(markup)) return undefined;
+  for (const tag of ['script', 'style', 'template', 'head']) {
+    const pairedElement = new RegExp(`<${tag}\\b[^>]*>[\\s\\S]*?<\\/${tag}\\s*>`, 'gi');
+    markup = markup.replace(pairedElement, ' ');
+    if (new RegExp(`<\\/?${tag}\\b`, 'i').test(markup)) return undefined;
+  }
+
+  const bodyOpenings = [...markup.matchAll(/<body\b[^>]*>/gi)];
+  const bodyClosings = [...markup.matchAll(/<\/body\s*>/gi)];
+  if (bodyOpenings.length !== 1 || bodyClosings.length !== 1) return undefined;
+  const bodyOpen = bodyOpenings[0];
+  const bodyClose = bodyClosings[0];
+  const bodyOpenIndex = bodyOpen.index;
+  const bodyEnd = bodyClose.index;
+  if (bodyOpenIndex === undefined || bodyEnd === undefined) return undefined;
+  const bodyStart = bodyOpenIndex + bodyOpen[0].length;
+  if (bodyEnd < bodyStart) return undefined;
+
+  const bodyMarkup = markup.slice(bodyStart, bodyEnd);
+  const bodyWithoutTagTokens = bodyMarkup.replace(/<\/?[A-Za-z][^>]*>/g, ' ');
+  if (bodyWithoutTagTokens.includes('<')) return undefined;
+  const bodyText = cleanHtmlText(bodyMarkup);
+  if (!bodyText || bodyText.length > 12_000) return undefined;
+  return bodyText;
+}
 
 /**
  * Strict allowlist of authorized Singapore statutory authorities and verified reference APIs.
@@ -79,6 +120,12 @@ export interface TopicContentExpectation {
   requireAcraAnnualReturnDeadlineTable?: boolean;
   /** Enables one native CPF wage-definition card only for the exact bounded request. */
   cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Enables the native Additional Wages definition card only for its bounded request. */
+  cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+  /** Restores visible, link-free CPF action-card prose for an exact registered discovery candidate. */
+  preserveNativeDisclosureProse?: boolean;
+  /** Preserves the one registered ACRA audit-exemption conditional heading for its bounded request. */
+  acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
 }
 
 export interface TopicContentValidationResult extends ExternalValidationResult {
@@ -480,6 +527,27 @@ function isHiddenMarkupElement(element: BalancedMarkupElement): boolean {
   return isHiddenMarkupAttributes(element.attributes);
 }
 
+function removeHiddenAcraAuditMarkup(
+  markup: string,
+  request: AcraAuditExemptionContextRequest
+): string | undefined {
+  if (!isAcraAuditExemptionContextRequest(request)) return markup;
+  const elements = parseBalancedMarkupElements(markup);
+  if (!elements) return undefined;
+  const hiddenSubtrees = elements.filter(isHiddenMarkupElement).filter(element => {
+    for (let parent = element.parent; parent; parent = parent.parent) {
+      if (isHiddenMarkupElement(parent)) return false;
+    }
+    return true;
+  });
+  if (hiddenSubtrees.some(element => element.end === undefined)) return undefined;
+  const filteredMarkup = hiddenSubtrees.sort((left, right) => right.start - left.start).reduce((currentMarkup, element) => {
+    const end = element.end;
+    return end === undefined ? currentMarkup : currentMarkup.slice(0, element.start) + currentMarkup.slice(end);
+  }, markup);
+  return filteredMarkup;
+}
+
 function isHiddenMarkupAttributes(attributes: string): boolean {
   return /(?:^|\s)hidden(?:\s|=|\/|$)/i.test(attributes)
     || /(?:^|\s)aria-hidden\s*=\s*(?:"true"|'true'|true)(?:\s|$)/i.test(attributes)
@@ -494,20 +562,17 @@ function isInsideElement(element: BalancedMarkupElement, ancestor: BalancedMarku
   return false;
 }
 
-/**
- * Restores only the official CPF page's visible native action-card description,
- * and only when its complete criteria satisfy the bounded request. The source
- * card is replaced in place so body order and the source wording stay intact.
- */
-function preserveSupportedCpfOrdinaryWageCard(
-  mainMarkup: string,
-  request: BoundedStatutoryAdvisoryRequest
-): string {
-  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+interface VisibleCpfActionCardDescription {
+  start: number;
+  end: number;
+  descriptionMarkup: string;
+  proseMarkup: string;
+}
+
+/** Find structurally verified, visible native CPF action-card descriptions without interpreting their legal content. */
+function findVisibleCpfActionCardDescriptions(mainMarkup: string): VisibleCpfActionCardDescription[] {
   const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
-  // Parse only a bounded native card and its enclosing path. This keeps the
-  // extraction scoped to the real action-card description and avoids relying
-  // on unrelated CMS wrappers elsewhere in main.
+  const descriptions: VisibleCpfActionCardDescription[] = [];
   const actionCardPattern = /<div\b([^>]*)>/gi;
   let inspectedCards = 0;
   for (const match of markupWithoutComments.matchAll(actionCardPattern)) {
@@ -553,16 +618,128 @@ function preserveSupportedCpfOrdinaryWageCard(
         cardAncestors.some(element => element.tagName === 'a')) continue;
     const descendants = cardElements.filter(element => isInsideElement(element, description));
     if (descendants.some(element => element.tagName === 'a' || isHiddenMarkupElement(element) ||
-        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName))) continue;
+        ['script', 'style', 'noscript', 'svg', 'template', 'iframe', 'object'].includes(element.tagName) ||
+        (element !== description && (() => {
+          const identity = `${markupAttribute(element.attributes, 'class')} ${markupAttribute(element.attributes, 'id')}`;
+          return RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+            /\b(?:navigation|navbar|breadcrumb|menu|sidebar|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity);
+        })()))) continue;
 
     const descriptionMarkup = cardMarkup.slice(description.contentStart, description.contentEnd);
     if (/<(?:table|thead|tbody|tfoot|tr|td|th)\b/i.test(descriptionMarkup)) continue;
-    const ruleMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
-    if (!/<(?:p|li)\b/i.test(ruleMarkup) ||
-        supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(ruleMarkup) }) !== true) continue;
-    return markupWithoutComments.slice(0, cardStart) + '<div>' + ruleMarkup + '</div>' + markupWithoutComments.slice(cardEnd);
+    const proseMarkup = extractRuleBearingMarkup(descriptionMarkup).trim();
+    if (!/<(?:p|li)\b/i.test(proseMarkup)) continue;
+    descriptions.push({ start: cardStart, end: cardEnd, descriptionMarkup, proseMarkup });
+  }
+  return descriptions;
+}
+
+/** Restore a native card only when extraction retained all of its visible description text. */
+function preserveRegisteredCpfDisclosureProse(mainMarkup: string): string {
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  const descriptions = findVisibleCpfActionCardDescriptions(markupWithoutComments);
+  return descriptions.sort((left, right) => right.start - left.start).reduce((markup, description) => {
+    const proseRetainsDescription = normalizeVisibleText(description.descriptionMarkup) ===
+      normalizeVisibleText(description.proseMarkup);
+    const replacement = proseRetainsDescription ? '<div>' + description.proseMarkup + '</div>' : ' ';
+    return markup.slice(0, description.start) + replacement + markup.slice(description.end);
+  }, markupWithoutComments);
+}
+
+/** Preserve the existing complete, per-card bounded rule proof without pooling across cards. */
+function preserveSupportedCpfWageCard(
+  mainMarkup: string,
+  request: BoundedStatutoryAdvisoryRequest
+): string {
+  if (!isBoundedStatutoryAdvisoryRequest(request)) return mainMarkup;
+  const markupWithoutComments = mainMarkup.replace(/<!--[\s\S]*?-->/g, ' ');
+  for (const description of findVisibleCpfActionCardDescriptions(markupWithoutComments)) {
+    if (supportBoundedStatutoryAdvisory({ ...request, sourceText: cleanHtmlText(description.proseMarkup) }) !== true) continue;
+    return markupWithoutComments.slice(0, description.start) + '<div>' + description.proseMarkup + '</div>' +
+      markupWithoutComments.slice(description.end);
   }
   return mainMarkup;
+}
+
+const ACRA_AUDIT_CONTEXT_HEADING = 'If your company is newly incorporated (less than two years old)';
+const ACRA_AUDIT_CONTEXT_ELIGIBILITY = 'You qualify for audit exemption if you meet the criteria in the current financial year.';
+const ACRA_AUDIT_GROUP_CONTEXT_HEADING = 'If your company is part of a group';
+const ACRA_AUDIT_GROUP_CRITERIA = 'Your entire group (including foreign entities) meets at least two of these quantitative criteria for the immediate past two consecutive financial years:';
+const ACRA_AUDIT_SECTION_BOUNDARIES = [
+  'Maintaining your exemption status',
+  'Frequently asked questions (FAQs)'
+] as const;
+
+/** Retain only the exact native section labels needed by the complete ACRA audit proof. */
+function preserveAcraAuditExemptionContext(
+  mainMarkup: string,
+  request: AcraAuditExemptionContextRequest
+): string {
+  if (!isAcraAuditExemptionContextRequest(request)) return mainMarkup;
+  const elements = parseBalancedMarkupElements(mainMarkup);
+  if (!elements) return mainMarkup;
+
+  const replacements: Array<{ start: number; end: number; text: string }> = [];
+  const summaryLabels = [ACRA_AUDIT_CONTEXT_HEADING, ACRA_AUDIT_GROUP_CONTEXT_HEADING];
+  for (const label of summaryLabels) {
+    const matches = elements.filter(element => element.tagName === 'summary' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)
+        .replace(/<svg\b[^>]*>[\s\S]*?<\/svg\s*>/gi, ' ')).trim() === label);
+    if (matches.length !== 1) continue;
+    const summary = matches[0];
+    const details = summary.parent?.tagName === 'details' ? summary.parent : undefined;
+    if (!details || summary.end === undefined || !isVisibleAcraAuditContextPath(summary, details) ||
+        !hasOnlyVisibleAcraAuditContextDescendants(summary, elements)) continue;
+    if (label === ACRA_AUDIT_CONTEXT_HEADING) {
+      const eligibility = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_CONTEXT_ELIGIBILITY &&
+        isVisibleAcraAuditContextPath(element, details) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+      if (eligibility.length !== 1 || eligibility[0].start <= summary.end) continue;
+    } else {
+      const criteria = elements.filter(element => element.tagName === 'p' && isInsideElement(element, details) &&
+        cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === ACRA_AUDIT_GROUP_CRITERIA &&
+        isVisibleAcraAuditContextPath(element, details));
+      if (criteria.length !== 1) continue;
+    }
+    replacements.push({ start: summary.start, end: summary.end, text: `<p>${mainMarkup.slice(summary.contentStart, summary.contentEnd)}</p>` });
+  }
+
+  for (const label of ACRA_AUDIT_SECTION_BOUNDARIES) {
+    const matches = elements.filter(element => element.tagName === 'h2' && element.contentEnd !== undefined &&
+      cleanHtmlText(mainMarkup.slice(element.contentStart, element.contentEnd)).trim() === label &&
+      isVisibleAcraAuditContextPath(element) && hasOnlyVisibleAcraAuditContextDescendants(element, elements));
+    if (matches.length === 1) {
+      const heading = matches[0];
+      if (heading.end !== undefined) replacements.push({
+        start: heading.start, end: heading.end,
+        text: `<p>${mainMarkup.slice(heading.contentStart, heading.contentEnd)}</p>`
+      });
+    }
+  }
+
+  return replacements.sort((left, right) => right.start - left.start).reduce((markup, replacement) =>
+    markup.slice(0, replacement.start) + replacement.text + markup.slice(replacement.end), mainMarkup);
+}
+
+function hasOnlyVisibleAcraAuditContextDescendants(
+  element: BalancedMarkupElement,
+  elements: readonly BalancedMarkupElement[]
+): boolean {
+  return !elements.some(descendant => isInsideElement(descendant, element) &&
+    (descendant.tagName === 'a' || (descendant.tagName !== 'svg' && isHiddenMarkupElement(descendant))));
+}
+
+function isVisibleAcraAuditContextPath(element: BalancedMarkupElement, stopAt?: BalancedMarkupElement): boolean {
+  let foundStop = stopAt === undefined;
+  for (let current: BalancedMarkupElement | undefined = element; current; current = current.parent) {
+    const identity = `${markupAttribute(current.attributes, 'class')} ${markupAttribute(current.attributes, 'id')}`;
+    if (isHiddenMarkupElement(current) || current.tagName === 'a' || RULE_METADATA_CONTAINER_MARKER.test(identity) ||
+        /\b(?:navigation|navbar|breadcrumb|menu|sidebar|carousel|teaser|quick[-_ ]?link|related|page[-_ ]?index)\b/i.test(identity)) {
+      return false;
+    }
+    if (current === stopAt) foundStop = true;
+  }
+  return foundStop;
 }
 interface MarkupElementContext {
   tagName: string;
@@ -678,7 +855,10 @@ function extractVisiblePageText(
     preferMainContent?: boolean;
     requireSubstantiveBody?: boolean;
     requireAcraAnnualReturnDeadlineTable?: boolean;
+    acraAuditExemptionContextRequest?: AcraAuditExemptionContextRequest;
     cpfOrdinaryWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    cpfAdditionalWageDefinitionRequest?: BoundedStatutoryAdvisoryRequest;
+    preserveNativeDisclosureProse?: boolean;
   } = {}
 ): string {
   const withoutChrome = (options.preferMainContent ? removeCorporateNavigationMarkup(rawDocument) : rawDocument)
@@ -690,7 +870,9 @@ function extractVisiblePageText(
     withoutChrome.match(/<article\b[^>]*>([\s\S]*?)<\/article\s*>/i);
   const bodyMatch = withoutChrome.match(/<body\b[^>]*>([\s\S]*?)<\/body\s*>/i);
   let visibleMarkup = contentMatch?.[1] || bodyMatch?.[1] || withoutChrome;
-  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && options.cpfOrdinaryWageDefinitionRequest &&
+  const cpfWageDefinitionRequest = options.cpfAdditionalWageDefinitionRequest || options.cpfOrdinaryWageDefinitionRequest;
+  const preserveNativeDisclosureProse = options.preserveNativeDisclosureProse === true && !cpfWageDefinitionRequest;
+  if (contentMatch && /^<main\b/i.test(contentMatch[0]) && (cpfWageDefinitionRequest || preserveNativeDisclosureProse) &&
       !/<\/?main\b/i.test(contentMatch[1])) {
     const mainMarkup = rawDocument
       .replace(/<!--[\s\S]*?-->/g, ' ')
@@ -719,7 +901,10 @@ function extractVisiblePageText(
     if (visibleMain && mainOpen && mainClosings[0]) {
       const mainContentStart = mainOpenIndex + mainOpen[0].length;
       const originalMainContent = mainMarkup.slice(mainContentStart, mainCloseIndex);
-      visibleMarkup = preserveSupportedCpfOrdinaryWageCard(originalMainContent, options.cpfOrdinaryWageDefinitionRequest)
+      const candidateMarkup = preserveNativeDisclosureProse
+        ? preserveRegisteredCpfDisclosureProse(originalMainContent) : originalMainContent;
+      visibleMarkup = (cpfWageDefinitionRequest
+        ? preserveSupportedCpfWageCard(candidateMarkup, cpfWageDefinitionRequest) : candidateMarkup)
         .replace(/<(head|script|style|noscript|svg|template|nav|footer|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
         .replace(/<(div|section|ul)\b(?=[^>]*(?:id|class)\s*=\s*["'][^"']*(?:navigation|navbar|breadcrumb|menu|sidebar|site-search|cookie|utility-links|social-links)[^"']*["'])[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ');
     }
@@ -733,11 +918,17 @@ function extractVisiblePageText(
       visibleMarkup = visibleMarkup.replace(tableMarkup, `<p>${tableMarker}</p>`);
     }
   }
+  if (options.acraAuditExemptionContextRequest) {
+    const visibleAuditMarkup = removeHiddenAcraAuditMarkup(visibleMarkup, options.acraAuditExemptionContextRequest);
+    if (visibleAuditMarkup === undefined) return '';
+    visibleMarkup = visibleAuditMarkup;
+  }
   if (options.requireSubstantiveBody) {
     visibleMarkup = removeNavigationalSummaryLead(visibleMarkup, rawDocument);
-    visibleMarkup = visibleMarkup
-      .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ');
     visibleMarkup = removeLinkOnlyRuleBlocks(removeRuleMetadataContainers(removeBlockWrappingLinks(visibleMarkup)));
+    if (options.acraAuditExemptionContextRequest) visibleMarkup = preserveAcraAuditExemptionContext(
+      visibleMarkup, options.acraAuditExemptionContextRequest
+    );
     visibleMarkup = extractRuleBearingMarkup(visibleMarkup);
   }
   // Keep nested list-item identity after HTML cleanup so evidence-only fallback
@@ -927,16 +1118,21 @@ export class ExternalSourceValidator {
 
     const titleMatch = rawDocument.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i);
     const pageTitle = titleMatch ? cleanHtmlText(titleMatch[1]) : '';
+    const cpfWageDefinitionRequest = expectation.cpfAdditionalWageDefinitionRequest ||
+      expectation.cpfOrdinaryWageDefinitionRequest;
     const substantiveText = extractVisiblePageText(rawDocument, {
       preferMainContent: expectation.preferMainContent,
       requireSubstantiveBody: expectation.requireSubstantiveBody,
       requireAcraAnnualReturnDeadlineTable: expectation.requireAcraAnnualReturnDeadlineTable,
-      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest
+      acraAuditExemptionContextRequest: expectation.acraAuditExemptionContextRequest,
+      cpfOrdinaryWageDefinitionRequest: expectation.cpfOrdinaryWageDefinitionRequest,
+      cpfAdditionalWageDefinitionRequest: expectation.cpfAdditionalWageDefinitionRequest,
+      preserveNativeDisclosureProse: expectation.preserveNativeDisclosureProse
     });
-    if (expectation.cpfOrdinaryWageDefinitionRequest &&
-        (!isBoundedStatutoryAdvisoryRequest(expectation.cpfOrdinaryWageDefinitionRequest) ||
+    if (cpfWageDefinitionRequest &&
+        (!isBoundedStatutoryAdvisoryRequest(cpfWageDefinitionRequest) ||
          supportBoundedStatutoryAdvisory({
-           ...expectation.cpfOrdinaryWageDefinitionRequest,
+           ...cpfWageDefinitionRequest,
            sourceText: substantiveText
          }) !== true)) {
       return {

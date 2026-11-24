@@ -1,0 +1,11 @@
+{
+  "exitCode": 1,
+  "errors": 34,
+  "errorFiles": [
+    {
+      "Count": 34,
+      "Name": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs"
+    }
+  ],
+  "warnings": 1129
+}

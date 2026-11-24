@@ -1,4 +1,4 @@
-import type { AccountingEventSequence, AccountingStandard, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingEventSequence, AccountingStandard, AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
@@ -23,8 +23,15 @@ import {
 import { RequestProfiler } from './telemetry';
 import { defaultSourceFreshnessManager } from '../standards/sourceFreshnessManager';
 import { formatSingaporeDate } from '../utils/dateUtils';
-import { resolveFactAmendment } from './factAmendmentService';
-import { startsNewAccountingScenario } from './conversationBoundary';
+import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
+import {
+  hasAffirmativeResetDirective,
+  hasConflictingPriorSubject,
+  hasExplicitPriorFactReference,
+  isJournalDisplayRequest,
+  startsNewAccountingScenario
+} from './conversationBoundary';
+import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -40,19 +47,33 @@ import {
   projectQuestionUnderstandingDiagnostics,
   reconcileQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
+import { isSemanticUnderstandingDisjointFromScenario } from './semanticScenarioResolver';
 import { buildAuthorityWorkstreams } from './authorityWorkstreams';
 import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
 import {
+  hasMomRulesAndUnresolvedAccountingJournal,
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
 } from '../utils/authorityEvidenceRouting';
 import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
-import { createRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
+import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
+import { buildAdvisoryConversation, classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
+  isHighRiskStatutoryClaim } from './aiFirstAdvisory';
+import { tryGenerateGroundedSynthesis, type GroundedSynthesisVerification } from './evidenceGroundedSynthesis';
+import type { VerifiedStandardGstCalculation } from '../engine/verifiedGstCalculation';
+import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluator';
+import { defaultQueryTopicResolver } from '../retrieval/queryTopicResolver';
 
 export interface GeminiResponse {
   messageText: string;
   scenarioState: AccountingScenarioState;
+  /** User turn selected by the service when it narrows unrelated chat history. */
+  conversationBoundaryMessageId?: string;
+  /** The advisory response is already structured and safe to show in full in chat. */
+  displayFullAnswer?: boolean;
+  /** Sanitized explanation category when AI-first generation falls back offline. */
+  advisoryFailureStatus?: AdvisoryFailureStatus;
   clarifications?: MissingFieldInfo[];
   imageAnalysisFailed?: boolean;
   /** Provider completion is separate from the independent IRAS evidence gate. */
@@ -60,6 +81,10 @@ export interface GeminiResponse {
   answerPath?: string;
   evidenceQuality?: GroundedReasoningContext['evidenceQuality'];
   claimVerification?: { accepted: unknown[]; rejected: unknown[] };
+  calculation?: VerifiedStandardGstCalculation;
+  applicationConclusions?: IrasApplicationConclusion[];
+  /** Source and response checks, separate from journal validation and model reasoning. */
+  synthesisVerification?: GroundedSynthesisVerification;
   /** Routing/retrieval trace only; this does not itself establish answer grounding. */
   sourceMapFallbackTrace?: SourceMapFallbackTrace;
 }
@@ -457,12 +482,433 @@ export async function processAccountingQuery(
   modelName: string = 'gemini-3.5-flash-lite',
   chatHistory: ChatMessage[] = [],
   outputPreference?: OutputPreference,
-  diagnostics?: AccountingQueryDiagnostics
+  diagnostics?: AccountingQueryDiagnostics,
+  journalRecallProposal?: AccountingScenarioState
+): Promise<GeminiResponse> {
+  let groundedContext: GroundedReasoningContext | undefined;
+  let authorityWorkstreams: AuthorityWorkstreamsResult | undefined;
+  let deterministicScenario: AccountingScenarioState | undefined;
+  let synthesisHistory = chatHistory;
+  let conversationBoundaryMessageId: string | undefined;
+  const response = await processAccountingQueryCore(
+    userInput, currentScenario, standard, providerOrApiKey, modelName, chatHistory, outputPreference, journalRecallProposal,
+    {
+      onGroundedContext: context => {
+        groundedContext = context;
+        diagnostics?.onGroundedContext?.(context);
+      },
+      onAuthorityWorkstreams: result => {
+        authorityWorkstreams = result;
+        diagnostics?.onAuthorityWorkstreams?.(result);
+      }
+    },
+    history => {
+      synthesisHistory = history;
+      conversationBoundaryMessageId = history.find(message => message.sender === 'user')?.id;
+    },
+    scenario => { deterministicScenario = structuredClone(scenario); }
+  );
+  if (conversationBoundaryMessageId) response.conversationBoundaryMessageId = conversationBoundaryMessageId;
+  // Reuse the governed result and its evidence; never restart a failed provider
+  // request or let synthesis produce accounting state or image-derived facts.
+  if (response.displayFullAnswer || response.advisoryFailureStatus || response.providerStatus === 'FAILED' ||
+      getCurrentImageAttachments(chatHistory).length > 0 || isJournalDisplayRequest(userInput)) return response;
+  if (response.calculation && isStandaloneOutputGstCalculationRequest(userInput)) return response;
+  try {
+    // An unmapped issue is an answer-completeness gap, not proof that the
+    // existing retrieval policy cannot establish any useful source passages.
+    // Reuse that policy for the original question while retaining every issue
+    // gap for synthesis; this does not admit a source or establish application.
+    if (hasConfiguredProvider(providerOrApiKey) && authorityWorkstreams && !groundedContext &&
+        authorityWorkstreams.workstreams.some(stream => stream.authority === 'IRAS' &&
+          stream.issues.some(issue => issue.verifiedClaims.length === 0)) &&
+        usesIrasEvidencePolicy(classifyQuestion(userInput), userInput)) {
+      const evidenceWorkstreams = authorityWorkstreams;
+      const irasIssue = evidenceWorkstreams.issuePlan.issues.find(issue =>
+        issue.governingAuthorities.includes('IRAS') && issue.domain.startsWith('IRAS_') &&
+        evidenceWorkstreams.workstreams.some(stream => stream.issues.some(candidate =>
+          candidate.issueId === issue.id && candidate.verifiedClaims.length === 0)));
+      const retrievalTopicIds = irasIssue ? defaultQueryTopicResolver.decomposeQuery(irasIssue.subject).topics
+        .filter(topic => topic.authorities.includes('IRAS')).map(topic => topic.id) : [];
+      const requestedConcepts = irasIssue ? [{ id: `synthesis-rule-${irasIssue.id}`, topicIds: retrievalTopicIds,
+        label: irasIssue.subject, terms: [irasIssue.subject] }] : [];
+      groundedContext = await buildGroundedReasoningContext(userInput, null, undefined, undefined, {
+        questionUnderstanding: { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' },
+        requestCompletenessContext: response.scenarioState.requestCompletenessContext,
+        ...(irasIssue ? {
+          evidenceScope: {
+            authority: 'IRAS' as const, domain: irasIssue.domain, topicIds: retrievalTopicIds, requestedConcepts,
+            context: { domainId: irasIssue.domain, population: irasIssue.population,
+              primarySubject: irasIssue.subject, concepts: [irasIssue.subject], requestedOperation: irasIssue.operation }
+          },
+          authorityIssue: { authority: 'IRAS' as const, issue: irasIssue, requestedConcepts }
+        } : {})
+      });
+      diagnostics?.onGroundedContext?.(groundedContext);
+    }
+    const synthesis = await tryGenerateGroundedSynthesis({
+      query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
+      response, context: groundedContext, workstreams: authorityWorkstreams
+    });
+    if (!synthesis) {
+      const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
+      const responseContainsStatutoryClaim = hasUnverifiedStatutoryClaim(response, deterministicScenario);
+      const journalRejectionOnly = response.answerPath === 'ACCOUNTING_JOURNAL_VALIDATION_REJECTION';
+      const statutoryRequest = responseContainsStatutoryClaim || (!journalRejectionOnly && !accountingOnlyPlan && (
+        Boolean(groundedContext && groundedContext.classification.intent !== 'TRANSACTION') ||
+        response.scenarioState.queryIntent === 'STATUTORY_ADVISORY' ||
+        response.scenarioState.queryIntent === 'HYBRID' ||
+        Boolean(authorityWorkstreams?.workstreams.some(stream =>
+          stream.authority !== 'ACCOUNTING_STANDARDS' && stream.authority !== 'IFRS_FOUNDATION'))
+      ));
+      if (hasConfiguredProvider(providerOrApiKey) && statutoryRequest) {
+        return createGroundedSynthesisFailureResponse(
+          response, userInput, standard, authorityWorkstreams, groundedContext, 'OTHER', deterministicScenario
+        );
+      }
+      return response;
+    }
+    return {
+      ...response,
+      messageText: synthesis.messageText,
+      displayFullAnswer: true,
+      answerPath: 'AI_GROUNDED_SYNTHESIS',
+      synthesisVerification: synthesis.verification,
+      scenarioState: {
+        ...response.scenarioState,
+        officialAnswerLinks: synthesis.officialAnswerLinks
+      }
+    };
+  } catch (error) {
+    const advisoryFailureStatus = classifyAdvisoryFailure(error);
+    console.warn('[Evidence-grounded synthesis] Re-rendering admitted evidence after synthesis failure.', advisoryFailureStatus);
+    return createGroundedSynthesisFailureResponse(
+      response, userInput, standard, authorityWorkstreams, groundedContext, advisoryFailureStatus, deterministicScenario
+    );
+  }
+}
+
+/** Rebuild the visible answer from admitted evidence after synthesis fails. */
+export function createGroundedSynthesisFailureResponse(
+  response: GeminiResponse,
+  userInput: string,
+  standard: AccountingStandard,
+  authorityWorkstreams: AuthorityWorkstreamsResult | undefined,
+  groundedContext: GroundedReasoningContext | undefined,
+  advisoryFailureStatus: AdvisoryFailureStatus,
+  deterministicScenario?: AccountingScenarioState
+): GeminiResponse {
+  const baseScenario = deterministicScenario || getUntrustedFallbackScenario(response.scenarioState);
+  const snapshotGroups = [
+    ...(deterministicScenario?.directGroups || []),
+    ...(deterministicScenario?.committedDirectGroups || []),
+    ...(deterministicScenario?.projectedGroups || [])
+  ];
+  const trustedGroups = snapshotGroups.filter(group => group.authorityStatus === 'DETERMINISTIC');
+  const trustedGroupIds = new Set(trustedGroups.map(group => group.id));
+  const trustedAccountNames = new Set(trustedGroups.flatMap(group => group.lines.map(line => line.accountName)));
+  const safeDirectGroups = mergeFallbackGroups(response.scenarioState.directGroups || [],
+    deterministicScenario?.directGroups || [], (deterministicScenario?.directGroups || []).filter(group => group.authorityStatus === 'DETERMINISTIC'),
+    trustedGroupIds, trustedAccountNames);
+  const safeCommittedGroups = mergeFallbackGroups(response.scenarioState.committedDirectGroups || [],
+    deterministicScenario?.committedDirectGroups || [], (deterministicScenario?.committedDirectGroups || []).filter(group => group.authorityStatus === 'DETERMINISTIC'),
+    trustedGroupIds, trustedAccountNames, true);
+  const safeProjectedGroups = mergeFallbackGroups(response.scenarioState.projectedGroups || [],
+    deterministicScenario?.projectedGroups || [], (deterministicScenario?.projectedGroups || []).filter(group => group.authorityStatus === 'DETERMINISTIC'),
+    trustedGroupIds, trustedAccountNames);
+  const engineMissingFields = deterministicScenario?.missingFields || [];
+  const currentCompletenessContext = [deterministicScenario?.requestCompletenessContext,
+    authorityWorkstreams?.requestCompletenessContext, groundedContext?.requestCompletenessContext]
+    .find(candidate => candidate && isCurrentRequestCompletenessContext(candidate, userInput));
+  const balancedJournalAvailable = Boolean(trustedGroups.some(group =>
+    group.authorityStatus === 'DETERMINISTIC' && group.isHypothetical !== true &&
+    deterministicScenario?.isHypothetical !== true && group.lines?.length > 0 &&
+    group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
+  ));
+  const sanitizedScenario: AccountingScenarioState = {
+    ...baseScenario,
+    // Keep only transaction structure and amounts from the accounting engine.
+    // Narrative fields may have been supplied or overwritten by the provider.
+    transactionTitle: deterministicScenario ? 'Transaction facts' : 'Transaction details not verified',
+    keyParameters: undefined,
+    assetName: undefined,
+    expenseAccountName: undefined,
+    paymentMethodAccountName: undefined,
+    transactionNature: undefined,
+    underlyingTransaction: undefined,
+    accountingTreatmentSummary: undefined,
+    singaporeTaxTreatmentSummary: undefined,
+    regulatoryMandatesSummary: undefined,
+    queryIntent: 'TRANSACTION',
+    primaryDomain: undefined,
+    assumptions: [],
+    effectiveDateOrTiming: undefined,
+    missingFacts: deterministicScenario?.missingFacts,
+    missingFields: engineMissingFields,
+    requestCompletenessContext: currentCompletenessContext,
+    statutoryAdvisory: [],
+    officialAnswerLinks: [],
+    authorityEvidencePresentation: undefined,
+    irasEvidencePresentation: undefined,
+    directGroups: safeDirectGroups,
+    committedDirectGroups: safeCommittedGroups,
+    projectedGroups: safeProjectedGroups,
+    ...(response.scenarioState.factAmendments?.length
+      ? { factAmendments: response.scenarioState.factAmendments }
+      : {}),
+    isComplete: Boolean(baseScenario.isComplete && engineMissingFields.length === 0)
+  };
+  let messageText: string;
+  let officialAnswerLinks: AccountingScenarioState['officialAnswerLinks'] = [];
+  let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
+  let irasEvidencePresentation: AccountingScenarioState['irasEvidencePresentation'];
+  let irasPrimaryDomain: AccountingScenarioState['primaryDomain'];
+  let irasQueryIntent: AccountingScenarioState['queryIntent'];
+  let statutoryAdvisory: AccountingScenarioState['statutoryAdvisory'] = [];
+  let fallbackMissingFacts: AccountingScenarioState['missingFacts'];
+  const mergeMissingFacts = (facts?: string[]) => {
+    fallbackMissingFacts = [...new Set([...(deterministicScenario?.missingFacts || []), ...(fallbackMissingFacts || []), ...(facts || [])])];
+  };
+  const renderAdmittedIrasFallback = (): void => {
+    if (!groundedContext?.evidenceQuality || !contextualIrasIssueMatchesWorkstreams(groundedContext, authorityWorkstreams, userInput)) return;
+    const fallback = renderIrasEvidenceResponse(
+      {}, groundedContext, userInput, sanitizedScenario, standard, 'PROVIDER_FAILURE'
+    );
+    if (!fallback.scenarioState.irasEvidencePresentation?.sourceGroups.some(group => group.passages.length > 0)) return;
+    irasEvidencePresentation = fallback.scenarioState.irasEvidencePresentation;
+    irasPrimaryDomain = fallback.scenarioState.primaryDomain;
+    irasQueryIntent = fallback.scenarioState.queryIntent;
+    statutoryAdvisory = fallback.scenarioState.statutoryAdvisory;
+    mergeMissingFacts(fallback.scenarioState.missingFacts);
+    officialAnswerLinks = [...(officialAnswerLinks || []), ...(irasEvidencePresentation.sourceGroups.flatMap(source =>
+      source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
+    ))];
+    messageText += `\n\n### Additional admitted IRAS evidence\n\n${fallback.messageText}`;
+  };
+  if (authorityWorkstreams?.query === userInput) {
+    const presentation = createAuthorityEvidencePresentation(authorityWorkstreams);
+    authorityEvidencePresentation = presentation;
+    messageText = renderAuthorityEvidenceResponseText(
+      presentation, balancedJournalAvailable
+    );
+    officialAnswerLinks = presentation.workstreams.flatMap(stream => stream.sources.flatMap(source =>
+      source.officialUrl ? [{ title: source.title, url: source.officialUrl }] : []
+    ));
+    renderAdmittedIrasFallback();
+  } else if (groundedContext?.evidenceQuality && contextualIrasIssueMatchesWorkstreams(groundedContext, authorityWorkstreams, userInput)) {
+    const fallback = renderIrasEvidenceResponse(
+      {}, groundedContext, userInput, sanitizedScenario, standard, 'PROVIDER_FAILURE'
+    );
+    messageText = fallback.messageText;
+    irasEvidencePresentation = fallback.scenarioState.irasEvidencePresentation;
+    irasPrimaryDomain = fallback.scenarioState.primaryDomain;
+    irasQueryIntent = fallback.scenarioState.queryIntent;
+    statutoryAdvisory = fallback.scenarioState.statutoryAdvisory;
+    mergeMissingFacts(fallback.scenarioState.missingFacts);
+    officialAnswerLinks = irasEvidencePresentation?.sourceGroups.flatMap(source =>
+      source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
+    ) || [];
+  } else {
+    messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
+      (balancedJournalAvailable ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.' : '');
+  }
+  return {
+    ...response,
+    messageText,
+    displayFullAnswer: true,
+    answerPath: 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    advisoryFailureStatus,
+    scenarioState: {
+      ...sanitizedScenario,
+      missingFacts: fallbackMissingFacts?.length ? fallbackMissingFacts : sanitizedScenario.missingFacts,
+      isComplete: Boolean(sanitizedScenario.isComplete && !engineMissingFields.length && !fallbackMissingFacts?.length),
+      statutoryAdvisory,
+      authorityEvidencePresentation,
+      irasEvidencePresentation,
+      ...(irasEvidencePresentation ? { primaryDomain: irasPrimaryDomain, queryIntent: irasQueryIntent } : {}),
+      uncertaintyDisclaimer: 'The original advisory response was not retained because its claims did not pass verification.' ,
+      officialAnswerLinks: [...new Map(officialAnswerLinks.map(link => [link.url, link])).values()]
+    },
+    clarifications: engineMissingFields
+  };
+}
+
+function getUntrustedFallbackScenario(scenario: AccountingScenarioState): AccountingScenarioState {
+  return {
+    scenarioType: 'UNRECOGNIZED',
+    rawQuery: scenario.rawQuery,
+    transactionTitle: 'Transaction details not verified',
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    isComplete: false,
+    missingFields: []
+  };
+}
+
+function mergeFallbackGroups(
+  responseGroups: JournalEntryGroup[], snapshotGroups: JournalEntryGroup[], trustedGroups: JournalEntryGroup[], trustedGroupIds: Set<string>,
+  trustedAccountNames: Set<string>, committedOnly = false
+): JournalEntryGroup[] {
+  const preservedTrusted = (committedOnly ? trustedGroups.filter(group => !group.isHypothetical) : trustedGroups)
+    .filter(group => group.authorityStatus === 'DETERMINISTIC');
+  const proposals = [...new Map([...responseGroups, ...snapshotGroups].filter(group => !trustedGroupIds.has(group.id))
+    .map(group => [group.id, group])).values()].map(group => ({
+    ...group,
+    eventDate: sanitizeJournalEventDate(group.eventDate),
+    title: group.authorityStatus === 'CONDITIONAL' ? 'Conditional illustrative journal' : 'Unverified AI-proposed journal',
+    summary: '',
+    taxSummary: undefined,
+    rationalePoints: [],
+    citations: [],
+    authorityStatus: group.authorityStatus === 'CONDITIONAL' ? 'CONDITIONAL' as const : 'AI_PROPOSED' as const,
+    lines: (group.lines || []).map(line => ({
+      ...line,
+      accountName: trustedAccountNames.has(line.accountName) ? line.accountName : 'Unverified proposed account',
+      lineExplanation: '',
+      foreignCurrency: typeof line.foreignCurrency === 'string' && /^[A-Z]{3}$/.test(line.foreignCurrency) ? line.foreignCurrency : undefined,
+      foreignDebit: safeNonNegativeNumber(line.foreignDebit),
+      foreignCredit: safeNonNegativeNumber(line.foreignCredit),
+      exchangeRate: safePositiveNumber(line.exchangeRate)
+    }))
+  }));
+  return [...preservedTrusted, ...proposals];
+}
+
+function sanitizeJournalEventDate(value: string): string {
+  const normalized = value.trim();
+  const dmy = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const ymd = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const day = Number(dmy?.[1] || ymd?.[3]);
+  const month = Number(dmy?.[2] || ymd?.[2]);
+  const year = Number(dmy?.[3] || ymd?.[1]);
+  if (!dmy && !ymd) return '';
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() + 1 !== month || date.getUTCDate() !== day) return '';
+  return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+}
+
+function safeNonNegativeNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function safePositiveNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+export function hasUnverifiedStatutoryClaim(
+  response: GeminiResponse,
+  deterministicScenario?: AccountingScenarioState
+): boolean {
+  const scenario = response.scenarioState;
+  if (scenario.singaporeTaxTreatmentSummary?.trim() || scenario.regulatoryMandatesSummary?.trim() ||
+      scenario.statutoryAdvisory?.some(advisory => advisory.authority !== 'ASC' && Boolean(advisory.summary?.trim()))) {
+    return true;
+  }
+  const groups = [...(scenario.directGroups || []), ...(scenario.committedDirectGroups || []), ...(scenario.projectedGroups || [])];
+  const deterministicGroups = [
+    ...(deterministicScenario?.directGroups || []),
+    ...(deterministicScenario?.committedDirectGroups || []),
+    ...(deterministicScenario?.projectedGroups || [])
+  ].filter(group => group.authorityStatus === 'DETERMINISTIC' && validateJournalGroups([group]).isValid);
+  const deterministicGroupById = new Map(deterministicGroups.map(group => [group.id, group]));
+  const deterministicScenarioTitle = deterministicGroups.length > 0 && deterministicScenario?.scenarioType !== 'UNRECOGNIZED'
+    ? deterministicScenario?.transactionTitle?.trim()
+    : undefined;
+  const matchesTrustedGroupNarrative = (group: JournalEntryGroup, field: 'title' | 'summary' | 'taxSummary' | 'eventDate', text: string | undefined) => {
+    const trustedGroup = deterministicGroupById.get(group.id);
+    return Boolean(trustedGroup && trustedGroup[field] === text);
+  };
+  const matchesTrustedLineNarrative = (group: JournalEntryGroup, lineId: string, field: 'accountName' | 'lineExplanation', text: string | undefined) => {
+    const trustedGroup = deterministicGroupById.get(group.id);
+    const trustedLine = trustedGroup?.lines.find(candidate => candidate.id === lineId);
+    return Boolean(trustedLine && trustedLine[field] === text);
+  };
+  const candidateNarrative = [
+    response.messageText,
+    ...(scenario.transactionTitle?.trim() === deterministicScenarioTitle ? [] : [scenario.transactionTitle]),
+    scenario.accountingTreatmentSummary,
+    scenario.singaporeTaxTreatmentSummary,
+    scenario.regulatoryMandatesSummary,
+    scenario.effectiveDateOrTiming,
+    scenario.uncertaintyDisclaimer,
+    scenario.keyParameters?.map(fact => `${fact.label}: ${fact.value} ${fact.badge || ''}`).join('. '),
+    ...(scenario.statutoryAdvisory || []).flatMap(advisory => [advisory.summary, ...(advisory.keyRules || [])]),
+    ...groups.flatMap(group => [
+      ...(matchesTrustedGroupNarrative(group, 'title', group.title) ? [] : [group.title]),
+      ...(matchesTrustedGroupNarrative(group, 'summary', group.summary) ? [] : [group.summary]),
+      ...(matchesTrustedGroupNarrative(group, 'taxSummary', group.taxSummary) ? [] : [group.taxSummary]),
+      ...(group.rationalePoints || []).filter(point => !deterministicGroupById.get(group.id)?.rationalePoints?.includes(point)),
+      ...(matchesTrustedGroupNarrative(group, 'eventDate', group.eventDate) ? [] : [group.eventDate]),
+      ...(group.lines || []).flatMap(line => [
+        ...(matchesTrustedLineNarrative(group, line.id, 'accountName', line.accountName) ? [] : [line.accountName]),
+        ...(matchesTrustedLineNarrative(group, line.id, 'lineExplanation', line.lineExplanation) ? [] : [line.lineExplanation]),
+        line.foreignCurrency,
+        line.foreignDebit,
+        line.foreignCredit,
+        line.exchangeRate
+      ])
+    ])
+  ].filter((text): text is string => typeof text === 'string' && Boolean(text.trim()));
+  return candidateNarrative.flatMap(text => text.split(/\n+|(?<=[.!?])\s+/)).some(sentence => {
+    const classification = classifyQuestion(sentence);
+    return classification.taxAnalysisRequired || classification.regulatoryAnalysisRequired || isHighRiskStatutoryClaim(sentence);
+  });
+}
+
+function hasOnlyAccountingAuthorityPlan(workstreams: AuthorityWorkstreamsResult | undefined): boolean {
+  if (!workstreams) return false;
+  const plannedIssues = workstreams.issuePlan.issues;
+  if (plannedIssues.length > 0) return plannedIssues.every(issue => issue.domain === 'ACCOUNTING' &&
+    issue.governingAuthorities.length > 0 && issue.governingAuthorities.every(authority =>
+      authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION'));
+  const evidenceIssues = workstreams.workstreams.flatMap(stream => stream.issues);
+  return evidenceIssues.length > 0 && evidenceIssues.every(issue => issue.domain === 'ACCOUNTING' &&
+    (issue.governingAuthority === 'ACCOUNTING_STANDARDS' || issue.governingAuthority === 'IFRS_FOUNDATION'));
+}
+
+function contextualIrasIssueMatchesWorkstreams(
+  context: GroundedReasoningContext,
+  workstreams: AuthorityWorkstreamsResult | undefined,
+  userInput: string
+): boolean {
+  if (workstreams && workstreams.query !== userInput) return false;
+  if (!context.requestCompletenessContext ||
+      !isCurrentRequestCompletenessContext(context.requestCompletenessContext, userInput)) return false;
+  const contextualIssue = context.authorityIssue?.issue;
+  if (!contextualIssue) return !workstreams && context.classification.authorities.includes('IRAS');
+  if (!workstreams) return true;
+  return workstreams.workstreams.some(stream => stream.authority === 'IRAS' &&
+    stream.issues.some(issue => issue.issueId === contextualIssue.id && issue.subject === contextualIssue.subject &&
+      issue.operation === contextualIssue.operation && issue.domain === contextualIssue.domain &&
+      issue.population === contextualIssue.population && issue.evidenceRequirement === contextualIssue.evidenceRequirement &&
+      contextualIssue.governingAuthorities.includes('IRAS')));
+}
+
+async function processAccountingQueryCore(
+  userInput: string,
+  currentScenario: AccountingScenarioState | null,
+  standard: AccountingStandard,
+  providerOrApiKey?: ProviderSettings | string,
+  modelName: string = 'gemini-3.5-flash-lite',
+  chatHistory: ChatMessage[] = [],
+  outputPreference?: OutputPreference,
+  journalRecallProposal?: AccountingScenarioState,
+  diagnostics?: AccountingQueryDiagnostics,
+  onConversationScope?: (history: ChatMessage[]) => void,
+  onDeterministicScenario?: (scenario: AccountingScenarioState) => void
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
   let relevantChatHistory = chatHistory;
+  const isNewAccountingScenario = startsNewAccountingScenario(userInput, currentScenario);
+  if (isNewAccountingScenario) {
+    const currentUserTurn = [...chatHistory].reverse().find(message => message.sender === 'user' && message.text === userInput);
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    onConversationScope?.(relevantChatHistory);
+  }
   if (outputPreference?.shareStructure) {
     const shareAnswer = answerShareStructureQuery(userInput, currentScenario);
     if (shareAnswer) return shareAnswer;
@@ -472,16 +918,22 @@ export async function processAccountingQuery(
   // The parser has the same boundary as a defence in depth measure; applying
   // it here also prevents grounding and provider prompts from seeing stale
   // balances on a complete new transaction.
-  let activeScenario = startsNewAccountingScenario(userInput, currentScenario)
-    ? null
-    : currentScenario;
-  let amendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  let activeScenario = isNewAccountingScenario ? null : currentScenario;
+  const rawAmendmentResolution = resolveFactAmendment(userInput, activeScenario);
+  let amendmentResolution = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+    !isSingleMonthlySalaryAmendment(userInput)
+    ? { intent: 'QUESTION' as const }
+    : rawAmendmentResolution;
   let authorityEvidencePresentation: AuthorityEvidencePresentation | undefined;
   let authorityEvidenceMessage: string | undefined;
   let authorityEvidenceQueryIntent: AccountingScenarioState['queryIntent'];
   let requestCompletenessContext: RequestCompletenessContext | undefined;
+  let advisoryFailureStatus: AdvisoryFailureStatus | undefined;
+  const attachAdvisoryFailureStatus = (response: GeminiResponse): GeminiResponse => advisoryFailureStatus
+    ? { ...response, advisoryFailureStatus }
+    : response;
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
-    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return response;
+    if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return attachAdvisoryFailureStatus(response);
     const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
       group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
     ));
@@ -507,11 +959,15 @@ export async function processAccountingQuery(
       ...(authorityMessage || authorityEvidenceMessage ? { messageText: authorityMessage || authorityEvidenceMessage } : {}),
       scenarioState: amendmentResolution.amendments?.length ? {
         ...scenarioWithCompleteness,
+        ...(typeof deterministicScenario?.amount === 'number' && scenarioWithCompleteness.amount === undefined
+          ? { amount: deterministicScenario.amount }
+          : {}),
         factAmendments: [
           ...(activeScenario?.factAmendments || []),
           ...amendmentResolution.amendments
         ]
-      } : scenarioWithCompleteness
+      } : scenarioWithCompleteness,
+      ...(advisoryFailureStatus ? { advisoryFailureStatus } : {})
     };
   };
 
@@ -519,12 +975,17 @@ export async function processAccountingQuery(
   // reclassified as a new transaction and sent to a model.  Preserve the last
   // committed journal exactly; if none exists, say so rather than inventing
   // one from generic expense defaults.
-  const isJournalDisplayRequest = /^\s*(?:(?:where(?:\s+is|\s*'s)|what(?:\s+is|\s*'s))\s+(?:your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?)|(?:show|repeat|display|give(?:\s+me)?|provide)\s+(?:(?:me\s+)?|your\s+|the\s+|last\s+)?(?:double\s+entry|journal(?:\s+entry)?))\s*\?*\s*$/i.test(userInput);
-  if (isJournalDisplayRequest) {
-    const candidateGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
+  if (isJournalDisplayRequest(userInput)) {
+    const hasRetainedCommittedSnapshot = Boolean(currentScenario?.committedDirectGroups?.length);
+    const candidateGroups = currentScenario?.committedDirectGroups?.length
       ? currentScenario.committedDirectGroups
       : currentScenario?.directGroups || [];
-    const committedGroups = candidateGroups.filter(group => !group.isHypothetical && group.isBalanced && group.totalDebit > 0 && group.totalCredit > 0);
+    const committedGroups = currentScenario && !currentScenario.isHypothetical &&
+      (hasRetainedCommittedSnapshot || currentScenario.isComplete) &&
+      candidateGroups.every(group => group.authorityStatus === 'DETERMINISTIC' && !group.isHypothetical) &&
+      validateJournalGroups(candidateGroups).isValid
+      ? candidateGroups
+      : [];
     const lastGroup = committedGroups[committedGroups.length - 1];
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
@@ -537,6 +998,28 @@ export async function processAccountingQuery(
           ...currentScenario,
           directGroups: committedGroups,
           committedDirectGroups: committedGroups
+        }
+      });
+    }
+
+    const uncommittedScenario = journalRecallProposal || currentScenario;
+    const uncommittedGroups = getDisplayableUncommittedJournalGroups(uncommittedScenario, standard);
+    if (uncommittedScenario && uncommittedGroups.length > 0) {
+      const hasConditionalGroups = uncommittedGroups.some(group => group.authorityStatus === 'CONDITIONAL');
+      const hasAiProposedGroups = uncommittedGroups.some(group => group.authorityStatus === 'AI_PROPOSED');
+      const messageText = hasConditionalGroups && hasAiProposedGroups
+        ? '### Mixed Unconfirmed Journal (Conditional and AI-Proposed)\n\nThere is no confirmed journal available. The current journal in the Double Entry Journal tab includes both conditional entries that depend on current assumptions and unverified AI-proposed entries for review; neither has been committed.'
+        : hasConditionalGroups
+          ? '### Conditional Journal (Unconfirmed)\n\nA complete journal is available under the current assumptions. It remains conditional and has not been committed; review the assumptions before relying on it. The journal is shown in the Double Entry Journal tab.'
+          : '### AI-Proposed Journal (Not Confirmed)\n\nThere is no confirmed journal available. The current AI-proposed journal is shown in the Double Entry Journal tab for review; it has not been committed.';
+      return attachAmendmentProvenance({
+        messageText,
+        scenarioState: {
+          ...uncommittedScenario,
+          directGroups: uncommittedGroups,
+          committedDirectGroups: undefined,
+          projectedGroups: undefined,
+          isHypothetical: false
         }
       });
     }
@@ -565,6 +1048,58 @@ export async function processAccountingQuery(
   const journalIntentQuery = removeNegatedJournalDirectives(userInput);
   const outputJournalRequested = Boolean(outputPreference?.journal);
   const journalRequested = Boolean(outputJournalRequested || /\b(?:double[ -]+entr(?:y|ies)|journal[ -]+entr(?:y|ies)|debits? and credits?)\b/i.test(journalIntentQuery) || /\b(?:which|what)\s+accounts?\b.{0,100}\bdebit(?:ed)?\b.{0,60}\bcredit(?:ed)?\b/i.test(journalIntentQuery) || /\b(?:debit(?:ed)?|dr)\b.{0,60}\b(?:credit(?:ed)?|cr)\b/i.test(journalIntentQuery));
+  const deterministicClassification = classifyQuestion(userInput);
+  const explicitNewQuestion = /\b(?:new (?:case|scenario|situation|question|transaction|analysis|example)|unrelated|(?:separate|different) (?:case|scenario|situation|analysis|question|transaction|example))\b/i.test(userInput) ||
+    hasAffirmativeResetDirective(userInput);
+  const isContextualFollowUp = !explicitNewQuestion &&
+    (isShortSemanticFollowUp(userInput, activeScenario) || hasExplicitPriorFactReference(userInput, activeScenario));
+  const isPayrollSalaryAmendment = activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
+    amendmentResolution.amendments?.length === 1 &&
+    amendmentResolution.amendments[0].field === 'monthlySalary' &&
+    isSingleMonthlySalaryAmendment(userInput);
+  const isFactualClarificationReply = Boolean(activeScenario?.missingFields?.length) &&
+    !/[?]/.test(userInput) &&
+    !/\b(?:what|when|which|how|why|who|where|explain|describe|outline|actually|instead)\b/i.test(userInput) &&
+    (/^\s*(?:(?:sgd|usd|eur|s\$|\$)\s*)?[\d,]+(?:\.\d+)?\s*$/i.test(userInput) ||
+      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
+  const retainConversationContext = isContextualFollowUp ||
+    (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
+  const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
+    deterministicClassification.authorities.some(authority => authority !== 'UNKNOWN') &&
+    !deterministicClassification.accountingAnalysisRequired && !deterministicClassification.journalEntryRequired &&
+    !journalRequested && !outputJournalRequested && !retainConversationContext;
+  const conflictingPriorSubject = !retainConversationContext && hasConflictingPriorSubject(userInput, activeScenario);
+  if (explicitNewQuestion || independentStatutoryRequest || conflictingPriorSubject) {
+    const currentUserTurn = [...chatHistory].reverse().find(message =>
+      message.sender === 'user' && message.text.trim() === userInput.trim());
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    activeScenario = null;
+    amendmentResolution = resolveFactAmendment(userInput, null);
+    onConversationScope?.(relevantChatHistory);
+  }
+  if (isAiFirstAdvisoryEligible(userInput, providerOrApiKey, hasImages, activeScenario, outputPreference)) {
+    try {
+      const advisory = await generateAiFirstAdvisory(
+        userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,
+        { onGroundedContext: context => diagnostics?.onGroundedContext?.(context) }
+      );
+      profiler.setQueryMode('AI_FIRST_ADVISORY');
+      profiler.recordFirstVisibleResponse();
+      profiler.logSummary();
+      return attachAmendmentProvenance({
+        messageText: advisory.messageText,
+        scenarioState: advisory.scenarioState,
+        displayFullAnswer: true
+      });
+    } catch (error) {
+      advisoryFailureStatus = classifyAdvisoryFailure(error);
+      console.warn('[AI-first advisory] Generation failed; using the existing offline response path.', advisoryFailureStatus);
+      profiler.recordFallback();
+      providerOrApiKey = undefined;
+    }
+  }
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
@@ -581,31 +1116,34 @@ export async function processAccountingQuery(
     if (integrity.isValid) return response;
 
     const unstatedIssue = integrity.issues.find(i => i.code === 'UNSTATED_AMOUNT');
-    const issue: MissingFieldInfo = unstatedIssue
-      ? {
-          fieldKey: 'amount',
-          fieldName: 'Transaction amount',
-          prompt: 'What is the transaction amount in SGD?',
-          whyNeeded: unstatedIssue.message
-        }
-      : {
-          fieldKey: 'journalValidation',
-          fieldName: 'Journal validation',
-          prompt: 'The proposed journal did not pass exact debit/credit and classification validation: ' + integrity.issues.map(i => i.message).join(' '),
-          whyNeeded: 'A provider-generated entry cannot be accepted unless all journal lines, account categories, and totals are valid and balance to the cent.'
-        };
+    const trustedIssue: MissingFieldInfo = unstatedIssue
+      ? { fieldKey: 'amount', fieldName: 'Transaction amount', prompt: 'What is the transaction amount in SGD?',
+          whyNeeded: 'The amount was not supplied by the user and is required to calculate the journal.' }
+      : { fieldKey: 'journalValidation', fieldName: 'Journal validation',
+          prompt: 'The proposed journal could not be validated. Please confirm the transaction amount and account details.',
+          whyNeeded: 'Only validated accounting facts can produce an accepted journal.' };
+    if (deterministicScenario) {
+      onDeterministicScenario?.({
+        ...deterministicScenario,
+        directGroups: deterministicScenario.directGroups || [],
+        isComplete: false,
+        missingFields: [...deterministicScenario.missingFields.filter(field =>
+          field.fieldKey !== trustedIssue.fieldKey), trustedIssue]
+      });
+    }
 
     return {
       ...response,
-      messageText: '### AI-Proposed Journal Rejected\n\n' + issue.prompt,
+      messageText: '### AI-Proposed Journal Rejected\n\n' + trustedIssue.prompt,
+      answerPath: 'ACCOUNTING_JOURNAL_VALIDATION_REJECTION',
       scenarioState: {
         ...response.scenarioState,
         directGroups: [],
         projectedGroups: [],
         isComplete: false,
-        missingFields: [issue]
+        missingFields: [trustedIssue]
       },
-      clarifications: [issue]
+      clarifications: [trustedIssue]
     };
   };
 
@@ -634,16 +1172,20 @@ export async function processAccountingQuery(
   }
   const questionUnderstandingStarted = performance.now();
   requestCompletenessContext = createRequestCompletenessContext(userInput);
-  const rawQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+  const semanticConversation = relevantChatHistory.length
+    ? buildAdvisoryConversation(relevantChatHistory, userInput)
+    : undefined;
+  const rawQuestionUnderstanding = await interpretSemanticQuestion(
+    userInput, providerOrApiKey, undefined, semanticConversation
+  );
   if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
     profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
   }
   if (rawQuestionUnderstanding.failure === 'TIMEOUT') profiler.recordTimeout();
   else if (rawQuestionUnderstanding.failure && rawQuestionUnderstanding.failure !== 'NO_PROVIDER') profiler.recordFallback();
   const classificationStarted = performance.now();
-  const deterministicClassification = classifyQuestion(userInput);
   const reconciledQuestionUnderstanding = reconcileQuestionUnderstanding(
-    userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext
+    userInput, deterministicClassification, rawQuestionUnderstanding, requestCompletenessContext, semanticConversation
   );
   requestCompletenessContext = reconciledQuestionUnderstanding.requestCompletenessContext;
   const classification = reconciledQuestionUnderstanding.classification;
@@ -651,6 +1193,16 @@ export async function processAccountingQuery(
   profiler.recordClassification(performance.now() - classificationStarted);
   profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
   if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
+  if (!retainConversationContext && isSemanticUnderstandingDisjointFromScenario(questionUnderstanding, activeScenario)) {
+    const currentUserTurn = [...chatHistory].reverse().find(message =>
+      message.sender === 'user' && message.text.trim() === userInput.trim());
+    relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    imageAttachments = getCurrentImageAttachments(relevantChatHistory);
+    hasImages = imageAttachments.length > 0;
+    activeScenario = null;
+    amendmentResolution = resolveFactAmendment(userInput, null);
+    onConversationScope?.(relevantChatHistory);
+  }
   const explicitIrasEvidenceRequest = usesIrasEvidencePolicy(classification, userInput);
   const unsupportedAccountingRuleExplanationRuntimeEnabled = shouldUseUnmappedAccountingRuleExplanationRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
@@ -661,14 +1213,16 @@ export async function processAccountingQuery(
     explicitJournalRequest: journalRequested,
     outputJournalRequest: outputJournalRequested,
     hasImages,
-    isShortSemanticFollowUp: isShortSemanticFollowUp(userInput)
+    isShortSemanticFollowUp: isContextualFollowUp
   });
-  const authorityEvidenceRuntimeEnabled = shouldUseAuthorityEvidenceRuntime({
+  const authorityEvidenceRuntimeEnabled = !isPayrollSalaryAmendment && (shouldUseAuthorityEvidenceRuntime({
     issuePlan: reconciledQuestionUnderstanding.issuePlan,
     classification,
     explicitIrasEvidenceRequest,
-    hasImages
-  }) || unsupportedAccountingRuleExplanationRuntimeEnabled;
+    hasImages,
+    questionUnderstanding,
+    rawQuery: userInput
+  }) || unsupportedAccountingRuleExplanationRuntimeEnabled);
   if (authorityEvidenceRuntimeEnabled) {
     authorityEvidenceQueryIntent = classification.intent;
     const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {
@@ -686,45 +1240,64 @@ export async function processAccountingQuery(
       issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
       (issue.domain === 'ACCOUNTING' || issue.operation === 'PREPARE_JOURNAL')
     );
-    const standaloneAuthorityQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
-      (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested && !isShortSemanticFollowUp(userInput));
-    if (standaloneAuthorityQuestion) {
+    const authorityOnlyQuestion = unsupportedAccountingRuleExplanationRuntimeEnabled ||
+      (!materialPlanRequestsAccounting && !journalRequested && !outputJournalRequested);
+    // No supported accounting application has been established for this mixed
+    // plan. Parsing its combined amounts as payroll would misattribute sale
+    // proceeds as salary and invent employee/CPF facts.
+    const unresolvedMixedJournal = hasMomRulesAndUnresolvedAccountingJournal(
+      reconciledQuestionUnderstanding.issuePlan, classification
+    );
+    if (authorityOnlyQuestion || unresolvedMixedJournal) {
       activeScenario = null;
       amendmentResolution = resolveFactAmendment(userInput, null);
-      const currentUserTurn = [...chatHistory].reverse().find(message =>
-        message.sender === 'user' && message.text.trim() === userInput.trim());
-      relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+      // Advisory continuations need labeled history, not transaction parsing.
+      // A standalone question or unresolved mixed journal still clears it.
+      if (unsupportedAccountingRuleExplanationRuntimeEnabled || unresolvedMixedJournal || !isContextualFollowUp) {
+        const currentUserTurn = [...chatHistory].reverse().find(message =>
+          message.sender === 'user' && message.text.trim() === userInput.trim());
+        relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+        onConversationScope?.(relevantChatHistory);
+      }
+      const authorityScenario: AccountingScenarioState = {
+        scenarioType: unresolvedMixedJournal ? 'UNRECOGNIZED' : 'AUTHORITY_ADVISORY',
+        rawQuery: userInput,
+        transactionTitle: 'Unresolved accounting and statutory obligations',
+        functionalCurrency: 'SGD',
+        transactionCurrency: 'SGD',
+        directGroups: [],
+        missingFields: unresolvedMixedJournal ? [{
+          fieldKey: 'independentAccountingFacts',
+          fieldName: 'Separate sale and final-salary facts',
+          prompt: 'Please confirm the sale settlement and measurement details separately from the salary rate, pay period and departure facts.',
+          whyNeeded: 'Sale proceeds cannot establish an employee’s salary or CPF contribution.'
+        }] : [],
+        isComplete: !unresolvedMixedJournal && authorityEvidencePresentation.status !== 'INSUFFICIENT',
+        queryIntent: classification.intent,
+        primaryDomain: 'MULTI_AUTHORITY',
+        requestCompletenessContext
+      };
+      onDeterministicScenario?.(authorityScenario);
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
       return attachAmendmentProvenance({
         messageText: authorityEvidenceMessage,
-        scenarioState: {
-          scenarioType: 'AUTHORITY_ADVISORY',
-          rawQuery: userInput,
-          transactionTitle: 'Whole-question statutory review',
-          functionalCurrency: 'SGD',
-          transactionCurrency: 'SGD',
-          directGroups: [],
-          missingFields: [],
-          isComplete: authorityEvidencePresentation.status !== 'INSUFFICIENT',
-          queryIntent: classification.intent,
-          primaryDomain: 'MULTI_AUTHORITY',
-          requestCompletenessContext
-        }
+        scenarioState: authorityScenario
       });
     }
   }
   const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isShortSemanticFollowUp(userInput);
+    !isContextualFollowUp;
   if (standaloneIrasQuestion) {
     activeScenario = null;
     amendmentResolution = resolveFactAmendment(userInput, null);
     const currentUserTurn = [...chatHistory].reverse().find(message =>
       message.sender === 'user' && message.text.trim() === userInput.trim());
     relevantChatHistory = currentUserTurn ? [currentUserTurn] : [];
+    onConversationScope?.(relevantChatHistory);
     imageAttachments = currentUserTurn?.images || [];
     hasImages = imageAttachments.length > 0;
   }
@@ -776,6 +1349,7 @@ export async function processAccountingQuery(
         eventSequence: resolution.sequence, evidence: resolution.sequence.events.flatMap(event => event.evidence),
         isComplete: resolution.clarifications.length === 0, missingFields: resolution.clarifications
       };
+      onDeterministicScenario?.(sequenceScenario);
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
@@ -817,7 +1391,8 @@ export async function processAccountingQuery(
     }
   }
   const tDet0 = Date.now();
-  deterministicScenario = await parseAccountingQuery(userInput, activeScenario);
+  deterministicScenario = await parseAccountingQuery(userInput, activeScenario, questionUnderstanding);
+  onDeterministicScenario?.(deterministicScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
   if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {
@@ -831,6 +1406,8 @@ export async function processAccountingQuery(
   // permission for a provider to invent a value. This is field-agnostic: new
   // scenarios can supply their own missingFields without editing this gate.
   const materialClarification = deterministicScenario.missingFields?.[0];
+  const hasExplicitUnresolvedSaleJournal = journalRequested &&
+    deterministicScenario.missingFields?.some(field => field.fieldKey === 'independentSaleJournal');
   // A complete deterministic journal wins. Otherwise permit the existing AI
   // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
@@ -853,10 +1430,12 @@ export async function processAccountingQuery(
       return {
         messageText: '### Clarification Required for Double Entry\n\n' + clarification.prompt,
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false, missingFields: [clarification] },
-        clarifications: [clarification]
+        clarifications: [clarification],
+        ...(advisoryFailureStatus ? { advisoryFailureStatus } : {})
       };
     }
-    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED') {
+    if (materialClarification && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+        !hasExplicitUnresolvedSaleJournal) {
       return attachAmendmentProvenance({
         messageText: '### Clarification Required for Double Entry\n\n' + deterministicScenario.missingFields.map(f => f.prompt).join('\n'),
         scenarioState: { ...deterministicScenario, directGroups: [], isComplete: false },
@@ -866,6 +1445,7 @@ export async function processAccountingQuery(
   }
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
+      !hasExplicitUnresolvedSaleJournal &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);

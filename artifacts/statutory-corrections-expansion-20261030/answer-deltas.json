@@ -1,0 +1,714 @@
+{
+  "review30": [
+    {
+      "id": "hold-acra-01",
+      "question": "We are preparing an annual return now. Must we check the particulars of auditors as well as directors?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "e3cde778f73522913959eaf9f3aa4d2bab5737edd393e5456c632a25cff748a8",
+      "afterSha256": "d364af48412d9eb51806b861e7c99058180fd111e63f7003ba0f7151f8410762",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** From 20 October 2026, an annual-return filer must confirm that current particulars already provided to ACRA are accurate for directors, chief executive officers (CEOs), secretaries, auditors and relevant members. These particulars include names, identification details, nationality, contact address, appointment dates, registered office address and shareholding details where applicable. The form separately asks whether any individual performs the CEO role. A company limited by guarantee must confirm its latest-reported total member count. Applies to annual returns filed from the expressly stated commencement date. Check ACRA-recorded particulars and update inaccurate particulars in Bizfile before filing. The CEO question concerns individuals performing the role; the ACRA notice does not limit it to a title or appointed position. Companies limited by guarantee have an additional total-number-of-members confirmation. The notice does not say the CEO question or officer-particulars confirmation changes the underlying duty to appoint or register officers. A case-specific conclusion requires: For a particular filing: filing date, company type, existing ACRA particulars, whether individuals perform the CEO role, and whether the company is limited by guarantee. General change explanation only; does not verify what particulars are currently recorded for an entity. Do not apply this change to filings submitted before 20 October 2026 without contemporaneous evidence. The notice gives examples of particulars and says “where applicable”; it is not a field-by-field eform schema. [ACRA | Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026](https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** From 20 October 2026, an annual-return filer must confirm that current particulars already provided to ACRA are accurate for directors, chief executive officers (CEOs), secretaries, auditors and relevant members. These particulars include names, identification details, nationality, contact address, appointment dates, registered office address and shareholding details where applicable. The form separately asks whether any individual performs the CEO role. A company limited by guarantee must confirm its latest-reported total member count. Applies to annual returns filed from the expressly stated commencement date. Check ACRA-recorded particulars and update inaccurate particulars in Bizfile before filing. The CEO question concerns individuals performing the role; the ACRA notice does not limit it to a title or appointed position. Companies limited by guarantee have an additional total-number-of-members confirmation. The notice does not say the CEO question or officer-particulars confirmation changes the underlying duty to appoint or register officers. A case-specific conclusion requires: For a particular filing: filing date, company type, existing ACRA particulars, whether individuals perform the CEO role, and whether the company is limited by guarantee. General change explanation only; does not verify what particulars are currently recorded for an entity. Do not apply this change to filings submitted before 20 October 2026 without contemporaneous evidence. The notice gives examples of particulars and says “where applicable”; it is not a field-by-field eform schema. [ACRA | Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026](https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/)"
+      ]
+    },
+    {
+      "id": "hold-acra-02",
+      "question": "Does the October 2026 annual-return change ask whether somebody actually performs the CEO role?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "25c2e7a566bb3260924a827d62ff2d1c705fc8a3cc107d6ab5bac3fa515cb78b",
+      "afterSha256": "6495156457ce5652bb164ef4e3346605decf7ec95847c94d77e7c322f21d6408",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** From 20 October 2026, an annual-return filer must confirm that current particulars already provided to ACRA are accurate for directors, chief executive officers (CEOs), secretaries, auditors and relevant members. These particulars include names, identification details, nationality, contact address, appointment dates, registered office address and shareholding details where applicable. The form separately asks whether any individual performs the CEO role. A company limited by guarantee must confirm its latest-reported total member count. Applies to annual returns filed from the expressly stated commencement date. Check ACRA-recorded particulars and update inaccurate particulars in Bizfile before filing. The CEO question concerns individuals performing the role; the ACRA notice does not limit it to a title or appointed position. Companies limited by guarantee have an additional total-number-of-members confirmation. The notice does not say the CEO question or officer-particulars confirmation changes the underlying duty to appoint or register officers. A case-specific conclusion requires: For a particular filing: filing date, company type, existing ACRA particulars, whether individuals perform the CEO role, and whether the company is limited by guarantee. General change explanation only; does not verify what particulars are currently recorded for an entity. Do not apply this change to filings submitted before 20 October 2026 without contemporaneous evidence. The notice gives examples of particulars and says “where applicable”; it is not a field-by-field eform schema. [ACRA | Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026](https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** From 20 October 2026, an annual-return filer must confirm that current particulars already provided to ACRA are accurate for directors, chief executive officers (CEOs), secretaries, auditors and relevant members. These particulars include names, identification details, nationality, contact address, appointment dates, registered office address and shareholding details where applicable. The form separately asks whether any individual performs the CEO role. A company limited by guarantee must confirm its latest-reported total member count. Applies to annual returns filed from the expressly stated commencement date. Check ACRA-recorded particulars and update inaccurate particulars in Bizfile before filing. The CEO question concerns individuals performing the role; the ACRA notice does not limit it to a title or appointed position. Companies limited by guarantee have an additional total-number-of-members confirmation. The notice does not say the CEO question or officer-particulars confirmation changes the underlying duty to appoint or register officers. A case-specific conclusion requires: For a particular filing: filing date, company type, existing ACRA particulars, whether individuals perform the CEO role, and whether the company is limited by guarantee. General change explanation only; does not verify what particulars are currently recorded for an entity. Do not apply this change to filings submitted before 20 October 2026 without contemporaneous evidence. The notice gives examples of particulars and says “where applicable”; it is not a field-by-field eform schema. [ACRA | Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026](https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/)"
+      ]
+    },
+    {
+      "id": "hold-acra-03",
+      "question": "Our return was filed on 19 October 2026. Did the officer-confirmation change that commenced on 20 October already govern that filing?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "0500d5ec9582d387d4fc1abe394174c8cc15a7c45d086f78c63e8495c2855448",
+      "afterSha256": "0500d5ec9582d387d4fc1abe394174c8cc15a7c45d086f78c63e8495c2855448",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    },
+    {
+      "id": "hold-acra-04",
+      "question": "Is a solvent exempt private company automatically required to upload Full XBRL financial statements?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "f9666aae84f3a501846cfb40cb55013372e367744dca7be46e33e4883255fe71",
+      "afterSha256": "ad28a0ac015c61bcb0bac4a5004ae0ff5b6ff50507aed23dfd856398c001a8bb",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ]
+    },
+    {
+      "id": "hold-iras-01",
+      "question": "Is GST on an employee medical examination for renewing a work permit recoverable simply because the employer had to arrange it?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "542d1505df113c5e96a5d679ef65b94a233f7b75f23cb2ced8efba5389a5c064",
+      "afterSha256": "bf9d4064d4c64b2dbd23fe76f628602d99a79f268af48232ee92c9612ae8f687",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ]
+    },
+    {
+      "id": "hold-iras-02",
+      "question": "Can a business recover GST on a chauffeured point-to-point private-hire ride instead of buying or hiring the motor car itself?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "2e683784300cd0f71dc98eb91a4099f2f9b2b698dbe7e96bcccd4044c3194be8",
+      "afterSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim. All exceptions remain subject to the ordinary claim conditions and records. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ]
+    },
+    {
+      "id": "hold-iras-03",
+      "question": "We paid expenses for a subsidiary's car and recovered only half. Is every dollar of its input GST recoverable?",
+      "priorGrade": "PARTIAL",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "6582699785dae70544d0e5744d2b301a9cb5542ce0f4f2df45d18f2e9bd16fee",
+      "afterSha256": "22a2e83e438cb941514c095b68902846c4d7d8ce6abd8eeffe41ce30276e83d0",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS generally disallows input tax on a motor car’s purchase and running costs under regulation 27, unless the vehicle is outside the regulation 25(1) motor-car definition or a specific exception applies. Its examples include qualifying chauffeured pay-per-trip transport services from 1 April 2022; qualifying costs for cars used by a third party from 1 January 2023; and vehicles such as lorries, vans and motorcycles that are not motor cars. Costs for cars used physically or economically by you or your employees remain disallowed. For a connected person’s car, the claimant must recover the expense and the recovery must not be ancillary to a primary supply; partial recovery limits the claim to the recovered portion. If only half the expenses are recovered, the exception permits input tax only to the extent of that half, not the unrecovered half. All exceptions remain subject to the ordinary claim conditions and records. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ]
+    },
+    {
+      "id": "hold-iras-04",
+      "question": "If a treaty reduces withholding tax to zero, can we omit the WHT filing?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "b820c72fcf7e4256fbb3e6b952d74063b354f38ab23febd359c26e3fea96145f",
+      "afterSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates. [IRAS | Withholding Tax (WHT) filing and payment due date](https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates. [IRAS | Withholding Tax (WHT) filing and payment due date](https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date)"
+      ]
+    },
+    {
+      "id": "hold-cpf-01",
+      "question": "What are the employer and employee CPF percentages in 2026 for a Singapore citizen aged over 60 to 65 earning more than S$750 per month?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "e7a0fa41aa7954d3d400fc735cc85bf9a60caaca0a09725d1debebb97ca01782",
+      "afterSha256": "7c248c48a04b591d5577362c7e33034d585c01eeb1e6dc2a0de86ad88e8596d7",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ]
+    },
+    {
+      "id": "hold-cpf-02",
+      "question": "Does the employee CPF percentage fall on the exact date of a 60th birthday, or in the following month?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "8209e3c1a0045ed346721a031f5f14b087821d759d205120b3d57e314207d378",
+      "afterSha256": "e9e0cbcd032d48edf82e575481da4ed518b8fd20e1421487cf33acda5b3287d0",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ]
+    },
+    {
+      "id": "hold-cpf-03",
+      "question": "A worker became a permanent resident on 18 May 2025. When does the second PR contribution year begin?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "5368fc8571a477fd0250396074633099a5a443f62b25361cc863c091a24c98cd",
+      "afterSha256": "1c830d8e4005377419e8ced8b7cec85eb994353bf07fdb1c5f5ef031f48827a8",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** For PR status obtained on 18/05/2025, first-year rates apply from that date through 31/05/2026; second-year rates apply from 01/06/2026 through 31/05/2027; third-year rates start 01/06/2027. This calculates the PR-year timing only; it does not establish a contribution rate without the applicable payroll-year table and any approved higher-rate election. [CPF | I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?](https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** For PR status obtained on 18/05/2025, first-year rates apply from that date through 31/05/2026; second-year rates apply from 01/06/2026 through 31/05/2027; third-year rates start 01/06/2027. This calculates the PR-year timing only; it does not establish a contribution rate without the applicable payroll-year table and any approved higher-rate election. [CPF | I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?](https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions)"
+      ]
+    },
+    {
+      "id": "hold-cpf-04",
+      "question": "Can payroll deduct the rounded total CPF contribution from the employee and then add an employer share on top?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "2c0d41ce21c0ae6631f00b9cdfbbd6b0a1e9cc1c5aee7adf770251d65b223257",
+      "afterSha256": "0985f0c252cc1339c3158a38ae875858ebd9b772b3f9466020667a590045f8f8",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** CPF Board selects the contribution table from citizenship or SPR year, age group and wage band. Total wages combine Ordinary Wages (OW) and Additional Wages (AW), which have separate ceilings. For wages above S$50 and up to S$500 in a month, the employee share is nil but the employer share remains due. Round the combined total contribution to the nearest dollar (50 cents rounds up); drop cents from the employee share and set the employer share to total less employee. To determine the actual amount, supply the payroll month, date of birth, status/PR conversion date, rate election, CPF-classified OW/AW, year-to-date contributions and expected annual OW where an AW ceiling applies. [CPF | How much CPF contributions to pay](https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board selects the contribution table from citizenship or SPR year, age group and wage band. Total wages combine Ordinary Wages (OW) and Additional Wages (AW), which have separate ceilings. For wages above S$50 and up to S$500 in a month, the employee share is nil but the employer share remains due. Round the combined total contribution to the nearest dollar (50 cents rounds up); drop cents from the employee share and set the employer share to total less employee. To determine the actual amount, supply the payroll month, date of birth, status/PR conversion date, rate election, CPF-classified OW/AW, year-to-date contributions and expected annual OW where an AW ceiling applies. [CPF | How much CPF contributions to pay](https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay)"
+      ]
+    },
+    {
+      "id": "hold-mom-01",
+      "question": "After four completed months with the employer, is statutory paid sick leave already the full 14 outpatient and 60 hospitalisation days?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "94b8a8939892c9e404e21208d4ac5a28d9d6acd4ede1d5f400852302f32e0c1b",
+      "afterSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee with at least 3 months’ service who informs, or tries to inform, the employer within 48 hours may qualify for paid outpatient sick and hospitalisation leave on the applicable medical certification. The example entitlement is 5 days of outpatient sick leave and 15 days of hospitalisation leave at month 3; 8 outpatient and 30 hospitalisation days at month 4; 11 outpatient and 45 hospitalisation days at month 5; and from month 6, 14 days of outpatient leave and 60 days of hospitalisation leave. The 60-day hospitalisation cap includes outpatient leave. The Employment Act applies, at least 3 months of service are completed, and the employer is notified or attempted to be notified within 48 hours. Outpatient leave requires a registered medical or dental practitioner’s certification. Hospitalisation leave must meet the specified care/quarantine conditions and certification requirements. The 60 hospitalisation days include the 14 outpatient days; they are not 60 days in addition to outpatient leave. Historical table application is not established by this current page. Cosmetic procedures are not required paid sick leave under the page. A case-specific conclusion requires: Employment Act coverage, employment start date and service months completed. When the employer was informed, qualifying medical certificate and whether care satisfies the hospitalisation definition. Outpatient and hospitalisation leave already taken in the relevant entitlement year. General entitlement only; case eligibility and remaining balance require the listed employee, notice, certification and leave-use facts. Do not infer the applicable historical table from page retrieval date. [MOM | Sick leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee with at least 3 months’ service who informs, or tries to inform, the employer within 48 hours may qualify for paid outpatient sick and hospitalisation leave on the applicable medical certification. The example entitlement is 5 days of outpatient sick leave and 15 days of hospitalisation leave at month 3; 8 outpatient and 30 hospitalisation days at month 4; 11 outpatient and 45 hospitalisation days at month 5; and from month 6, 14 days of outpatient leave and 60 days of hospitalisation leave. The 60-day hospitalisation cap includes outpatient leave. The Employment Act applies, at least 3 months of service are completed, and the employer is notified or attempted to be notified within 48 hours. Outpatient leave requires a registered medical or dental practitioner’s certification. Hospitalisation leave must meet the specified care/quarantine conditions and certification requirements. The 60 hospitalisation days include the 14 outpatient days; they are not 60 days in addition to outpatient leave. Historical table application is not established by this current page. Cosmetic procedures are not required paid sick leave under the page. A case-specific conclusion requires: Employment Act coverage, employment start date and service months completed. When the employer was informed, qualifying medical certificate and whether care satisfies the hospitalisation definition. Outpatient and hospitalisation leave already taken in the relevant entitlement year. General entitlement only; case eligibility and remaining balance require the listed employee, notice, certification and leave-use facts. Do not infer the applicable historical table from page retrieval date. [MOM | Sick leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement)"
+      ]
+    },
+    {
+      "id": "hold-mom-02",
+      "question": "Is the 60-day hospitalisation leave entitlement in addition to the 14 days of outpatient sick leave?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "94b8a8939892c9e404e21208d4ac5a28d9d6acd4ede1d5f400852302f32e0c1b",
+      "afterSha256": "520c21b8fbbf3c86fe101f497872d386246458908a18296a20f743e4cd186139",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee with at least 3 months’ service who informs, or tries to inform, the employer within 48 hours may qualify for paid outpatient sick and hospitalisation leave on the applicable medical certification. The example entitlement is 5 days of outpatient sick leave and 15 days of hospitalisation leave at month 3; 8 outpatient and 30 hospitalisation days at month 4; 11 outpatient and 45 hospitalisation days at month 5; and from month 6, 14 days of outpatient leave and 60 days of hospitalisation leave. The 60-day hospitalisation cap includes outpatient leave. The Employment Act applies, at least 3 months of service are completed, and the employer is notified or attempted to be notified within 48 hours. Outpatient leave requires a registered medical or dental practitioner’s certification. Hospitalisation leave must meet the specified care/quarantine conditions and certification requirements. The 60 hospitalisation days include the 14 outpatient days; they are not 60 days in addition to outpatient leave. Historical table application is not established by this current page. Cosmetic procedures are not required paid sick leave under the page. A case-specific conclusion requires: Employment Act coverage, employment start date and service months completed. When the employer was informed, qualifying medical certificate and whether care satisfies the hospitalisation definition. Outpatient and hospitalisation leave already taken in the relevant entitlement year. General entitlement only; case eligibility and remaining balance require the listed employee, notice, certification and leave-use facts. Do not infer the applicable historical table from page retrieval date. [MOM | Sick leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee with at least 3 months’ service who informs, or tries to inform, the employer within 48 hours may qualify for paid outpatient sick and hospitalisation leave on the applicable medical certification. The example entitlement is 5 days of outpatient sick leave and 15 days of hospitalisation leave at month 3; 8 outpatient and 30 hospitalisation days at month 4; 11 outpatient and 45 hospitalisation days at month 5; and from month 6, 14 days of outpatient leave and 60 days of hospitalisation leave. The 60-day hospitalisation cap includes outpatient leave. The Employment Act applies, at least 3 months of service are completed, and the employer is notified or attempted to be notified within 48 hours. Outpatient leave requires a registered medical or dental practitioner’s certification. Hospitalisation leave must meet the specified care/quarantine conditions and certification requirements. The 60 hospitalisation days include the 14 outpatient days; they are not 60 days in addition to outpatient leave. Historical table application is not established by this current page. Cosmetic procedures are not required paid sick leave under the page. A case-specific conclusion requires: Employment Act coverage, employment start date and service months completed. When the employer was informed, qualifying medical certificate and whether care satisfies the hospitalisation definition. Outpatient and hospitalisation leave already taken in the relevant entitlement year. General entitlement only; case eligibility and remaining balance require the listed employee, notice, certification and leave-use facts. Do not infer the applicable historical table from page retrieval date. [MOM | Sick leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement)"
+      ]
+    },
+    {
+      "id": "hold-mom-03",
+      "question": "What general salary-payment rule applies when the employer dismisses an employee, rather than the employee resigning?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "9137b24d5dcb431db6546552bbce1260130bdbf4dbfd8703202cf87b8e9076c2",
+      "afterSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** For employees covered by the Employment Act, final salary is due on the last employment day when required notice is served; within 7 days of the last employment day when the employee resigns without notice; and, after misconduct dismissal or employer termination, on the last day or, if that is not possible, within 3 working days from dismissal or termination. Commission timing follows the employment contract or existing policies or practices. For a foreign employee leaving employment, the employer must withhold monies due for tax clearance for up to 30 days after notifying the Comptroller of Income Tax; this can affect when salary is released. [MOM | Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** For employees covered by the Employment Act, final salary is due on the last employment day when required notice is served; within 7 days of the last employment day when the employee resigns without notice; and, after misconduct dismissal or employer termination, on the last day or, if that is not possible, within 3 working days from dismissal or termination. Commission timing follows the employment contract or existing policies or practices. For a foreign employee leaving employment, the employer must withhold monies due for tax clearance for up to 30 days after notifying the Comptroller of Income Tax; this can affect when salary is released. [MOM | Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)"
+      ]
+    },
+    {
+      "id": "hold-mom-04",
+      "question": "Do public holidays always entitle every employee to a day off with pay even after an unauthorised absence immediately before the holiday?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "9d025127350e3eeefc9e3b955d38cf81e3ce6e32b3cec7bd43f3140d14790c67",
+      "afterSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee has 11 paid public holidays each year. If a holiday falls on the rest day, the following working day will be a paid public holiday; if it falls on a non-working day, another day off or an extra day at the gross rate is due. Working on a public holiday ordinarily earns holiday gross pay plus an additional day at the basic rate; overtime applies beyond normal hours. By mutual agreement, the day may be substituted. Part IV coverage limits which employees may use time off in lieu. Distinguish a holiday on a working day, non-working day, or rest day. For holiday gross pay, the employee must not be absent without consent or reasonable excuse on the working day immediately before or after the holiday; authorised leave on either day is permitted. No holiday pay is due when the holiday itself falls during approved unpaid leave. Additional basic-rate pay is the default for working on the holiday; substitute-holiday arrangements require mutual agreement. An employee outside Employment Act coverage is governed by the contract. Time off in lieu of hours worked is available only to employees not covered by Part IV under the stated arrangement. Rest-day pay and any excess-hours overtime are separate entitlements. A case-specific conclusion requires: Employment Act and Part IV coverage. Work schedule and whether the date is a working, non-working or rest day. Whether the employee worked, hours worked, agreed substitution/time-off arrangements, and relevant absence or unpaid-leave facts. Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts. Does not replace separate rest-day, overtime or part-time rules. [MOM | Public holidays: entitlement and pay](https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee has 11 paid public holidays each year. If a holiday falls on the rest day, the following working day will be a paid public holiday; if it falls on a non-working day, another day off or an extra day at the gross rate is due. Working on a public holiday ordinarily earns holiday gross pay plus an additional day at the basic rate; overtime applies beyond normal hours. By mutual agreement, the day may be substituted. Part IV coverage limits which employees may use time off in lieu. Distinguish a holiday on a working day, non-working day, or rest day. For holiday gross pay, the employee must not be absent without consent or reasonable excuse on the working day immediately before or after the holiday; authorised leave on either day is permitted. No holiday pay is due when the holiday itself falls during approved unpaid leave. Additional basic-rate pay is the default for working on the holiday; substitute-holiday arrangements require mutual agreement. An employee outside Employment Act coverage is governed by the contract. Time off in lieu of hours worked is available only to employees not covered by Part IV under the stated arrangement. Rest-day pay and any excess-hours overtime are separate entitlements. A case-specific conclusion requires: Employment Act and Part IV coverage. Work schedule and whether the date is a working, non-working or rest day. Whether the employee worked, hours worked, agreed substitution/time-off arrangements, and relevant absence or unpaid-leave facts. Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts. Does not replace separate rest-day, overtime or part-time rules. [MOM | Public holidays: entitlement and pay](https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay)"
+      ]
+    },
+    {
+      "id": "hold-mas-01",
+      "question": "Does filing an LFMC's quarterly financial returns discharge the reporting obligations of each investment fund it manages?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "e3609d89d3a666fc0c9b33520d5c776139014ce6c792b2caf8b25a69c6bc9521",
+      "afterSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+      "beforeGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ],
+      "afterGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    },
+    {
+      "id": "hold-mas-02",
+      "question": "What is the normal deadline for an LFMC's quarterly Forms 1 and 2?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "df01121fa474118524111998d45ecbeedb333a8af24e2050901d371789c310f9",
+      "afterSha256": "c8d17cbb9e64a1858cf4fc6110c43a79c38dace19bcc3d1bc73f799fb27fc7f2",
+      "beforeGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ],
+      "afterGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    },
+    {
+      "id": "hold-mas-03",
+      "question": "Can the misconduct notice that takes effect on 1 January 2027 be treated as already governing an October 2026 report?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "629f182c7e44b2d2b7b8756bdaf909d59ec8b6e758a121c31d7142fbc2e6e56b",
+      "afterSha256": "629f182c7e44b2d2b7b8756bdaf909d59ec8b6e758a121c31d7142fbc2e6e56b",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    },
+    {
+      "id": "hold-mas-04",
+      "question": "Is the precise QDC form for our venture-capital fund established by the generic LFMC quarterly financial return table?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "1cec4d2e26a00e64ffb5df2234b261db770cd63bcad786d3fb331e041cd4a846",
+      "afterSha256": "1cec4d2e26a00e64ffb5df2234b261db770cd63bcad786d3fb331e041cd4a846",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    },
+    {
+      "id": "fresh-acra-01",
+      "question": "When filing an annual return in Bizfile, do we still need to declare AGM details if our company was exempt from holding the meeting?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "6ecf2876be1120a5df92ba8554eb23a0ad11f009d8ec3c1094d405d4a6a7716a",
+      "afterSha256": "a98a1f7e021443bd408b7ab22693ca01d21a1d8b0dae33a7f32580f4be65c333",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** A company officer such as a director or secretary may file a company annual return, or a corporate service provider may file for it. The filer logs in to Bizfile as a Business User through Corppass, checks the company type, registered office address, business activities, company officers, shareholder/share-capital particulars, charges and statutory-register requirements, updates inaccurate entity details before continuing, checks financial-statement duties, and completes company-type declarations and AGM/financial-statement/register sections. The eform asks whether an individual performs the CEO role; a yes answer requires that CEO to be appointed and reflected as a Position Holder. AGM details must be entered even where the company was exempt or dispensed with the AGM. One director signs the directors’ statement for a single-director company; at least two directors sign where there is more than one. The filer reviews, declares and pays the stated S$60 fee. The page also says all overdue annual returns must be filed first when more than one financial year is overdue. Filing is through Bizfile’s File annual returns eService; the company data and applicable form sections depend on company type and reporting-period status. If full XBRL financial statements are filed, a PDF copy is not required; otherwise a complete PDF copy is required for the cases stated on the page. AGM details are declared whether the company held an AGM, was exempt or dispensed with one. Financial-statement filing exemptions and exceptions depend on the separate ACRA financial-statement rules. This process page does not establish the statutory annual-return deadline or a historical filing process. A case-specific conclusion requires: Entity type and financial-year end. Company type and status for the financial period. Current officer, shareholder, share, office, activity and charge information. Financial-statement filing status, AGM status, director count, and RORC/ROND/RONS obligations. This is a general process summary, not confirmation of a particular entity’s statutory filing obligation, deadline, eligibility or completed filing. The current step sequence and stated S$60 transaction fee may change; year-specific filing process is not established by the page. [ACRA | Steps to file an annual return](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** A company officer such as a director or secretary may file a company annual return, or a corporate service provider may file for it. The filer logs in to Bizfile as a Business User through Corppass, checks the company type, registered office address, business activities, company officers, shareholder/share-capital particulars, charges and statutory-register requirements, updates inaccurate entity details before continuing, checks financial-statement duties, and completes company-type declarations and AGM/financial-statement/register sections. The eform asks whether an individual performs the CEO role; a yes answer requires that CEO to be appointed and reflected as a Position Holder. AGM details must be entered even where the company was exempt or dispensed with the AGM. One director signs the directors’ statement for a single-director company; at least two directors sign where there is more than one. The filer reviews, declares and pays the stated S$60 fee. The page also says all overdue annual returns must be filed first when more than one financial year is overdue. Filing is through Bizfile’s File annual returns eService; the company data and applicable form sections depend on company type and reporting-period status. If full XBRL financial statements are filed, a PDF copy is not required; otherwise a complete PDF copy is required for the cases stated on the page. AGM details are declared whether the company held an AGM, was exempt or dispensed with one. Financial-statement filing exemptions and exceptions depend on the separate ACRA financial-statement rules. This process page does not establish the statutory annual-return deadline or a historical filing process. A case-specific conclusion requires: Entity type and financial-year end. Company type and status for the financial period. Current officer, shareholder, share, office, activity and charge information. Financial-statement filing status, AGM status, director count, and RORC/ROND/RONS obligations. This is a general process summary, not confirmation of a particular entity’s statutory filing obligation, deadline, eligibility or completed filing. The current step sequence and stated S$60 transaction fee may change; year-specific filing process is not established by the page. [ACRA | Steps to file an annual return](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/)"
+      ]
+    },
+    {
+      "id": "fresh-acra-02",
+      "question": "Our company needs to file financial statements. For Simplified XBRL, is being non-publicly accountable enough, or do both revenue and total assets also have to be at most S$500,000?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "f9666aae84f3a501846cfb40cb55013372e367744dca7be46e33e4883255fe71",
+      "afterSha256": "ad28a0ac015c61bcb0bac4a5004ae0ff5b6ff50507aed23dfd856398c001a8bb",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ]
+    },
+    {
+      "id": "fresh-iras-01",
+      "question": "For an investment holding company's ECI filing waiver, do dividends and interest count as revenue, and does an accounting loss by itself establish nil ECI?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "b9f616e768c489c97fa3e78a3218a229eed1a05f9140776ccbfa66a1ceb3f229",
+      "afterSha256": "8e10276200991a65d7af1585882d96c7ff74780e48f8d70d65cbd6ed7e3ba78d",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category. [IRAS | Estimated Chargeable Income (ECI) Filing](https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS generally requires ECI filing within three months after FYE. The general waiver requires both annual revenue of S$5 million or less for that financial year and nil ECI for the YA, with ECI measured before partial or start-up exemption. Revenue is the company’s main source of income; for an investment holding company it is investment income. A nil ECI or book loss alone does not qualify a company whose relevant revenue exceeds S$5 million; likewise, revenue below the threshold does not qualify when ECI is positive. IRAS gives separate entity categories that need not file and says companies self-assess the waiver. To assess a particular YA, confirm FYE, principal/investment revenue, pre-exemption ECI and any specifically excluded category. [IRAS | Estimated Chargeable Income (ECI) Filing](https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing)"
+      ]
+    },
+    {
+      "id": "fresh-iras-02",
+      "question": "A non-resident company provides consultancy services partly overseas and partly in Singapore. Is withholding tax charged on every dollar of the fee merely because our payer is in Singapore?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "aa8badb6eb59e766b91a4078facd297b44e08ed9b20f6dbf7c9958a683e47f3a",
+      "afterSha256": "b2d19700fab248854af61b096522dc75178e0f8f7a14ebac0cb3a93198f90bb2",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates. [IRAS | Payments that are subject to withholding tax](https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS says WHT applies to specified service and management fees paid to a non-resident company to the extent attributable to work done in Singapore; a mixed Singapore/overseas engagement must be apportioned. Services supplied electronically from overseas without sending staff are described as performed outside Singapore. The current page states the prevailing 17% Corporate Income Tax rate on gross service fees for Singapore work, but the applicable DTA, payee residence and permanent-establishment facts may change the rate or treatment. IRAS also says the old related-party cost-pooling concession was withdrawn for payments liable on or after 1 November 2022. Specific treatment requires the payee type and residence, service scope/location, DTA and relevant dates. [IRAS | Payments that are subject to withholding tax](https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax)"
+      ]
+    },
+    {
+      "id": "fresh-cpf-01",
+      "question": "For a Singapore citizen in private-sector employment aged above 60 and up to 65, with monthly wages above S$750, what are the employer and employee CPF rates in the 2026 contribution table?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "dd9dd875b56a1b2d2138153e9a110c1305f42b67d8d5f1551f8e9203a2d2df01",
+      "afterSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ]
+    },
+    {
+      "id": "fresh-cpf-02",
+      "question": "For CPF Additional Wages, can we keep our estimated annual ceiling unchanged in December if the employee's actual Ordinary Wages turn out higher?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "08fd645d8eb6df0ac14636b3283a9efbdb7e644840bf3765aad596a129ac5de7",
+      "afterSha256": "c17336892d43e6b89b66bae9ebbd0daa13ff64a7528f28c2200d55aa599b9947",
+      "beforeGuidance": [
+        "- **CPF rule explanation:** CPF Board sets the AW ceiling per employer, per year at S$102,000 less that employee’s Ordinary Wages subject to CPF for the year. The 2026 examples use an OW ceiling of S$8,000 per month and say the year in which an AW is due and payable controls the ceiling. At each AW payment, estimate OW for the year and account for AW already subject to CPF. In the last month of employment or December, whichever is earlier, recalculate using actual OW subject to CPF through that period; pay any CPF shortfall with the last-month or December contributions, and apply for a refund if excess CPF contributions result. To compute the current payment’s CPF-subject AW, the employer must provide actual year-to-date OW/AW and either the expected full-year OW or confirm this is final settlement. [Examples for computation of Additional Wage (AW) Ceiling](https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1)"
+      ],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board sets the AW ceiling per employer, per year at S$102,000 less that employee’s Ordinary Wages subject to CPF for the year. The 2026 examples use an OW ceiling of S$8,000 per month and say the year in which an AW is due and payable controls the ceiling. At each AW payment, estimate OW for the year and account for AW already subject to CPF. In the last month of employment or December, whichever is earlier, recalculate using actual OW subject to CPF through that period; pay any CPF shortfall with the last-month or December contributions, and apply for a refund if excess CPF contributions result. To compute the current payment’s CPF-subject AW, the employer must provide actual year-to-date OW/AW and either the expected full-year OW or confirm this is final settlement. [Examples for computation of Additional Wage (AW) Ceiling](https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1)"
+      ]
+    },
+    {
+      "id": "fresh-mom-01",
+      "question": "For an Employment Act employee with an incomplete year of service, how is annual leave pro-rated and how are fractions of half a day rounded?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "29940f7aa36d834921550844161662670ff13e6d9014948660226cd54ffede76",
+      "afterSha256": "59482f1ac5fd1a8271ffc4b4a032f036ba9f52e5b75b0fb69acd00369efd0cf1",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee becomes entitled to paid annual leave after at least 3 months; being on probation does not remove that entitlement. For 3 to 12 months of service, the entitlement is based on completed months worked even if the employee is still on probation. The minimum annual entitlement rises by one day per year from 7 days in year one to 14 days from year eight. The official formula is completed months of service divided by 12, multiplied by the annual leave entitlement; fractions less than one-half of a day round down, while half or more rounds up to one day. Approved unpaid leave is excluded; service during a resignation notice period counts. The Employment Act must cover the employee and at least three months’ service must be completed; probation does not remove entitlement after this threshold. For 3 to 12 months of service, pro-rating uses completed months even if the employee is still on probation; a partial, incomplete service month is disregarded. The minimum table follows year of service beginning on the employment start date. For employees outside the Employment Act, use contractual terms; this page does not establish their statutory entitlement. Annual leave on half-working days, unused-leave carry-forward/forfeiture and termination encashment have separate rules. A case-specific conclusion requires: Employment Act coverage and start date. Completed service months and service year. Annual contractual entitlement, approved unpaid-leave periods, and notice period if pro-rating. States the general statutory minimum and pro-rating method; it does not calculate an individual balance without the listed facts. The current page’s retrieval or update date is not treated as legal commencement. [MOM | Annual leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee becomes entitled to paid annual leave after at least 3 months; being on probation does not remove that entitlement. For 3 to 12 months of service, the entitlement is based on completed months worked even if the employee is still on probation. The minimum annual entitlement rises by one day per year from 7 days in year one to 14 days from year eight. The official formula is completed months of service divided by 12, multiplied by the annual leave entitlement; fractions less than one-half of a day round down, while half or more rounds up to one day. Approved unpaid leave is excluded; service during a resignation notice period counts. The Employment Act must cover the employee and at least three months’ service must be completed; probation does not remove entitlement after this threshold. For 3 to 12 months of service, pro-rating uses completed months even if the employee is still on probation; a partial, incomplete service month is disregarded. The minimum table follows year of service beginning on the employment start date. For employees outside the Employment Act, use contractual terms; this page does not establish their statutory entitlement. Annual leave on half-working days, unused-leave carry-forward/forfeiture and termination encashment have separate rules. A case-specific conclusion requires: Employment Act coverage and start date. Completed service months and service year. Annual contractual entitlement, approved unpaid-leave periods, and notice period if pro-rating. States the general statutory minimum and pro-rating method; it does not calculate an individual balance without the listed facts. The current page’s retrieval or update date is not treated as legal commencement. [MOM | Annual leave eligibility and entitlement](https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement)"
+      ]
+    },
+    {
+      "id": "fresh-mom-02",
+      "question": "For a five-day-week Employment Act employee, what is the difference if a public holiday falls on the non-working Saturday rather than the rest-day Sunday?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "9d025127350e3eeefc9e3b955d38cf81e3ce6e32b3cec7bd43f3140d14790c67",
+      "afterSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee has 11 paid public holidays each year. If a holiday falls on the rest day, the following working day will be a paid public holiday; if it falls on a non-working day, another day off or an extra day at the gross rate is due. Working on a public holiday ordinarily earns holiday gross pay plus an additional day at the basic rate; overtime applies beyond normal hours. By mutual agreement, the day may be substituted. Part IV coverage limits which employees may use time off in lieu. Distinguish a holiday on a working day, non-working day, or rest day. For holiday gross pay, the employee must not be absent without consent or reasonable excuse on the working day immediately before or after the holiday; authorised leave on either day is permitted. No holiday pay is due when the holiday itself falls during approved unpaid leave. Additional basic-rate pay is the default for working on the holiday; substitute-holiday arrangements require mutual agreement. An employee outside Employment Act coverage is governed by the contract. Time off in lieu of hours worked is available only to employees not covered by Part IV under the stated arrangement. Rest-day pay and any excess-hours overtime are separate entitlements. A case-specific conclusion requires: Employment Act and Part IV coverage. Work schedule and whether the date is a working, non-working or rest day. Whether the employee worked, hours worked, agreed substitution/time-off arrangements, and relevant absence or unpaid-leave facts. Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts. Does not replace separate rest-day, overtime or part-time rules. [MOM | Public holidays: entitlement and pay](https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee has 11 paid public holidays each year. If a holiday falls on the rest day, the following working day will be a paid public holiday; if it falls on a non-working day, another day off or an extra day at the gross rate is due. Working on a public holiday ordinarily earns holiday gross pay plus an additional day at the basic rate; overtime applies beyond normal hours. By mutual agreement, the day may be substituted. Part IV coverage limits which employees may use time off in lieu. Distinguish a holiday on a working day, non-working day, or rest day. For holiday gross pay, the employee must not be absent without consent or reasonable excuse on the working day immediately before or after the holiday; authorised leave on either day is permitted. No holiday pay is due when the holiday itself falls during approved unpaid leave. Additional basic-rate pay is the default for working on the holiday; substitute-holiday arrangements require mutual agreement. An employee outside Employment Act coverage is governed by the contract. Time off in lieu of hours worked is available only to employees not covered by Part IV under the stated arrangement. Rest-day pay and any excess-hours overtime are separate entitlements. A case-specific conclusion requires: Employment Act and Part IV coverage. Work schedule and whether the date is a working, non-working or rest day. Whether the employee worked, hours worked, agreed substitution/time-off arrangements, and relevant absence or unpaid-leave facts. Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts. Does not replace separate rest-day, overtime or part-time rules. [MOM | Public holidays: entitlement and pay](https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay)"
+      ]
+    },
+    {
+      "id": "fresh-mas-01",
+      "question": "Does MAS's LFMC compliance toolkit cover every return owed by the investment funds a licensed manager manages?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "e3609d89d3a666fc0c9b33520d5c776139014ce6c792b2caf8b25a69c6bc9521",
+      "afterSha256": "83f9b5c6df3ab8a643b53236502c26ba1aec171f3ff7a6097a6775a60687a444",
+      "beforeGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ],
+      "afterGuidance": [
+        "- **MAS rule explanation:** MAS’s 29 May 2026 SFA compliance toolkit states that an LFMC files quarterly Forms 1 and 2 within 14 days after each quarter end under Regulation 27 of the FMR. It also lists annual audited Forms 1 to 6 and the audited Profit and Loss Account, Balance Sheet and auditor’s report (including a management letter, if any) within five months after financial year end under section 107 of the SFA and Regulation 27 of the FMR. The toolkit says it is non-exhaustive and excludes obligations outside the SFA and fund-level requirements. Confirm the entity’s LFMC scope, reporting period, and current MAS-Tx instructions before applying these deadlines. A complete reporting calendar also needs the licence and manager regime, regulated activities, fund types and reporting periods, plus checks for event-triggered notifications and duties outside this toolkit. One quarterly financial return does not establish that all MAS duties are discharged. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    },
+    {
+      "id": "fresh-mas-02",
+      "question": "Under the expressly future Notice SFA 04-N24 effective on 1 January 2027, who files the initial representative-misconduct report and what triggers its 21-calendar-day clock?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "9099437abf4571339069d76e45ba46fd62e9a91fd945322c4eaa166f937f9821",
+      "afterSha256": "9099437abf4571339069d76e45ba46fd62e9a91fd945322c4eaa166f937f9821",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    }
+  ],
+  "fresh10": [
+    {
+      "id": "reviewfresh-acra-01",
+      "question": "We lodged our annual return on 19 October 2026. Was the new question about a person carrying out the chief executive officer role already mandatory for that filing?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+      "afterSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    },
+    {
+      "id": "reviewfresh-acra-02",
+      "question": "For ACRA financial-statement filing, is meeting the small-company size limits enough to use Simplified XBRL if the company is publicly accountable?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "173f632952da8b2f919b8379d1127cd1f7d05892b0a62f037a525e56f7b2472e",
+      "afterSha256": "e933f9651387b57ee9b21de228fda4d311c3ee62e6dbd082bacb9aeba92bc082",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** The ACRA guidance lists simplified XBRL plus an authorised PDF for smaller and non-publicly accountable companies; XBRL FSH (Banks) or XBRL FSH (Insurance) plus an authorised PDF for the regulated bank, finance and insurance group; PDF only for companies limited by guarantee or companies approved to use other standards; and Full XBRL for all other Singapore-incorporated companies required to file financial statements. “Smaller” requires both current-year revenue and assets not exceeding S$500,000. “Non-publicly accountable” also excludes listed and specified regulated entity types. The dormant-relevant-company and solvent-EPC financial-statement exceptions have separate qualification conditions. ACRA labels technical resources as applying from 19 October 2026 onwards and identifies ACRA Taxonomy 2026 resources. A company must first determine whether it is required to file financial statements; dormant relevant companies and solvent EPCs may qualify for separate financial-statement exceptions. Small-company revenue and asset thresholds must both be met; group consolidation and currency translation details apply under the ACRA definitions page. The Full/Simplified/FSH/PDF template depends on the company’s exact status and regulatory category. Dormant relevant companies need not prepare/file only if all Companies Act section 201A requirements are met, including the assets, dormancy and listing/subsidiary conditions. A solvent EPC meeting an EPC definition may elect not to file financial statements but may file voluntarily; its annual-return solvency declaration still applies. Foreign companies with Singapore branches and some individually approved cases are addressed elsewhere on the ACRA filing guidance and are not classified by this local-company rule summary. A case-specific conclusion requires: Local/foreign incorporation, company form and whether it is a company limited by guarantee. Required-to-file/exempt status, dormancy history, listed/subsidiary status and group assets. Current-year revenue and assets, consolidation and currency facts. Public-accountability or MAS regulatory status. EPC status and solvency, where relevant. Does not determine an individual company’s template without classification facts. The complete definitions and section 201A eligibility must be checked against ACRA’s linked guidance and law. Do not apply the current page or 19 October 2026 XBRL boundary to a historical filing unless the relevant year-specific official source supports it. [ACRA | Financial statements: Filing requirements and exemptions](https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/)"
+      ]
+    },
+    {
+      "id": "reviewfresh-iras-01",
+      "question": "We transferred a payment to a non-resident on 14 October 2026. Does that transaction date change the general rule for when WHT must be filed and paid?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "b820c72fcf7e4256fbb3e6b952d74063b354f38ab23febd359c26e3fea96145f",
+      "afterSha256": "aed22a8b0a3e44fb427711b79bd8d200d966f3fb8eae2c5b53d857d757c36320",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates. [IRAS | Withholding Tax (WHT) filing and payment due date](https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS requires WHT filing and payment by the 15th of the second month after its defined date of payment. For most payments, use the earliest of the contractual due date (or invoice date if there is no agreement, ignoring credit terms), credit to an account designated by the non-resident, and actual payment. Director fees have separate timing rules based on arrears/advance approval, entitlement, credit and actual payment. WHT still must be filed when a DTA or ARI makes the rate zero. GIRO is normally deducted on the 25th of the due month, or the next working day if that date is a weekend/public holiday. The exact deadline requires the payment type and all relevant dates. [IRAS | Withholding Tax (WHT) filing and payment due date](https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date)"
+      ]
+    },
+    {
+      "id": "reviewfresh-iras-02",
+      "question": "Our GST-registered business paid for staff medical examinations needed to renew their work permits. Does having a business reason make the GST deductible as input tax?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "7a3b8bd59b7104d4c1f26508913647659000408edefeb1ee28563d016e5d3a6f",
+      "afterSha256": "561a66b13684536c01d79258d847ff0598bea6f0bbc837df2dded8d84265b873",
+      "beforeGuidance": [
+        "- **IRAS rule explanation:** IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)"
+      ]
+    },
+    {
+      "id": "reviewfresh-cpf-01",
+      "question": "A Singapore citizen on our payroll reaches age 65 in November 2026. For the CPF percentage age band, does the change start on the birthday itself or on the first day of the next month?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "f1833bf41f706cc062e3161b1b3438898cf9e9ac7fe86a42650f8d02d6e8d82f",
+      "afterSha256": "0cb47ca896726f12e7e9ff2c8548cfe514cfc5328d54f049182102ee4d19e264",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **CPF rule explanation:** CPF Board’s 2026 contribution table applies from 1 January 2026 to Singapore Citizens or third-year-onward SPRs in private-sector or non-pensionable public-service employment. For monthly wages above S$750, the employer/employee rates are: age 55 and below 17%/20%; above 55 to 60, 16%/18%; above 60 to 65, 12.5%/12.5%; above 65 to 70, 9%/7.5%; above 70, 7.5%/5%. For an actual payroll case, identify the year, birth date, citizenship/PR conversion date and any approved PR-rate election before selecting a table. New age-group rates start on the first day of the month after the 55th, 60th, 65th or 70th birthday. Do not apply this 2026 table to another payroll year. [CPF Contribution Rate Table from 1 January 2026](https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf)"
+      ]
+    },
+    {
+      "id": "reviewfresh-cpf-02",
+      "question": "An employee obtained SPR status on 7 August 2025. Is the move into the second CPF contribution year on 7 August 2026, or at the start of September?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+      "afterSha256": "3f5d5c177f5ee290095ed59285fdcffa8dff96cba71e314d16b3200ce2483d21",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **CPF rule explanation:** For PR status obtained on 07/08/2025, first-year rates apply from that date through 31/08/2026; second-year rates apply from 01/09/2026 through 31/08/2027; third-year rates start 01/09/2027. This calculates the PR-year timing only; it does not establish a contribution rate without the applicable payroll-year table and any approved higher-rate election. [CPF | I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?](https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions)"
+      ]
+    },
+    {
+      "id": "reviewfresh-mom-01",
+      "question": "For an Employment Act employee whose contract is ended by the employer, is the final-pay deadline the same seven-day deadline used when someone quits without serving notice?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "9137b24d5dcb431db6546552bbce1260130bdbf4dbfd8703202cf87b8e9076c2",
+      "afterSha256": "a8c9eb31b4b556e87aa3ad4557a6b4b005e13d73e3cf3dc08c704dbec53fe1ff",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** For employees covered by the Employment Act, final salary is due on the last employment day when required notice is served; within 7 days of the last employment day when the employee resigns without notice; and, after misconduct dismissal or employer termination, on the last day or, if that is not possible, within 3 working days from dismissal or termination. Commission timing follows the employment contract or existing policies or practices. For a foreign employee leaving employment, the employer must withhold monies due for tax clearance for up to 30 days after notifying the Comptroller of Income Tax; this can affect when salary is released. [MOM | Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** For employees covered by the Employment Act, final salary is due on the last employment day when required notice is served; within 7 days of the last employment day when the employee resigns without notice; and, after misconduct dismissal or employer termination, on the last day or, if that is not possible, within 3 working days from dismissal or termination. Commission timing follows the employment contract or existing policies or practices. For a foreign employee leaving employment, the employer must withhold monies due for tax clearance for up to 30 days after notifying the Comptroller of Income Tax; this can affect when salary is released. [MOM | Paying salary](https://www.mom.gov.sg/employment-practices/salary/paying-salary)"
+      ]
+    },
+    {
+      "id": "reviewfresh-mom-02",
+      "question": "An Employment Act employee has Tuesday as a non-working day and Wednesday as the contractual rest day. What is the public-holiday entitlement if the holiday falls on Tuesday rather than Wednesday?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "6899704c497283d02cb81ece7c480addf23e209be811ecc75e6f2d07d14cb51d",
+      "afterSha256": "cdd85bec08d3c11f2c449d890786915ae53b13a792262d2772cb8df1ee41dbd7",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **MOM rule explanation:** An Employment Act-covered employee has 11 paid public holidays each year. If a holiday falls on the rest day, the following working day will be a paid public holiday; if it falls on a non-working day, another day off or an extra day at the gross rate is due. Working on a public holiday ordinarily earns holiday gross pay plus an additional day at the basic rate; overtime applies beyond normal hours. By mutual agreement, the day may be substituted. Part IV coverage limits which employees may use time off in lieu. Distinguish a holiday on a working day, non-working day, or rest day. For holiday gross pay, the employee must not be absent without consent or reasonable excuse on the working day immediately before or after the holiday; authorised leave on either day is permitted. No holiday pay is due when the holiday itself falls during approved unpaid leave. Additional basic-rate pay is the default for working on the holiday; substitute-holiday arrangements require mutual agreement. An employee outside Employment Act coverage is governed by the contract. Time off in lieu of hours worked is available only to employees not covered by Part IV under the stated arrangement. Rest-day pay and any excess-hours overtime are separate entitlements. A case-specific conclusion requires: Employment Act and Part IV coverage. Work schedule and whether the date is a working, non-working or rest day. Whether the employee worked, hours worked, agreed substitution/time-off arrangements, and relevant absence or unpaid-leave facts. Does not decide a specific date’s gazetted holiday status or compute holiday pay without schedule and wage facts. Does not replace separate rest-day, overtime or part-time rules. [MOM | Public holidays: entitlement and pay](https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay)"
+      ]
+    },
+    {
+      "id": "reviewfresh-mas-01",
+      "question": "Can a licensed investment manager use the MAS LFMC compliance toolkit as a complete checklist for the funds it manages, including duties outside the Securities and Futures Act?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "78009346f81eaded179fc6c457b7a2465ec245b7f49e4c743f85dafca2bee9fa",
+      "afterSha256": "c07392e248bd55271f30e435b1d53f83c1ee499ff31d14275d8a74ba27a829dd",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **MAS rule explanation:** The MAS LFMC toolkit is a reference for common SFA approvals, notifications and regulatory submissions applicable to LFMCs. MAS says it is not exhaustive and expressly excludes obligations outside the SFA and fund-level requirements, such as the Code of Collective Investment Schemes. It therefore is not a complete checklist for all duties affecting a managed fund. Identify applicable fund-level requirements and other legislation separately. This scope statement applies to the LFMC toolkit; it does not establish the scope of VCFM or other licence-class toolkits. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    },
+    {
+      "id": "reviewfresh-mas-02",
+      "question": "Notice SFA 04-N24 says it takes effect on 1 January 2027. Does its 21-day reporting rule already settle what a CMS licence holder had to do for misconduct first suspected in December 2026?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": true,
+      "statusOnly": true,
+      "beforeSha256": "4e3a76df13c78a3bdcf5afbf4ca65d0e4db8a02d9440f0778500363e24115c8b",
+      "afterSha256": "4e3a76df13c78a3bdcf5afbf4ca65d0e4db8a02d9440f0778500363e24115c8b",
+      "beforeGuidance": [],
+      "afterGuidance": []
+    }
+  ],
+  "workflows10": [
+    {
+      "id": "fresh29-acra-01",
+      "question": "Our Singapore-incorporated private company changed its business email ten days ago. Can the secretary wait until the next annual return to tell ACRA?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "b81a682c237fe532be25d11085eb941588525a6412c8f137367e42cdd1a7e7d2",
+      "afterSha256": "1f700a3099470360a2efc87cc0b25fabe10afd972801ef405832b9e62135d3ff",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** ACRA says registered entities must notify it of changes within 14 days from the date of change; foreign companies have 30 days. The listed details include the entity email address and registered office address. The time limit runs from the change, so the annual return is not a substitute for making a required update within that period. The 14-day period applies to registered entities except foreign companies, for which the page gives 30 days. The source lists entity name, email address, business activities, registered office and other entity information; the steps vary by information category. The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods. For case-specific application, consider: Entity type and the category of information changed. The date of the change and any category-specific filing facts. General current page guidance only; no deadline date is calculated here. For an entity-specific answer, confirm the entity category and the actual change date. [Updating an entity’s information | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** ACRA says registered entities must notify it of changes within 14 days from the date of change; foreign companies have 30 days. The listed details include the entity email address and registered office address. The time limit runs from the change, so the annual return is not a substitute for making a required update within that period. The 14-day period applies to registered entities except foreign companies, for which the page gives 30 days. The source lists entity name, email address, business activities, registered office and other entity information; the steps vary by information category. The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods. For case-specific application, consider: Entity type and the category of information changed. The date of the change and any category-specific filing facts. A calendar deadline requires a confirmed change date and entity category. For an entity-specific answer, confirm the applicable filing route. [Updating an entity’s information | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/)"
+      ]
+    },
+    {
+      "id": "fresh29-acra-02",
+      "question": "We are an overseas-incorporated company registered in Singapore as a foreign company. We changed our registered office twenty days ago. A colleague says every ACRA entity has only fourteen days. Are we already late?",
+      "priorGrade": "PARTIAL",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "b81a682c237fe532be25d11085eb941588525a6412c8f137367e42cdd1a7e7d2",
+      "afterSha256": "abe6fe7cc375ee2e218d667a9d394e80fa38101af9d1d88788258c6066320ba6",
+      "beforeGuidance": [
+        "- **ACRA rule explanation:** ACRA says registered entities must notify it of changes within 14 days from the date of change; foreign companies have 30 days. The listed details include the entity email address and registered office address. The time limit runs from the change, so the annual return is not a substitute for making a required update within that period. The 14-day period applies to registered entities except foreign companies, for which the page gives 30 days. The source lists entity name, email address, business activities, registered office and other entity information; the steps vary by information category. The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods. For case-specific application, consider: Entity type and the category of information changed. The date of the change and any category-specific filing facts. General current page guidance only; no deadline date is calculated here. For an entity-specific answer, confirm the entity category and the actual change date. [Updating an entity’s information | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/)"
+      ],
+      "afterGuidance": [
+        "- **ACRA rule explanation:** ACRA says registered entities must notify it of changes within 14 days from the date of change; foreign companies have 30 days. The listed details include the entity email address and registered office address. The time limit runs from the change, so the annual return is not a substitute for making a required update within that period. The 14-day period applies to registered entities except foreign companies, for which the page gives 30 days. The source lists entity name, email address, business activities, registered office and other entity information; the steps vary by information category. The page distinguishes foreign companies and does not establish every filing duty for officers, share capital, annual returns, VCCs or historical periods. For case-specific application, consider: Entity type and the category of information changed. The date of the change and any category-specific filing facts. A calendar deadline requires a confirmed change date and entity category. For an entity-specific answer, confirm the applicable filing route. On the stated facts, 20 days is within the foreign-company 30-day period, so the company is not yet late. Notify ACRA within that period. [Updating an entity’s information | Accounting and Corporate Regulatory Authority](https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/)"
+      ]
+    },
+    {
+      "id": "fresh29-iras-01",
+      "question": "Our company has a September year-end. Its accounts for the year ended 30/09/2024 relate to YA 2025, and the tax return has been filed. Can we shred the supporting invoices on 01/10/2029?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "f650ccfd0ea3fad28d35afe6f08cee704d75b7ea11a686fe36cd1af9289a3bf5",
+      "afterSha256": "901ad4370ab088aa3b83ce5f6c9cccbfdb54ecacdb34f8a277bad0330ba68302",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** A company must retain source documents, accounting records and schedules, bank statements and other transaction-connected business records for at least five years from the relevant Year of Assessment (YA). IRAS gives examples: records for YA 2019 are retained to 31 December 2023, while records for YA 2023 are retained to 31 December 2027. For a company struck off and dissolved, the officer immediately before dissolution keeps the books and papers for at least five years after dissolution; for a wound-up company, the liquidator does so for at least five years from dissolution. Use the relevant YA for ordinary company tax records; the page’s examples distinguish December and non-December financial-year ends. After dissolution, the source identifies a different responsible person and starts the five-year period from dissolution. This is corporate income tax record guidance, not the separate GST record-retention rule. The ordinary YA period does not replace the separate dissolution-date duties for struck-off or wound-up companies. For case-specific application, consider: The relevant YA and financial-year period. Whether the company was struck off and dissolved or wound up, and its dissolution date. The source examples explain ordinary YA retention; they do not determine every record-specific retention requirement. A company-specific last-retention date requires the correct YA or dissolution date. For YA 2025, retain the records through at least 31 December 2029. The proposed disposal date 01/10/2029 is before the end of that period, so do not shred the records then. Filing the tax return does not end the retention period. [IRAS | Record Keeping Requirements](https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements)"
+      ]
+    },
+    {
+      "id": "fresh29-iras-02",
+      "question": "A company was struck off and dissolved on 15/08/2026. Its former director thinks the old YA retention periods have expired, so nobody needs to keep its books now. Is that right, and would responsibility differ if it had been wound up?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "216c388a2b57ecb18900cb8841ab5b51abb30b9fbbda2f3db822d88ea9c44bf7",
+      "afterSha256": "ba8ee51c837a610f536b1f8cc3070cbc3f96fcaf2011c9d6738c786cd170a6b2",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **IRAS rule explanation:** A company must retain source documents, accounting records and schedules, bank statements and other transaction-connected business records for at least five years from the relevant Year of Assessment (YA). IRAS gives examples: records for YA 2019 are retained to 31 December 2023, while records for YA 2023 are retained to 31 December 2027. For a company struck off and dissolved, the officer immediately before dissolution keeps the books and papers for at least five years after dissolution; for a wound-up company, the liquidator does so for at least five years from dissolution. Use the relevant YA for ordinary company tax records; the page’s examples distinguish December and non-December financial-year ends. After dissolution, the source identifies a different responsible person and starts the five-year period from dissolution. This is corporate income tax record guidance, not the separate GST record-retention rule. The ordinary YA period does not replace the separate dissolution-date duties for struck-off or wound-up companies. For case-specific application, consider: The relevant YA and financial-year period. Whether the company was struck off and dissolved or wound up, and its dissolution date. The source examples explain ordinary YA retention; they do not determine every record-specific retention requirement. A company-specific last-retention date requires the correct YA or dissolution date. [IRAS | Record Keeping Requirements](https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements)"
+      ]
+    },
+    {
+      "id": "fresh29-cpf-01",
+      "question": "We found an ordinary CPF overpayment on 01/10/2026. The payment record says PAYMENTS RECEIVED ON 06/11/2025. Do we have a year from discovering the mistake to request our money back?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "7f703cf0e89d4d58d0763e0254fd934a9f27c00c71dcfd92e0bae03612470b97",
+      "afterSha256": "d989e00ebf3bc3bae2ea6eff9e44cc282a561a8c2069fb6beb929ca224331fbf",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **CPF rule explanation:** Refund requests for CPF contributions generally must be made immediately and no later than one year from payment; the “PAYMENTS RECEIVED ON” field identifies the payment date. For conditional wages, the one-year period instead runs from when the wages are due to be repaid to the employer, as stated in employment terms or a mutual agreement, and that date must be entered in the application. Before applying, the employer must return the employee share directly to the employee. CPF Board effects refunds only to the extent of funds available in the employee’s CPF account. Excess Additional Wage ceiling contributions should be claimed promptly; excess CPF Annual Limit contributions paid from 2023 are automatically refunded to the employer’s Direct Debit Account from February 2024. The general and entire-submission application deadline is one year from contribution payment, using the “PAYMENTS RECEIVED ON” record field. Conditional-wage refunds use the repayment due date, not the contribution payment date. The employer must first return the employee share where applicable; refunds depend on funds available in employee CPF accounts. Excess Additional Wage ceiling contributions are a prompt-application category. CPF Annual Limit excess contributions paid from 2023 are refunded automatically to the employer from February 2024; this is distinct from an application for an AW-ceiling refund. For case-specific application, consider: Refund category and CPF payment date. For conditional wages, the contractual or mutually agreed repayment due date. Whether the employee share was returned and funds remain available in CPF account(s). For AW or annual-limit excess, the relevant year and excess category. Do not infer a refund deadline when the payment date, conditional-wage repayment date or calendar anniversary is unclear. The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund. The payment record’s “PAYMENTS RECEIVED ON” date is 06/11/2025, making the one-year outer limit 06/11/2026; discovery of the error does not restart that period. [CPFB | Applying for refund of CPF contributions](https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions)"
+      ]
+    },
+    {
+      "id": "fresh29-cpf-02",
+      "question": "CPF was paid on a conditional joining bonus in 2024. Under the employment terms, the employee had to repay the bonus on 15/09/2026. We are applying in October 2026. Is the claim too old, and can we wait for CPF Board's refund before returning the employee's contribution share?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "a72df19f0f552f194eb26ef1aebf19d7ccc7aff2b9c38c5e13f01e2467f3d020",
+      "afterSha256": "508f1e3f9dbc26e3f1295d4264c556c6639a531d94114c20d5c9b51224dc7fd6",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **CPF rule explanation:** Refund requests for CPF contributions generally must be made immediately and no later than one year from payment; the “PAYMENTS RECEIVED ON” field identifies the payment date. For conditional wages, the one-year period instead runs from when the wages are due to be repaid to the employer, as stated in employment terms or a mutual agreement, and that date must be entered in the application. Before applying, the employer must return the employee share directly to the employee. CPF Board effects refunds only to the extent of funds available in the employee’s CPF account. Excess Additional Wage ceiling contributions should be claimed promptly; excess CPF Annual Limit contributions paid from 2023 are automatically refunded to the employer’s Direct Debit Account from February 2024. The general and entire-submission application deadline is one year from contribution payment, using the “PAYMENTS RECEIVED ON” record field. Conditional-wage refunds use the repayment due date, not the contribution payment date. The employer must first return the employee share where applicable; refunds depend on funds available in employee CPF accounts. Excess Additional Wage ceiling contributions are a prompt-application category. CPF Annual Limit excess contributions paid from 2023 are refunded automatically to the employer from February 2024; this is distinct from an application for an AW-ceiling refund. For case-specific application, consider: Refund category and CPF payment date. For conditional wages, the contractual or mutually agreed repayment due date. Whether the employee share was returned and funds remain available in CPF account(s). For AW or annual-limit excess, the relevant year and excess category. Do not infer a refund deadline when the payment date, conditional-wage repayment date or calendar anniversary is unclear. The source does not establish that a particular refund application will be accepted or the amount CPF Board will refund. For the supplied conditional-wage repayment due date of 15/09/2026, the one-year outer limit is 15/09/2027. [CPFB | Applying for refund of CPF contributions](https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions)"
+      ]
+    },
+    {
+      "id": "fresh29-mom-01",
+      "question": "For staff covered by the Employment Act, our bank salary transfer succeeds but the payroll portal cannot generate the itemised statement that day. How long can we take to provide it, and may we email it?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "881655144381285d763967213c05ab6050978abc1853746e9703b375d77d3c5a",
+      "afterSha256": "9e4607434503a957e9d5bc0d17af162fa4d2c8334c5e47b5ac0d0fb04631bd1f",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically. The requirement applies to employees covered by the Employment Act. MOM permits soft or hard copy, including handwritten. The fallback is three working days after payment only when the employer cannot give it with payment. Items that do not apply need not be shown; MOM’s page gives overtime items as an example. This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker. For case-specific application, consider: Employment Act coverage. Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary. Three working days are not converted into calendar days. The captured page does not establish current coverage of a particular worker. [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically. The requirement applies to employees covered by the Employment Act. MOM permits soft or hard copy, including handwritten. The fallback is three working days after payment only when the employer cannot give it with payment. Items that do not apply need not be shown; MOM’s page gives overtime items as an example. This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker. For case-specific application, consider: Employment Act coverage. Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary. Three working days are not converted into calendar days. The captured page does not establish current coverage of a particular worker. [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)"
+      ]
+    },
+    {
+      "id": "fresh29-mom-02",
+      "question": "We dismissed an employee covered by the Employment Act and are now paying the outstanding salary. Payroll wants to send the itemised payslip three working days later under the usual fallback. Is that acceptable?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": true,
+      "beforeSha256": "881655144381285d763967213c05ab6050978abc1853746e9703b375d77d3c5a",
+      "afterSha256": "9e4607434503a957e9d5bc0d17af162fa4d2c8334c5e47b5ac0d0fb04631bd1f",
+      "beforeGuidance": [
+        "- **MOM rule explanation:** Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically. The requirement applies to employees covered by the Employment Act. MOM permits soft or hard copy, including handwritten. The fallback is three working days after payment only when the employer cannot give it with payment. Items that do not apply need not be shown; MOM’s page gives overtime items as an example. This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker. For case-specific application, consider: Employment Act coverage. Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary. Three working days are not converted into calendar days. The captured page does not establish current coverage of a particular worker. [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)"
+      ],
+      "afterGuidance": [
+        "- **MOM rule explanation:** Employers must issue itemised pay slips to employees covered by the Employment Act together with payment. If that is not possible, the payslip must be given within three working days of payment. For termination or dismissal, the payslip must be given together with outstanding salary. MOM allows a soft or hard copy (including handwritten); a soft copy can be delivered electronically. The requirement applies to employees covered by the Employment Act. MOM permits soft or hard copy, including handwritten. The fallback is three working days after payment only when the employer cannot give it with payment. Items that do not apply need not be shown; MOM’s page gives overtime items as an example. This rule does not calculate final-salary deadlines or determine Employment Act coverage for a particular worker. For case-specific application, consider: Employment Act coverage. Payment date, whether a pay slip was provided with payment, and any termination/dismissal with outstanding salary. Three working days are not converted into calendar days. The captured page does not establish current coverage of a particular worker. [Itemised pay slips](https://www.mom.gov.sg/employment-practices/salary/itemised-payslips)"
+      ]
+    },
+    {
+      "id": "fresh29-mas-01",
+      "question": "Our licensed fund management company has selected a new chief executive. Can she start first if we tell MAS about the appointment within fourteen days, or is there a form and approval needed beforehand?",
+      "priorGrade": "CORRECT",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "9705ab556a1e5729d6526ae6da0283314de32728847041be70b5c3fad3108e77",
+      "afterSha256": "5f8046a4b3aa07fddd15382cd5b102e410713e51192565a9d2dcb0f35b5a0e22",
+      "beforeGuidance": [
+        "- **MAS rule explanation:** The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11. The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope. Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3. This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements. The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements. For case-specific application, consider: Whether the firm is an LFMC. Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change. General current toolkit guidance only; verify the applicable SFA provisions, licence conditions and current MAS requirements for a specific LFMC. Do not apply this row to VCFMs or other CMS licence holders without a source covering that regime. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ],
+      "afterGuidance": [
+        "- **MAS rule explanation:** The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive; already being on the board does not remove approval for that change. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11. Row 17 gives “As soon as practicable” for these notifications; its additional no-later-than-14-days limit is specifically attached to the resignation in item (i). The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope. Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3. Its 14-day time limit applies to item (i), resignation. This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements. The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements. For case-specific application, consider: Whether the firm is an LFMC. Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change. General current toolkit guidance only; verify the applicable SFA provisions, licence conditions and current MAS requirements for a specific LFMC. Do not apply this row to VCFMs or other CMS licence holders without a source covering that regime. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    },
+    {
+      "id": "fresh29-mas-02",
+      "question": "At our LFMC, an existing non-executive director will take an executive role. Since he is already on the board, can we simply notify MAS afterwards? Would moving an executive director into a non-executive role follow the same process?",
+      "priorGrade": "UNSUPPORTED",
+      "byteIdentical": false,
+      "statusOnly": false,
+      "beforeSha256": "527e48cb048786be03621910a8642c81f78275164e084af5b4dd9f19f6282a26",
+      "afterSha256": "f890663e346ded12da74c93abcc32d14d53e5b3772a464e0665eda90503593a6",
+      "beforeGuidance": [],
+      "afterGuidance": [
+        "- **MAS rule explanation:** The current MAS LFMC Compliance Toolkit row 3 says an LFMC must seek prior MAS approval using Form 11 before appointing a Chief Executive Officer or Director, or before changing a Director’s appointment nature from Non-Executive to Executive; already being on the board does not remove approval for that change. Row 17 is a separate subsequent notification: it covers CEO or Director resignation, an Executive-to-Non-Executive change, changed CEO/Director particulars, and changed business interests or shareholdings provided in Form 11. Row 17 gives “As soon as practicable” for these notifications; its additional no-later-than-14-days limit is specifically attached to the resignation in item (i). The toolkit applies to Licensed Fund Management Companies and identifies the SFA and LCBR requirements in its scope. Row 3 calls for prior approval; row 17 separately concerns subsequent notifications and must not be substituted for row 3. Its 14-day time limit applies to item (i), resignation. This toolkit is not exhaustive and excludes requirements outside the SFA and fund-level requirements. The toolkit revision date is not a legal commencement date; this summary does not establish historic requirements. For case-specific application, consider: Whether the firm is an LFMC. Whether the person is a CEO or Director and whether the action is an initial appointment, Director nature change, resignation or later particulars change. General current toolkit guidance only; verify the applicable SFA provisions, licence conditions and current MAS requirements for a specific LFMC. Do not apply this row to VCFMs or other CMS licence holders without a source covering that regime. [LICENSED FUND MANAGEMENT COMPANIES](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf)"
+      ]
+    }
+  ]
+}

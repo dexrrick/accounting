@@ -1,0 +1,29 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?
+Canonical official URL: https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status
+Capture date (Singapore): 2026-11-01
+Capture method: official web read visible-text excerpt; raw HTML was not retained. Source lines 138–191 and continuation, independently opened via web tool. This excerpt is not a native HTTP response.
+
+Yes, CPF contributions are payable once your foreign employee obtains his Singapore Permanent Resident (SPR) status. Please ensure that your employee informs you of his SPR status.
+For the first two years of obtaining the SPR status, to help your employee adjust to the lower take-home pay, both you and your SPR employee will contribute CPF at graduated rates (refer to Tables 2 and 3). From the third year onwards, you and your SPR employee will contribute CPF at the full rates (refer to Table 1).
+Determining your employee’s year of SPR status
+The year of SPR status determines your employee’s CPF contribution rates.
+First-year rate: Applies from the day your employee obtains his SPR status until the last day of the month of his first anniversary. The SPR status date is shown on his Entry Permit (Form 5/5A) issued by the Immigration & Checkpoints Authority (ICA).
+Second-year rate: Applies from the month following his first anniversary as an SPR until the last day of the month of his second anniversary.
+Third-year rate: Applies from the month following his second anniversary as an SPR onwards.
+Example
+If your employee obtained his SPR status on 15 January 2026, the start and end dates for first, second and third year of obtaining SPR status are shown in the table below:
+Years of obtaining SPR status | Starts from | Ends on
+First year | 15 January 2026 | 31 January 2027
+Second year | 1 February 2027 | 31 January 2028
+Third year | 1 February 2028 | Not applicable
+Computing CPF contributions
+For Ordinary Wages (OW), you will need to pay CPF contributions on the pro-rated OW. For Additional Wages (AW), CPF contributions are required depending on when the AW is payable to your employee.
+Example
+Assuming your employee obtains his SPR status on 15 March 2026 and he receives OW and AW for March 2026.
+For OW
+CPF contribution is required on the pro-rated wages from 15 to 31 March 2026.
+For AW
+• CPF contribution is not required on the AW if it is payable while the employee was a foreigner i.e. before 15 March 2026.
+• CPF contribution is required on the AW if it is payable on or after 15 March 2026.

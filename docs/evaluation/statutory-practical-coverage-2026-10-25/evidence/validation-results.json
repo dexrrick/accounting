@@ -1,0 +1,51 @@
+[
+  {
+    "check": "preflight",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:38.9816545Z",
+    "completedAtUTC": "2026-10-25T12:40:39.0501336Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\preflight.log"
+  },
+  {
+    "check": "lint",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:39.0652623Z",
+    "completedAtUTC": "2026-10-25T12:40:39.1875650Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\lint.log"
+  },
+  {
+    "check": "typecheck",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:39.1895443Z",
+    "completedAtUTC": "2026-10-25T12:40:43.0337169Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\typecheck.log"
+  },
+  {
+    "check": "vite-build",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:43.0360071Z",
+    "completedAtUTC": "2026-10-25T12:40:44.9092042Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\vite-build.log"
+  },
+  {
+    "check": "worker-build",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:44.9116163Z",
+    "completedAtUTC": "2026-10-25T12:40:45.5151590Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\worker-build.log"
+  },
+  {
+    "check": "smoke",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:40:45.5167420Z",
+    "completedAtUTC": "2026-10-25T12:43:06.0242101Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\smoke.log"
+  },
+  {
+    "check": "full",
+    "exitCode": 0,
+    "startedAtUTC": "2026-10-25T12:43:06.0253456Z",
+    "completedAtUTC": "2026-10-25T12:45:40.3606872Z",
+    "log": "D:\\Accounting\\artifacts\\practical-question-wave-2026-10-25\\post-mom-scope-fix\\full.log"
+  }
+]

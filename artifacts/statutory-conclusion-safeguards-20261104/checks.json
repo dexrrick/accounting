@@ -1,0 +1,32 @@
+[
+  {
+    "name": "maintained-lint",
+    "exitCode": 0,
+    "elapsedSeconds": 0.23
+  },
+  {
+    "name": "typecheck",
+    "exitCode": 0,
+    "elapsedSeconds": 5.18
+  },
+  {
+    "name": "vite-build",
+    "exitCode": 0,
+    "elapsedSeconds": 3.22
+  },
+  {
+    "name": "worker-build",
+    "exitCode": 0,
+    "elapsedSeconds": 0.78
+  },
+  {
+    "name": "smoke",
+    "exitCode": 0,
+    "elapsedSeconds": 289.72
+  },
+  {
+    "name": "full",
+    "exitCode": 0,
+    "elapsedSeconds": 318.49
+  }
+]

@@ -1,0 +1,17 @@
+[
+  {
+    "name": "vite-build",
+    "exitCode": 0,
+    "elapsedSeconds": 5.62
+  },
+  {
+    "name": "worker-build",
+    "exitCode": 0,
+    "elapsedSeconds": 0.76
+  },
+  {
+    "name": "smoke",
+    "exitCode": 1,
+    "elapsedSeconds": 290.94
+  }
+]

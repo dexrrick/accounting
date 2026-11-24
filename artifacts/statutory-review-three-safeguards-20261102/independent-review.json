@@ -1,0 +1,42 @@
+{
+  "baseHead": "ece1aa9fb98532794055db650d8c861b4b7a22de",
+  "target": "Uncommitted working-tree delta",
+  "reviewer": "Independent reviewer agent",
+  "status": "PASSED",
+  "finalResult": "No remaining material findings in the final scoped delta after targeted corrections and independent re-review.",
+  "resolutions": [
+    "Natural-name recognition precedes compact-ID fallback, preserving case-insensitive full names and withholding cross-owner personal dates.",
+    "Main reporting predicate restoration uses modal-question and relative-clause grammar, without a time-token allowlist.",
+    "Nearby sentence context keeps relative payroll dates attached across conjunctions and commas, while unrelated yearful wage facts retain their scope."
+  ],
+  "finalIndependentControls": [
+    "Lowercase, mixed-case, uppercase and internally mixed-capitalization full names: cross-owner withholding and same-owner date retention.",
+    "E1/E-1 compact alias preservation.",
+    "Restrictive reporting with yesterday/recently, and descriptive modal/to-infinitive negatives.",
+    "Relative future bonus dates including due and payable the following day and The next day, his bonus becomes payable.",
+    "Current-wage and independent anniversary-boundary controls.",
+    "Updated application regression suite independently executed and passed."
+  ],
+  "initialFindings": [
+    {
+      "severity": "P1",
+      "finding": "Lowercase natural names and shared first names still allowed a different employee's PR date to be borrowed.",
+      "probes": ["Employee alice / Employee bob", "Employee Alice / Employee bob", "Employee Alice Lee / Employee Alice Tan"],
+      "observed": "Fresh fixture-backed application responses included 15/03/2026 proration and 31/03/2027 boundary for the foreign employee."
+    },
+    {
+      "severity": "P2",
+      "finding": "Reporting-predicate restoration required a recognized time token.",
+      "probes": ["Should the annual bonus that we paid yesterday be reported as employment income, and does CPF apply?", "Should the annual bonus that was paid recently be reported as employment income, and does CPF apply?"],
+      "observed": "Only CPF_PAYROLL survived in direct reconciled issue plans."
+    },
+    {
+      "severity": "P2",
+      "finding": "Conjunction/comma clause splitting separated a relative future date from its payroll predicate.",
+      "probes": ["His bonus is due and payable the following day.", "The next day, his bonus becomes payable."],
+      "context": "2026 PR grant followed by first contribution-year boundary on 31 March 2027.",
+      "observed": "Fresh fixture-backed application responses marked CPF evidence VERIFIED without the 2027 applicability limitation."
+    }
+  ],
+  "limits": "Targeted offline helper, reconciled-plan and full-application probes only. Broad validation and preservation are supervisor-owned. No live/model/CI/production verification."
+}

@@ -1,0 +1,34 @@
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:42: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:97: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:154: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:206: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:237: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:280: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:307: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:309: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:376: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:453: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:526: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:637: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:731: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:806: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:906: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:908: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:990: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:1067: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:1169: error: Invalid Unicode escape sequence
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:41: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:96: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:153: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:205: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:236: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:279: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:306: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:375: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:452: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:525: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:636: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:730: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:805: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:1066: error: Keywords cannot contain escape characters
+artifacts/fresh-acceptance-2026-10-24/prepare.mjs:1:1168: error: Expected a semicolon or an implicit semicolon after a statement, but found none

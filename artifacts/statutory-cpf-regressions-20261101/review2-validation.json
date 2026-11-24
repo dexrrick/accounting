@@ -1,0 +1,23 @@
+[
+  {
+    "suite": "tests/regression/test_cpf_payroll_knowledge_20261027b.mjs",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T13:18:48.3929784Z",
+    "completedUTC": "2026-11-01T13:18:50.3514465Z",
+    "log": "D:\\Accounting\\artifacts\\statutory-cpf-regressions-20261101\\test_cpf_payroll_knowledge_20261027b.mjs.review2.log"
+  },
+  {
+    "suite": "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T13:18:50.3727473Z",
+    "completedUTC": "2026-11-01T13:19:04.6446541Z",
+    "log": "D:\\Accounting\\artifacts\\statutory-cpf-regressions-20261101\\test_statutory_cpf_expansion_20261101.mjs.review2.log"
+  },
+  {
+    "suite": "tests/regression/test_statutory_multipart_issue_refinements_20261030.mjs",
+    "exitCode": 0,
+    "startedUTC": "2026-11-01T13:19:04.6453253Z",
+    "completedUTC": "2026-11-01T13:19:05.6417401Z",
+    "log": "D:\\Accounting\\artifacts\\statutory-cpf-regressions-20261101\\test_statutory_multipart_issue_refinements_20261030.mjs.review2.log"
+  }
+]

@@ -1,0 +1,25 @@
+{
+  "base": "30ce81747552b57d373bb5ed98941428b63d395b",
+  "target": "Uncommitted correction diff on codex/ai-first-advisory-phase1-20261103; final validated code hashes are recorded separately.",
+  "reviewerRole": "Independent read-only reviewer custom agent",
+  "initialFindings": [
+    {"severity":"P1","finding":"Numeric paraphrases could change the subject, trigger or temporal direction.","resolution":"Repaired with clause-local labels, trigger anchors and direction checks; negative reproductions and faithful positives pass."},
+    {"severity":"P1","finding":"Inherited-subject and result conjunctions could append categorical eligibility conclusions.","resolution":"Outcome clauses are assessed separately; reported and supervisor-adjacent result variants are rejected."},
+    {"severity":"P2","finding":"Signs before currency prefixes were ignored.","resolution":"Signs before and after currency prefixes are captured; negative numeric and word-sign reproductions are rejected."},
+    {"severity":"P2","finding":"Ordinary can-if and negative-unless explanations were rejected.","resolution":"Positive conditional constructions remain available for independent semantic assessment."}
+  ],
+  "additionalFinding": {"severity":"P1","finding":"Negated numerical equality could reuse a positive source value.","resolution":"Assertion polarity is preserved; a contradictory GST rate is rejected and a valid not-exceed revenue bound remains accepted."},
+  "supervisorIntegrationChecks": [
+    "Fixed required-after-optional parameters, unused type import and narrowed fallback issue metadata to the actual semantic types after validation.",
+    "Added and independently confirmed so-subject-is-eligible and so-subject-can-recover variants without blocking condition-first can wording.",
+    "Corrected new test fixtures to use valid semantic enum values and SFRS_I."
+  ],
+  "boundedRereview": "All 16 original/adjacent probes passed after the numerical-polarity fix. A final five-probe confirmation passed after the last two result-conjunction cases.",
+  "finalOutcome": "No known material findings remain within the reviewed scope.",
+  "fallbackTrace": "Reviewer traced production callers and found no confirmed user-visible fallback ownership regression. Exact-context ownership is used for IRAS recovery; the unscoped whole-query path remains for no-plan callers.",
+  "limitations": [
+    "Bounded read-only review and scripted provider probes are not a proof of natural-language entailment.",
+    "Broad regression and build verification are supervisor-owned and recorded in validation-summary.json.",
+    "No real-model, browser or production acceptance was performed."
+  ]
+}

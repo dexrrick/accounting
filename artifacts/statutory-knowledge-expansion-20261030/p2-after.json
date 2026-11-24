@@ -1,0 +1,504 @@
+{
+  "scope": "APPLICATION_ENTRY_NATURAL_QUESTIONS_OFFLINE_NO_PROVIDER",
+  "appRoot": "D:\\Accounting",
+  "corpusSha256": "e96af2e44c6c83332681620205b6e1f3419736054d98ca4461faeaa8a5fac726",
+  "networkRequests": 0,
+  "modelRequests": 0,
+  "blockedModelEndpoints": [],
+  "addedSourceFixtures": [
+    {
+      "id": "acra-officer-particulars.txt",
+      "sourceUrl": "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/",
+      "title": "Commencement of Key Changes under the Corporate and Accounting Laws (Amendment) Act 2025 on 20 October 2026",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "eab7036a1ddecf2be02d17f4e59757cf452d2d6dc7d2208e7f437b24111ba49e",
+      "responseSha256": "3d2dee94823ba4ccc63f654936b91c9d2da9db827ed9e2321e2732e4a666201f",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-officer-particulars.txt"
+    },
+    {
+      "id": "acra-annual-return-steps.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/",
+      "title": "Steps to file an annual return",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "ceab11e8fa7f262a6b8ba57a4009c629a20eb3e80d2c34b7414342c577a387a0",
+      "responseSha256": "e5043d7da3a5eeeab53daa7ff5b6485a25b8f5982e68db18f9e4d73cf2f3c129",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-annual-return-steps.txt"
+    },
+    {
+      "id": "acra-xbrl-requirements.txt",
+      "sourceUrl": "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+      "title": "Financial statements: Filing requirements and exemptions",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "adffff20762e5cddafc22fd0696185f13560ae23cd6a0ea81f83862e145e11c4",
+      "responseSha256": "b9599f1d17b99d0f2d973858787c97df0245b49e7276fb103cb688ae2621b490",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-xbrl-requirements.txt"
+    },
+    {
+      "id": "mom-annual-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement",
+      "title": "Annual leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "3860c323d002a58d0a1eded019ea05be74e3e066635c2768fc483e19be0887dd",
+      "responseSha256": "8fabe393a7727f99ee6320f4b9fc756b4ec42aa3ead3db19e821200fcc6e83f4",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-annual-leave.txt"
+    },
+    {
+      "id": "mom-sick-leave.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement",
+      "title": "Sick leave eligibility and entitlement",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "acc7a34bd7e233b0fc2055f53b9c1e0225c9c9f4f45399b19c250f37dd3cfefc",
+      "responseSha256": "d4cea1d2d22c25298a8ae9819ab60c43962681a02b521e0857d2c04cc6c5d741",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-sick-leave.txt"
+    },
+    {
+      "id": "mom-public-holidays.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay",
+      "title": "Public holidays: entitlement and pay",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e39d68945cef9536932f8bc76e6defeae59c2aeb15f791e4461a5c9ed6d7961e",
+      "responseSha256": "b6dcef40d4ecdd66d048e29ea59faf93c758d2b742acc2a7a76af6dea12a463c",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-public-holidays.txt"
+    },
+    {
+      "id": "mom-final-salary.txt",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+      "title": "Paying salary",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "f9f276912ea150290ebdb692a5878492994e42b14b071d24a6ca6412511fe8f2",
+      "responseSha256": "aec006363c1d90c724458b463bdd02f5d31dbb004da4fc018c22f7f8c30ad121",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "mom-final-salary.txt"
+    },
+    {
+      "id": "acra-company-secretary.txt",
+      "sourceUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/",
+      "title": "Step 4.3: Choosing company directors & other key officers",
+      "authority": "ACRA",
+      "topicIds": [
+        "acra_company-secretary"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "706caa3d601fbea5d4659f987fb719396445c9b55695319c51a18ab644c361aa",
+      "responseSha256": "e0881d7c2ca13329e4d2e16191c6d247a0a278e02612387f019df46eaea7ab5b",
+      "manifest": "statutoryKnowledge20261027b-acra-mom-source-manifest.json",
+      "filename": "acra-company-secretary.txt"
+    },
+    {
+      "id": "cpf-rates-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf",
+      "title": "CPF Contribution Rate Table from 1 January 2026",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-pr-contribution-rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "responseSha256": "7ab21a34bd830be773b5bf39020f590d61e744fb7df6c91922352cef82789496",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-rates-native-2026.pdf"
+    },
+    {
+      "id": "cpf-computation-guidance-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+      "title": "How much CPF contributions to pay",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf_contribution_rates",
+        "cpf-contribution-computation",
+        "cpf-contribution-rounding"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "e2fc3172ae35f62a264aa0029216114dfb3918a8455b54f8f6a91915447811d5",
+      "responseSha256": "c2a9aac0472a7093a040a1848fb2564ad5563e044c396f89779b1fc5d5364d5a",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-computation-guidance-extract.txt"
+    },
+    {
+      "id": "cpf-ow-ceiling-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "title": "What is the Ordinary Wage (OW) ceiling?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-ordinary-wages",
+        "cpf-ordinary-wage-ceiling"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "6f9c5e65278421c7ced24676640c5df507aedc4bc09e1445041f94bc40612611",
+      "responseSha256": "03614f7a519978c17bb745b06d69d0366988426bd96f09cb688a5b331b593b44",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-ow-ceiling-extract.txt"
+    },
+    {
+      "id": "cpf-aw-ceiling-native-2026.pdf",
+      "sourceUrl": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "title": "Examples for computation of Additional Wage (AW) Ceiling",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-additional-wages",
+        "cpf-additional-wage-ceiling"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "responseSha256": "98fc7777d8c6fb0f76f4770217570e26e94e91533345d98db7b1c451c8721220",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-aw-ceiling-native-2026.pdf"
+    },
+    {
+      "id": "cpf-pr-year-status-extract.txt",
+      "sourceUrl": "https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions",
+      "title": "I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-pr-contribution-rates",
+        "cpf_contribution_rates"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "WEB_READ_OFFICIAL_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "1209fe78ae0c48f8579dd70d1c84794147dfb6d8588019bf7ae344e77cb3a359",
+      "responseSha256": "623310671948909cd7bb25f446b35c8e551858b6fa5b96de9b3126205d7bdff5",
+      "manifest": "statutoryKnowledge20261027b-cpf-source-manifest.json",
+      "filename": "cpf-pr-year-status-extract.txt"
+    },
+    {
+      "id": "iras-mas-input-tax-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+      "title": "Conditions for Claiming Input Tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-gst-input-tax",
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "responseSha256": "261cbe8d471c494011bb02dd54e67810720421dcc3162e4d6b73e7655f943cdc",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-input-tax-native.html"
+    },
+    {
+      "id": "iras-mas-eci-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-(eci)-filing",
+      "title": "Estimated Chargeable Income (ECI) Filing",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-eci"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "responseSha256": "81c4bd3d744a3a93cdad18406302447c4671a6f4dc08dcb75d81f06c233c60d0",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-eci-native.html"
+    },
+    {
+      "id": "iras-mas-wht-services-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax",
+      "title": "Payments that are subject to withholding tax",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-management-fees"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "responseSha256": "b4c249e8e76f33be676994c41443d9883818d1f78c1e5efb6a3aabb1d2f0a286",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-services-native.html"
+    },
+    {
+      "id": "iras-mas-wht-deadline-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+      "title": "Withholding Tax (WHT) filing and payment due date",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-withholding-tax",
+        "iras-wht-filing-payment-due-date",
+        "iras-wht-deemed-payment-date"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "IRAS_NATIVE_HTML_PAGE",
+      "fixtureSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "responseSha256": "dd21cb5953d1726d80b0633e27e2f18f4c62fe9c960f5e335a4e7e91aee95acf",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-wht-deadline-native.html"
+    },
+    {
+      "id": "iras-mas-misconduct-native.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/notices/cmg/notice-sfa-04-n24/notice-sfa-04-n24-reporting-of-misconduct-of-representatives.pdf?hash=C027656887BDCD18A5742523AA08B2A1&sc_lang=en",
+      "title": "Notice SFA 04-N24 — Reporting of Misconduct of Representatives",
+      "authority": "MAS",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "MAS_OFFICIAL_NOTICE_PDF_VISIBLE_TEXT_EXCERPT",
+      "fixtureSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "responseSha256": "160c25cd05295fb211e61b9c064fc22e63ba5ffa04e4c81600d65e62df232070",
+      "manifest": "statutoryKnowledge20261027b-iras-mas-source-manifest.json",
+      "filename": "iras-mas-misconduct-native.pdf"
+    },
+    {
+      "id": "iras-donations-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-(a-f)",
+      "title": "Tax Treatment of Business Expenses (A-F)",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "responseSha256": "1a76a622c623c15172cbbe5baf489f53516df350b22a046ff882751a18e3a9c0",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "iras-donations-native.html"
+    },
+    {
+      "id": "iras-donations-conditions-native.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/other-taxes/charities/donations-tax-deductions",
+      "title": "Donations and Tax Deductions",
+      "authority": "IRAS",
+      "topicIds": [
+        "iras-cit-donations"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "responseSha256": "5dfacf6d7ae734ad3a1799963415f546e154878d23e5f259b183a2801969e0bb",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "iras-donations-conditions-native.html"
+    },
+    {
+      "id": "cpf-rectifications-native.html",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications",
+      "title": "Compliance and rectifications",
+      "authority": "CPF",
+      "topicIds": [
+        "cpf-adjustments-refunds"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "responseSha256": "838c87fd54901b0f66879355315f4eccc1cb051ac13fef4bd9b2a3b7df7a0772",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "cpf-rectifications-native.html"
+    },
+    {
+      "id": "acra-registered-office-native.html",
+      "sourceUrl": "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/registering-via-bizfile/",
+      "title": "Registering a local company via Bizfile",
+      "authority": "ACRA",
+      "topicIds": [
+        "acra_registered-office"
+      ],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "responseSha256": "8a71d954766af7cf60d851d90926f967c0e89ee064c5c3ec646a93d8cb404349",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "acra-registered-office-native.html"
+    },
+    {
+      "id": "mas-misconduct-faq-native.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf",
+      "title": "FAQs on the Misconduct Reporting Requirements under the FAA, IA and SFA (Effective 1 January 2027)",
+      "authority": "MAS",
+      "topicIds": [
+        "mas-regulatory-reporting"
+      ],
+      "contentType": "application/pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "responseSha256": "d0b40357d97aa04c710dddfd2d3b051a544cc16b918703235b0032918f7489e4",
+      "manifest": "statutoryKnowledge20261030-expansion-source-manifest.json",
+      "filename": "mas-misconduct-faq-native.pdf"
+    },
+    {
+      "id": "mom-payslips.html",
+      "sourceUrl": "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips",
+      "title": "Itemised pay slips",
+      "authority": "MOM",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6",
+      "responseSha256": "02f36e1b240e69f2a3c464bf9269808d6d7308162b4a27db0008aceb30b8c2a6",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "mom-payslips.html"
+    },
+    {
+      "id": "iras-company-records.html",
+      "sourceUrl": "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements",
+      "title": "Record Keeping Requirements",
+      "authority": "IRAS",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f",
+      "responseSha256": "b37188f95f578e77087a2637d6f78be78aacee621341cb3b702419499da1f94f",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "iras-company-records.html"
+    },
+    {
+      "id": "acra-entity-updates.html",
+      "sourceUrl": "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+      "title": "Updating entity information",
+      "authority": "ACRA",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32",
+      "responseSha256": "1eda45c272875607b422bead9315e9241cdfae6f0d64790fcec68a3e91dcad32",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "acra-entity-updates.html"
+    },
+    {
+      "id": "cpf-refunds.html",
+      "sourceUrl": "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+      "title": "Applying for refund of CPF contributions",
+      "authority": "CPF",
+      "topicIds": [],
+      "contentType": "text/html",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_HTML",
+      "fixtureSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8",
+      "responseSha256": "c0f1d212d7265fee06b730946797a7c092a8227d19947eed690799dae36f02c8",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "cpf-refunds.html"
+    },
+    {
+      "id": "mas-lfmc-toolkit.pdf",
+      "sourceUrl": "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf",
+      "title": "Compliance Toolkit for Licensed Fund Management Companies",
+      "authority": "MAS",
+      "topicIds": [],
+      "contentType": "application/pdf",
+      "fixtureKind": "RETAINED_NATIVE_OFFICIAL_PDF",
+      "fixtureSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "responseSha256": "bb0df7931e20f3d9602076716d11d55552d3acf7ddf74afae9bd54317ffdc651",
+      "manifest": "statutoryWorkflows20261029-workflows-source-manifest.json",
+      "filename": "mas-lfmc-toolkit.pdf"
+    }
+  ],
+  "limitation": "The normal processAccountingQuery entry point receives only each question with a null current scenario, IFRS, and no provider. Its default classification, deterministic fallback, retrieval and returned answer are measured. Frozen official source fixtures are served through a strict fetch override; every other URL, including any model endpoint, is blocked with HTTP 404. This is offline application-path evidence, not live semantic-model or browser acceptance. An absent authority evidence presentation and its empty status list remain as returned.",
+  "outcomes": [
+    {
+      "id": "p2-iras-medical-van",
+      "question": "Our GST-registered company paid for staff medical expenses and bought a delivery van to deliver goods. Can we claim input tax on each, and what separate conditions or exceptions apply?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence verified for mapped issues; full request coverage unconfirmed.\n\n**General statutory guidance:** Verified for all listed issues.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** None identified within the listed guidance. Full request coverage still requires an independent assessment.\n\n#### IRAS — GST\n\n**Status:** Evidence verified\n\n**GST input tax on staff medical expenses** (party in scope: Company)\n- **IRAS rule explanation:** IRAS states that staff medical input tax is generally disallowed under regulation 26 of the GST (General) Regulations. Subject to the ordinary input-tax conditions, the stated exceptions are expenses obligatory under WICA or a qualifying Industrial Relations Act collective agreement; or, for expenses incurred on or after 1 October 2021, treatment connected with a work-related health risk or requirement and required under relevant Singapore written law. For the advisory limb, IRAS specifies treatment related to COVID-19 and required under a written advisory of the Government or a Singapore public authority. IRAS specifically says Primary Care Plan expenses do not meet the described work-related exception. A claim needs the expense date, legal/collective-agreement basis, work-related risk and mandate evidence, GST registration and invoice facts. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n**GST input tax on a delivery van used for business deliveries** (party in scope: Company)\n- **IRAS rule explanation:** IRAS says input tax on other motor vehicles such as delivery vans is not blocked under the motor-car restriction, because those vehicles do not fall within the motor-car definition. A GST-registered business may claim input tax on the van purchase and running expenses only if the ordinary input-tax conditions are met; the vehicle classification and supporting claim facts still matter. [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n**Source:** IRAS | Conditions for Claiming Input Tax (live external)\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Input tax claims are disallowed under Regulation 26 of the GST (General) Regulations.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): However, subject to the conditions for input tax claim, these claims are allowed if: • the medical expenses (e.g. pre-employment and annual health screening expenses) are obligatory under the Work Injury Compensation Act (WICA) or under any collective agreement under the Industrial Relations Act (IRA); or • the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement due to the work nature or environment and mandated by written law or advisory.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement arising on account of the nature of the work required of your staff or his work environment; and ◦ the medical expenses are incurred pursuant to any written law of Singapore concerning the medical treatment or the provision of a medical facility or medical practitioner; or ◦ the medical treatment is related to COVID-19 and the staff undergoes such medical treatment pursuant to any written advisory (including industry circular) issued by, or posted on the website of, the Government or a public authority of Singapore.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): No, GST incurred on PCP will not be claimable. Based on the nature of the medical expenses covered under the PCP, the medical treatment is not provided in connection with any health risk or requirement arising on account of the nature of the work required of your staff or his work environment (e.g. employees exposed to radiation in the course of their work are required to undergo prescribed medical examinations by an approved medical practitioner). As such, it does not fall under any of the exceptions above and thus GST incurred on PCP will not be claimable.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Can I claim the GST charged on medical examinations incurred for the purpose of renewing my employees' work permits? No, the input tax on such examinations is blocked as medical expenses under Regulation 26 of the GST (General) Regulations.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Input tax claims are disallowed under Regulation 26 of the GST (General) Regulations.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): However, subject to the conditions for input tax claim, these claims are allowed if: • the medical expenses (e.g. pre-employment and annual health screening expenses) are obligatory under the Work Injury Compensation Act (WICA) or under any collective agreement under the Industrial Relations Act (IRA); or • the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement due to the work nature or environment and mandated by written law or advisory.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement arising on account of the nature of the work required of your staff or his work environment; and ◦ the medical expenses are incurred pursuant to any written law of Singapore concerning the medical treatment or the provision of a medical facility or medical practitioner; or ◦ the medical treatment is related to COVID-19 and the staff undergoes such medical treatment pursuant to any written advisory (including industry circular) issued by, or posted on the website of, the Government or a public authority of Singapore.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): No, GST incurred on PCP will not be claimable. Based on the nature of the medical expenses covered under the PCP, the medical treatment is not provided in connection with any health risk or requirement arising on account of the nature of the work required of your staff or his work environment (e.g. employees exposed to radiation in the course of their work are required to undergo prescribed medical examinations by an approved medical practitioner). As such, it does not fall under any of the exceptions above and thus GST incurred on PCP will not be claimable.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Can I claim the GST charged on medical examinations incurred for the purpose of renewing my employees' work permits? No, the input tax on such examinations is blocked as medical expenses under Regulation 26 of the GST (General) Regulations.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Input tax claims are disallowed under Regulation 26 of the GST (General) Regulations. However, subject to the conditions for input tax claim, these claims are allowed if: • the medical expenses (e.g. pre-employment and annual health screening expenses) are obligatory under the Work Injury Compensation Act (WICA) or under any collective agreement under the Industrial Relations Act (IRA); or • the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement due to the work nature or environment and mandated by written law or advisory.\n- **Verified official source excerpt** (supports GST input tax on staff medical expenses): Input tax claims are disallowed under Regulation 26 of the GST (General) Regulations. However, subject to the conditions for input tax claim, these claims are allowed if: • the medical expenses (e.g. pre-employment and annual health screening expenses) are obligatory under the Work Injury Compensation Act (WICA) or under any collective agreement under the Industrial Relations Act (IRA); or • the medical treatment in respect of expenses incurred on or after 1 Oct 2021 is provided in connection with any health risk or requirement due to the work nature or environment and mandated by written law or advisory.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Input tax claims on purchase and running expenses of motor cars are disallowed under Regulation 27 of the GST (General) Regulations unless the car is excluded from the definition of a 'motor car' in Regulation 25(1). In addition, input tax incurred for specific scenarios is also excluded from the scope of Regulation 27. The input tax incurred in such specific scenarios will be claimable, subject to the conditions for input tax claim.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, from 1 Apr 2022 onwards, you can claim input tax incurred on the purchase of services to transport passengers from point A to point B (pay-per-trip) in a chauffeured private hire car (e.g. airport transfer services), if the conditions for claiming input tax are met. This includes ensuring that your purchases are supported by valid tax invoices or simplified tax invoices with GST charged to you. For example, for limousine services, you will need to keep an invoice from the GST-registered business showing that GST has been charged on the services.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, from 1 Jan 2023, where you incur expenses on a motor car that is used by a third party, you will be allowed input tax claims on the cost and running expenses of the motor car incurred, if the conditions for claiming input tax are met\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Input tax claims on motor car expenses for cars used by you or your employees are disallowed under Regulation 27 of the GST (General) Regulations. Use of the motor car includes both: • physical use (e.g. motor car driven by your company staff or chauffeur to transport your company directors or business associates); and • economic use (i.e., use of the car to generate income or make supplies e.g. a consultancy firm uses its motor car to transport its preferred clients for a fee).\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): No, from 1 Jan 2023, where you incur expenses on a motor car used by a person connected to you (e.g. your subsidiary), you cannot claim input tax on the cost and running expenses of the motor car, unless you satisfy both of the following conditions (in addition to the conditions for claiming input tax): 1. You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and. 2. The recovery is not ancillary to any primary supply made by you to the connected person.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, input tax claims are allowed on motor vehicles (e.g. lorry, van, motorcycle) that do not fall under the definition of a 'motor car'*, if the conditions for claiming input tax are met.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Input tax claims on purchase and running expenses of motor cars are disallowed under Regulation 27 of the GST (General) Regulations unless the car is excluded from the definition of a 'motor car' in Regulation 25(1). In addition, input tax incurred for specific scenarios is also excluded from the scope of Regulation 27. The input tax incurred in such specific scenarios will be claimable, subject to the conditions for input tax claim.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, from 1 Apr 2022 onwards, you can claim input tax incurred on the purchase of services to transport passengers from point A to point B (pay-per-trip) in a chauffeured private hire car (e.g. airport transfer services), if the conditions for claiming input tax are met. This includes ensuring that your purchases are supported by valid tax invoices or simplified tax invoices with GST charged to you. For example, for limousine services, you will need to keep an invoice from the GST-registered business showing that GST has been charged on the services.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, from 1 Jan 2023, where you incur expenses on a motor car that is used by a third party, you will be allowed input tax claims on the cost and running expenses of the motor car incurred, if the conditions for claiming input tax are met\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Input tax claims on motor car expenses for cars used by you or your employees are disallowed under Regulation 27 of the GST (General) Regulations. Use of the motor car includes both: • physical use (e.g. motor car driven by your company staff or chauffeur to transport your company directors or business associates); and • economic use (i.e., use of the car to generate income or make supplies e.g. a consultancy firm uses its motor car to transport its preferred clients for a fee).\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): No, from 1 Jan 2023, where you incur expenses on a motor car used by a person connected to you (e.g. your subsidiary), you cannot claim input tax on the cost and running expenses of the motor car, unless you satisfy both of the following conditions (in addition to the conditions for claiming input tax): 1. You recover the motor car expenses from the connected person. Where you recover only a portion of the motor car expenses incurred, you can only claim input tax to the extent of the portion recovered; and. 2. The recovery is not ancillary to any primary supply made by you to the connected person.\n- **Verified official source excerpt** (supports GST input tax on a delivery van used for business deliveries): Yes, input tax claims are allowed on motor vehicles (e.g. lorry, van, motorcycle) that do not fall under the definition of a 'motor car'*, if the conditions for claiming input tax are met.\n- Official source: [IRAS | Conditions for Claiming Input Tax](https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "IRAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "GST input tax on staff medical expenses",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "GST input tax on a delivery van used for business deliveries",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p2-mas-combined",
+      "question": "Our venture capital fund manager has not confirmed its financial year-end. Can we use the calendar-year nil-misconduct return deadline for Form 25A and assume that filing Form 25A also completes every reporting obligation of the funds we manage?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Verified general guidance is available. Evidence is incomplete for one or more material issues.\n\n**General statutory guidance:** Verified for the issues identified below; other issues remain incomplete.\n**Individual applicability:** General guidance does not by itself establish eligibility or compliance in an individual case.\n**Material evidence gaps:** See the evidence gaps and coverage limitations below.\n\n#### Monetary Authority of Singapore — Financial regulation\n\n**Status:** Evidence verified\n\n**Venture Capital Fund Manager** (party in scope: Not established)\n\n**MAS VCFM annual declaration and Form 25A reporting requirements** (party in scope: Company)\n- **MAS rule explanation:** MAS’s current VCFM compliance toolkit says a venture capital fund manager must submit Form 25A, an annual declaration of changes to key appointments, assets under management, investor types and numbers, fund types, and deals, within one month after its financial year end. The toolkit cites Regulation 14(6) of the Securities and Futures (Licensing and Conduct of Business) Regulations. The due date for a specific manager depends on its financial year end. [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**MAS VCFM nil misconduct return requirements** (party in scope: Company)\n- **MAS rule explanation:** MAS FAQ 13 says that financial institutions covered by SFA 04-N11 are not required to submit a nil misconduct declaration for the calendar year ending 31 December 2026, notwithstanding the existing Notice wording. The Misconduct Reporting Notices effective 1 January 2027 also do not require nil declarations. If you mean a different reporting year, identify that calendar year: this FAQ passage does not establish its deadline. [FREQUENTLY ASKED QUESTIONS (“FAQs”) ON](https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf)\n\n**MAS VCFM toolkit scope and fund-level requirements** (party in scope: Company)\n- **MAS rule explanation:** MAS describes the VCFM toolkit as a reference for common applications, forms and submissions under the Securities and Futures Act. MAS says it is not exhaustive and expressly excludes reporting obligations outside the SFA and fund-level requirements. Therefore, Form 25A does not establish that every reporting obligation of each managed fund is complete. Identify applicable fund-level requirements separately for each fund and relevant activity; this source does not provide a complete fund-level checklist. [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Source:** Fund Management Licensing | Monetary Authority of Singapore (MAS) (offline fixture title) (live external)\n- **Verified official source excerpt** (supports Venture Capital Fund Manager): If your company wishes to conduct fund management activities regulated under the Securities and Futures Act 2001 (SFA) , it must apply to be a licensed fund management company (LFMC) that holds a capital markets services (CMS) licence.\n- **Verified official source excerpt** (supports Venture Capital Fund Manager): If your company solely manages venture capital funds, it may apply to be an LFMC that operates under the simplified venture capital fund manager (VCFM) regime.\n- Official source: [Fund Management Licensing | Monetary Authority of Singapore (MAS) (offline fixture title)](https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing)\n\n**Source:** VENTURE CAPITAL FUND MANAGERS (live external)\n- **Verified official source excerpt** (supports MAS VCFM annual declaration and Form 25A reporting requirements): 16 To submit an annual declaration on changes Form 25A – Annual Within 1 month after Regulation 14(6) of the MAS-Tx | Regular | Data\nto key appointments, Assets Under Declaration by a financial year end | LCBR | Returns\nManagement, investor types and numbers, Venture Capital | (Annual\nfund types, and deals | Fund Manager | Declaration - Form\n25A)\n[Updated in Dec 2024]\n17 To report to MAS\n- **Verified official source excerpt** (supports MAS VCFM toolkit scope and fund-level requirements): This Compliance Toolkit aims to provide guidance on:\nDocument: | • Applications for approvals from MAS;\n• Notifications to be submitted to MAS; and\n• Regulatory submissions to MAS, which are applicable to VCFMs\nThis compliance toolkit aims to provide VCFMs with a simple reference\non the common applications, forms and submissions pursuant to the SFA\nthat are applicable to VCFMs. However, it is not exhaustive, and VCFMs\nare expected to be familiar with all legislations and requirements that\nare applicable to them. For the avoidance of doubt, this toolkit excludes\nreporting obligations that fall outside the SFA; as well as fund-level\nrequirements.\nVCFMs are welcomed to provide suggestions on this toolkit using the\nGuided Form at Contact Us.\n- **Verified official source excerpt** (supports MAS VCFM toolkit scope and fund-level requirements): Relevant to: | VCFMs\n- Official source: [VENTURE CAPITAL FUND MANAGERS](https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf)\n\n**Source:** FREQUENTLY ASKED QUESTIONS (“FAQs”) ON (live external)\n- **Verified official source excerpt** (supports MAS VCFM nil misconduct return requirements): 13 Are FIs required to submit to MAS a declaration of nil return of misconduct of\nrepresentatives or broking staff for the calendar year ended 31 December 2026?\nNo. MAS does not require FIs to submit a declaration of nil return of misconduct of\nrepresentatives or broking staff for the calendar year ending 31 December 2026,\nnotwithstanding the requirement under paragraph 6 of the following Notices:\n• FAA-N14 Notice on Reporting of Misconduct of Representatives by Financial Advisers\n• MAS 504 Notice on Reporting of Misconduct of Broking Staff by Insurance Brokers\n• SFA 04-N11 Notice on Reporting of Misconduct of Representatives by Holders of\nCapital Markets Services Licence and Exempt Financial Institutions\nUnder the Misconduct Reporting Notices, which take effect on 1 January 2027, FIs are not\nrequired to submit to MAS a declaration of nil return of misconduct of representatives or\nbroking staff.\n- Official source: [FREQUENTLY ASKED QUESTIONS (“FAQs”) ON](https://www.mas.gov.sg/-/media/mas/regulations-and-financial-stability/regulations-guidance-and-licensing/financial-advisers/faq/faqs-on-misconduct-reporting-notices-under-the-faa-ia-and-sfa.pdf)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.",
+      "evidenceStatuses": [
+        {
+          "authority": "MAS",
+          "evidenceStatus": "VERIFIED",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "Venture Capital Fund Manager",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "MAS VCFM annual declaration and Form 25A reporting requirements",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "MAS VCFM nil misconduct return requirements",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "MAS VCFM toolkit scope and fund-level requirements",
+              "evidenceStatus": "VERIFIED",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "p2-mas-qdc",
+      "question": "Which exact QDC form must our VCFM file, which funds and mandates are in scope, and what is the filing deadline?",
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Monetary Authority of Singapore — Financial regulation\n\n**Status:** Evidence incomplete\n\n**Venture Capital Fund Manager** (party in scope: Not established)\n- **Evidence gap:** Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic mas-vcfm.\n\n**Quarterly Fund Data Collection** (party in scope: Not established)\n- **Evidence gap:** Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic mas-quarterly-fund-data-collection.\n- **Evidence gap:** Venture Capital Fund Manager: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** Venture Capital Fund Manager: No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** Venture Capital Fund Manager: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Venture Capital Fund Manager: Verified quotations do not support the requested topic mas-vcfm.\n- **Evidence gap:** Quarterly Fund Data Collection: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- **Evidence gap:** Quarterly Fund Data Collection: No candidate passed the evidence admission checks for this issue.\n- **Evidence gap:** Quarterly Fund Data Collection: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Quarterly Fund Data Collection: Verified quotations do not support the requested topic mas-quarterly-fund-data-collection.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- Venture Capital Fund Manager: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- Venture Capital Fund Manager: No candidate passed the evidence admission checks for this issue.\n- Venture Capital Fund Manager: No complete source quotation passed claim verification for this issue.\n- Venture Capital Fund Manager: Verified quotations do not support the requested topic mas-vcfm.\n- Quarterly Fund Data Collection: Candidates failed authority, domain, provenance, date, topic, or source-text checks.\n- Quarterly Fund Data Collection: No candidate passed the evidence admission checks for this issue.\n- Quarterly Fund Data Collection: No complete source quotation passed claim verification for this issue.\n- Quarterly Fund Data Collection: Verified quotations do not support the requested topic mas-quarterly-fund-data-collection.",
+      "evidenceStatuses": [
+        {
+          "authority": "MAS",
+          "evidenceStatus": "INSUFFICIENT",
+          "applicationStatus": "NOT_REQUIRED",
+          "issues": [
+            {
+              "subject": "Venture Capital Fund Manager",
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED"
+            },
+            {
+              "subject": "Quarterly Fund Data Collection",
+              "evidenceStatus": "INSUFFICIENT",
+              "applicationStatus": "NOT_REQUIRED"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

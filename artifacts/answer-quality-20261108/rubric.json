@@ -1,0 +1,39 @@
+{
+  "reviewedDateSingapore": "2026-11-08",
+  "basis": "Independent read-only review of current first-party official pages, separate from the model outputs. Core user-requested issues are required; optional procedural detail is not an exhaustive pass/fail checklist.",
+  "dimensions": ["directness and practical usefulness", "material issue coverage", "missing-fact handling", "official-source support for material claims", "no fabricated journal or calculation", "safety distinguished from usefulness"],
+  "cases": {
+    "accounting-accrual": {
+      "core": "Explain activity/recognition timing versus cash movements and the unpaid supplier liability without inventing amounts or statutory duties."
+    },
+    "accounting-asset-register": {
+      "core": "Explain the detailed fixed asset register versus general ledger balances and their reconciliation; retain the qualified accounting instructions without a statutory-registration detour."
+    },
+    "iras-private-car": {
+      "core": "Business use alone does not remove the private motor car input-GST restriction. Address the restriction and keep exceptions conditional on relevant facts, without asserting all exceptions have been ruled out.",
+      "sources": ["https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"]
+    },
+    "cpf-employer-responsibility": {
+      "core": "Employer remits the applicable employer and employee shares, with employee share recoverable from wages where applicable. Collect relevant age, contribution period, remuneration and OW/AW facts without inventing rates or amounts; respect the supplied citizenship/contract facts.",
+      "sources": ["https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions", "https://www.cpf.gov.sg/member/growing-your-savings/cpf-contributions/saving-as-an-employee"]
+    },
+    "mom-salary-overtime": {
+      "core": "State different deadlines: ordinary salary within seven days and overtime within fourteen days after the salary period ends; offer useful payroll steps with official support. Coverage is already supplied.",
+      "sources": ["https://www.mom.gov.sg/employment-practices/salary/paying-salary"]
+    },
+    "acra-sole-director-secretary": {
+      "core": "Directly state the sole director cannot also be company secretary. Explain appointing a different eligible local-resident natural person and the relevant appointment/filing steps; qualify private-company versus public-company requirements.",
+      "relevantProceduralDetails": "Appointment within six months; officer updates within fourteen days. Verify any additional procedure asserted by a generated answer against the applicable official page.",
+      "sources": ["https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/", "https://www.acra.gov.sg/resources/guides-forms/registering-a-local-company-in-singapore-forms-templates/"]
+    },
+    "mas-fund-management-startup": {
+      "core": "Explain fund-management regulatory perimeter and the need to establish the applicable CMS licensing route or a specific exemption before regulated activity. Ask relevant activity, asset/product, discretion, mandate, investor/relationship and Singapore-operation facts. Do not treat small scale or accredited investors alone as an exemption.",
+      "sources": ["https://www.mas.gov.sg/regulation/capital-markets/understand-the-types-of-capital-market-entities/fund-managers", "https://www.mas.gov.sg/regulation/capital-markets/apply-for-licensing-or-registration-of-capital-market-entities/fund-management-licensing"]
+    },
+    "mixed-first-employee": {
+      "core": "Cover both CPF setup/contribution remittance and MOM salary duties. Request material citizenship/PR, age, employment/pay and coverage facts without assuming every employee attracts CPF or overtime. Distinguish CPF payment dates from MOM salary dates if stated.",
+      "sources": ["https://www.cpf.gov.sg/service/article/when-and-how-do-i-obtain-my-cpf-submission-number-csn-as-a-new-employer", "https://www.cpf.gov.sg/employer/tools-and-services/forms-e-applications/apply-for-cpf-submission-number", "https://www.mom.gov.sg/employment-practices/salary/paying-salary"]
+    }
+  },
+  "limitations": ["Not an exhaustive review of statutory instruments or every fact-specific exemption.", "A safe refusal or generic authority referral does not establish a useful complete answer.", "Any generated claim beyond this rubric requires its own source verification."]
+}

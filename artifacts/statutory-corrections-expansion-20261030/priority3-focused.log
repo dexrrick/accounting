@@ -1,0 +1,3 @@
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=1089.52ms (first_vis=1089.42ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=569.58ms (first_vis=569.58ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+Full application MAS toolkit scope and IRAS connected-person partial recovery checks passed.

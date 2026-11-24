@@ -1,0 +1,254 @@
+{
+  "dateSingapore": "26/10/2026",
+  "status": "SCOPED_DEVELOPMENT_PASS_COMPLETE_OFFLINE_VALIDATED_INDEPENDENTLY_REVIEWED",
+  "coverageStatus": "PARTIAL_CORPUS_COVERAGE_NOT_AUTHORITY_WIDE_ACCEPTANCE",
+  "workspace": "D:\\Accounting\\.worktrees\\review-corrections-20261025",
+  "branch": "codex/statutory-practical-coverage-20261025",
+  "localHeadCommit": "051f503f26b162038e19a5a0d2cd430e851f02cf",
+  "applicationBaseCommit": "c3783109de0c7a8d1574a9a10cd1f338fee4ff26",
+  "uncommitted": true,
+  "committed": false,
+  "pushed": false,
+  "merged": false,
+  "deployed": false,
+  "sourceActivationPerformed": false,
+  "historicalAcraAcceptance": "UNCHANGED_SEPARATE",
+  "liveModelAcceptance": "NOT_RUN",
+  "browserAcceptance": "NOT_RUN",
+  "productionVerification": "NOT_RUN",
+  "githubCI": "NOT_CONFIRMED_FOR_UNCOMMITTED_SNAPSHOT",
+  "baselineRouting": {
+    "completeRequiredTopics": 57,
+    "oldPrimaryTopicOnlyCount": 58,
+    "caseId": "cpf-additional-wages-definition-02",
+    "missingBaselineTopic": "cpf-additional-wages",
+    "scope": "Old resolver catalog in the same current application, not a reconstructed old application"
+  },
+  "authorities": {
+    "IRAS": {
+      "questions": 20,
+      "routed": 20,
+      "verifiedEvidence": 10,
+      "independentReview": {
+        "reviewed": 20,
+        "correct": 8,
+        "partial": 9,
+        "unsupported": 3
+      },
+      "heuristicChecklist": {
+        "PARTIAL": 12,
+        "FAIL": 3,
+        "PASS": 5
+      },
+      "remainingCaseIds": [
+        "iras-input-tax-01",
+        "iras-input-tax-02",
+        "iras-input-tax-03",
+        "iras-input-tax-04",
+        "iras-input-tax-05",
+        "iras-eci-01",
+        "iras-eci-02",
+        "iras-eci-03",
+        "iras-eci-04",
+        "iras-eci-05",
+        "iras-withholding-tax-02",
+        "iras-withholding-tax-04"
+      ]
+    },
+    "CPF": {
+      "questions": 20,
+      "routed": 20,
+      "verifiedEvidence": 14,
+      "independentReview": {
+        "reviewed": 20,
+        "correct": 12,
+        "partial": 2,
+        "unsupported": 6
+      },
+      "heuristicChecklist": {
+        "PASS": 6,
+        "PARTIAL": 13,
+        "FAIL": 1
+      },
+      "remainingCaseIds": [
+        "cpf-additional-wages-definition-02",
+        "cpf-cpf-due-date-03",
+        "cpf-cpf-rate-factors-02",
+        "cpf-cpf-rate-factors-04",
+        "cpf-cpf-bonus-classification-01",
+        "cpf-cpf-bonus-classification-02",
+        "cpf-cpf-bonus-classification-03",
+        "cpf-cpf-bonus-classification-04"
+      ]
+    },
+    "MOM": {
+      "questions": 20,
+      "routed": 20,
+      "verifiedEvidence": 9,
+      "independentReview": {
+        "reviewed": 20,
+        "correct": 9,
+        "partial": 0,
+        "unsupported": 11
+      },
+      "heuristicChecklist": {
+        "FAIL": 6,
+        "PASS": 6,
+        "PARTIAL": 8
+      },
+      "remainingCaseIds": [
+        "mom-salary-timing-01",
+        "mom-salary-timing-02",
+        "mom-salary-timing-04",
+        "mom-annual-leave-04",
+        "mom-salary-deductions-01",
+        "mom-salary-deductions-02",
+        "mom-salary-deductions-03",
+        "mom-overtime-eligibility-01",
+        "mom-overtime-eligibility-02",
+        "mom-overtime-eligibility-03",
+        "mom-overtime-eligibility-04"
+      ]
+    },
+    "ACRA": {
+      "questions": 20,
+      "routed": 20,
+      "verifiedEvidence": 5,
+      "independentReview": {
+        "reviewed": 20,
+        "correct": 5,
+        "partial": 0,
+        "unsupported": 15
+      },
+      "heuristicChecklist": {
+        "FAIL": 5,
+        "PARTIAL": 10,
+        "PASS": 5
+      },
+      "remainingCaseIds": [
+        "acra-agm-deadlines-01",
+        "acra-agm-deadlines-02",
+        "acra-agm-deadlines-03",
+        "acra-agm-deadlines-04",
+        "acra-annual-returns-01",
+        "acra-annual-returns-02",
+        "acra-annual-returns-03",
+        "acra-annual-returns-04",
+        "acra-annual-return-officer-particulars-01",
+        "acra-annual-return-officer-particulars-02",
+        "acra-annual-return-officer-particulars-03",
+        "acra-annual-return-officer-particulars-04",
+        "acra-secretary-appointment-01",
+        "acra-secretary-appointment-02",
+        "acra-secretary-appointment-04"
+      ]
+    },
+    "MAS": {
+      "questions": 20,
+      "routed": 20,
+      "verifiedEvidence": 12,
+      "independentReview": {
+        "reviewed": 20,
+        "correct": 9,
+        "partial": 3,
+        "unsupported": 8
+      },
+      "heuristicChecklist": {
+        "PARTIAL": 12,
+        "PASS": 8
+      },
+      "remainingCaseIds": [
+        "mas-vcfm-03",
+        "mas-vcfm-04",
+        "mas-class-exemptions-02",
+        "mas-qdc-reporting-01",
+        "mas-qdc-reporting-02",
+        "mas-qdc-reporting-03",
+        "mas-qdc-reporting-04",
+        "mas-regulatory-notifications-01",
+        "mas-regulatory-notifications-02",
+        "mas-regulatory-notifications-03",
+        "mas-regulatory-notifications-04"
+      ]
+    }
+  },
+  "independentTotals": {
+    "reviewed": 100,
+    "correct": 43,
+    "partial": 14,
+    "unsupported": 43
+  },
+  "heuristicChecklistPasses": 30,
+  "validation": [
+    {
+      "check": "preflight",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:44:57.7994887Z",
+      "completedAtUTC": "2026-10-26T11:44:57.8675918Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\preflight.log"
+    },
+    {
+      "check": "lint",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:44:57.8817456Z",
+      "completedAtUTC": "2026-10-26T11:44:58.0145636Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\lint.log"
+    },
+    {
+      "check": "typecheck",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:44:58.0163518Z",
+      "completedAtUTC": "2026-10-26T11:45:01.8110305Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\typecheck.log"
+    },
+    {
+      "check": "vite-build",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:45:01.8133286Z",
+      "completedAtUTC": "2026-10-26T11:45:03.7533292Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\vite-build.log"
+    },
+    {
+      "check": "worker-build",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:45:03.7556153Z",
+      "completedAtUTC": "2026-10-26T11:45:04.4339804Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\worker-build.log"
+    },
+    {
+      "check": "smoke",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:45:04.4354025Z",
+      "completedAtUTC": "2026-10-26T11:47:28.3492525Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\smoke.log"
+    },
+    {
+      "check": "full",
+      "exitCode": 0,
+      "startedAtUTC": "2026-10-26T11:47:28.3504580Z",
+      "completedAtUTC": "2026-10-26T11:50:07.9328630Z",
+      "log": "D:\\Accounting\\artifacts\\coverage-development-20261026\\validation\\full.log"
+    }
+  ],
+  "passedSuites": {
+    "smoke": 133,
+    "full": 156
+  },
+  "snapshotSha256": "175c0869b5802a76a50018e4d2d8576d34317e1490945085d1c71accc4b2d28e",
+  "replaySha256": "2cc8713050eb0d7c84d3b4541d94674ab587607f385afbfbb95a0e33220dae6f",
+  "reviewSha256": "fd16dc9fdcdf7cea28bd81740f86f4f8e245bfc9aad945566837ec532a6ddded",
+  "comparisonLimits": [
+    "Offline retained/paraphrased source fixtures and supplied semantic interpretations",
+    "Two final-salary offline population labels were corrected; live model interpretation was not exercised",
+    "Verified evidence, literal checklist results and independent answer correctness are different measures"
+  ],
+  "remainingGaps": {
+    "IRAS": "Input-tax reasonable-steps/Missing Trader Fraud condition, ECI answers/waiver completeness, selected withholding-tax questions",
+    "CPF": "OW/AW compound completeness, specific-period due dates, historical/numeric schedules and bonus classifications",
+    "MOM": "Remaining regular/overtime timing wording, historical leave, deduction and overtime eligibility evidence",
+    "ACRA": "AGM/annual-return/officer particulars and most secretary questions; historical acceptance remains separate",
+    "MAS": "Detailed exemption conditions, full VCFM/LFMC comparison and Appendix 4 eligibility, QDC and notifications"
+  },
+  "evidenceDirectory": "D:\\Accounting\\artifacts\\coverage-development-20261026",
+  "noOpenMaterialIntroducedImplementationFindings": true
+}

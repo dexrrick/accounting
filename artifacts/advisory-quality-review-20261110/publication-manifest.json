@@ -1,0 +1,275 @@
+{
+  "preparedAt": "2026-11-10T07:36:34.858Z",
+  "destination": "https://github.com/dexrrick/accounting",
+  "branch": "codex/project-charter-simplification-20261103",
+  "baseCommit": "bef2cffbadbc8f4d7264a73b20f97b83dbecda78",
+  "implementationCommit": "7e4f80ddf0b0fc30ad930c6ba385cd58a8ba3fb2",
+  "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+  "status": "READY_FOR_PUBLICATION_REVIEW",
+  "publicationDirectory": "artifacts/advisory-quality-review-20261110",
+  "trackedImplementationFiles": [
+    "scripts/replay_statutory_coverage.mjs",
+    "src/retrieval/controlledWebRetriever.ts",
+    "src/retrieval/cpfMasPracticalRules.ts",
+    "src/retrieval/externalSourceValidator.ts",
+    "src/retrieval/practicalStatutoryExpansion.ts",
+    "src/services/aiFirstAdvisory.ts",
+    "src/services/authorityWorkstreams.ts",
+    "src/services/evidenceGroundedSynthesis.ts",
+    "src/services/geminiService.ts",
+    "src/services/groundingContextBuilder.ts",
+    "src/services/irasEvidencePolicy.ts",
+    "src/services/semanticQuestionUnderstanding.ts",
+    "src/types/authorityEvidence.ts",
+    "src/utils/authorityEvidencePresentation.ts",
+    "src/utils/authorityEvidenceRouting.ts",
+    "src/utils/evidenceTextBoundaries.ts",
+    "src/utils/journalRequestIntent.ts",
+    "src/verification/claimEvidenceVerifier.ts",
+    "tests/evaluation/statutory_coverage_wave_2026-10-25.json",
+    "tests/fixtures/statutoryCoverageOfficialPages.mjs",
+    "tests/regression/test_ai_first_advisory_phase1.mjs",
+    "tests/regression/test_authority_evidence_presentation.mjs",
+    "tests/regression/test_cpf_mas_practical_rules.mjs",
+    "tests/regression/test_evidence_grounded_synthesis.mjs",
+    "tests/regression/test_iras_rule_concept_support.mjs",
+    "tests/regression/test_material_issue_decomposition.mjs",
+    "tests/regression/test_official_source_failure_safety.mjs",
+    "tests/regression/test_semantic_question_understanding.mjs",
+    "tests/regression/test_statutory_coverage_replay.mjs",
+    "tests/regression/test_statutory_expansion_pipeline.mjs",
+    "tests/regression/test_statutory_source_discovery.mjs"
+  ],
+  "files": [
+    {
+      "path": "cases.json",
+      "originalPath": "cases.json",
+      "originalSha256": "ffe87f621e80e4d77f36d4f076e1100e803df6ec5d5ac8f1f66ae0fd5b2f3b44",
+      "publishedSha256": "ffe87f621e80e4d77f36d4f076e1100e803df6ec5d5ac8f1f66ae0fd5b2f3b44",
+      "bytes": 3972
+    },
+    {
+      "path": "latest-acceptance-summary.json",
+      "originalPath": "latest-acceptance-summary.json",
+      "originalSha256": "e5c0be8e331e5c7e2bf190d36b3f28c0cb9fc22a853ca2e1172e633a47f13016",
+      "publishedSha256": "e5c0be8e331e5c7e2bf190d36b3f28c0cb9fc22a853ca2e1172e633a47f13016",
+      "bytes": 6154
+    },
+    {
+      "path": "LATEST.md",
+      "originalPath": "LATEST.md",
+      "originalSha256": "1d1946f1528c086bd82633fdceca31932d045d382e45da7749b9b6340977e398",
+      "publishedSha256": "1d1946f1528c086bd82633fdceca31932d045d382e45da7749b9b6340977e398",
+      "bytes": 3461
+    },
+    {
+      "path": "run-live.mjs",
+      "originalPath": "run-live.mjs",
+      "originalSha256": "de8461026f49f16af728bcf6776d49042cc7fc9e07f4ef15231e14f576c0c2e1",
+      "publishedSha256": "de8461026f49f16af728bcf6776d49042cc7fc9e07f4ef15231e14f576c0c2e1",
+      "bytes": 15805
+    },
+    {
+      "path": "run-mom-final-retest.ps1",
+      "originalPath": "run-mom-final-retest.ps1",
+      "originalSha256": "1171a2c63c82d9cec1410cb73b42d56cd53025ff598686aa46b06c3ba0223e72",
+      "publishedSha256": "1171a2c63c82d9cec1410cb73b42d56cd53025ff598686aa46b06c3ba0223e72",
+      "bytes": 1644
+    },
+    {
+      "path": "REVIEW_HANDOFF.md",
+      "originalPath": "review-publication/REVIEW_HANDOFF.md",
+      "originalSha256": "1d6a4feecfbf8c0c4580055c7f7b0da907a1728e0715a6cc96d37bf46ba2000c",
+      "publishedSha256": "1d6a4feecfbf8c0c4580055c7f7b0da907a1728e0715a6cc96d37bf46ba2000c",
+      "bytes": 12322
+    },
+    {
+      "path": "review-publication/implementation-commit.json",
+      "originalPath": "review-publication/implementation-commit.json",
+      "originalSha256": "1d2334bc8cd8bed9935960cff9cc752be6c753897913bd9498e37b7c7520ae63",
+      "publishedSha256": "1d2334bc8cd8bed9935960cff9cc752be6c753897913bd9498e37b7c7520ae63",
+      "bytes": 2305
+    },
+    {
+      "path": "answers/accounting-accrual.json",
+      "originalPath": "answers/accounting-accrual.json",
+      "originalSha256": "1bfdbfb30272c372da1e071dabd7df9ee9dfb81543392036d93d05b4f9facd21",
+      "publishedSha256": "1bfdbfb30272c372da1e071dabd7df9ee9dfb81543392036d93d05b4f9facd21",
+      "bytes": 29310
+    },
+    {
+      "path": "answers/accounting-asset-register.json",
+      "originalPath": "answers/accounting-asset-register.json",
+      "originalSha256": "f315151a42fb5cc3f432f5b1c075e6e8067f848188fc735321707b1564041edd",
+      "publishedSha256": "f315151a42fb5cc3f432f5b1c075e6e8067f848188fc735321707b1564041edd",
+      "bytes": 29649
+    },
+    {
+      "path": "answers/iras-private-car.json",
+      "originalPath": "answers/iras-private-car.json",
+      "originalSha256": "141c8722ae2127783b251771dc71090aa34faeda27fb880b3eedc660fad130c3",
+      "publishedSha256": "141c8722ae2127783b251771dc71090aa34faeda27fb880b3eedc660fad130c3",
+      "bytes": 340758
+    },
+    {
+      "path": "answers/cpf-employer-responsibility.json",
+      "originalPath": "answers/cpf-employer-responsibility.json",
+      "originalSha256": "3b57ea1297c93f24bfe101d4b45b00d3219306b5271b9b7d2a3eceedae670634",
+      "publishedSha256": "3b57ea1297c93f24bfe101d4b45b00d3219306b5271b9b7d2a3eceedae670634",
+      "bytes": 238279
+    },
+    {
+      "path": "answers/acra-sole-director-secretary.json",
+      "originalPath": "answers/acra-sole-director-secretary.json",
+      "originalSha256": "a0dc077996d2baf0ab49ddb6df2309cb3dcc7d99c435eb48aac882456695d18d",
+      "publishedSha256": "a0dc077996d2baf0ab49ddb6df2309cb3dcc7d99c435eb48aac882456695d18d",
+      "bytes": 265582
+    },
+    {
+      "path": "paced-replay/answers/mas-fund-management-startup.json",
+      "originalPath": "paced-replay/answers/mas-fund-management-startup.json",
+      "originalSha256": "fada1c11c4468820e59cf7c3ddbd4a0626cc03a7ac354bbf0769765fb0617082",
+      "publishedSha256": "fada1c11c4468820e59cf7c3ddbd4a0626cc03a7ac354bbf0769765fb0617082",
+      "bytes": 174639
+    },
+    {
+      "path": "paced-replay/answers/mixed-first-employee.json",
+      "originalPath": "paced-replay/answers/mixed-first-employee.json",
+      "originalSha256": "1e2a55c3a67ba005aefc51d7a89b432ccdacf5cded53757693410fdaeffb0472",
+      "publishedSha256": "1e2a55c3a67ba005aefc51d7a89b432ccdacf5cded53757693410fdaeffb0472",
+      "bytes": 178816
+    },
+    {
+      "path": "mom-inline-retest/mom-salary-overtime.json",
+      "originalPath": "mom-inline-retest/mom-salary-overtime.json",
+      "originalSha256": "4348752f6415e4cb21b69203231c3127dee838c589ebceb07e499ec077722ac2",
+      "publishedSha256": "4348752f6415e4cb21b69203231c3127dee838c589ebceb07e499ec077722ac2",
+      "bytes": 335428
+    },
+    {
+      "path": "mom-inline-retest/offline-diagnosis.json",
+      "originalPath": "mom-inline-retest/offline-diagnosis.json",
+      "originalSha256": "64f377323a967194c071662cdcde399d58797ee8bbb19830da92977742e1bd51",
+      "publishedSha256": "7ff619561deeef0f03e502a6fef00aea0df0068db65fa9c72570ea19f41a75b3",
+      "bytes": 16066
+    },
+    {
+      "path": "mom-inline-retest/issue-inline-offline-diagnosis.json",
+      "originalPath": "mom-inline-retest/issue-inline-offline-diagnosis.json",
+      "originalSha256": "633586dff6b4bb6ddbbde230f2eee8893f14e0d0acc9950e60b6304436ad20c1",
+      "publishedSha256": "e8adc6ff1ab6b34bb908addef77d3df8b2656dbd35d9937af5abe4297b7149a8",
+      "bytes": 16148
+    },
+    {
+      "path": "mom-inline-retest/validation/builder-checks.json",
+      "originalPath": "mom-inline-retest/validation/builder-checks.json",
+      "originalSha256": "e4ec066ef618ba2d326977bbbeeb13015fd4c3bf7b24d584750b1a73798db269",
+      "publishedSha256": "b6e1cbee5a27e38be5ac4cf1afc4757a1021bd1f6220265fbd2a4d0a40bc45af",
+      "bytes": 4087
+    },
+    {
+      "path": "mom-inline-retest/validation/builder-issue-inline-checks.json",
+      "originalPath": "mom-inline-retest/validation/builder-issue-inline-checks.json",
+      "originalSha256": "695b95d8437b98ee5d4aa038c6861f49af7bfdc04fb4bd28f24621943141d03a",
+      "publishedSha256": "d99171d8ff45e201c3f19edda53f478d406dfb268387e72abc95850a80bb7949",
+      "bytes": 4216
+    },
+    {
+      "path": "mom-inline-retest/validation/smoke.log",
+      "originalPath": "mom-inline-retest/validation/smoke.log",
+      "originalSha256": "431b7dcd962f6f5ad8e878b1ce0ddb58edb20b260b43f9b31960db541e23af80",
+      "publishedSha256": "431b7dcd962f6f5ad8e878b1ce0ddb58edb20b260b43f9b31960db541e23af80",
+      "bytes": 204392
+    },
+    {
+      "path": "mom-inline-retest/validation/supervisor-checks.json",
+      "originalPath": "mom-inline-retest/validation/supervisor-checks.json",
+      "originalSha256": "6441eb155129472f10d6e9b11d1daaee826e85883b1ebd3da9f3f908b93cb2a5",
+      "publishedSha256": "9fe7e09f64befe2a387997cfeb9016793570bd55517dea1377b49da149ed1566",
+      "bytes": 245
+    },
+    {
+      "path": "mom-cached-plan-retest/mom-salary-overtime.json",
+      "originalPath": "mom-cached-plan-retest/mom-salary-overtime.json",
+      "originalSha256": "ce1db2884f74a830f5ac8de2df1f4f5bf5c7fbf5ad2362a857362c7e83ed4ce0",
+      "publishedSha256": "7dd04e893b55518750d03317716e13256ae77fccadcf0074e273d87a59170474",
+      "bytes": 331308
+    },
+    {
+      "path": "mom-cached-plan-retest/request-ledger.json",
+      "originalPath": "mom-cached-plan-retest/request-ledger.json",
+      "originalSha256": "6a2194e9e2df2fdaa731dadd1798456512c05a0093a995cc64c2659e73538384",
+      "publishedSha256": "2fc0ca33d60fea43d947ff2313ae70669567c636e68197e1c40e839881ae3ccf",
+      "bytes": 534
+    },
+    {
+      "path": "mom-final-retest/mom-salary-overtime.json",
+      "originalPath": "mom-final-retest/mom-salary-overtime.json",
+      "originalSha256": "3d90badc18a6896aec7b1c003b27d55367f4b0e78e04d05d99a9cdc5a56c3d5b",
+      "publishedSha256": "3d90badc18a6896aec7b1c003b27d55367f4b0e78e04d05d99a9cdc5a56c3d5b",
+      "bytes": 272556
+    },
+    {
+      "path": "mom-final-retest/request-ledger.json",
+      "originalPath": "mom-final-retest/request-ledger.json",
+      "originalSha256": "9a35555dec8dea7935f3d8da959f266241b6fda75d926cb9c6675fbe2c0cead4",
+      "publishedSha256": "c7f0f631875bfa049cb3c355981b1908bf99b88261f5f24c8c924c61c5d3843b",
+      "bytes": 520
+    },
+    {
+      "path": "mom-final-retest/live-report.json",
+      "originalPath": "mom-final-retest/live-report.json",
+      "originalSha256": "dd3f7f122a8279c67e93ca3a2594d3a44bf52d6479c40040728ad73033fdb596",
+      "publishedSha256": "dd3f7f122a8279c67e93ca3a2594d3a44bf52d6479c40040728ad73033fdb596",
+      "bytes": 5622
+    },
+    {
+      "path": "mom-final-retest/validation/supervisor-checks.json",
+      "originalPath": "mom-final-retest/validation/supervisor-checks.json",
+      "originalSha256": "cb778aaba9971fc17992a98ffb9f9711f7e477901bcf894f3458544698bbab78",
+      "publishedSha256": "8860038bf188d2877132fe0e1cdd505a908f2633a130c35adf9150af54aa7f16",
+      "bytes": 253
+    },
+    {
+      "path": "mom-final-retest/validation/maintained-lint.log",
+      "originalPath": "mom-final-retest/validation/maintained-lint.log",
+      "originalSha256": "0baae0d1d176c3becc18b9e2dd4dcf7e2da2c49c50ad78b32e2c9029937abf99",
+      "publishedSha256": "0baae0d1d176c3becc18b9e2dd4dcf7e2da2c49c50ad78b32e2c9029937abf99",
+      "bytes": 30117
+    },
+    {
+      "path": "mom-final-retest/validation/vite-build.log",
+      "originalPath": "mom-final-retest/validation/vite-build.log",
+      "originalSha256": "f84001f936f247f8b26987d46497b31a449386fa78e37d2420c8a6710d0e080d",
+      "publishedSha256": "f84001f936f247f8b26987d46497b31a449386fa78e37d2420c8a6710d0e080d",
+      "bytes": 19044
+    },
+    {
+      "path": "mom-final-retest/validation/worker-build.log",
+      "originalPath": "mom-final-retest/validation/worker-build.log",
+      "originalSha256": "054de12b439fd9fc1164c562240b40a37d72d6acf5640369e714de636b8ae6a2",
+      "publishedSha256": "054de12b439fd9fc1164c562240b40a37d72d6acf5640369e714de636b8ae6a2",
+      "bytes": 153
+    },
+    {
+      "path": "review-publication/validation/full.log",
+      "originalPath": "review-publication/validation/full.log",
+      "originalSha256": "55e55f15fca3e44c3196d72294313f286a91d7061dd35cb7f87bf63dae4608a1",
+      "publishedSha256": "55e55f15fca3e44c3196d72294313f286a91d7061dd35cb7f87bf63dae4608a1",
+      "bytes": 296371
+    },
+    {
+      "path": "review-publication/validation/full-result.json",
+      "originalPath": "review-publication/validation/full-result.json",
+      "originalSha256": "af3acfb18d92d1281af69d8e66252c942b554c05a62d34cddba08f9c63a97cc1",
+      "publishedSha256": "79469860f96a77fb85c0e1090dcf48a45d55241b9fd34b8654c20ec64d034bc2",
+      "bytes": 313
+    }
+  ],
+  "artifactCount": 32,
+  "captureCount": 10,
+  "totalArtifactBytes": 2840069,
+  "sanitization": "Credential scan against configured secret values and common token patterns; JSON operator path strings replaced, original/published hashes recorded. No credentials, environment files, unrelated artifacts or private account data included.",
+  "scanFailures": [],
+  "scope": "Code/tests/replay changes plus exact fixed hypothetical questions, public-source captures, provider errors, local validation and review handoff; no merge/deployment/live API calls."
+}

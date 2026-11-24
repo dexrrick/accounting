@@ -1,0 +1,84 @@
+{
+  "status": "COMPLETE_LOCAL_OFFLINE_READY_FOR_EXTERNAL_REVIEW",
+  "completedUTC": "2026-11-03T05:34:57.158Z",
+  "branch": "codex/statutory-knowledge-expansion-20261030",
+  "baseHead": "24102c38d1b081f786cf22a643bc16747986eb3d",
+  "areas": {
+    "ACRA": "Owned registration date for company-secretary appointment guidance",
+    "CPF": "Qualitative low-wage employee and employer contribution shares",
+    "MOM": "Joint ordinary-salary and overtime payment deadlines with fact ownership and payment polarity",
+    "IRAS": "Employee health-screening and health-check-up input-tax intent",
+    "MAS": "VCFM branch approval and form guidance proved by complete native toolkit row 2"
+  },
+  "files": [
+    "src/classification/questionClassifier.ts",
+    "src/retrieval/acraMomKnowledge20261027b.ts",
+    "src/retrieval/cpfPayrollKnowledge20261027b.ts",
+    "src/retrieval/irasMasKnowledge20261027b.ts",
+    "src/retrieval/statutoryKnowledge20261027b.ts",
+    "src/retrieval/statutoryWorkflows20261029.ts",
+    "src/retrieval/targetDateResolver.ts",
+    "src/services/authorityWorkstreams.ts",
+    "src/services/groundingContextBuilder.ts",
+    "src/services/semanticQuestionUnderstanding.ts",
+    "src/standards/coverageRegistry.ts",
+    "src/utils/taxJurisdictionNames.ts",
+    "tests/regression/test_acra_mom_knowledge_20261027b.mjs",
+    "tests/regression/test_iras_mas_knowledge_20261027b.mjs",
+    "tests/regression/test_iras_wht_filing_treaty_production.mjs",
+    "tests/regression/test_statutory_cpf_expansion_20261101.mjs",
+    "tests/regression/test_statutory_workflow_expansions_20261030.mjs",
+    "tests/regression/test_statutory_workflows_20261029.mjs",
+    "tests/regression/test_iras_gst_opening_locator.mjs"
+  ],
+  "validation": {
+    "maintainedLint": "PASS",
+    "typecheck": "PASS",
+    "viteBuild": "PASS",
+    "workerBuild": "PASS",
+    "suites": {
+      "smoke": 161,
+      "full": 184
+    },
+    "independentReview": "CLEAR_BOUNDED_OFFLINE_REVIEW",
+    "codeHashDrift": [],
+    "rootLint": "FAIL: 34 pre-existing errors in archived artifacts/fresh-acceptance-2026-10-24/prepare.mjs"
+  },
+  "acceptance": {
+    "perAuthority": 2,
+    "total": 10,
+    "correctBoundedGuidance": 10,
+    "preexistingControl": "balanced-iras-2",
+    "wholeQuestionComplete": false,
+    "networkRequests": 0,
+    "modelRequests": 0
+  },
+  "preservation": {
+    "answers": 350,
+    "unchanged": 347,
+    "changed": 3,
+    "priorCorrect": 213,
+    "priorCorrectUnchanged": 213,
+    "networkRequests": 0,
+    "modelRequests": 0,
+    "drift": []
+  },
+  "changedAnswerReview": {
+    "total": 3,
+    "correctBoundedGuidance": 3
+  },
+  "limitations": [
+    "Guidance remains conditional; whole-question coverage and individual applicability are not automatically established.",
+    "Local offline validation only; no new CI, browser/model acceptance, source activation or deployment."
+  ],
+  "publication": "All changes uncommitted and unpushed; no PR, publication, merge or deployment performed.",
+  "evidence": [
+    "final-code-hashes.json",
+    "validation-results.json",
+    "full-results.json",
+    "preservation.json",
+    "final-acceptance.json",
+    "changed-answers.json",
+    "independent-review-final.json"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Full registered regression suite",
+  "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+  "exitCode": 0,
+  "elapsedSeconds": 295.23,
+  "networkPolicy": "External fetch guard; no real provider requests",
+  "command": "node scripts/run_all_tests.mjs --tier=full"
+}

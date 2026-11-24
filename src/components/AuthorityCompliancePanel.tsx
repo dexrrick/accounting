@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AlertTriangle, ExternalLink, ShieldCheck } from 'lucide-react';
 import type { AuthorityEvidencePresentation, AuthorityPresentedClaim, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
+import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { defaultSourceRetriever } from '../retrieval/sourceRetriever';
 import type { ISourceRetriever } from '../retrieval/sourceRetriever';
 import { sameVerifiedDocumentBinding, verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
@@ -12,7 +13,10 @@ interface AuthorityCompliancePanelProps {
   sourceRetriever?: ISourceRetriever;
 }
 
-function statusLabel(status: AuthorityEvidencePresentation['status']): string {
+function statusLabel(status: AuthorityEvidencePresentation['status'], requestComplete: boolean, evidenceVerified: boolean, applicationUnresolved: boolean): string {
+  if (!requestComplete && evidenceVerified) {
+    return `Evidence verified for mapped issues; full request coverage unconfirmed${applicationUnresolved ? '; application unresolved' : ''}`;
+  }
   if (status === 'VERIFIED') return 'All requested evidence verified';
   if (status === 'CONDITIONAL') return 'Evidence verified; application unresolved';
   return 'Evidence incomplete';
@@ -66,7 +70,9 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
     return { stream, claimStatuses, hasStaleBinding };
   });
   const hasInvalidatedBinding = renderedStreams.some(item => item.hasStaleBinding);
-  const displayedStatus = hasInvalidatedBinding ? 'INSUFFICIENT' : presentation.status;
+  const requestComplete = hasCompleteRequestRepresentation(presentation);
+  const displayedStatus = hasInvalidatedBinding ? 'INSUFFICIENT'
+    : !requestComplete && presentation.evidenceStatus === 'VERIFIED' ? 'CONDITIONAL' : presentation.status;
 
   return (
   <section className="bg-white dark:bg-[#1C2538] rounded-2xl border border-slate-200 dark:border-[#2B374E] shadow-xl overflow-hidden flex flex-col">
@@ -82,7 +88,7 @@ export const AuthorityCompliancePanel: React.FC<AuthorityCompliancePanelProps> =
       </div>
       <span className={`inline-flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-md font-semibold border ${statusStyle(displayedStatus)}`}>
         {(displayedStatus === 'INSUFFICIENT' || hasInvalidatedBinding) && <AlertTriangle className="w-3 h-3" />}
-        {hasInvalidatedBinding ? 'Source version changed; review required' : statusLabel(displayedStatus)}
+        {hasInvalidatedBinding ? 'Source version changed; review required' : statusLabel(displayedStatus, requestComplete, presentation.evidenceStatus === 'VERIFIED', presentation.applicationStatus === 'UNRESOLVED')}
       </span>
     </header>
 

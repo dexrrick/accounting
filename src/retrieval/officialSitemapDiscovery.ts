@@ -308,7 +308,10 @@ function normalizeWords(text: string): string[] {
     if (word.endsWith('ies') && word.length > 5) return `${word.slice(0, -3)}y`;
     if (word.endsWith('es') && word.length > 5) return word.slice(0, -2);
     if (word.endsWith('s') && word.length > 4) return word.slice(0, -1);
-    return word;
+    // MOM uses "paying salary" where mapped topics often say "salary
+    // payment". Normalize these common forms so the correct page can rank
+    // inside the existing bounded candidate limit.
+    return ({ payment: 'pay', paying: 'pay', paid: 'pay' } as Record<string, string>)[word] || word;
   });
 }
 
@@ -373,10 +376,12 @@ function metadataRelevanceScore(entry: OfficialSourceIndexEntry, request: Offici
   const candidatePathWords = new Set(normalizeWords(entry.normalizedPath));
   const scopedRouteTopicMatch = Boolean(routeArea && request.topicDomainId?.startsWith('IRAS_') &&
     scopedTopicWords.some(word => candidatePathWords.has(word)));
+  const momEmploymentSectionMatch = request.authority === 'MOM' && request.topicDomainId === 'MOM_EMPLOYMENT' &&
+    /^\/employment-practices(?:\/|$)/i.test(new URL(entry.canonicalUrl).pathname);
   if (!expectedTitleMatch && !distinctiveTitleMatch && matchedTitleWords.size < 2 && matchedQueryWords.size < 2 &&
       !matchedSpecificHint && !matchedTopicPhrase && !authorityQueryMatch && !scopedRouteTopicMatch) return 0;
   return 20 + matchedExpectedTitleWords.size * 6 + matchedTitleWords.size * 4 + matchedQueryWords.size +
-    (matchedSpecificHint ? 8 : 0) + (matchedTopicPhrase ? 8 : 0);
+    (matchedSpecificHint ? 8 : 0) + (matchedTopicPhrase ? 8 : 0) + (momEmploymentSectionMatch ? 12 : 0);
 }
 
 function candidateScore(entry: OfficialSourceIndexEntry, request: OfficialSourceDiscoveryRequest): number {
@@ -390,10 +395,13 @@ export function isAcraCompanySourceUrlCompatible(topicDomainId: string | undefin
   if (topicDomainId !== 'ACRA_COMPANIES') return true;
   try {
     const url = new URL(candidateUrl);
+    const path = decodeURIComponent(url.pathname).toLowerCase();
+    const supportedCompanyRoute = path.startsWith('/manage/companies/') ||
+      path.startsWith('/register/business/registering-different-business-structures/local-company/');
     return url.protocol === 'https:' && !url.username && !url.password && !url.port &&
       ['acra.gov.sg', 'www.acra.gov.sg'].includes(url.hostname.toLowerCase()) &&
-      decodeURIComponent(url.pathname).toLowerCase().startsWith('/manage/companies/') &&
-      !/(?:foreign-company|foreign-companies|variable-capital|(?:^|[/-])vcc(?:[/-]|$)|limited-liability-partnership|limited-partnership|sole-proprietor)/i.test(decodeURIComponent(url.pathname));
+      supportedCompanyRoute &&
+      !/(?:foreign-company|foreign-companies|variable-capital|(?:^|[/-])vcc(?:[/-]|$)|limited-liability-partnership|limited-partnership|sole-proprietor)/i.test(path);
   } catch {
     return false;
   }

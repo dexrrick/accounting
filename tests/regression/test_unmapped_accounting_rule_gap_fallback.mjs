@@ -65,6 +65,11 @@ for (const failure of ['no provider', 'malformed', 'timeout', 'provider error'])
   assert.equal(result.workstreams.status, 'INSUFFICIENT');
   assert.ok(result.workstreams.workstreams.every(stream => stream.sources.length === 0));
   assert.ok(result.workstreams.workstreams.every(stream => stream.issues.every(issue => issue.verifiedClaims.length === 0)));
+  assert.ok(result.workstreams.issuePlan.issues.every(issue => issue.domain === 'ACCOUNTING' &&
+    issue.governingAuthorities.every(authority => authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION')),
+  `${failure}: the missing source belongs only to accounting standards`);
+  assert.notEqual(result.response.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    `${failure}: an accounting-standard evidence gap does not enter the statutory failure fallback`);
   assert.equal(result.response.scenarioState.scenarioType, 'AUTHORITY_ADVISORY');
   assert.equal(result.response.scenarioState.directGroups?.length || 0, 0, `${failure}: no journal is produced`);
   assert.match(result.response.messageText, /No reviewed topic was resolved/i);

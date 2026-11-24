@@ -1,0 +1,104 @@
+{
+  "cases": [
+    {
+      "id": "cpf-01",
+      "authority": "CPF",
+      "question": "A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?",
+      "expected": [
+        "OW for a month must be for employment in that month and payable by the 14th of the following month; this payment misses the second condition and is AW for that month.",
+        "Classify by actual contractual due/payable facts; do not classify solely by pay-period label."
+      ],
+      "forbidden": [
+        "Every monthly salary is OW regardless of payable date.",
+        "Treat AW as exempt from CPF."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "cpf-04",
+      "authority": "CPF",
+      "question": "An annual bonus for 2025 was contractually due and payable in January 2026, though payroll had budgeted it for last year. Which year's AW ceiling applies?",
+      "expected": [
+        "Use the year the AW is due and payable; a 2025 bonus due/payable in 2026 uses the 2026 AW ceiling.",
+        "Confirm contractual due date; do not choose the year by performance period or accrual label alone."
+      ],
+      "forbidden": [
+        "Apply prior year's ceiling solely because it was earned then.",
+        "Assume bonus amount equals CPF-able AW."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000MoFDuYAN"
+      ]
+    },
+    {
+      "id": "cpf-06",
+      "authority": "CPF",
+      "question": "A foreign employee became a Singapore PR on 15 March 2026. What is the first-year boundary, and is CPF due on March OW earned from the grant date?",
+      "expected": [
+        "CPF is payable once SPR status is obtained; first year runs from 15 March 2026 through 31 March 2027; second year begins 1 April 2027.",
+        "CPF on March OW is pro-rated from 15–31 March; applicable graduated rate depends on age, applicable table and any approved joint election."
+      ],
+      "forbidden": [
+        "First year begins the next calendar year.",
+        "Charge CPF on wages earned while still a foreigner."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status"
+      ]
+    },
+    {
+      "id": "cpf-07",
+      "authority": "CPF",
+      "question": "The same new PR employee received an annual bonus payable on 10 March, before obtaining PR, and another bonus payable on 20 March, after obtaining PR. Which bonus can attract CPF?",
+      "expected": [
+        "AW is assessed according to when it is payable: not required on AW payable while employee was a foreigner; contributions required on/after PR grant, subject to AW ceiling/rates.",
+        "Need actual due/payable dates and annual OW to compute amounts."
+      ],
+      "forbidden": [
+        "Apply PR status to both bonuses based only on payment month.",
+        "Ignore the AW ceiling."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status"
+      ]
+    },
+    {
+      "id": "fresh31-cpf-01",
+      "authority": "CPF",
+      "question": "For CPF wage classification, employee A's September pay is contractually payable on 10 October, while employee B's September pay is contractually payable on 20 October. Are both Ordinary Wages merely because both relate to September employment?",
+      "expected": [
+        "OW requires relevant-month employment and payable by14th following month.",
+        "A meets timing; B is AW for month; classify independently and AW not exempt."
+      ],
+      "forbidden": [
+        "All monthly salary OW.",
+        "Borrow A date for B.",
+        "AW never CPF."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "fresh31-cpf-02",
+      "authority": "CPF",
+      "question": "In October 2026, one employee has S$8,700 of Ordinary Wages and a separate annual bonus. Is the CPF-able monthly OW base S$8,700, and does capping OW also prove that none of the bonus attracts CPF?",
+      "expected": [
+        "OW capped S$8000 in2026.",
+        "Separate AW ceiling102000 less annual OW subject CPF per employer.",
+        "Exact bonus contribution needs remaining ceiling and rate facts."
+      ],
+      "forbidden": [
+        "OW ceiling used as AW ceiling.",
+        "Bonus exempt from capped OW.",
+        "Invent exact CPF."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+        "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "baseCommit": "f1a6c28f3c35fb7ea41b4090b979a6cfb05e36b8",
+  "findings": [
+    {
+      "id": "filing-purpose",
+      "status": "CONFIRMED_FIXED"
+    },
+    {
+      "id": "other-filings",
+      "status": "CONFIRMED_FIXED"
+    },
+    {
+      "id": "independent-review-multipart-purpose",
+      "status": "CONFIRMED_FIXED_REVIEWER_CLEARED"
+    }
+  ],
+  "independentReview": "Read-only reviewer reproduced the combined-clause P2, then checked its correction and four unrelated-owner variants; no further material ACRA finding. Supervisor refreshed the actual application probe successfully.",
+  "checks": [
+    {
+      "name": "ACRA/MOM focused regression",
+      "result": "PASS"
+    },
+    {
+      "name": "authority evidence presentation",
+      "result": "PASS"
+    },
+    {
+      "name": "actual application response probe",
+      "result": "PASS",
+      "log": "acra-probe-final.log"
+    }
+  ],
+  "limitations": [
+    "No company-specific filing date is asserted without established company facts and verified source applicability. Conditional general filing-period illustrations remain labelled as conditional.",
+    "Explicit no-branch FYE2025 case still has unresolved source target-date applicability; that hold is retained."
+  ],
+  "reviewedFiles": {
+    "src/retrieval/companyFyeDate.ts": "1fa789864397ebaf8d7083c738eca9139a10bdec3c2a3fb63f7cf3e88b09783c",
+    "src/engine/acraAnnualReturnApplication.ts": "d94f9f1afc6f3607b1f982b53b46007da0d7b168c02244aaf8674eca24b5298b",
+    "src/retrieval/acraMomKnowledge20261027b.ts": "ca68a918cdb269f5e8b7ed30ce017a3ad26a8ac3a27c0e5f1101982780285587",
+    "tests/regression/test_acra_mom_knowledge_20261027b.mjs": "aab7aa6d1dcbe82934744febc349d7701a00eda647fdbc1fb95a40287e923f77"
+  }
+}

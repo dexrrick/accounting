@@ -1,0 +1,150 @@
+{
+  "changedInputs": [],
+  "corpora": {
+    "final75": {
+      "cases": 75,
+      "beforeCounts": {
+        "CORRECT": 30,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 37
+      },
+      "unchangedAnswers": 74,
+      "changedIds": [
+        "acra-15"
+      ],
+      "priorCorrect": 30,
+      "priorCorrectUnchanged": 30,
+      "priorCorrectChangedForReview": [],
+      "questionChanges": [],
+      "invalidPriorHashes": [],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "final60": {
+      "cases": 60,
+      "beforeCounts": {
+        "CORRECT": 59,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 1
+      },
+      "unchangedAnswers": 60,
+      "changedIds": [],
+      "priorCorrect": 59,
+      "priorCorrectUnchanged": 59,
+      "priorCorrectChangedForReview": [],
+      "questionChanges": [],
+      "invalidPriorHashes": [],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fresh15": {
+      "cases": 15,
+      "beforeCounts": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 11
+      },
+      "unchangedAnswers": 15,
+      "changedIds": [],
+      "priorCorrect": 4,
+      "priorCorrectUnchanged": 4,
+      "priorCorrectChangedForReview": [],
+      "questionChanges": [],
+      "invalidPriorHashes": [],
+      "networkRequests": 0,
+      "modelRequests": 0
+    },
+    "fixed100-original": {
+      "cases": 100,
+      "beforeCounts": {
+        "CORRECT": 50,
+        "PARTIAL": 12,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 38
+      },
+      "unchangedAnswers": 100,
+      "changedIds": [],
+      "priorCorrect": 50,
+      "priorCorrectUnchanged": 50,
+      "priorCorrectChangedForReview": [],
+      "questionChanges": [],
+      "invalidPriorHashes": [],
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "evidencePathsBefore": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "evidencePathsAfter": {
+        "IRAS/INSUFFICIENT": 11,
+        "IRAS/VERIFIED": 9,
+        "CPF/VERIFIED": 14,
+        "CPF/INSUFFICIENT": 6,
+        "MOM/INSUFFICIENT": 8,
+        "MOM/VERIFIED": 12,
+        "ACRA/INSUFFICIENT": 14,
+        "ACRA/VERIFIED": 6,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "verifiedPathLosses": [],
+      "eci03EvidenceStatus": "INSUFFICIENT"
+    },
+    "fixed100-enriched": {
+      "cases": 100,
+      "beforeCounts": {
+        "CORRECT": 66,
+        "PARTIAL": 8,
+        "INCORRECT": 0,
+        "UNSUPPORTED": 26
+      },
+      "unchangedAnswers": 100,
+      "changedIds": [],
+      "priorCorrect": 66,
+      "priorCorrectUnchanged": 66,
+      "priorCorrectChangedForReview": [],
+      "questionChanges": [],
+      "invalidPriorHashes": [],
+      "networkRequests": 0,
+      "modelRequests": 0,
+      "evidencePathsBefore": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/VERIFIED": 15,
+        "ACRA/INSUFFICIENT": 5,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "evidencePathsAfter": {
+        "IRAS/VERIFIED": 19,
+        "IRAS/INSUFFICIENT": 1,
+        "CPF/VERIFIED": 15,
+        "CPF/INSUFFICIENT": 5,
+        "MOM/INSUFFICIENT": 7,
+        "MOM/VERIFIED": 13,
+        "ACRA/VERIFIED": 15,
+        "ACRA/INSUFFICIENT": 5,
+        "MAS/VERIFIED": 12,
+        "MAS/INSUFFICIENT": 8
+      },
+      "verifiedPathLosses": [],
+      "eci03EvidenceStatus": "VERIFIED"
+    }
+  },
+  "limitations": "Offline preservation only. Changed answers need independent review; evidence-path status is not whole-answer correctness."
+}

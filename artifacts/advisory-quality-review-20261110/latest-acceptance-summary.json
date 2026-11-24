@@ -1,0 +1,157 @@
+{
+  "savedAt": "2026-11-10T07:25:54.739Z",
+  "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+  "status": "INCOMPLETE_PROVIDER_UNAVAILABLE",
+  "gradesAre": "Qualitative review judgments, not automatic accuracy measurements",
+  "counts": {
+    "PASS": 2,
+    "PARTIAL": 4,
+    "FAIL": 2
+  },
+  "cases": [
+    {
+      "id": "accounting-accrual",
+      "grade": "PASS",
+      "note": "Practical timing, liability and asset caveat covered.",
+      "capture": "answers/accounting-accrual.json",
+      "sourceHash": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+      "modelRequests": 1,
+      "sourceRequests": 0,
+      "noJournal": true
+    },
+    {
+      "id": "accounting-asset-register",
+      "grade": "PASS",
+      "note": "Register/ledger/cost/reconciliation meaningfully explained.",
+      "capture": "answers/accounting-asset-register.json",
+      "sourceHash": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+      "modelRequests": 1,
+      "sourceRequests": 0,
+      "noJournal": true
+    },
+    {
+      "id": "iras-private-car",
+      "grade": "PARTIAL",
+      "note": "Central restriction supported; exceptions/application wording incomplete.",
+      "capture": "answers/iras-private-car.json",
+      "sourceHash": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+      "modelRequests": 3,
+      "sourceRequests": 114,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "noJournal": true
+    },
+    {
+      "id": "cpf-employer-responsibility",
+      "grade": "PARTIAL",
+      "note": "Remittance responsibility covered; requested payroll checklist still incomplete.",
+      "capture": "answers/cpf-employer-responsibility.json",
+      "sourceHash": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+      "modelRequests": 3,
+      "sourceRequests": 10,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "noJournal": true
+    },
+    {
+      "id": "mom-salary-overtime",
+      "grade": "FAIL",
+      "note": "FAIL: both generated claims mixed issue scopes; deterministic checks rejected both; fallback official excerpts rendered.",
+      "capture": "mom-inline-retest/mom-salary-overtime.json",
+      "sourceHash": "2496686a06fcd0ade7102b2005bdf5090cdce1f1fd8ff352abd2b4b05fdb5b5c",
+      "modelRequests": 2,
+      "sourceRequests": 16,
+      "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "noJournal": true,
+      "latestAttempt": "mom-final-retest/mom-salary-overtime.json",
+      "latestRevisionQuality": "UNVERIFIED_HTTP503"
+    },
+    {
+      "id": "acra-sole-director-secretary",
+      "grade": "PARTIAL",
+      "note": "Core prohibition and six-month rule survive; supported application withheld and stock applicability wording contradicts answer.",
+      "capture": "answers/acra-sole-director-secretary.json",
+      "sourceHash": "820510a10ac2d5f1d96fd64fd16034b0c4dec6b15b2800aa53a25c80a221e048",
+      "modelRequests": 3,
+      "sourceRequests": 11,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "noJournal": true
+    },
+    {
+      "id": "mas-fund-management-startup",
+      "grade": "PARTIAL",
+      "note": "Licensing/exemptions/fact categories now visible, followed by contradictory unsupported-facts notice.",
+      "capture": "paced-replay/answers/mas-fund-management-startup.json",
+      "sourceHash": "324bcdede47a6fd851f18db02ed24c93a0a008e4a31356900c7de7648af84783",
+      "modelRequests": 3,
+      "sourceRequests": 4,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "noJournal": true
+    },
+    {
+      "id": "mixed-first-employee",
+      "grade": "FAIL",
+      "note": "MOM duties visible; CPF contribution/registration and comparative/facts guidance withheld.",
+      "capture": "paced-replay/answers/mixed-first-employee.json",
+      "sourceHash": "324bcdede47a6fd851f18db02ed24c93a0a008e4a31356900c7de7648af84783",
+      "modelRequests": 3,
+      "sourceRequests": 6,
+      "answerPath": "AI_GROUNDED_SYNTHESIS",
+      "noJournal": true
+    }
+  ],
+  "allEightNoJournalGroups": true,
+  "modelBudget": {
+    "approvedTotal": 87,
+    "usedTotal": 86,
+    "remaining": 1,
+    "breakdown": {
+      "previousBatches": 55,
+      "initialSeven": 15,
+      "temporary503Attempts": 2,
+      "pacedThree": 9,
+      "momInlineRetest": 2,
+      "cachedPlan503": 1,
+      "freshMom503": 2
+    }
+  },
+  "pacing": {
+    "configuredGeminiLimits": {
+      "rpm": 15,
+      "tpm": 250000,
+      "rpd": 500
+    },
+    "minRequestStartSpacingMs": 5100,
+    "interCaseCooldownSeconds": 65,
+    "maxModelRequestsPerCase": 3,
+    "observedPacedPeakRequestsIn60Seconds": 3,
+    "observedPacedPeakPromptTokensIn60Seconds": 13348,
+    "allNinePacedResponses200": true
+  },
+  "verification": {
+    "previousFullSuites": "189/189 PASS at324bcd; not rerun on final revision",
+    "finalFocused": "Synthesis and TypeScript PASS; discovery PASS; final lint/Vite/worker PASS",
+    "smoke": {
+      "passed": 165,
+      "failed": 1,
+      "failedSuite": "Evidence-Grounded Synthesis Claim Review",
+      "reason": "Run started before final fixture increase; compact-path assertion at197 used undersized fixture.",
+      "resolution": "Corrected fixture and final focused synthesis suite pass; full smoke was not repeated."
+    },
+    "independentCodeReview": "No material findings after product and harness corrections",
+    "file": "mom-final-retest/live-report.json",
+    "currentFullSuites": {
+      "passed": 189,
+      "failed": 0,
+      "result": "review-publication/validation/full-result.json",
+      "implementationCommit": "7e4f80ddf0b0fc30ad930c6ba385cd58a8ba3fb2",
+      "sourceDiffSha256": "abaada4c5d376233ac16e236abadfea60ee221c94ba54cb59b999df2b527c08e",
+      "realModelRequests": 0
+    }
+  },
+  "limitations": [
+    "All grades are review judgments.",
+    "No fresh final-revision eight-case acceptance; other cases retain their prior outcomes.",
+    "No browser, CI, deployment or production acceptance.",
+    "One approved request remains; insufficient for a complete ordinary three-request replay.",
+    "No commit, push, merge, deployment, source activation or external evidence publication."
+  ]
+}

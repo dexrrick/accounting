@@ -1,0 +1,10 @@
+{
+  "phase2-acceptance-prep-20261111/full.log": {
+    "bytes": 296430,
+    "sha256": "de465c7e116966ffcdc62148636ff1a1648f111552cb1749668c02d053c9a6ef"
+  },
+  "phase2-acceptance-prep-20261111/regression-results.json": {
+    "bytes": 742,
+    "sha256": "210ab5d0efb6ab68923cf77df54f0f505b44f8a8a58ed360a1f90488c7c1128e"
+  }
+}

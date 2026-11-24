@@ -1,0 +1,367 @@
+{
+  "reviewer": "/root/final_source_review",
+  "scope": "Bounded independent review of 30 October source changes and two changed full rendered answers. Earlier independently graded answers carry only on exact byte identity.",
+  "gradingInputSha256": "6b868f78c20283fdf01afb03da4a875389e0df6ebc260d98c5f0240596110edf",
+  "sourceReview": {
+    "status": "NO_REMAINING_MATERIAL_FINDINGS",
+    "confirmed": [
+      "WHT payment date remains a transaction fact for the intended general question",
+      "Six retrospective/percentage controls retain explicit 14 October 2026 scope",
+      "CPF engine tests separate unavailable evidence from native-source proof",
+      "AW selection preserves bounded unchanged complete source paragraphs and all required premises",
+      "Missing Step 2 rejects proof",
+      "Reversed AW shortfall instruction rejects proof and activates contradiction veto",
+      "Exact-source, issue-binding and single-revision gates remain intact"
+    ],
+    "limitations": [
+      "Read-only reviewer did not run broad tests/builds",
+      "No CI, live source/model/browser, production or release acceptance",
+      "Unchanged grades carried using exact full-answer identity comparison"
+    ]
+  },
+  "cohorts": {
+    "review30": {
+      "carriedCount": 29,
+      "newlyGradedCount": 1,
+      "corpusSha256": "14f78beb364c97546089d62baff415577b1af260b49e6f7d59f53d77155b5c44",
+      "summary": {
+        "CORRECT": 25,
+        "PARTIAL": 1,
+        "UNSUPPORTED": 4,
+        "INCORRECT": 0
+      },
+      "grades": [
+        {
+          "id": "hold-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "e3cde778f73522913959eaf9f3aa4d2bab5737edd393e5456c632a25cff748a8",
+          "carried": true
+        },
+        {
+          "id": "hold-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "25c2e7a566bb3260924a827d62ff2d1c705fc8a3cc107d6ab5bac3fa515cb78b",
+          "carried": true
+        },
+        {
+          "id": "hold-acra-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "0500d5ec9582d387d4fc1abe394174c8cc15a7c45d086f78c63e8495c2855448",
+          "carried": true
+        },
+        {
+          "id": "hold-acra-04",
+          "grade": "CORRECT",
+          "answerSha256": "f9666aae84f3a501846cfb40cb55013372e367744dca7be46e33e4883255fe71",
+          "carried": true
+        },
+        {
+          "id": "hold-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "542d1505df113c5e96a5d679ef65b94a233f7b75f23cb2ced8efba5389a5c064",
+          "carried": true
+        },
+        {
+          "id": "hold-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "2e683784300cd0f71dc98eb91a4099f2f9b2b698dbe7e96bcccd4044c3194be8",
+          "carried": true
+        },
+        {
+          "id": "hold-iras-03",
+          "grade": "PARTIAL",
+          "answerSha256": "6582699785dae70544d0e5744d2b301a9cb5542ce0f4f2df45d18f2e9bd16fee",
+          "carried": true
+        },
+        {
+          "id": "hold-iras-04",
+          "grade": "CORRECT",
+          "answerSha256": "b820c72fcf7e4256fbb3e6b952d74063b354f38ab23febd359c26e3fea96145f",
+          "carried": true
+        },
+        {
+          "id": "hold-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "e7a0fa41aa7954d3d400fc735cc85bf9a60caaca0a09725d1debebb97ca01782",
+          "carried": true
+        },
+        {
+          "id": "hold-cpf-02",
+          "grade": "CORRECT",
+          "answerSha256": "8209e3c1a0045ed346721a031f5f14b087821d759d205120b3d57e314207d378",
+          "carried": true
+        },
+        {
+          "id": "hold-cpf-03",
+          "grade": "CORRECT",
+          "answerSha256": "5368fc8571a477fd0250396074633099a5a443f62b25361cc863c091a24c98cd",
+          "carried": true
+        },
+        {
+          "id": "hold-cpf-04",
+          "grade": "CORRECT",
+          "answerSha256": "2c0d41ce21c0ae6631f00b9cdfbbd6b0a1e9cc1c5aee7adf770251d65b223257",
+          "carried": true
+        },
+        {
+          "id": "hold-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "94b8a8939892c9e404e21208d4ac5a28d9d6acd4ede1d5f400852302f32e0c1b",
+          "carried": true
+        },
+        {
+          "id": "hold-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "94b8a8939892c9e404e21208d4ac5a28d9d6acd4ede1d5f400852302f32e0c1b",
+          "carried": true
+        },
+        {
+          "id": "hold-mom-03",
+          "grade": "CORRECT",
+          "answerSha256": "9137b24d5dcb431db6546552bbce1260130bdbf4dbfd8703202cf87b8e9076c2",
+          "carried": true
+        },
+        {
+          "id": "hold-mom-04",
+          "grade": "CORRECT",
+          "answerSha256": "9d025127350e3eeefc9e3b955d38cf81e3ce6e32b3cec7bd43f3140d14790c67",
+          "carried": true
+        },
+        {
+          "id": "hold-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "e3609d89d3a666fc0c9b33520d5c776139014ce6c792b2caf8b25a69c6bc9521",
+          "carried": true
+        },
+        {
+          "id": "hold-mas-02",
+          "grade": "CORRECT",
+          "answerSha256": "df01121fa474118524111998d45ecbeedb333a8af24e2050901d371789c310f9",
+          "carried": true
+        },
+        {
+          "id": "hold-mas-03",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "629f182c7e44b2d2b7b8756bdaf909d59ec8b6e758a121c31d7142fbc2e6e56b",
+          "carried": true
+        },
+        {
+          "id": "hold-mas-04",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "1cec4d2e26a00e64ffb5df2234b261db770cd63bcad786d3fb331e041cd4a846",
+          "carried": true
+        },
+        {
+          "id": "fresh-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "6ecf2876be1120a5df92ba8554eb23a0ad11f009d8ec3c1094d405d4a6a7716a",
+          "carried": true
+        },
+        {
+          "id": "fresh-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "f9666aae84f3a501846cfb40cb55013372e367744dca7be46e33e4883255fe71",
+          "carried": true
+        },
+        {
+          "id": "fresh-iras-01",
+          "grade": "CORRECT",
+          "answerSha256": "b9f616e768c489c97fa3e78a3218a229eed1a05f9140776ccbfa66a1ceb3f229",
+          "carried": true
+        },
+        {
+          "id": "fresh-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "aa8badb6eb59e766b91a4078facd297b44e08ed9b20f6dbf7c9958a683e47f3a",
+          "carried": true
+        },
+        {
+          "id": "fresh-cpf-01",
+          "grade": "CORRECT",
+          "answerSha256": "dd9dd875b56a1b2d2138153e9a110c1305f42b67d8d5f1551f8e9203a2d2df01",
+          "carried": true
+        },
+        {
+          "id": "fresh-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "29940f7aa36d834921550844161662670ff13e6d9014948660226cd54ffede76",
+          "carried": true
+        },
+        {
+          "id": "fresh-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "9d025127350e3eeefc9e3b955d38cf81e3ce6e32b3cec7bd43f3140d14790c67",
+          "carried": true
+        },
+        {
+          "id": "fresh-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "e3609d89d3a666fc0c9b33520d5c776139014ce6c792b2caf8b25a69c6bc9521",
+          "carried": true
+        },
+        {
+          "id": "fresh-mas-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "9099437abf4571339069d76e45ba46fd62e9a91fd945322c4eaa166f937f9821",
+          "carried": true
+        },
+        {
+          "id": "fresh-cpf-02",
+          "answerSha256": "08fd645d8eb6df0ac14636b3283a9efbdb7e644840bf3765aad596a129ac5de7",
+          "grade": "CORRECT",
+          "reason": "Requires actual-OW recalculation in December or earlier final employment month, shortfall payment and excess-contribution refund, supported by the complete native passage.",
+          "priorGrade": "UNSUPPORTED",
+          "carried": false
+        }
+      ]
+    },
+    "fresh10": {
+      "carriedCount": 9,
+      "newlyGradedCount": 1,
+      "corpusSha256": "6847b7de7a0d27ba0036dcf722922f9f3cfd7ca54be8b42be8d96779bfc0e651",
+      "summary": {
+        "CORRECT": 4,
+        "PARTIAL": 0,
+        "UNSUPPORTED": 6,
+        "INCORRECT": 0
+      },
+      "grades": [
+        {
+          "id": "reviewfresh-acra-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "9b559fa3276f9c463142755ef7f004ba6089dc2173cd4d787ccbbf5e4e4b9296",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-acra-02",
+          "grade": "CORRECT",
+          "answerSha256": "173f632952da8b2f919b8379d1127cd1f7d05892b0a62f037a525e56f7b2472e",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-iras-02",
+          "grade": "CORRECT",
+          "answerSha256": "7a3b8bd59b7104d4c1f26508913647659000408edefeb1ee28563d016e5d3a6f",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-cpf-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "f1833bf41f706cc062e3161b1b3438898cf9e9ac7fe86a42650f8d02d6e8d82f",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-cpf-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "04d1d5343c185b5c8aaac4bc611f16fd2825198a26ebad5bddcf363e9f52c4a4",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "9137b24d5dcb431db6546552bbce1260130bdbf4dbfd8703202cf87b8e9076c2",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-mom-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "6899704c497283d02cb81ece7c480addf23e209be811ecc75e6f2d07d14cb51d",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-mas-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "78009346f81eaded179fc6c457b7a2465ec245b7f49e4c743f85dafca2bee9fa",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-mas-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "4e3a76df13c78a3bdcf5afbf4ca65d0e4db8a02d9440f0778500363e24115c8b",
+          "carried": true
+        },
+        {
+          "id": "reviewfresh-iras-01",
+          "answerSha256": "b820c72fcf7e4256fbb3e6b952d74063b354f38ab23febd359c26e3fea96145f",
+          "grade": "CORRECT",
+          "reason": "Explains general WHT deadline and legally defined earliest payment date; avoids concluding an exact deadline from transfer date alone.",
+          "priorGrade": "UNSUPPORTED",
+          "carried": false
+        }
+      ]
+    },
+    "workflows10": {
+      "carriedCount": 10,
+      "newlyGradedCount": 0,
+      "corpusSha256": "092e8e9bc12ccd797682100d2dd820addfc1b141b36b516b49b9aa43e462b702",
+      "summary": {
+        "CORRECT": 4,
+        "PARTIAL": 1,
+        "UNSUPPORTED": 5,
+        "INCORRECT": 0
+      },
+      "grades": [
+        {
+          "id": "fresh29-acra-01",
+          "grade": "CORRECT",
+          "answerSha256": "b81a682c237fe532be25d11085eb941588525a6412c8f137367e42cdd1a7e7d2",
+          "carried": true
+        },
+        {
+          "id": "fresh29-acra-02",
+          "grade": "PARTIAL",
+          "answerSha256": "b81a682c237fe532be25d11085eb941588525a6412c8f137367e42cdd1a7e7d2",
+          "carried": true
+        },
+        {
+          "id": "fresh29-iras-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "f650ccfd0ea3fad28d35afe6f08cee704d75b7ea11a686fe36cd1af9289a3bf5",
+          "carried": true
+        },
+        {
+          "id": "fresh29-iras-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "216c388a2b57ecb18900cb8841ab5b51abb30b9fbbda2f3db822d88ea9c44bf7",
+          "carried": true
+        },
+        {
+          "id": "fresh29-cpf-01",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "7f703cf0e89d4d58d0763e0254fd934a9f27c00c71dcfd92e0bae03612470b97",
+          "carried": true
+        },
+        {
+          "id": "fresh29-cpf-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "a72df19f0f552f194eb26ef1aebf19d7ccc7aff2b9c38c5e13f01e2467f3d020",
+          "carried": true
+        },
+        {
+          "id": "fresh29-mom-01",
+          "grade": "CORRECT",
+          "answerSha256": "881655144381285d763967213c05ab6050978abc1853746e9703b375d77d3c5a",
+          "carried": true
+        },
+        {
+          "id": "fresh29-mom-02",
+          "grade": "CORRECT",
+          "answerSha256": "881655144381285d763967213c05ab6050978abc1853746e9703b375d77d3c5a",
+          "carried": true
+        },
+        {
+          "id": "fresh29-mas-01",
+          "grade": "CORRECT",
+          "answerSha256": "9705ab556a1e5729d6526ae6da0283314de32728847041be70b5c3fad3108e77",
+          "carried": true
+        },
+        {
+          "id": "fresh29-mas-02",
+          "grade": "UNSUPPORTED",
+          "answerSha256": "527e48cb048786be03621910a8642c81f78275164e084af5b4dd9f19f6282a26",
+          "carried": true
+        }
+      ]
+    }
+  }
+}

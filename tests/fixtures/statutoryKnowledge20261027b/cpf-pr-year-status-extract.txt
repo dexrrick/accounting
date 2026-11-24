@@ -1,0 +1,19 @@
+SOURCE CAPTURE METADATA
+Authority: CPF Board, Government of Singapore
+Page title: I have successfully applied for a new re-entry permit and retained my Singapore Permanent Resident status. How will this impact my CPF contributions?
+Canonical official URL: https://www.cpf.gov.sg/service/article/i-have-successfully-applied-for-a-new-re-entry-permit-and-retained-my-singapore-permanent-resident-status-how-will-this-impact-my-cpf-contributions
+Capture date (Singapore): 2026-10-27
+Capture method: verbatim visible text excerpt returned by a read-only browser extraction of the official HTML page. This is not a raw HTML response; exact excerpt text is retained below.
+
+As a Singapore Permanent Resident (SPR), you are required to make CPF contributions on wages earned in Singapore.
+CPF contributions are not payable for employees who are neither Singapore Citizens nor SPRs.
+Your CPF contribution rates as an SPR depend on how long you have held Permanent Resident status.
+First-year rate: Applies from the day you obtain your SPR status, [i.e. the date indicated on your Entry Permit (Form 5/5A) issued by the Immigration & Checkpoints Authority (ICA)] until the last day of the month of your first anniversary of SPR.
+Second-year rate: Applies from the month following your first anniversary as an SPR until the last day of the month of your second anniversary.
+Third-year rate: Applies from the month following your second anniversary as an SPR onwards.
+Example
+If you have obtained your SPR status on 15 January 2026, the start and end dates for first, second and third year of obtaining SPR status are shown in the table below:
+Year of obtaining SPR status | Starts from | Ends on
+First year | 15 January 2026 | 31 January 2027
+Second year | 1 February 2027 | 31 January 2028
+Third year | 1 February 2028 | Not applicable

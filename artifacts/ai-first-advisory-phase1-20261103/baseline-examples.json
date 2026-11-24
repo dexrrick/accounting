@@ -1,0 +1,60 @@
+{
+  "baseline": "863daf4299540ed0a50d808b07c1ee0e617b284b",
+  "kind": "MOCKED_PROVIDER_ROUTING_NOT_LIVE_ANSWER_QUALITY",
+  "results": [
+    {
+      "question": "What is accrual accounting, and how does it differ from cash accounting?",
+      "messageText": "### Statutory Directive: Unrecognized Query (Offline Mode)\n\n**Governing Authority**: **ASC** | **Legislation**: **SFRS(I) 1-1 Presentation of Financial Statements** | **Authority Status**: **🤖 AI Proposed**\n\n---\n\n#### 1. Statutory Principle & Ruling\nGeneral explanatory context: accrual accounting records economic activity when it occurs; cash accounting follows cash receipts and payments.\n\n---\n\n#### 2. Key Rules, Thresholds & Mandatory Provisions\n",
+      "scenarioType": "SINGAPORE_STATUTORY_ADVISORY",
+      "calls": [
+        {
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+          "inputCharacters": 12542
+        },
+        {
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+          "inputCharacters": 6948
+        },
+        {
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+          "inputCharacters": 11840
+        }
+      ]
+    },
+    {
+      "question": "Explain GST input tax and output tax, including the conditions that matter for a business.",
+      "messageText": "The available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.",
+      "scenarioType": "SINGAPORE_STATUTORY_ADVISORY",
+      "calls": [
+        {
+          "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+          "inputCharacters": 12560
+        },
+        {
+          "url": "https://www.iras.gov.sg/sitemap",
+          "inputCharacters": 2
+        },
+        {
+          "url": "https://www.iras.gov.sg/robots.txt",
+          "inputCharacters": 2
+        },
+        {
+          "url": "https://html.duckduckgo.com/html/",
+          "inputCharacters": 2
+        },
+        {
+          "url": "https://html.duckduckgo.com/html/",
+          "inputCharacters": 2
+        },
+        {
+          "url": "https://html.duckduckgo.com/html/",
+          "inputCharacters": 2
+        },
+        {
+          "url": "https://html.duckduckgo.com/html/",
+          "inputCharacters": 2
+        }
+      ]
+    }
+  ]
+}

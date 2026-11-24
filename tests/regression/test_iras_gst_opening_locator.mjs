@@ -17,6 +17,7 @@ import {
   validateSemanticQuestionInterpretation
 } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { supportGeneralIrasRuleConcept } from '../../src/retrieval/irasRuleConceptSupport.ts';
+import { cleanHtmlText } from '../../src/retrieval/sourceAdapters.ts';
 import { irasResolverCases } from '../fixtures/irasResolverCases.mjs';
 
 const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -39,14 +40,25 @@ assert.equal(topic.domainId, 'IRAS_GST');
 assert.deepEqual(topic.paragraphHints.slice(0, 4), [
   'input tax claim', 'claim input tax', 'claiming input tax', 'recover input tax'
 ]);
-assert.deepEqual(topic.keywords, [
+const previousInputTaxKeywords = [
   'input tax claim', 'tax invoice requirements', 'claim input gst', 'input gst', 'claimed tax invoices', 'input taxes'
-]);
+];
+assert.ok(previousInputTaxKeywords.every(keyword => topic.keywords.includes(keyword)),
+  'The existing IRAS input-tax retrieval terms remain available.');
+assert.ok(topic.keywords.includes('input tax recovery conditions'));
+assert.ok(topic.keywords.includes('recover gst on business purchases'));
 assert.deepEqual(topic.queryPatterns, [
+  String.raw`(?=[\s\S]*\b(?:gst|input tax|input gst)\b)(?=[\s\S]*\b(?:employees?|staff|employer|workers?)\b)(?=[\s\S]*\b(?:health[ -]screening|health[ -]check[ -]?ups?)\b)`,
+  String.raw`(?=[\s\S]*\b(?:gst|input tax)\b)(?=[\s\S]*\b(?:recover\w*|claim\w*)\b)(?=[\s\S]*\b(?:purchases?|eligibility|business)\b)`,
   String.raw`\b(?:gst|input tax|input gst)\b[\s\S]{0,140}\b(?:meals?|dining|entertainment)\b[\s\S]{0,100}\b(?:customers?|clients?|suppliers?)\b`,
   String.raw`\b(?:meals?|dining|entertainment)\b[\s\S]{0,140}\b(?:customers?|clients?|suppliers?)\b[\s\S]{0,100}\b(?:gst|input tax|input gst)\b`,
   String.raw`(?=[\s\S]*\b(?:gst|goods and services tax)\b)(?=[\s\S]*\binput[ -]?tax\b)(?=[\s\S]*\b(?:claim\w*|recover\w*|recovery)\b)(?=[\s\S]*\b(?:business|purchase|company)\b)`
 ]);
+const healthScreeningPattern = new RegExp(topic.queryPatterns[0], 'i');
+assert.equal(healthScreeningPattern.test('Can our company claim GST input tax on health screening for employees?'), true,
+  'Employee health-screening queries retain the registered input-tax query pattern.');
+assert.equal(healthScreeningPattern.test('Can our company claim GST input tax on health screening?'), false,
+  'The health-screening pattern requires employee context.');
 const expectedTopicMaps = [
   ['IRAS_GST_INPUT_TAX_SOURCE_MAP', 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax'],
   ['IRAS_GST_INVOICING_SOURCE_MAP', 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/basics-of-gst/invoicing-price-display-and-record-keeping/invoicing-customers']
@@ -162,11 +174,13 @@ async function runPipeline(testCase, ruleText, controlId = testCase.id) {
   controlTransportCounts.set(controlId, counts);
   activeControlCounts = counts;
   const { questionUnderstanding, reconciled, issue, topicIds, requestedConcepts } = understandingFor(testCase);
-  const selectedPageHtml = `<html><head><title>${escapeHtml(mapPointer.documentTitle)} | IRAS</title></head>` +
-    `<body><main><h1>${escapeHtml(mapPointer.documentTitle)} | IRAS</h1>` +
-    competition.map((text, index) => index === distractors.length + 1
-      ? `<p>${escapeHtml(ruleText)}</p>` : `<p>${escapeHtml(text)}</p>`).join('') +
-    `</main></body></html>`;
+  const selectedPageHtml = /^\s*<!doctype html/i.test(ruleText)
+    ? ruleText
+    : `<html><head><title>${escapeHtml(mapPointer.documentTitle)} | IRAS</title></head>` +
+      `<body><main><h1>${escapeHtml(mapPointer.documentTitle)} | IRAS</h1>` +
+      competition.map((text, index) => index === distractors.length + 1
+        ? `<p>${escapeHtml(ruleText)}</p>` : `<p>${escapeHtml(text)}</p>`).join('') +
+      `</main></body></html>`;
   const discoveryAdapter = {
     async discoverOfficialSourceCandidates() {
       counts.discovery += 1;
@@ -245,6 +259,46 @@ async function runPipeline(testCase, ruleText, controlId = testCase.id) {
 const generalCase = irasResolverCases.find(row => row.id === 'gst-input-tax-general-rule');
 assert.ok(generalCase);
 try {
+  const missingRegistrationGeneralCase = {
+    ...generalCase,
+    id: 'gst-input-tax-general-rule-registration-not-provided',
+    query: 'What are the general Singapore GST rules for claiming input tax on business purchases by a company?',
+    issues: [{ ...generalCase.issues[0], subject: 'general GST input tax claim conditions for business purchases' }]
+  };
+  const completeInputTaxHtml = await readFile(path.join(REPOSITORY_ROOT,
+    'tests/fixtures/statutoryExpansionSources/iras-gst-input-tax-page.html'), 'utf8');
+  const completeInputTaxSource = cleanHtmlText(completeInputTaxHtml);
+  const missingRegistrationContext = understandingFor(missingRegistrationGeneralCase);
+  assert.equal(supportGeneralIrasRuleConcept({
+    sourceText: completeInputTaxSource,
+    domainId: mapDefinition.domainId,
+    topicIds: missingRegistrationContext.topicIds,
+    subject: missingRegistrationContext.issue.subject,
+    population: missingRegistrationContext.issue.population,
+    concepts: missingRegistrationContext.requestedConcepts
+  }), true, `The complete native IRAS source proves the general concepts: ${JSON.stringify(missingRegistrationContext.requestedConcepts)}`);
+  const missingRegistrationGeneral = await runPipeline(missingRegistrationGeneralCase, completeInputTaxHtml);
+  assert.ok(missingRegistrationGeneral.liveRecords.length > 0,
+    'A general question can retrieve the input-tax rule when registration status is not supplied.');
+  assert.equal(missingRegistrationGeneral.finalIssue.evidenceStatus, 'VERIFIED');
+  assert.notEqual(missingRegistrationGeneral.finalIssue.applicationStatus, 'VERIFIED',
+    'Source-backed general conditions do not verify the case-specific claim application.');
+  const fullRuleRecordIds = new Set(missingRegistrationGeneral.liveRecords
+    .filter(record => record.canonicalSourceUrl === mapDefinition.canonicalSourceUrl)
+    .map(record => record.recordId ?? record.id));
+  const fullRuleClaims = (missingRegistrationGeneral.finalIssue.verifiedClaims || [])
+    .filter(claim => fullRuleRecordIds.has(claim.recordId));
+  const numberedConditionClaims = fullRuleClaims.filter(claim => /^\s*[1-8]\.\s/.test(claim.quote));
+  assert.equal(numberedConditionClaims.length, 8,
+    'The verified general answer retains all eight individually source-bound IRAS criteria.');
+  const conditionsLeadIn = 'You can claim input tax incurred on your purchases only if all the following conditions are met:';
+  assert.ok(fullRuleClaims.some(claim => normalize(claim.quote).includes(normalize(conditionsLeadIn))),
+    'The verified general answer retains the lead-in bound to the same mapped IRAS source.');
+  for (let condition = 1; condition <= 8; condition += 1) {
+    assert.ok(numberedConditionClaims.some(claim => new RegExp('^\\s*' + condition + '\\.\\s').test(claim.quote)),
+      'The general answer retains exact IRAS input-tax condition ' + condition + '.');
+  }
+
   const complete = await runPipeline(generalCase, completeOpeningParagraph, 'complete-positive');
   assert.equal(complete.transportCounts.discovery, 0,
     'The complete positive is sufficient from the selected mapped source without discovery fallback.');

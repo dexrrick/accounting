@@ -1,0 +1,5 @@
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=1142.25ms (first_vis=1142.14ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=282.05ms (first_vis=282.05ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=190.29ms (first_vis=190.29ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=26.16ms (first_vis=26.15ms, gemini=0ms, ground=21ms, post=0ms) | tokens: in=0, out=0, think=0
+Existing MAS and IRAS rule mappings passed actual-entry and scope-control regressions.

@@ -21,7 +21,8 @@ import { hasCurrentIrasEvidencePresentation } from './utils/irasEvidencePresenta
 import { hasCurrentAuthorityEvidencePresentation } from './utils/authorityEvidencePresentation';
 import { runDueRegulatoryChecks } from './retrieval/regulatoryUpdateScheduler';
 import { FeedbackDialog } from './components/FeedbackDialog';
-import { assessConversationRelation } from './services/conversationBoundary';
+import { assessConversationRelation, buildAnalysisConversationHistory, buildRetryConversationHistory, canRetryFailedAnswer, isJournalDisplayRequest } from './services/conversationBoundary';
+import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from './services/committedJournal';
 import { ShareTransferCalculator } from './components/ShareTransferCalculator';
 import { ImageEvidencePanel } from './components/ImageEvidencePanel';
 
@@ -75,6 +76,8 @@ export const App: React.FC = () => {
   };
 
   const [scenario, setScenario] = useState<AccountingScenarioState | null>(null);
+  const [committedJournalScenario, setCommittedJournalScenario] = useState<AccountingScenarioState | null>(null);
+  const [analysisStartMessageId, setAnalysisStartMessageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
@@ -90,27 +93,61 @@ export const App: React.FC = () => {
     }
   ]);
 
-  const processMessage = async (text: string, activeScenario: AccountingScenarioState | null, userMsg: ChatMessage) => {
+  const processMessage = async (
+    text: string,
+    activeScenario: AccountingScenarioState | null,
+    userMsg: ChatMessage,
+    retryHistory?: ChatMessage[],
+    options?: { startNewScenario?: boolean; useProvidedScenario?: boolean }
+  ) => {
     setIsLoading(true);
-    setAppliedOutputPreference(outputPreference);
+    const isJournalRecall = isJournalDisplayRequest(text);
+    setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
     try {
+      const journalRecallGroups = isJournalRecall
+        ? getDisplayableUncommittedJournalGroups(activeScenario, standard)
+        : [];
+      const journalRecallProposal = journalRecallGroups.length > 0 ? activeScenario || undefined : undefined;
+      const requestScenario = journalRecallProposal
+        ? null
+        : options?.useProvidedScenario
+          ? activeScenario
+          : selectAccountingScenarioForRequest(text, activeScenario, committedJournalScenario, options?.startNewScenario);
+      const history = retryHistory || (options?.startNewScenario
+        ? [userMsg]
+        : messages.some(message => message.id === userMsg.id)
+          ? messages
+          : [...messages, userMsg]);
+      const relevantChatHistory = buildAnalysisConversationHistory(
+        history,
+        options?.startNewScenario ? userMsg.id : analysisStartMessageId
+      );
       const response = await processAccountingQuery(
         text,
-        activeScenario,
+        requestScenario,
         standard,
         providerSettings,
         providerSettings.gemini.model,
-        [...messages, userMsg],
-        outputPreference
+        relevantChatHistory,
+        outputPreference,
+        undefined,
+        journalRecallProposal
       );
 
       const answerState: AccountingScenarioState = {
         ...response.scenarioState,
-        officialAnswerLinks: extractOfficialAnswerLinks(response.messageText)
+        officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
+      if (response.conversationBoundaryMessageId) {
+        setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      }
       setScenario(answerState);
+      setCommittedJournalScenario(previous => updateCommittedJournalScenario(
+        previous, answerState, standard, options?.startNewScenario
+      ));
 
-      if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
+      if (isJournalRecall) setActiveTab('entries');
+      else if (outputPreference.journal && !outputPreference.statutory) setActiveTab('entries');
       else if (outputPreference.statutory && !outputPreference.journal) setActiveTab('compliance');
       else if (
         answerState.queryIntent === 'STATUTORY_ADVISORY' ||
@@ -122,8 +159,13 @@ export const App: React.FC = () => {
 
       setMessages((prev) => [...prev, {
         id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
-        text: createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
+        text: response.displayFullAnswer ? response.messageText : createChatPreview(response.messageText, answerState, response.clarifications), fullText: response.messageText,
         scenarioSnapshot: answerState, clarificationPrompt: response.clarifications,
+        displayFullAnswer: response.displayFullAnswer,
+        advisoryFailureStatus: response.advisoryFailureStatus,
+        advisoryRetryPayload: response.advisoryFailureStatus
+          ? { text, scenarioSnapshot: requestScenario, originalUserMessageId: userMsg.id }
+          : undefined,
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {
@@ -131,6 +173,17 @@ export const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleRetryAiAnswer = (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => {
+    if (isLoading || !canRetryFailedAnswer(messages, originalUserMessageId)) return;
+    const currentAnalysisHistory = buildAnalysisConversationHistory(messages, analysisStartMessageId);
+    if (!currentAnalysisHistory.some(message => message.id === originalUserMessageId && message.sender === 'user')) return;
+    const retryHistory = buildRetryConversationHistory(messages, originalUserMessageId);
+    const originalUserMessage = retryHistory.at(-1);
+    if (!originalUserMessage) return;
+    // Restore the scenario and conversation prefix captured before the failed turn.
+    void processMessage(text, scenarioSnapshot, originalUserMessage, retryHistory, { useProvidedScenario: true });
   };
 
   const handleSendMessage = async (text: string, images: ChatImageAttachment[] = []) => {
@@ -143,7 +196,8 @@ export const App: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMsg]);
-    if (assessConversationRelation(text, scenario) === 'AMBIGUOUS') {
+    const relation = assessConversationRelation(text, scenario, committedJournalScenario);
+    if (relation === 'AMBIGUOUS') {
       setPendingRelation({ text, userMessage: userMsg });
       setMessages((prev) => [...prev, {
         id: `relation-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), relationPrompt: true,
@@ -151,14 +205,25 @@ export const App: React.FC = () => {
       }]);
       return;
     }
-    await processMessage(text, scenario, userMsg);
+    const startNewScenario = relation === 'NEW';
+    if (startNewScenario) {
+      setAnalysisStartMessageId(userMsg.id);
+      setScenario(null);
+      setCommittedJournalScenario(null);
+    }
+    await processMessage(text, scenario, userMsg, undefined, { startNewScenario });
   };
 
   const handleResolveRelation = (isRelated: boolean) => {
     if (!pendingRelation || isLoading) return;
     const pending = pendingRelation;
     setPendingRelation(null);
-    void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage);
+    if (!isRelated) {
+      setAnalysisStartMessageId(pending.userMessage.id);
+      setScenario(null);
+      setCommittedJournalScenario(null);
+    }
+    void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage, undefined, { startNewScenario: !isRelated });
   };
 
   const handleSelectSuggestion = (fieldKey: string, value: number | string) => {
@@ -169,16 +234,33 @@ export const App: React.FC = () => {
 
   const handleScenarioChange = (updated: AccountingScenarioState) => {
     setScenario(updated);
+    setCommittedJournalScenario(previous => updateCommittedJournalScenario(previous, updated, standard));
   };
 
   const handleResetToDefaults = () => {
+    if (isLoading) return;
     setScenario(null);
+    setCommittedJournalScenario(null);
+    setAnalysisStartMessageId(null);
+    setPendingRelation(null);
   };
 
   const computed = scenario
     ? calculateDoubleEntries(scenario, standard)
     : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
-  const hasJournal = computed.groups.some((group) => group.lines.length > 0);
+  const committedJournal = committedJournalScenario
+    ? calculateDoubleEntries(committedJournalScenario, standard)
+    : { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: 'SGD' } };
+  const currentUncommittedGroups = getDisplayableUncommittedJournalGroups(scenario, standard);
+  const displayedJournalScenario = scenario?.isHypothetical || currentUncommittedGroups.length > 0
+    ? scenario
+    : committedJournalScenario;
+  const displayedJournal = scenario?.isHypothetical
+    ? computed
+    : currentUncommittedGroups.length > 0
+      ? { ...computed, groups: currentUncommittedGroups }
+      : committedJournal;
+  const hasJournal = displayedJournal.groups.some((group) => group.lines.length > 0);
   const showJournal = hasJournal && !(appliedOutputPreference.statutory && !appliedOutputPreference.journal);
   const showStatutory = !(appliedOutputPreference.journal && !appliedOutputPreference.statutory);
   const currentAuthorityPresentation = scenario && hasCurrentAuthorityEvidencePresentation(
@@ -210,6 +292,7 @@ export const App: React.FC = () => {
               messages={messages}
               onSendMessage={handleSendMessage}
               onRetryMessage={handleSendMessage}
+              onRetryAiAnswer={handleRetryAiAnswer}
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
               isLoading={isLoading}
@@ -227,6 +310,7 @@ export const App: React.FC = () => {
                   scenario={scenario}
                   onScenarioChange={handleScenarioChange}
                   onResetToDefaults={handleResetToDefaults}
+                  resetDisabled={isLoading}
                 />
                 {scenario?.imageEvidence && scenario.imageEvidence.length > 0 && <ImageEvidencePanel evidence={scenario.imageEvidence} />}
 
@@ -259,7 +343,7 @@ export const App: React.FC = () => {
                       {showStatutory && <button
                         onClick={() => setActiveTab('compliance')}
                         className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
-                          activeTab === 'compliance' || !computed.groups.some((g) => g.lines.length > 0)
+                          activeTab === 'compliance' || !hasJournal
                             ? 'border-workspace-accent text-workspace-accent-text dark:border-workspace-accent dark:text-workspace-accent-text'
                             : 'border-transparent text-workspace-muted dark:text-workspace-muted hover:text-slate-800 dark:hover:text-slate-200'
                         }`}
@@ -272,10 +356,10 @@ export const App: React.FC = () => {
                     {/* Tab Content */}
                     {activeTab === 'entries' && showJournal && (
                       <JournalTable
-                        groups={computed.groups}
+                        groups={displayedJournal.groups}
                         standard={standard}
-                        functionalCurrency={scenario.functionalCurrency}
-                        assumptions={scenario.assumptions}
+                        functionalCurrency={displayedJournalScenario?.functionalCurrency || 'SGD'}
+                        assumptions={displayedJournalScenario?.assumptions}
                       />
                     )}
 

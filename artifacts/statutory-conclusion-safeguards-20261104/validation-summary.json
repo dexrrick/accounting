@@ -1,0 +1,113 @@
+{
+  "dateSingapore": "04/11/2026",
+  "branch": "codex/project-charter-simplification-20261103",
+  "baseCommit": "a6fa33011e23d475cc9dde0ed6146299c5a50ae7",
+  "changes": "Statutory support verification, structured unresolved-application enforcement, and complete currency magnitude matching.",
+  "implementationFiles": [
+    "src/services/evidenceGroundedSynthesis.ts",
+    "tests/regression/test_evidence_grounded_synthesis.mjs",
+    "tests/regression/test_evidence_grounded_synthesis_pipeline.mjs",
+    "tests/regression/test_synthesis_numeric_provenance.mjs",
+    "tests/regression/test_synthesis_practical_answers.mjs"
+  ],
+  "fileHashes": [
+    {
+      "path": "src/services/evidenceGroundedSynthesis.ts",
+      "sha256": "c01d97366d1b6ec4604efe44898c0a4f684fa5174d49fc07f2edf660eb0de446"
+    },
+    {
+      "path": "tests/regression/test_evidence_grounded_synthesis.mjs",
+      "sha256": "0c471301ca185bf94e97aec7ad67f1231d99469222bdcab592e65c0546255a2a"
+    },
+    {
+      "path": "tests/regression/test_evidence_grounded_synthesis_pipeline.mjs",
+      "sha256": "0d75086e11298fac69c36f24fd13c90f981b4fe5b2c1cc3064ad8a2e4e687396"
+    },
+    {
+      "path": "tests/regression/test_synthesis_numeric_provenance.mjs",
+      "sha256": "1b6c56375bbe477b3e6389c80539fa5bb959eca334ef8bea469cd0902e18639e"
+    },
+    {
+      "path": "tests/regression/test_synthesis_practical_answers.mjs",
+      "sha256": "74254da7fa4c4caee53d7de8af71476af9d4a2a8115b670e197ff401c118e03a"
+    }
+  ],
+  "checks": [
+    {
+      "name": "maintained-lint",
+      "exitCode": 0,
+      "elapsedSeconds": 0.23
+    },
+    {
+      "name": "typecheck",
+      "exitCode": 0,
+      "elapsedSeconds": 5.18
+    },
+    {
+      "name": "vite-build",
+      "exitCode": 0,
+      "elapsedSeconds": 3.22
+    },
+    {
+      "name": "worker-build",
+      "exitCode": 0,
+      "elapsedSeconds": 0.78
+    },
+    {
+      "name": "smoke",
+      "exitCode": 0,
+      "elapsedSeconds": 289.72
+    },
+    {
+      "name": "full",
+      "exitCode": 0,
+      "elapsedSeconds": 318.49
+    }
+  ],
+  "smokeSuites": 166,
+  "fullSuites": 189,
+  "rootLint": {
+    "exitCode": 1,
+    "existingErrors": 34,
+    "file": "artifacts/fresh-acceptance-2026-10-24/prepare.mjs",
+    "changed": false
+  },
+  "review": {
+    "status": "CLEAR_BOUNDED_REVIEW",
+    "initialFindingsCorrected": [
+      "Claim-kind limitation bypass",
+      "AGC statutory fallback bypass",
+      "Incomplete currency tokens and digit backtracking",
+      "Unicode normalization and actual support-call counting"
+    ],
+    "scope": "Read-only diff review and targeted mocked reproductions; supervisor performed broad checks and live evaluation."
+  },
+  "liveEvidence": "live-summary.json",
+  "liveResults": "live-results.json",
+  "liveFinalScopeCheck": "live-scope-recheck.json",
+  "baselineReplay": "baseline-replay.json",
+  "scopeTradeoff": "Every freeform claim in a statutory packet receives one batched support check, including some ordinary explanations. Exact whole-source rules and accounting-only packets retain no-review paths. One generation call; no repair generation.",
+  "limitations": [
+    "Model support verification is probabilistic, not a proof of legal correctness.",
+    "Initial live generated-answer run returned 4/6 answers. MOM and ACRA false withholding also reproduced on original commit.",
+    "Canonical citation completeness was not established for all registry fixtures.",
+    "Live harness uses fixture upstream workstream admission; it does not test live retrieval or browser flow.",
+    "Token costs not measured; added support calls ranged roughly 0.6 to 10.8 seconds in this small sample."
+  ],
+  "notPerformed": [
+    "Live-source retrieval acceptance",
+    "Browser acceptance",
+    "CI verification",
+    "Production verification",
+    "Commit",
+    "Push",
+    "Merge",
+    "Deployment",
+    "Source activation"
+  ],
+  "committed": false,
+  "pushed": false,
+  "deployed": false,
+  "unrelatedUntrackedFilesPreserved": true,
+  "snapshotPhase": "Post-validation, before the separately authorized commit and push. Publication status is reported in review-handoff.txt and the final chat."
+}

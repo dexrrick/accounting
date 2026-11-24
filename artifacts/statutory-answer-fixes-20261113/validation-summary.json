@@ -1,0 +1,60 @@
+{
+  "status": "OFFLINE_VALIDATED_FOR_REVIEW",
+  "branch": "codex/statutory-contextual-answer-fixes-20261113",
+  "baseCommit": "d8f04bf475cc2c1708a3707dff7c9e94e236d888",
+  "sourceBaseline": "d1f9be1f46c780acfb01591f0f527e87cbd133a9",
+  "changes": [
+    "Preserve bounded prior-user context through question understanding and per-issue topic reconciliation.",
+    "Retain own-issue official MOM/CPF documents already validated by the current fetch instead of rejecting paraphrased workflow labels.",
+    "Remove false CPF deadline routing for pay details while retaining explicit last-day timing.",
+    "Keep issue-owned passage IDs, fact requests and evidence gaps distinct; preserve current-user precedence.",
+    "Clarify exception role, transaction direction and qualifying purpose in the existing synthesis/support prompts."
+  ],
+  "architecture": "Existing understanding, retrieval, synthesis and selective support stages retained; no additional provider stage.",
+  "verification": {
+    "fullOfflineSuite": {
+      "passed": 189,
+      "failed": 0,
+      "node": "22.23.3",
+      "elapsedSeconds": 310.08,
+      "location": "Actual Git checkout",
+      "summary": "full-suite-summary.log",
+      "defaultExternalFetchAndHttpBlocked": true
+    },
+    "threePreviouslyFailedSuitesRetested": "All passed in the actual Git checkout",
+    "lint": "Maintained-code and root lint passed in the source snapshot",
+    "typecheck": "PASS",
+    "frontendBuild": "PASS",
+    "workerBuild": "PASS",
+    "buildScope": "Validated source snapshot; normalized source/test hashes verified identical after integration",
+    "independentReview": "No remaining material findings after timing-route and fact/evidence metadata corrections",
+    "ci": "Not assessed; no CI pass claimed"
+  },
+  "limitations": [
+    "Scripted provider regressions do not establish current real-model compliance, particularly exception paraphrases.",
+    "Phase 2 real-answer acceptance remains incomplete; retained pre-fix grades were not upgraded.",
+    "Earlier staging full run had one then-loaded synthesis assertion failure and two missing-Git-history failures; the final actual-checkout run supersedes that validation result."
+  ],
+  "operations": {
+    "liveProviderCalls": 0,
+    "liveOfficialSourceCalls": 0,
+    "merges": 0,
+    "deployments": 0,
+    "sourceActivations": 0,
+    "pullRequestsCreated": 0
+  },
+  "reviewedPatchSha256": "43803b4659245b07bbb4b3303db20b7eaeb42c30500aeb4af98befb4b95288e9",
+  "changedCodeAndTestFiles": [
+    "src/services/authorityWorkstreams.ts",
+    "src/services/evidenceGroundedSynthesis.ts",
+    "src/services/geminiService.ts",
+    "src/services/semanticQuestionUnderstanding.ts",
+    "src/standards/coverageRegistry.ts",
+    "tests/regression/test_evidence_grounded_synthesis.mjs",
+    "tests/regression/test_synthesis_practical_answers.mjs",
+    "tests/regression/test_semantic_question_understanding.mjs",
+    "tests/regression/test_statutory_source_discovery.mjs",
+    "tests/fixtures/statutory-answer-payroll-steps-20261113.json",
+    "tests/fixtures/statutory-answer-cpf-facts-20261113.json"
+  ]
+}

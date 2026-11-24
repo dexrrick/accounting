@@ -195,6 +195,13 @@ async function run() {
     'A stale deep link is not exposed in rendered answer text.');
   assert.ok(querySingaporeStatutes('Section 14 wholly and exclusively business expenses').some(rule => rule.id === section14.id),
     'Local statutory knowledge remains queryable when its public URL cannot be verified');
+  const ordinaryCompanyFilingRules = querySingaporeStatutes(
+    'We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?');
+  assert.ok(!ordinaryCompanyFilingRules.some(rule => rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'),
+    'An ordinary company filing question cannot inherit the VCC framework without explicit VCC facts.');
+  assert.ok(querySingaporeStatutes('What annual return requirements apply to our VCC?')
+    .some(rule => rule.id === 'ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE'),
+  'A question explicitly about a VCC can still retrieve the VCC framework.');
 
   const verifiedSnapshotUrl = 'https://www.iras.gov.sg/taxes/income-tax/verified-section-14';
   for (const mutatedUrl of [

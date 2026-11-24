@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createAuthorityEvidencePresentation, hasCurrentAuthorityEvidencePresentation } from '../../src/utils/authorityEvidencePresentation.ts';
+import {
+  createAuthorityEvidencePresentation,
+  groupExactIssueClaimsByDocument,
+  hasCompleteRequestRepresentation,
+  hasCurrentAuthorityEvidencePresentation
+} from '../../src/utils/authorityEvidencePresentation.ts';
 import {
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
@@ -18,6 +23,7 @@ import { getRequestedQuestionConcepts, reconcileQuestionUnderstanding } from '..
 import { defaultQueryTopicResolver, isBoundedAcraAnnualReturnMissingFactsQuestion } from '../../src/retrieval/queryTopicResolver.ts';
 import { getAcraAnnualReturnDeadlineMonths } from '../../src/retrieval/acraAnnualReturnFilingRule.ts';
 import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
+import { SINGAPORE_COVERAGE_REGISTRY } from '../../src/standards/coverageRegistry.ts';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 
 function source({ id, authority, title, validFrom = '2026-01-01', validTo, officialSourceUrl = '', sourceText = 'A complete paragraph from the reviewed source.', domain = authority === 'IRAS' ? 'IRAS_TAX' : 'CPF_PAYROLL' }) {
@@ -140,6 +146,52 @@ function evidenceIssue(plan, supportingSource, claimOverrides = {}) {
   };
 }
 
+const claimScopeIssueId = 'claim-scope-regression';
+const claimScopeUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions';
+const claimScopeBinding = {
+  recordId: 'cpf-wages-revision-a', documentHash: 'a'.repeat(64), canonicalUrl: claimScopeUrl,
+  retrievedAt: '2026-10-25T00:00:00.000Z'
+};
+const completeRuleQuote = 'Complete passage: wages meet condition alpha and qualifier beta, so the stated treatment applies.';
+const canonicalEntityQuote = 'The employee’s salary deduction is capped at 25% after an inquiry.';
+const claimScopeSource = {
+  officialUrl: claimScopeUrl,
+  claims: [
+    { text: completeRuleQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: completeRuleQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'A noncontained partial premise stays alongside the complete passage.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding, validFrom: '2025-01-01' },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding, sourceAdmissionOptions: { targetDate: '2025-01-01', expectedAuthority: 'CPF' } },
+    { text: 'condition alpha', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: { ...claimScopeBinding, recordId: 'cpf-wages-revision-b' } },
+    { text: 'qualifier beta', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: { ...claimScopeBinding, documentHash: 'b'.repeat(64) } },
+    { text: canonicalEntityQuote, supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee&rsquo;s salary deduction is capped at 25% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'employee&rsquo;s salary deduction', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee’s salary deduction is capped at 26% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee was not directly at fault for the damage.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding },
+    { text: 'The employee&amp;rsquo;s salary deduction is capped at 25% after an inquiry.', supportKind: 'EXACT_SOURCE_QUOTE', issueIds: [claimScopeIssueId], provenance: 'LIVE_EXTERNAL', fetchedSourceBinding: claimScopeBinding }
+  ]
+};
+const groupedClaimScopes = groupExactIssueClaimsByDocument(claimScopeSource, claimScopeIssueId);
+const findClaimGroup = predicate => groupedClaimScopes.find(group => group.some(predicate));
+const originalRevisionClaims = findClaimGroup(claim => claim.fetchedSourceBinding?.recordId === 'cpf-wages-revision-a');
+assert.deepEqual(originalRevisionClaims.map(claim => claim.text), [
+  completeRuleQuote,
+  'A noncontained partial premise stays alongside the complete passage.',
+  'condition alpha',
+  'qualifier beta',
+  canonicalEntityQuote,
+  'The employee’s salary deduction is capped at 26% after an inquiry.',
+  'The employee was not directly at fault for the damage.',
+  'The employee&amp;rsquo;s salary deduction is capped at 25% after an inquiry.'
+], 'only exact or entity-equivalent contained text is pruned; original text, numeric changes, and distinct qualifiers remain');
+assert.equal(findClaimGroup(claim => claim.fetchedSourceBinding?.recordId === 'cpf-wages-revision-b').length, 1,
+  'claims from a different record remain in a separate document group');
+assert.equal(findClaimGroup(claim => claim.fetchedSourceBinding?.documentHash === 'b'.repeat(64)).length, 1,
+  'claims from a different document hash remain in a separate revision group');
+
 const irasSource = source({ id: 'iras-source-1', authority: 'IRAS', title: 'IRAS income tax guidance' });
 const cpfSource = source({ id: 'cpf-source-1', authority: 'CPF', title: 'CPF contribution guidance' });
 const irasPlanA = plannedIssue({ id: 'iras-company-issue', authority: 'IRAS', domain: 'IRAS_INCOME_TAX', subject: 'Company tax deduction', population: 'COMPANY' });
@@ -180,7 +232,9 @@ const result = {
 };
 
 const presentation = createAuthorityEvidencePresentation(result);
-assert.equal(presentation.status, 'VERIFIED');
+assert.equal(presentation.status, 'CONDITIONAL',
+  'Mapped evidence cannot confirm whole-question acceptance while the exact-query representation is uncertain.');
+assert.equal(presentation.evidenceStatus, 'VERIFIED', 'Evidence status remains separate from request completeness.');
 assert.equal(presentation.workstreams.length, 2);
 assert.equal(presentation.workstreams[0].issues[0].population, 'Company');
 assert.equal(presentation.workstreams[1].issues[0].population, 'Employer');
@@ -190,6 +244,7 @@ assert.deepEqual(presentation.workstreams[0].sources[0].claims[0].issueIds, ['ir
 assert.equal(presentation.workstreams[0].sources[0].claims[1].supportKind, 'REVIEWED_EDITORIAL_SUMMARY');
 assert.equal(presentation.workstreams[0].sources[0].validFrom, '2026-01-01');
 assert.ok(hasCurrentAuthorityEvidencePresentation(presentation, result.query));
+assert.equal(hasCompleteRequestRepresentation(presentation), false);
 assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, ` ${result.query} `), false,
   'diagnostic presentations are bound to the exact raw query');
 assert.equal(hasCurrentAuthorityEvidencePresentation(presentation, 'A different follow-up'), false);
@@ -221,6 +276,37 @@ const completeButInsufficientPresentation = createAuthorityEvidencePresentation(
 assert.equal(completeButInsufficientPresentation.requestCompletenessContext.evaluation.status, 'COMPLETE');
 assert.equal(completeButInsufficientPresentation.status, 'INSUFFICIENT',
   'complete request representation never promotes insufficient evidence');
+const completeAndVerifiedResult = {
+  ...result,
+  query: completeCpfQuery,
+  requestCompletenessContext: completeCpfContext,
+  issuePlan: { ...result.issuePlan, issues: [cpfPlan] },
+  workstreams: [result.workstreams[1]]
+};
+const completeAndVerifiedPresentation = createAuthorityEvidencePresentation(completeAndVerifiedResult);
+assert.equal(completeAndVerifiedPresentation.status, 'VERIFIED',
+  'Only complete exact-query representation with verified evidence receives whole-question verified status.');
+assert.equal(hasCompleteRequestRepresentation(completeAndVerifiedPresentation), true);
+const missingCompletenessPresentation = createAuthorityEvidencePresentation({ ...result, requestCompletenessContext: undefined });
+assert.equal(missingCompletenessPresentation.status, 'CONDITIONAL',
+  'Missing request completeness evidence cannot yield whole-question VERIFIED status.');
+const incorrectCpfOperationObservation = structuredClone(completeCpfContext.observationSnapshot.normalizedInterpretation);
+incorrectCpfOperationObservation.requestedOperation = 'EXPLAIN_RULE';
+incorrectCpfOperationObservation.issues[0].operation = 'EXPLAIN_RULE';
+const incompleteCpfContext = ensureRequestCompletenessContext(completeCpfQuery, undefined, {
+  mode: 'SEMANTIC_INTERPRETATION', interpretation: incorrectCpfOperationObservation
+});
+assert.equal(incompleteCpfContext.evaluation.status, 'INCOMPLETE');
+const incompleteRepresentationPresentation = createAuthorityEvidencePresentation({
+  ...completeAndVerifiedResult, requestCompletenessContext: incompleteCpfContext
+});
+assert.equal(incompleteRepresentationPresentation.status, 'CONDITIONAL',
+  'An explicit operation mismatch leaves verified mapped evidence conditional.');
+const staleCompletenessPresentation = createAuthorityEvidencePresentation({
+  ...result, requestCompletenessContext: completeCpfContext
+});
+assert.equal(staleCompletenessPresentation.status, 'CONDITIONAL',
+  'A complete evaluation for another query cannot confirm this request.');
 const forgedAggregate = createAuthorityEvidencePresentation({
   ...result, requestCompletenessContext: { ...result.requestCompletenessContext, identity: 'forged' }
 });
@@ -235,6 +321,10 @@ assert.match(panel, /Employer CPF contribution/);
 assert.match(panel, /Reviewed local summary/);
 assert.match(panel, /01\/01\/2026/);
 assert.match(panel, /Supports: Company tax deduction/);
+assert.match(panel, /Evidence verified for mapped issues; full request coverage unconfirmed/,
+  'The compliance panel makes uncertain whole-request coverage explicit.');
+assert.match(renderAuthorityEvidenceResponseText(presentation, false), /full request coverage unconfirmed/,
+  'Text responses preserve the same distinction between evidence and request coverage.');
 
 // These fetched-like fixtures exercise the real projection and panel link gate.
 // They validate presentation behavior only; they are not production acceptance evidence.
@@ -272,12 +362,32 @@ for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
     evidenceStatus: 'VERIFIED', applicationStatus: 'NOT_REQUIRED', status: 'VERIFIED', gaps: []
   };
   const liveResult = createAuthorityEvidencePresentation(liveAuthorityResult);
+  const livePresentedSource = liveResult.workstreams[0].sources[0];
+  assert.deepEqual(groupExactIssueClaimsByDocument(livePresentedSource, livePlan.id), [],
+    `${authority} live-looking claims without fetched revision metadata do not group by URL alone.`);
+  const malformedFormalFallback = structuredClone(livePresentedSource);
+  const malformedClaim = malformedFormalFallback.claims.find(claim => claim.issueIds.includes(livePlan.id));
+  malformedClaim.fetchedSourceBinding = {
+    recordId: liveEvidence.id,
+    documentHash: 'a'.repeat(64),
+    canonicalUrl: officialUrl,
+    retrievedAt: '2026-10-25T00:00:00.000Z'
+  };
+  malformedClaim.sourceBinding = {
+    recordId: liveEvidence.id,
+    versionId: 'formal-version',
+    documentHash: 'invalid-hash',
+    provisionHash: 'b'.repeat(64),
+    sourceLocator: {}
+  };
+  assert.deepEqual(groupExactIssueClaimsByDocument(malformedFormalFallback, livePlan.id), [],
+    `${authority} malformed formal binding blocks fallback to fetched metadata.`);
   const livePanel = renderToStaticMarkup(React.createElement(ComplianceRationale, {
     citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: liveResult
   }));
   assert.match(livePanel, new RegExp(officialUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
     `${authority} verified live URL is shown exactly`);
-  assert.match(livePanel, /All requested evidence verified/);
+  assert.match(livePanel, /Evidence verified for mapped issues; full request coverage unconfirmed/);
 
   const conditionalIssue = { ...liveIssue, applicationStatus: 'UNRESOLVED', applicationReason: 'The relevant application facts are unresolved.' };
   const conditionalPresentation = createAuthorityEvidencePresentation({
@@ -289,7 +399,7 @@ for (const authority of ['ACRA', 'CPF', 'MOM', 'MAS']) {
     citations: [], standard: 'SFRS_I', rawQuery: liveQuery, authorityEvidencePresentation: conditionalPresentation
   }));
   assert.equal(conditionalPresentation.status, 'CONDITIONAL');
-  assert.match(conditionalPanel, /Evidence verified; application unresolved/);
+  assert.match(conditionalPanel, /full request coverage unconfirmed; application unresolved/);
 
   const unresolvedGap = plannedIssue({
     id: `${authority.toLowerCase()}-unresolved-residual`, authority: 'UNKNOWN', domain: 'UNKNOWN',
@@ -392,7 +502,7 @@ assert.equal(createChatPreview('Legacy answer body', { ...currentSingleIrasScena
   'single-IRAS preview remains on the legacy path');
 
 const freshScenario = { ...staleScenario, rawQuery: presentation.query, authorityEvidencePresentation: presentation };
-assert.match(createChatPreview('legacy unsupported statutory prose', freshScenario), /Verified evidence covers the resolved material workstreams/);
+assert.match(createChatPreview('legacy unsupported statutory prose', freshScenario), /Evidence verified for mapped issues; full request coverage unconfirmed/);
 const balancedScenario = {
   ...freshScenario, queryIntent: 'HYBRID', scenarioType: 'EXPENSE',
   directGroups: [{ title: 'Operating expense', totalDebit: 120, totalCredit: 120, isBalanced: true, lines: [{}] }]
@@ -824,6 +934,62 @@ for (const operation of ['EXPLAIN_RULE', 'FILING_REQUIREMENT', 'DETERMINE_TREATM
   assert.deepEqual(plan.issues[0].mappedTopicIds, ['acra_annual-returns'],
     `${operation} maps the ordinary-company annual-return label to its independently recognized ACRA topic`);
 }
+const separateAcraExtensionQuery = 'For a Singapore-incorporated non-listed company, what is its annual-return filing deadline? Separately, can we request an extension of time?';
+const separateAcraExtensionTopics = defaultQueryTopicResolver.decomposeQuery(separateAcraExtensionQuery);
+assert.ok(separateAcraExtensionTopics.topics.some(topic => topic.id === 'acra_annual-returns'),
+  'a separate extension question does not suppress the independently asked annual-return deadline');
+assert.ok(separateAcraExtensionTopics.unresolvedTopics.some(fragment => /extension of time/i.test(fragment)),
+  'an extension question remains unresolved when the current annual-return topic does not cover it');
+const separateAgmExtensionTopics = defaultQueryTopicResolver.decomposeQuery(
+  'For a Singapore-incorporated non-listed company, what is its annual-return filing deadline? Separately, what is the AGM extension deadline?'
+).topics.map(topic => topic.id);
+assert.ok(separateAgmExtensionTopics.includes('acra_annual-returns') && separateAgmExtensionTopics.includes('acra_agm'),
+  'annual-return and AGM-extension questions remain independently routable');
+const acraOfficerParticularsTopic = SINGAPORE_COVERAGE_REGISTRY.find(topic => topic.id === 'acra-annual-return-officer-particulars');
+assert.ok(acraOfficerParticularsTopic, 'the annual-return officer particulars family has a separate governed topic');
+assert.equal(acraOfficerParticularsTopic.status, 'MISSING', 'the new officer topic is not marked as evidence-validated');
+assert.equal(acraOfficerParticularsTopic.effectiveFrom, '2026-10-20', 'the notice-derived scope starts on its stated commencement date');
+assert.equal(acraOfficerParticularsTopic.urlVerificationStatus, 'CANDIDATE', 'the commencement notice remains a discovery candidate');
+const acraOfficerParticularsQuery = 'From 20 October 2026, what officer particulars are confirmed when filing a company annual return?';
+assert.ok(defaultQueryTopicResolver.decomposeQuery(acraOfficerParticularsQuery).topics
+  .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+  'annual-return and officer-confirmation wording routes to its bounded topic without requiring a Singapore literal');
+const acraOfficerSemanticPlan = b1IssuePlanFor(acraOfficerParticularsQuery,
+  annualReturnUnderstanding('FILING_REQUIREMENT', 'annual return officer particulars confirmation'));
+assert.ok(acraOfficerSemanticPlan.issues[0].mappedTopicIds.includes('acra-annual-return-officer-particulars'),
+  'the narrow semantic subject maps to the separate officer-confirmation topic');
+assert.ok(!defaultQueryTopicResolver.decomposeQuery(b2AnnualReturnQuery).topics
+  .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+  'ordinary filing-deadline questions remain outside officer-particular confirmation scope');
+for (const query of [
+  'For a VCC, what officer particulars must be confirmed when filing its annual return?',
+  'For a foreign-incorporated company, what officer particulars must be confirmed when filing its annual return?',
+  'How do I change a company director without filing an annual return?'
+]) {
+  assert.ok(!defaultQueryTopicResolver.decomposeQuery(query).topics
+    .some(topic => topic.id === 'acra-annual-return-officer-particulars'),
+    `officer changes without an ordinary company annual-return confirmation remain outside the new topic: ${query}`);
+}
+const preCommencementOfficerQuery = 'On 19 October 2026, what officer particulars must a local company confirm when filing its annual return?';
+const preCommencementOfficerPlan = b1IssuePlanFor(preCommencementOfficerQuery,
+  annualReturnUnderstanding('FILING_REQUIREMENT', 'annual return officer particulars confirmation'));
+const preCommencementOfficerSource = source({
+  id: 'TEST_ACRA_OFFICER_PARTICULARS_PRECOMMENCEMENT', authority: 'ACRA',
+  title: acraOfficerParticularsTopic.pageTitle,
+  validFrom: acraOfficerParticularsTopic.effectiveFrom,
+  officialSourceUrl: acraOfficerParticularsTopic.canonicalSourceUrl,
+  sourceText: 'From 20 October 2026, a company must confirm the latest particulars of its officers when filing an annual return.',
+  domain: 'ACRA_CORP'
+});
+const preCommencementOfficerWorkstreams = await buildAuthorityWorkstreams(preCommencementOfficerQuery,
+  preCommencementOfficerPlan, {
+    referenceDate: '2026-10-19', localOnly: true,
+    providers: { ACRA: { authority: 'ACRA', retrieve: async () => ({ candidates: [preCommencementOfficerSource] }) } }
+  });
+const preCommencementOfficerIssue = preCommencementOfficerWorkstreams.workstreams.flatMap(stream => stream.issues)[0];
+assert.ok(preCommencementOfficerIssue, 'the pre-commencement issue remains represented');
+assert.deepEqual(preCommencementOfficerIssue.verifiedClaims, [],
+  'the notice effective 20 October 2026 is not verified for a 19 October 2026 question');
 const b2FyeAliasUnderstanding = annualReturnUnderstanding();
 b2FyeAliasUnderstanding.interpretation.concepts = [
   ...b2FyeAliasUnderstanding.interpretation.concepts,
@@ -1083,7 +1249,9 @@ assert.equal(b1PositiveIssue.evidenceStatus, 'VERIFIED', 'the B1 table passes re
 assert.equal(b1PositiveIssue.applicationStatus, 'NOT_REQUIRED', 'the general rule request remains source-only without a date calculation');
 assert.equal(b1PositiveIssue.applicationReason, undefined);
 const b1PositivePresentation = createAuthorityEvidencePresentation(b1Workstreams);
-assert.equal(b1PositivePresentation.status, 'VERIFIED');
+assert.equal(b1PositivePresentation.status, 'CONDITIONAL',
+  'verified ACRA source coverage remains conditional while whole-request representation is unconfirmed');
+assert.match(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /full request coverage unconfirmed/);
 assert.doesNotMatch(renderAuthorityEvidenceResponseText(b1PositivePresentation, false), /31\/07\/2026/,
   'B1 reports the rule without calculating a filing deadline date');
 const b2SemanticUnderstanding = annualReturnUnderstanding('EXPLAIN_RULE');
@@ -1127,9 +1295,9 @@ assert.ok(b2Issue.verifiedClaims.every(claim => !claim.quote.includes('31/07/202
   'derived date math remains separate from verbatim verified source claims');
 const b2Presentation = createAuthorityEvidencePresentation(b2Workstreams);
 const b2ResponseText = renderAuthorityEvidenceResponseText(b2Presentation, false);
-if (b2Presentation.status !== 'VERIFIED') {
-  acceptanceMatrixFailures.push('B2 evidence presentation is not whole-question VERIFIED');
-}
+assert.equal(b2Presentation.status, 'CONDITIONAL',
+  'verified evidence and date application stay conditional until request representation is complete');
+assert.match(b2ResponseText, /full request coverage unconfirmed/);
 assert.match(b2ResponseText, /\*\*Application:\*\* .*31\/07\/2026/,
   'the text renderer presents the deterministic date as an application result');
 assert.doesNotMatch(b2ResponseText, /Application unresolved/);

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
 import { buildAuthorityWorkstreams } from '../../src/services/authorityWorkstreams.ts';
 import {
+  hasBoundedGstInputTaxRecoveryAnchors,
   getRequestedQuestionConcepts,
   reconcileQuestionUnderstanding,
   validateSemanticQuestionInterpretation
@@ -166,20 +167,39 @@ const compoundGstPlan = reconcileQuestionUnderstanding(compoundGstQuestion, clas
 assert.ok(compoundGstPlan.issues.find(issue => issue.subject === canonicalGstSubject)
   ?.mappedTopicIds.includes('iras-gst-input-tax'),
   'Canonical GST subjects keep their existing topic mapping in a compound question.');
-for (const question of [
+const generalGstQuestionsWithoutRegistration = [
   'What are the general Singapore GST rules for claiming input tax on business purchases by a company?',
   'What are the general Singapore GST rules for claiming input tax on business purchases by an unregistered company?',
   'What are the general Singapore GST rules for claiming input tax on business purchases by a company that is not a GST-registered company?',
   'If it becomes a GST-registered company, what are the general Singapore GST rules for claiming input tax on business purchases?',
   'What are the general Singapore GST rules for claiming input tax on business purchases by a company that will become a GST-registered company next year?',
-  'What are the general Singapore GST rules for claiming input tax on business purchases by a company that plans to become a GST-registered company?',
+  'What are the general Singapore GST rules for claiming input tax on business purchases by a company that plans to become a GST-registered company?'
+];
+for (const question of generalGstQuestionsWithoutRegistration) {
+  assert.equal(hasBoundedGstInputTaxRecoveryAnchors(question, truncatedGst), false,
+    'The legacy narrow binder still requires explicit current registered-company facts.');
+  const fixture = interpretationFor({ ...gst, question }, truncatedGst, 'COMPANY', gstConcepts, question);
+  const semanticIssue = fixture.issuePlan.issues.find(issue => issue.subject === truncatedGst);
+  assert.ok(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax'),
+    `A general question can route to conditional IRAS rules without asserting eligibility: ${question}`);
+}
+for (const question of [
   'What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company? And what GST registration requirements apply?',
   'What are the general Singapore GST rules for claiming input tax on business purchases by a GST-registered company? And what journal entries should be recorded?'
 ]) {
+  assert.equal(hasBoundedGstInputTaxRecoveryAnchors(question, truncatedGst), false,
+    'The legacy narrow binder does not cover compound question text.');
   const fixture = interpretationFor({ ...gst, question }, truncatedGst, 'COMPANY', gstConcepts, question);
   const semanticIssue = fixture.issuePlan.issues.find(issue => issue.subject === truncatedGst);
-  assert.equal(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax'), false,
-    `The GST topic binding fails closed when registration is absent or an independent outcome is requested: ${question}`);
+  assert.ok(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax'),
+    'The explicitly requested general rule remains available as one part of a compound question.');
+  assert.equal(fixture.issuePlan.coverageEstablished, false,
+    `A compound question cannot be declared complete when an independent outcome is unresolved: ${question}`);
+  if (question.includes('registration requirements')) {
+    assert.ok(fixture.issuePlan.issues.some(issue => issue.subject !== truncatedGst &&
+      issue.mappedTopicIds.includes('gst_compulsory_registration')),
+    'The independent registration requirement remains a separate issue instead of being absorbed into input-tax guidance.');
+  }
 }
 const willClaimQuestion = `${gst.question} The company will claim input tax on those business purchases.`;
 const willClaimFixture = interpretationFor({ ...gst, question: willClaimQuestion }, truncatedGst, 'COMPANY', gstConcepts, willClaimQuestion);
@@ -192,8 +212,11 @@ for (const subject of [
 ]) {
   const fixture = interpretationFor(gst, subject, 'COMPANY', gstConcepts);
   const semanticIssue = fixture.issuePlan.issues.find(issue => issue.subject === subject);
-  assert.equal(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax'), false,
-    `A contradictory or mixed subject cannot claim the independently recognized topic: ${subject}`);
+  assert.equal(hasBoundedGstInputTaxRecoveryAnchors(gst.question, subject), false,
+    'The legacy narrow topic binder rejects a mixed or specific issue subject.');
+  if (subject.includes('output tax')) assert.equal(fixture.issuePlan.coverageEstablished, false,
+    'An output-tax outcome remains incomplete when only the input-tax issue is supplied.');
+  assert.ok(semanticIssue, `The source-neutral issue remains in the plan: ${subject}`);
 }
 for (const subject of [
   'general GST input tax treatment',
@@ -217,8 +240,10 @@ for (const [name, rootPatch, issuePatch] of [
     mode: 'SEMANTIC_INTERPRETATION', interpretation: wrong
   }).issuePlan;
   const semanticIssue = wrongPlan.issues.find(issue => issue.subject === truncatedGst);
-  assert.equal(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax') === true, false,
-    `The GST issue binding rejects a wrong ${name} even when the query text matches.`);
+  assert.equal(semanticIssue?.mappedTopicIds.includes('iras-gst-input-tax') === true, name === 'operation',
+    name === 'operation'
+      ? 'A general input-tax rule may be mapped for a CHECK_ELIGIBILITY request while its application remains unresolved.'
+      : `The GST issue binding rejects a wrong ${name} even when the query text matches.`);
   const wrongScore = scoreSemanticV4(gst, wrong, wrongPlan);
   assert.equal(wrongScore.stages.SEMANTIC_ISSUE_IDENTITY, false,
     `V4 does not use the bounded subject match with a wrong ${name}.`);

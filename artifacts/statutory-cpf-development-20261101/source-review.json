@@ -1,0 +1,43 @@
+{
+  "reviewDateSingapore": "2026-11-01",
+  "method": "Supervisor opened the official CPF Board pages and AW PDF using web read. Missing PR premises were retained as an explicitly labelled visible-text excerpt with hash manifest. No source activation or live application acceptance occurred.",
+  "sources": [
+    {
+      "url": "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+      "premises": ["OW requires employment in the relevant month and contractual payability by the 14th of the following month.", "Wages not classified OW are AW; neither label alone establishes exemption.", "Salary, bonuses and commission can be wages; qualifying official-expense reimbursement is distinct.", "Separate monthly OW and per-employee, per-employer, per-calendar-year AW ceilings apply."],
+      "sourceDate": "Page footer last updated 06 October 2026; update date is not an independently established legal commencement date.",
+      "reuse": "Existing retained wage-classification evidence is available. Classification and factual application must select this evidence instead of contribution-rate tables."
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000KUuZCYA1",
+      "premises": ["2026 AW ceiling is S$102,000 less annual CPF-subject OW, per employer.", "The AW due-and-payable year controls: the source explicitly illustrates a 2025 bonus due and payable in 2026 using the 2026 ceiling.", "Estimate available ceiling at each AW payment; recalculate at last employment month or December, whichever is earlier, and address shortfall/excess."],
+      "applicability": "Page 1 explicitly establishes the 2026 example and ceiling. A performance/accrual year does not set the legal evidence date for a 2026-payable AW question.",
+      "reuse": "Native official PDF already retained in statutoryKnowledge20261027b."
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/what-is-the-ordinary-wage-ow-ceiling-mbr",
+      "premises": ["Dated ceiling table: 2025 S$7,400; from 1 January 2026 S$8,000.", "October 2026 OW of S$8,700 therefore has an OW contribution base of S$8,000. This does not exempt the separate annual bonus."],
+      "sourceDate": "Page footer last updated 14 August 2026; use the dated table, not retrieval date, for applicability.",
+      "reuse": "Existing retained ceiling evidence."
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status",
+      "premises": ["CPF begins when the foreign employee obtains SPR status.", "First year: grant date through the last day of first anniversary month; second year starts the following month.", "OW in the conversion month is pro-rated from grant date.", "AW payable while still foreign is not subject to CPF; AW payable on/after grant may be subject, with applicable ceilings and rates."],
+      "sourceDate": "Page footer last updated 27 April 2026. The page explicitly illustrates a 15 March 2026 conversion and OW from 15 to 31 March. This is not proof of all historical versions.",
+      "newEvidence": "tests/fixtures/statutoryCpf20261101/cpf-new-pr-visible.txt; manifest retains SHA-256 and visible-text capture kind. Native HTTP retrieval failed authentication/TLS in the restricted environment; no raw HTML is claimed."
+    },
+    {
+      "url": "https://www.cpf.gov.sg/service/article/are-cpf-contributions-payable-on-additional-wages-payable-to-ex-employees-after-they-have-left-employment",
+      "premises": ["From 1 January 2024 an ex-employee AW assessment also depends on SC/SPR status at last employment date as well as AW payable date."],
+      "scopeDecision": "This batch must not extend the continuing-employee PR rule to ex-employees without these separate premises and facts. Ex-employee scenarios may remain unresolved."
+    }
+  ],
+  "acceptanceExpectations": {
+    "cpf-01": "March wages contractually payable 20 April fail the second OW condition and are AW for that month; do not compute a CPF amount.",
+    "cpf-04": "Use 2026 AW ceiling for the 2025 bonus contractually due/payable January 2026; no invented bonus contribution amount.",
+    "cpf-06": "For 15 March 2026 grant: first year through 31 March 2027; second starts 1 April 2027; March OW covered from 15 to 31 March. Rates/amounts need further facts.",
+    "cpf-07": "Given the stated before/after grant relationship, 10 March payable while foreign does not attract CPF, while 20 March payable after grant may attract CPF subject to ceiling/rates. Stateless question does not establish an exact grant date/year; do not invent one.",
+    "fresh31-cpf-01": "Bind independently: employee A September wages payable 10 October meet timing; employee B payable 20 October fail timing and are AW. Do not borrow either employee's facts.",
+    "fresh31-cpf-02": "October 2026 OW base is S$8,000; bonus is separate AW subject to remaining annual ceiling. Exact bonus CPF requires bonus amount, year-to-date/annual CPF-subject wages and applicable rate facts."
+  }
+}

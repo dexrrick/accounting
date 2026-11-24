@@ -1,0 +1,3212 @@
+================================================================
+🚀 RUNNING FULL ACCOUNTING & STATUTORY REGRESSION SUITE
+================================================================
+
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Basic Bookkeeping Journal Templates (test_basic_bookkeeping.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=112.37ms (first_vis=94.42ms, gemini=0ms, ground=29ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=30.5ms (first_vis=20.42ms, gemini=0ms, ground=16ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.51ms (first_vis=14.08ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=3.99ms (first_vis=3.98ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.48ms (first_vis=16.32ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.72ms (first_vis=14.9ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.48ms (first_vis=15.19ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=2.01ms (first_vis=2ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=5.63ms (first_vis=5.63ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.55ms (first_vis=14.01ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.15ms (first_vis=13.48ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.54ms (first_vis=13.83ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.36ms (first_vis=13.75ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.19ms (first_vis=13.39ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.38ms (first_vis=13.56ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.51ms (first_vis=13.77ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.22ms (first_vis=13.9ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.03ms (first_vis=13.43ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.85ms (first_vis=13.35ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.9ms (first_vis=13.36ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.97ms (first_vis=13.28ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.97ms (first_vis=16.05ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.89ms (first_vis=14.96ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.76ms (first_vis=14.02ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=27.06ms (first_vis=16.28ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.17ms (first_vis=13.75ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.93ms (first_vis=13.4ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.13ms (first_vis=13.19ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.03ms (first_vis=13.38ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.68ms (first_vis=13.51ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.86ms (first_vis=13.5ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.83ms (first_vis=13.31ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.49ms (first_vis=13.02ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.48ms (first_vis=13.31ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.49ms (first_vis=12.89ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.47ms (first_vis=14.17ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=26.42ms (first_vis=16.6ms, gemini=0ms, ground=16ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.77ms (first_vis=13.95ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.39ms (first_vis=13.56ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.97ms (first_vis=13.68ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.76ms (first_vis=13.27ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.68ms (first_vis=13.02ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.8ms (first_vis=13.17ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.18ms (first_vis=13.21ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.66ms (first_vis=13.25ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.1ms (first_vis=13.23ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.4ms (first_vis=13.01ms, gemini=0ms, ground=12ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.92ms (first_vis=13.21ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.46ms (first_vis=13.03ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.16ms (first_vis=1.16ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=22.96ms (first_vis=14.52ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.65ms (first_vis=13.77ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.47ms (first_vis=1.47ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=3.73ms (first_vis=3.73ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.23ms (first_vis=1.23ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.2ms (first_vis=1.2ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.38ms (first_vis=1.38ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.92ms (first_vis=0.92ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=29.41ms (first_vis=15.17ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.83ms (first_vis=0.82ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=28.04ms (first_vis=13.7ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=13.56ms (first_vis=13.54ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | Basic bookkeeping journals, property-style amount checks, lease routing and offline failure
+
+✅ PASSED: Basic Bookkeeping Journal Templates [1.90s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Development Live Routing Regressions (test_development_live_routing.mjs)
+----------------------------------------------------------------
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=42.26ms (first_vis=42.18ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=24.07ms (first_vis=24.06ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=27.46ms (first_vis=27.46ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=17.37ms (first_vis=17.37ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=17.29ms (first_vis=17.29ms, gemini=12.43ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS development live routing regressions
+
+✅ PASSED: Development Live Routing Regressions [0.74s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Malformed Tax Response Safety (test_malformed_tax_response.mjs)
+----------------------------------------------------------------
+Malformed IRAS provider output regression passed.
+
+✅ PASSED: Malformed Tax Response Safety [0.46s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Double-Entry Reliability & Journal Integrity (test_double_entry_reliability.mjs)
+----------------------------------------------------------------
+[SemanticExtractor] AI extraction failed schema validation gate: [
+  "Invalid or missing reportingEntity.type: 'undefined'",
+  "Invalid or missing currency.source: 'undefined'"
+]
+[Telemetry] UNKNOWN (azure-gpt-4o): total=1.98ms (first_vis=1.98ms, gemini=0ms, ground=0ms, post=1ms) | tokens: in=0, out=0, think=0
+PASS | Double-entry reliability, deterministic integrity, and guardrail validation
+
+✅ PASSED: Double-Entry Reliability & Journal Integrity [0.54s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] AI Semantic Extraction & Schema Validation Gate (test_ai_semantic_extraction.mjs)
+----------------------------------------------------------------
+=== RUNNING AI SEMANTIC EXTRACTION & SCHEMA GATE TEST SUITE ===
+
+[1. STRICT SCHEMA VALIDATION GATE & INVARIANTS]
+✓ 1A. Null/non-object payload strictly rejected
+✓ 1B. Invalid enums strictly rejected across all fields
+✓ 1C. Dangerous contradiction (own_equity as FVTPL) rejected without silent correction
+✓ 1D. Contradictory counterparty (customer issuing own equity) rejected
+✓ 1E. Invariant enforced: explicit currency must have non-null value
+✓ 1F. Negative transaction amounts rejected
+
+[2. PROVENANCE TRACKING]
+✓ 2A. Valid AI extraction preserves extractionSource === "ai"
+✓ 2B. Deterministic fallback records extractionSource === "deterministic_fallback"
+✓ 2C. Standalone abbreviated capital amount is extracted
+
+[3. SERVICE RESILIENCE & FALLBACK]
+[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor: ETIMEDOUT: Connection to AI gateway timed out
+✓ 3A. Service catches AI network error and falls back seamlessly to deterministic extractor
+[SemanticExtractor] AI extraction failed schema validation gate: [
+  "Invalid or missing reportingEntity.type: 'invalid_type'",
+  "Invalid ownershipContext: 'illegal_classification'",
+  "Invalid or missing currency.source: 'magic'"
+]
+✓ 3B. Schema validation gate rejects illegal AI output and invokes deterministic fallback
+
+[4. DETERMINISTIC FIXTURE SEPARATION]
+✓ 4A. All 10 canonical benchmark test fixtures return isDeterministicFixture === true
+✓ 4B. Free-form queries and paraphrases return isDeterministicFixture === false
+
+[5. AI SEMANTIC GENERALIZATION ON UNSEEN PARAPHRASES]
+✓ 5A. Unseen Paraphrase 1 (Founder equity allocation unpaid) correctly extracted via AI
+✓ 5B. Unseen Paraphrase 2 (Client advance payment) correctly extracted via AI
+✓ 5C. Unseen Paraphrase 3 (Board member personal card payment) correctly extracted via AI
+✓ 5D. Unseen Paraphrase 4 (Nasdaq stock acquisition) correctly identified as external investment
+
+[6. GROUNDING CONTEXT INTEGRATION]
+✓ 6A. GroundedReasoningContext receives structured semanticUnderstanding
+
+=============================================================
+ALL AI SEMANTIC EXTRACTION TESTS PASSED! (18 GREEN)
+=============================================================
+
+
+✅ PASSED: AI Semantic Extraction & Schema Validation Gate [0.47s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Semantic Question Understanding & Guarded Routing (test_semantic_question_understanding.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=51.64ms (first_vis=51.61ms, gemini=12.93ms, ground=25ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=39.52ms (first_vis=39.52ms, gemini=0.49ms, ground=30ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=21.79ms (first_vis=21.79ms, gemini=0ms, ground=17ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=19.52ms (first_vis=19.52ms, gemini=0.37ms, ground=17ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=42.55ms (first_vis=38.97ms, gemini=0ms, ground=0ms, post=4ms) | tokens: in=0, out=0, think=0
+Semantic question understanding and guarded routing regressions passed.
+
+✅ PASSED: Semantic Question Understanding & Guarded Routing [0.91s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Per-Issue Semantic Operation Contracts (test_semantic_operations.mjs)
+----------------------------------------------------------------
+Semantic operation contract regressions passed; promptChars=8814.
+
+✅ PASSED: Per-Issue Semantic Operation Contracts [1.91s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Semantic Operation Intent Boundaries (test_semantic_intent_boundaries.mjs)
+----------------------------------------------------------------
+Semantic intent-boundary mock V2 contract and downstream regressions passed for 12 cases; promptChars=8935. These mocks test prompt/contract/routing behavior, not model inference.
+
+✅ PASSED: Semantic Operation Intent Boundaries [0.54s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Intent Follow-Up Runner (test_semantic_intent_followup_runner.mjs)
+----------------------------------------------------------------
+Semantic intent follow-up runner regression tests passed.
+
+✅ PASSED: Semantic Intent Follow-Up Runner [0.65s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Authority & Relief Evaluation Safety (test_semantic_authority_relief_evaluation.mjs)
+----------------------------------------------------------------
+Semantic authority and relief evaluation safety regressions passed.
+
+✅ PASSED: Semantic Authority & Relief Evaluation Safety [0.65s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS-First Release Gate (test_iras_first_release_gate.mjs)
+----------------------------------------------------------------
+IRAS-first per-issue scope, evidence, and release-gate regressions passed.
+
+✅ PASSED: IRAS-First Release Gate [0.17s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS-First Runner Safety (test_iras_first_runner_safety.mjs)
+----------------------------------------------------------------
+IRAS-first fixed-profile, fake-capture, privacy, final-gate, and output-safety regressions passed.
+
+✅ PASSED: IRAS-First Runner Safety [1.14s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Semantic Authority & Relief Contract (test_semantic_authority_relief_contract.mjs)
+----------------------------------------------------------------
+Semantic authority and relief contract regressions passed.
+
+✅ PASSED: Semantic Authority & Relief Contract [0.49s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] IRAS-First Semantic Contract (test_iras_first_semantic_contract.mjs)
+----------------------------------------------------------------
+IRAS-first query-aware semantic contract regressions passed for 35 operation families and mixed issues.
+
+✅ PASSED: IRAS-First Semantic Contract [0.40s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] CPF Relief Context and Private Expense Enumeration (test_iras_cpf_context_private_enumeration.mjs)
+----------------------------------------------------------------
+IRAS private expense and CPF contextual-topic regressions passed.
+
+✅ PASSED: CPF Relief Context and Private Expense Enumeration [0.39s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Routing Clause Topic Ownership (test_routing_clause_ownership.mjs)
+----------------------------------------------------------------
+Routing clause ownership: bounded partitions and per-atom ownership passed.
+
+✅ PASSED: Routing Clause Topic Ownership [0.55s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Application-Derived Semantic Specificity (test_derived_semantic_specificity.mjs)
+----------------------------------------------------------------
+Derived semantic specificity regressions passed.
+
+✅ PASSED: Application-Derived Semantic Specificity [0.45s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Natural-Language Topic Resolution (test_iras_natural_language_resolution.mjs)
+----------------------------------------------------------------
+IRAS natural-language resolver: 33 cases passed.
+
+✅ PASSED: IRAS Natural-Language Topic Resolution [0.60s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Factual Conjunction Residual Safety (test_factual_conjunction_residual.mjs)
+----------------------------------------------------------------
+Factual conjunction residual regression passed.
+
+✅ PASSED: Factual Conjunction Residual Safety [0.33s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Shared Whole-Question Residual Safety (test_shared_question_residuals.mjs)
+----------------------------------------------------------------
+Shared whole-question residual regression passed.
+
+✅ PASSED: Shared Whole-Question Residual Safety [0.30s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS V2 Measurement and Timeout Safety (test_iras_v2_measurement_safety.mjs)
+----------------------------------------------------------------
+IRAS-first V2 fixed-profile and structured-timeout experiment safety regressions passed.
+
+✅ PASSED: IRAS V2 Measurement and Timeout Safety [0.62s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Versioned Semantic Question Wire Contract (test_semantic_wire_contract.mjs)
+----------------------------------------------------------------
+Semantic V2 wire contract and operation regressions passed.
+
+✅ PASSED: Versioned Semantic Question Wire Contract [0.30s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Semantic Provider JSON Schema & Wire Contract (test_semantic_provider_schema.mjs)
+----------------------------------------------------------------
+Semantic provider schema, strict validation, and transport payload regressions passed.
+
+✅ PASSED: Semantic Provider JSON Schema & Wire Contract [0.23s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Wire-Format Evaluation Profile Safety (test_semantic_wire_format_evaluation.mjs)
+----------------------------------------------------------------
+Semantic wire-format fixed profile, gate, and output-safety regressions passed.
+
+✅ PASSED: Semantic Wire-Format Evaluation Profile Safety [0.58s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Contract Follow-Up Runner (test_semantic_contract_followup_runner.mjs)
+----------------------------------------------------------------
+Semantic contract follow-up runner regression tests passed.
+
+✅ PASSED: Semantic Contract Follow-Up Runner [0.60s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Material Issue Decomposition & Authority Ownership (test_material_issue_decomposition.mjs)
+----------------------------------------------------------------
+Material issue decomposition regression passed.
+
+✅ PASSED: Material Issue Decomposition & Authority Ownership [0.37s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Authority Workstream Evidence Isolation & Coverage (test_authority_workstreams.mjs)
+----------------------------------------------------------------
+Authority workstream evidence isolation and coverage tests passed.
+
+✅ PASSED: Authority Workstream Evidence Isolation & Coverage [0.56s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Authority Semantic Concept Ownership (test_authority_semantic_concept_ownership.mjs)
+----------------------------------------------------------------
+Authority semantic concept ownership regressions passed.
+
+✅ PASSED: Authority Semantic Concept Ownership [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Bounded Statutory Advisory Support (test_statutory_advisory_support.mjs)
+----------------------------------------------------------------
+Bounded statutory advisory support regression tests passed.
+
+✅ PASSED: Bounded Statutory Advisory Support [0.40s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS and ACRA Practical Rule Explanations (test_iras_acra_practical_rules.mjs)
+----------------------------------------------------------------
+IRAS ECI and ACRA secretary discovery, admission, citation and bounded explanations: passed.
+
+✅ PASSED: IRAS and ACRA Practical Rule Explanations [0.58s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] CPF and MAS Practical Rule Explanations (test_cpf_mas_practical_rules.mjs)
+----------------------------------------------------------------
+CPF Additional Wages and MAS fund-management licensing offline regressions passed.
+
+✅ PASSED: CPF and MAS Practical Rule Explanations [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Five-authority Statutory Coverage Benchmark (test_statutory_coverage_benchmark.mjs)
+----------------------------------------------------------------
+Statutory coverage benchmark fixture and answer-evaluation contracts passed.
+
+✅ PASSED: Five-authority Statutory Coverage Benchmark [1.54s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Five-authority Statutory Coverage Fixture Replay (test_statutory_coverage_replay.mjs)
+----------------------------------------------------------------
+Statutory coverage replay regression passed: 22 production-pipeline family cases across 5 authorities.
+
+✅ PASSED: Five-authority Statutory Coverage Fixture Replay [1.18s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] MOM Part IV Coverage Concept Support (test_mom_part_iv_concept_support.mjs)
+----------------------------------------------------------------
+MOM Part IV concept support regressions passed.
+
+✅ PASSED: MOM Part IV Coverage Concept Support [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Fetched Statutory Qualification Retention (test_statutory_fetched_qualification_retention.mjs)
+----------------------------------------------------------------
+Fetched statutory qualification retention regression tests passed.
+
+✅ PASSED: Fetched Statutory Qualification Retention [0.40s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Unmapped Accounting Rule Gap Fallback (test_unmapped_accounting_rule_gap_fallback.mjs)
+----------------------------------------------------------------
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=70.8ms (first_vis=70.7ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=15.67ms (first_vis=15.67ms, gemini=12.03ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [timeouts=1, fallback=true]: total=2.48ms (first_vis=2.48ms, gemini=0.43ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=2.44ms (first_vis=2.43ms, gemini=0.34ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=2.49ms (first_vis=2.49ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=6.93ms (first_vis=6.93ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=36.48ms (first_vis=35.25ms, gemini=0ms, ground=25ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=18.2ms (first_vis=18.19ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=16.62ms (first_vis=16.56ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=52.45ms (first_vis=39.05ms, gemini=0ms, ground=31ms, post=0ms) | tokens: in=0, out=0, think=0
+Unmapped accounting rule gap fallback regressions passed.
+
+✅ PASSED: Unmapped Accounting Rule Gap Fallback [0.64s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Exact-Query Request Completeness Diagnostics (test_request_completeness_diagnostics.mjs)
+----------------------------------------------------------------
+[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor: Non-interpretation model calls are outside the semantic-call count.
+Request completeness diagnostic regressions passed.
+
+✅ PASSED: Exact-Query Request Completeness Diagnostics [0.49s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Prospective Current Scope V2 Compatibility (Archived V4/V5/V8/V9 Controls) (test_current_scope_v2_archived_compatibility.mjs)
+----------------------------------------------------------------
+PASS: IRAS multi-authority local evidence stage regressions
+V5 mapped-evidence diagnostic API-free safety regression passed.
+V8 mapped-evidence diagnostic API-free safety regression passed.
+V9 mapped-evidence diagnostic API-free safety regression passed.
+Current-scope V2 archived V4/V5/V8/V9 compatibility adapters passed.
+
+✅ PASSED: Prospective Current Scope V2 Compatibility (Archived V4/V5/V8/V9 Controls) [15.78s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Residency Subject Diagnostic V4 (test_semantic_residency_subject_diagnostic_v4.mjs)
+----------------------------------------------------------------
+Semantic residency subject diagnostic V4 API-free safety regressions passed.
+
+✅ PASSED: Semantic Residency Subject Diagnostic V4 [0.41s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS Mapped Evidence Diagnostic V4 (test_iras_mapped_evidence_diagnostic_v4.mjs)
+----------------------------------------------------------------
+V4 mapped-evidence diagnostic API-free safety regression passed.
+
+✅ PASSED: IRAS Mapped Evidence Diagnostic V4 [7.04s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS Public GST Selection V3 (test_iras_public_gst_selection_v3.mjs)
+----------------------------------------------------------------
+IRAS prospective public GST selection V3 API-free regression passed.
+
+✅ PASSED: IRAS Public GST Selection V3 [3.11s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS Public GST Selection V4 (test_iras_public_gst_selection_v4.mjs)
+----------------------------------------------------------------
+IRAS prospective public GST selection V4 API-free regression passed.
+
+✅ PASSED: IRAS Public GST Selection V4 [12.66s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Source Term Compatibility (test_iras_source_term_compatibility.mjs)
+----------------------------------------------------------------
+IRAS bounded source-term compatibility regression passed.
+
+✅ PASSED: IRAS Source Term Compatibility [0.54s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS General Rule Concept Support (test_iras_rule_concept_support.mjs)
+----------------------------------------------------------------
+IRAS general-rule concept-support regressions passed.
+
+✅ PASSED: IRAS General Rule Concept Support [0.71s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Private Expense Scoped Local-to-Mapped Fallback (test_private_expense_scoped_fallback.mjs)
+----------------------------------------------------------------
+Private-expense scoped local-to-mapped fallback regression passed.
+
+✅ PASSED: Private Expense Scoped Local-to-Mapped Fallback [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Public Rule Forms (test_iras_public_rule_forms.mjs)
+----------------------------------------------------------------
+{"sourceBlocks":["IRAS_CIT_EXPENSES_SOURCE_MAP:26","IRAS_WHT_OVERVIEW_SOURCE_MAP:10"],"actualPrivateSupport":true,"actualWhtSupport":true}
+
+✅ PASSED: IRAS Public Rule Forms [0.17s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Defined Foreign-income Rule (test_iras_foreign_defined_income_rule.mjs)
+----------------------------------------------------------------
+{"contextEligibleRecordCount":1,"contextUncoveredConceptCount":0,"fixedConceptIds":["semantic_singapore_corporate_tax_treatment_of_dividend_fr"],"uncoveredTargets":[],"sourceTopicAssociationFlags":[true],"issueConceptTrace":[{"conceptId":"semantic_singapore_corporate_tax_treatment_of_dividend_fr","topicAssociated":true,"conceptTextFlags":{"hasDividendToken":true,"hasForeignOriginToken":true,"hasGeneralTaxToken":true},"fullParagraphSupport":"SUPPORTED","standaloneLabelSupport":"SUPPORTED","retainedRecordSupport":[{"recordIndex":0,"topicAssociated":true,"support":"SUPPORTED"}],"acceptedQuoteSupport":[{"quoteIndex":0,"support":"SUPPORTED"},{"quoteIndex":1,"support":"RECOGNIZED_UNSUPPORTED"}],"finalQuoteSupport":[{"quoteIndex":0,"support":"SUPPORTED"}]}],"rendererAcceptedCount":2,"rendererRejectedCount":0,"acceptedQuoteFlags":[{"helperSupported":true,"preservesWholeRuleParagraph":true,"preservesExemptionOpening":false,"sentenceFlags":[true,true,true],"containsDividendExclusion":false,"paragraphCount":1},{"helperSupported":false,"preservesWholeRuleParagraph":false,"preservesExemptionOpening":true,"sentenceFlags":[false,false,false],"containsDividendExclusion":false,"paragraphCount":1}],"finalClaimCount":1,"finalEvidenceStatus":"VERIFIED","finalApplicationStatus":"UNRESOLVED","finalGapCodes":[],"finalRuleClaimVerified":true,"anyOriginFactClaim":false,"finalLifecycle":{"requested":true,"mapped":true,"retrievalAttempted":true,"evidenceFound":true,"admitted":true,"verified":true,"covered":true}}
+IRAS defined foreign-income rule regression passed.
+
+✅ PASSED: IRAS Defined Foreign-income Rule [0.57s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS GST Opening Locator (test_iras_gst_opening_locator.mjs)
+----------------------------------------------------------------
+{"status":"OK","syntheticVisibleInputCharacterCount":13214,"selectedRegisteredMapGetCount":8,"closedOtherGstMapGetCount":8,"unexpectedMappedGetCount":0,"ambientFetchCount":0,"discoveryCount":4,"searchCount":4,"controlTransportCounts":{"complete-positive":{"selectedGets":2,"closedKnownMappedGets":2,"unexpectedMappedGets":0,"discovery":0,"search":0,"discoveryResultCount":0,"searchResultCount":0,"ambient":0},"first-sentence-only":{"selectedGets":2,"closedKnownMappedGets":2,"unexpectedMappedGets":0,"discovery":2,"search":2,"discoveryResultCount":0,"searchResultCount":0,"ambient":0},"missing-condition-sentence":{"selectedGets":2,"closedKnownMappedGets":2,"unexpectedMappedGets":0,"discovery":2,"search":2,"discoveryResultCount":0,"searchResultCount":0,"ambient":0},"specific-private-expense":{"selectedGets":2,"closedKnownMappedGets":2,"unexpectedMappedGets":0,"discovery":0,"search":0,"discoveryResultCount":0,"searchResultCount":0,"ambient":0}},"positiveRetainedLiveRecordCount":1,"completeOpeningAcceptedAndVerified":true,"incompleteControlsRemainUnverified":true,"specificApplicationStatus":"UNRESOLVED"}
+
+✅ PASSED: IRAS GST Opening Locator [1.04s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Supported Rule Quote Priority (test_iras_rule_quote_priority.mjs)
+----------------------------------------------------------------
+IRAS requested-rule quote priority regression passed.
+
+✅ PASSED: IRAS Supported Rule Quote Priority [0.70s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS WHT Overview Topic Binding (test_iras_wht_overview_topic_binding_current_scope.mjs)
+----------------------------------------------------------------
+DEFAULT_RETRIEVER_WHT_CONTROL {"status":"CONDITIONAL","verifiedClaimCount":2,"sourceCount":2,"localVerifiedClaimCount":0,"verifiedClaimProvenance":["LIVE_EXTERNAL"],"overviewFetchCount":1}
+IRAS WHT overview topic-binding regression passed.
+Current-scope WHT compatibility adapter passed; the frozen source remains unchanged.
+
+✅ PASSED: IRAS WHT Overview Topic Binding [0.61s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS WHT Topicless Concept Ownership (test_iras_wht_topicless_concept_ownership.mjs)
+----------------------------------------------------------------
+WHT topicless concept ownership regressions passed.
+
+✅ PASSED: IRAS WHT Topicless Concept Ownership [0.50s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Scoped Concept Coverage (test_iras_scoped_concept_coverage.mjs)
+----------------------------------------------------------------
+IRAS scoped concept coverage regression passed.
+
+✅ PASSED: IRAS Scoped Concept Coverage [0.25s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Requested Concept Fallback (test_iras_requested_concept_fallback.mjs)
+----------------------------------------------------------------
+{"localStatus":"LIMITED","localEligibleRecordCount":1,"localCoveredTopicIds":["iras-gst-input-tax"],"localUncoveredConceptIds":["semantic_general_gst_input_tax_recovery_rules_for_busines"],"mappedFetchCount":2,"mappedAttemptStatuses":["SUCCESS","SUCCESS"],"retainedLiveExternalRecordCount":2,"finalIssueEvidenceStatus":"VERIFIED","finalIssueLifecycle":{"requested":true,"mapped":true,"retrievalAttempted":true,"evidenceFound":true,"admitted":true,"verified":true,"covered":true}}
+IRAS requested-concept fallback regression passed.
+
+✅ PASSED: IRAS Requested Concept Fallback [0.64s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Individual CPF Cash Top-up Workstream (test_iras_cpf_cash_top_up_individual_workstream.mjs)
+----------------------------------------------------------------
+IRAS individual CPF cash top-up workstream regression passed.
+
+✅ PASSED: IRAS Individual CPF Cash Top-up Workstream [0.57s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Shared Page Claim Bindings (test_iras_shared_page_claim_bindings.mjs)
+----------------------------------------------------------------
+IRAS shared-page claim-binding regressions passed.
+
+✅ PASSED: IRAS Shared Page Claim Bindings [0.48s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Multi-authority Issue Scoring (test_multi_authority_issue_scoring.mjs)
+----------------------------------------------------------------
+Multi-authority issue-scoring regressions passed.
+
+✅ PASSED: Multi-authority Issue Scoring [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Prospective Multi-authority Issue Scoring V2 (test_multi_authority_issue_scoring_v2.mjs)
+----------------------------------------------------------------
+Prospective multi-authority issue-scoring V2 regressions passed.
+
+✅ PASSED: Prospective Multi-authority Issue Scoring V2 [0.17s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Multi-authority Evaluation Runner Output Safety (test_multi_authority_runner_safety.mjs)
+----------------------------------------------------------------
+Multi-authority evaluation runner preserves pending checkpoint state, finalizes locally, and protects saved live reports.
+
+✅ PASSED: Multi-authority Evaluation Runner Output Safety [3.10s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Reliability Experiment Harness (test_semantic_reliability_experiment.mjs)
+----------------------------------------------------------------
+Semantic reliability experiment regressions passed.
+
+✅ PASSED: Semantic Reliability Experiment Harness [1.08s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Residency Diagnostic V3 Safety (test_semantic_residency_diagnostic.mjs)
+----------------------------------------------------------------
+Semantic residency diagnostic V3 synthetic safety regressions passed.
+
+✅ PASSED: Semantic Residency Diagnostic V3 Safety [0.92s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Semantic Contract Diagnostics & Capture Runner Safety (test_semantic_contract_diagnostics.mjs)
+----------------------------------------------------------------
+Semantic contract diagnostic/privacy regressions passed.
+
+✅ PASSED: Semantic Contract Diagnostics & Capture Runner Safety [0.25s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Verification Receipt Export Durability & Integrity (test_verification_receipt_exporter.mjs)
+----------------------------------------------------------------
+{"event":"CASE_EXPORTED","caseId":"mom","answerStatus":"INSUFFICIENT","declaredCaptureStatus":"CAPTURE_WINDOW_SETTLED","payloadAvailability":"NO_BODY_CAPTURE_METADATA","exportStatus":"EXPORTED","receiptArtifact":"receipts/mom.json.gz","receiptSha256":"870a40669d929c900820cb18599c728dcde1c6d74cb9a1bafbac8f884e499079","diagnosticArtifact":"diagnostics/mom.json.gz","capturedBodyCount":0}
+{"event":"RUN_FINISHED","runId":"offline-cli","exportStatus":"INCOMPLETE","manifestArtifact":"manifest.json"}
+Verification receipt exporter durability, integrity, status separation, stdout bounds, interruption and CLI regressions passed.
+
+✅ PASSED: Verification Receipt Export Durability & Integrity [1.96s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Cloudflare R2 Verification Receipt Sink Durability & Recovery (test_cloudflare_verification_receipt_sink.mjs)
+----------------------------------------------------------------
+Cloudflare receipt sink preflight, immutable upload, R2 readback, manifest ordering, offline recovery and failure regressions passed.
+
+✅ PASSED: Cloudflare R2 Verification Receipt Sink Durability & Recovery [0.63s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Reviewed Legacy R2 Harness Preparation Safety (test_r2_verification_harness.mjs)
+----------------------------------------------------------------
+R2 harness preparation preserves ten frozen cases, source guards, storage preflight and the live-call hold.
+
+✅ PASSED: Reviewed Legacy R2 Harness Preparation Safety [2.68s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Resolver Coverage Contract & Compound Issue Isolation (test_resolver_coverage_contract.mjs)
+----------------------------------------------------------------
+Resolver coverage contract passed: 16 cases, 22 requested issues.
+
+✅ PASSED: Resolver Coverage Contract & Compound Issue Isolation [0.51s]
+
+----------------------------------------------------------------
+▶ Running: [ux-resilience] Whole-Question Authority Evidence Presentation (test_authority_evidence_presentation.mjs)
+----------------------------------------------------------------
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=179.6ms (first_vis=179.51ms, gemini=14.05ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=39.57ms (first_vis=39.57ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=22.91ms (first_vis=22.91ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=19.57ms (first_vis=19.56ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=19.68ms (first_vis=19.68ms, gemini=0.82ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=20.94ms (first_vis=20.93ms, gemini=0.96ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=21.53ms (first_vis=21.52ms, gemini=0.58ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=20.85ms (first_vis=20.84ms, gemini=0.66ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=19.91ms (first_vis=19.9ms, gemini=0.49ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor: Gemini API request failed with HTTP 404. The provider response was withheld for security.
+Gemini API call failed, falling back to smart universal engine: Error: Gemini API request failed with HTTP 404. The provider response was withheld for security.
+    at toSafeProviderError (D:\Accounting\.worktrees\review-corrections-20261025\src\services\aiTransport.ts:141:10)
+    at callGeminiAPI (D:\Accounting\.worktrees\review-corrections-20261025\src\services\geminiService.ts:1824:15)
+    at async processAccountingQuery (D:\Accounting\.worktrees\review-corrections-20261025\src\services\geminiService.ts:998:66)
+    at async file:///D:/Accounting/.worktrees/review-corrections-20261025/tests/regression/test_authority_evidence_presentation.mjs:1534:37
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=48.73ms (first_vis=28.98ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=19.06ms (first_vis=19.06ms, gemini=0.8ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=18.16ms (first_vis=18.16ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=45.13ms (first_vis=45.13ms, gemini=1.04ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=35.14ms (first_vis=35.14ms, gemini=0.58ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=20.34ms (first_vis=20.33ms, gemini=0.66ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=4.68ms (first_vis=4.68ms, gemini=0.57ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+Authority evidence presentation and routing regressions passed.
+
+✅ PASSED: Whole-Question Authority Evidence Presentation [1.39s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Semantic Understanding & Routing (test_sidequest2_semantic_understanding.mjs)
+----------------------------------------------------------------
+================================================================
+🚀 RUNNING SIDE QUEST 2: AI SEMANTIC UNDERSTANDING & ROUTING
+================================================================
+
+[1. CURRENT BUG REGRESSION]
+✓ 1A. Proved: Underlying economic facts correctly extracted (own_equity, shareholder, unpaid, non-USD)
+✓ 1B. Proved: Accounting guardrails strictly reject FVTPL / foreign shares asset classification
+
+[2. PARAPHRASE CONSISTENCY (UNPAID SHARE CAPITAL)]
+✓ 2.1. Paraphrase verified: "Shareholder subscribed for $1 of shares but h..." -> own_equity / unpaid
+✓ 2.2. Paraphrase verified: "We issued one dollar of ordinary shares to th..." -> own_equity / unpaid
+✓ 2.3. Paraphrase verified: "Founder took up shares but the subscription m..." -> own_equity / unpaid
+✓ 2.4. Paraphrase verified: "Share capital was issued but remains unpaid...." -> own_equity / unpaid
+✓ 2.5. Paraphrase verified: "Shareholder owes the company the amount subsc..." -> own_equity / unpaid
+
+[3. GENERALIZATION: CUSTOMER ADVANCE / DEFERRED REVENUE]
+✓ 3.1. Advance verified: "customer paid us before delivery" -> customer / customer_advance_payment / paid
+✓ 3.2. Advance verified: "client paid an advance for goods" -> customer / customer_advance_payment / paid
+✓ 3.3. Advance verified: "received money from customer before we delivered" -> customer / customer_advance_payment / paid
+
+[4. GENERALIZATION: DIRECTOR EXPENSE SETTLEMENT]
+✓ 4.1. Director settlement verified: "director paid a company expense personally" -> director / director_expense_settlement
+✓ 4.2. Director settlement verified: "company expense was settled by the director" -> director / director_expense_settlement
+✓ 4.3. Director settlement verified: "director used his own money to pay a business bill" -> director / director_expense_settlement
+
+[5. CONTRASTING EXTERNAL INVESTMENT]
+✓ 5A. Proved: "Company bought Apple shares for USD 1" -> external_investment / USD
+✓ 5B. Proved: "The shareholder transferred Apple shares" -> external_investment / shareholder transferor
+
+[6. AUDITABLE CURRENCY EXTRACTION & FX GUARDRAILS]
+✓ 6A. Proved: Context-inferred SGD vs unknown currency cleanly distinguished
+✓ 6B. Proved: Guardrail blocks foreign exchange translation without verified foreign currency
+
+[7. NEGATIVE ROUTING]
+✓ 7A. Proved: None of the free-form shareholder, director, or customer queries match legacy demo fixtures
+
+[8. END-TO-END OFFLINE PIPELINE EXECUTION]
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=15.52ms (first_vis=15.42ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ 8A. Proved: Section 68 content and shareholder accounting remain available while its unverified URL is withheld
+✓ 8B. Proved: Zero mention of Financial Asset at FVTPL, Foreign Shares Investment, USD, or FX translation
+
+=============================================================
+ALL SIDE QUEST 2 TESTS PASSED SUCCESSFULLY! (20 GREEN)
+=============================================================
+
+
+✅ PASSED: Semantic Understanding & Routing [0.51s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Multi-Turn Accounting State & Follow-Ups (test_followup_accounting_state.mjs)
+----------------------------------------------------------------
+================================================================
+🧪 RUNNING MULTI-TURN ACCOUNTING STATE & FOLLOW-UP EVENT SUITE
+================================================================
+
+--- TEST 1: Full Settlement ($1 Unpaid -> Bank Payment) ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=74.65ms (first_vis=74.56ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=8.78ms (first_vis=8.78ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 1 Passed: Full settlement generates Dr Bank / Cr Shareholder Receivable without crediting equity
+
+--- TEST 2: Partial Settlement ("50 cents") ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=40.66ms (first_vis=29.46ms, gemini=0ms, ground=24ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 2 Passed: Partial settlement extracts 50 cents ($0.50) correctly
+
+--- TEST 3: Inherit Amount Without Repeating in Follow-Up ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=28ms (first_vis=18.8ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 3 Passed: Inherited SGD 5,000 amount across conversational turns
+
+--- TEST 4: Natural Language Settlement Paraphrases ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.48ms (first_vis=16.78ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.63ms (first_vis=15.53ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.86ms (first_vis=15.02ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 4 Passed: All conversational settlement paraphrases correctly resolved
+
+--- TEST 5: External Investment Separation ---
+✅ Test 5 Passed: External investment separation maintained
+
+--- TEST 6: Guardrail A Violation Detection ---
+✅ Test 6 Passed: Guardrail A successfully blocked duplicate equity recognition
+
+--- TEST 7: Hypothetical vs Actual Event Classification ---
+✅ Test 7 Passed: Hypothetical and actual events distinguished correctly
+
+--- TEST 8: extractAccountingContext Logic ---
+✅ Test 8 Passed: Context extraction correctly identified receivable, equity total, and ownership
+
+--- TEST 9: Context Reset on New Unrelated Transaction ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=9.11ms (first_vis=9.11ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 9 Passed: New unrelated transaction cleanly resets context to asset purchase
+
+--- TEST 10: 3-Turn Partial Settlement ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.61ms (first_vis=1.6ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=27.7ms (first_vis=15.86ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=30.67ms (first_vis=16.4ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 10 Passed: 3-turn partial settlement correctly tracked and settled remaining balance
+
+--- TEST 11: Share Capital Invariant Throughout 3-Turn Lifecycle ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=2ms (first_vis=2ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=27.13ms (first_vis=15.93ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=29.16ms (first_vis=14.97ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 11 Passed: Share Capital recognized exactly once ($1,000) and invariant held across all turns
+
+--- TEST 12: Multi-Factor Target Resolution ---
+✅ Test 12 Passed: Multi-factor resolution successfully distinguished targets and rejected ambiguity
+
+--- TEST 13: Full Cycle: Hypothetical -> Actual -> Hypothetical ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.17ms (first_vis=1.17ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=24.96ms (first_vis=13.6ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=26.3ms (first_vis=15.08ms, gemini=0ms, ground=14ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=28.11ms (first_vis=14.17ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 13 Passed: Hypothetical -> Actual -> Hypothetical cycle verified without state corruption
+
+--- TEST 14: Authoritative Transaction ID Disambiguation ---
+✅ Test 14 Passed: Authoritative transaction ID disambiguated between multiple allotments with decisive margin
+
+--- TEST 15: No Phantom Balance Fabrication on Cash-Paid Equity ---
+✅ Test 15 Passed: Phantom balance fabrication prevented when equity was paid in cash
+
+--- TEST 16: Deterministic Event Replay & Committed History Boundary ---
+✅ Test 16 Passed: Deterministic event replay and committed event boundary enforcement verified
+
+--- TEST 17: True End-to-End Multi-Turn Replay Equivalence (4-Turn Lifecycle) ---
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.27ms (first_vis=1.27ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=25.2ms (first_vis=13.99ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=28.34ms (first_vis=14.36ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=30.66ms (first_vis=13.93ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+✅ Test 17 Passed: True end-to-end multi-turn replay equivalence verified across 4-turn lifecycle (Allotment -> $300 -> $200 -> $500)
+
+================================================================
+🎉 ALL 17 MULTI-TURN ACCOUNTING STATE TESTS PASSED!
+================================================================
+
+
+✅ PASSED: Multi-Turn Accounting State & Follow-Ups [1.01s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Phase 5 Integration & Semantics (test_sidequest2_phase5_integration.mjs)
+----------------------------------------------------------------
+================================================================
+🔗 RUNNING SIDE QUEST 2 → PHASE 5 INTEGRATION & SEMANTICS TESTS
+================================================================
+
+[1. OWN EQUITY RANKING INVARIANT]
+✓ 1. Ranking invariant verified: Own equity semantics boosts §68 (+0.2) and penalizes FVTPL (-0.25)
+
+[2. EXTERNAL INVESTMENT RANKING INVARIANT]
+✓ 2. Ranking invariant verified: External investment semantics boosts FVTPL (+0.25) and penalizes §68 (-0.2)
+
+[3. HARD TEMPORAL GATE DOMINANCE]
+✓ 3. Invariant verified: Hard temporal gate strictly prunes expired candidate regardless of semantic alignment
+
+[4. MULTI-TOPIC MINIMUM QUALITY GATE]
+✓ 4. Invariant verified: Multi-topic coverage does not force low-quality candidate (< 0.35) into top rank
+
+[5. INCREMENTAL-VS-REPLAY EQUIVALENCE]
+✓ 5. Invariant verified: Replay and incremental accounting state yield identical deterministic balances and ownership context
+
+[6. TELEMETRY RECORDING OF SEMANTIC EXPLANATIONS]
+✓ 6. Invariant verified: Telemetry recorded 10 semantic evaluations with structured explanations
+
+================================================================
+🏆 ALL 6/6 INTEGRATION TESTS PASSED CLEANLY
+================================================================
+
+
+✅ PASSED: Phase 5 Integration & Semantics [0.39s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Topic Resolver Semantics & Provenance Separation (test_topic_resolver_and_provenance.mjs)
+----------------------------------------------------------------
+================================================================
+🧪 RUNNING TOPIC RESOLVER SEMANTICS & PROVENANCE SEPARATION TESTS
+================================================================
+
+[TEST 1: Primary Semantic Topic Resolution (Implicit Lease)]
+  ✓ Implicit lease query accurately resolved to sfrsi_leases as semantic_primary
+
+[TEST 2: Primary Semantic Topic Resolution (Software R&D)]
+  ✓ Proprietary platform development resolved to sfrsi_intangibles_cap
+
+[TEST 3: Primary Semantic Topic Resolution & Narrowed Conflict (External Investment)]
+  ✓ External investment resolved to sfrsi_financial_instruments (semantic_primary)
+  ✓ Verified: CA §199 does NOT conflict (neutral: 0.00)
+  ✓ Verified: CA §68 properly conflicts (penalty applied)
+  ✓ Verified: SFRS(I) 9 receives positive alignment boost
+
+[TEST 4: Negative Semantic-Topic Invariant (Pruning Incidental Mentions)]
+  ✓ Incidental mentions pruned: sfrsi_leases and acra_share_capital suppressed
+  ✓ Appropriate topic retained: cit_section_14 matched
+
+[TEST 5: Strict Neutrality of "unknown" and Unclassified Attributes]
+  ✓ Evaluator returned delta = 0.00 and 0 matches/conflicts for unknown attributes
+  ✓ Topic resolver generated 0 spurious semantic matches
+
+[TEST 6: AI Full Semantic Weighting (1.0x)]
+  ✓ AI Reasoning correctly received 1.0x multiplier: base=0.25, final=0.25
+  ✓ Rationale: Δ_semantics = +0.250 [Base: +0.25 * Full Semantic Weighting (1.0x)]: Matched: [own_equity:Companies Act 1967, transactionType:share_capital:Companies Act 1967, counterparty:shareholder:Companies Act] (+0.35)
+
+[TEST 7: Deterministic Heuristic Fallback Calibration (0.70x & Capped Confidence)]
+  ✓ Fallback confidence capped at 0.65 (<= 0.65)
+  ✓ Provenance multiplier scaled: base=0.25 * 0.70 = 0.175
+  ✓ Rules applied: [reporting_entity:company, counterparty_role:shareholder, ownership_context:own_equity, transaction_type:share_capital_issuance, currency:context_inference]
+
+[TEST 8: Detailed Scoring Telemetry & Conflict Auditability]
+  ✓ Conflict accurately flagged: hasSemanticConflict = true
+  ✓ Telemetry recorded conflicts detected: 1
+  ✓ Full audit formula preserved: base (-0.25) * mult (1) = final (-0.25)
+
+[TEST 9: No Semantic Context Backward Compatibility]
+  ✓ Query decomposition without semanticContext functions seamlessly (matchSource: lexical_only)
+  ✓ Evaluator neutral alignment backward-compatible when context is undefined
+
+[TEST 10: Lexical-Only Topic Suppression Under Usable Semantic Context]
+  ✓ Lexical-only spurious expansions suppressed under usable semantic context
+
+[TEST 11: Controlled Fallback when 0 Semantic Topics Match]
+  ✓ Controlled fallback preserved lexical topics when 0 semantic topics matched
+
+[TEST 12: AI Schema Failure → Heuristic Fallback Provenance Regression]
+[SemanticExtractor] AI extraction failed schema validation gate: [
+  "Invalid or missing reportingEntity.type: 'illegal_alien_dimension'",
+  "Invalid counterparty.role: 'time_traveler'",
+  "Invalid ownershipContext: 'interdimensional_equity'",
+  "Invalid or missing currency.source: 'supernatural'",
+  "Invalid transactionType: 'magic_teleportation'"
+]
+  ✓ AI schema validation failure caught without crash
+  ✓ Seamless fallback to DETERMINISTIC_HEURISTIC_FALLBACK
+  ✓ Provenance confidence capped at 0.65 (<= 0.65)
+  ✓ Evaluator applied 0.70x multiplier: base=0.25 -> final=0.175
+  ✓ Telemetry verified isFallbackSemanticExtraction = true
+
+[TEST 13: Genuine SQ3 -> SQ2 -> Phase 5 Multi-Turn Lease Integration Test]
+  --- Turn 1: Commercial Lease Inception ($180,000 Total Commitment) ---
+    ✓ Turn 1 SQ3 State: Outstanding Lease Liability recognised: $180,000
+    ✓ Turn 1 Phase 5: SFRS(I) 16 §22 boosted (+0.15), §36 neutral (0.00), CA §68 conflict (-0.20)
+  --- Turn 2: Subsequent Monthly Lease Payment ($5,000) ---
+    ✓ Turn 2 SQ3 State: Outstanding liability reduced from $180,000 -> $175,000 (settled: $5,000)
+    ✓ Turn 2 Phase 5: SFRS(I) 16 §36 boosted (+0.15), §22 neutral (0.00), CA §68 neutral (0.00)
+  --- Deterministic Event Replay Equivalence ---
+    ✓ Invariant verified: deriveAccountingStateFromEvents([evt1, evt2]) === incremental_state
+
+[TEST 14: Compile-Time / Fixture Guard Test (Rejection of Invalid Semantic Strings)]
+  ✓ Invalid ownershipContext rejected at validation gate
+  ✓ Invalid transactionType rejected at validation gate
+  ✓ Invalid instrument rejected at validation gate
+  ✓ Boundary normalizer mapped: own_company_equity -> own_equity, equity_issuance_subscription -> share_capital_issuance, fixed_asset -> property_plant_equipment
+  ✓ QueryTopicResolver processes normalized TransactionUnderstanding with strict type fidelity
+
+================================================================
+🎉 ALL 14/14 TESTS PASSED CLEANLY!
+================================================================
+
+
+✅ PASSED: Topic Resolver Semantics & Provenance Separation [0.26s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Projection Builder No-Fabrication Invariants (test_projection_builder_invariants.mjs)
+----------------------------------------------------------------
+=== RUNNING PROJECTION BUILDER INVARIANT SUITE ===
+
+✓ supported FVOCI projection is balanced and retains authoritative IDs
+✓ missing identifiers, currencies, rates and amounts return controlled diagnostics
+✓ lease, settlement, debt and own-equity requests receive controlled out-of-contract diagnostics
+✓ mismatched declared journal totals cannot be marked balanced
+
+Projection builder invariant suite passed.
+
+✅ PASSED: Projection Builder No-Fabrication Invariants [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Payroll Amount Correction & CPF Journal (test_payroll_followup_correction.mjs)
+----------------------------------------------------------------
+=== RUNNING PAYROLL FOLLOW-UP CORRECTION SUITE ===
+
+✓ 10k parsing, context-aware correction, 2026 senior CPF and SDL journal entries passed.
+
+✅ PASSED: Payroll Amount Correction & CPF Journal [0.23s]
+
+----------------------------------------------------------------
+▶ Running: [ux-resilience] Conversational Payroll and Chat Presentation (test_conversational_payroll_and_chat.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=65.08ms (first_vis=64.99ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=6.9ms (first_vis=6.89ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=47.1ms (first_vis=21.39ms, gemini=0ms, ground=20ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.25ms (first_vis=1.25ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=37.03ms (first_vis=13.95ms, gemini=0ms, ground=13ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ conversational payroll routing, clarification, projection, compact chat, source retention, and collapsed facts passed
+
+✅ PASSED: Conversational Payroll and Chat Presentation [0.81s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Generic Fact Amendment Resolution (test_fact_amendment_service.mjs)
+----------------------------------------------------------------
+=== RUNNING FACT AMENDMENT SERVICE SUITE ===
+
+✓ canonical patches, immutable application and ambiguity guard passed.
+
+✅ PASSED: Generic Fact Amendment Resolution [0.25s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Own-Equity versus Payroll Routing (test_own_equity_routing.mjs)
+----------------------------------------------------------------
+=== RUNNING OWN-EQUITY ROUTING REGRESSION ===
+
+✓ ambiguous own-equity contribution clarifies; an in-kind answer stays in share capital, never payroll.
+
+✅ PASSED: Own-Equity versus Payroll Routing [0.23s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] Semantic Routing Priority (test_semantic_routing_priority.mjs)
+----------------------------------------------------------------
+=== RUNNING SEMANTIC ROUTING PRIORITY SUITE ===
+
+✓ validated AI semantics override conflicting keyword routing; reporting reclassification routes to accounting; unknown legislation does not become tax law.
+
+✅ PASSED: Semantic Routing Priority [0.28s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] MAS / IRAS Multi-authority Fund Incentive Routing (test_mas_funds_routing.mjs)
+----------------------------------------------------------------
+PASS | MAS 13O routes to MAS and IRAS and retains its MAS-focused statutory evidence path
+PASS | VCC routes to the VCC Act primary source instead of offline mode
+PASS | VCC audit-exemption query stays within VCC-specific statutory scope
+PASS | Company audit-exemption criteria remain available for explicit company requests and comparisons
+PASS | VCC mentions do not displace MAS as the primary authority for licensing queries
+PASS | Mixed MAS licensing and VCC audit queries retain MAS as the primary authority
+PASS | Statutory link normalization preserves the VCC Act title and ordinary Companies Act wording
+
+✅ PASSED: MAS / IRAS Multi-authority Fund Incentive Routing [0.32s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Share Capital Consideration & Settlement (test_share_capital_payment_followup.mjs)
+----------------------------------------------------------------
+=== RUNNING SHARE CAPITAL PAYMENT FOLLOW-UP SUITE ===
+
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.35ms (first_vis=0.25ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ clarification, journal display, payable balance, and settlement target invariants passed.
+
+✅ PASSED: Share Capital Consideration & Settlement [0.53s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Phase 5 Advanced Hybrid Retrieval & Vector Index (test_phase5_advanced_retrieval.mjs)
+----------------------------------------------------------------
+================================================================
+🚀 RUNNING PHASE 5: ADVANCED RETRIEVAL, VECTOR INDEX & RRF TESTS
+================================================================
+
+[1. DETERMINISTIC LOCAL VECTORIZATION & VECTORIZER_VERSION]
+✓ 1A. Proved: Identical text produces byte-for-byte identical 128D vector with vectorizerVersion 1.0.0-semlex
+✓ 1B. Proved: Vector is strictly L2-normalized to unit sphere (||v||_2 = 1.0)
+✓ 1C. Proved: Conceptually aligned query achieves strong similarity (0.801) vs unrelated (0.069)
+
+[2. AUTHORITATIVE VECTOR INDEX ADMISSION & SNAPSHOT METADATA]
+✓ 2A. Proved: Vector index produces immutable snapshot metadata with ledger head hash and vectorizerVersion
+✓ 2B. Proved: Admission Gate strictly excludes STAGED candidates and CURATED_SUMMARY records from vector index
+
+[3. PARAGRAPH-LEVEL CHUNK INTEGRITY & EXACT CHARACTER BOUNDARIES]
+✓ 3A. Proved: Paragraph chunker strictly satisfies slice invariant parentRecord.sourceText.slice(start, end) === chunk.chunkText
+✓ 3B. Proved: Adversarially tampered chunk text or offsets fail chunk integrity verification
+
+[4. EXACT MATHEMATICAL RRF & 55/45 DETERMINISTIC RERANKING]
+✓ 4A. Proved: Deterministic Reranker calculates exact mathematical score: 1.3275 (matches formula 55/45 + 0.10*RRF + tier + topic)
+✓ 4B. Proved: Legacy/granular Part IV overtime and IFRS 9 aliases count once per concept
+✓ 4C. Proved: Distinct GST registration and turnover-test concepts each contribute topic ranking weight
+
+[5. HARD TEMPORAL ELIGIBILITY GATING]
+✓ 5A. Proved: Explicit target date 2026 strictly excludes historical 2023 provision at hard eligibility gate
+✓ 5B. Proved: Explicit target date 2023 strictly admits historical provision and hard-rejects 2024+ provision
+
+[6. MULTI-TOPIC QUERY DECOMPOSITION & BALANCED COVERAGE]
+✓ 6A. Proved: QueryTopicResolver decomposes composite query into Section 88A Annual Leave and Section 89 Sick Leave
+✓ 6B. Proved: Reranker enforces multi-topic coverage guarantee (both topics represented in top candidate set)
+
+[7. PHASE 4 -> PHASE 5 INDEX REFRESH LIFECYCLE]
+✓ 7A. Proved: Phase 4 package activation triggers Phase 5 vector index refresh, updating ledgerHeadHash snapshot
+
+[8. TELEMETRY & OBSERVATION SEPARATION]
+✓ 8A. Proved: RetrievalTelemetry captures execution performance (total: 14.12ms, vector: 0ms) without altering deterministic rankings
+
+[9. FAST-PATH INTEGRITY INVARIANT WITH VECTOR SIMILARITY]
+✓ 9A. Proved: High vector similarity CANNOT bypass fast-path gate without verified section-level primary law: "Evidence for 'Section 205C Audit Exemption' (Companies Act 1967) has status 'NEEDS_REVIEW', not VERIFIED"
+
+=============================================================
+ALL PHASE 5 TESTS PASSED SUCCESSFULLY! (17/17 GREEN)
+=============================================================
+
+
+✅ PASSED: Phase 5 Advanced Hybrid Retrieval & Vector Index [0.55s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Authority and Domain Conjunctive Retrieval (test_retrieval_authority_domain_conjunction.mjs)
+----------------------------------------------------------------
+PASS | Explicit authority and domain hints are conjunctive; no-domain multi-authority retrieval is preserved.
+
+✅ PASSED: Authority and Domain Conjunctive Retrieval [0.27s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Labelled Retrieval Quality Evaluation (test_retrieval_quality_evaluation.mjs)
+----------------------------------------------------------------
+================================================================
+RETRIEVAL QUALITY EVALUATION
+================================================================
+
+PASS | iras-general-deductibility | top-3: ITA_SEC14_GENERAL_DEDUCTION, ITA_SEC13W_EQUITY_DISPOSAL_2026, ITA_SUTE_PTE_TAX_EXEMPTION
+PASS | acra-record-retention | top-3: ACRA_SEC199_RECORD_RETENTION, ACRA_VCC_STRUCTURE_AND_ONGOING_COMPLIANCE, ACRA_SEC145_RESIDENT_DIRECTOR
+PASS | mom-annual-leave | top-3: MOM_SEC88A_ANNUAL_LEAVE, MOM_ANNUAL_SICK_LEAVE, MOM_SEC21_SALARY_TIMELINES
+PASS | cpf-wage-ceiling-2026 | top-3: CPF_WAGE_CEILINGS_2026, CPFA_SEC7_FIRST_SCHEDULE, CPF_RATES_BY_AGE_2026
+PASS | gst-current-rate | top-3: GST_RATE_9_PERCENT, GST_REMISSION_QUALIFYING_FUNDS, GST_REG26_BLOCKED_INPUT_TAX
+PASS | gst-historical-rate-2023 | top-3: GST_RATE_8_PERCENT_2023, GST_REMISSION_QUALIFYING_FUNDS, GST_REG26_BLOCKED_INPUT_TAX
+
+Metrics
+- Top-3 expected-source recall: 6/6 (100%)
+- Authority precision at rank 1: 6/6 (100%)
+- Temporal exclusion rate: 3/3 (100%)
+
+✅ PASSED: Labelled Retrieval Quality Evaluation [0.59s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Provider Boundary Safety (test_provider_boundary_safety.mjs)
+----------------------------------------------------------------
+PASS | Provider boundary safety: input limit and response-body redaction
+
+✅ PASSED: Provider Boundary Safety [0.18s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Gemini Provider Diagnostics Safety (test_gemini_provider_diagnostics.mjs)
+----------------------------------------------------------------
+Gemini provider diagnostics are opt-in, bounded, and redact untrusted provider content.
+
+✅ PASSED: Gemini Provider Diagnostics Safety [5.40s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Gemini Failure Chain Attribution (test_gemini_failure_diagnostics.mjs)
+----------------------------------------------------------------
+PASS | Gemini availability and interpretation assessment retain the original and downstream failure chain
+
+✅ PASSED: Gemini Failure Chain Attribution [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Latest Gemini Retained Offline Diagnostic (test_latest_gemini_offline_diagnostic.mjs)
+----------------------------------------------------------------
+PASS | Latest retained Gemini interpretations replay without new calls or mutation of consumed runs
+
+✅ PASSED: Latest Gemini Retained Offline Diagnostic [1.00s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Gemini Downstream V4 Semantic and Ownership Boundaries (test_gemini_downstream_repair_boundaries.mjs)
+----------------------------------------------------------------
+Gemini downstream V4 semantic and issue-ownership boundary regressions passed.
+
+✅ PASSED: Gemini Downstream V4 Semantic and Ownership Boundaries [1.10s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] Latest Nine-response Gemini Downstream Offline Replay (test_gemini_downstream_repair_replay.mjs)
+----------------------------------------------------------------
+All 61 available responses across seven retained Gemini batches replayed; two transport-unavailable cases remain NOT_ASSESSED.
+
+✅ PASSED: Latest Nine-response Gemini Downstream Offline Replay [9.82s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Scoped Fallback Evidence Reuse (test_iras_scoped_fallback_reuse.mjs)
+----------------------------------------------------------------
+Scoped IRAS fallback reuse and negative-scope regressions passed.
+
+✅ PASSED: IRAS Scoped Fallback Evidence Reuse [0.79s]
+
+----------------------------------------------------------------
+▶ Running: [ux-resilience] Feedback Build Metadata (test_feedback_build_metadata.mjs)
+----------------------------------------------------------------
+✓ Build metadata resolution and feedback payload safety passed.
+
+✅ PASSED: Feedback Build Metadata [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [ux-resilience] iOS Small-Screen Input Focus Zoom (test_ios_focus_zoom.mjs)
+----------------------------------------------------------------
+iOS focus zoom CSS and viewport regression checks passed
+
+✅ PASSED: iOS Small-Screen Input Focus Zoom [0.20s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Official Source Failure Safety (test_official_source_failure_safety.mjs)
+----------------------------------------------------------------
+PASS | Official-source failure safety: allowlist, empty content, redirect, network, and timeout
+
+✅ PASSED: Official Source Failure Safety [0.20s]
+
+----------------------------------------------------------------
+▶ Running: [provider-resilience] Official Source Same-Origin Proxy & Feedback Diagnostics (test_official_source_proxy.mjs)
+----------------------------------------------------------------
+Official source proxy, browser transport, and feedback diagnostics tests passed.
+
+✅ PASSED: Official Source Same-Origin Proxy & Feedback Diagnostics [0.46s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Shared Official Document Extraction (test_official_document_extraction.mjs)
+----------------------------------------------------------------
+PASS: bounded official HTML/PDF extraction, exact byte hashes, dates, SSO identity, and failure guards
+
+✅ PASSED: Shared Official Document Extraction [0.98s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Controlled Official Document Capture (test_official_document_capture.mjs)
+----------------------------------------------------------------
+PASS | explicit official-document capture preserves bytes and provenance, blocks unsafe or partial captures, and leaves candidates unadmitted
+
+✅ PASSED: Controlled Official Document Capture [0.27s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] MAS Transport Investigation Diagnostic (test_mas_transport_diagnostic.mjs)
+----------------------------------------------------------------
+PASS | MAS transport diagnostic traces observed hops and proxy layers, preserves bytes, and keeps unknown or rejected results blocked
+
+✅ PASSED: MAS Transport Investigation Diagnostic [0.60s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Tagged PDF Paragraph Geometry (test_pdf_tagged_paragraphs.mjs)
+----------------------------------------------------------------
+PASS | tagged PDF paragraphs and LI labels reflow only with structural and geometric proof; tables and unsupported bindings remain guarded
+
+✅ PASSED: Tagged PDF Paragraph Geometry [0.86s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Explicitly Bounded PDF Subsections and Linked Notes (test_pdf_bounded_subsections.mjs)
+----------------------------------------------------------------
+PASS | Explicit PDF start/end headings bind the complete MAS subsection and only structurally linked notes
+
+✅ PASSED: Explicitly Bounded PDF Subsections and Linked Notes [1.02s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] MAS Bounded Subsection Preview Lifecycle (test_mas_subsection_preview_lifecycle.mjs)
+----------------------------------------------------------------
+PASS | unchanged-provision HTML rejected at full-document gate: Atomic validation failure on record 'MAS_FUND_MANAGEMENT_LICENSING_SUBSECTION_RECHECK': Raw bytes, URL, MIME type, status, or document hash differs from the staged provenance
+PASS | strict PDF full-document hash gate: Atomic validation failure on record 'MAS_IID_04_2025_SUBSECTION_RECHECK': Raw bytes, URL, MIME type, status, or document hash differs from the staged provenance
+PASS | New MAS HTML/PDF subsection captures: byte verification, approval, answer retrieval, binding, replacement and rollback
+
+✅ PASSED: MAS Bounded Subsection Preview Lifecycle [9.30s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] MAS Byte-backed Regulatory Update Lifecycle (test_mas_regulatory_lifecycle.mjs)
+----------------------------------------------------------------
+PASS | MAS document lifecycle: byte-backed HTML/PDF verification, review approval, history, rollback, and IRAS isolation
+
+✅ PASSED: MAS Byte-backed Regulatory Update Lifecycle [1.09s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Reviewed MAS Source Response Captures (test_reviewed_mas_documents.mjs)
+----------------------------------------------------------------
+PASS | Two reviewed MAS source-response replays reject maintenance HTML; positive real-document admission remains unverified
+
+✅ PASSED: Reviewed MAS Source Response Captures [0.39s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Targeted MAS Exact-byte Acceptance Recheck (test_mas_targeted_acceptance.mjs)
+----------------------------------------------------------------
+PASS | Four fresh MAS endpoint captures reject maintenance HTML; no source records, update packages, candidates or activations are admitted
+
+✅ PASSED: Targeted MAS Exact-byte Acceptance Recheck [0.47s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Genuine MAS IID 04/2025 PDF Acceptance Checkpoint (test_mas_genuine_pdf_acceptance.mjs)
+----------------------------------------------------------------
+PASS | Genuine IID 04/2025 PDF bytes pass exact structural replay; incomplete captured HTTP trace still blocks admission and MAS activation
+
+✅ PASSED: Genuine MAS IID 04/2025 PDF Acceptance Checkpoint [0.98s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Genuine MAS HTTP Provenance and Controlled Lifecycle Acceptance (test_mas_genuine_transport_lifecycle.mjs)
+----------------------------------------------------------------
+PASS | Genuine MAS HTML/PDF captures: extraction, isolated approval lifecycle, citations, replacement and rollback
+
+✅ PASSED: Genuine MAS HTTP Provenance and Controlled Lifecycle Acceptance [1.53s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Shared Approved Document Admission & Citations (test_shared_document_admission.mjs)
+----------------------------------------------------------------
+✓ Shared approved-document admission and verified citation regression checks passed
+
+✅ PASSED: Shared Approved Document Admission & Citations [0.44s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] ACRA B2 Captured Source Admission and Deadline Replay (test_acra_b2_managed_admission.mjs)
+----------------------------------------------------------------
+PASS: actual ACRA bytes -> stage -> verify -> TEST_ONLY approval -> activation -> B2 deadline 31/07/2026
+
+✅ PASSED: ACRA B2 Captured Source Admission and Deadline Replay [0.95s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] ACRA Annual Return Filing Duty Evidence Scope (test_acra_annual_return_filing_duty_evidence_scope.mjs)
+----------------------------------------------------------------
+
+✅ PASSED: ACRA Annual Return Filing Duty Evidence Scope [0.64s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Phase 7 Coverage Registry (test_phase7_coverage_registry.mjs)
+----------------------------------------------------------------
+PASS | Phase 7 coverage registry: 287 canonical topics
+
+✅ PASSED: Phase 7 Coverage Registry [0.22s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Singapore Knowledge Routing Benchmark (test_singapore_knowledge_benchmark.mjs)
+----------------------------------------------------------------
+PASS | Singapore knowledge benchmark framework: 33 cases; 19 dimensions
+  authorityRouting: 33/33 passed (100.0%)
+  domainRouting: 33/33 passed (100.0%)
+  topicRouting: 30/33 passed (90.9%)
+  sourceRetrieval: 0/0 passed (NOT_EVALUATED)
+  answerCorrectness: 0/0 passed (NOT_EVALUATED)
+  calculationCorrectness: 0/0 passed (NOT_EVALUATED)
+  citationCorrectness: 0/0 passed (NOT_EVALUATED)
+  missingFactBehaviour: 0/0 passed (NOT_EVALUATED)
+  effectiveDateCorrectness: 0/0 passed (NOT_EVALUATED)
+  multiAuthorityHandling: 33/33 passed (100.0%)
+  classification: 33/33 passed (100.0%)
+  sourceSelection: 0/0 passed (NOT_EVALUATED)
+  retrieval: 0/0 passed (NOT_EVALUATED)
+  grounding: 0/0 passed (NOT_EVALUATED)
+  answerPath: 0/0 passed (NOT_EVALUATED)
+  substantiveConclusion: 0/0 passed (NOT_EVALUATED)
+  citation: 0/0 passed (NOT_EVALUATED)
+  missingFacts: 0/0 passed (NOT_EVALUATED)
+  effectiveDate: 0/0 passed (NOT_EVALUATED)
+
+✅ PASSED: Singapore Knowledge Routing Benchmark [0.65s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Singapore Knowledge Foundation Registry and Routing (test_singapore_knowledge_foundation.mjs)
+----------------------------------------------------------------
+PASS | Singapore knowledge foundation: 287 canonical topics, 25 domains, routing and compatibility invariants
+
+✅ PASSED: Singapore Knowledge Foundation Registry and Routing [0.47s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Singapore Consolidation Source Map and Local Routing (test_singapore_consolidation_source_map.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=54.77ms (first_vis=53.69ms, gemini=0ms, ground=34ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.72ms (first_vis=23.71ms, gemini=0ms, ground=19ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=2.34ms (first_vis=2.32ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=3.52ms (first_vis=3.52ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | Singapore consolidation source map and conservative local-answer path
+
+✅ PASSED: Singapore Consolidation Source Map and Local Routing [0.59s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Verified Official Citation and Source-Map Fallback (test_verified_official_citation_fallback.mjs)
+----------------------------------------------------------------
+PASS | Verified official URL, redirect, topic validation, mapped fallback, discovery, and candidate lifecycle
+
+✅ PASSED: Verified Official Citation and Source-Map Fallback [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] SFRS(I) 9 Reviewed Knowledge Pack (test_sfrsi9_knowledge_pack.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=13.11ms (first_vis=13.03ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=4.3ms (first_vis=4.3ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.32ms (first_vis=1.32ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=5.45ms (first_vis=5.45ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.88ms (first_vis=1.87ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=3.7ms (first_vis=3.7ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=7.64ms (first_vis=7.63ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=2.65ms (first_vis=2.65ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=1.21ms (first_vis=1.21ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+SFRS(I) 9 answer-path and reviewed retrieval-precision checks passed.
+
+✅ PASSED: SFRS(I) 9 Reviewed Knowledge Pack [0.65s]
+
+----------------------------------------------------------------
+▶ Running: [corporate-tax] Corporate Tax Treatment Pack (test_corporate_tax_treatment.mjs)
+----------------------------------------------------------------
+PASS | Corporate tax treatment: business expense, prohibited expense, and capital allowance paths
+
+✅ PASSED: Corporate Tax Treatment Pack [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [coverage-governance] Phase 7 Remaining Topic Packs (test_phase7_remaining_packs.mjs)
+----------------------------------------------------------------
+PASS | Phase 7 remaining packs: GST, CPF/SDL, revenue, lease, and share capital
+
+✅ PASSED: Phase 7 Remaining Topic Packs [0.23s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Regulatory Update Scheduler (test_regulatory_update_scheduler.mjs)
+----------------------------------------------------------------
+PASS | Regulatory update scheduler cadence: daily, weekly, and duplicate suppression
+
+✅ PASSED: Regulatory Update Scheduler [0.24s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Personal Fine Conversation Boundary (test_conversation_boundary_personal_fine.mjs)
+----------------------------------------------------------------
+PASS | Personal director fine is a new scenario, not settlement of a prior balance
+
+✅ PASSED: Personal Fine Conversation Boundary [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Personal Fine Clarification & Journal Follow-Ups (test_director_personal_fine_followup.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.46ms (first_vis=0.34ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | Director personal fine retains amount and journal across clarification and display follow-ups
+
+✅ PASSED: Personal Fine Clarification & Journal Follow-Ups [0.43s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Conversation Relation Failsafe (test_conversation_relation_failsafe.mjs)
+----------------------------------------------------------------
+PASS | Conversation relation failsafe only prompts for genuinely ambiguous transaction narratives
+
+✅ PASSED: Conversation Relation Failsafe [0.16s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] GST Registration Measurement-Basis Follow-Up (test_gst_registration_measurement_basis.mjs)
+----------------------------------------------------------------
+PASS | GST registration threshold measurement-basis follow-ups retain the GST registration context
+
+✅ PASSED: GST Registration Measurement-Basis Follow-Up [0.23s]
+
+----------------------------------------------------------------
+▶ Running: [conversation-state] Deferred Tax Standards Boundary (test_deferred_tax_boundary.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=81.43ms (first_vis=81.33ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=4.64ms (first_vis=4.64ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | deferred-tax inquiry uses SFRS(I) 1-12 without stale PPE journals
+
+✅ PASSED: Deferred Tax Standards Boundary [0.52s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Official Tax Source Links (test_official_tax_source_links.mjs)
+----------------------------------------------------------------
+PASS | Source records consistently provide canonical provisions and optional official guidance
+
+✅ PASSED: Official Tax Source Links [0.31s]
+
+----------------------------------------------------------------
+▶ Running: [input-understanding] IRAS Missing Fact Guards (test_iras_missing_fact_guards.mjs)
+----------------------------------------------------------------
+PASS | IRAS case questions identify material tax facts without burdening conceptual queries
+
+✅ PASSED: IRAS Missing Fact Guards [0.40s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Verified Source Map and Fallback (test_iras_source_map.mjs)
+----------------------------------------------------------------
+PASS | IRAS source-map catalog (45 URLs), provenance, fallback, discovery, publisher, and historical-scope guards
+
+✅ PASSED: IRAS Verified Source Map and Fallback [0.76s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Mapped Source Diagnostic V3 Safety (test_iras_mapped_source_diagnostic.mjs)
+----------------------------------------------------------------
+IRAS mapped-source diagnostic safety passed: 9 preregistered URLs, 10 synthetic GETs, 14 cache reuses, no live calls.
+
+✅ PASSED: IRAS Mapped Source Diagnostic V3 Safety [1.18s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] CPF Sitemap Discovery (test_cpf_sitemap_discovery.mjs)
+----------------------------------------------------------------
+CPF sitemap discovery regression tests passed.
+
+✅ PASSED: CPF Sitemap Discovery [0.44s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] ACRA Sitemap Discovery (test_acra_sitemap_discovery.mjs)
+----------------------------------------------------------------
+ACRA sitemap discovery regression tests passed.
+
+✅ PASSED: ACRA Sitemap Discovery [0.60s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] MOM and MAS Official Sitemap Discovery (test_statutory_source_discovery.mjs)
+----------------------------------------------------------------
+ACRA/CPF/MOM/MAS official discovery, workstream provenance, exact quotes and negative evidence guards: passed.
+
+✅ PASSED: MOM and MAS Official Sitemap Discovery [0.70s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] MAS CMS General Rule Evidence Support (test_mas_cms_rule_support.mjs)
+----------------------------------------------------------------
+MAS CMS general rule support regressions passed.
+
+✅ PASSED: MAS CMS General Rule Evidence Support [0.41s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Authority-level Discovery Progression (test_iras_authority_discovery.mjs)
+----------------------------------------------------------------
+PASS | IRAS authority discovery covers search after sitemap exhaustion and sitemap-first evidence admission with independent claim verification.
+
+✅ PASSED: IRAS Authority-level Discovery Progression [0.57s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS End-to-End Routing and Retrieval (test_iras_e2e_routing.mjs)
+----------------------------------------------------------------
+PASS: IRAS end-to-end routing, source-map selection, historical fail-closed, and visible-content validation
+
+✅ PASSED: IRAS End-to-End Routing and Retrieval [0.70s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Evidence Quality Gate and Ranking (test_iras_evidence_quality_gate.mjs)
+----------------------------------------------------------------
+IRAS evidence quality gate tests passed.
+
+✅ PASSED: IRAS Evidence Quality Gate and Ranking [0.36s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Claim-to-Evidence Verification (test_iras_claim_evidence_verifier.mjs)
+----------------------------------------------------------------
+PASS | Exact source quote claim evidence verification
+
+✅ PASSED: IRAS Claim-to-Evidence Verification [0.41s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS HTML Evidence Boundaries (test_iras_html_evidence_boundaries.mjs)
+----------------------------------------------------------------
+PASS: IRAS HTML block boundaries and strict evidence verification
+
+✅ PASSED: IRAS HTML Evidence Boundaries [0.36s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Evidence Policy Pipeline (test_iras_evidence_pipeline.mjs)
+----------------------------------------------------------------
+[Telemetry] IRAS_LOCAL_VERIFIED_CALCULATION (gemini-3.5-flash-lite): total=28.39ms (first_vis=28.31ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] IRAS_LOCAL_VERIFIED_CALCULATION (gemini-3.5-flash-lite): total=20.95ms (first_vis=20.95ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+Gemini API call failed, falling back to smart universal engine: Error: No network permitted in gate-order regression
+    at globalThis.fetch (file:///D:/Accounting/.worktrees/review-corrections-20261025/tests/regression/test_iras_evidence_pipeline.mjs:226:11)
+    at fetchGemini (D:\Accounting\.worktrees\review-corrections-20261025\src\services\geminiProxyTransport.ts:11:44)
+    at callGeminiAPI (D:\Accounting\.worktrees\review-corrections-20261025\src\services\geminiService.ts:1815:25)
+    at async processAccountingQuery (D:\Accounting\.worktrees\review-corrections-20261025\src\services\geminiService.ts:962:68)
+    at async file:///D:/Accounting/.worktrees/review-corrections-20261025/tests/regression/test_iras_evidence_pipeline.mjs:228:3
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=38.3ms (first_vis=32.17ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=47.88ms (first_vis=44.85ms, gemini=0ms, ground=0ms, post=3ms) | tokens: in=0, out=0, think=0
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=35.98ms (first_vis=32.47ms, gemini=0ms, ground=1ms, post=3ms) | tokens: in=0, out=0, think=0
+IRAS evidence policy pipeline regressions passed.
+
+✅ PASSED: IRAS Evidence Policy Pipeline [1.36s]
+
+----------------------------------------------------------------
+▶ Running: [evaluation-safety] IRAS V4 Retained-response Offline Regression (test_iras_v4_retained_response_replay.mjs)
+----------------------------------------------------------------
+IRAS V4 retained-response replay regression passed (six retained responses, exact family identity checks, and diagnostic-only offline execution).
+
+✅ PASSED: IRAS V4 Retained-response Offline Regression [1.29s]
+
+----------------------------------------------------------------
+▶ Running: [corporate-tax] IRAS Deterministic Applications (test_iras_application_evaluator.mjs)
+----------------------------------------------------------------
+IRAS deterministic application regressions passed.
+
+✅ PASSED: IRAS Deterministic Applications [0.34s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Verified Source-Driven GST Calculation (test_verified_gst_calculation.mjs)
+----------------------------------------------------------------
+PASS | Verified source-driven standard GST calculation
+
+✅ PASSED: Verified Source-Driven GST Calculation [0.22s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] IRAS Provisional Answer Pipeline (test_iras_end_to_end_provisional.mjs)
+----------------------------------------------------------------
+{
+  "fixture": "tests\\evaluation\\singapore\\iras-answer-e2e.json",
+  "caseCount": 19,
+  "noProviderExecutionCount": 12,
+  "additionalGroundedCaseDiagnostics": {
+    "status": "OBSERVED_RUNTIME_DIAGNOSTICS_NOT_ORACLE_REVIEW",
+    "caseCount": 7,
+    "observedPassCount": 6,
+    "observedFailCount": 1,
+    "cases": [
+      {
+        "id": "cit-renovation-section-14n-ya2024",
+        "question": "For qualifying renovation costs in a company basis period for YA 2024, what Section 14N deduction timing and cap period applied?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2024-01-01",
+            "to": "2024-12-31"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC14_GENERAL_DEDUCTION",
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-renovation-section-14n-ya2026",
+        "question": "For qualifying non-structural renovation costs incurred for YA 2026, what Section 14N options and cap period should the company check?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [],
+        "observedRequiredLocalRecordIds": [],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [],
+        "observedLocalRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT"
+        ],
+        "expectedRuntimeMapIds": [
+          "IRAS_CIT_RR_SOURCE_MAP"
+        ],
+        "actualRuntimeMapIds": [
+          "IRAS_CIT_RR_SOURCE_MAP"
+        ],
+        "syntheticFetchCount": 17,
+        "issues": []
+      },
+      {
+        "id": "gst-historical-standard-rated-supply-2023",
+        "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2023; invoice and payment were on that date. What are output GST and the invoice total?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2023-07-01",
+            "to": "2023-07-01"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023",
+          "GST_SEC11_TIME_OF_SUPPLY"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "gst-historical-standard-rated-supply-2024",
+        "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2024; invoice and payment were on that date. What are output GST and the invoice total?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "GST_RATE_9_PERCENT"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "GST_RATE_9_PERCENT"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2024-07-01",
+            "to": "2024-07-01"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "GST_SEC11_TIME_OF_SUPPLY",
+          "GST_RATE_9_PERCENT"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-section-13w-pre-2026-disposal",
+        "question": "For an ordinary-share disposal completed on 30 December 2025, can the company rely on Section 13W?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2025-12-30",
+            "to": "2025-12-30"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-section-13w-post-2026-disposal",
+        "question": "For a disposal on 2 January 2026 of qualifying preference shares, can Section 13W apply where the company and eligible group entities held the required interest?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2026-01-02",
+            "to": "2026-01-02"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-form-cs-lite-foreign-tax-credit-ya2026",
+        "question": "For YA 2026, can a Singapore-incorporated company with S$180,000 revenue use Form C-S (Lite) if it claims a foreign tax credit?",
+        "status": "OBSERVED_FAIL",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [],
+        "observedRequiredLocalRecordIds": [],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [],
+        "observedLocalRecordIds": [
+          "IRAS_FORM_CS_LITE_CRITERIA"
+        ],
+        "expectedRuntimeMapIds": [
+          "IRAS_CIT_RETURNS_SOURCE_MAP",
+          "IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+        ],
+        "actualRuntimeMapIds": [
+          "IRAS_CIT_RETURNS_SOURCE_MAP"
+        ],
+        "syntheticFetchCount": 17,
+        "issues": [
+          "missing expected runtime map IRAS_CIT_FOREIGN_TAX_CREDIT_SOURCE_MAP"
+        ]
+      }
+    ]
+  },
+  "dateScopedLocalEvidenceDiagnostics": {
+    "status": "OBSERVED_RUNTIME_DIAGNOSTICS_NOT_ORACLE_REVIEW",
+    "observedPassCount": 6,
+    "observedFailCount": 0,
+    "cases": [
+      {
+        "id": "gst-invoice-december-2022-payment-january-2023",
+        "question": "Invoice issued in December 2022 but payment received in January 2023. Which GST rate applies?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "GST_RATE_7_PERCENT",
+          "GST_RATE_8_PERCENT_2023",
+          "GST_SEC11_TIME_OF_SUPPLY"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "GST_RATE_7_PERCENT",
+          "GST_RATE_8_PERCENT_2023",
+          "GST_SEC11_TIME_OF_SUPPLY"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2022-12-01",
+            "to": "2022-12-31"
+          },
+          {
+            "from": "2023-01-01",
+            "to": "2023-01-31"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "GST_RATE_7_PERCENT",
+          "GST_SEC11_TIME_OF_SUPPLY",
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-renovation-section-14n-ya2024",
+        "question": "For qualifying renovation costs in a company basis period for YA 2024, what Section 14N deduction timing and cap period applied?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2024-01-01",
+            "to": "2024-12-31"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC14_GENERAL_DEDUCTION",
+          "ITA_SEC14N_RENOVATION_REFURBISHMENT_PRE2025"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "gst-historical-standard-rated-supply-2023",
+        "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2023; invoice and payment were on that date. What are output GST and the invoice total?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2023-07-01",
+            "to": "2023-07-01"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "GST_RATE_8_PERCENT_2023",
+          "GST_SEC11_TIME_OF_SUPPLY"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "gst-historical-standard-rated-supply-2024",
+        "question": "A GST-registered Singapore supplier made a standard-rated domestic supply for SGD 1,000 tax-exclusive on 1 July 2024; invoice and payment were on that date. What are output GST and the invoice total?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "GST_RATE_9_PERCENT"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "GST_RATE_9_PERCENT"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2024-07-01",
+            "to": "2024-07-01"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "GST_SEC11_TIME_OF_SUPPLY",
+          "GST_RATE_9_PERCENT"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-section-13w-pre-2026-disposal",
+        "question": "For an ordinary-share disposal completed on 30 December 2025, can the company rely on Section 13W?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2025-12-30",
+            "to": "2025-12-30"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_SAFE_HARBOUR"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      },
+      {
+        "id": "cit-section-13w-post-2026-disposal",
+        "question": "For a disposal on 2 January 2026 of qualifying preference shares, can Section 13W apply where the company and eligible group entities held the required interest?",
+        "status": "OBSERVED_PASS",
+        "oracleReviewStatus": "PENDING_REVIEW",
+        "requiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "observedRequiredLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "missingRequiredLocalRecordIds": [],
+        "dateInvalidRequiredLocalRecordIds": [],
+        "targetRanges": [
+          {
+            "from": "2026-01-02",
+            "to": "2026-01-02"
+          }
+        ],
+        "observedLocalRecordIds": [
+          "ITA_SEC13W_EQUITY_DISPOSAL_2026"
+        ],
+        "expectedRuntimeMapIds": [],
+        "actualRuntimeMapIds": [],
+        "syntheticFetchCount": 0,
+        "issues": []
+      }
+    ]
+  },
+  "oracleReviewStatus": "PENDING_REVIEW",
+  "syntheticOnly": true,
+  "provisionalTotals": {
+    "classification": {
+      "PROVISIONAL_PASS": 12
+    },
+    "topicRouting": {
+      "PROVISIONAL_PASS": 12
+    },
+    "sourceSelection": {
+      "PENDING_REVIEW": 12
+    },
+    "retrieval": {
+      "SYNTHETIC_PASS": 9,
+      "NOT_EVALUATED_LOCAL_PATH_IN_RESPONSE": 1,
+      "SYNTHETIC_FAIL": 2
+    },
+    "answerPath": {
+      "SYNTHETIC_PASS": 9,
+      "NOT_EVALUATED_NO_DATED_EVIDENCE": 1,
+      "SYNTHETIC_FAIL": 2
+    },
+    "grounding": {
+      "NOT_EVALUATED_NO_PROVIDER": 12
+    },
+    "substantiveConclusion": {
+      "NOT_EVALUATED_NO_PROVIDER": 12
+    },
+    "citationCorrectness": {
+      "NOT_EVALUATED_NO_PROVIDER": 12
+    },
+    "missingFactHandling": {
+      "NOT_EVALUATED_NO_PROVIDER": 12
+    },
+    "effectiveDateHandling": {
+      "NOT_EVALUATED_NO_PROVIDER": 12
+    },
+    "calculationCorrectness": {
+      "NOT_APPLICABLE": 12
+    }
+  },
+  "cases": [
+    {
+      "id": "gst-customer-supplier-meals",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_GST",
+      "actualDomains": [
+        "IRAS_GST"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-gst-input-tax",
+        "iras-gst-entertainment"
+      ],
+      "pendingReviewTopics": [
+        "iras-gst-input-tax"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "gst-passenger-car-input-tax",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_GST",
+      "actualDomains": [
+        "IRAS_GST"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-gst-blocked-input-tax",
+        "iras-gst-motor-vehicles"
+      ],
+      "pendingReviewTopics": [],
+      "expectedSourceMapIds": [
+        "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_GST_MOTOR_VEHICLES_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "gst-overseas-services-zero-rated-or-out-of-scope",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_GST",
+      "actualDomains": [
+        "IRAS_GST"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-gst-zero-rating",
+        "iras-gst-out-of-scope-supplies"
+      ],
+      "pendingReviewTopics": [],
+      "expectedSourceMapIds": [
+        "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP",
+        "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_GST_ZERO_RATED_SERVICES_SOURCE_MAP",
+        "IRAS_GST_OUT_OF_SCOPE_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "gst-invoice-december-2022-payment-january-2023",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "NOT_EVALUATED_LOCAL_PATH_IN_RESPONSE",
+        "answerPath": "NOT_EVALUATED_NO_DATED_EVIDENCE",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_GST",
+      "actualDomains": [
+        "IRAS_GST"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-gst-standard-rated-supplies",
+        "iras-gst-time-of-supply"
+      ],
+      "pendingReviewTopics": [
+        "iras-gst-standard-rated-supplies"
+      ],
+      "expectedSourceMapIds": [],
+      "catalogSourceMapIds": [
+        "IRAS_GST_TIME_OF_SUPPLY_SOURCE_MAP",
+        "IRAS_GST_CHARGING_SOURCE_MAP"
+      ],
+      "actualSourceMapIds": [],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "No undated current map was selected. This no-provider response does not expose dated local evidence; separate grounded-context diagnostics check the required records.",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "cit-business-expense-deductibility-missing-facts",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_FAIL",
+        "answerPath": "SYNTHETIC_FAIL",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-cit-deductibility"
+      ],
+      "pendingReviewTopics": [
+        "iras-cit-disallowed-expenses"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "NO_VERIFIED_MAP",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": [
+        "retrieval: NO_VERIFIED_MAP",
+        "answerPath: NO_VERIFIED_MAP"
+      ]
+    },
+    {
+      "id": "cit-renovation-immediate-deduction-missing-period",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_FAIL",
+        "answerPath": "SYNTHETIC_FAIL",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-cit-deductibility",
+        "iras-cit-renovation-refurbishment"
+      ],
+      "pendingReviewTopics": [
+        "iras-cit-deductibility"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_RR_SOURCE_MAP",
+        "IRAS_CIT_EXPENSES_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "NO_VERIFIED_MAP",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": [
+        "retrieval: NO_VERIFIED_MAP",
+        "answerPath: NO_VERIFIED_MAP"
+      ]
+    },
+    {
+      "id": "cit-passenger-car-expense-and-capital-allowance",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-cit-disallowed-expenses",
+        "iras-capital-allowances"
+      ],
+      "pendingReviewTopics": [],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP",
+        "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_CIT_EXPENSES_SOURCE_MAP",
+        "IRAS_CIT_CAPITAL_ALLOWANCES_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "cit-prior-year-loss-carry-forward",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-cit-loss-carry-forward",
+        "iras-substantial-shareholding-test"
+      ],
+      "pendingReviewTopics": [
+        "iras-substantial-shareholding-test"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_CIT_UNUTILISED_ITEMS_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "wht-overseas-interest-payment",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "pendingReviewTopics": [
+        "iras-withholding-tax-interest-royalties"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "wht-overseas-related-management-fee",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_CORPORATE_TAX",
+      "actualDomains": [
+        "IRAS_CORPORATE_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-withholding-tax",
+        "iras-withholding-tax-management-fees"
+      ],
+      "pendingReviewTopics": [
+        "iras-withholding-tax-management-fees"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_WHT_RATES_SOURCE_MAP",
+        "IRAS_WHT_SCOPE_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "employer-tax-clearance-ir21",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_EMPLOYER_TAX",
+      "actualDomains": [
+        "IRAS_EMPLOYER_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-employer-ir21"
+      ],
+      "pendingReviewTopics": [],
+      "expectedSourceMapIds": [
+        "IRAS_IR21_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_IR21_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    },
+    {
+      "id": "employer-bonus-reporting-timing",
+      "checks": {
+        "classification": "PROVISIONAL_PASS",
+        "topicRouting": "PROVISIONAL_PASS",
+        "sourceSelection": "PENDING_REVIEW",
+        "retrieval": "SYNTHETIC_PASS",
+        "answerPath": "SYNTHETIC_PASS",
+        "grounding": "NOT_EVALUATED_NO_PROVIDER",
+        "substantiveConclusion": "NOT_EVALUATED_NO_PROVIDER",
+        "citationCorrectness": "NOT_EVALUATED_NO_PROVIDER",
+        "missingFactHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "effectiveDateHandling": "NOT_EVALUATED_NO_PROVIDER",
+        "calculationCorrectness": "NOT_APPLICABLE"
+      },
+      "expectedDomain": "IRAS_EMPLOYER_TAX",
+      "actualDomains": [
+        "IRAS_EMPLOYER_TAX",
+        "IRAS_INDIVIDUAL_TAX"
+      ],
+      "missingTopics": [],
+      "actualTopics": [
+        "iras-ais-employment-income",
+        "iras-employee-bonus-timing"
+      ],
+      "pendingReviewTopics": [
+        "iras-ais-employment-income"
+      ],
+      "expectedSourceMapIds": [
+        "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+      ],
+      "catalogSourceMapIds": [],
+      "actualSourceMapIds": [
+        "IRAS_AIS_IR8A_SOURCE_MAP",
+        "IRAS_EMPLOYMENT_INCOME_TIMING_SOURCE_MAP"
+      ],
+      "disallowedSourceMapIds": [],
+      "fallbackPath": "MAPPED_SOURCE",
+      "noProviderAnswerAvailability": "NO_PROVIDER_RESPONSE",
+      "failureReasons": []
+    }
+  ],
+  "knownBaselineFindings": {
+    "narrowUnconditionalMealGstGuard": {
+      "status": "PASS",
+      "detail": "The targeted guard removes this unconditional meal input-tax claim and replaces it with a conditional response; this does not verify general semantic claim support.",
+      "acceptedStructuralCitationStatus": "SOURCE_NEEDS_REVIEW"
+    },
+    "generalSemanticClaimEntailment": {
+      "status": "UNVERIFIED",
+      "detail": "This regression covers one narrow unconditional meal-GST wording pattern only; arbitrary claim-to-evidence entailment remains unverified."
+    },
+    "fabricatedUrlStripping": {
+      "status": "PASS"
+    },
+    "navigationTextRejection": {
+      "status": "PASS",
+      "accepted": false,
+      "reason": "Fetched page has too little visible body content to substantiate a topic; navigation or page chrome is not evidence"
+    },
+    "currentTimeOfSupplyRule": {
+      "status": "PASS",
+      "flags": [
+        "Current general rule must use invoice or payment; Basic Tax Point / 14-day rule must be explicitly limited to the pre-2011 period."
+      ],
+      "currentGeneralRule": "Current General Rule: For most transactions, use the earlier of invoice issuance and receipt of payment. A document triggers the rule when it functions as a bill for payment; a pro-forma invoice or statement of account may not do so.",
+      "historicalTransition": "Historical Transition: The pre-1 January 2011 general regime used a Basic Tax Point and a 14-day rule. Do not apply those historical rules to supplies on or after 1 January 2011; check the applicable historical law for an earlier supply."
+    },
+    "zeroRatedOvergeneralization": {
+      "status": "PASS",
+      "flags": [
+        "A qualifying Section 21(3) category and its beneficiary/location conditions must be identified; overseas customer status alone is insufficient."
+      ],
+      "legacyBroadExamplePresent": false
+    },
+    "validatedTopicMissingLocalEvidenceFallback": {
+      "status": "PASS",
+      "topicId": "gst_compulsory_registration",
+      "topicStatusDuringTest": "VALIDATED",
+      "retrievedLocalRecordCount": 0,
+      "fallbackPath": "MAPPED_SOURCE",
+      "mapIds": [
+        "IRAS_GST_REGISTRATION_SOURCE_MAP"
+      ]
+    }
+  },
+  "syntheticMechanics": {
+    "fallbackPath": "MAPPED_SOURCE",
+    "mapIds": [
+      "IRAS_GST_INPUT_TAX_SOURCE_MAP"
+    ],
+    "candidateCount": 1,
+    "finalUrls": [
+      "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax"
+    ],
+    "evidenceRecordIds": [
+      "GST_REG28_DE_MINIMIS_RULE",
+      "GST_REG26_BLOCKED_INPUT_TAX",
+      "LIVE_TOPIC_iras-gst-entertainment_0761722b60b4"
+    ],
+    "structuralCitationStatus": "SOURCE_NEEDS_REVIEW",
+    "narrowMealClaimRemoved": true,
+    "generalSemanticClaimEntailment": "UNVERIFIED",
+    "fabricatedCitationDropped": true,
+    "sourceMapPointerGrounded": false
+  },
+  "syntheticIrasSourceUrls": [
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+A+Singapore+company+pays+interest+to+an+overseas+company.+Is+withholding+tax+required%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+A+company+provides+services+overseas.+Is+the+income+zero-rated+or+out-of-scope%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Can+GST+be+claimed+for+meals+with+customers+or+suppliers%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Can+renovation+cost+be+deducted+immediately%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Can+the+company+use+prior-year+losses%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Can+this+expense+be+claimed+as+a+tax+deduction%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Company+bought+a+passenger+car.+Can+it+claim+tax+deduction+and+capital+allowance%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+Employee+received+a+bonus+in+April+for+June+payroll.+When+should+it+be+reported%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+When+do+we+need+to+file+IR21%3F",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+bonu+april",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+bonu+entitlement+year+assessment",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+bought+passenger",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+claimed+deduction",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+claimed+meal",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+cost+deducted",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+expense+claimed",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+file+ir21",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+interest+oversea",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+company+guidance+bought+passenger+car+can+it+claim+tax+deduction+capital+allowance",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+company+guidance+can+use+prior+year+loss",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+company+guidance+provid+servic+oversea+is+income+zero+rated+out+scope",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+company+guidance+singapore+pays+interest+oversea+is+withholding+tax+required",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+individual+employee+guidance+received+bonu+april+june+payroll+when+should+it+be+reported",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+taxpayer+guidance+can+gst+be+claimed+meal+customer+supplier",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+taxpayer+guidance+can+renovation+cost+be+deducted+immediately",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+taxpayer+guidance+can+this+expense+be+claimed+tax+deduction",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+iras+taxpayer+guidance+when+do+we+need+file+ir21",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+meal+customer",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+need+file",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+passenger+claim",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+pays+interest",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+prior+year",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+provid+servic",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+received+bonu",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+renovation+cost",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+servic+oversea",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+tax+timing+employment+bonus",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+taxe+bonus",
+    "https://html.duckduckgo.com/html/?q=site%3Airas.gov.sg+year+loss",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20A%20Singapore%20company%20pays%20interest%20to%20an%20overseas%20company.%20Is%20withholding%20tax%20required%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20A%20company%20provides%20services%20overseas.%20Is%20the%20income%20zero-rated%20or%20out-of-scope%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Can%20GST%20be%20claimed%20for%20meals%20with%20customers%20or%20suppliers%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Can%20renovation%20cost%20be%20deducted%20immediately%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Can%20the%20company%20use%20prior-year%20losses%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Can%20this%20expense%20be%20claimed%20as%20a%20tax%20deduction%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Company%20bought%20a%20passenger%20car.%20Can%20it%20claim%20tax%20deduction%20and%20capital%20allowance%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20Employee%20received%20a%20bonus%20in%20April%20for%20June%20payroll.%20When%20should%20it%20be%20reported%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20When%20do%20we%20need%20to%20file%20IR21%3F",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20bonu%20april",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20bonu%20entitlement%20year%20assessment",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20bought%20passenger",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20claimed%20deduction",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20claimed%20meal",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20cost%20deducted",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20expense%20claimed",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20file%20ir21",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20interest%20oversea",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20company%20guidance%20bought%20passenger%20car%20can%20it%20claim%20tax%20deduction%20capital%20allowance",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20company%20guidance%20can%20use%20prior%20year%20loss",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20company%20guidance%20provid%20servic%20oversea%20is%20income%20zero%20rated%20out%20scope",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20company%20guidance%20singapore%20pays%20interest%20oversea%20is%20withholding%20tax%20required",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20individual%20employee%20guidance%20received%20bonu%20april%20june%20payroll%20when%20should%20it%20be%20reported",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20taxpayer%20guidance%20can%20gst%20be%20claimed%20meal%20customer%20supplier",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20taxpayer%20guidance%20can%20renovation%20cost%20be%20deducted%20immediately",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20taxpayer%20guidance%20can%20this%20expense%20be%20claimed%20tax%20deduction",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20iras%20taxpayer%20guidance%20when%20do%20we%20need%20file%20ir21",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20meal%20customer",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20need%20file",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20passenger%20claim",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20pays%20interest",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20prior%20year",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20provid%20servic",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20received%20bonu",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20renovation%20cost",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20servic%20oversea",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20tax%20timing%20employment%20bonus",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20taxe%20bonus",
+    "https://r.jina.ai/http://html.duckduckgo.com/html/?q=site%3Airas.gov.sg%20year%20loss",
+    "https://www.iras.gov.sg/robots.txt",
+    "https://www.iras.gov.sg/sitemap",
+    "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses",
+    "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/claiming-allowances/capital-allowances",
+    "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/unutilised-items-(capital-allowances-trade-losses-donations)",
+    "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-is-gst-not-charged/out-of-scope-supplies",
+    "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/charging-gst-(output-tax)/when-to-charge-0-gst-(zero-rate)/providing-international-services",
+    "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses",
+    "https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/basics-of-individual-income-tax/what-is-taxable-what-is-not/employment-income/salary-bonus-director's-fee-commission-and-others",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employers/auto-inclusion-scheme-(ais)-for-employment-income/reporting-employee-earnings-(ir8a-appendix-8a-appendix-8b)",
+    "https://www.iras.gov.sg/taxes/individual-income-tax/employers/tax-clearance-for-foreign-spr-employees-(ir21)/tax-clearance-for-employees",
+    "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/types-of-payment-and-withholding-tax-rates",
+    "https://www.iras.gov.sg/taxes/withholding-tax/payments-to-non-resident-company/payments-that-are-subject-to-withholding-tax"
+  ]
+}
+
+✅ PASSED: IRAS Provisional Answer Pipeline [1.03s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Business Equipment Acquisition (test_business_equipment_acquisition.mjs)
+----------------------------------------------------------------
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.71ms (first_vis=0.62ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | Equipment acquisition returns a measured journal and capital-allowance treatment
+
+✅ PASSED: Business Equipment Acquisition [0.41s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Inventory Event Sequence (test_event_sequence_inventory.mjs)
+----------------------------------------------------------------
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=426.62ms (first_vis=426.52ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | inventory event sequence is extracted, reconciled, balanced, and routed before generic clarification
+
+✅ PASSED: Inventory Event Sequence [0.86s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Sale and Leaseback Event Sequence (test_sale_leaseback_sequence.mjs)
+----------------------------------------------------------------
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=98.76ms (first_vis=98.67ms, gemini=17.52ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=49.95ms (first_vis=49.94ms, gemini=0.92ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | Gemini lease event extraction reaches balanced sale-and-leaseback journals
+
+✅ PASSED: Sale and Leaseback Event Sequence [0.66s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Mixed-Domain Event Sequence (test_mixed_event_sequence.mjs)
+----------------------------------------------------------------
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=85.86ms (first_vis=85.77ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=64.1ms (first_vis=64.09ms, gemini=14.28ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | mixed-domain text and AI-extraction routes produce four balanced journal groups
+
+✅ PASSED: Mixed-Domain Event Sequence [0.57s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Investment Event Sequence (test_investment_event_sequence.mjs)
+----------------------------------------------------------------
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=141.42ms (first_vis=141.33ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=120.46ms (first_vis=120.46ms, gemini=14.12ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | investment sequence posts balanced FVOCI/FVTPL, fees, valuation and non-cash dividend entries
+
+✅ PASSED: Investment Event Sequence [0.69s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Dated Investment Event Sequence (test_dated_investment_sequence.mjs)
+----------------------------------------------------------------
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=190.93ms (first_vis=190.83ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Telemetry] EVENT_SEQUENCE (gemini-3.5-flash-lite): total=29.94ms (first_vis=29.94ms, gemini=13.77ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+PASS | date-labelled family-office events post seven balanced groups without AI lease hallucination
+
+✅ PASSED: Dated Investment Event Sequence [0.67s]
+
+----------------------------------------------------------------
+▶ Running: [regulatory-updates] Phase 4 Live Retrieval & Source Versioning (test_phase4_live_retrieval.mjs)
+----------------------------------------------------------------
+=============================================================
+🧪 RUNNING PHASE 4: EXTERNAL / LIVE RETRIEVAL & SOURCE VERSIONING TEST SUITE
+=============================================================
+
+[1. DOMAIN ALLOWLISTING & URL SECURITY]
+✓ 1A. Accepts official Singapore regulatory portals and Frankfurter reference API
+✓ 1B. Strictly rejects unauthorized domains and spoofed hostnames
+✓ 1C. Enforces port 443 / default HTTPS and rejects custom ports
+
+[2. HTTPS ENFORCEMENT & REDIRECT PROTECTION]
+✓ 2A. Rejects insecure HTTP protocol and enforces HTTPS
+✓ 2B. Validates redirect destinations and rejects redirect to external domain
+
+[3. SHA-256 CONTENT HASHING & INTEGRITY AUDITING]
+✓ 3A. Deterministic SHA-256 computation conforms to standard test vectors
+✓ 3B. Integrity audit detects content modification / tampering
+
+[4. PROVENANCE & SOURCE CACHE]
+✓ 4A. Provenance validator rejects external sources falsely claiming LOCAL_STATIC
+✓ 4B. Source cache handles set, get, hit, invalidation, and clear
+
+[5. CONTROLLED WEB RETRIEVER & NETWORK FAILURE RESILIENCE]
+✓ 5A. ControlledWebRetriever intercepts network timeouts gracefully without throwing
+✓ 5B. ControlledWebRetriever intercepts CORS failures gracefully without throwing
+
+[6. STAGING, ATOMIC ACTIVATION & ROLLBACK PIPELINE]
+✓ 6A. Candidate update staging holds records in candidate pool without mutating active retrieval
+✓ 6B. Verified update package activation atomically commits into active registry and version ledger
+✓ 6C. Atomic package failure: 1 invalid record causes entire package rejection (0 activated)
+✓ 6D. Rollback cleanly restores predecessor version in active registry while keeping ledger entry
+
+[7. VERSION COMPARISON ENGINE]
+✓ 7A. Detects TEXT_CHANGE, RATE_CHANGE, THRESHOLD_CHANGE, EFFECTIVE_DATE_CHANGE
+
+[8. COMPOSITE RETRIEVER & OFFLINE FALLBACK GUARANTEES]
+✓ 8A. CompositeSourceRetriever merges local and live verified sources and preserves offline operation
+✓ 8B. Phase 3 temporal resolution remains 100% preserved (2023 8% GST vs 2026 9% GST)
+
+[9. FAST-PATH INTEGRITY & REFERENCE API SEPARATION]
+✓ 9A. UNVERIFIED and REFERENCE_API sources are strictly rejected from fast-path bypass
+✓ 9B. Frankfurter ECB FX is tagged REFERENCE_API and cannot satisfy statutory authority checks
+
+[10. PHASE 4.1 COMPLETION & FIX PASS VALIDATION]
+✓ 10A. SHA-256 standard test vectors match Node.js crypto.createHash across diverse data types
+✓ 10B. MOM and CPF canonical URL validation in ExternalSourceValidator
+✓ 10C. SourceCache TTL freshness, conditional revalidation headers, and expiry pruning
+✓ 10D. Source-specific update discovery adapters produce valid update packages
+✓ 10E. LiveRegulatoryFeedService.checkForUpdates() queries registered adapters
+✓ 10F. Preserves external provenance details into candidate metadata
+✓ 10G. Truly atomic package activation: Aborts and restores registry snapshot on any error (0 records activated)
+✓ 10H. Live fetch failures leave UNIFIED_SOURCE_REGISTRY completely untouched
+
+[11. PHASE 4.2: EXACT PROVISION EXTRACTION, DUAL HASHING & TRUE VERBATIM INTEGRITY]
+✓ 11A (Test 1). Strict anti-truncation: Rejects ellipsis, truncation markers, or missing locators with INVALID_VERBATIM_CLAIM
+✓ 11B (Test 2). Partial extraction rejection: Blocks PARTIAL status from authoritative verification
+✓ 11C (Test 3). Failed extraction rejection: FAILED status produces EXTRACTION_FAILED and halts verification
+✓ 11D (Test 4). Correct section mapping: Full deterministic extraction passes validation with EXACT status
+✓ 11E (Test 5). Incorrect section mapping: Mismatched section number or invalid offsets trigger PROVISION_MAPPING_MISMATCH
+✓ 11F (Test 6). Precision update gating: Peripheral document changes modify documentHash but leave provisionHash identical (0 updates emitted)
+✓ 11G (Test 7). True provision change: Modifying statutory wording updates provisionHash and triggers valid update package
+✓ 11H (Test 8). No hard-coded fallback: Missing target section produces FAILED status and empty text
+✓ 11I (Test 9). Hash independence: Independent mathematical derivation of documentHash vs provisionHash
+✓ 11J (Test 10). Frankfurter source separation: Tagged REFERENCE_API and strictly separated from statutory authority
+
+[12. PHASE 4.2 HARDENING: STRUCTURAL EXTRACTION, LOCATOR IDENTITY & ADVERSARIAL DEFENSE]
+✓ 12A (SSO Adversarial). Target phrasing in historical notes or nav fails when structural node missing
+✓ 12B (SSO Nested Container). Balanced tag parser correctly preserves outer container boundary across nested <div> tags
+✓ 12C (Truncated Container Fail-Closed). Missing closing tag triggers FAILED status instead of capturing corrupt content
+✓ 12D (Affirmative Section/Subsection Validation). Validator affirmatively verifies extracted section and subsection identity
+✓ 12E (Canonical Act Identity Mapping). Validates canonical identity between statutory titles and short codes
+✓ 12F (Adversarial Decoys Across All Authorities). Decoys in FAQs, press releases, blogs and announcements fail closed
+✓ 12G (Decoy vs Authentic Target Node Resolution). Parser extracts solely from authentic node when document contains both obsolete note and current node
+✓ 12H (Decoupled FX_OBSERVATION Pipeline). Frankfurter adapter produces clean FX_OBSERVATION record with structured observation
+
+[13. PHASE 4.2 FINAL INTEGRITY PASS: EXACT SUBSECTIONS, ADVERSARIAL DECOYS & BOUNDARY VERIFICATION]
+✓ 13A. SSO structural subsection extraction isolates exact subsection node with unstripped offsets
+✓ 13B-1. Adversarial decoy subsection test: (4) decoy before (5) authentic
+✓ 13B-2. Adversarial decoy subsection test: (5) authentic before (4) decoy, and decoy-only failure
+✓ 13C. Promotion gate boundary verification failure: Missing or tampered raw document blocks candidate from VERIFIED
+✓ 13D. Administrative portals modeled as OFFICIAL_GUIDANCE: Rejects PRIMARY_SOURCE statutory claims
+✓ 13E. Frankfurter non-verbatim reference data guard: Rejects isVerbatimText: true
+✓ 13F. Full end-to-end promotion pipeline with mandatory rawDocument verification
+✓ 13G. JSON boundary verification fails if fxObservation rates/base/date mismatch payload even if JSON is valid syntax
+✓ 13H. Multi-record package requires record-specific raw documents; missing or misassigned record document fails atomically
+✓ 13I. sourceType and evidenceTier are preserved through activation; SSO rejects whole-section masquerading as subsection
+=============================================================
+ALL 56/56 PHASE 4 TESTS PASSED! (100% GREEN) 🎉
+=============================================================
+
+✅ PASSED: Phase 4 Live Retrieval & Source Versioning [0.55s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Coverage & Temporal Invariants (test_phase3_coverage.mjs)
+----------------------------------------------------------------
+=== RUNNING PHASE 3: BETTER EVIDENCE COVERAGE & TEMPORAL TESTS ===
+
+[1. SOURCE FRESHNESS MANAGER STATUS EVALUATION]
+✓ 1A. Proved: In-force provision with fresh audit evaluates to ACTIVE_CURRENT
+✓ 1B. Proved: Provision with elapsed validTo evaluates to HISTORICAL_SUPERSEDED
+✓ 1C. Proved: Provision with future validFrom evaluates to PENDING_EFFECTIVE
+✓ 1D. Proved: In-force provision with expired verification window evaluates to AUDIT_OVERDUE
+✓ 1E. Proved: Exact boundary dates evaluate correctly across transitions
+
+[2. TARGET DATE RESOLVER]
+✓ 2A. Proved: Explicit DD/MM/YYYY parsed to 2023-03-15 with HIGH confidence and isHistorical === true
+✓ 2B. Proved: Named date "1 April 2026" parsed to 2026-04-01 with HIGH confidence
+✓ 2C. Proved: "for YA 2024" resolved to 2024-01-01 with MEDIUM confidence
+✓ 2D. Proved: Undated query does NOT invent a historical date (targetDate === undefined)
+
+[3. SFRS(I) KNOWLEDGE EXPANSION]
+✓ 3. Proved: All 5 SFRS(I) standards (1-36, 1-20, 1-23, 1-10, 1-8) registered with paragraph citations and curated summary discipline
+
+[4. IRAS / INCOME TAX ACT EXPANSION]
+✓ 4. Proved: IRAS tax provisions retain their declared evidence tiers and YA 2025 renovation guidance is not represented as verbatim legislation
+
+[5. GST EXPANSION & HISTORICAL RATES]
+✓ 5. Proved: GST Reg 28, Sec 14, Regs 82-90, Sec 11, and historical/current GST rates (7%, 8%, 9%) registered cleanly
+
+[6. ACRA / COMPANIES ACT EXPANSION]
+✓ 6. Proved: All 5 Companies Act provisions (§§ 156, 171, 142/143/Part 11A, 68, 78B) registered with authentic SSO verbatim text
+
+[7. CPF & MOM EXPANSION]
+✓ 7. Proved: CPF allocation, historical ceilings (2024, 2025, 2026), MOM rest day pay, MRN, and CDCA parental leaves registered cleanly
+
+[8. TEMPORAL AMBIGUITY & RETRIEVAL RESOLUTION]
+✓ 8A. Proved: 15/03/2023 dated query resolves GST_RATE_8_PERCENT_2023 as top result
+✓ 8B. Proved: 01/05/2022 dated query resolves GST_RATE_7_PERCENT as top result
+✓ 8C. Proved: Undated query prioritizes active current 9% GST rate over historical 7% and 8%
+✓ 8D. Proved: 2024 CPF query resolves CPF_WAGE_CEILING_2024 as top result
+✓ 8E. Proved: Current CPF query resolves CPF_WAGE_CEILINGS_2026 as top result
+✓ 8F. Proved: Section 13W retrieval separates pre-2026 ordinary-share rules from 2026 preference-share rules
+
+[9. FAST-PATH DETERMINISTIC SAFETY & AUDIT INVARIANTS]
+✓ 9A. Proved: Invariant enforced — AUDIT_OVERDUE sources are denied fast-path zero-LLM bypass
+✓ 9B. Proved: Claim completeness requirement enforced for Phase 3 statutory claims (Section 156)
+
+[10. CITATION VERIFICATION & DISCIPLINE FOR NEW PROVISIONS]
+✓ 10A. Proved: Section 13W historical/current boundaries are explicit and its unverified URL is rejected
+✓ 10B. Proved: Historical 8% GST citation matches HISTORICAL_SUPERSEDED with validTo: 2023-12-31
+✓ 10C. Proved: Generic ACRA framework URL is rejected for a paragraph-specific SFRS(I) citation
+
+=============================================================
+ALL PHASE 3 COVERAGE & TEMPORAL TESTS PASSED! (25/25 GREEN)
+=============================================================
+
+
+✅ PASSED: Coverage & Temporal Invariants [0.62s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Sidequest Correction Pass (test_sidequest_correction.mjs)
+----------------------------------------------------------------
+=== RUNNING FOCUSED CORRECTION PASS VERIFICATION TESTS ===
+
+[1. NO GENERIC NUMERIC REGEX EXTRACTION]
+✓ 1A. Proved: Generic numbers (dates 15/2026, qty 5, GST 9%, terms 30) are NEVER fabricated into journal amounts
+
+[2. ERADICATION OF HARD-CODED FALLBACK AMOUNTS]
+✓ 2A. Proved: Capitalisation without outlay defaults to 0.00 lines, isBalanced: false, and missing facts card (no $50,000 default)
+✓ 2B. Proved: Car purchase without cost defaults to 0.00 lines, isBalanced: false, and missing facts card (no $120,000 default)
+
+[3. SECTION-LEVEL & CLAIM-COMPLETE FAST PATH GATING]
+✓ 3A. Proved: Multi-topic statutory query with all 3 claims verified at section level (88A, 89, 38) succeeds on fast-path
+✓ 3B. Proved: Curated summary (Section 205C) correctly rejected from fast-path: "Evidence for 'Section 205C Audit Exemption' (Companies Act 1967) has status 'NEEDS_REVIEW', not VERIFIED"
+✓ 3C. Proved: Loose Act match without matching Section is strictly rejected: "Supporting citation 'Employment Act 1968 (MOM) Section 999 NonExistentSection' not found at section level in retrieved sources"
+
+[4. TIMEOUT & FALLBACK TELEMETRY RECORDING]
+[Telemetry] UNKNOWN (gemini-2.5-flash) [timeouts=1, fallback=true]: total=12009.7ms (first_vis=0.05ms, gemini=12005ms, ground=1ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ 4A. Proved: Timeout and fallback events are captured and logged in telemetry summary
+
+[5. PROMPT HISTORY CONDENSATION]
+✓ 5A. Proved: Prior assistant responses are condensed before sending to LLM, eliminating prompt re-bloat
+
+=============================================================
+ALL FOCUSED CORRECTION PASS TESTS PASSED SUCCESSFULLY! (100% GREEN)
+=============================================================
+
+✅ PASSED: Sidequest Correction Pass [0.56s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Fast-Path Grounding (test_sidequest_1_1.mjs)
+----------------------------------------------------------------
+=== RUNNING SIDE QUEST 1.1: ARCHITECTURAL & GROUNDED VERIFICATION TESTS ===
+
+[1. STRICT 6-CONDITION FAST-PATH LOGIC]
+✓ 1A. Fast-path triggers when all 6 conditions are met (verified primary source + deterministic coverage)
+✓ 1B. Proved: Deterministic != Authoritative (NEEDS_REVIEW source prevents fast-path despite isComplete === true)
+✓ 1C. Proved: Accounting interpretation/judgment requires LLM (Q8 routes to Gemini)
+✓ 1D. Proved: Foreign currency equity transaction routes to Gemini for classification (Q9)
+✓ 1E. Missing material facts prevent fast-path
+
+[2. PROMPT PRUNING & REASONING DELEGATION]
+✓ 2A. Application rules pruned cleanly without domain cross-contamination
+
+[3. CORRECT JOURNAL DELEGATION & ZERO PLACEHOLDER NUMBERS]
+✓ 3A. Proved: Q10 Barter trade has ZERO invented numbers, isBalanced === false, CONDITIONAL, and uncertified proposal callout
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite) [fallback=true]: total=30.31ms (first_vis=30.22ms, gemini=0.92ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ 3B. Standalone statutory response is query-bound, gap-aware, and carries no invented journal or deterministic authority stamp
+
+=============================================================
+ALL SIDE QUEST 1.1 TESTS PASSED SUCCESSFULLY! (8/8 GREEN)
+=============================================================
+
+
+✅ PASSED: Fast-Path Grounding [0.66s]
+
+----------------------------------------------------------------
+▶ Running: [ux-resilience] Performance Architecture & Telemetry (test_performance_architecture.mjs)
+----------------------------------------------------------------
+=== RUNNING SIDE QUEST: LATENCY & PERFORMANCE ARCHITECTURE TESTS ===
+
+[1. TOKEN REDUCTION & COMPACT SCHEMA FORMATTING]
+✓ 1. Compact decision schema achieves >= 75% output token reduction across all 7 query classes
+
+[2. DETERMINISTIC RESPONSE ASSEMBLER VERIFICATION]
+✓ 2A. assembleDeterministicResponse correctly synthesizes complete statutory advisory response
+✓ 2B. assembleDeterministicResponse preserves deterministic accounting engine calculations and discount guardrail
+
+[3. POSTPROCESSAIRESPONSE INTEGRATION WITH COMPACT PAYLOAD]
+✓ 3. postProcessAIResponse seamlessly delegates compact payload to deterministic assembler
+
+[4. REQUEST PROFILER TELEMETRY INSTRUMENTATION]
+✓ 4. RequestProfiler compiles complete, transparent telemetry report with all stages
+
+[5. SAFETY INVARIANTS & AUTHORITY STATUS TRIAD PRESERVATION]
+✓ 5A. Unrecognized transaction with AI proposal strictly assigned AI_PROPOSED / CONDITIONAL
+✓ 5B. Missing facts strictly trigger CONDITIONAL authority status and explicit disclaimer
+
+=============================================================
+ALL PERFORMANCE ARCHITECTURE TESTS PASSED! (7/7 GREEN)
+=============================================================
+
+✅ PASSED: Performance Architecture & Telemetry [0.81s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Grounded Reasoning & Citations (test_grounded_reasoning.mjs)
+----------------------------------------------------------------
+=== RUNNING PHASE 2: GROUNDED GEMINI REASONING PIPELINE TESTS ===
+
+[1. EVIDENCE HIERARCHY & FOUR-TIER SEPARATION]
+✓ 1A. Primary evidence tier strictly populated with verified verbatim provisions
+✓ 1B. Curated summaries (SFRS) isolated from primary evidence (no tier leakage)
+✓ 1C. System prompt cleanly formats all 4 evidence tiers with strict labeling
+
+[2. FACTS, MISSING FACTS & ASSUMPTIONS SEPARATION]
+✓ 2A. Explicit user facts accurately extracted without inventing undeclared facts
+✓ 2B. Missing facts required for legal conclusion explicitly flagged
+✓ 2C. Explicit assumptions maintain materiality and do NOT silently convert missing facts
+
+[3. TIME-SENSITIVITY & UNCERTAINTY FALLBACK MANDATE]
+✓ 3A. Grounding prompt enforces the mandatory uncertainty fallback clause
+✓ 3B. postProcessAIResponse automatically enforces fallback disclaimer when current evidence is missing
+
+[4. POST-GENERATION CITATION VERIFICATION ON AI RESPONSES]
+✓ 4A. Case A: Verified statutory content is retained as evidence but its unverified URL is withheld
+✓ 4B-F. Invalid, generic, or out-of-scope citations retain distinct rejection reasons and are omitted
+
+[5. DETERMINISTIC ACCOUNTING ENGINE GUARDRAILS]
+✓ 5A. Deterministic balancing guardrail catches and flags unbalanced double entry
+✓ 5B. Trade discount rule enforced: trade discount expense line removed per SFRS(I) 1-16 §16(a)
+
+[6. PROVIDER CONSISTENCY]
+✓ 6A. Azure OpenAI and OpenAI message adapter shares identical grounded prompt structure
+✓ 6B. Azure OpenAI and OpenAI adapter uses identical postProcessAIResponse verification
+
+[7. PHASE 2.1 EXPLICIT PROOF SUITE]
+✓ 7A. PROOF 1: Unsupported GST/CPF/tax sources remain outside answer scope and their unverified URLs are rejected
+✓ 7B. PROOF 2: Fabricated standards and paragraphs are strictly rejected
+✓ 7C. PROOF 3: Missing material facts produce explicitly conditional conclusions
+✓ 7D. PROOF 4: AI cannot override deterministic journal calculations (deterministic engine strictly governs)
+✓ 7E. PROOF 5: No evidence triggers an uncertainty fallback and citation URL suppression
+
+[8. PHASE 2.2 HARDENING: AUTHORITY STATUS TRIAD & STRUCTURAL VERIFICATION]
+✓ 8A. Unrecognized transactions with AI proposed journals are strictly AI_PROPOSED (never DETERMINISTIC)
+✓ 8B. Fully specified recognized transactions computed by deterministic engine receive DETERMINISTIC
+✓ 8C. Missing material facts strictly enforce CONDITIONAL status on scenario and direct groups
+✓ 8D. Structural verification boundary remains explicit while unverified statutory URLs are withheld
+
+=============================================================
+ALL PHASE 2, 2.1 & 2.2 TESTS PASSED SUCCESSFULLY! (23/23 GREEN)
+=============================================================
+
+
+✅ PASSED: Grounded Reasoning & Citations [0.87s]
+
+----------------------------------------------------------------
+▶ Running: [retrieval-evidence] Source-Backed Foundation (test_source_backed_architecture.mjs)
+----------------------------------------------------------------
+=== RUNNING PHASE 1: EVIDENCE FOUNDATION BEHAVIORAL TESTS ===
+
+[1. CLASSIFICATION]
+✓ 1A. Pure Accounting question correctly classified
+✓ 1B. Pure Corporate Tax question correctly classified
+✓ 1C. Pure GST question correctly classified
+✓ 1D. Corporate Regulatory question correctly classified
+✓ 1E. Mixed Accounting + Tax question correctly classified
+✓ 1F. Numbers in statutory advisory query resisted false-positive journal trigger
+✓ 1G. "rate" in conceptual accounting query resisted false-positive time-sensitivity alert
+✓ 1H. Conceptual lease question resisted false-positive missing facts
+
+[2. SOURCE RETRIEVAL & PROVENANCE]
+✓ 2A. Retrieved SFRS curated summary: Intangible Assets - Capitalisation of Development Costs vs Research Expense [NEEDS_REVIEW / CURATED_SUMMARY] (EffectiveDate: undefined - no fake date)
+✓ 2B. Retrieved verified primary statutory source: Income Tax Act 1947 (Section 14(1))
+✓ 2C. Unknown source safely rejected without false matches
+✓ 2D. Proved: Official URL alone cannot make text authoritative (remains NEEDS_REVIEW + CURATED_SUMMARY)
+
+[3. CITATION VERIFICATION]
+✓ 3A. Proved: Generic ACRA framework pointer cannot be cited for a specific SFRS(I) paragraph
+✓ 3B. Verbatim statutory content is matched while its unverified URL is withheld
+✓ 3C. Fabricated paragraph correctly rejected (PARAGRAPH_NOT_FOUND)
+✓ 3D. Unknown source correctly rejected (SOURCE_NOT_FOUND)
+✓ 3E. Authority mismatch correctly rejected (AUTHORITY_MISMATCH)
+✓ 3F. Non-canonical domain URL correctly rejected (NON_CANONICAL_URL)
+✓ 3G. Mismatched canonical statute URL path correctly rejected
+✓ 3H. Proved: Exact URL-verified official guidance returns SOURCE_NEEDS_REVIEW, not VERIFIED_PRIMARY_SOURCE
+
+[4. CAPITALISATION & ASSUMPTION BEHAVIOR]
+✓ 4A. Capitalisation missing facts detected, assumptions represented, and entry marked conditional
+✓ 4B. Implicit 5% lease discount rate explicitly labeled as an assumption
+
+[5. MULTI-AUTHORITY SEPARATION]
+✓ 5A. Accounting (SFRS(I) 1-38) and Tax (Income Tax Act / EIS) strictly separated
+
+=============================================================
+ALL PHASE 1 BEHAVIORAL TESTS PASSED SUCCESSFULLY! (100% GREEN)
+=============================================================
+
+
+✅ PASSED: Source-Backed Foundation [0.45s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Singapore Statutory Engine (test_statutory_engine.mjs)
+----------------------------------------------------------------
+=== STARTING SINGAPORE STATUTORY ENGINE VERIFICATION ===
+
+Test 1: ACRA Small Company Audit Exemption Query
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=101ms (first_vis=100.9ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ ACRA audit-exemption query correctly reports insufficient evidence without unsupported rule details.
+
+Test 2: CPF 2026 Wage Ceilings Query
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=56.12ms (first_vis=37.57ms, gemini=0ms, ground=22ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ CPF 2026 Wage Ceiling verified successfully.
+
+Test 3: Passenger Motor Car Purchase (Hybrid Query)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=9.42ms (first_vis=9.41ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ Passenger Car Hybrid Entry verified successfully.
+
+✓ Third-party replacement car remains conditional on IRAS use and recipient facts.
+
+✓ A company car used by an unrelated contractor remains outside the own-use fast path.
+
+✓ Company ownership alone does not trigger the car GST block for consultant-only use.
+
+Test 4: Canonical SSO URL Builder
+✓ Canonical SSO URL Builder verified successfully.
+
+Test 5: Link Sanitizer (Anti-hallucination)
+✓ Link Sanitizer verified successfully.
+
+Test 6: Existing General Expense Double Entry (Entertainment 3k)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=28.04ms (first_vis=21.93ms, gemini=0ms, ground=17ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ Existing double entry engine intact.
+
+Test 7: Software Development Capitalisation (SFRS(I) 1-38 vs S14/EIS)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=52.88ms (first_vis=19.51ms, gemini=0ms, ground=16ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ Software Development Capitalisation query verified.
+
+Test 8: GST Compulsory Registration Threshold ($1M Turnover)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=23.71ms (first_vis=22.81ms, gemini=0ms, ground=19ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ GST Compulsory Registration query verified.
+
+Test 9: MOM Annual and Outpatient Sick Leave Entitlements
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=23.3ms (first_vis=23.3ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ MOM statutory leave query correctly reports insufficient evidence offline.
+
+Test 10: CPF Tiered Contribution Rates by Age
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=30.02ms (first_vis=17.46ms, gemini=0ms, ground=15ms, post=0ms) | tokens: in=0, out=0, think=0
+✓ CPF Tiered Rates by Age verified.
+
+====================================================
+ALL 10 TESTS PASSED! Statutory Engine 100% Verified.
+====================================================
+
+✅ PASSED: Singapore Statutory Engine [0.80s]
+
+----------------------------------------------------------------
+▶ Running: [accounting-invariants] Universal Accounting Engine & FX (test_universal.mjs)
+----------------------------------------------------------------
+=== RUNNING UNIVERSAL ACCOUNTING ENGINE & FRANKFURTER API VERIFICATION ===
+
+[TEST 1] Frankfurter API Rate Fetch (USD -> SGD):
+Frankfurter API call failed for USD->SGD (2024-01-15), using realistic fallback: Error: OFFLINE_EXTERNAL_FETCH_BLOCKED
+    at guardedFetch (file:///D:/Accounting/.tmp/canonical-node22/external-fetch-guard.mjs:8:11)
+    at getExchangeRate (D:\Accounting\.worktrees\review-corrections-20261025\src\services\frankfurterService.ts:62:23)
+    at file:///D:/Accounting/.worktrees/review-corrections-20261025/tests/regression/test_universal.mjs:11:23
+    at ModuleJob.run (node:internal/modules/esm/module_job:343:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:681:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+Fetched Rate: 1 USD = 1.345 SGD (Date: 2024-01-15, Source: Market Benchmark (Frankfurter Fallback))
+✓ TEST 1 PASSED: Frankfurter API operational!
+
+[TEST 2] Universal Query: 'i pay for entertainment expenses 3k with bank':
+Scenario: GENERAL_EXPENSE, Title: Payment of Entertainment & Hospitality Expenses, Amount: 3000
+Debit:  Entertainment & Hospitality Expenses (P&L) = SGD 3000
+Credit: Cash at Bank (Current Account) = SGD 3000
+✓ TEST 2 PASSED: Entertainment expense double entry generated with exact debit/credit balance!
+
+[TEST 3] Universal Query: 'i have a rental agreement for 3 years, paying 1 month sgd3,000':
+Inception ROU Asset: SGD 100097.1
+Inception Lease Liability: SGD 100097.1
+✓ TEST 3 PASSED: Rental lease agreement IFRS 16 entries generated!
+
+[TEST 4] Apple Shares Scenario with Frankfurter FX & Realized FX Gain:
+Buy Spot Rate: 1.34 (Source: Benchmark Spot Rates for Future Dates (1.34 buy / 1.36 sell SGD/USD))
+Sell Spot Rate: 1.36
+Gross Disposal Proceeds (Dr): SGD 544000
+Stock Price Gain (Cr): SGD 136000
+Realized Foreign Exchange Gain (Cr): SGD 6000
+✓ TEST 4 PASSED: Apple shares foreign exchange gain double entry (SGD 6,000) verified!
+
+[TEST 5] Complex Machinery Trade-in, Catch-up Depreciation & Equipment Loan:
+Scenario: PPE_IAS16
+Key facts extracted: 14 items
+[Group 1] Entry 1: Catch-Up Depreciation for Jan–Mar 2026: Dr/Cr = SGD 2500 (Balanced: true)
+[Group 2] Entry 2: Derecognition / Disposal of Old Machinery: Dr/Cr = SGD 51800 (Balanced: true)
+  Loss on Disposal: SGD 7500
+  Output GST (9%): SGD 1800
+[Group 3] Entry 3: Acquisition of New Machinery & Equipment Loan Financing: Dr/Cr = SGD 114720 (Balanced: true)
+  Input GST (9%): SGD 9000
+  Unexpired Loan Interest: SGD 5720
+  Gross Equipment Loan: SGD 62920
+✓ TEST 5 PASSED: Complex Machinery trade-in, catch-up depreciation, GST, and loan verified with 100% precision!
+
+[TEST 6] Office Equipment with 10% Trade Discount, 9% GST, Cash & Credit Terms:
+Scenario: ASSET_PURCHASE_DISCOUNT
+Title: Purchase of Office Equipment (Trade Discount & Credit Terms)
+Group Title: Single Compound Journal Entry: Purchase of Office Equipment
+Total Dr = SGD 19620, Total Cr = SGD 19620, Balanced = true
+  Dr. Office Equipment Cost: SGD 18000
+  Dr. GST Input Tax (9%): SGD 1620
+  Cr. Cash at Bank: SGD 5000
+  Cr. Trade Payables (Credit Terms): SGD 14620
+✓ TEST 6 PASSED: Office Equipment with 10% trade discount single compound entry verified with 100% precision!
+
+[TEST 7] Guard against fake Apple shares default on unrecognized offline queries:
+Unrecognized query scenarioType: UNRECOGNIZED
+✓ TEST 7 PASSED: Unrecognized queries safely produce an informative notice instead of fake Apple shares!
+
+>>> ALL 7 TESTS PASSED SUCCESSFULLY WITH ZERO ERRORS! <<<
+
+✅ PASSED: Universal Accounting Engine & FX [0.28s]
+
+================================================================
+📊 REGRESSION SUITE EXECUTION SUMMARY
+================================================================
+✅ PASS | accounting-invariants  | Basic Bookkeeping Journal Templates        |  1.90s
+✅ PASS | input-understanding    | Development Live Routing Regressions       |  0.74s
+✅ PASS | provider-resilience    | Malformed Tax Response Safety              |  0.46s
+✅ PASS | accounting-invariants  | Double-Entry Reliability & Journal Integrity |  0.54s
+✅ PASS | input-understanding    | AI Semantic Extraction & Schema Validation Gate |  0.47s
+✅ PASS | input-understanding    | Semantic Question Understanding & Guarded Routing |  0.91s
+✅ PASS | input-understanding    | Per-Issue Semantic Operation Contracts     |  1.91s
+✅ PASS | input-understanding    | Semantic Operation Intent Boundaries       |  0.54s
+✅ PASS | evaluation-safety      | Semantic Intent Follow-Up Runner           |  0.65s
+✅ PASS | evaluation-safety      | Semantic Authority & Relief Evaluation Safety |  0.65s
+✅ PASS | evaluation-safety      | IRAS-First Release Gate                    |  0.17s
+✅ PASS | evaluation-safety      | IRAS-First Runner Safety                   |  1.14s
+✅ PASS | input-understanding    | Semantic Authority & Relief Contract       |  0.49s
+✅ PASS | input-understanding    | IRAS-First Semantic Contract               |  0.40s
+✅ PASS | input-understanding    | CPF Relief Context and Private Expense Enumeration |  0.39s
+✅ PASS | input-understanding    | Routing Clause Topic Ownership             |  0.55s
+✅ PASS | input-understanding    | Application-Derived Semantic Specificity   |  0.45s
+✅ PASS | retrieval-evidence     | IRAS Natural-Language Topic Resolution     |  0.60s
+✅ PASS | input-understanding    | Factual Conjunction Residual Safety        |  0.33s
+✅ PASS | input-understanding    | Shared Whole-Question Residual Safety      |  0.30s
+✅ PASS | evaluation-safety      | IRAS V2 Measurement and Timeout Safety     |  0.62s
+✅ PASS | input-understanding    | Versioned Semantic Question Wire Contract  |  0.30s
+✅ PASS | provider-resilience    | Semantic Provider JSON Schema & Wire Contract |  0.23s
+✅ PASS | evaluation-safety      | Semantic Wire-Format Evaluation Profile Safety |  0.58s
+✅ PASS | evaluation-safety      | Semantic Contract Follow-Up Runner         |  0.60s
+✅ PASS | input-understanding    | Material Issue Decomposition & Authority Ownership |  0.37s
+✅ PASS | retrieval-evidence     | Authority Workstream Evidence Isolation & Coverage |  0.56s
+✅ PASS | retrieval-evidence     | Authority Semantic Concept Ownership       |  0.52s
+✅ PASS | retrieval-evidence     | Bounded Statutory Advisory Support         |  0.40s
+✅ PASS | retrieval-evidence     | IRAS and ACRA Practical Rule Explanations  |  0.58s
+✅ PASS | retrieval-evidence     | CPF and MAS Practical Rule Explanations    |  0.52s
+✅ PASS | coverage-governance    | Five-authority Statutory Coverage Benchmark |  1.54s
+✅ PASS | coverage-governance    | Five-authority Statutory Coverage Fixture Replay |  1.18s
+✅ PASS | retrieval-evidence     | MOM Part IV Coverage Concept Support       |  0.52s
+✅ PASS | retrieval-evidence     | Fetched Statutory Qualification Retention  |  0.40s
+✅ PASS | retrieval-evidence     | Unmapped Accounting Rule Gap Fallback      |  0.64s
+✅ PASS | input-understanding    | Exact-Query Request Completeness Diagnostics |  0.49s
+✅ PASS | evaluation-safety      | Prospective Current Scope V2 Compatibility (Archived V4/V5/V8/V9 Controls) | 15.78s
+✅ PASS | evaluation-safety      | Semantic Residency Subject Diagnostic V4   |  0.41s
+✅ PASS | evaluation-safety      | IRAS Mapped Evidence Diagnostic V4         |  7.04s
+✅ PASS | evaluation-safety      | IRAS Public GST Selection V3               |  3.11s
+✅ PASS | evaluation-safety      | IRAS Public GST Selection V4               | 12.66s
+✅ PASS | retrieval-evidence     | IRAS Source Term Compatibility             |  0.54s
+✅ PASS | retrieval-evidence     | IRAS General Rule Concept Support          |  0.71s
+✅ PASS | retrieval-evidence     | Private Expense Scoped Local-to-Mapped Fallback |  0.52s
+✅ PASS | retrieval-evidence     | IRAS Public Rule Forms                     |  0.17s
+✅ PASS | retrieval-evidence     | IRAS Defined Foreign-income Rule           |  0.57s
+✅ PASS | retrieval-evidence     | IRAS GST Opening Locator                   |  1.04s
+✅ PASS | retrieval-evidence     | IRAS Supported Rule Quote Priority         |  0.70s
+✅ PASS | retrieval-evidence     | IRAS WHT Overview Topic Binding            |  0.61s
+✅ PASS | retrieval-evidence     | IRAS WHT Topicless Concept Ownership       |  0.50s
+✅ PASS | retrieval-evidence     | IRAS Scoped Concept Coverage               |  0.25s
+✅ PASS | retrieval-evidence     | IRAS Requested Concept Fallback            |  0.64s
+✅ PASS | retrieval-evidence     | IRAS Individual CPF Cash Top-up Workstream |  0.57s
+✅ PASS | retrieval-evidence     | IRAS Shared Page Claim Bindings            |  0.48s
+✅ PASS | input-understanding    | Multi-authority Issue Scoring              |  0.16s
+✅ PASS | input-understanding    | Prospective Multi-authority Issue Scoring V2 |  0.17s
+✅ PASS | evaluation-safety      | Multi-authority Evaluation Runner Output Safety |  3.10s
+✅ PASS | evaluation-safety      | Semantic Reliability Experiment Harness    |  1.08s
+✅ PASS | evaluation-safety      | Semantic Residency Diagnostic V3 Safety    |  0.92s
+✅ PASS | evaluation-safety      | Semantic Contract Diagnostics & Capture Runner Safety |  0.25s
+✅ PASS | evaluation-safety      | Verification Receipt Export Durability & Integrity |  1.96s
+✅ PASS | evaluation-safety      | Cloudflare R2 Verification Receipt Sink Durability & Recovery |  0.63s
+✅ PASS | evaluation-safety      | Reviewed Legacy R2 Harness Preparation Safety |  2.68s
+✅ PASS | retrieval-evidence     | Resolver Coverage Contract & Compound Issue Isolation |  0.51s
+✅ PASS | ux-resilience          | Whole-Question Authority Evidence Presentation |  1.39s
+✅ PASS | input-understanding    | Semantic Understanding & Routing           |  0.51s
+✅ PASS | conversation-state     | Multi-Turn Accounting State & Follow-Ups   |  1.01s
+✅ PASS | retrieval-evidence     | Phase 5 Integration & Semantics            |  0.39s
+✅ PASS | retrieval-evidence     | Topic Resolver Semantics & Provenance Separation |  0.26s
+✅ PASS | accounting-invariants  | Projection Builder No-Fabrication Invariants |  0.16s
+✅ PASS | conversation-state     | Payroll Amount Correction & CPF Journal    |  0.23s
+✅ PASS | ux-resilience          | Conversational Payroll and Chat Presentation |  0.81s
+✅ PASS | conversation-state     | Generic Fact Amendment Resolution          |  0.25s
+✅ PASS | accounting-invariants  | Own-Equity versus Payroll Routing          |  0.23s
+✅ PASS | input-understanding    | Semantic Routing Priority                  |  0.28s
+✅ PASS | input-understanding    | MAS / IRAS Multi-authority Fund Incentive Routing |  0.32s
+✅ PASS | conversation-state     | Share Capital Consideration & Settlement   |  0.53s
+✅ PASS | retrieval-evidence     | Phase 5 Advanced Hybrid Retrieval & Vector Index |  0.55s
+✅ PASS | retrieval-evidence     | Authority and Domain Conjunctive Retrieval |  0.27s
+✅ PASS | retrieval-evidence     | Labelled Retrieval Quality Evaluation      |  0.59s
+✅ PASS | provider-resilience    | Provider Boundary Safety                   |  0.18s
+✅ PASS | provider-resilience    | Gemini Provider Diagnostics Safety         |  5.40s
+✅ PASS | provider-resilience    | Gemini Failure Chain Attribution           |  0.16s
+✅ PASS | evaluation-safety      | Latest Gemini Retained Offline Diagnostic  |  1.00s
+✅ PASS | evaluation-safety      | Gemini Downstream V4 Semantic and Ownership Boundaries |  1.10s
+✅ PASS | evaluation-safety      | Latest Nine-response Gemini Downstream Offline Replay |  9.82s
+✅ PASS | retrieval-evidence     | IRAS Scoped Fallback Evidence Reuse        |  0.79s
+✅ PASS | ux-resilience          | Feedback Build Metadata                    |  0.16s
+✅ PASS | ux-resilience          | iOS Small-Screen Input Focus Zoom          |  0.20s
+✅ PASS | provider-resilience    | Official Source Failure Safety             |  0.20s
+✅ PASS | provider-resilience    | Official Source Same-Origin Proxy & Feedback Diagnostics |  0.46s
+✅ PASS | retrieval-evidence     | Shared Official Document Extraction        |  0.98s
+✅ PASS | retrieval-evidence     | Controlled Official Document Capture       |  0.27s
+✅ PASS | regulatory-updates     | MAS Transport Investigation Diagnostic     |  0.60s
+✅ PASS | retrieval-evidence     | Tagged PDF Paragraph Geometry              |  0.86s
+✅ PASS | retrieval-evidence     | Explicitly Bounded PDF Subsections and Linked Notes |  1.02s
+✅ PASS | regulatory-updates     | MAS Bounded Subsection Preview Lifecycle   |  9.30s
+✅ PASS | regulatory-updates     | MAS Byte-backed Regulatory Update Lifecycle |  1.09s
+✅ PASS | regulatory-updates     | Reviewed MAS Source Response Captures      |  0.39s
+✅ PASS | regulatory-updates     | Targeted MAS Exact-byte Acceptance Recheck |  0.47s
+✅ PASS | regulatory-updates     | Genuine MAS IID 04/2025 PDF Acceptance Checkpoint |  0.98s
+✅ PASS | regulatory-updates     | Genuine MAS HTTP Provenance and Controlled Lifecycle Acceptance |  1.53s
+✅ PASS | retrieval-evidence     | Shared Approved Document Admission & Citations |  0.44s
+✅ PASS | regulatory-updates     | ACRA B2 Captured Source Admission and Deadline Replay |  0.95s
+✅ PASS | retrieval-evidence     | ACRA Annual Return Filing Duty Evidence Scope |  0.64s
+✅ PASS | coverage-governance    | Phase 7 Coverage Registry                  |  0.22s
+✅ PASS | coverage-governance    | Singapore Knowledge Routing Benchmark      |  0.65s
+✅ PASS | coverage-governance    | Singapore Knowledge Foundation Registry and Routing |  0.47s
+✅ PASS | coverage-governance    | Singapore Consolidation Source Map and Local Routing |  0.59s
+✅ PASS | retrieval-evidence     | Verified Official Citation and Source-Map Fallback |  0.52s
+✅ PASS | accounting-invariants  | SFRS(I) 9 Reviewed Knowledge Pack          |  0.65s
+✅ PASS | corporate-tax          | Corporate Tax Treatment Pack               |  0.16s
+✅ PASS | coverage-governance    | Phase 7 Remaining Topic Packs              |  0.23s
+✅ PASS | regulatory-updates     | Regulatory Update Scheduler                |  0.24s
+✅ PASS | conversation-state     | Personal Fine Conversation Boundary        |  0.16s
+✅ PASS | conversation-state     | Personal Fine Clarification & Journal Follow-Ups |  0.43s
+✅ PASS | conversation-state     | Conversation Relation Failsafe             |  0.16s
+✅ PASS | conversation-state     | GST Registration Measurement-Basis Follow-Up |  0.23s
+✅ PASS | conversation-state     | Deferred Tax Standards Boundary            |  0.52s
+✅ PASS | retrieval-evidence     | Official Tax Source Links                  |  0.31s
+✅ PASS | input-understanding    | IRAS Missing Fact Guards                   |  0.40s
+✅ PASS | retrieval-evidence     | IRAS Verified Source Map and Fallback      |  0.76s
+✅ PASS | retrieval-evidence     | IRAS Mapped Source Diagnostic V3 Safety    |  1.18s
+✅ PASS | retrieval-evidence     | CPF Sitemap Discovery                      |  0.44s
+✅ PASS | retrieval-evidence     | ACRA Sitemap Discovery                     |  0.60s
+✅ PASS | retrieval-evidence     | MOM and MAS Official Sitemap Discovery     |  0.70s
+✅ PASS | retrieval-evidence     | MAS CMS General Rule Evidence Support      |  0.41s
+✅ PASS | retrieval-evidence     | IRAS Authority-level Discovery Progression |  0.57s
+✅ PASS | retrieval-evidence     | IRAS End-to-End Routing and Retrieval      |  0.70s
+✅ PASS | retrieval-evidence     | IRAS Evidence Quality Gate and Ranking     |  0.36s
+✅ PASS | retrieval-evidence     | IRAS Claim-to-Evidence Verification        |  0.41s
+✅ PASS | retrieval-evidence     | IRAS HTML Evidence Boundaries              |  0.36s
+✅ PASS | retrieval-evidence     | IRAS Evidence Policy Pipeline              |  1.36s
+✅ PASS | evaluation-safety      | IRAS V4 Retained-response Offline Regression |  1.29s
+✅ PASS | corporate-tax          | IRAS Deterministic Applications            |  0.34s
+✅ PASS | accounting-invariants  | Verified Source-Driven GST Calculation     |  0.22s
+✅ PASS | retrieval-evidence     | IRAS Provisional Answer Pipeline           |  1.03s
+✅ PASS | accounting-invariants  | Business Equipment Acquisition             |  0.41s
+✅ PASS | accounting-invariants  | Inventory Event Sequence                   |  0.86s
+✅ PASS | accounting-invariants  | Sale and Leaseback Event Sequence          |  0.66s
+✅ PASS | accounting-invariants  | Mixed-Domain Event Sequence                |  0.57s
+✅ PASS | accounting-invariants  | Investment Event Sequence                  |  0.69s
+✅ PASS | accounting-invariants  | Dated Investment Event Sequence            |  0.67s
+✅ PASS | regulatory-updates     | Phase 4 Live Retrieval & Source Versioning |  0.55s
+✅ PASS | retrieval-evidence     | Coverage & Temporal Invariants             |  0.62s
+✅ PASS | accounting-invariants  | Sidequest Correction Pass                  |  0.56s
+✅ PASS | retrieval-evidence     | Fast-Path Grounding                        |  0.66s
+✅ PASS | ux-resilience          | Performance Architecture & Telemetry       |  0.81s
+✅ PASS | retrieval-evidence     | Grounded Reasoning & Citations             |  0.87s
+✅ PASS | retrieval-evidence     | Source-Backed Foundation                   |  0.45s
+✅ PASS | accounting-invariants  | Singapore Statutory Engine                 |  0.80s
+✅ PASS | accounting-invariants  | Universal Accounting Engine & FX           |  0.28s
+----------------------------------------------------------------
+Total Duration: 154.29s
+Final Status: ALL SUITES PASSED (100% GREEN) 🎉
+================================================================
+

@@ -1,0 +1,1218 @@
+{
+  "frozenOn": "30/10/2026",
+  "authorship": "Independent practical question set frozen before the coverage implementation batch; source expectations were checked against first-party authority pages.",
+  "scope": "75 held-out natural-language Singapore compliance questions, 15 per authority. Intended for offline application-path replay plus independent answer grading. A question or evidence path alone does not establish a correct answer. Current rules are not historical-law advice; future commencement and missing facts must be handled expressly. QDC remains unsupported absent precise first-party requirements.",
+  "cases": [
+    {
+      "id": "iras-01",
+      "authority": "IRAS",
+      "question": "Our company year ended 30 June 2026. When is ECI due, and can we skip it if revenue was S$4.8 million but ECI is S$30,000?",
+      "expected": [
+        "ECI due within three months after FYE (30 September 2026).",
+        "The waiver requires both annual revenue no more than S$5 million and nil ECI; positive ECI means this company does not qualify."
+      ],
+      "forbidden": [
+        "ECI deadline is three months from YA end.",
+        "Revenue below S$5 million alone grants a waiver."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing"
+      ]
+    },
+    {
+      "id": "iras-02",
+      "authority": "IRAS",
+      "question": "A non-resident consultant has no contract with us. The IRAS invoice is dated 26 March 2026, says 30-day payment terms, was received on 30 April and paid on 19 May; no amount was credited earlier to a recipient-designated account. If WHT applies, what is the filing deadline, and does treaty exemption remove filing?",
+      "expected": [
+        "For non-director payments, IRAS uses the earliest of when payment is due/payable under agreement or invoice date if no contract (credit terms ignored), credit to a non-resident-designated account, or actual payment; here 26 March 2026 is earliest, so filing/payment is due 15 May 2026.",
+        "A treaty exemption may reduce tax to zero but filing is still required; establish the payment category, recipient, treaty eligibility and evidence."
+      ],
+      "forbidden": [
+        "All overseas consultant fees have the same rate.",
+        "A treaty exemption automatically removes the filing obligation."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-%28wht%29"
+      ]
+    },
+    {
+      "id": "iras-03",
+      "authority": "IRAS",
+      "question": "A GST-registered employer paid an employee's annual health screening bill. The examination was not legally required and was not linked to a work-related health risk. Can we claim the input tax?",
+      "expected": [
+        "Staff medical expenses are generally blocked under Regulation 26.",
+        "The described facts do not establish a WICA/qualifying collective-agreement or post-1 October 2021 work-risk exception; ordinary input-tax conditions also apply."
+      ],
+      "forbidden": [
+        "All employee medical costs are deductible because they benefit the business.",
+        "The post-2021 exception covers any voluntary check-up."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax"
+      ]
+    },
+    {
+      "id": "iras-04",
+      "authority": "IRAS",
+      "question": "We bought a delivery van for taxable business deliveries and a staff medical check-up in the same GST period. Are both input-tax claims allowed?",
+      "expected": [
+        "Assess the two expenses independently: staff medical input tax is generally blocked subject to the stated exceptions and ordinary claim conditions.",
+        "A van is a non-car motor vehicle; input tax on purchase/running expenses may be claimable subject to ordinary conditions. Confirm vehicle classification, use, invoice and period."
+      ],
+      "forbidden": [
+        "Treat the van as a motor car without checking classification.",
+        "Answer only the medical expense and silently omit the van."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax",
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+      ]
+    },
+    {
+      "id": "iras-05",
+      "authority": "IRAS",
+      "question": "We gave S$2,000 to an approved Singapore IPC in December 2026 and supplied our UEN. What corporate tax deduction is generally available, and until when does the enhanced deduction run under current guidance?",
+      "expected": [
+        "Qualifying approved donations to an IPC/Government for local community benefit made 1 January 2016 through 31 December 2029 generally receive a 2.5-times deduction, subject to eligibility and substantiation.",
+        "The company should provide its UEN to the IPC; verify the donee and donation qualify."
+      ],
+      "forbidden": [
+        "Every charitable gift gets a 2.5-times deduction.",
+        "Claim the donation as GST input tax."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/income-deductions-for-companies/business-expenses/tax-treatment-of-business-expenses-%28a-f%29/"
+      ]
+    },
+    {
+      "id": "iras-06",
+      "authority": "IRAS",
+      "question": "Royalty under our contract accrued on 30 June 2026 and was paid on 15 July. The recipient may qualify for treaty relief. What is the WHT filing deadline, and is filing still needed if the rate is zero?",
+      "expected": [
+        "For royalty, date of payment is earliest of contractual due/payable, credit to non-resident/designated account, or actual payment; stated accrual on 30 June precedes actual payment, so filing/payment is due 15 August 2026 if WHT filing applies.",
+        "Filing remains required even when DTA relief results in zero tax; verify payment and treaty facts, do not invent a rate."
+      ],
+      "forbidden": [
+        "Assume a 10% or zero rate without establishing treaty facts.",
+        "Assume no filing because tax might be zero."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/withholding-tax-filing/withholding-tax-filing-and-payment-due-date",
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-%28wht%29"
+      ]
+    },
+    {
+      "id": "iras-07",
+      "authority": "IRAS",
+      "question": "Our company incurred a book loss this year but has S$800,000 of revenue. Must we file ECI?",
+      "expected": [
+        "A book loss does not by itself answer whether ECI is nil or establish a waiver.",
+        "Waiver only if revenue is S$5 million or below and ECI is nil before partial/start-up exemption; otherwise file within three months of FYE. Need FYE and tax-adjusted ECI facts."
+      ],
+      "forbidden": [
+        "Book loss automatically means nil ECI.",
+        "Revenue above S$5 million is exempt from filing."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing"
+      ]
+    },
+    {
+      "id": "iras-08",
+      "authority": "IRAS",
+      "question": "We received a Notice of Assessment although our revenue was below S$5 million and taxable ECI was nil. Can we ignore it?",
+      "expected": [
+        "Self-assess both waiver conditions; a portal status or notice does not alone establish eligibility.",
+        "If both criteria are met and an estimated assessment was issued, contact IRAS via myTax Mail before the payment due date and confirm revenue and nil ECI."
+      ],
+      "forbidden": [
+        "Ignore every NOA automatically.",
+        "Must file ECI solely because the portal says Ready to File."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing"
+      ]
+    },
+    {
+      "id": "iras-09",
+      "authority": "IRAS",
+      "question": "For YA 2023, may we shred our company bank statements once we submit the tax return?",
+      "expected": [
+        "Keep source documents, accounting records/schedules, bank statements and business transaction records for at least five years from relevant YA.",
+        "Filing the return does not end retention; IRAS example says YA 2023 records through 31 December 2027."
+      ],
+      "forbidden": [
+        "Retention ends on the filing date.",
+        "Apply GST retention guidance without identifying it."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/basics-of-corporate-income-tax/record-keeping-requirements"
+      ]
+    },
+    {
+      "id": "iras-10",
+      "authority": "IRAS",
+      "question": "We imported a laptop for our Singapore office, but the import permit names another group company. Can we claim the import GST?",
+      "expected": [
+        "Claimant must be GST-registered, goods/import must be supplied to/imported by claimant and used for business; import permit evidence must support claimant.",
+        "Related-company use or reimbursement alone does not establish that this entity satisfies all input-tax conditions; clarify importer and documents."
+      ],
+      "forbidden": [
+        "Group relationship automatically transfers the claim.",
+        "Claim without a valid import permit/invoice."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax"
+      ]
+    },
+    {
+      "id": "iras-11",
+      "authority": "IRAS",
+      "question": "The ECI deadline passed last week and no Notice of Assessment has arrived. Is late filing still possible?",
+      "expected": [
+        "ECI remains due within three months of FYE unless valid waiver or specific exemption applies.",
+        "IRAS says filing after three months is still possible if NOA has not yet issued; determine FYE, YA and waiver eligibility."
+      ],
+      "forbidden": [
+        "Missed deadline means filing is impossible.",
+        "No NOA means no ECI duty."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing"
+      ]
+    },
+    {
+      "id": "iras-12",
+      "authority": "IRAS",
+      "question": "We paid a non-resident company for remote software support carried out wholly overseas. Does Singapore WHT apply?",
+      "expected": [
+        "Do not infer WHT solely from non-resident status; identify payment nature, services/performance location, payer/payee facts and applicable domestic/treaty rules.",
+        "Ask for the contract/invoice and service facts if needed; do not invent a rate."
+      ],
+      "forbidden": [
+        "All service fees paid overseas are automatically subject to WHT.",
+        "All remote services are automatically exempt."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/withholding-tax/basics-of-withholding-tax/overview-of-withholding-tax-%28wht%29"
+      ]
+    },
+    {
+      "id": "iras-13",
+      "authority": "IRAS",
+      "question": "We claimed GST on staff medical treatment required by written law for a work-related health risk. The bill is dated 30 September 2021. Does the post-October 2021 exception apply?",
+      "expected": [
+        "The cited work-related-risk limb is expressly for expenses incurred on or after 1 October 2021; 30 September does not meet that date condition.",
+        "Check whether another separate exception (WICA or qualifying collective agreement) applies and ordinary input-tax criteria."
+      ],
+      "forbidden": [
+        "Apply the post-2021 exception retroactively.",
+        "Conclude no claim under any other possible exception without facts."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/conditions-for-claiming-input-tax"
+      ]
+    },
+    {
+      "id": "iras-14",
+      "authority": "IRAS",
+      "question": "Our company sold its delivery lorry and bought a replacement van. Is input GST on both vehicle purchases blocked as it is for cars?",
+      "expected": [
+        "Distinguish a motor car from other motor vehicles; IRAS says input tax on purchase/running expenses for lorries and vans may be claimed subject to conditions.",
+        "Vehicle category, actual use, GST registration and valid tax invoices remain relevant."
+      ],
+      "forbidden": [
+        "Treat every road vehicle as a blocked motor car.",
+        "Promise eligibility without ordinary claim conditions."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/goods-services-tax-%28gst%29/claiming-gst-%28input-tax%29/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses"
+      ]
+    },
+    {
+      "id": "iras-15",
+      "authority": "IRAS",
+      "question": "Our investment holding company has only dividend income and nil ECI before exemptions. Is its revenue automatically zero for the ECI waiver test?",
+      "expected": [
+        "For an investment holding company, IRAS treats investment income such as dividends and interest as its main-source revenue for this test.",
+        "Waiver requires revenue no more than S$5 million and nil ECI; confirm relevant YA/basis period and amount."
+      ],
+      "forbidden": [
+        "Exclude dividends as passive income automatically.",
+        "Assume nil ECI alone grants waiver."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/corporate-income-tax/estimated-chargeable-income-%28eci%29-filing"
+      ]
+    },
+    {
+      "id": "cpf-01",
+      "authority": "CPF",
+      "question": "A monthly salary is earned in March but, under our payroll terms, is payable on 20 April. Is it March Ordinary Wages under CPF?",
+      "expected": [
+        "OW for a month must be for employment in that month and payable by the 14th of the following month; this payment misses the second condition and is AW for that month.",
+        "Classify by actual contractual due/payable facts; do not classify solely by pay-period label."
+      ],
+      "forbidden": [
+        "Every monthly salary is OW regardless of payable date.",
+        "Treat AW as exempt from CPF."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "cpf-02",
+      "authority": "CPF",
+      "question": "An employee has S$9,200 monthly OW in 2026. What OW base is subject to CPF before applying the employee's rate?",
+      "expected": [
+        "The 2026 monthly OW ceiling is S$8,000; contributions are computed on the capped OW base, subject to status/age/rate facts."
+      ],
+      "forbidden": [
+        "Apply 2027 ceiling to 2026 wages.",
+        "Calculate an exact contribution without citizenship, age, and SPR-year facts."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions",
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "cpf-03",
+      "authority": "CPF",
+      "question": "We paid a S$12,000 bonus in February 2026. How do we determine the CPF-able AW ceiling for this employee?",
+      "expected": [
+        "AW ceiling is per employee, per employer, per calendar year: S$102,000 less that employee's total OW subject to CPF for 2026, subject to the applicable OW ceiling/rates.",
+        "Need actual OW history and status/rate details to calculate exact contribution."
+      ],
+      "forbidden": [
+        "Use the monthly OW ceiling as the annual AW ceiling.",
+        "Assume the full bonus is CPF-able without remaining-ceiling calculation."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "cpf-04",
+      "authority": "CPF",
+      "question": "An annual bonus for 2025 was contractually due and payable in January 2026, though payroll had budgeted it for last year. Which year's AW ceiling applies?",
+      "expected": [
+        "Use the year the AW is due and payable; a 2025 bonus due/payable in 2026 uses the 2026 AW ceiling.",
+        "Confirm contractual due date; do not choose the year by performance period or accrual label alone."
+      ],
+      "forbidden": [
+        "Apply prior year's ceiling solely because it was earned then.",
+        "Assume bonus amount equals CPF-able AW."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000MoFDuYAN"
+      ]
+    },
+    {
+      "id": "cpf-05",
+      "authority": "CPF",
+      "question": "An employee turned 55 in May 2026. From which month do the new age-band CPF rates apply?",
+      "expected": [
+        "New age-group rate starts on the first day of the month after the birthday month, so 1 June 2026.",
+        "Actual rate depends on citizenship/SPR year and wage band."
+      ],
+      "forbidden": [
+        "Apply from the birthday itself.",
+        "Supply a full rate without other employee facts."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "cpf-06",
+      "authority": "CPF",
+      "question": "A foreign employee became a Singapore PR on 15 March 2026. What is the first-year boundary, and is CPF due on March OW earned from the grant date?",
+      "expected": [
+        "CPF is payable once SPR status is obtained; first year runs from 15 March 2026 through 31 March 2027; second year begins 1 April 2027.",
+        "CPF on March OW is pro-rated from 15–31 March; applicable graduated rate depends on age, applicable table and any approved joint election."
+      ],
+      "forbidden": [
+        "First year begins the next calendar year.",
+        "Charge CPF on wages earned while still a foreigner."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status"
+      ]
+    },
+    {
+      "id": "cpf-07",
+      "authority": "CPF",
+      "question": "The same new PR employee received an annual bonus payable on 10 March, before obtaining PR, and another bonus payable on 20 March, after obtaining PR. Which bonus can attract CPF?",
+      "expected": [
+        "AW is assessed according to when it is payable: not required on AW payable while employee was a foreigner; contributions required on/after PR grant, subject to AW ceiling/rates.",
+        "Need actual due/payable dates and annual OW to compute amounts."
+      ],
+      "forbidden": [
+        "Apply PR status to both bonuses based only on payment month.",
+        "Ignore the AW ceiling."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/article/do-i-need-to-pay-cpf-contributions-for-my-foreign-employee-who-has-recently-obtained-singapore-permanent-residence-status"
+      ]
+    },
+    {
+      "id": "cpf-08",
+      "authority": "CPF",
+      "question": "Our payroll vendor says CPF contributions for June are due on 14 July. What is the contribution due date and what is the 14th?",
+      "expected": [
+        "Contribution due date is last day of the calendar month (30 June); enforcement action applies if unpaid by 14 July.",
+        "Distinguish due date from the date by which late-payment enforcement applies."
+      ],
+      "forbidden": [
+        "State 14 July as the statutory due date.",
+        "Say payment after the 14th is consequence-free."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations"
+      ]
+    },
+    {
+      "id": "cpf-09",
+      "authority": "CPF",
+      "question": "Our employee earns S$400 in the month. Is there an employee CPF share?",
+      "expected": [
+        "For total wages above S$50 and not more than S$500 monthly, employer share is payable but employee share is not required.",
+        "Exact employer amount depends on employee status/age and applicable rates."
+      ],
+      "forbidden": [
+        "No CPF at all below S$500.",
+        "Deduct an employee share automatically."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "cpf-10",
+      "authority": "CPF",
+      "question": "An employee received basic pay, overtime, a performance bonus and a reimbursed S$60 stationery purchase supported by a receipt. Which items are generally wages for CPF?",
+      "expected": [
+        "Basic pay, overtime and bonus are wages; a genuine reimbursement of actual business expenses is not wages, and amount should not exceed expenditure.",
+        "Verify that the payment is truly reimbursement and not an allowance or profit component."
+      ],
+      "forbidden": [
+        "Treat every reimbursement as wages.",
+        "Exclude bonuses or overtime categorically."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/what-constitutes-wages-for-cpf-contributions"
+      ]
+    },
+    {
+      "id": "cpf-11",
+      "authority": "CPF",
+      "question": "The annual AW ceiling calculator says S$1,000 is excess but the employee's total annual CPF is below the CPF Annual Limit. Must the excess be automatically refunded?",
+      "expected": [
+        "Distinguish AW ceiling from the CPF Annual Limit; automatic annual-limit refund concerns excess over that separate limit, while AW-ceiling excess is applied for promptly.",
+        "Applicable rates may mean AW ceiling excess does not exceed annual limit; determine each measure separately."
+      ],
+      "forbidden": [
+        "Assume any AW ceiling excess automatically refunds under annual-limit process.",
+        "Assume all excess is recoverable from CPF without account funds/process."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/service/article/why-does-the-excess-cpf-from-the-additional-wage-ceiling-calculator-differ-from-the-automatic-refund-and-how-do-i-calculate-my-employee-s-share",
+        "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions"
+      ]
+    },
+    {
+      "id": "cpf-12",
+      "authority": "CPF",
+      "question": "Our staff member is 59 and became a PR in 2025. Can I use the standard third-year PR rate table for the employer contribution in July 2026?",
+      "expected": [
+        "Rate depends on age and exact PR status date; the phrase in 2025 does not establish whether July 2026 falls in first, second or third year. Ask for the Entry Permit status date and applicable contribution month.",
+        "Also determine wage band and whether an approved joint election to full rates exists; do not assert a first-year rate or calculate an amount without those facts."
+      ],
+      "forbidden": [
+        "Assume first-year rates from became a PR in 2025.",
+        "Use third-year/citizen rate without establishing anniversary and eligibility.",
+        "Give exact amount without payroll wages."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay",
+        "https://www.cpf.gov.sg/content/dam/web/employer/employer-obligations/documents/CPFcontributionratesfrom1Jan2026.pdf"
+      ]
+    },
+    {
+      "id": "cpf-13",
+      "authority": "CPF",
+      "question": "We paid the CPF contribution on an Additional Wage that is now above the AW ceiling. Should we wait for the year-end automatic refund?",
+      "expected": [
+        "Apply promptly when AW-ceiling excess is discovered; automatic refund from February 2024 is for CPF Annual Limit excess paid from 2023, a different category.",
+        "Recalculate actual AW ceiling using OW subject to CPF and determine employee-share/refund conditions."
+      ],
+      "forbidden": [
+        "Wait for all AW ceiling excess to refund automatically.",
+        "Confuse CPF Annual Limit and AW ceiling."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/compliance-and-rectifications/applying-for-refund-of-cpf-contributions",
+        "https://www.cpf.gov.sg/service/sfc/servlet.shepherd/document/download/069IW00000MoFDuYAN"
+      ]
+    },
+    {
+      "id": "cpf-14",
+      "authority": "CPF",
+      "question": "An employee born 20 June moves to the next CPF age band. Should payroll change the rate in June or July?",
+      "expected": [
+        "New age-band rate applies from the first day of the month after birthday month; July 1.",
+        "Check CPF status/SPR year and wage band for the actual rate."
+      ],
+      "forbidden": [
+        "Apply on birthday or from the month before.",
+        "Assume all employees have same rate."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay"
+      ]
+    },
+    {
+      "id": "cpf-15",
+      "authority": "CPF",
+      "question": "We declared S$6,000 OW but later confirmed actual OW was S$5,500 and an S$800 bonus was paid. How should payroll correct the wage record?",
+      "expected": [
+        "Inform CPF Board of wrongly declared wages and ensure future submissions are accurate; submit actual wage information for the relevant contribution month using correction process.",
+        "Do not calculate/refund without payment history, AW classification, ceiling and contribution rate facts."
+      ],
+      "forbidden": [
+        "Leave a known incorrect wage declaration uncorrected.",
+        "Assume changing wage record itself is the refund process."
+      ],
+      "sourceUrls": [
+        "https://www.cpf.gov.sg/employer/employer-obligations/declaring-accurate-wage-information"
+      ]
+    },
+    {
+      "id": "mom-01",
+      "authority": "MOM",
+      "question": "We paid May salary on 10 June and overtime wages on 10 June. Were both paid within the usual Employment Act deadlines?",
+      "expected": [
+        "Salary due within seven days after salary period end (by 7 June); overtime within 14 days (by 14 June), for covered employees.",
+        "10 June is late for ordinary salary but within overtime period; coverage and period terms matter."
+      ],
+      "forbidden": [
+        "Both have a seven-day limit.",
+        "Both are on time because paid within the next calendar month."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    },
+    {
+      "id": "mom-02",
+      "authority": "MOM",
+      "question": "An employee resigned with notice and their last day is 30 June. When should final salary be paid?",
+      "expected": [
+        "If employee resigns and serves required notice, final salary is due on the last day of employment.",
+        "If facts differ (no notice, dismissal, employer termination), deadline differs."
+      ],
+      "forbidden": [
+        "Always within seven days after last day.",
+        "Ignore distinction between resignation/termination cases."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    },
+    {
+      "id": "mom-03",
+      "authority": "MOM",
+      "question": "We dismissed an employee for misconduct, but payroll cannot release final salary on that day. How soon must we pay, and when is a payslip due?",
+      "expected": [
+        "Final salary on dismissal day; if not possible, within three working days from dismissal.",
+        "For payslip, issue with salary payment or within three working days after payment; termination/dismissal with outstanding salary has its own timing tied to final payment."
+      ],
+      "forbidden": [
+        "Use seven calendar days for misconduct dismissal.",
+        "Omit the payslip component."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary",
+        "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips"
+      ]
+    },
+    {
+      "id": "mom-04",
+      "authority": "MOM",
+      "question": "A covered employee has four completed months of service and a medical certificate for hospitalisation. How much paid sick leave can they have?",
+      "expected": [
+        "At four completed months, entitlement is eight outpatient sick-leave days and 30 hospitalisation-leave days inclusive of outpatient days, subject to statutory eligibility/certification.",
+        "Full 14/60-day entitlement starts after six months; account for leave already taken."
+      ],
+      "forbidden": [
+        "Four months earns 14 outpatient plus 60 hospitalisation days.",
+        "Add hospitalisation and outpatient caps together."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/leave/sick-leave/eligibility-and-entitlement"
+      ]
+    },
+    {
+      "id": "mom-05",
+      "authority": "MOM",
+      "question": "Our employee is still on probation at five completed months. Can we deny paid annual leave until confirmation?",
+      "expected": [
+        "Covered employees are eligible after at least three months, including probation; entitlement is pro-rated by completed service months.",
+        "Exact remaining balance needs contractual/statutory entitlement, leave used and unpaid-leave period."
+      ],
+      "forbidden": [
+        "Probation removes statutory eligibility.",
+        "Invent an exact leave balance without usage facts."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ]
+    },
+    {
+      "id": "mom-06",
+      "authority": "MOM",
+      "question": "A public holiday falls on Saturday, a non-working day for our five-day-week employee. What should we provide?",
+      "expected": [
+        "Another day off or one extra day's salary at gross rate in lieu, under applicable Employment Act rules.",
+        "Do not confuse a non-working day with a rostered rest day; confirm work arrangement."
+      ],
+      "forbidden": [
+        "No entitlement because Saturday is non-working.",
+        "Pay only basic-rate extra day automatically."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay"
+      ]
+    },
+    {
+      "id": "mom-07",
+      "authority": "MOM",
+      "question": "Our employee works on a public holiday that is a normal working day and works past normal hours. What pay elements may be due?",
+      "expected": [
+        "Extra day's salary at basic rate plus gross rate for the holiday; overtime pay if work beyond normal hours.",
+        "Part IV coverage/actual hours and any valid alternative agreement may affect details."
+      ],
+      "forbidden": [
+        "Only ordinary salary with no holiday premium.",
+        "Use gross rate for every extra day without distinction."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/public-holidays-entitlement-and-pay"
+      ]
+    },
+    {
+      "id": "mom-08",
+      "authority": "MOM",
+      "question": "Can we deduct an employee's salary for a S$400 uniform, recruitment costs and a foreign worker levy?",
+      "expected": [
+        "Salary deductions allowed only for specified reasons; cannot deduct employment levy, recruitment costs or other employer costs in contravention of EFMA.",
+        "Need employee category, legal basis, consent/notification and deduction cap for any proposed deduction."
+      ],
+      "forbidden": [
+        "Written consent alone permits any deduction.",
+        "Recover foreign worker levy from salary."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ]
+    },
+    {
+      "id": "mom-09",
+      "authority": "MOM",
+      "question": "A Work Permit holder agrees in writing to a new deduction for accommodation. Can we start deducting next month without telling MOM?",
+      "expected": [
+        "For migrant-worker salary reduction/new deductions, written consent and notification to MOM are required; Work Permit process is via WP Online.",
+        "Confirm deduction is lawful/for permitted purpose and not an expressly prohibited employment cost."
+      ],
+      "forbidden": [
+        "Consent alone removes MOM notification requirement.",
+        "Deduct levy, insurance, recruitment or other prohibited costs."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/salary-deductions"
+      ]
+    },
+    {
+      "id": "mom-10",
+      "authority": "MOM",
+      "question": "We want to pay salary every two months because our shop is seasonal. Is that allowed for an employee covered by the Employment Act?",
+      "expected": [
+        "Salary must be paid at least once a month; shorter intervals permitted, not longer as a general arrangement.",
+        "Overtime salary has separate 14-day period after salary period."
+      ],
+      "forbidden": [
+        "Any salary cycle is permitted by agreement.",
+        "Use the overtime deadline for all salary."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+      ]
+    },
+    {
+      "id": "mom-11",
+      "authority": "MOM",
+      "question": "Our new employee is a foreign national and starts work next Monday; their work pass application is pending. May they begin work while we wait?",
+      "expected": [
+        "Foreign employees generally need a valid work pass before working; pending application alone is not permission.",
+        "Eligibility and pass type depend on role, qualifications, salary and employer; verify approval/effective status before start."
+      ],
+      "forbidden": [
+        "All pass applications authorize immediate work.",
+        "Give pass eligibility conclusion without applicant facts."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/passes-and-permits"
+      ]
+    },
+    {
+      "id": "mom-12",
+      "authority": "MOM",
+      "question": "A covered staff member started on 1 February 2026 and took three months of approved unpaid leave. How much of a 14-day annual leave entitlement remains on 31 October if they have already taken two days?",
+      "expected": [
+        "Eligibility begins after three months and leave is pro-rated by completed months; approved unpaid-leave periods affect computation.",
+        "Need apply current pro-rating method and exact unpaid-leave dates/rounding; do not state exact remaining balance from an approximate period."
+      ],
+      "forbidden": [
+        "Ignore unpaid leave.",
+        "Provide exact balance without precise dates and rule rounding."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/leave/annual-leave/eligibility-and-entitlement"
+      ]
+    },
+    {
+      "id": "mom-13",
+      "authority": "MOM",
+      "question": "We gave a soft-copy payslip three days after paying salary. Is electronic format allowed and is the timing acceptable?",
+      "expected": [
+        "Payslips may be soft or hard copy; issue together with salary, or within three working days if impossible.",
+        "Count working days and confirm employee is covered by Employment Act."
+      ],
+      "forbidden": [
+        "Only hard copy is valid.",
+        "Count three calendar days regardless of working days."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips"
+      ]
+    },
+    {
+      "id": "mom-14",
+      "authority": "MOM",
+      "question": "We have current employees and one former employee who left on 30 June 2026. For Employment Act-covered employees, how long must we keep the itemised payslip records, and may we keep them electronically?",
+      "expected": [
+        "For current employees, retain the latest two years of payslip records. For former employees, retain the last two years of records for one year after the employee leaves.",
+        "Soft or hard copies, including handwritten records, are allowed; apply this to employees covered by the Employment Act."
+      ],
+      "forbidden": [
+        "Destroy current employee records after one year.",
+        "Retain ex-employee records only until the last day of work."
+      ],
+      "sourceUrls": [
+        "https://www.mom.gov.sg/employment-practices/salary/itemised-payslips"
+      ]
+    },
+    {
+      "id": "mom-15",
+      "authority": "MOM",
+      "question": "Our employee gave notice on 1 October, is a foreign employee, and will leave on 31 October. Must we withhold salary for tax clearance, and is the period always 30 days?",
+      "expected": [
+        "Employer generally must notify IRAS and withhold monies due when a non-Singapore citizen ceases employment/leaves Singapore; up to 30 days for tax clearance, with release based on IRAS clearance/instructions.",
+        "Confirm citizenship, cessation/departure, notice and tax-clearance applicability; do not assume every foreign employee is covered identically."
+      ],
+      "forbidden": [
+        "All foreign employees can be paid immediately without clearance.",
+        "Treat 30 days as a fixed additional salary-payment deadline regardless of clearance."
+      ],
+      "sourceUrls": [
+        "https://www.iras.gov.sg/taxes/individual-income-tax/employers/understanding-the-tax-treatment/other-payments"
+      ]
+    },
+    {
+      "id": "acra-01",
+      "authority": "ACRA",
+      "question": "We incorporated a Singapore private company on 15 March 2026 and have one resident director. By when must we appoint a company secretary, and may the sole director fill that role?",
+      "expected": [
+        "Appoint secretary within six months of incorporation (by 15 September 2026).",
+        "Secretary must be a natural person ordinarily resident in Singapore and cannot be the sole director."
+      ],
+      "forbidden": [
+        "Secretary can be appointed after annual return.",
+        "Sole director can be both sole director and secretary."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/register/business/registering-different-business-structures/local-company/appointing-company-directors-other-key-officers/"
+      ]
+    },
+    {
+      "id": "acra-02",
+      "authority": "ACRA",
+      "question": "Our local private company FYE is 31 December 2025. What are the usual AGM and annual return deadlines if it is not exempt from AGM?",
+      "expected": [
+        "Private company AGM generally within six months after FYE (30 June 2026); annual return within seven months after FYE (31 July 2026).",
+        "Check any extension, dispensation/exemption, company status and applicable current requirements."
+      ],
+      "forbidden": [
+        "Use public-company timeline for a private company.",
+        "Annual return is a substitute for holding a required AGM."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/annual-filing/annual-general-meetings-agms/",
+        "https://www.acra.gov.sg/manage/companies/annual-filing/annual-returns"
+      ]
+    },
+    {
+      "id": "acra-03",
+      "authority": "ACRA",
+      "question": "A dormant relevant company has no transactions and its total assets are below the substantial assets threshold. Can it stop preparing accounts without checking other criteria?",
+      "expected": [
+        "Dormant relevant company exemption under Companies Act section 201A requires all applicable criteria; satisfying one test is not enough.",
+        "Check substantial assets, group/member/filing status and other statutory conditions; dormant relevant companies are distinct from merely inactive companies."
+      ],
+      "forbidden": [
+        "Any dormant company is exempt automatically.",
+        "Infer exemption from only an asset threshold."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/"
+      ]
+    },
+    {
+      "id": "acra-04",
+      "authority": "ACRA",
+      "question": "Our small private company meets two of the three small-company criteria this year and last year. Does it qualify for audit exemption?",
+      "expected": [
+        "A company must be a private company and meet at least two of three quantitative criteria for the relevant two consecutive financial years (revenue, assets, employees thresholds).",
+        "Confirm thresholds, group context and period; audit exemption does not necessarily exempt preparing/filing financial statements."
+      ],
+      "forbidden": [
+        "Small-company audit exemption means no accounts need be prepared or filed.",
+        "One-year test is always sufficient."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/annual-filing/audit-requirements/exemption-from-audit"
+      ]
+    },
+    {
+      "id": "acra-05",
+      "authority": "ACRA",
+      "question": "We are a small, non-publicly accountable private company that must file statements. Which financial-statement format does ACRA generally require?",
+      "expected": [
+        "Small non-publicly accountable companies generally file Simplified XBRL plus director-authorised PDF statements.",
+        "Check company type, exemption and applicable taxonomy/commencement version; taxonomy changed from 19 October 2026."
+      ],
+      "forbidden": [
+        "All small companies file full XBRL.",
+        "Audit exemption automatically means no filing."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/"
+      ]
+    },
+    {
+      "id": "acra-06",
+      "authority": "ACRA",
+      "question": "Our local company changed its registered office on 20 October 2026. Can we wait until the annual return to update ACRA?",
+      "expected": [
+        "ACRA current guidance requires registered entities to notify changes within 14 days from change; annual return does not replace the update filing.",
+        "Confirm entity type and exact change date; foreign-company period differs."
+      ],
+      "forbidden": [
+        "Wait for annual return.",
+        "Apply 30 days to a local company."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/"
+      ]
+    },
+    {
+      "id": "acra-07",
+      "authority": "ACRA",
+      "question": "Our Singapore-incorporated company must file its statements and fits the category requiring a full set of financial statements in XBRL under the current ACRA taxonomy. We have two directors. Must we attach a PDF, and how many directors sign the directors statement?",
+      "expected": [
+        "A full set of financial statements submitted in XBRL does not need a duplicate PDF under current ACRA guidance; this differs from simplified XBRL filing, which needs authorised PDF.",
+        "At least two directors sign the directors statement where the company has multiple directors; determine applicable filing category and taxonomy based on company facts and current rules."
+      ],
+      "forbidden": [
+        "A PDF is always required with full XBRL.",
+        "Use the simplified-XBRL rule for a full-XBRL filer.",
+        "Only one director signs when several exist."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/",
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/"
+      ]
+    },
+    {
+      "id": "acra-08",
+      "authority": "ACRA",
+      "question": "Our private company dispensed with its AGM. What date and details must we still declare when filing the annual return?",
+      "expected": [
+        "Annual return must include AGM-related declaration whether AGM held, exempt or dispensed; if dispensed/exempt, give date financial statements sent to members as applicable.",
+        "Confirm company type, filing form and deadline."
+      ],
+      "forbidden": [
+        "No AGM means omit the AGM section entirely.",
+        "Invent a meeting date."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/"
+      ]
+    },
+    {
+      "id": "acra-09",
+      "authority": "ACRA",
+      "question": "Our FYE is 31 December and the AGM deadline has passed. Can we change FYE now to gain time before annual return is filed?",
+      "expected": [
+        "ACRA states FYE change requests are not allowed if company has already passed statutory AGM/annual return/financial-statement deadlines.",
+        "Need company status, past extensions/approvals and whether deadlines actually passed."
+      ],
+      "forbidden": [
+        "Change FYE retroactively without restriction.",
+        "Assume filing an extension is automatic."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/annual-filing/changing-your-financial-year-end"
+      ]
+    },
+    {
+      "id": "acra-10",
+      "authority": "ACRA",
+      "question": "Our director's residential address changed. Can we leave the old address in Bizfile until next year's annual return?",
+      "expected": [
+        "Keep officer/company particulars updated promptly under applicable ACRA change-notification rules; annual return requires accurate latest particulars and cannot postpone an update duty.",
+        "Exact deadline depends on effective rule/entity and change type; do not conflate officer appointment cessation forms with contact-address update."
+      ],
+      "forbidden": [
+        "Wait a year without checking the notification deadline.",
+        "Apply entity registered-office process blindly to all officer particulars."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/",
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ]
+    },
+    {
+      "id": "acra-11",
+      "authority": "ACRA",
+      "question": "A company secretary resigned on 1 October and a replacement was appointed on 12 October. What should the company check and update?",
+      "expected": [
+        "Maintain a company secretary who meets residency/qualification requirements; vacancy/appointment must be notified to ACRA within applicable filing deadline.",
+        "Check exact cessation/appointment dates, company structure and form; ensure a sole director is not appointed secretary."
+      ],
+      "forbidden": [
+        "No notification needed if vacancy lasted less than a year.",
+        "Let the company remain indefinitely without a secretary."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/how-to-guides/setting-up-a-local-company/company-officers/appointing-a-company-secretary",
+        "https://www.acra.gov.sg/resources/guides-forms/updating-entitys-information/"
+      ]
+    },
+    {
+      "id": "acra-12",
+      "authority": "ACRA",
+      "question": "We need up to two more months to file our annual return. Is an extension available and does applying remove the need for the AGM?",
+      "expected": [
+        "ACRA says company may apply for up to 60 extra days to file annual return; application/approval conditions apply.",
+        "An AR extension is not itself an AGM exemption/extension; separate AGM duty and extension route must be checked."
+      ],
+      "forbidden": [
+        "Extension is automatic without application.",
+        "AR extension automatically extends AGM deadline."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-annual-returns-companies/steps-to-file/"
+      ]
+    },
+    {
+      "id": "acra-13",
+      "authority": "ACRA",
+      "question": "We formed a company with no operations. Can we omit financial statements from the annual return just because it is newly incorporated?",
+      "expected": [
+        "Singapore-incorporated companies generally prepare and file financial statements unless a specific exemption applies; new/inactive status alone is not enough.",
+        "Check dormant relevant company criteria, company type, FYE and applicable filing exemptions."
+      ],
+      "forbidden": [
+        "Every newly formed company is automatically exempt.",
+        "Confuse no audit requirement with no financial statement requirement."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/legal-requirements-common-offences/filing-financial-statements-in-xbrl-format/requirements-exemptions/"
+      ]
+    },
+    {
+      "id": "acra-14",
+      "authority": "ACRA",
+      "question": "Since 20 October 2026, what must an annual-return filer confirm about company officers, and is CEO information now specifically requested?",
+      "expected": [
+        "Under changes commencing 20 October 2026, confirm latest ACRA particulars for directors, CEOs, secretaries, auditors and relevant members; eform asks whether individuals perform CEO role.",
+        "Update inaccurate particulars before filing; this rule should not be backdated to pre-commencement filings without evidence."
+      ],
+      "forbidden": [
+        "Claim requirement applied before 20 October 2026.",
+        "Say CEO role question is unnecessary."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/news-events/news-announcements/commencement-of-key-changes-under-the-corporate-and-accounting-laws--amendment--act-2025-on-20-october-2026/"
+      ]
+    },
+    {
+      "id": "acra-15",
+      "authority": "ACRA",
+      "question": "Our listed public company FYE was 31 December 2025. Can it file its annual return seven months later like a private company?",
+      "expected": [
+        "Do not apply private-company AR timeline to a listed public company; ordinary listed public-company deadline is five months after FYE (31 May 2026), subject to applicable current rule/extension.",
+        "Confirm company listed status and any valid extension/exception."
+      ],
+      "forbidden": [
+        "Use seven-month private-company AR period.",
+        "Confuse AR deadline with audited accounts submission timeline."
+      ],
+      "sourceUrls": [
+        "https://www.acra.gov.sg/manage/companies/annual-filing/annual-returns"
+      ]
+    },
+    {
+      "id": "mas-01",
+      "authority": "MAS",
+      "question": "Our VCFM financial year ended 30 September 2026. What does the current toolkit require in Form 25A, and what period does it use for the deadline?",
+      "expected": [
+        "The VCFM toolkit requires Form 25A within one month after financial year end; use the manager FYE and confirm the actual MAS-Tx due date rather than borrowing the calendar-year nil-return period.",
+        "Declaration covers changes to key appointments, AUM, investor types/numbers, fund types and deals, citing LCBR Regulation 14(6); it is manager-level and not a complete fund-level return."
+      ],
+      "forbidden": [
+        "Use calendar-year nil-return deadline for Form 25A.",
+        "Say Form 25A is a fund-level annual return."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-02",
+      "authority": "MAS",
+      "question": "For our VCFM upcoming nil-misconduct declaration, assume no representative Misconduct Report is submitted for calendar year 2026. Under the currently published toolkit, when is it due, and is it the same as Form 25A?",
+      "expected": [
+        "If no Misconduct Report is submitted in the preceding calendar year, the nil declaration is due within 14 days after calendar year end (14 January 2027 for calendar 2026), subject to confirming the applicable current requirement before filing.",
+        "This is a separate calendar-year trigger; Form 25A is within one month after the manager FYE."
+      ],
+      "forbidden": [
+        "Use Form 25A FYE deadline for the nil declaration.",
+        "Submit nil declaration if a misconduct report was filed for the preceding year."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-03",
+      "authority": "MAS",
+      "question": "Our VCFM has not confirmed its financial year-end. Can we use the nil-misconduct date to set Form 25A and treat it as satisfying all fund returns?",
+      "expected": [
+        "Form 25A deadline depends on VCFM FYE; nil-misconduct return has separate preceding-calendar-year/no-report trigger and 14-day deadline.",
+        "Toolkit expressly excludes reporting obligations outside SFA and fund-level requirements; identify applicable fund duties separately, with fund facts."
+      ],
+      "forbidden": [
+        "Invent Form 25A due date without FYE.",
+        "Treat either manager return as complete fund-level compliance checklist."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-04",
+      "authority": "MAS",
+      "question": "Our LFMC needs to file its quarterly financial returns for the quarter ending 30 September. Which forms and usual deadline apply under the current LFMC toolkit?",
+      "expected": [
+        "LFMC toolkit lists quarterly financial returns Forms 1 and 2 within 14 days from quarter end (14 October).",
+        "Confirm licence category and current version/tool submission route."
+      ],
+      "forbidden": [
+        "Apply this LFMC rule to VCFMs without checking their separate toolkit.",
+        "Use annual audited-return deadline."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-05",
+      "authority": "MAS",
+      "question": "An LFMC's FYE is 31 December. When are audited annual financial returns and auditor's report generally due?",
+      "expected": [
+        "LFMC toolkit states within five months from FYE (31 May), using specified forms/supporting documents.",
+        "Check licence class, current return form, submission route and any changed requirement."
+      ],
+      "forbidden": [
+        "Use VCFM Form 25A deadline.",
+        "Claim this satisfies fund-level filing obligations."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-06",
+      "authority": "MAS",
+      "question": "Our VCFM appointed a director on 4 May 2026. Which notification form and deadline appear in the current VCFM toolkit?",
+      "expected": [
+        "Form 23A change in particulars for VCFMs covers CEO, directors and shareholders; submit within 14 days from date of change.",
+        "Check whether the fact pattern is appointment/change and applicable current toolkit instructions."
+      ],
+      "forbidden": [
+        "Use Form 25A annual declaration for a director appointment notification.",
+        "Assume only annual reporting is required."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-07",
+      "authority": "MAS",
+      "question": "Our VCFM stopped a regulated activity on 1 June. What does the toolkit say about Form 7 and customer obligations?",
+      "expected": [
+        "Form 7 notice of cessation of business within 14 days after cessation; accompanied by an audit certification, no prescribed format, that customer obligations are fully discharged.",
+        "Confirm activity cessation and applicable licence/closure facts; not interchangeable with non-commencement trigger."
+      ],
+      "forbidden": [
+        "File Form 7 immediately after six months in all cases.",
+        "Omit customer-obligation certification."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-08",
+      "authority": "MAS",
+      "question": "A VCFM was licensed six months ago but has not commenced one regulated activity. When must it notify MAS?",
+      "expected": [
+        "Toolkit says Form 7/non-commencement notification immediately after the end of six months from licence grant for activity not commenced.",
+        "Differentiate this from cessation notice deadline and verify grant date/activity."
+      ],
+      "forbidden": [
+        "Wait 14 days after cessation when activity never began.",
+        "Assume licensing approval itself means activity commenced."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-09",
+      "authority": "MAS",
+      "question": "Our VCFM discovered a serious representative misconduct issue today. Can it wait until its annual Form 25A filing?",
+      "expected": [
+        "Misconduct Report is due upon discovery under the toolkit/Notice; Form 25A does not replace event-triggered misconduct reporting.",
+        "Classify reportable misconduct and submit required report/update through applicable MAS-Tx transaction."
+      ],
+      "forbidden": [
+        "Defer report to annual declaration.",
+        "Assume every HR issue is reportable without applying Notice categories."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-10",
+      "authority": "MAS",
+      "question": "Our VCFM opened a branch overseas. Does it need prior approval and what form is specified?",
+      "expected": [
+        "Toolkit identifies prior MAS approval before establishing any branch (Singapore or elsewhere); row indicates no prescribed form and MAS-Tx Entity Activities & Particulars category.",
+        "Check exact licence condition and related facts; do not treat notification after event as equivalent to prior approval."
+      ],
+      "forbidden": [
+        "Branch can be opened first and reported 14 days later.",
+        "Invent a prescribed form."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-11",
+      "authority": "MAS",
+      "question": "Our fund's NAV is under S$500 million. Does that alone prove there is no MAS QDC return to submit?",
+      "expected": [
+        "Cannot establish QDC applicability/exemption from NAV alone using available verified official evidence; do not infer exemption from general toolkit silence.",
+        "Need exact applicable QDC source, firm/fund classification, reporting scope and threshold/period; state unsupported until established."
+      ],
+      "forbidden": [
+        "Assume no QDC because NAV is below S$500m.",
+        "Infer exact QDC form/deadline from an industry source or LFMC general return."
+      ],
+      "sourceUrls": []
+    },
+    {
+      "id": "mas-12",
+      "authority": "MAS",
+      "question": "We manage three funds as an LFMC. Does the LFMC SFA toolkit establish all fund-level annual reports and investor filings?",
+      "expected": [
+        "LFMC toolkit is not exhaustive and excludes outside-SFA reporting and fund-level requirements (e.g., Code of Collective Investment Schemes).",
+        "Identify each fund structure, scheme status, investor type and applicable CIS/VCC/tax rules separately."
+      ],
+      "forbidden": [
+        "Treat LFMC toolkit as complete fund compliance checklist.",
+        "Assume all managed funds share one obligation."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit-lfmcs29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-13",
+      "authority": "MAS",
+      "question": "Our VCFM's base capital may fall below the prescribed amount tomorrow. Can it notify MAS at year end?",
+      "expected": [
+        "Current VCFM toolkit says notify MAS immediately when base capital/net head-office funds fall or will fall below prescribed requirement.",
+        "Determine applicable minimum for VCFM and current financial facts; notification does not cure non-compliance."
+      ],
+      "forbidden": [
+        "Wait until Form 25A.",
+        "Apply LFMC base-capital threshold to VCFM without checking its regime."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-14",
+      "authority": "MAS",
+      "question": "Our VCFM's financial condition may make it insolvent. What does the toolkit require?",
+      "expected": [
+        "Notify MAS immediately of matters materially adversely affecting financial position including actual/likely insolvency, inability to meet obligations or suspended/about-to-suspend payments.",
+        "Assess facts against licence condition and use relevant MAS-Tx incident/breach category."
+      ],
+      "forbidden": [
+        "Wait for next financial return.",
+        "Conclude mere forecast must be reported without assessing likelihood/materiality described by source."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    },
+    {
+      "id": "mas-15",
+      "authority": "MAS",
+      "question": "A VCFM plans to acquire 20% of a corporation that is not incorporated to arrange a closed-end fund or CIS. Is prior approval implicated?",
+      "expected": [
+        "VCFM toolkit describes prior MAS approval to acquire/hold directly or indirectly 20% or more share capital of a corporation, with stated exclusion for corporation incorporated to arrange a closed-end fund/CIS.",
+        "Verify target's legal purpose, structure, exact interest and applicable licence condition before conclusion."
+      ],
+      "forbidden": [
+        "Treat every 20% shareholding as approval-free.",
+        "Ignore the stated closed-end/CIS corporation exclusion."
+      ],
+      "sourceUrls": [
+        "https://www.mas.gov.sg/-/media/mas-media-library/regulation/guidance/cmi/compliance-toolkits-for-fund-management-companies/sfa-compliance-toolkit--vcfms29-may-2026-clean.pdf"
+      ]
+    }
+  ]
+}

@@ -99,6 +99,7 @@ export function compactReplay(caseId, response, transport, result, error, invent
       status: governed.status,
       evidenceStatus: governed.evidenceStatus,
       applicationStatus: governed.applicationStatus,
+      requestCompletenessStatus: governed.requestCompletenessStatus,
       topLevelGaps: governed.topLevelGaps,
       fetches: (governed.fetchValidationObservations || []).map(item => ({
         url: item.url,

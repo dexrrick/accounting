@@ -1,0 +1,46 @@
+[
+  {
+    "check": "root-lint",
+    "exitCode": 1,
+    "startedUTC": "2026-10-31T04:55:18.5620372Z",
+    "completedUTC": "2026-10-31T04:55:19.076451Z"
+  },
+  {
+    "check": "maintained-lint",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T04:55:19.0946823Z",
+    "completedUTC": "2026-10-31T04:55:19.2230536Z"
+  },
+  {
+    "check": "typecheck",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T04:55:19.2256945Z",
+    "completedUTC": "2026-10-31T04:55:24.7196755Z"
+  },
+  {
+    "check": "vite-build",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T04:55:24.7237373Z",
+    "completedUTC": "2026-10-31T04:55:27.6488762Z"
+  },
+  {
+    "check": "worker-build",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T04:55:27.6504356Z",
+    "completedUTC": "2026-10-31T04:55:28.5188725Z"
+  },
+  {
+    "check": "smoke",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T05:01:13.8090052Z",
+    "completedUTC": "2026-10-31T05:04:51.2582344Z",
+    "execution": "Normal Windows process access; offline external-fetch guard retained"
+  },
+  {
+    "check": "full",
+    "exitCode": 0,
+    "startedUTC": "2026-10-31T05:04:51.2790502Z",
+    "completedUTC": "2026-10-31T05:08:52.0440711Z",
+    "execution": "Normal Windows process access; offline external-fetch guard retained"
+  }
+]

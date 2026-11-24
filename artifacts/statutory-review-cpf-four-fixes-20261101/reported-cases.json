@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "id": "explicit-ir8a-and-cpf",
+      "authority": "IRAS",
+      "question": "Should we report the annual bonus in IR8A, and does CPF apply to this bonus?",
+      "expected": ["Retain independently requested IRAS reporting and CPF obligations."],
+      "forbidden": ["Discard the explicit IR8A reporting obligation as incidental CPF context."]
+    },
+    {
+      "id": "multiple-employees-ow",
+      "authority": "CPF",
+      "question": "In October 2026, employee A has S$3,000 of Ordinary Wages and an annual bonus. Employee B has S$9,000 of Ordinary Wages and an annual bonus. Which employee hits the CPF OW ceiling?",
+      "expected": ["Apply the monthly ceiling per employee, or withhold a specific base if ownership cannot be resolved."],
+      "forbidden": ["Treat A's S$3,000 as B's or as a universal monthly base."]
+    },
+    {
+      "id": "mixed-label-pr-ownership",
+      "authority": "CPF",
+      "question": "Employee A became a Singapore PR on 15 March 2026. Staff B remains a foreigner. Is CPF due on B's March Ordinary Wages, and what is B's first-year boundary?",
+      "expected": ["Do not borrow A's grant date; B has no SPR contribution-year boundary while remaining a foreigner."],
+      "forbidden": ["Generate A's personal anniversary dates or March proration for B."]
+    },
+    {
+      "id": "explicit-derived-anniversary",
+      "authority": "CPF",
+      "question": "An employee obtained PR on 15 March 2026. Does the first contribution year end on 31 March 2027?",
+      "expected": ["First contribution year ends 31/03/2027; second starts 01/04/2027. Do not infer contribution rates."],
+      "forbidden": ["Reject the answer solely because the calculated anniversary is in 2027."]
+    },
+    {
+      "id": "future-payroll-not-anniversary",
+      "authority": "CPF",
+      "question": "An employee obtained PR on 15 March 2026. For March 2027, does the employer have to contribute CPF on the employee's Ordinary Wages, and when does the first contribution year end?",
+      "expected": ["Keep the future payroll period outside current 2026 PR wage evidence."],
+      "forbidden": ["Admit the 2027 payroll period as a current employee date merely because an anniversary is also requested."]
+    },
+    {
+      "id": "verb-led-employment-income-reporting",
+      "authority": "IRAS",
+      "question": "Should we report the annual bonus as employment income, and does CPF apply to this bonus?",
+      "expected": ["Retain independent employment-income reporting and CPF issues."],
+      "forbidden": ["Discard explicitly requested income reporting as incidental CPF context."]
+    }
+  ]
+}

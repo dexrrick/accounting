@@ -7,6 +7,7 @@ const OUTPUT_MODIFIER = String.raw`(?!(?:but|instead|however|and|or|${NEGATED_CA
 const CALCULATION_OUTPUT = String.raw`(?:(?:${OUTPUT_MODIFIER}\s+){0,3})(?:tax(?:es)?(?:\s+payable)?|rates?|due\s+dates?|deadlines?(?:\s+date)?|amounts?|totals?|values?|figures?|numbers?|pay(?:roll)?|salar(?:y|ies)|wages?)`;
 const JOURNAL_ACTION = String.raw`(?:prepare|create|make|generate|produce|provide|post|record|draft|show|include)`;
 const JOURNAL_TARGET = String.raw`(?:(?:me|the|a|an|any)\s+)*(?:double[ -]+entr(?:y|ies)(?:[ -]+journal(?:[ -]+entr(?:y|ies))?|journal(?:[ -]+entr(?:y|ies))?)?|journal(?:[ -]+entr(?:y|ies))?|accounting[ -]+entr(?:y|ies)?)`;
+const UNREQUESTED_JOURNAL_DIRECTIVE = /\b(?:i(?:\s+(?:am|was)|'m)\s+not\s+(?:asking\s+for|requesting|looking\s+for|seeking)\s+(?:(?:a|an|any)\s+)?(?:double[ -]+entr(?:y|ies)(?:[ -]+journal(?:[ -]+entr(?:y|ies))?|journal(?:[ -]+entr(?:y|ies))?)?|journal(?:[ -]+entr(?:y|ies))?|accounting[ -]+entr(?:y|ies)?)|no\s+(?:accounting\s+)?(?:journal|double[ -]+entr(?:y|ies))(?:\s+(?:entr(?:y|ies)|amounts?|figures?))?\s+(?:(?:is|are|was|were)\s+)?(?:needed|required|necessary|requested))\b/gi;
 const NEGATED_CALCULATION_WITH_JOURNAL = new RegExp(
   String.raw`\b(?:please\s+)?${NEGATION}\s+(?:(?:need|want)\s+to\s+)?${NEGATED_CALCULATION_ACTION}\s+${CALCULATION_OUTPUT}(?:\s+or\s+${CALCULATION_OUTPUT})*\s+or\s+(?:please\s+)?${JOURNAL_ACTION}\s+${JOURNAL_TARGET}\b`,
   'gi'
@@ -30,6 +31,7 @@ export function removeNegatedJournalDirectives(query: string): string {
     .replace(NEGATED_CALCULATION_WITH_JOURNAL, ' ')
     .replace(NEGATED_BUSINESS_ASSESSMENT_WITH_JOURNAL, ' ')
     .replace(COORDINATED_NEGATED_ACTION_AND_JOURNAL, ' ')
+    .replace(UNREQUESTED_JOURNAL_DIRECTIVE, ' ')
     .replace(NEGATED_JOURNAL_DIRECTIVE, ' ');
 }
 

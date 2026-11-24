@@ -1,0 +1,65 @@
+{
+  "dateSingapore": "24/10/2026",
+  "status": "WORK_IN_PROGRESS_RELEASE_HELD",
+  "repository": "dexrrick/accounting",
+  "branch": "codex/receipt-authority-review-20261024",
+  "baselineCommit": "cc1e9488c6a10fd8ae4bc7a11d0fe917f23afa95",
+  "receiptCommit": "d19b56a",
+  "receiptRepair": [
+    "Initial manifest and immutable object creation use If-None-Match",
+    "Manifest replacement uses ETag-based If-Match",
+    "Ambiguous publication uses bounded read-only reconciliation and terminal write fencing; no automatic rollback",
+    "Recovery decompression limits: receipt16MiB,diagnostic16MiB,body64MiB",
+    "Harness preserves REMOTE_VERIFIED,REMOTE_PREVIOUS,REMOTE_UNCERTAIN and stops after terminal outcomes"
+  ],
+  "receiptValidation": [
+    "Three focused suites passed",
+    "Independent review clear after terminal-propagation fixes",
+    "Read-only historical reconstruction verified10 receipts,69 compressed artifact hashes and lengths,93 source bodies;3 model replies metadata only"
+  ],
+  "authorityWorkInProgress": [
+    "ACRA EXPLAIN_RULE and FILING_REQUIREMENT use scoped filing-duty support; exact leading duty sentence may exclude only two known ancillary late-filing sentences; qualifications retained",
+    "IRAS known-profile excerpt retention uses bounded contiguous original source spans and retained table-boundary context",
+    "CPF individual workstream uses complete eligibility and both qualified limit spans from the same admitted record",
+    "Current GST motor-car wording retains third-party exclusions,both connected-person conditions,proportional recovery and GST-registered recipient restriction",
+    "CPF split table rows use separately checked SA and RA ranges; BHS abbreviation requires same-table full definition",
+    "Qualified eligibility quotation also covers introduction without raising the existing per-source quote budget",
+    "Completeness bridge unchanged; UNKNOWN_SUBJECT_DESCRIPTOR alone was not established as cause"
+  ],
+  "latestValidation": {
+    "receiptSuites": "PASS",
+    "acraFocused": "PASS",
+    "newIndividualCpfWorkstream": "PASS as reported by implementing agent; registered in smoke tier",
+    "irasConceptSupport": "FAIL: tests/regression/test_iras_rule_concept_support.mjs line439; preferred CPF passage assertion",
+    "remainingFocusedSuites": "NOT_RUN after this final failure",
+    "finalLintBuildSmokeFull": "NOT_RUN after last boundary repair",
+    "earlierCandidateChecks": "Lint/build passed;125/125 smoke and148/148 full passed before last boundary repair; do not attribute these to this final WIP snapshot",
+    "independentProductionReview": "No remaining material finding reported for latest code; does not override failing test or missing final validation",
+    "newGithubActions": "NOT_RUN_OR_CLAIMED",
+    "newCredentialedR2": "NOT_RUN",
+    "freshLiveModelBatch": "NOT_RUN",
+    "browserAcceptance": "NOT_RUN"
+  },
+  "unresolved": [
+    "Resolve concept-support fixture failure at line439: distinguish fixture layout from selector handling of already-embedded marker; do not weaken qualification checks",
+    "Run final registered focused and full checks on stable code",
+    "Retest three standalone IRAS questions and combined coverage using authorized fresh acceptance procedure",
+    "MAS direct Node CMS and parent pages returned HTTP200 Maintenance; Ask.gov.sg returned403; web-reader accessibility is not runtime transport proof"
+  ],
+  "reviewFocus": [
+    "Check conditional-write and terminal reconciliation correctness in d19b56a",
+    "Review authority diff separately from receipt commit; treat authority commit as WIP",
+    "Inspect exact source-boundary preservation and CPF same-record completeness",
+    "Inspect current GST qualifier negatives and legacy behavior preservation",
+    "Confirm no whole-authority parity or release acceptance inferred from recovered receipts"
+  ],
+  "holds": [
+    "No merge",
+    "No production deployment",
+    "No source activation",
+    "No canonical acceptance",
+    "No automatic live run or ambiguous run-ID reuse",
+    "No reset credits"
+  ],
+  "publicationScope": "Only task-owned code/tests and this compact handoff. Private raw receipts,source/model bodies,credentials and unrelated dirty files excluded."
+}
