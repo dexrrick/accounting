@@ -1835,7 +1835,8 @@ for (const call of calls) {
       ['We paid SGD 5,000 for staff salary this month.', 5000],
       ['We paid SGD 5,000 for staff salary payment.', 5000],
       ['Staff salary expense is SGD 5,000. How much CPF?', 5000],
-      ['Our payroll administration staff earns SGD 4,000 a month. How much CPF?', 4000]
+      ['Our payroll administration staff earns SGD 4,000 a month. How much CPF?', 4000],
+      ['Our payroll processing intern earns SGD 4,000 a month. How much CPF?', 4000]
     ]) {
       const parsedPositiveRemuneration = await parseAccountingQuery(positiveRemunerationQuery);
       assert.equal(
@@ -1929,7 +1930,8 @@ for (const call of calls) {
       'We paid SGD 1,000 for staff salary processing fees and SGD 5,000 for staff salary. How much CPF?',
       'We paid SGD 5,000 for staff salary and SGD 1,000 for staff salary processing fees. How much CPF?',
       'We paid SGD 1,000 for staff salary processing fees. Our employee earns SGD 5,000 per month. How much CPF?',
-      'Staff salary processing fee is SGD 1,000 and staff salary is SGD 5,000. How much CPF?'
+      'Staff salary processing fee is SGD 1,000 and staff salary is SGD 5,000. How much CPF?',
+      'We paid SGD 5,000 for staff salary with SGD 100 processing fee. How much CPF?'
     ]) {
       const parsedMixedSalaryAndFee = await parseAccountingQuery(mixedSalaryAndProcessingFeeQuery);
       assert.equal(
