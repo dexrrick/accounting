@@ -2759,50 +2759,31 @@ try {
   };
   try {
     const replayedFallback = await processAccountingQuery(
-      equipmentCreditQuestion, null, 'SFRS_I', geminiSettings, geminiSettings.gemini.model,
+      equipmentCreditQuestion, retainedPayrollScenario, 'SFRS_I', geminiSettings, geminiSettings.gemini.model,
       [{ id: 'conditional-journal', sender: 'user', timestamp: '', text: equipmentCreditQuestion }],
       { journal: true, statutory: false, shareStructure: false }
     );
-    assert.equal(replayedProviderCalls.length, 4,
-      'the captured first turn uses semantic interpretation, event extraction, transaction understanding and streamed Gemini response');
-    assert.ok(replayedProviderCalls.slice(0, 3).every(call => call.endpoint === 'generateContent'));
+    assert.equal(replayedProviderCalls.length, 2,
+      'the complete on-credit equipment journal is prepared locally after the existing interpretation and event-extraction stages');
+    assert.ok(replayedProviderCalls.every(call => call.endpoint === 'generateContent'));
     assert.match(replayedProviderCalls[0].system, /Interpret the user question only/);
     assert.match(replayedProviderCalls[1].userContent, /Extract chronological accounting EVENT FACTS/);
-    assert.match(replayedProviderCalls[2].system, /expert economic and accounting transaction classifier/);
-    assert.equal(replayedProviderCalls[3].endpoint, 'streamGenerateContent');
-    assert.match(replayedProviderResponses[2], /purchase_of_office_equipment_on_credit/,
-      'the invalid transaction-type response from the captured trace fails schema validation');
-    assert.equal(replayedFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
-      'the replay reaches the captured statutory synthesis fallback');
-    assert.equal(replayedFallback.scenarioState.isComplete, false);
-    assert.equal(replayedFallback.scenarioState.journalPreparationFailed, true,
-      'a failed journal request stays marked as an unavailable current preparation after statutory fallback');
-    assert.match(replayedFallback.messageText, /Journal Not Prepared/);
-    assert.match(replayedFallback.messageText, /(?:incomplete|unavailable|could not prepare|unable to prepare)/i,
-      'the fallback explains that preparation of the current journal failed');
-    assert.doesNotMatch(replayedFallback.messageText, /fictional Singapore Equipment Registry|30 June 2026/);
-    assert.doesNotMatch(JSON.stringify(replayedFallback.scenarioState), /fictional Singapore Equipment Registry|30 June 2026/,
-      'unchecked statutory claims from the failed synthesis are discarded');
+    assert.equal(replayedFallback.scenarioState.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+    assert.equal(replayedFallback.scenarioState.isComplete, true,
+      'explicit supplier-credit terms resolve the equipment settlement facts');
+    assert.equal(replayedFallback.scenarioState.journalPreparationFailed, undefined);
+    assert.match(replayedFallback.messageText, /Double Entry Journal/);
     assert.deepEqual(replayedFallback.scenarioState.directGroups.map(group => group.authorityStatus), ['CONDITIONAL']);
-    assert.deepEqual(getDisplayableUncommittedJournalGroups(replayedFallback.scenarioState, 'SFRS_I'), [],
-      'the incomplete hypothetical fallback does not expose its unverified proposal as a ready journal');
-    assert.equal(isCurrentJournalPreparationFailure(replayedFallback.scenarioState), true,
-      'the statutory fallback remains identifiable as the failed active journal request');
+    assert.equal(replayedFallback.scenarioState.directGroups[0].totalDebit, 1200);
+    assert.equal(replayedFallback.scenarioState.directGroups[0].totalCredit, 1200);
+    assert.deepEqual(replayedFallback.scenarioState.directGroups[0].lines.map(line => [line.category, line.debit, line.credit]), [
+      ['ASSET', 1200, 0], ['LIABILITY', 0, 1200]
+    ]);
+    assert.match(replayedFallback.scenarioState.directGroups[0].lines[1].accountName, /payable/i);
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(replayedFallback.scenarioState, 'SFRS_I').map(group => group.authorityStatus), ['CONDITIONAL'],
+      'the current hypothetical journal remains available as an uncommitted conditional proposal');
     assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, replayedFallback.scenarioState, 'SFRS_I'), retainedPayrollScenario,
-      'the incomplete fallback preserves the committed payroll without promoting its equipment proposal');
-    assert.strictEqual(selectAccountingScenarioForRequest('show the double entry', replayedFallback.scenarioState, retainedPayrollScenario), replayedFallback.scenarioState,
-      'plain recall stays on the failed equipment request after synthesis fallback');
-    const plainFallbackRecall = await processAccountingQuery(
-      'show the double entry', replayedFallback.scenarioState, 'SFRS_I', geminiSettings, 'unused', [],
-      { journal: true, statutory: false, shareStructure: false }
-    );
-    assert.equal(replayedProviderCalls.length, 4,
-      'plain journal recall after the fallback makes no additional provider call');
-    assert.match(plainFallbackRecall.messageText, /Journal Not Prepared/);
-    assert.doesNotMatch(plainFallbackRecall.messageText, /payroll|73,?291\.25|fictional Singapore Equipment Registry/i,
-      'plain recall explains the equipment preparation failure without showing payroll or unverified claims');
-    assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, plainFallbackRecall.scenarioState, 'SFRS_I'), retainedPayrollScenario,
-      'plain recall never commits the incomplete equipment proposal');
+      'the complete hypothetical equipment proposal does not replace the committed payroll journal');
     const explicitLastScenario = selectAccountingScenarioForRequest(
       'show last journal', replayedFallback.scenarioState, retainedPayrollScenario
     );
@@ -2811,13 +2792,15 @@ try {
     const explicitLastRecall = await processAccountingQuery(
       'show last journal', explicitLastScenario, 'SFRS_I', geminiSettings, 'unused', []
     );
-    assert.equal(replayedProviderCalls.length, 4,
+    assert.equal(replayedProviderCalls.length, 2,
       'explicit last-journal recall does not need a provider call');
     assert.match(explicitLastRecall.messageText, /Committed payroll journal/);
     assert.equal(explicitLastRecall.scenarioState.directGroups[0].totalDebit, 73291.25);
     assert.deepEqual(updateCommittedJournalScenario(retainedPayrollScenario, explicitLastRecall.scenarioState, 'SFRS_I').committedDirectGroups,
       retainedPayrollScenario.committedDirectGroups,
       'explicit display of the committed payroll preserves the existing committed journal contents');
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(replayedFallback.scenarioState, 'SFRS_I').map(group => group.totalDebit), [1200],
+      'returning to the unchanged current state after last-journal recall still exposes the equipment proposal');
     replayedProviderCalls.splice(0);
     replayedProviderResponses.splice(0);
     const journalToggleOnlyQuestion = 'If we buy office equipment for SGD 1,200 on credit, how should we account for it? This is hypothetical only.';
@@ -2826,16 +2809,11 @@ try {
       [{ id: 'journal-toggle-equipment', sender: 'user', timestamp: '', text: journalToggleOnlyQuestion }],
       { journal: true, statutory: false, shareStructure: false }
     );
-    assert.equal(replayedProviderCalls.length, 4,
-      'the journal-toggle-only equipment wording follows the same four scripted provider stages');
-    assert.equal(journalToggleOnlyFallback.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
-    assert.equal(journalToggleOnlyFallback.scenarioState.journalPreparationFailed, true,
-      'journal output preference alone marks the current transaction as an unsuccessful journal preparation');
-    assert.match(journalToggleOnlyFallback.messageText, /Journal Not Prepared/);
-    assert.strictEqual(selectAccountingScenarioForRequest(
-      'show the double entry', journalToggleOnlyFallback.scenarioState, retainedPayrollScenario
-    ), journalToggleOnlyFallback.scenarioState,
-    'journal-toggle-only failure remains active for plain journal recall');
+    assert.equal(replayedProviderCalls.length, 2,
+      'the journal-toggle-only equipment wording follows the same two interpretation stages');
+    assert.equal(journalToggleOnlyFallback.scenarioState.isComplete, true);
+    assert.equal(journalToggleOnlyFallback.scenarioState.directGroups.length, 1);
+    assert.equal(journalToggleOnlyFallback.scenarioState.directGroups[0].totalDebit, 1200);
     assert.deepEqual(replayedExternalCalls, [], 'the captured service and recall replay remains fully offline');
   } finally {
     globalThis.fetch = fallbackReplayFetch;
@@ -2843,7 +2821,7 @@ try {
   const replayCapturedEquipmentRequest = async (
     activeScenario,
     responseText = capturedIncompleteJournalJson,
-    question = equipmentCreditQuestion
+    question = 'Suppose the company receives office equipment costing SGD 1,200 under supplier credit terms. What is the double entry?'
   ) => {
     const providerAttempts = [];
     globalThis.fetch = async (input, init) => {
@@ -2868,12 +2846,12 @@ try {
     assert.equal(providerAttempts.length, 4, 'the captured offline replay uses the three interpretation stages and one main Gemini response');
     assert.ok(providerAttempts.every(attempt => attempt.url.includes('generativelanguage.googleapis.com')),
       'the replayed stages use the Gemini provider transport');
-    assert.equal(response.scenarioState.journalPreparationFailed, true,
-      'an incomplete hypothetical journal result marks the current preparation as unavailable for recall');
-    assert.equal(response.scenarioState.isComplete, false);
     assert.equal(response.scenarioState.committedDirectGroups, undefined,
       'the scoped failed journal state does not carry historical committed groups');
     if (isSchemaFallback) {
+      assert.equal(response.scenarioState.journalPreparationFailed, true,
+        'an incomplete schema fallback marks the current preparation as unavailable for recall');
+      assert.equal(response.scenarioState.isComplete, false);
       assert.equal(response.answerPath, 'ACCOUNTING_JOURNAL_PREPARATION_FAILURE');
       assert.deepEqual(response.scenarioState.directGroups, [], 'the incomplete model payload creates no journal groups');
       assert.match(response.messageText, /Journal Not Prepared/);
@@ -2881,6 +2859,9 @@ try {
       assert.doesNotMatch(response.messageText, /transactionNature|Acquisition of office equipment|SFRS\(I\) 1-16|\{\s*"/,
         'the malformed provider JSON and its partial accounting claims are not exposed');
     } else {
+      assert.equal(response.scenarioState.journalPreparationFailed, true,
+        'a structurally valid but hypothetical proposal remains incomplete for current journal recall');
+      assert.equal(response.scenarioState.isComplete, false);
       assert.equal(response.scenarioState.directGroups?.length, 1,
         'a structurally valid balanced equipment proposal remains available as an uncommitted current proposal');
       assert.equal(response.scenarioState.directGroups[0].totalDebit, 1200);
@@ -2893,7 +2874,6 @@ try {
     return { response, providerAttempts, isSchemaFallback };
   };
   const capturedEquipmentFailure = await replayCapturedEquipmentRequest(null);
-  const appLikeEquipmentFailure = await replayCapturedEquipmentRequest(retainedPayrollScenario);
   const shortPrefixFailure = await replayCapturedEquipmentRequest(null, '{"transactionNature');
   const balancedEquipmentProposalJson = JSON.stringify({
     transactionTitle: 'Hypothetical office equipment acquisition',
@@ -2916,17 +2896,14 @@ try {
     }]
   });
   const validHypotheticalResult = await replayCapturedEquipmentRequest(null, balancedEquipmentProposalJson);
-  const validAppLikeHypotheticalResult = await replayCapturedEquipmentRequest(retainedPayrollScenario, balancedEquipmentProposalJson);
   assert.equal(validHypotheticalResult.response.scenarioState.isComplete, false,
-    'the valid hypothetical proposal remains incomplete under the existing evidence gate');
-  assert.equal(validHypotheticalResult.response.scenarioState.journalPreparationFailed, true,
-    'an incomplete valid hypothetical result is scoped for journal recall');
-  assert.equal(validAppLikeHypotheticalResult.response.scenarioState.journalPreparationFailed, true,
-    'the valid structured result keeps its recall marker when the initial request has prior payroll context');
+    'the structurally valid proposal remains incomplete under the existing hypothetical/evidence gate');
+  assert.ok((validHypotheticalResult.response.scenarioState.directGroups || []).every(group => group.authorityStatus !== 'DETERMINISTIC'),
+    'any retained group from the hypothetical proposal remains non-deterministic');
   assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, validHypotheticalResult.response.scenarioState, 'SFRS_I'), retainedPayrollScenario,
-    'the incomplete AI-proposed group is not promoted and the committed payroll snapshot remains intact');
+    'the AI-proposed group is not promoted and the committed payroll snapshot remains intact');
   assert.deepEqual(getDisplayableUncommittedJournalGroups(validHypotheticalResult.response.scenarioState, 'SFRS_I'), [],
-    'an incomplete hypothetical proposal does not become an eligible displayable journal');
+    'a hypothetical AI-proposed group does not become an eligible displayable journal');
   const currentFailureScenario = capturedEquipmentFailure.response.scenarioState;
   assert.equal(isCurrentJournalPreparationFailure(currentFailureScenario), true,
     'the failure remains scoped to the active incomplete result');
@@ -2949,19 +2926,6 @@ try {
     assert.deepEqual(recallResponse.scenarioState.directGroups, []);
     assert.doesNotMatch(recallResponse.messageText, /payroll|73,?291\.25|No Double Entry Available Yet/i,
       'plain recall explains the current preparation failure without presenting the historical payroll journal');
-    const validCurrentScenario = validHypotheticalResult.response.scenarioState;
-    assert.strictEqual(selectAccountingScenarioForRequest('show the double entry', validCurrentScenario, retainedPayrollScenario), validCurrentScenario,
-      'plain recall selects a valid but incomplete current hypothetical result instead of payroll');
-    const validRecallResponse = await processAccountingQuery(
-      'show the double entry', validCurrentScenario, 'SFRS_I', geminiSettings, 'unused', []
-    );
-    assert.equal(recallCalls.length, 0, 'plain recall of the valid incomplete hypothetical proposal also makes no Gemini calls');
-    assert.match(validRecallResponse.messageText, /A validated journal is unavailable for the current transaction/i,
-      'recall explains that the valid hypothetical result is not yet a validated journal');
-    assert.doesNotMatch(validRecallResponse.messageText, /payroll|73,?291\.25/i,
-      'the valid incomplete current proposal does not recall historical payroll');
-    assert.equal(validRecallResponse.scenarioState.committedDirectGroups, undefined,
-      'plain recall does not commit the valid hypothetical proposal');
     const lastJournalScenario = selectAccountingScenarioForRequest('show last journal', currentFailureScenario, retainedPayrollScenario);
     assert.strictEqual(lastJournalScenario, retainedPayrollScenario,
       'explicit last-journal access continues to select the retained committed payroll');
@@ -2973,10 +2937,6 @@ try {
   } finally {
     globalThis.fetch = beforeRecallFetch;
   }
-  assert.equal(appLikeEquipmentFailure.response.scenarioState.journalPreparationFailed, true,
-    'the App-like replay with prior payroll context also scopes failure to the current equipment request');
-  assert.deepEqual(appLikeEquipmentFailure.response.scenarioState.directGroups, [],
-    'prior payroll groups do not enter the App-like failed current state');
   assert.equal(shortPrefixFailure.response.scenarioState.journalPreparationFailed, true,
     'a stream truncated before a complete JSON key also fails closed on a journal request');
   assert.doesNotMatch(shortPrefixFailure.response.messageText, /transactionNature|\{\s*"/,
@@ -3347,7 +3307,7 @@ try {
     'What are annual filing deadlines?', 'The statutory answer is shown here.', 'What did you say about the deadline?'
   ], 'the App persists the service-selected statutory boundary for the next contextual follow-up');
 
-  const appFailureScenario = { ...validHypotheticalResult.response.scenarioState, isHypothetical: false };
+  const appFailureScenario = capturedEquipmentFailure.response.scenarioState;
   stateSlots[3] = appFailureScenario;
   stateSlots[4] = retainedPayrollScenario;
   stateSlots[6] = 'entries';
@@ -3356,9 +3316,9 @@ try {
   journalProps = undefined;
   appUi = renderApp();
   assert.equal(appUi.journalProps, undefined,
-    'App hides the retained payroll journal while the active hypothetical equipment request has no journal');
-  assert.deepEqual(appUi.inputProps.scenario.directGroups.map(group => group.title), ['Hypothetical equipment acquisition'],
-    'App retains the balanced current proposal in state while the failure marker keeps it from being shown as a validated journal');
+    'App hides the retained payroll journal while the active malformed equipment request has no journal');
+  assert.deepEqual(appUi.inputProps.scenario.directGroups, [],
+    'App retains the failed current request without exposing malformed model groups');
   await appUi.chatProps.onSendMessage('show the double entry');
   appUi = renderApp();
   assert.strictEqual(appCalls.at(-1)[1], appFailureScenario,

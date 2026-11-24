@@ -1677,6 +1677,27 @@ function supportsTransientIssueTopicText(text: string, topic: SingaporeCoverageT
   return anchors.length > 0 && anchors.filter(anchor => hasSemanticOwnerAnchor(text, anchor)).length >= Math.min(2, anchors.length);
 }
 
+function supportsCpfResignationNoticePayIssue(
+  text: string,
+  issue: ReconciledSemanticQuestionIssue,
+  topic: SingaporeCoverageTopic,
+  originalQuery: string
+): boolean {
+  const cessationContext = /\b(?:resign\w*|terminat\w*|last date of employment|last day of employment)\b/i;
+  const differentCpfClaim = /\b(?:leave encashment|unused (?:annual )?leave|contribution rates?|rate table|rate schedule|calculate|compute|refund|due date|bonus|allowance)\b/i;
+  return topic.id === 'cpf-notice-pay-leave-encashment' && topic.domainId === 'CPF_CONTRIBUTIONS' &&
+    topic.authorities.includes('CPF') && issue.domain === 'CPF_PAYROLL' && issue.population === 'EMPLOYER' &&
+    issue.operation === 'EXPLAIN_RULE' && issue.status === 'MAPPED' &&
+    issue.governingAuthorities.length === 1 && issue.governingAuthorities[0] === 'CPF' &&
+    issue.mappedTopicIds.includes(topic.id) &&
+    cessationContext.test(issue.subject) && cessationContext.test(originalQuery) &&
+    /\b(?:cpf|central provident fund)\b/i.test(originalQuery) &&
+    !differentCpfClaim.test(issue.subject) &&
+    textSupportsTopic(text, topic) &&
+    /\bcompensation in lieu of notice\b/i.test(text) &&
+    /\b(?:last date|last day) of employment\b/i.test(text);
+}
+
 function supportsIssueSubject(
   text: string,
   issue: ReconciledSemanticQuestionIssue,
@@ -1686,6 +1707,7 @@ function supportsIssueSubject(
 ): boolean {
   const practicalRuleSupport = practicalRuleIssueTextSupport(text, originalQuery, issue, topic);
   if (practicalRuleSupport !== undefined) return practicalRuleSupport;
+  if (supportsCpfResignationNoticePayIssue(text, issue, topic, originalQuery)) return true;
   if (topic.id === 'mom-salary-payment' && topic.domainId === 'MOM_EMPLOYMENT' &&
       issue.mappedTopicIds.includes(topic.id)) {
     const momSalarySupport = momSalaryPaymentIssueSupport(text, issue, 'MOM', originalQuery);

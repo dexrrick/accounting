@@ -1011,7 +1011,7 @@ const CPF_DISCOVERY_TITLE_HINTS: Readonly<Record<string, readonly string[]>> = {
   'cpf-additional-wages': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
   'cpf-bonus-backpay': ['What constitutes wages for CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
   'cpf-employee-coverage': ['Who should receive CPF contributions', 'Do I need to pay CPF contributions for my foreign employee who has recently obtained Singapore Permanent Residence status?'],
-  'cpf-notice-pay-leave-encashment': ['What constitutes wages for CPF contributions'],
+  'cpf-notice-pay-leave-encashment': ['Are CPF contributions payable on compensation in lieu of notice?', 'What constitutes wages for CPF contributions'],
   'cpf-allowances': ['What constitutes wages for CPF contributions'],
   'cpf_wage_ceiling': ['How much CPF contributions to pay'],
   'cpf_contribution_rates': ['How much CPF contributions to pay'],

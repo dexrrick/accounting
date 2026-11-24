@@ -13,6 +13,7 @@ import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { getDisplayableUncommittedJournalGroups, selectAccountingScenarioForRequest, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
+import { defaultQueryTopicResolver } from '../../src/retrieval/queryTopicResolver.ts';
 import { STATUTORY_COVERAGE_OFFICIAL_PAGE_FIXTURES } from '../fixtures/statutoryCoverageOfficialPages.mjs';
 import { validateSemanticQuestionInterpretation } from '../../src/services/semanticQuestionUnderstanding.ts';
 import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
@@ -1348,25 +1349,61 @@ try {
     { id: 'retained-payroll-answer', sender: 'assistant', timestamp: '', text: 'The payroll journal was prepared.' }
   ];
   const resignationJournalQuery = 'Please prepare the double entry for the staff resignation. What CPF rules apply?';
+  const cpfResignationTopicId = 'cpf-notice-pay-leave-encashment';
+  for (const cpfResignationQuestion of [resignationJournalQuery, 'CPF rules on resignation',
+    'CPF contribution duties for a resigning employee']) {
+    assert.ok(defaultQueryTopicResolver.decomposeQuery(cpfResignationQuestion).topics.some(topic => topic.id === cpfResignationTopicId),
+      `CPF plus resignation wording resolves the reviewed notice-pay topic: ${cpfResignationQuestion}`);
+  }
+  assert.ok(!defaultQueryTopicResolver.decomposeQuery('What CPF rules apply?').topics.some(topic => topic.id === cpfResignationTopicId),
+    'a generic CPF-rules question does not inherit the resignation topic without resignation context');
+  assert.ok(defaultQueryTopicResolver.decomposeQuery('What is the CPF leave encashment treatment?').topics.some(topic => topic.id === cpfResignationTopicId),
+    'the existing leave-encashment topic remains independently routable');
   const cpfResignationIssue = {
-    subject: 'CPF contribution duties for a resigning employee', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
-    governingAuthorities: ['CPF'], operation: 'EXPLAIN_RULE', mappedTopicIds: ['cpf_contribution_rates'],
+    subject: 'CPF rules on resignation', population: 'EMPLOYER', domain: 'CPF_PAYROLL',
+    governingAuthorities: ['CPF'], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
     evidenceRequirement: 'AUTHORITATIVE_SOURCE'
   };
-  const cpfResignationInterpretation = makePhase2Interpretation({
-    domain: 'CPF_PAYROLL', population: 'EMPLOYER', authorities: ['CPF'],
-    subject: cpfResignationIssue.subject, operation: 'EXPLAIN_RULE', issues: [cpfResignationIssue]
-  });
+  const resignationAccountingIssue = {
+    subject: 'staff resignation double entry', population: 'COMPANY', domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'], operation: 'PREPARE_JOURNAL', mappedTopicIds: [],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS'
+  };
+  const cpfResignationInterpretation = {
+    schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['UNKNOWN'], contextualAuthorities: [],
+    domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: 'staff resignation double entry and CPF rules on resignation',
+    concepts: [
+      { concept: resignationAccountingIssue.subject, role: 'PRIMARY' },
+      { concept: cpfResignationIssue.subject, role: 'PRIMARY' }
+    ],
+    requestedOperation: 'OTHER', factsExplicitlyProvided: [], confidence: 0.99,
+    issues: [resignationAccountingIssue, cpfResignationIssue].map(issue => ({ ...issue, contextualAuthorities: [],
+      evidenceRequirement: issue.evidenceRequirement, confidence: 0.99 }))
+  };
+  assert.deepEqual(cpfResignationInterpretation.concepts.map(concept => concept.role), ['PRIMARY', 'PRIMARY'],
+    'the captured accounting and CPF subjects both remain primary request concepts');
+  assert.deepEqual(cpfResignationInterpretation.issues.map(issue => issue.mappedTopicIds), [[], []],
+    'the replay leaves both issue topic IDs unmapped for production reconciliation');
   assert.ok(validateSemanticQuestionInterpretation(cpfResignationInterpretation, resignationJournalQuery));
-  const cpfContributionUrl = 'https://www.cpf.gov.sg/employer/employer-obligations/how-much-cpf-contributions-to-pay';
+  const cpfResignationUrl = 'https://www.cpf.gov.sg/service/article/are-cpf-contributions-payable-on-compensation-in-lieu-of-notice';
+  const cpfResignationPassage = 'CPF contributions are not payable on compensation in lieu of notice payable by you to your employee. However, CPF contributions are still payable on the wages given to your employee until his last date of employment. If your employee must pay you compensation in lieu of notice and you decide to offset the compensation against the wages payable to your employee, CPF contributions are still payable on the wages before the offset.';
   const resignationSynthesisRun = await runPhase2ApplicationCase({
     interpretation: cpfResignationInterpretation,
-    pages: new Map([[cpfContributionUrl, officialFixturePage('How Much CPF Contributions to Pay', 'Central Provident Fund Board',
-      'The applicable employer and employee CPF contribution rates depend on the employee’s citizenship or permanent-resident status, permanent-resident year, age band and wages. Employers need the correct contribution-year table and the employee’s relevant wage amount before calculating contributions. This general explanation gives no universal rate or contribution amount.')]]),
+    pages: new Map([[cpfResignationUrl, officialFixturePage('Are CPF contributions payable on compensation in lieu of notice?', 'Central Provident Fund Board',
+      cpfResignationPassage)]]),
     generate: packet => {
-      const passage = packet.evidencePassages.find(item => item.authority === 'CPF' &&
-        /contribution rates depend on the employee/i.test(item.completeAdmittedPassage));
-      assert.ok(passage, 'the current CPF advice is grounded in an admitted CPF Board passage');
+      const cpfRequestedIssue = packet.requestedIssues.find(issue => issue.subject === cpfResignationIssue.subject);
+      assert.ok(cpfRequestedIssue, 'the CPF resignation issue reaches synthesis from the query and AI subject');
+      assert.ok(packet.requestedIssues.some(issue => issue.subject === resignationAccountingIssue.subject),
+        'the incomplete accounting issue remains alongside the CPF issue');
+      const passage = packet.evidencePassages.find(item => item.authority === 'CPF' && item.issueId === cpfRequestedIssue.id &&
+        item.sourceRecordId.startsWith(`LIVE_TOPIC_${cpfResignationTopicId}_`) &&
+        /compensation in lieu of notice/i.test(item.completeAdmittedPassage));
+      assert.ok(passage, 'the CPF resignation issue is grounded in its admitted CPF Board notice-pay passage');
+      assert.match(passage.completeAdmittedPassage, /wages given to your employee until his last date of employment/i,
+        'the admitted first-party passage supports the last-employment-day rule');
+      assert.match(passage.completeAdmittedPassage, /wages before the offset/i,
+        'the admitted first-party passage supports pre-offset wage treatment');
       return [{ id: 'current-cpf-resignation-rules', kind: 'RULE', text: passage.completeAdmittedPassage,
         supportIds: [passage.id], factRefs: [], issueId: passage.issueId }];
     },
@@ -1378,14 +1415,23 @@ try {
     { id: 'current-resignation-question', sender: 'user', timestamp: '', text: resignationJournalQuery }
   ], retainedPayroll, { journal: true, statutory: false, shareStructure: false });
   const incompleteResignation = resignationSynthesisRun.result;
+  const reconciledAccountingIssue = resignationSynthesisRun.authorityWorkstreams.issuePlan.issues.find(issue =>
+    issue.subject === resignationAccountingIssue.subject);
+  assert.ok(reconciledAccountingIssue, 'mixed reconciliation retains the captured accounting subject');
+  assert.deepEqual(reconciledAccountingIssue.mappedTopicIds, [], 'the accounting subject remains without a reviewed mapped topic');
+  assert.equal(reconciledAccountingIssue.status, 'UNRESOLVED', 'the accounting issue remains incomplete while CPF evidence is admitted');
   assert.equal(incompleteResignation.answerPath, 'AI_GROUNDED_SYNTHESIS',
     'the incomplete mixed request reaches successful evidence-grounded synthesis');
   assert.match(incompleteResignation.messageText, /Journal Not Prepared/,
     'successful CPF synthesis explicitly states that the current resignation journal was not prepared');
-  assert.match(incompleteResignation.messageText, /contribution rates depend on the employee/i,
-    'the journal failure notice preserves the source-grounded CPF advice');
-  assert.ok(incompleteResignation.scenarioState.officialAnswerLinks.some(link => link.url.includes('cpf.gov.sg')),
-    'the successful incomplete request preserves the CPF Board source link');
+  assert.match(incompleteResignation.messageText, /CPF contributions are not payable on compensation in lieu of notice payable by you to your employee/i,
+    'the answer states the source-grounded notice-pay exclusion');
+  assert.match(incompleteResignation.messageText, /CPF contributions are still payable on the wages given to your employee until his last date of employment/i,
+    'the answer states the source-grounded last-employment-day rule');
+  assert.match(incompleteResignation.messageText, /CPF contributions are still payable on the wages before the offset/i,
+    'the answer states the source-grounded pre-offset wage rule');
+  assert.ok(incompleteResignation.scenarioState.officialAnswerLinks.some(link => link.url === cpfResignationUrl),
+    'the answer links the specific official CPF Board notice-pay page');
   assert.equal(incompleteResignation.scenarioState.isComplete, false);
   assert.equal(incompleteResignation.scenarioState.missingFields?.some(field => field.fieldKey === 'resignationDate'), true,
     'the current resignation result retains its missing last day');
@@ -1396,6 +1442,8 @@ try {
   assert.equal(incompleteResignation.scenarioState.journalPreparationFailed, true);
   assert.equal(resignationSynthesisRun.stages.filter(stage => stage === 'synthesis').length, 1,
     'the current mixed question still uses one synthesis generation');
+  assert.equal(resignationSynthesisRun.stages.filter(stage => stage === 'existing-pipeline').length, 1,
+    'the mapped CPF source does not add another model interpretation call');
 
   const equipmentJournalQuery = 'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?';
   const equipmentInterpretation = {

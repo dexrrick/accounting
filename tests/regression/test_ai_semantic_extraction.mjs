@@ -3,10 +3,13 @@ import {
   validateAndNormalizeUnderstanding,
   TransactionUnderstandingService,
   DeterministicSemanticExtractor,
+  SEMANTIC_EXTRACTION_SYSTEM_PROMPT,
+  VALID_CANONICAL_TRANSACTION_TYPES,
   defaultTransactionUnderstandingService
 } from '../../src/services/transactionUnderstandingService.ts';
-import { isDeterministicFixture } from '../../src/engine/scenarioParser.ts';
+import { isDeterministicFixture, parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { buildGroundedReasoningContext } from '../../src/services/groundingContextBuilder.ts';
+import { getDisplayableUncommittedJournalGroups, updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 
 console.log('=== RUNNING AI SEMANTIC EXTRACTION & SCHEMA GATE TEST SUITE ===\n');
 
@@ -196,6 +199,58 @@ async function runTests() {
   console.log('✓ 3B. Schema validation gate rejects illegal AI output and invokes deterministic fallback');
   passed++;
 
+  const hypotheticalEquipmentQuery = 'If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.';
+  const invalidEquipmentType = {
+    reportingEntity: { type: 'company' },
+    counterparty: { role: 'supplier' },
+    transactionType: 'purchase_of_office_equipment_on_credit',
+    subject: 'office equipment purchase on credit',
+    instrument: 'accounts_payable',
+    ownershipContext: 'not_applicable',
+    paymentStatus: 'unknown',
+    amount: 1200,
+    currency: { value: 'SGD', source: 'explicit', confidence: 1 },
+    jurisdiction: 'SG',
+    factsMissing: [],
+    assumptions: [],
+    confidence: 0.95,
+    isHypothetical: true
+  };
+  const invalidEquipmentTypeResult = validateAndNormalizeUnderstanding(
+    invalidEquipmentType, 'SG', 'ai', undefined, hypotheticalEquipmentQuery
+  );
+  assert.strictEqual(invalidEquipmentTypeResult.isValid, false, 'Unsupported generated transaction types remain rejected');
+  assert.ok(invalidEquipmentTypeResult.errors.includes("Invalid transactionType: 'purchase_of_office_equipment_on_credit'"));
+
+  const serviceWithInvalidEquipmentType = new TransactionUnderstandingService(
+    new DeterministicSemanticExtractor(),
+    { extract: async () => invalidEquipmentType }
+  );
+  const fallbackFromInvalidEquipmentType = await serviceWithInvalidEquipmentType.understandTransaction(
+    hypotheticalEquipmentQuery, 'SGD', 'SG', 'dummy-valid-key-1234567890'
+  );
+  assert.strictEqual(fallbackFromInvalidEquipmentType.extractionSource, 'deterministic_fallback');
+  assert.strictEqual(fallbackFromInvalidEquipmentType.transactionType, 'asset_purchase');
+  assert.strictEqual(fallbackFromInvalidEquipmentType.instrument, 'property_plant_equipment');
+  assert.strictEqual(fallbackFromInvalidEquipmentType.paymentStatus, 'unpaid', 'On-credit terms identify a supplier balance outstanding');
+  assert.strictEqual(fallbackFromInvalidEquipmentType.amount, 1200);
+  assert.strictEqual(fallbackFromInvalidEquipmentType.currency.value, 'SGD');
+  assert.strictEqual(fallbackFromInvalidEquipmentType.isHypothetical, true);
+  assert.ok(!fallbackFromInvalidEquipmentType.factsMissing.includes('Settlement/payment timing is unspecified'));
+  const deterministicExtractor = new DeterministicSemanticExtractor();
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment on credit').paymentStatus, 'unpaid');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment on credit but paid immediately').paymentStatus, 'paid');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment not on credit').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('Equipment not bought on credit').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('We bought office equipment, not sure whether it was on credit').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment not on credit; paid from the business bank').paymentStatus, 'paid');
+  assert.strictEqual(deterministicExtractor.extract('We bought office equipment for SGD 1,200; credit terms are unclear').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment on account').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment without credit terms').paymentStatus, 'unknown');
+  assert.strictEqual(deterministicExtractor.extract('Buy office equipment on a credit card').paymentStatus, 'unknown');
+  console.log('✓ 3C. Invalid AI transaction type falls back to a complete on-credit equipment interpretation');
+  passed++;
+
   // -------------------------------------------------------------------------
   // 4. DETERMINISTIC FIXTURE WHITELIST VS NATURAL LANGUAGE SEPARATION
   // -------------------------------------------------------------------------
@@ -243,6 +298,76 @@ async function runTests() {
     );
   }
   console.log('✓ 4B. Free-form queries and paraphrases return isDeterministicFixture === false');
+  passed++;
+
+  const expectedTransactionTypeSchema = VALID_CANONICAL_TRANSACTION_TYPES
+    .map(transactionType => `"${transactionType}"`)
+    .join(' | ');
+  assert.ok(
+    SEMANTIC_EXTRACTION_SYSTEM_PROMPT.includes(`"transactionType": ${expectedTransactionTypeSchema}`),
+    'The AI prompt lists exactly the transaction types accepted by the schema validator'
+  );
+  assert.match(SEMANTIC_EXTRACTION_SYSTEM_PROMPT, /affirmative supplier-purchase statement.*"on credit".*unpaid/i);
+  assert.match(SEMANTIC_EXTRACTION_SYSTEM_PROMPT, /generic or unclear credit terms.*do not establish an unpaid balance/i);
+  assert.match(SEMANTIC_EXTRACTION_SYSTEM_PROMPT, /generic or unclear credit terms, "on account", negated "on credit", and an uncertain statement.*do not establish an unpaid balance/i);
+
+  assert.strictEqual(isDeterministicFixture(hypotheticalEquipmentQuery), false);
+  const hypotheticalEquipmentScenario = await parseAccountingQuery(hypotheticalEquipmentQuery);
+  assert.strictEqual(hypotheticalEquipmentScenario.scenarioType, 'BUSINESS_EQUIPMENT_ACQUISITION');
+  assert.strictEqual(hypotheticalEquipmentScenario.amount, 1200);
+  assert.strictEqual(hypotheticalEquipmentScenario.isComplete, true);
+  assert.deepStrictEqual(hypotheticalEquipmentScenario.missingFields, [], 'Explicit on-credit terms resolve the settlement question');
+  assert.deepStrictEqual(hypotheticalEquipmentScenario.assumptions, [], 'The explicit on-credit fact must not be replaced by an assumption');
+  assert.doesNotMatch(hypotheticalEquipmentScenario.uncertaintyDisclaimer, /whether the equipment has been paid/i,
+    'the disclaimer does not ask whether a clearly on-credit purchase was paid');
+  assert.match(hypotheticalEquipmentScenario.uncertaintyDisclaimer, /GST-exclusive|GST-registered/i,
+    'the settlement fix preserves GST verification caveats');
+  const hypotheticalEquipmentGroup = hypotheticalEquipmentScenario.directGroups?.[0];
+  assert.ok(hypotheticalEquipmentGroup, 'The exact natural-language query prepares an uncommitted equipment journal');
+  assert.strictEqual(hypotheticalEquipmentGroup.authorityStatus, 'CONDITIONAL');
+  assert.strictEqual(hypotheticalEquipmentGroup.totalDebit, 1200);
+  assert.strictEqual(hypotheticalEquipmentGroup.totalCredit, 1200);
+  assert.deepStrictEqual(hypotheticalEquipmentGroup.lines.map(line => [line.category, line.debit, line.credit]), [
+    ['ASSET', 1200, 0], ['LIABILITY', 0, 1200]
+  ]);
+  assert.match(hypotheticalEquipmentGroup.lines[1].accountName, /payable/i);
+  for (const ambiguousEquipmentQuery of [
+    'Office equipment for SGD 1,200 was not bought on credit.',
+    'We bought office equipment for SGD 1,200, not sure whether it was on credit.',
+    'We bought office equipment for SGD 1,200 on a credit card.'
+  ]) {
+    const ambiguousEquipmentScenario = await parseAccountingQuery(ambiguousEquipmentQuery);
+    assert.strictEqual(ambiguousEquipmentScenario.isComplete, false, `Ambiguous settlement stays unresolved: ${ambiguousEquipmentQuery}`);
+    assert.ok(ambiguousEquipmentScenario.missingFields.some(field => field.fieldKey === 'paymentStatus'));
+    assert.deepStrictEqual(ambiguousEquipmentScenario.assumptions, []);
+    assert.deepStrictEqual(ambiguousEquipmentScenario.directGroups, []);
+  }
+  const explicitlyPaidEquipmentScenario = await parseAccountingQuery(
+    'We bought office equipment for SGD 1,200 on credit and paid in full by bank transfer.'
+  );
+  assert.strictEqual(explicitlyPaidEquipmentScenario.isComplete, true);
+  assert.match(explicitlyPaidEquipmentScenario.directGroups[0].lines[1].accountName, /bank/i,
+    'explicit bank payment remains paid even when credit wording also appears');
+  const retainedPayrollScenario = {
+    scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'Committed payroll', transactionTitle: 'Committed payroll',
+    amount: 1000, functionalCurrency: 'SGD', transactionCurrency: 'SGD', isComplete: true, missingFields: [],
+    directGroups: [{
+      id: 'committed-payroll', eventDate: '23/11/2026', title: 'Committed payroll', summary: 'Payroll',
+      totalDebit: 1000, totalCredit: 1000, isBalanced: true, authorityStatus: 'DETERMINISTIC',
+      citations: [], rationalePoints: [], lines: [
+        { id: 'payroll-dr', accountCode: '6000', accountName: 'Payroll Expense', category: 'EXPENSE', debit: 1000, credit: 0 },
+        { id: 'payroll-cr', accountCode: '1000', accountName: 'Cash', category: 'ASSET', debit: 0, credit: 1000 }
+      ]
+    }]
+  };
+  assert.deepStrictEqual(
+    getDisplayableUncommittedJournalGroups(hypotheticalEquipmentScenario, 'SFRS_I').map(group => group.authorityStatus),
+    ['CONDITIONAL'],
+    'the conditional proposal for the explicit hypothetical stays discoverable without becoming committed'
+  );
+  assert.strictEqual(updateCommittedJournalScenario(retainedPayrollScenario, hypotheticalEquipmentScenario, 'SFRS_I'), retainedPayrollScenario,
+    'a hypothetical equipment journal cannot replace the last committed journal');
+  console.log('✓ 4C. AI transaction type contract and natural-language equipment journal honor the on-credit fact');
   passed++;
 
   // -------------------------------------------------------------------------

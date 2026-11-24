@@ -1233,6 +1233,15 @@ export class DeterministicSemanticExtractor {
       return 'paid';
     }
 
+    if (/\b(?:not|never|isn['’]?t|wasn['’]?t|weren['’]?t)\s+(?:(?:bought|purchased)\s+)?on\s+credit\b/i.test(q) ||
+        /\b(?:not sure|unsure|uncertain|unclear|unknown)\s+(?:whether|if)\b.{0,40}\bon\s+credit\b/i.test(q)) {
+      return 'unknown';
+    }
+
+    if (/\bon\s+credit\b(?!\s+card\b)/i.test(q)) {
+      return 'unpaid';
+    }
+
     return 'unknown';
   }
 }
@@ -1251,7 +1260,7 @@ Return ONLY a JSON object conforming strictly to this JSON schema:
     "role": "shareholder" | "customer" | "supplier" | "employee" | "lender" | "director" | "government" | "investor" | "other" | "unknown",
     "description": string
   },
-  "transactionType": string,
+  "transactionType": ${VALID_CANONICAL_TRANSACTION_TYPES.map(transactionType => `"${transactionType}"`).join(' | ')},
   "subject": string,
   "instrument": string,
   "ownershipContext": "own_equity" | "external_investment" | "not_applicable" | "unknown",
@@ -1305,6 +1314,7 @@ CRITICAL CLASSIFICATION INVARIANTS:
 4. PAYMENT STATUS:
    - If unpaid, remaining unpaid, owes, yet to pay, cash hasn't arrived, pending call/settlement:
      * paymentStatus = "unpaid"
+   - An affirmative supplier-purchase statement that it is "on credit" means the supplier balance is unpaid unless the query also clearly says the amount was paid. Generic or unclear credit terms, "on account", negated "on credit", and an uncertain statement about whether a purchase is on credit do not establish an unpaid balance.
    - If paid, settled, transferred:
      * paymentStatus = "paid"
    - The words "his", "her", "owner", a currency amount, or "payment" alone are NOT payroll evidence. Classify payroll_payment only when the query establishes an employee/wage/remuneration relationship (for example salary, wages, payroll, CPF, or employee).
