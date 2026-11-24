@@ -1,0 +1,292 @@
+{
+  "head": "7d9a8d704802f0d4fd269273a32c77333d85a149",
+  "model": "gemini-3.5-flash-lite",
+  "workflows": [
+    {
+      "id": "retained-incomplete",
+      "turns": [
+        [
+          "embedded-resignation",
+          "Please prepare the double entry for the staff resignation. What CPF rules apply?",
+          "journal",
+          "offline-payroll-original",
+          null,
+          [
+            "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal"
+          ],
+          "offline-payroll-original"
+        ],
+        [
+          "incomplete-ordinary-recall",
+          "show the double entry",
+          "journal",
+          "embedded-resignation",
+          null,
+          [],
+          "offline-payroll-original"
+        ],
+        [
+          "incomplete-explicit-last",
+          "show last journal",
+          "journal",
+          "incomplete-ordinary-recall",
+          null,
+          [],
+          "offline-payroll-original"
+        ],
+        [
+          "incomplete-current-after-last",
+          "show the double entry",
+          "journal",
+          "incomplete-explicit-last",
+          null,
+          [],
+          "offline-payroll-original"
+        ]
+      ]
+    },
+    {
+      "id": "recall",
+      "turns": [
+        [
+          "conditional-journal",
+          "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+          "journal",
+          null,
+          null,
+          [],
+          "offline-payroll"
+        ],
+        [
+          "recall-journal",
+          "show the double entry",
+          "journal",
+          "conditional-journal",
+          null,
+          [],
+          "offline-payroll"
+        ],
+        [
+          "equipment-explicit-last",
+          "show last journal",
+          "journal",
+          "recall-journal",
+          null,
+          [],
+          "offline-payroll"
+        ],
+        [
+          "equipment-current-after-last",
+          "show the double entry",
+          "journal",
+          "equipment-explicit-last",
+          null,
+          [],
+          "offline-payroll"
+        ]
+      ]
+    },
+    {
+      "id": "retained-complete",
+      "turns": [
+        [
+          "complete-independent",
+          "We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?",
+          "journal",
+          "offline-payroll",
+          null,
+          [
+            "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal"
+          ],
+          "offline-payroll"
+        ]
+      ]
+    },
+    {
+      "id": "transaction",
+      "turns": [
+        [
+          "machine-parent",
+          "My company incurred SGD 80,000 on a piece of equipment. How should we account for it?",
+          "journal",
+          null,
+          null,
+          [],
+          null
+        ],
+        [
+          "second-purchase",
+          "Regarding our previous machine purchase, we bought a machine for SGD 80,000. We subsequently purchased another machine for SGD 100,000. What IRAS rules apply to the second purchase?",
+          "advisory",
+          "machine-parent",
+          null,
+          [
+            "My company incurred SGD 80,000 on a piece of equipment. How should we account for it?"
+          ],
+          null
+        ]
+      ]
+    },
+    {
+      "id": "hypothetical",
+      "turns": [
+        [
+          "conditional-purchase",
+          "Regarding our previous machine purchase, can we claim capital allowances if we sold the old machine, but we subsequently purchased another machine for SGD 100,000?",
+          "advisory",
+          "machine-parent",
+          null,
+          [
+            "My company incurred SGD 80,000 on a piece of equipment. How should we account for it?"
+          ],
+          null
+        ]
+      ]
+    },
+    {
+      "id": "image",
+      "turns": [
+        [
+          "invoice-simple",
+          "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "journal",
+          null,
+          "invoice-simple.png",
+          [],
+          null
+        ],
+        [
+          "invoice-replace",
+          "S$500 is not correct, please use S$600",
+          "journal",
+          "invoice-simple",
+          null,
+          [],
+          null
+        ],
+        [
+          "invoice-alternatives",
+          "S$500 is not correct, please use S$600 or S$700",
+          "journal",
+          "invoice-simple",
+          null,
+          [],
+          null
+        ],
+        [
+          "invoice-subtotals",
+          "The subtotal is S$600, GST is S$54, total is S$654, and subtotal is S$650.",
+          "journal",
+          "invoice-simple",
+          null,
+          [],
+          null
+        ],
+        [
+          "invoice-with-gst",
+          "Attached invoice INV-202. Please prepare the journal from the screenshot.",
+          "journal",
+          null,
+          "invoice-with-gst.png",
+          [],
+          null
+        ],
+        [
+          "invoice-conflicting-total",
+          "S$545 is not correct, please use S$600",
+          "journal",
+          "invoice-with-gst",
+          null,
+          [],
+          null
+        ]
+      ]
+    },
+    {
+      "id": "correction",
+      "turns": [
+        [
+          "payroll-parent",
+          "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal",
+          "journal",
+          null,
+          null,
+          [],
+          null
+        ],
+        [
+          "salary-correction",
+          "Actually the monthly salary for CPF is 72k a month",
+          "journal",
+          "payroll-parent",
+          null,
+          [],
+          null
+        ]
+      ]
+    },
+    {
+      "id": "reset",
+      "turns": [
+        [
+          "holdings-parent",
+          "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B.",
+          "shares",
+          null,
+          null,
+          [],
+          null
+        ],
+        [
+          "continuing-trade",
+          "Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "shares",
+          "holdings-parent",
+          null,
+          [],
+          null
+        ],
+        [
+          "reset-trade",
+          "New question: Company A then trade 10 units of Company C's shares for 5 units of Company B's shares.",
+          "shares",
+          "holdings-parent",
+          null,
+          [
+            "Company A holds 1000 units of Company C's shares, transfer 500 units of Company C's shares to Company B. Now Company A holds 500 units of Company C and 500 units of Company B."
+          ],
+          null
+        ]
+      ]
+    },
+    {
+      "id": "statutory-follow-up",
+      "turns": [
+        [
+          "mom-parent",
+          "Our employee is covered by the Employment Act and the overtime provisions. Do ordinary salary and overtime have the same payment deadline after the salary period ends? Explain the practical payroll steps and cite the relevant official guidance. No journal is required.",
+          "advisory",
+          null,
+          null,
+          [],
+          null
+        ],
+        [
+          "mom-follow-up",
+          "Does that change if the employee is not covered by the overtime provisions? Please keep ordinary salary and overtime separate. No journal is required.",
+          "advisory",
+          "mom-parent",
+          null,
+          [
+            "Our employee is covered by the Employment Act and the overtime provisions."
+          ],
+          null
+        ]
+      ]
+    }
+  ],
+  "batchCap": 24,
+  "turnCap": 6,
+  "minimumGapMs": 5100,
+  "retries": 0
+}

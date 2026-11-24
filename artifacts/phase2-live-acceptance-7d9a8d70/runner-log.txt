@@ -1,0 +1,19 @@
+retained-incomplete/embedded-resignation | ANSWERED | 2 Gemini attempts | 2 cumulative | CAPTURED
+Batch final | HARNESS_STOP: isExplicitLastJournalRequest is not a function | 2 Gemini attempts
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.87ms (first_vis=0.75ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+retained-incomplete/incomplete-ordinary-recall | ANSWERED | 0 Gemini attempts | 2 cumulative | CAPTURED
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.58ms (first_vis=0.56ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+retained-incomplete/incomplete-explicit-last | ANSWERED | 0 Gemini attempts | 2 cumulative | CAPTURED
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=0.04ms (first_vis=0.03ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+retained-incomplete/incomplete-current-after-last | ANSWERED | 0 Gemini attempts | 2 cumulative | CAPTURED
+[SemanticExtractor] AI extraction call failed, falling back to deterministic extractor: HTTP_503_NO_RETRY
+Gemini API call failed, falling back to smart universal engine: Error: HTTP_503_NO_RETRY
+    at globalThis.fetch (controlled-run.mjs:384:31)
+    at fetchGemini (source\src\services\geminiProxyTransport.ts:11:44)
+    at callGeminiAPI (source\src\services\geminiService.ts:3382:25)
+    at async processAccountingQueryCore (source\src\services\geminiService.ts:2526:68)
+    at async processAccountingQuery (source\src\services\geminiService.ts:1310:20)
+    at async <anonymous> (controlled-run.mjs:605:26)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=10773.84ms (first_vis=10772.75ms, gemini=0ms, ground=1ms, post=0ms) | tokens: in=0, out=0, think=0
+recall/conditional-journal | ANSWERED | 2 Gemini attempts | 4 cumulative | REVIEW
+Batch final | HTTP_503_NO_RETRY | 4 Gemini attempts

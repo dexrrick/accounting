@@ -1,0 +1,55 @@
+{
+  "head": "7d9a8d704802f0d4fd269273a32c77333d85a149",
+  "continuationCapInclusive": 20,
+  "readinessRequests": 1,
+  "generationRequests": 4,
+  "continuationTotalRequests": 5,
+  "remainingUnused": 15,
+  "generationResponses": {
+    "200": 3,
+    "503": 1
+  },
+  "automaticRetries": 0,
+  "providerFailure": {
+    "event": "provider-error",
+    "id": "conditional-journal",
+    "workflow": "recall",
+    "status": 503,
+    "providerStatus": "UNAVAILABLE",
+    "providerMessage": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "retryAfter": null
+  },
+  "combinedAcceptanceGenerationRequests": 8,
+  "combinedAcceptanceRequestsIncludingReadiness": 9,
+  "localSharedLedgerAndReadinessPeakRequestsIn60Seconds": 5,
+  "localSharedLedgerPeakEstimatedGenerationInputTokensIn60Seconds": 34230,
+  "localSharedLedgerGenerationRequestsByPacificDay": {
+    "2026-11-23": 8
+  },
+  "providerReportedInputTokensInContinuation": 3936,
+  "projectWideUsageIndependentlyVerified": false,
+  "continuationTurnsCompleted": [],
+  "continuationInterruptedTurn": "conditional-journal",
+  "continuationUnstartedTurns": [
+    "recall-journal",
+    "equipment-explicit-last",
+    "equipment-current-after-last",
+    "complete-independent",
+    "machine-parent",
+    "second-purchase",
+    "conditional-purchase",
+    "invoice-simple",
+    "invoice-replace",
+    "invoice-alternatives",
+    "invoice-subtotals",
+    "invoice-with-gst",
+    "invoice-conflicting-total",
+    "payroll-parent",
+    "salary-correction",
+    "holdings-parent",
+    "continuing-trade",
+    "reset-trade",
+    "mom-parent",
+    "mom-follow-up"
+  ]
+}

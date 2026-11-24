@@ -1,0 +1,11 @@
+[SemanticExtractor] AI extraction failed schema validation gate: [ "Invalid transactionType: 'purchase_of_office_equipment_on_credit'" ]
+Gemini API call failed, falling back to smart universal engine: Error: HTTP_503_NO_RETRY
+    at globalThis.fetch (controlled-run.mjs:334:31)
+    at fetchGemini (source\src\services\geminiProxyTransport.ts:11:44)
+    at callGeminiAPI (source\src\services\geminiService.ts:3382:25)
+    at async processAccountingQueryCore (source\src\services\geminiService.ts:2526:68)
+    at async processAccountingQuery (source\src\services\geminiService.ts:1310:20)
+    at async <anonymous> (controlled-run.mjs:554:26)
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite) [fallback=true]: total=16370.42ms (first_vis=16369.14ms, gemini=4370ms, ground=1ms, post=0ms) | tokens: in=0, out=0, think=0
+recall/conditional-journal | ANSWERED | 4 Gemini attempts | 4 cumulative | REVIEW
+Batch final | HTTP_503_NO_RETRY | 4 Gemini attempts

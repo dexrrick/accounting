@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-23T23:54:26.154Z",
+  "target": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite",
+  "method": "GET",
+  "generation": false,
+  "countsAgainstContinuationCap": true,
+  "retry": false,
+  "status": 200,
+  "model": "models/gemini-3.5-flash-lite",
+  "supportsGeneration": true
+}

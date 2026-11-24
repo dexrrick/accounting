@@ -1,0 +1,945 @@
+{
+  "head": "7d9a8d704802f0d4fd269273a32c77333d85a149",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-23T23:54:42.272Z",
+  "quota": {
+    "ledgerPath": "[shared local quota ledger]",
+    "batchCap": 19,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "retries": 0,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "priorAcceptanceAttempts": 4,
+  "batchKind": "authorized continuation from equipment after upstream HTTP 503",
+  "workflows": [
+    {
+      "workflow": "recall",
+      "turns": [
+        {
+          "id": "conditional-journal",
+          "query": "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": true,
+          "overrideReason": "Fresh active equipment request, with payroll retained only for later recall",
+          "parentId": null,
+          "retainedId": "offline-payroll",
+          "status": "ANSWERED",
+          "selectedScenario": null,
+          "selectedHistoricalJournal": false,
+          "activeScenarioBefore": null,
+          "activeCommittedGroupsBefore": [],
+          "activeDirectGroupsBefore": [],
+          "retainedJournalsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 73291.25,
+              "credit": 73291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 72000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 70560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "historyMessageIds": [
+            "conditional-journal"
+          ],
+          "historyMarkersRequested": [],
+          "markersInProviderPayload": [
+            [],
+            [],
+            [],
+            []
+          ],
+          "analysisStartMessageId": "conditional-journal",
+          "incomingAnalysisBoundary": null,
+          "isUncommittedJournalRecallProposal": false,
+          "groundedContext": {
+            "classification": {
+              "primaryDomain": "ACCOUNTING",
+              "domains": [
+                "ACCOUNTING_SFRS"
+              ],
+              "topicIds": [],
+              "authorities": [
+                "ACRA"
+              ],
+              "multiAuthority": false,
+              "currentInformationRequired": false,
+              "accountingAnalysisRequired": true,
+              "taxAnalysisRequired": false,
+              "regulatoryAnalysisRequired": false,
+              "calculationRequired": true,
+              "journalEntryRequired": true,
+              "missingFacts": [],
+              "intent": "TRANSACTION",
+              "reasoning": "Single-domain ACCOUNTING question governed by ACRA."
+            },
+            "userFacts": [
+              "Numerical quantities stated: SGD 1,200, ,",
+              "Singapore Dollar (SGD) referenced",
+              "Transaction type: asset_purchase",
+              "Ownership context: not_applicable",
+              "Transaction subject: property, plant and equipment acquisition",
+              "Stated transaction amount: 1200"
+            ],
+            "missingFacts": [
+              "Settlement/payment timing is unspecified",
+              "Reporting entity perspective is unspecified"
+            ],
+            "assumptions": [],
+            "primaryEvidence": [],
+            "officialGuidance": [],
+            "curatedSummaries": [
+              {
+                "id": "SFRS_I_1_20_GOVERNMENT_GRANTS",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-20 §7, §12, §24 & §29 Accounting for Government Grants and Disclosure of Government Assistance",
+                "documentTitle": "Accounting for Government Grants and Disclosure of Government Assistance",
+                "standardOrActCode": "SFRS(I) 1-20",
+                "paragraphOrSection": "§7, §12, §24 & §29",
+                "sourceText": "Government grants shall not be recognized until there is reasonable assurance that the entity will comply with conditions attaching to them and the grants will be received (§7). Grants shall be recognized in profit or loss on a systematic basis over the periods in which the entity recognizes as expenses the related costs which the grants are intended to compensate (§12). Capital grants related to assets may be presented either as deferred income or by deducting the grant in arriving at the carrying amount of the asset (§24). Operating grants (e.g. wage credits, hiring incentives) may be presented as other income or deducted from the related expense (§29).",
+                "principleSummary": "Accounting for Government Grants and Disclosure of Government Assistance",
+                "effectiveDate": "2018-01-01",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "accounting for government grants and disclosure of government assistance",
+                  "§7, §12, §24 & §29",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "validFrom": "2018-01-01",
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "0800958eb08f7eb61c2d489d4a78d2dcee1f9e8976d1dd4ff2f86478a7ef380b",
+                "provisionHash": "0800958eb08f7eb61c2d489d4a78d2dcee1f9e8976d1dd4ff2f86478a7ef380b",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS21_INITIAL_FOREIGN_CURRENCY",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-21 §21 The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "documentTitle": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "standardOrActCode": "SFRS(I) 1-21",
+                "paragraphOrSection": "§21",
+                "sourceText": "A foreign currency transaction shall be recorded, on initial recognition in the functional currency, by applying the spot exchange rate at the transaction date.",
+                "principleSummary": "The Effects of Changes in Foreign Exchange Rates - Initial Spot Rate",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "the effects of changes in foreign exchange rates - initial spot rate",
+                  "§21",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "provisionHash": "3db6a156c06d5d89bdb9c8bc1ad0945eb1f74a90372daf51d3c3ac6f992299cd",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IFRS9_ECL_GENERAL",
+                "authority": "ACRA",
+                "authorityName": "IFRS Foundation",
+                "sourcePublisher": "IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 9 §5.5.1, §5.5.3-§5.5.5 & §5.5.17 Expected Credit Losses - General Approach",
+                "documentTitle": "Expected Credit Losses - General Approach",
+                "standardOrActCode": "SFRS(I) 9",
+                "paragraphOrSection": "§5.5.1, §5.5.3-§5.5.5 & §5.5.17",
+                "sourceText": "Under the general impairment approach, a loss allowance is recognised for applicable financial assets. Subject to the exceptions and requirements in paragraphs 5.5.13-5.5.16, the loss allowance is measured at lifetime expected credit losses when credit risk has increased significantly since initial recognition and at 12-month expected credit losses when it has not. Expected credit losses are measured as an unbiased, probability-weighted amount reflecting a range of outcomes, the time value of money, and reasonable and supportable information available without undue cost or effort.",
+                "principleSummary": "Expected Credit Losses - General Approach",
+                "effectiveDate": "2018-01-01",
+                "officialSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "expected credit losses - general approach",
+                  "§5.5.1, §5.5.3-§5.5.5 & §5.5.17",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "validFrom": "2018-01-01",
+                "lastVerifiedDate": "2026-09-25",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "canonicalSourceUrl": "https://www.ifrs.org/content/dam/ifrs/publications/pdf-standards/english/2022/issued/part-a/ifrs-9-financial-instruments.pdf?bypass=on",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "a67b247de2946b98901635dd54f92380888aeafa224823a1d5e07c22d7054363",
+                "provisionHash": "a67b247de2946b98901635dd54f92380888aeafa224823a1d5e07c22d7054363",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SFRS_I_1_10_EVENTS_AFTER_REPORTING",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-10 §3, §8, §10 & §12 Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "documentTitle": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "standardOrActCode": "SFRS(I) 1-10",
+                "paragraphOrSection": "§3, §8, §10 & §12",
+                "sourceText": "Events after the reporting period are those events, favourable and unfavourable, that occur between the end of the reporting period and the date when the financial statements are authorised for issue (§3). An entity shall adjust the amounts recognized in its financial statements to reflect adjusting events (evidence of conditions that existed at the end of the reporting period, §8). An entity shall not adjust amounts for non-adjusting events (indicative of conditions that arose after the reporting period, §10). If an entity declares dividends to holders of equity instruments after the reporting period, the entity shall not recognize those dividends as a liability at the end of the reporting period (§12).",
+                "principleSummary": "Events After the Reporting Period - Adjusting vs Non-Adjusting Events & Dividends",
+                "effectiveDate": "2018-01-01",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "events after the reporting period - adjusting vs non-adjusting events & dividends",
+                  "§3, §8, §10 & §12",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "validFrom": "2018-01-01",
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "provisionHash": "c6f09e913379b19e7078991c43437861931cfe9fd29b557a9b8713ab563808af",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "IAS16_PPE_RECOGNITION",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "SFRS(I) 1-16 §7 & §15 PPE - Recognition and Initial Measurement at Cost",
+                "documentTitle": "PPE - Recognition and Initial Measurement at Cost",
+                "standardOrActCode": "SFRS(I) 1-16",
+                "paragraphOrSection": "§7 & §15",
+                "sourceText": "An item of property, plant and equipment that qualifies for recognition as an asset shall be measured at its cost. Cost comprises purchase price (excluding trade discounts and recoverable sales taxes like input GST) and any directly attributable costs of bringing the asset to working condition.",
+                "principleSummary": "PPE - Recognition and Initial Measurement at Cost",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "ppe - recognition and initial measurement at cost",
+                  "§7 & §15",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "a8e19e59a4bcc3f3fe648234b2064272f6d6dc7fa46eb471353f9fa6ff73edd1",
+                "provisionHash": "a8e19e59a4bcc3f3fe648234b2064272f6d6dc7fa46eb471353f9fa6ff73edd1",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              },
+              {
+                "id": "SINGAPORE_GST_TRADE_IN",
+                "authority": "ACRA",
+                "authorityName": "Accounting Standards Council (ACRA) & IASB",
+                "sourcePublisher": "Accounting Standards Council (Singapore) / IFRS Foundation",
+                "legalOrStandardInstrument": "IRAS e-Tax Guide (Trade-ins) IRAS GST Treatment on Trade-In Transactions",
+                "documentTitle": "IRAS GST Treatment on Trade-In Transactions",
+                "standardOrActCode": "IRAS e-Tax Guide (Trade-ins)",
+                "paragraphOrSection": "Trade-in Rules",
+                "sourceText": "Under Singapore GST law, a trade-in involves two separate taxable supplies. A GST-registered buyer must account for output tax (9%) on the agreed trade-in value of the old asset disposed of, and can claim input tax (9%) on the purchase of the new asset.",
+                "principleSummary": "IRAS GST Treatment on Trade-In Transactions",
+                "officialSourceUrl": "",
+                "domain": "ACCOUNTING_SFRS",
+                "jurisdiction": "Singapore",
+                "tags": [
+                  "iras gst treatment on trade-in transactions",
+                  "trade-in rules",
+                  "accounting standard",
+                  "sfrs(i)"
+                ],
+                "sourceStatus": "NEEDS_REVIEW",
+                "sourceType": "CURATED_SUMMARY",
+                "evidenceTier": "CURATED_SUMMARY",
+                "isVerbatimText": false,
+                "lastVerifiedDate": "2026-09-01",
+                "reviewAuditCycleDays": 365,
+                "provenance": "LOCAL_STATIC",
+                "lifecycleState": "ACTIVE",
+                "version": "2026.09",
+                "sourceAuthority": "ACRA",
+                "retrievedAt": "2026-09-01T00:00:00Z",
+                "verificationMethod": "CURATED_EDITORIAL_REVIEW",
+                "contentHash": "5bf8e22c389974cf902565f466a6638ab25bf52a7c224133230ba2d9419e78eb",
+                "provisionHash": "5bf8e22c389974cf902565f466a6638ab25bf52a7c224133230ba2d9419e78eb",
+                "extractionStatus": "PARTIAL",
+                "freshnessStatus": "ACTIVE_CURRENT"
+              }
+            ],
+            "applicationRules": [
+              "Calculation Rule: Sum of Debits must equal Sum of Credits exactly. Double-entry journals must balance to 2 decimal places."
+            ],
+            "currentInformationRequired": false,
+            "semanticUnderstanding": {
+              "extractionSource": "deterministic_fallback",
+              "provenance": {
+                "tier": "DETERMINISTIC_HEURISTIC_FALLBACK",
+                "isFallback": true,
+                "engine": "heuristic_pattern_matcher",
+                "appliedRules": [
+                  "ownership_context:not_applicable",
+                  "transaction_type:asset_purchase",
+                  "currency:explicit"
+                ],
+                "confidenceCapped": true,
+                "notice": "Heuristic rule fallback: extracted using regex/keyword patterns; not validated by LLM reasoning",
+                "timestamp": "2026-11-23T23:54:54.176Z"
+              },
+              "reportingEntity": {
+                "type": "unknown"
+              },
+              "transactionType": "asset_purchase",
+              "subject": "property, plant and equipment acquisition",
+              "instrument": "property_plant_equipment",
+              "ownershipContext": "not_applicable",
+              "paymentStatus": "unknown",
+              "amount": 1200,
+              "currency": {
+                "value": "SGD",
+                "source": "explicit",
+                "confidence": 1,
+                "rationale": "Explicitly stated as SGD / Singapore Dollar"
+              },
+              "transactionDate": null,
+              "jurisdiction": "SG",
+              "factsMissing": [
+                "Settlement/payment timing is unspecified",
+                "Reporting entity perspective is unspecified"
+              ],
+              "assumptions": [],
+              "confidence": 0.65,
+              "actualMeasurementBasis": "UNKNOWN",
+              "projectedMeasurementBasis": "UNKNOWN",
+              "measurementBasis": "UNKNOWN",
+              "isHypothetical": true
+            },
+            "questionUnderstanding": {
+              "mode": "SEMANTIC_PLUS_RULES",
+              "assessmentStatus": "PASSED",
+              "transportAttempts": [
+                {
+                  "attempt": 1,
+                  "status": 200,
+                  "elapsedMs": 1999,
+                  "retryScheduled": false
+                }
+              ],
+              "interpretation": {
+                "jurisdiction": [
+                  "Singapore"
+                ],
+                "authorityCandidates": [
+                  "ACCOUNTING_STANDARDS"
+                ],
+                "contextualAuthorities": [],
+                "domain": "ACCOUNTING",
+                "population": "COMPANY",
+                "primarySubject": "double entry for office equipment purchase on credit",
+                "concepts": [
+                  {
+                    "concept": "office equipment",
+                    "role": "PRIMARY"
+                  },
+                  {
+                    "concept": "purchase on credit",
+                    "role": "PRIMARY"
+                  },
+                  {
+                    "concept": "double entry",
+                    "role": "PRIMARY"
+                  }
+                ],
+                "requestedOperation": "PREPARE_JOURNAL",
+                "requiresUserSpecificFacts": true,
+                "calculationRequested": false,
+                "factsExplicitlyProvided": [
+                  "office equipment purchased for SGD 1200",
+                  "purchase made on credit"
+                ],
+                "confidence": 1,
+                "issues": [
+                  {
+                    "subject": "double entry for office equipment purchase on credit",
+                    "population": "COMPANY",
+                    "domain": "ACCOUNTING",
+                    "governingAuthorities": [
+                      "ACCOUNTING_STANDARDS"
+                    ],
+                    "contextualAuthorities": [],
+                    "operation": "PREPARE_JOURNAL",
+                    "mappedTopicIds": [],
+                    "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                    "confidence": 1
+                  }
+                ]
+              }
+            },
+            "requestCompletenessContext": {
+              "contractVersion": 1,
+              "identity": "[1,\"If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.\"]",
+              "rawQuery": "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+              "inputLength": 110,
+              "inventory": {
+                "state": "UNCERTAIN",
+                "fullyConsumed": false,
+                "outcomes": [],
+                "facts": [],
+                "findings": [
+                  {
+                    "stage": "INVENTORY",
+                    "code": "UNKNOWN_PREFIX_OR_REQUEST",
+                    "span": {
+                      "start": 0,
+                      "end": 110
+                    }
+                  }
+                ],
+                "inputLength": 110
+              },
+              "declaredFacts": [],
+              "excludedSpans": [],
+              "observationSnapshot": {
+                "hasWrapper": true,
+                "mode": "SEMANTIC_INTERPRETATION",
+                "format": "STORED_NORMALIZED_OR_LEGACY",
+                "normalizedInterpretation": {
+                  "jurisdiction": [
+                    "Singapore"
+                  ],
+                  "authorityCandidates": [
+                    "ACCOUNTING_STANDARDS"
+                  ],
+                  "contextualAuthorities": [],
+                  "domain": "ACCOUNTING",
+                  "population": "COMPANY",
+                  "primarySubject": "double entry for office equipment purchase on credit",
+                  "concepts": [
+                    {
+                      "concept": "office equipment",
+                      "role": "PRIMARY"
+                    },
+                    {
+                      "concept": "purchase on credit",
+                      "role": "PRIMARY"
+                    },
+                    {
+                      "concept": "double entry",
+                      "role": "PRIMARY"
+                    }
+                  ],
+                  "requestedOperation": "PREPARE_JOURNAL",
+                  "requiresUserSpecificFacts": true,
+                  "calculationRequested": false,
+                  "factsExplicitlyProvided": [
+                    "office equipment purchased for SGD 1200",
+                    "purchase made on credit"
+                  ],
+                  "confidence": 1,
+                  "issues": [
+                    {
+                      "subject": "double entry for office equipment purchase on credit",
+                      "population": "COMPANY",
+                      "domain": "ACCOUNTING",
+                      "governingAuthorities": [
+                        "ACCOUNTING_STANDARDS"
+                      ],
+                      "contextualAuthorities": [],
+                      "operation": "PREPARE_JOURNAL",
+                      "mappedTopicIds": [],
+                      "evidenceRequirement": "AUTHORITATIVE_SOURCE_AND_CASE_FACTS",
+                      "confidence": 1
+                    }
+                  ]
+                },
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "observedConfidence": 1
+              },
+              "evaluation": {
+                "status": "UNCERTAIN",
+                "structuralAcceptance": "ACCEPTED",
+                "confidenceAcceptance": "ACCEPTED",
+                "minimumConfidence": 0.72,
+                "observationFormat": "STORED_NORMALIZED_OR_LEGACY",
+                "observedConfidence": 1,
+                "findings": [
+                  {
+                    "stage": "BRIDGE",
+                    "code": "UNKNOWN_SUBJECT_DESCRIPTOR",
+                    "issueIndex": 0,
+                    "subject": "double entry for office equipment purchase on credit"
+                  }
+                ],
+                "matches": [],
+                "issues": [
+                  {
+                    "subject": "double entry for office equipment purchase on credit",
+                    "population": "COMPANY",
+                    "operation": "PREPARE_JOURNAL"
+                  }
+                ]
+              }
+            },
+            "sourceMapFallbackTrace": {
+              "path": "NOT_NEEDED",
+              "sourceMapIds": [],
+              "selectedRecordIds": [],
+              "finalVerifiedUrls": [],
+              "candidateOnly": false,
+              "attempts": [],
+              "stages": [
+                {
+                  "stage": "LOCAL_VERIFIED",
+                  "status": "SKIPPED",
+                  "reason": "No fallback was requested for a routed topic."
+                },
+                {
+                  "stage": "MAPPED_SOURCE",
+                  "status": "SKIPPED",
+                  "reason": "A source-map fetch was not needed."
+                },
+                {
+                  "stage": "SITEMAP_DISCOVERY",
+                  "status": "SKIPPED",
+                  "reason": "Sitemap discovery was not needed."
+                },
+                {
+                  "stage": "OFFICIAL_DOMAIN_SEARCH",
+                  "status": "SKIPPED",
+                  "reason": "Official-domain search was not needed."
+                }
+              ]
+            }
+          },
+          "answer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.\n\n### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+          "displayedAnswer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.\n\n### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": null,
+          "sourceAnalysisBoundary": "conditional-journal",
+          "scenario": "UNRECOGNIZED",
+          "scenarioComplete": false,
+          "rawQuery": "If we buy office equipment for SGD 1,200 on credit, what would the double entry be? This is hypothetical only.",
+          "preparationFailed": true,
+          "activeScenarioAfter": "UNRECOGNIZED",
+          "explicitLast": false,
+          "missing": [],
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [],
+          "retainedJournalsAfter": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 73291.25,
+              "credit": 73291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 72000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 70560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "cd7aafde8647b7b2514b7473fd287c621f0eadf634fbd5eff3bacb07e7497572",
+              "estimatedInputTokens": 13137,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "user content",
+              "fingerprint": "0de4fefdc5888fa0f56c68612b5e44c33debbcd5e71c8541186f867ca5fa7245",
+              "estimatedInputTokens": 1302,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 3,
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "6c2d9945b4b9b5e213de012361e995274627f67f1347c232b44e2aed5720ed46",
+              "estimatedInputTokens": 7115,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 4,
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "4778d4311203be2f1c329d86d5af1f082ae770f51d02e499e77ae5ac126902ef",
+              "estimatedInputTokens": 12676,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "cd7aafde8647b7b2514b7473fd287c621f0eadf634fbd5eff3bacb07e7497572",
+              "estimatedInputTokens": 13137,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "conditional-journal",
+              "workflow": "recall",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-23T23:54:42.313Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "0de4fefdc5888fa0f56c68612b5e44c33debbcd5e71c8541186f867ca5fa7245",
+              "estimatedInputTokens": 1302,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "conditional-journal",
+              "workflow": "recall",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-23T23:54:47.428Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "You are an expert economic and accounting transaction classifier for Singapore and international fin",
+              "fingerprint": "6c2d9945b4b9b5e213de012361e995274627f67f1347c232b44e2aed5720ed46",
+              "estimatedInputTokens": 7115,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "conditional-journal",
+              "workflow": "recall",
+              "attempt": 3,
+              "turnAttempt": 3,
+              "retry": false,
+              "at": "2026-11-23T23:54:52.540Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:streamGenerateContent",
+              "stage": "You are an authoritative Senior Singapore Accounting & Statutory Research Assistant for professional",
+              "fingerprint": "4778d4311203be2f1c329d86d5af1f082ae770f51d02e499e77ae5ac126902ef",
+              "estimatedInputTokens": 12676,
+              "repeatedInTurn": false,
+              "markersIncluded": [],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "conditional-journal",
+              "workflow": "recall",
+              "attempt": 4,
+              "turnAttempt": 4,
+              "retry": false,
+              "at": "2026-11-23T23:54:57.657Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 4,
+          "cumulativeAttempts": 4,
+          "transportStop": "HTTP_503_NO_RETRY",
+          "acceptanceFailures": [
+            "A balanced SGD 1,200 current equipment journal was not available."
+          ]
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "finishedAt": "2026-11-23T23:54:58.663Z",
+  "totalAttempts": 4,
+  "stopReason": "HTTP_503_NO_RETRY",
+  "usageSummary": {
+    "dispatchedRequests": 4,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 34230,
+    "providerReportedPromptTokens": 3936,
+    "providerReportedTotalTokens": 4826,
+    "attemptsWithoutUsageMetadata": 1
+  }
+}

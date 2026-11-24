@@ -1,0 +1,37 @@
+[
+  {
+    "id": "embedded-resignation",
+    "workflow": "retained-incomplete",
+    "target": "https://www.cpf.gov.sg/employer/employer-obligations",
+    "status": 200,
+    "ms": 112
+  },
+  {
+    "id": "embedded-resignation",
+    "workflow": "retained-incomplete",
+    "target": "https://www.cpf.gov.sg/employer/employer-obligations/who-should-receive-cpf-contributions",
+    "status": 200,
+    "ms": 40
+  },
+  {
+    "id": "embedded-resignation",
+    "workflow": "retained-incomplete",
+    "target": "https://www.cpf.gov.sg/employer/sitemap",
+    "status": 200,
+    "ms": 34
+  },
+  {
+    "id": "embedded-resignation",
+    "workflow": "retained-incomplete",
+    "target": "https://html.duckduckgo.com/html/",
+    "status": 200,
+    "ms": 807
+  },
+  {
+    "id": "embedded-resignation",
+    "workflow": "retained-incomplete",
+    "target": "https://html.duckduckgo.com/html/",
+    "status": 200,
+    "ms": 562
+  }
+]

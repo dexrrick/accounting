@@ -1,0 +1,476 @@
+{
+  "head": "7d9a8d704802f0d4fd269273a32c77333d85a149",
+  "model": "gemini-3.5-flash-lite",
+  "standard": "SFRS_I",
+  "startedAt": "2026-11-23T23:43:46.951Z",
+  "quota": {
+    "ledgerPath": "[shared local quota ledger]",
+    "batchCap": 24,
+    "turnCap": 6,
+    "requestsPerMinute": 15,
+    "inputTokensPerMinute": 250000,
+    "requestsPerPacificDay": 500,
+    "retries": 0,
+    "minimumGapMs": 5100
+  },
+  "fixtureProvenance": {
+    "originalPayrollSource": "local deterministic parse, verified against prior captured payroll journal",
+    "correctedPayrollSource": "local deterministic parse, verified against prior captured corrected payroll journal"
+  },
+  "workflows": [
+    {
+      "workflow": "retained-incomplete",
+      "turns": [
+        {
+          "id": "embedded-resignation",
+          "query": "Please prepare the double entry for the staff resignation. What CPF rules apply?",
+          "mode": "journal",
+          "uiRelation": "RELATED",
+          "uiResetApplied": false,
+          "deliberateHistoryOverride": false,
+          "parentId": "offline-payroll-original",
+          "retainedId": "offline-payroll-original",
+          "status": "ANSWERED",
+          "selectedScenario": "PAYROLL_CPF_SALARY",
+          "selectedHistoricalJournal": true,
+          "activeScenarioBefore": "PAYROLL_CPF_SALARY",
+          "activeCommittedGroupsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "activeDirectGroupsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalsBefore": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "historyMessageIds": [
+            "payroll-parent",
+            "payroll-parent-answer",
+            "embedded-resignation"
+          ],
+          "historyMarkersRequested": [
+            "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal"
+          ],
+          "markersInProviderPayload": [
+            [
+              {
+                "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                "markerLength": 115,
+                "included": true
+              }
+            ],
+            [
+              {
+                "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                "markerLength": 115,
+                "included": false
+              }
+            ]
+          ],
+          "analysisStartMessageId": "payroll-parent",
+          "incomingAnalysisBoundary": "payroll-parent",
+          "isUncommittedJournalRecallProposal": false,
+          "answer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.\n\n### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**staff resignation double entry** (party in scope: Company)\n- **Application unresolved:** For staff resignation double entry, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** staff resignation double entry: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**CPF rules on resignation** (party in scope: Employer)\n- **Application unresolved:** For CPF rules on resignation, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** No source evidence was found for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n- **Evidence gap:** CPF rules on resignation: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** CPF rules on resignation: No source evidence was found for this issue.\n- **Evidence gap:** CPF rules on resignation: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** CPF rules on resignation: Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- staff resignation: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- double entry: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- CPF rules: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- staff resignation double entry: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- CPF rules on resignation: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- CPF rules on resignation: No source evidence was found for this issue.\n- CPF rules on resignation: No complete source quotation passed claim verification for this issue.\n- CPF rules on resignation: Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n- staff resignation double entry: No reviewed topic was resolved for this issue\n- CPF rules on resignation: No reviewed topic was resolved for this issue",
+          "displayedAnswer": "### Journal Not Prepared\n\nA validated journal is unavailable for the current transaction. Please retry the original journal request.\n\n### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**staff resignation double entry** (party in scope: Company)\n- **Application unresolved:** For staff resignation double entry, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** staff resignation double entry: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### CPF Board — CPF contributions\n\n**Status:** Evidence incomplete\n\n**CPF rules on resignation** (party in scope: Employer)\n- **Application unresolved:** For CPF rules on resignation, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** No source evidence was found for this issue.\n- **Evidence gap:** No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n- **Evidence gap:** CPF rules on resignation: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** CPF rules on resignation: No source evidence was found for this issue.\n- **Evidence gap:** CPF rules on resignation: No complete source quotation passed claim verification for this issue.\n- **Evidence gap:** CPF rules on resignation: Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- staff resignation: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- double entry: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- CPF rules: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- staff resignation double entry: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- CPF rules on resignation: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- CPF rules on resignation: No source evidence was found for this issue.\n- CPF rules on resignation: No complete source quotation passed claim verification for this issue.\n- CPF rules on resignation: Verified quotations do not support the requested topic iras-authority-query-issue-cpf-cpf-rules-on-resignation.\n- staff resignation double entry: No reviewed topic was resolved for this issue\n- CPF rules on resignation: No reviewed topic was resolved for this issue",
+          "answerPath": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+          "advisoryFailureStatus": "OTHER",
+          "boundary": "payroll-parent",
+          "sourceAnalysisBoundary": "payroll-parent",
+          "scenario": "PAYROLL_CPF_SALARY",
+          "scenarioComplete": false,
+          "hypothetical": false,
+          "rawQuery": "Please prepare the double entry for the staff resignation. What CPF rules apply?",
+          "preparationFailed": true,
+          "activeScenarioAfter": "PAYROLL_CPF_SALARY",
+          "explicitLast": false,
+          "missing": [
+            {
+              "fieldKey": "resignationDate",
+              "fieldName": "Employee resignation date",
+              "prompt": "What was the employee’s last day of employment (DD/MM/YYYY)?",
+              "whyNeeded": "The payroll period and working days cannot be calculated without the last day."
+            }
+          ],
+          "amount": 10000,
+          "currency": "SGD",
+          "officialLinks": [],
+          "journals": [],
+          "projectedJournals": [],
+          "currentUncommittedJournals": [],
+          "displayedJournals": [],
+          "displayHasJournal": false,
+          "committedJournals": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalsAfter": [
+            {
+              "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+              "status": "DETERMINISTIC",
+              "date": "30 Sep 2026",
+              "debit": 11291.25,
+              "credit": 11291.25,
+              "markedBalanced": true,
+              "lines": [
+                {
+                  "account": "Staff Salaries & Wages (Operating Expense)",
+                  "debit": 10000,
+                  "credit": 0
+                },
+                {
+                  "account": "Employer CPF Contribution (Operating Expense)",
+                  "debit": 1280,
+                  "credit": 0
+                },
+                {
+                  "account": "CPF Payable to CPF Board (Current Liability)",
+                  "debit": 0,
+                  "credit": 2720
+                },
+                {
+                  "account": "Net Salaries Payable / Staff Clearing (Current Liability)",
+                  "debit": 0,
+                  "credit": 8560
+                },
+                {
+                  "account": "Skills Development Levy (Operating Expense)",
+                  "debit": 11.25,
+                  "credit": 0
+                },
+                {
+                  "account": "Skills Development Levy Payable",
+                  "debit": 0,
+                  "credit": 11.25
+                }
+              ]
+            }
+          ],
+          "retainedJournalChanged": false,
+          "payrollProviderInputAudit": [
+            {
+              "attempt": 1,
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "eca6379db3e3beac4c439953b914d6131292145781eebd878d37e5bc4c278148",
+              "estimatedInputTokens": 13655,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [
+                {
+                  "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                  "markerLength": 115,
+                  "included": true
+                }
+              ],
+              "repeatedInTurn": false
+            },
+            {
+              "attempt": 2,
+              "stage": "user content",
+              "fingerprint": "0405911c5119e88e69c338f68b7d5ed02da9e41e9dd0f5c90214c22ea3f3f9e6",
+              "estimatedInputTokens": 1272,
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "markersIncluded": [
+                {
+                  "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                  "markerLength": 115,
+                  "included": false
+                }
+              ],
+              "repeatedInTurn": false
+            }
+          ],
+          "providerCalls": [
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "Interpret the user question only. Use clearly labeled earlier conversation context when it is suppli",
+              "fingerprint": "eca6379db3e3beac4c439953b914d6131292145781eebd878d37e5bc4c278148",
+              "estimatedInputTokens": 13655,
+              "repeatedInTurn": false,
+              "markersIncluded": [
+                {
+                  "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                  "markerLength": 115,
+                  "included": true
+                }
+              ],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": true,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "embedded-resignation",
+              "workflow": "retained-incomplete",
+              "attempt": 1,
+              "turnAttempt": 1,
+              "retry": false,
+              "at": "2026-11-23T23:43:46.972Z",
+              "event": "dispatch"
+            },
+            {
+              "target": "/v1beta/models/gemini-3.5-flash-lite:generateContent",
+              "stage": "user content",
+              "fingerprint": "0405911c5119e88e69c338f68b7d5ed02da9e41e9dd0f5c90214c22ea3f3f9e6",
+              "estimatedInputTokens": 1272,
+              "repeatedInTurn": false,
+              "markersIncluded": [
+                {
+                  "markerHash": "e459c0715729392f8628f4d8c7672d854c50a3f53107b98c39e0f6a9a3750917",
+                  "markerLength": 115,
+                  "included": false
+                }
+              ],
+              "payrollInputAudit": {
+                "originalPayrollQueryIncluded": false,
+                "correctedPayrollQueryIncluded": false,
+                "originalPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "correctedPayrollJournalTitlesIncluded": [
+                  {
+                    "title": "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)",
+                    "included": false
+                  }
+                ],
+                "distinctPayrollGroupTitles": [
+                  "Monthly Payroll & Statutory CPF Accrual (30 Sep 2026)"
+                ]
+              },
+              "id": "embedded-resignation",
+              "workflow": "retained-incomplete",
+              "attempt": 2,
+              "turnAttempt": 2,
+              "retry": false,
+              "at": "2026-11-23T23:43:52.503Z",
+              "event": "dispatch"
+            }
+          ],
+          "providerRetries": 0,
+          "renderedLinks": [],
+          "attempts": 2,
+          "cumulativeAttempts": 2,
+          "acceptanceFailures": []
+        }
+      ]
+    }
+  ],
+  "testSurface": "Live application service and real rendered components with App journal state transitions mirrored in the harness",
+  "stopReason": "HARNESS_STOP: isExplicitLastJournalRequest is not a function",
+  "finishedAt": "2026-11-23T23:44:15.812Z",
+  "totalAttempts": 2,
+  "usageSummary": {
+    "dispatchedRequests": 2,
+    "transportRetries": 0,
+    "repeatedRequestFingerprints": 0,
+    "estimatedInputTokens": 14927,
+    "providerReportedPromptTokens": 2286,
+    "providerReportedTotalTokens": 2701,
+    "attemptsWithoutUsageMetadata": 0
+  }
+}
