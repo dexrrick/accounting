@@ -1,4 +1,4 @@
-import type { AccountingEventSequence, AccountingStandard, AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
+import type { AccountingEventSequence, AccountingStandard, AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup, JournalAuthorityStatus } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
 import type { TransactionUnderstanding } from './transactionUnderstandingService';
@@ -58,7 +58,7 @@ import {
   shouldUseAuthorityEvidenceRuntime,
   shouldUseUnmappedAccountingRuleExplanationRuntime
 } from '../utils/authorityEvidenceRouting';
-import { renderAuthorityEvidenceResponseText } from './authorityEvidenceResponse';
+import { renderAuthorityEvidenceResponseText, renderJournalAuthorityStatusSentences } from './authorityEvidenceResponse';
 import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import { createRequestCompletenessContext, isCurrentRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
 import { buildAdvisoryConversation, classifyAdvisoryFailure, generateAiFirstAdvisory, hasConfiguredProvider, isAiFirstAdvisoryEligible,
@@ -514,6 +514,7 @@ export async function processAccountingQuery(
   let groundedContext: GroundedReasoningContext | undefined;
   let authorityWorkstreams: AuthorityWorkstreamsResult | undefined;
   let deterministicScenario: AccountingScenarioState | undefined;
+  let hasPriorContextAmount = false;
   let synthesisHistory = chatHistory;
   let conversationBoundaryMessageId: string | undefined;
   const response = await processAccountingQueryCore(
@@ -532,7 +533,10 @@ export async function processAccountingQuery(
       synthesisHistory = history;
       conversationBoundaryMessageId = history.find(message => message.sender === 'user')?.id;
     },
-    scenario => { deterministicScenario = structuredClone(scenario); }
+    (scenario, hasApplicablePriorAmount) => {
+      deterministicScenario = structuredClone(scenario);
+      if (hasApplicablePriorAmount !== undefined) hasPriorContextAmount = hasApplicablePriorAmount;
+    }
   );
   if (conversationBoundaryMessageId) response.conversationBoundaryMessageId = conversationBoundaryMessageId;
   const finish = (
@@ -589,7 +593,7 @@ export async function processAccountingQuery(
   }
   const validatedProposalAccountNames = new Set((response.scenarioState.directGroups || [])
     .filter(group => (group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') &&
-      !group.isHypothetical && validateJournalGroups([group], { rawQuery: userInput }).isValid)
+      !group.isHypothetical && validateJournalGroups([group], { rawQuery: userInput, hasPriorContextAmount }).isValid)
     .flatMap(group => group.lines.map(line => line.accountName)));
   try {
     // An unmapped issue is an answer-completeness gap, not proof that the
@@ -631,7 +635,8 @@ export async function processAccountingQuery(
       if (hasConfiguredProvider(providerOrApiKey)) {
         return finish(createGroundedSynthesisFailureResponse(
           response, userInput, standard, authorityWorkstreams, groundedContext, undefined, deterministicScenario,
-          'PROVIDER_NO_CLAIMS', validatedProposalAccountNames
+          'PROVIDER_NO_CLAIMS', validatedProposalAccountNames, hasPriorContextAmount,
+          hasExplicitJournalOptOut(userInput, outputPreference)
         ), { rejectionReason: 'NO_GROUNDED_SYNTHESIS' });
       }
       return finish(response);
@@ -659,7 +664,8 @@ export async function processAccountingQuery(
     return finish(createGroundedSynthesisFailureResponse(
       response, userInput, standard, authorityWorkstreams, groundedContext,
       isClaimRejection ? undefined : advisoryFailureStatus, deterministicScenario,
-      isClaimRejection ? 'PROVIDER_CLAIMS_REJECTED' : 'PROVIDER_FAILURE', validatedProposalAccountNames
+      isClaimRejection ? 'PROVIDER_CLAIMS_REJECTED' : 'PROVIDER_FAILURE', validatedProposalAccountNames,
+      hasPriorContextAmount, hasExplicitJournalOptOut(userInput, outputPreference)
     ), {
       rejectionReason: isClaimRejection ? 'EVIDENCE_CLAIMS_REJECTED' : 'SYNTHESIS_PROVIDER_FAILURE',
       ...(isClaimRejection ? { rejectionCodes: [...error.rejectionCodes] } : {})
@@ -677,54 +683,43 @@ export function createGroundedSynthesisFailureResponse(
   advisoryFailureStatus: AdvisoryFailureStatus | undefined,
   deterministicScenario?: AccountingScenarioState,
   evidenceFallbackMode?: 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' | 'PROVIDER_CLAIMS_REJECTED',
-  validatedProposalAccountNames: ReadonlySet<string> = new Set()
+  validatedProposalAccountNames: ReadonlySet<string> = new Set(),
+  hasPriorContextAmount = false,
+  journalOutputOptedOut = hasExplicitJournalOptOut(userInput)
 ): GeminiResponse {
   const resolvedEvidenceFallbackMode = evidenceFallbackMode ??
     (advisoryFailureStatus === 'INVALID_RESPONSE' ? 'PROVIDER_CLAIMS_REJECTED' : 'PROVIDER_FAILURE');
   const baseScenario = deterministicScenario || getUntrustedFallbackScenario(response.scenarioState);
-  const snapshotGroups = [
-    ...(deterministicScenario?.directGroups || []),
-    ...(deterministicScenario?.committedDirectGroups || []),
-    ...(deterministicScenario?.projectedGroups || [])
-  ];
   const isTrustedJournalSnapshot = (group: JournalEntryGroup) =>
     group.authorityStatus === 'DETERMINISTIC' && (group.lines?.length || 0) >= 2 &&
-    validateJournalGroups([group], { rawQuery: userInput }).isValid;
+    validateJournalGroups([group], { rawQuery: userInput, hasPriorContextAmount }).isValid;
   const trustedDirectGroups = (deterministicScenario?.directGroups || []).filter(isTrustedJournalSnapshot);
   const trustedCommittedGroups = (deterministicScenario?.committedDirectGroups || []).filter(isTrustedJournalSnapshot);
   const trustedProjectedGroups = (deterministicScenario?.projectedGroups || []).filter(isTrustedJournalSnapshot);
-  const trustedGroups = snapshotGroups.filter(isTrustedJournalSnapshot);
   const validatedProposals = (response.scenarioState.directGroups || []).filter(group =>
     (group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') &&
-    !group.isHypothetical && validateJournalGroups([group], { rawQuery: userInput }).isValid
+    !group.isHypothetical &&
+    validateJournalGroups([group], { rawQuery: userInput, hasPriorContextAmount }).isValid
   );
-  const validatedProposalIds = new Set(validatedProposals.map(group => group.id));
   const trustedDirectGroupIds = new Set(trustedDirectGroups.map(group => group.id));
   const trustedCommittedGroupIds = new Set(trustedCommittedGroups.map(group => group.id));
   const trustedProjectedGroupIds = new Set(trustedProjectedGroups.map(group => group.id));
-  const safeDirectGroups = mergeFallbackGroups(response.scenarioState.directGroups || [],
-    deterministicScenario?.directGroups || [], trustedDirectGroups,
-    trustedDirectGroupIds, new Set([
+  const safeDirectGroups = mergeFallbackGroups(trustedDirectGroups, trustedDirectGroupIds, new Set([
       ...trustedDirectGroups.flatMap(group => group.lines.map(line => line.accountName)),
       ...[...validatedProposalAccountNames].filter(isSafeFallbackAccountName),
       ...validatedProposals.flatMap(group => group.lines.map(line => line.accountName).filter(isSafeFallbackAccountName))
-    ]), false, validatedProposalIds);
-  const safeCommittedGroups = mergeFallbackGroups(response.scenarioState.committedDirectGroups || [],
-    deterministicScenario?.committedDirectGroups || [], trustedCommittedGroups,
+    ]), false, validatedProposals);
+  const safeCommittedGroups = mergeFallbackGroups(trustedCommittedGroups,
     trustedCommittedGroupIds, new Set(trustedCommittedGroups.flatMap(group => group.lines.map(line => line.accountName))), true);
-  const safeProjectedGroups = mergeFallbackGroups(response.scenarioState.projectedGroups || [],
-    deterministicScenario?.projectedGroups || [], trustedProjectedGroups,
+  const safeProjectedGroups = mergeFallbackGroups(trustedProjectedGroups,
     trustedProjectedGroupIds, new Set(trustedProjectedGroups.flatMap(group => group.lines.map(line => line.accountName))));
   const engineMissingFields = deterministicScenario?.missingFields || [];
   const currentCompletenessContext = [deterministicScenario?.requestCompletenessContext,
     authorityWorkstreams?.requestCompletenessContext, groundedContext?.requestCompletenessContext]
     .find(candidate => candidate && isCurrentRequestCompletenessContext(candidate, userInput));
-  const balancedJournalAvailable = Boolean([...trustedGroups, ...validatedProposals].some(group =>
-    (group.authorityStatus === 'DETERMINISTIC' || group.authorityStatus === 'AI_PROPOSED') && group.isHypothetical !== true &&
-    deterministicScenario?.isHypothetical !== true && group.lines?.length > 0 &&
-    group.totalDebit > 0 && group.totalCredit > 0 && validateJournalGroups([group]).isValid
-  ));
-  const validatedProposalAvailable = validatedProposals.length > 0;
+  const journalAuthorityStatuses = journalOutputOptedOut ? false : getValidatedJournalAuthorityStatuses(
+    safeDirectGroups, userInput, hasPriorContextAmount, deterministicScenario?.isHypothetical === true
+  );
   const sanitizedScenario: AccountingScenarioState = {
     ...baseScenario,
     // Keep only transaction structure and amounts from the accounting engine.
@@ -789,7 +784,7 @@ export function createGroundedSynthesisFailureResponse(
     const presentation = createAuthorityEvidencePresentation(authorityWorkstreams);
     authorityEvidencePresentation = presentation;
     messageText = renderAuthorityEvidenceResponseText(
-      presentation, balancedJournalAvailable
+      presentation, journalAuthorityStatuses
     );
     officialAnswerLinks = presentation.workstreams.flatMap(stream => stream.sources.flatMap(source =>
       source.officialUrl ? [{ title: source.title, url: source.officialUrl }] : []
@@ -809,12 +804,9 @@ export function createGroundedSynthesisFailureResponse(
       source.canonicalUrl ? [{ title: source.title, url: source.canonicalUrl }] : []
     ) || [];
   } else {
+    const journalStatusText = renderJournalAuthorityStatusSentences(journalAuthorityStatuses).join('\n\n');
     messageText = '### Statutory evidence unresolved\n\nThe available evidence did not support a verified answer to the statutory question.' +
-      (balancedJournalAvailable && !validatedProposalAvailable
-        ? '\n\nThe deterministic journal remains available in the Double Entry Journal tab.'
-        : validatedProposalAvailable
-          ? '\n\nA validated AI-proposed journal remains available for review in the Double Entry Journal tab. It has not been committed.'
-          : '');
+      (journalStatusText ? `\n\n${journalStatusText}` : '');
   }
   return {
     ...response,
@@ -853,16 +845,50 @@ function getUntrustedFallbackScenario(scenario: AccountingScenarioState): Accoun
   };
 }
 
+function hasEstablishedPriorContextAmount(scenario: AccountingScenarioState | null | undefined): boolean {
+  if (!scenario || scenario.isHypothetical) return false;
+  if (typeof scenario.amount === 'number' && Number.isFinite(scenario.amount) && scenario.amount > 0) return true;
+  const groups = [
+    ...(scenario.directGroups || []),
+    ...(scenario.committedDirectGroups || [])
+  ];
+  return groups.some(group => !group.isHypothetical && group.totalDebit > 0 && group.totalCredit > 0 &&
+    validateJournalGroups([group]).isValid);
+}
+
+function hasPriorAmountContext(
+  query: string,
+  scenario: AccountingScenarioState | null | undefined,
+  isFactualClarificationReply: boolean
+): boolean {
+  return hasEstablishedPriorContextAmount(scenario) &&
+    (hasExplicitPriorFactReference(query, scenario) || isFactualClarificationReply);
+}
+
+function getValidatedJournalAuthorityStatuses(
+  groups: readonly JournalEntryGroup[],
+  rawQuery: string,
+  hasPriorContextAmount: boolean,
+  scenarioIsHypothetical = false
+): JournalAuthorityStatus[] {
+  if (scenarioIsHypothetical) return [];
+  const statuses = new Set<JournalAuthorityStatus>();
+  for (const group of groups) {
+    if (!group.authorityStatus || group.isHypothetical || group.totalDebit <= 0 || group.totalCredit <= 0 ||
+        !validateJournalGroups([group], { rawQuery, hasPriorContextAmount }).isValid) continue;
+    statuses.add(group.authorityStatus);
+  }
+  return [...statuses];
+}
+
 function mergeFallbackGroups(
-  responseGroups: JournalEntryGroup[], snapshotGroups: JournalEntryGroup[], trustedGroups: JournalEntryGroup[], trustedGroupIds: Set<string>,
-  trustedAccountNames: Set<string>, committedOnly = false, validatedProposalIds: ReadonlySet<string> = new Set()
+  trustedGroups: JournalEntryGroup[], trustedGroupIds: Set<string>,
+  trustedAccountNames: Set<string>, committedOnly = false, validatedProposals: readonly JournalEntryGroup[] = []
 ): JournalEntryGroup[] {
   const preservedTrusted = (committedOnly ? trustedGroups.filter(group => !group.isHypothetical) : trustedGroups)
     .filter(group => group.authorityStatus === 'DETERMINISTIC' && (group.lines?.length || 0) >= 2);
-  const proposals = [...new Map((committedOnly ? [] : [...responseGroups, ...snapshotGroups]).filter(group =>
-    (group.lines?.length || 0) >= 2 && !trustedGroupIds.has(group.id) && validatedProposalIds.has(group.id) &&
-    (group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL')
-  )
+  const proposals = [...new Map((committedOnly ? [] : validatedProposals)
+    .filter(group => (group.lines?.length || 0) >= 2 && !trustedGroupIds.has(group.id))
     .map(group => [group.id, group])).values()].map(group => ({
     ...group,
     eventDate: sanitizeJournalEventDate(group.eventDate),
@@ -1103,7 +1129,7 @@ async function processAccountingQueryCore(
   journalRecallProposal?: AccountingScenarioState,
   diagnostics?: AccountingQueryDiagnostics,
   onConversationScope?: (history: ChatMessage[]) => void,
-  onDeterministicScenario?: (scenario: AccountingScenarioState) => void
+  onDeterministicScenario?: (scenario: AccountingScenarioState, hasPriorContextAmount?: boolean) => void
 ): Promise<GeminiResponse> {
   const profiler = new RequestProfiler(userInput, modelName);
   let imageAttachments = getCurrentImageAttachments(chatHistory);
@@ -1142,15 +1168,18 @@ async function processAccountingQueryCore(
     : response;
   const attachAmendmentProvenance = (response: GeminiResponse): GeminiResponse => {
     if (!amendmentResolution.amendments?.length && !authorityEvidencePresentation && !requestCompletenessContext) return attachAdvisoryFailureStatus(response);
-    const balancedJournalAvailable = Boolean(response.scenarioState.directGroups?.some(group =>
-      group.isBalanced && group.lines?.length > 0 && group.totalDebit > 0 && group.totalCredit > 0
-    ));
     const clarificationPrompts = [...new Set([
       ...(response.clarifications || []).map(item => item.prompt),
       ...(response.scenarioState.missingFields || []).map(item => item.prompt)
     ].map(prompt => prompt.trim()).filter(Boolean))];
+    const journalAuthorityStatuses = authorityEvidencePresentation &&
+      !hasExplicitJournalOptOut(userInput, outputPreference)
+      ? getValidatedJournalAuthorityStatuses(response.scenarioState.directGroups || [], userInput,
+          hasPriorAmountContext(userInput, activeScenario, isFactualClarificationReply),
+          response.scenarioState.isHypothetical === true)
+      : false;
     const authorityMessage = authorityEvidencePresentation
-      ? `${renderAuthorityEvidenceResponseText(authorityEvidencePresentation, balancedJournalAvailable)}${clarificationPrompts.length ? `\n\n### Clarification Required\n\n${clarificationPrompts.join('\n')}` : ''}`
+      ? `${renderAuthorityEvidenceResponseText(authorityEvidencePresentation, journalAuthorityStatuses)}${clarificationPrompts.length ? `\n\n### Clarification Required\n\n${clarificationPrompts.join('\n')}` : ''}`
       : undefined;
     const scenarioState = authorityEvidencePresentation ? {
       ...response.scenarioState,
@@ -1326,7 +1355,7 @@ async function processAccountingQueryCore(
     }
     const integrity = validateJournalGroups(groups, {
       rawQuery: userInput,
-      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length)
+      hasPriorContextAmount: hasPriorAmountContext(userInput, activeScenario, isFactualClarificationReply)
     });
     if (integrity.isValid) return response;
 
@@ -1459,10 +1488,6 @@ async function processAccountingQueryCore(
     });
     diagnostics?.onAuthorityWorkstreams?.(authorityResult);
     authorityEvidencePresentation = createAuthorityEvidencePresentation(authorityResult);
-    authorityEvidenceMessage = renderAuthorityEvidenceResponseText(
-      authorityEvidencePresentation,
-      classification.intent === 'HYBRID' && Boolean(activeScenario?.directGroups?.some(group => group.isBalanced && group.lines.length > 0))
-    );
     profiler.setQueryMode('AUTHORITY_WORKSTREAM_EVIDENCE');
     const materialPlanRequestsAccounting = reconciledQuestionUnderstanding.issuePlan.issues.some(issue =>
       issue.unresolvedReason !== 'UNASSIGNED_QUERY_TOPIC' &&
@@ -1475,6 +1500,16 @@ async function processAccountingQueryCore(
     // proceeds as salary and invent employee/CPF facts.
     const unresolvedMixedJournal = hasMomRulesAndUnresolvedAccountingJournal(
       reconciledQuestionUnderstanding.issuePlan, classification
+    );
+    authorityEvidenceMessage = renderAuthorityEvidenceResponseText(
+      authorityEvidencePresentation,
+      !authorityOnlyQuestion && !unresolvedMixedJournal && classification.intent === 'HYBRID' &&
+      !hasExplicitJournalOptOut(userInput, outputPreference)
+        ? getValidatedJournalAuthorityStatuses([
+            ...(activeScenario?.directGroups || []), ...(activeScenario?.committedDirectGroups || [])
+          ], userInput, hasPriorAmountContext(userInput, activeScenario, isFactualClarificationReply),
+          activeScenario?.isHypothetical === true)
+        : false
     );
     if (authorityOnlyQuestion || unresolvedMixedJournal) {
       activeScenario = null;
@@ -1620,7 +1655,8 @@ async function processAccountingQueryCore(
   }
   const tDet0 = Date.now();
   deterministicScenario = await parseAccountingQuery(userInput, activeScenario, questionUnderstanding);
-  onDeterministicScenario?.(deterministicScenario);
+  onDeterministicScenario?.(deterministicScenario,
+    hasPriorAmountContext(userInput, activeScenario, isFactualClarificationReply));
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
   if (deterministicScenario.scenarioType === 'DEFERRED_TAX_IAS12' && !hasImages) {

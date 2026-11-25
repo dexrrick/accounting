@@ -1,3 +1,4 @@
+import type { JournalAuthorityStatus } from '../types/accounting';
 import type { AuthorityEvidencePresentation, AuthorityPresentedWorkstream } from '../utils/authorityEvidencePresentation';
 import { hasCompleteRequestRepresentation } from '../utils/authorityEvidencePresentation';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -43,7 +44,7 @@ function practicalRuleForIssue(
 /** Renders only verified source excerpts, reviewed summaries, and explicit gaps. */
 export function renderAuthorityEvidenceResponseText(
   presentation: AuthorityEvidencePresentation,
-  hasBalancedJournal: boolean
+  journalAuthorityStatuses: readonly JournalAuthorityStatus[] | false
 ): string {
   const requestComplete = hasCompleteRequestRepresentation(presentation);
   const evidenceVerified = presentation.evidenceStatus === 'VERIFIED';
@@ -86,7 +87,7 @@ export function renderAuthorityEvidenceResponseText(
       `**Individual applicability:** ${presentation.applicationStatus === 'UNRESOLVED' ? 'Additional case facts or checks are required; see the issue-level limitations.' : 'General guidance does not by itself establish eligibility or compliance in an individual case.'}`,
       `**Material evidence gaps:** ${onlyCoverageAssessmentMissing ? 'None identified within the listed guidance. Full request coverage still requires an independent assessment.' : 'See the evidence gaps and coverage limitations below.'}`
     ] : []),
-    ...(hasBalancedJournal ? ['', 'The deterministic journal remains available in the Double Entry Journal tab.'] : [])
+    ...renderJournalAuthorityStatusSentences(journalAuthorityStatuses).flatMap(sentence => ['', sentence])
   ];
 
   const requestedYears = [...new Set([...presentation.query.matchAll(/\b(?:19|20)\d{2}\b/g)].map(match => match[0]))]
@@ -140,4 +141,16 @@ export function renderAuthorityEvidenceResponseText(
     lines.push('', '**Whole-question gaps:**', ...presentation.gaps.map(gap => `- ${gap}`));
   }
   return lines.join('\n');
+}
+
+export function renderJournalAuthorityStatusSentences(
+  authorityStatuses: readonly JournalAuthorityStatus[] | false
+): string[] {
+  if (!authorityStatuses) return [];
+  const statuses = new Set(authorityStatuses);
+  return [
+    ...(statuses.has('DETERMINISTIC') ? ['Deterministic journal entries are calculated by the accounting engine.'] : []),
+    ...(statuses.has('CONDITIONAL') ? ['Conditional journal entries should be reviewed against their assumptions.'] : []),
+    ...(statuses.has('AI_PROPOSED') ? ['AI-proposed journal entries are for review before posting.'] : [])
+  ];
 }

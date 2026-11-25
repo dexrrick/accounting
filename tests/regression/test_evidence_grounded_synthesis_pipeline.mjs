@@ -7,6 +7,7 @@ import { ComplianceRationale } from '../../src/components/ComplianceRationale.ts
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { createGroundedSynthesisFailureResponse, hasUnverifiedStatutoryClaim, processAccountingQuery } from '../../src/services/geminiService.ts';
+import { renderAuthorityEvidenceResponseText } from '../../src/services/authorityEvidenceResponse.ts';
 import { postProcessAIResponse } from '../../src/services/groundingContextBuilder.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
@@ -479,6 +480,46 @@ try {
   assert.equal(unresolvedFallback.scenarioState.amount, 850, 'the engine-owned amount remains available');
   assert.doesNotMatch(unresolvedFallback.messageText, /30 June 2025/,
     'a false statutory deadline does not survive in fallback chat text');
+
+  const amountOmittingFollowUp = 'Can my client claim GST input tax on the office expense we discussed earlier, and what is its accounting treatment?';
+  const priorAmountFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, amountOmittingFollowUp, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE',
+    trustedEngineScenario, 'PROVIDER_CLAIMS_REJECTED', new Set(), true
+  );
+  assert.ok(priorAmountFallback.scenarioState.directGroups.some(group => group.id === deterministicJournal.id),
+    'a previously validated deterministic journal survives when the scoped conversation context supplies its amount');
+  assert.ok(priorAmountFallback.scenarioState.directGroups.some(group => group.id === validFxProposal.id),
+    'a validated AI proposal that retains the prior transaction amount survives the evidence fallback');
+  const unrelatedAmountFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse, amountOmittingFollowUp, 'SFRS_I', undefined, undefined, 'INVALID_RESPONSE', trustedEngineScenario
+  );
+  assert.deepEqual(unrelatedAmountFallback.scenarioState.directGroups, [],
+    'a prior transaction amount is not used when the fallback has no verified in-scope context');
+
+  const deterministicJournalText = renderAuthorityEvidenceResponseText(
+    mixedResult.scenarioState.authorityEvidencePresentation, ['DETERMINISTIC']);
+  const conditionalJournalText = renderAuthorityEvidenceResponseText(
+    mixedResult.scenarioState.authorityEvidencePresentation, ['CONDITIONAL']);
+  const proposedJournalText = renderAuthorityEvidenceResponseText(
+    mixedResult.scenarioState.authorityEvidencePresentation, ['AI_PROPOSED']);
+  const noJournalText = renderAuthorityEvidenceResponseText(
+    mixedResult.scenarioState.authorityEvidencePresentation, false);
+  assert.match(deterministicJournalText, /deterministic journal entries are calculated by the accounting engine/i);
+  assert.match(conditionalJournalText, /conditional journal entries should be reviewed/i);
+  assert.doesNotMatch(conditionalJournalText, /deterministic journal entries/i);
+  assert.match(proposedJournalText, /AI-proposed journal entries are for review before posting/i);
+  assert.doesNotMatch(proposedJournalText, /deterministic journal entries/i);
+  assert.doesNotMatch(noJournalText, /journal/i,
+    'authority evidence text omits journal status when no validated journal is available');
+  const optOutFallback = createGroundedSynthesisFailureResponse(
+    contaminatedResponse,
+    'Can my client claim GST input tax on the office expense we discussed earlier? Do not provide a journal entry.',
+    'SFRS_I', undefined, undefined, 'INVALID_RESPONSE', trustedEngineScenario,
+    'PROVIDER_CLAIMS_REJECTED', new Set(), true
+  );
+  assert.doesNotMatch(optOutFallback.messageText, /journal/i,
+    'an explicit no-journal request suppresses journal authority notices in statutory fallback');
+
   const safeModelProposedGroup = unresolvedFallback.scenarioState.directGroups.find(group => group.id === modelProposedGroup.id);
   assert.equal(safeModelProposedGroup.authorityStatus, 'AI_PROPOSED');
   assert.equal(safeModelProposedGroup.title, 'Unverified AI-proposed journal');
@@ -585,6 +626,8 @@ try {
     'the fallback retains the original whole-question workstream gaps');
   assert.ok(combinedFallback.scenarioState.irasEvidencePresentation?.sourceGroups.some(group => group.passages.length > 0),
     'new IRAS retrieval is selected for its matching planned issue despite the same-query workstream result');
+  assert.match(combinedFallback.messageText, /deterministic journal entries are calculated by the accounting engine/i);
+  assert.match(combinedFallback.messageText, /AI-proposed journal entries are for review before posting/i);
   assert.match(combinedFallback.messageText, /Additional admitted IRAS evidence/);
   assert.doesNotMatch(combinedFallback.messageText, /UNSAFE_ORIGINAL_ADVISORY/);
   const combinedCompliance = renderToStaticMarkup(React.createElement(ComplianceRationale, {

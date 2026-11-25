@@ -5,6 +5,8 @@ import { extractAccountingContext } from '../../src/services/conversationAccount
 import { defaultSourceCache } from '../../src/retrieval/sourceCache.ts';
 import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
 import { completeVisibleEvidenceListSpan } from '../../src/utils/evidenceTextBoundaries.ts';
+import { hasExplicitPriorFactReference, startsNewAccountingScenario } from '../../src/services/conversationBoundary.ts';
+import { isShortSemanticFollowUp } from '../../src/services/semanticQuestionUnderstanding.ts';
 
 const equity = {
   query: 'Our holding company just injected SGD 500,000 cash via bank transfer into a newly incorporated operating subsidiary for 100% of its ordinary shares. How do we book this in the holding company’s standalone ledger?',
@@ -320,6 +322,19 @@ try {
   });
   assert.doesNotMatch(JSON.stringify(result.response), /Bank <|GST is 70%/i,
     'structural balance does not make an unsafe model account label safe to display');
+
+  const priorLoan = await run(loan.query, { accounting: loan, journal: true });
+  assertProposed(priorLoan, loan);
+  const separateLoanFollowUp = 'Also, can you check the GST treatment and prepare a journal for a separate loan to Subsidiary C?';
+  assert.equal(hasExplicitPriorFactReference(separateLoanFollowUp, priorLoan.response.scenarioState), false);
+  assert.equal(isShortSemanticFollowUp(separateLoanFollowUp, priorLoan.response.scenarioState), true);
+  assert.equal(startsNewAccountingScenario(separateLoanFollowUp, priorLoan.response.scenarioState), false);
+  const separateLoan = await run(separateLoanFollowUp, {
+    accounting: loan, asksGst: true, rejectClaims: true, journal: true
+  }, priorLoan.turns, priorLoan.response.scenarioState);
+  assert.doesNotMatch(separateLoanFollowUp, /\d/);
+  assert.deepEqual(separateLoan.response.scenarioState.directGroups, [],
+    'a new loan without its own amount cannot inherit the unrelated prior loan journal');
 } finally {
   globalThis.fetch = unmockedFetch;
   defaultSourceCache.clear();
