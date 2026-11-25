@@ -1215,7 +1215,7 @@ export class DeterministicSemanticExtractor {
       q.includes("hasn't paid") ||
       q.includes('has not paid') ||
       q.includes('payment pending') ||
-      q.includes('outstanding') ||
+      q.replace(/\bno\s+outstanding\b/g, '').includes('outstanding') ||
       q.includes('owes the company') ||
       q.includes('yet to pay') ||
       q.includes('not yet paid')
@@ -1223,7 +1223,12 @@ export class DeterministicSemanticExtractor {
       return 'unpaid';
     }
 
+    const creditTermsUnclear = /\b(?:not sure|unsure|uncertain|unclear|unknown)\s+(?:whether|if)\b.{0,40}\bon\s+credit\b/i.test(q);
+    const cashPurchase = !creditTermsUnclear &&
+      /\b(?:bought|purchased|acquired)\b(?:[^.!?;\n]|\.(?=\d))*\bfor cash\b/.test(q) &&
+      !/\b(?:not|never)\s+(?:bought|purchased|acquired|for cash)\b/.test(q);
     if (
+      cashPurchase ||
       q.includes('paid') ||
       q.includes('received money') ||
       q.includes('settled') ||
@@ -1234,7 +1239,7 @@ export class DeterministicSemanticExtractor {
     }
 
     if (/\b(?:not|never|isn['’]?t|wasn['’]?t|weren['’]?t)\s+(?:(?:bought|purchased)\s+)?on\s+credit\b/i.test(q) ||
-        /\b(?:not sure|unsure|uncertain|unclear|unknown)\s+(?:whether|if)\b.{0,40}\bon\s+credit\b/i.test(q)) {
+        creditTermsUnclear) {
       return 'unknown';
     }
 

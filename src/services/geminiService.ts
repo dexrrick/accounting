@@ -42,7 +42,12 @@ import {
   reconcileQuestionUnderstanding
 } from './semanticQuestionUnderstanding';
 import { buildAuthorityWorkstreams } from './authorityWorkstreams';
-import { createAuthorityEvidencePresentation, type AuthorityEvidencePresentation } from '../utils/authorityEvidencePresentation';
+import {
+  createAuthorityEvidencePresentation,
+  hasCurrentAuthorityEvidencePresentation,
+  type AuthorityEvidencePresentation
+} from '../utils/authorityEvidencePresentation';
+import { hasCurrentIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
 import {
   hasMomRulesAndUnresolvedAccountingJournal,
   shouldUseAuthorityEvidenceRuntime,
@@ -386,7 +391,24 @@ function getRetainedInvoiceCorrection(scenario: AccountingScenarioState): Extrac
   const acceptedCorrection = [...(scenario.evidence || [])].reverse().find(field =>
     field.source === 'user_text' && field.field === 'correctedInvoiceTotal' && field.imageId
   );
-  if (!acceptedCorrection || !scenario.imageEvidence) return undefined;
+  if (!scenario.imageEvidence) return undefined;
+  if (!acceptedCorrection) {
+    const hasPendingInvoiceClarification = scenario.missingFields?.some(field =>
+      field.fieldKey === 'invoiceGstTreatment' || field.fieldKey === 'invoiceAccountClassification'
+    );
+    if (!hasPendingInvoiceClarification || scenario.imageEvidence.length !== 1) return undefined;
+    const image = scenario.imageEvidence[0];
+    if (!isInvoiceCorrectionCandidate(image) || image.confidence === undefined ||
+        image.confidence < 0.9 || image.confidence > 1 || scenario.amount === undefined) return undefined;
+    const matchingTotals = getImageTotalFields(scenario).filter(field => field.imageIndex === 0);
+    if (matchingTotals.length !== 1 || Math.round(scenario.amount * 100) !== Math.round(matchingTotals[0].value * 100)) return undefined;
+    return {
+      kind: 'correction',
+      source: 'initial_image_evidence',
+      amount: matchingTotals[0].value,
+      ...matchingTotals[0]
+    };
+  }
   const acceptedCents = parseImageAmountCents(acceptedCorrection.value);
   if (acceptedCents === undefined || scenario.amount === undefined ||
       Math.round(scenario.amount * 100) !== acceptedCents) return undefined;
@@ -409,13 +431,73 @@ function getRetainedInvoiceCorrection(scenario: AccountingScenarioState): Extrac
   };
 }
 
+type InvoicePaymentStatus = 'paid' | 'unpaid' | 'partially_paid';
+
+function isKnownInvoicePaymentStatus(value: unknown): value is InvoicePaymentStatus {
+  return value === 'paid' || value === 'unpaid' || value === 'partially_paid';
+}
+
+function getInvoicePaymentStatus(
+  scenario: AccountingScenarioState,
+  semanticUnderstanding: TransactionUnderstanding | undefined,
+  imageId: string
+): InvoicePaymentStatus | undefined {
+  if (isKnownInvoicePaymentStatus(semanticUnderstanding?.paymentStatus)) return semanticUnderstanding.paymentStatus;
+  const retainedStatus = [...(scenario.evidence || [])].reverse().find(field =>
+    field.source === 'user_text' && field.imageId === imageId && field.field === 'invoicePaymentStatus' &&
+    isKnownInvoicePaymentStatus(field.value)
+  );
+  return retainedStatus && isKnownInvoicePaymentStatus(retainedStatus.value)
+    ? retainedStatus.value
+    : undefined;
+}
+
+function getCurrentInvoiceStatutoryResponse(scenario: AccountingScenarioState, query: string) {
+  const authorityPresentation = hasCurrentAuthorityEvidencePresentation(scenario.authorityEvidencePresentation, query)
+    ? scenario.authorityEvidencePresentation : undefined;
+  const irasPresentation = hasCurrentIrasEvidencePresentation(
+    scenario.irasEvidencePresentation, query, scenario.primaryDomain, scenario.queryIntent
+  ) ? scenario.irasEvidencePresentation : undefined;
+  const officialAnswerLinks = new Map<string, { title: string; url: string }>();
+  for (const source of authorityPresentation?.workstreams.flatMap(stream => stream.sources) || []) {
+    if (source.officialUrl) officialAnswerLinks.set(source.officialUrl, { title: source.title, url: source.officialUrl });
+  }
+  for (const source of irasPresentation?.sourceGroups || []) {
+    if (source.canonicalUrl) officialAnswerLinks.set(source.canonicalUrl, { title: source.title, url: source.canonicalUrl });
+  }
+  const messageText = [
+    authorityPresentation ? renderAuthorityEvidenceResponseText(authorityPresentation, false) : undefined,
+    irasPresentation?.chatAnswer
+  ].filter((text): text is string => Boolean(text)).join('\n\n');
+  const hasCurrentPresentation = Boolean(authorityPresentation || irasPresentation);
+  return {
+    messageText,
+    state: {
+      queryIntent: hasCurrentPresentation ? scenario.queryIntent : 'TRANSACTION',
+      primaryDomain: hasCurrentPresentation ? scenario.primaryDomain : 'ACCOUNTING_SFRS',
+      statutoryAdvisory: hasCurrentPresentation ? scenario.statutoryAdvisory : [],
+      authorityEvidencePresentation: authorityPresentation,
+      irasEvidencePresentation: irasPresentation,
+      officialAnswerLinks: [...officialAnswerLinks.values()]
+    }
+  };
+}
+
+function statutoryPresentationScore(scenario: AccountingScenarioState): number {
+  const score = (status: string | undefined) => status === 'VERIFIED' ? 3 : status === 'CONDITIONAL' ? 2 : status ? 1 : 0;
+  return Math.max(
+    score(scenario.authorityEvidencePresentation?.status),
+    score(scenario.irasEvidencePresentation?.status)
+  );
+}
+
 function parseInvoiceAccountClassification(
   query: string,
   scenario: AccountingScenarioState,
   imageIndex: number
 ): { name: string; category: 'ASSET' | 'EXPENSE' } | undefined {
   if (query.includes('?') || /\b(?:maybe|perhaps|possibly|might|could|not sure|uncertain)\b/i.test(query)) return undefined;
-  const declaration = query.match(/^\s*(?:classify\s+(?:this|the invoice|this invoice)\s+as|treat\s+(?:it|this|the invoice)\s+as)\s+(.+?)[.!]?\s*$/i);
+  const declaration = query.match(/(?:^|[.!?]\s+)(?:please\s+)?(?:classify\s+(?:this|it|the invoice|this invoice)\s+as|treat\s+(?:it|this|the invoice)\s+as)\s+([^.!?]+?)(?=[.!?](?:\s|$)|$)/i);
   if (!declaration) return undefined;
   const classification = declaration[1].trim().replace(/^(?:an?\s+|the\s+)/i, '');
   if (/^(?:inventory|goods?)\s+for\s+resale$/i.test(classification)) {
@@ -744,10 +826,13 @@ function findPendingImageCorrection(
     }
     const gstClarificationPending = scenario.missingFields?.some(field => field.fieldKey === 'invoiceGstTreatment') || false;
     if (gstClarificationPending && isGstTreatmentReply(query)) {
+      const amountLabel = retainedCorrection.source === 'initial_image_evidence'
+        ? 'The image-derived invoice total'
+        : 'The corrected invoice total';
       return {
         kind: 'clarification',
         reason: 'gst_treatment_unverified',
-        prompt: `The corrected invoice total of SGD ${retainedCorrection.amount.toLocaleString()} remains retained. I cannot use a GST recovery statement alone to create a GST journal in this correction flow, so no journal is shown. The subtotal and GST must reconcile to the total, and input-tax recoverability must be verified through your GST-supported posting process before recording the GST split.`
+        prompt: `${amountLabel} of SGD ${retainedCorrection.amount.toLocaleString()} remains retained. I cannot use a GST recovery statement alone to create a GST journal in this correction flow, so no journal is shown. The subtotal and GST must reconcile to the total, and input-tax recoverability must be verified through your GST-supported posting process before recording the GST split.`
       };
     }
   }
@@ -766,11 +851,26 @@ function createImageCorrectionClarification(
     additionalEvidence?: ExtractedEvidence[];
   }
 ): GeminiResponse {
+  const statutoryResponse = getCurrentInvoiceStatutoryResponse(scenario, userInput);
+  const paymentStatus = detail?.correction.source === 'initial_image_evidence' &&
+    isKnownInvoicePaymentStatus(scenario.semanticUnderstanding?.paymentStatus) &&
+    !scenario.evidence?.some(field => field.source === 'user_text' && field.imageId === detail.correction.imageId &&
+      field.field === 'invoicePaymentStatus' && field.value === scenario.semanticUnderstanding?.paymentStatus)
+    ? [{
+      source: 'user_text' as const,
+      imageId: detail.correction.imageId,
+      field: 'invoicePaymentStatus',
+      value: scenario.semanticUnderstanding.paymentStatus
+    }]
+    : [];
   const clarification: MissingFieldInfo = {
     fieldKey: detail?.fieldKey || 'imageVerification',
-    fieldName: detail?.fieldName || 'Corrected invoice total',
+    fieldName: detail?.fieldName || (detail?.correction.source === 'initial_image_evidence'
+      ? 'Image-derived invoice total' : 'Corrected invoice total'),
     prompt,
-    whyNeeded: detail?.missingFact || 'The supplier invoice amount must be clear before a journal can be proposed.'
+    whyNeeded: detail?.missingFact || (detail?.correction.source === 'initial_image_evidence'
+      ? 'The image-derived supplier invoice amount must be clear before a journal can be proposed.'
+      : 'The supplier invoice amount must be clear before a journal can be proposed.')
   };
   const correctionEvidence: ExtractedEvidence[] = detail ? [
     ...(detail.correction.source === 'initial_image_evidence' ? [] : [{
@@ -789,13 +889,14 @@ function createImageCorrectionClarification(
       value: 'supplier purchase invoice',
       confidence: 1
     }]
-    : []), ...(detail.additionalEvidence || [])
+    : []), ...(detail.additionalEvidence || []), ...paymentStatus
   ] : [];
   return {
-    messageText: `### Screenshot journal clarification required\n\n${prompt}`,
+    messageText: `${statutoryResponse.messageText ? `${statutoryResponse.messageText}\n\n---\n\n` : ''}### Screenshot journal clarification required\n\n${prompt}`,
     displayFullAnswer: true,
     scenarioState: {
       ...scenario,
+      ...statutoryResponse.state,
       rawQuery: userInput,
       ...(detail ? {
         amount: detail.correction.amount,
@@ -806,13 +907,9 @@ function createImageCorrectionClarification(
       directGroups: [],
       projectedGroups: undefined,
       missingFields: [clarification],
-      missingFacts: [detail?.missingFact || 'corrected invoice total'],
+      missingFacts: [detail?.missingFact || (detail?.correction.source === 'initial_image_evidence'
+        ? 'image-derived invoice total' : 'corrected invoice total')],
       isComplete: false,
-      queryIntent: 'TRANSACTION',
-      statutoryAdvisory: [],
-      officialAnswerLinks: [],
-      authorityEvidencePresentation: undefined,
-      irasEvidencePresentation: undefined
     }
   };
 }
@@ -820,7 +917,8 @@ function createImageCorrectionClarification(
 async function respondToPendingImageCorrection(
   userInput: string,
   scenario: AccountingScenarioState,
-  correction: PendingImageCorrection
+  correction: PendingImageCorrection,
+  semanticUnderstanding?: TransactionUnderstanding
 ): Promise<GeminiResponse> {
   if (correction.kind === 'clarification') {
     const retainedCorrection = getRetainedInvoiceCorrection(scenario);
@@ -851,11 +949,40 @@ async function respondToPendingImageCorrection(
     return createImageCorrectionClarification(scenario, userInput,
       'I could not match the correction to the pending invoice evidence. Please confirm the corrected invoice total using “The invoice total is SGD [correct amount].” No journal proposal is shown.');
   }
+  if (correction.source === 'initial_image_evidence') {
+    const matchingTotals = getImageTotalFields(scenario);
+    if (rawImageEvidence.length !== 1 || invoiceImage.imageId !== correction.imageId ||
+        invoiceImage.confidence === undefined || invoiceImage.confidence < 0.9 || invoiceImage.confidence > 1 ||
+        matchingTotals.length !== 1 || matchingTotals[0].imageId !== correction.imageId ||
+        matchingTotals[0].fieldIndex !== correction.fieldIndex || matchingTotals[0].value !== correction.amount) {
+      return createImageCorrectionClarification(scenario, userInput,
+        'I could not match this journal request to one high-confidence invoice image and amount. Please verify the supplier invoice details. No journal proposal is shown.');
+    }
+    const statedTotalValues = getLabeledImageAmounts(userInput).get('total') || [];
+    const statedTotals = [...new Set(statedTotalValues)];
+    const explicitAmount = statedTotals[0] ?? (statedTotals.length === 0
+      ? semanticUnderstanding?.amount
+      : undefined);
+    if (statedTotals.length > 1 || (explicitAmount !== undefined &&
+        Math.round(explicitAmount * 100) !== Math.round(correction.amount * 100))) {
+      return createImageCorrectionClarification(scenario, userInput,
+        `The invoice amount stated in your request does not match the total read from the screenshot (${formatImageAmountCents(Math.round(correction.amount * 100))}). Please confirm which invoice total is correct before I prepare a journal. No journal proposal is shown.`);
+    }
+  }
+  const invoicePaymentStatus = getInvoicePaymentStatus(scenario, semanticUnderstanding, invoiceImage.imageId);
 
   const invoiceCurrency = invoiceImage.fields.find(field => /currency/i.test(field.field))?.value;
   if (typeof invoiceCurrency !== 'string' || !/^(?:SGD|S\$)$/i.test(invoiceCurrency.trim())) {
     return createImageCorrectionClarification(scenario, userInput,
       'The supplier invoice currency is not confirmed as SGD. Please confirm the invoice currency and corrected total before I prepare a journal. No journal proposal is shown.');
+  }
+  const userCurrency = semanticUnderstanding?.currency;
+  if (correction.source === 'initial_image_evidence' && userCurrency?.source === 'explicit' &&
+      userCurrency.value && userCurrency.value.toUpperCase() !== 'SGD') {
+    return createImageCorrectionClarification(scenario, userInput,
+      `Your request states ${userCurrency.value.toUpperCase()}, but the invoice image states SGD. Please confirm the transaction currency before I prepare a journal. No journal proposal is shown.`,
+      { fieldKey: 'invoiceCurrency', fieldName: 'Invoice currency',
+        missingFact: 'currency consistent with the invoice and transaction request', correction });
   }
   const invoiceDate = invoiceImage.fields.find(field => /date/i.test(field.field))?.value;
   const formattedInvoiceDate = typeof invoiceDate === 'string'
@@ -864,6 +991,15 @@ async function respondToPendingImageCorrection(
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(formattedInvoiceDate)) {
     return createImageCorrectionClarification(scenario, userInput,
       `You supplied a corrected invoice total of SGD ${correction.amount.toLocaleString()}. Please confirm the invoice date using DD/MM/YYYY before I prepare a journal. No journal proposal is shown.`);
+  }
+  if (correction.source === 'initial_image_evidence') {
+    const statedInvoiceDate = userInput.match(/\binvoice date\s*(?:is\s+|[:=]\s*)(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\b/i)?.[1];
+    if (statedInvoiceDate && sanitizeJournalEventDate(formatSingaporeDate(statedInvoiceDate)) !== formattedInvoiceDate) {
+      return createImageCorrectionClarification(scenario, userInput,
+        `The stated invoice date (${statedInvoiceDate}) differs from the date read from the screenshot (${formattedInvoiceDate}). Please confirm the invoice date before I prepare a journal. No journal proposal is shown.`,
+        { fieldKey: 'invoiceDate', fieldName: 'Invoice date',
+          missingFact: 'invoice date consistent with the screenshot and transaction request', correction });
+    }
   }
 
   const remainingFinancialEvidence = invoiceImage.fields.filter((field, fieldIndex) =>
@@ -912,7 +1048,12 @@ async function respondToPendingImageCorrection(
 
   const settlementCheck = checkInvoiceSettlement(invoiceImage, correction.amount);
   if (settlementCheck.clarification) {
-    return createImageCorrectionClarification(scenario, userInput, settlementCheck.clarification);
+    return createImageCorrectionClarification(scenario, userInput, settlementCheck.clarification, {
+      fieldKey: 'invoiceSettlement',
+      fieldName: 'Invoice settlement',
+      missingFact: 'invoice payment and remaining payable amounts',
+      correction
+    });
   }
 
   const gstEvidence = invoiceImage.fields.find(field => IMAGE_GST_AMOUNT_FIELD_ALIASES.has(
@@ -952,9 +1093,19 @@ async function respondToPendingImageCorrection(
       : correction.accountClassification
     : imageDebitAccount;
   if (!debitAccount) {
+    const retainedAmountText = correction.source === 'initial_image_evidence'
+      ? `The image-derived invoice total of SGD ${correction.amount.toLocaleString()} is retained`
+      : `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained`;
     return createImageCorrectionClarification(scenario, userInput,
-      `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained, but the image or your reply does not establish a consistent expense, inventory, or fixed-asset account. Reply in one of these forms: “Classify this as Maintenance Expense,” “Classify this as inventory for resale,” or “Classify this as fixed asset: Office Equipment.” Restate the total only if it changes. No journal proposal is shown until the account is clear.`,
+      `${retainedAmountText}, but the image or your reply does not establish a consistent expense, inventory, or fixed-asset account. Reply in one of these forms: “Classify this as Maintenance Expense,” “Classify this as inventory for resale,” or “Classify this as fixed asset: Office Equipment.” Restate the total only if it changes. No journal proposal is shown until the account is clear.`,
       { fieldKey: 'invoiceAccountClassification', fieldName: 'Invoice account classification', missingFact: 'invoice account classification', correction });
+  }
+
+  if (invoicePaymentStatus === 'paid' || invoicePaymentStatus === 'partially_paid') {
+    return createImageCorrectionClarification(scenario, userInput,
+      `The transaction facts indicate that this invoice ${invoicePaymentStatus === 'paid' ? 'was paid' : 'was partly paid'}, but the invoice recovery proposal can only credit Trade Payables. Please confirm the payment account and any amount that remains payable before a journal is prepared. No journal proposal is shown.`,
+      { fieldKey: 'invoiceSettlement', fieldName: 'Invoice settlement',
+        missingFact: 'payment account and amount remaining payable', correction });
   }
 
   const invoiceNumber = invoiceImage.fields.find(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field))?.value;
@@ -965,8 +1116,13 @@ async function respondToPendingImageCorrection(
     debitAccountName: debitAccount.name,
     debitCategory: debitAccount.category,
     totalAmount: correction.amount,
-    fullAmountPayable: settlementCheck.allPayable
+    fullAmountPayable: settlementCheck.allPayable || invoicePaymentStatus === 'unpaid'
   });
+  if (!settlementCheck.allPayable && invoicePaymentStatus === 'unpaid') {
+    const payableLine = proposal.lines.find(line => line.accountName === 'Trade Payables');
+    if (payableLine) payableLine.lineExplanation = 'The request states that the invoice is unpaid; verify the invoice details before posting.';
+    proposal.rationalePoints[1] = 'The request states that the invoice is unpaid; verify the invoice details before posting.';
+  }
   const isInitialImageEvidence = correction.source === 'initial_image_evidence';
   if (isInitialImageEvidence) {
     proposal.rationalePoints = [
@@ -974,9 +1130,16 @@ async function respondToPendingImageCorrection(
       ...proposal.rationalePoints.slice(1)
     ];
   }
+  const semanticErrors = getGuardrailErrorViolations([proposal], semanticUnderstanding);
+  if (semanticErrors.length > 0) {
+    return createImageCorrectionClarification(scenario, userInput,
+      `${buildGuardrailValidationMessage(semanticErrors)}\n\nNo journal proposal is shown.`,
+      { fieldKey: 'invoiceAccountingValidation', fieldName: 'Invoice accounting validation',
+        missingFact: 'invoice facts that resolve the accounting validation issue', correction });
+  }
   const integrity = validateJournalGroups([proposal], {
     rawQuery: userInput,
-    hasPriorContextAmount: correction.source === 'retained_invoice_total'
+    hasPriorContextAmount: correction.source === 'retained_invoice_total' || correction.source === 'initial_image_evidence'
   });
   if (!integrity.isValid || proposal.totalDebit <= 0 || proposal.totalDebit !== proposal.totalCredit) {
     return createImageCorrectionClarification(scenario, userInput,
@@ -989,7 +1152,10 @@ async function respondToPendingImageCorrection(
     : '';
   const payableQualification = settlementCheck.allPayable
     ? ''
-    : ' This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.';
+    : invoicePaymentStatus === 'unpaid'
+      ? ' The request states that the invoice is unpaid; verify the invoice details before posting.'
+      : ' This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.';
+  const statutoryResponse = getCurrentInvoiceStatutoryResponse(scenario, userInput);
   const resultEvidence = [...(scenario.evidence || flattenImageEvidence(rawImageEvidence)),
   ...(isInitialImageEvidence ? [] : [{
     source: 'user_text' as const,
@@ -1014,14 +1180,16 @@ async function respondToPendingImageCorrection(
     }
   ] : [])];
   return {
-    messageText: isInitialImageEvidence
+    messageText: `${statutoryResponse.messageText ? `${statutoryResponse.messageText}\n\n---\n\n` : ''}${isInitialImageEvidence
       ? `### Initial supplier invoice journal proposal\n\nThe journal is based on the visible invoice evidence, remains conditional and uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`
       : `### Corrected invoice journal proposal\n\n${correction.accountClassification
       ? `The retained corrected invoice total is SGD ${correction.amount.toLocaleString()}, and your explicit account classification is ${debitAccount.name}.`
-      : `The invoice total was corrected to SGD ${correction.amount.toLocaleString()}.`} The proposed journal is balanced and remains uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`,
+      : `The invoice total was corrected to SGD ${correction.amount.toLocaleString()}.`} The proposed journal is balanced and remains uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`
+    }`,
     displayFullAnswer: true,
     scenarioState: {
       ...scenario,
+      ...statutoryResponse.state,
       rawQuery: userInput,
       transactionTitle: `Supplier invoice${invoiceReference ? ` ${invoiceReference}` : ''}`,
       amount: correction.amount,
@@ -1034,14 +1202,8 @@ async function respondToPendingImageCorrection(
       missingFields: [],
       missingFacts: [],
       isComplete: true,
-      queryIntent: 'TRANSACTION',
-      primaryDomain: 'ACCOUNTING_SFRS',
       evidence: resultEvidence,
       imageEvidence: rawImageEvidence,
-      statutoryAdvisory: [],
-      officialAnswerLinks: [],
-      authorityEvidencePresentation: undefined,
-      irasEvidencePresentation: undefined,
       uncertaintyDisclaimer: `${payableQualification}${dateWarning ? ` ${dateWarning}` : ''}`.trim() || undefined
     }
   };
@@ -3616,7 +3778,27 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   if (imageJournalRequested && initialImageInvoiceCorrection && !imageVerificationPending &&
       !deterministicFallback?.length && !result.scenarioState.committedDirectGroups?.length &&
       (invoiceGstRequiresClarification || !hasValidProviderJournal)) {
-    result = await respondToPendingImageCorrection(userInput, result.scenarioState, initialImageInvoiceCorrection);
+    const currentStatutoryResponse = currentScenario
+      ? getCurrentInvoiceStatutoryResponse(currentScenario, userInput)
+      : undefined;
+    const resultStatutoryResponse = getCurrentInvoiceStatutoryResponse(result.scenarioState, userInput);
+    if (currentStatutoryResponse?.messageText &&
+        (!resultStatutoryResponse.messageText ||
+          statutoryPresentationScore(currentStatutoryResponse.state as AccountingScenarioState) >
+            statutoryPresentationScore(result.scenarioState))) {
+      result.scenarioState = { ...result.scenarioState, ...currentStatutoryResponse.state };
+    }
+    const requestedAccountClassification = parseInvoiceAccountClassification(
+      userInput, result.scenarioState, initialImageInvoiceCorrection.imageIndex
+    );
+    result = await respondToPendingImageCorrection(
+      userInput,
+      result.scenarioState,
+      requestedAccountClassification
+        ? { ...initialImageInvoiceCorrection, accountClassification: requestedAccountClassification }
+        : initialImageInvoiceCorrection,
+      context.semanticUnderstanding
+    );
   }
 
   if (textJournalRequest && context.semanticUnderstanding?.isHypothetical && !result.scenarioState.isComplete) {

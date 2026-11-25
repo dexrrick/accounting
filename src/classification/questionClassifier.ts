@@ -604,12 +604,18 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasUnresolvedSection14NBasisPeriod(q)) {
     missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
   }
-  const asksAboutSpecificGstTreatment = q.split(/[!?;\n]+|(?<!\d)\.|\.(?!\d)/).some(clause =>
-    /\b(?:gst|goods and services tax|input tax|output tax)\b/i.test(clause) &&
-    (/\b(?:claim\w*|recover\w*|zero.rate|exempt|blocked input)\b/i.test(clause) ||
-      (/\bcharge\w*\b/i.test(clause) &&
-        /\b(?:can|could|should|must|do|does|did|is|are|whether|what|how|explain|guidance|check|confirm)\b/i.test(clause)))
-  );
+  const gstTreatmentClauses = q.split(/[!?;\n]+|(?<!\d)\.|\.(?!\d)/);
+  const asksAboutSpecificGstTreatment = gstTreatmentClauses.some((clause, index) => {
+    const asksAboutGstInClause =
+      /\b(?:gst|goods and services tax|input tax|output tax)\b/i.test(clause) &&
+      (/\b(?:claim\w*|recover\w*|zero.rate|exempt|blocked input)\b/i.test(clause) ||
+        (/\bcharge\w*\b/i.test(clause) &&
+          /\b(?:can|could|should|must|do|does|did|is|are|whether|what|how|explain|guidance|check|confirm)\b/i.test(clause)));
+    const asksAnaphoricGstClaim = index > 0 &&
+      /\b(?:gst|goods and services tax|input tax|output tax)\b/i.test(gstTreatmentClauses[index - 1]) &&
+      /\b(?:claim\w*|recover\w*)\s+(?:back\s+)?(?:it|that|this)\b(?=\s*(?:back\b|for\b|from\b|on\b|against\b|[!?.,;:]|$))/i.test(clause);
+    return asksAboutGstInClause || asksAnaphoricGstClaim;
+  });
   if (asksAboutSpecificTaxCase && hasGst && asksAboutSpecificGstTreatment) {
     if (!/\b(?:gst.registered|registered for gst|not registered for gst)\b/i.test(q)) {
       missingFacts.push('Supplier and customer GST registration status, where relevant');

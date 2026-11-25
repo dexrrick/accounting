@@ -1457,6 +1457,23 @@ try {
     assert.ok(classifyQuestion(gstQuery).missingFacts.some(fact => /GST registration status/i.test(fact)),
       'specific GST queries still request applicable facts after decimal amounts or as directives');
   }
+  const sentenceSpanningGstClassification = classifyQuestion('GST was charged on our staff meal. Can we claim it?');
+  for (const expectedFact of [
+    /GST registration status/i,
+    /Business or private use and supporting tax invoice/i,
+    /Business purpose of the meal/i,
+    /Who attended and their relationship/i
+  ]) {
+    assert.ok(sentenceSpanningGstClassification.missingFacts.some(fact => expectedFact.test(fact)),
+      `sentence-spanning GST claim retains the relevant missing fact ${expectedFact}`);
+  }
+  for (const query of [
+    'GST was not charged. Can we claim capital allowances on this equipment?',
+    'GST was not charged. Can we claim it under the capital allowance rules?'
+  ]) {
+    assert.ok(!classifyQuestion(query).missingFacts.some(fact => /GST registration status|tax invoice for the GST claim/i.test(fact)),
+      'a capital-allowance request does not inherit the earlier GST context');
+  }
   const equipmentInterpretation = {
     schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['UNKNOWN'], contextualAuthorities: [],
     domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: 'office equipment purchase accounting and capital allowances',

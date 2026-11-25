@@ -5,6 +5,9 @@ import { getDisplayableUncommittedJournalGroups } from '../../src/services/commi
 import { validateJournalGroups } from '../../src/verification/journalIntegrity.ts';
 import { invoiceVisionResponse } from '../fixtures/visionEvidenceFixtures.mjs';
 import { compileFeedbackReport } from '../../src/services/feedback.ts';
+import { classifyQuestion } from '../../src/classification/questionClassifier.ts';
+import { createIrasEvidencePresentation } from '../../src/utils/irasEvidencePresentation.ts';
+import { UNIFIED_SOURCE_REGISTRY } from '../../src/standards/unifiedSourceModel.ts';
 
 console.log('=== RUNNING VISION ATTACHMENT SUITE ===\n');
 
@@ -134,10 +137,182 @@ try {
   'the initial invoice proposal retains image provenance without inventing a user correction');
   assert.equal(initialImageInvoice.scenarioState.committedDirectGroups?.length || 0, 0,
     'the initial invoice proposal remains uncommitted');
-
   assert.equal(correctionProviderRequests.filter(request =>
     JSON.stringify(request).includes('Extract only visible document evidence')).length, 1,
   'invoice journal recovery reuses the existing image extraction request');
+
+  const digitFreeInvoiceTurn = { ...correctionImageTurn, text: 'Please prepare the journal for this invoice.' };
+  proposedInvoice = invoiceProposal(0);
+  const digitFreeInitialImageInvoice = await processAccountingQuery(
+    digitFreeInvoiceTurn.text, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite', [digitFreeInvoiceTurn]
+  );
+  const digitFreeInvoiceGroups = getDisplayableUncommittedJournalGroups(digitFreeInitialImageInvoice.scenarioState, 'SFRS_I');
+  assert.equal(digitFreeInvoiceGroups.length, 1,
+    'a verified image total satisfies journal amount validation when the request contains no digits or invoice reference');
+  assert.deepEqual(digitFreeInvoiceGroups[0].lines.map(line => [line.accountName, line.debit, line.credit]), [
+    ['Maintenance Expense', 500, 0], ['Trade Payables', 0, 500]
+  ]);
+  assert.equal(validateJournalGroups(digitFreeInvoiceGroups).isValid, true);
+  assert.equal(digitFreeInitialImageInvoice.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal'), false);
+  const verifiedStatutoryInvoiceQuery = 'Please prepare the journal for this invoice, and explain whether input GST is recoverable.';
+  const verifiedGstSource = UNIFIED_SOURCE_REGISTRY.GST_REG26_BLOCKED_INPUT_TAX;
+  const verifiedGstClassification = classifyQuestion(verifiedStatutoryInvoiceQuery);
+  const verifiedGstQuality = {
+    status: 'LOCAL_SUFFICIENT', eligibleRecords: [verifiedGstSource], rejectedRecords: [],
+    coveredTopicIds: verifiedGstClassification.topicIds, uncoveredTopicIds: [], missingFacts: [],
+    targetDateConfidence: 'HIGH'
+  };
+  const verifiedGstClaim = {
+    text: verifiedGstSource.sourceText, quote: verifiedGstSource.sourceText,
+    recordId: verifiedGstSource.id, canonicalUrl: verifiedGstSource.canonicalSourceUrl,
+    supportKind: 'REVIEWED_EDITORIAL_SUMMARY'
+  };
+  const verifiedGstPresentation = createIrasEvidencePresentation({
+    query: verifiedStatutoryInvoiceQuery, classification: verifiedGstClassification,
+    quality: verifiedGstQuality, acceptedClaims: [verifiedGstClaim], missingFacts: [],
+    applicationConclusions: [], hasVerifiedCalculation: false, hasApplicationUncertainty: false,
+    isGeneralRuleRequest: true
+  });
+  const currentStatutoryScenario = {
+    scenarioType: 'UNRECOGNIZED', rawQuery: verifiedStatutoryInvoiceQuery,
+    transactionTitle: 'Current invoice request', functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+    directGroups: [], isComplete: false, missingFields: [], queryIntent: 'HYBRID', primaryDomain: 'IRAS_GST',
+    irasEvidencePresentation: verifiedGstPresentation,
+    officialAnswerLinks: [{ title: verifiedGstSource.documentTitle, url: verifiedGstSource.canonicalSourceUrl }]
+  };
+  proposedInvoice = invoiceProposal(0);
+  correctionProviderRequests.length = 0;
+  const verifiedStatutoryInvoice = await processAccountingQuery(
+    verifiedStatutoryInvoiceQuery, currentStatutoryScenario, 'SFRS_I', correctionProviderKey,
+    'gemini-3.5-flash-lite', [{ ...digitFreeInvoiceTurn, text: verifiedStatutoryInvoiceQuery }]
+  );
+  const verifiedStatutoryInvoiceGroups = getDisplayableUncommittedJournalGroups(verifiedStatutoryInvoice.scenarioState, 'SFRS_I');
+  assert.equal(verifiedStatutoryInvoiceGroups.length, 1,
+    'invoice recovery still prepares the journal when the active request has a current verified statutory answer');
+  assert.equal(verifiedStatutoryInvoice.scenarioState.queryIntent, 'HYBRID');
+  assert.equal(verifiedStatutoryInvoice.scenarioState.primaryDomain, 'IRAS_GST');
+  assert.equal(verifiedStatutoryInvoice.scenarioState.irasEvidencePresentation, verifiedGstPresentation,
+    'invoice recovery preserves the current verified IRAS presentation');
+  assert.ok(verifiedStatutoryInvoice.scenarioState.officialAnswerLinks.some(link =>
+    link.url === verifiedGstSource.canonicalSourceUrl), 'invoice recovery preserves the verified official source link');
+  assert.match(verifiedStatutoryInvoice.messageText, /Regulations 26 and 27 generally disallow input tax/i,
+    'the verified statutory answer remains visible beside the recovered journal');
+
+  const staleStatutoryScenario = {
+    ...currentStatutoryScenario, rawQuery: 'What are the input GST rules?',
+    irasEvidencePresentation: { ...verifiedGstPresentation, query: 'What are the input GST rules?' },
+    officialAnswerLinks: [{ title: 'unverified', url: 'https://attacker.example/source' }]
+  };
+  proposedInvoice = invoiceProposal(0);
+  const staleStatutoryInvoice = await processAccountingQuery(
+    verifiedStatutoryInvoiceQuery, staleStatutoryScenario, 'SFRS_I', correctionProviderKey,
+    'gemini-3.5-flash-lite', [{ ...digitFreeInvoiceTurn, text: verifiedStatutoryInvoiceQuery }]
+  );
+  assert.equal(staleStatutoryInvoice.scenarioState.officialAnswerLinks?.some(link =>
+    link.url === 'https://attacker.example/source'), false,
+  'invoice recovery does not retain stale, unverified statutory links');
+  assert.notEqual(staleStatutoryInvoice.scenarioState.irasEvidencePresentation, staleStatutoryScenario.irasEvidencePresentation,
+    'invoice recovery does not reuse the prior query presentation object');
+
+  proposedInvoice = invoiceProposal(0);
+  const onCreditInvoiceText = 'Please prepare the journal for this invoice on credit.';
+  const onCreditInvoice = await processAccountingQuery(
+    onCreditInvoiceText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: onCreditInvoiceText }]
+  );
+  const onCreditInvoiceGroups = getDisplayableUncommittedJournalGroups(onCreditInvoice.scenarioState, 'SFRS_I');
+  assert.equal(onCreditInvoiceGroups.length, 1);
+  assert.equal(onCreditInvoiceGroups[0].authorityStatus, 'CONDITIONAL',
+    'an explicit credit instruction does not upgrade the image-derived proposal from conditional or uncommitted');
+  assert.match(onCreditInvoice.messageText, /request states that the invoice is unpaid/i,
+    'the explicit credit instruction is preserved without asking whether the invoice is unpaid');
+  assert.equal(onCreditInvoice.scenarioState.committedDirectGroups?.length || 0, 0);
+
+  for (const paymentText of [
+    'Please prepare the journal for this invoice. We bought it for cash, not on credit.',
+    'Please prepare the journal for this invoice. It was paid in full, with no outstanding balance.'
+  ]) {
+    extractedImageResponse = clearInitialInvoiceVision;
+    proposedInvoice = invoiceProposal(0);
+    const paidInvoice = await processAccountingQuery(
+      paymentText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+      [{ ...digitFreeInvoiceTurn, text: paymentText }]
+    );
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(paidInvoice.scenarioState, 'SFRS_I'), [],
+      `initial image recovery does not replace an explicit paid fact with Trade Payables: ${paymentText}`);
+    assert.equal(paidInvoice.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceSettlement', paymentText);
+    assert.match(paidInvoice.messageText, /payment account and any amount that remains payable/i, paymentText);
+  }
+
+  const incompatibleClassificationText =
+    'Please prepare the journal for this invoice. Classify it as a fixed asset, Office Equipment.';
+  extractedImageResponse = clearInitialInvoiceVision;
+  proposedInvoice = invoiceProposal(0);
+  const incompatibleClassification = await processAccountingQuery(
+    incompatibleClassificationText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: incompatibleClassificationText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(incompatibleClassification.scenarioState, 'SFRS_I'), [],
+    'an explicit fixed-asset classification cannot be replaced by the invoice image expense account');
+  assert.equal(incompatibleClassification.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceAccountClassification');
+  assert.match(incompatibleClassification.messageText, /does not establish a consistent expense, inventory, or fixed-asset account/i);
+
+  proposedInvoice = invoiceProposal(0);
+  const paidInvoiceText = 'Please prepare the journal for this invoice. It was paid in cash.';
+  const paidInvoice = await processAccountingQuery(
+    paidInvoiceText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: paidInvoiceText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(paidInvoice.scenarioState, 'SFRS_I'), [],
+    'initial image recovery does not replace an explicit cash payment with Trade Payables');
+  assert.equal(paidInvoice.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceSettlement');
+  assert.match(paidInvoice.messageText, /payment account and any amount that remains payable/i);
+
+  const conflictingInvoiceText = 'Please prepare the journal for this invoice. The invoice total is SGD 600.';
+  proposedInvoice = invoiceProposal(0);
+  const conflictingInvoiceAmount = await processAccountingQuery(
+    conflictingInvoiceText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: conflictingInvoiceText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(conflictingInvoiceAmount.scenarioState, 'SFRS_I'), [],
+    'image recovery does not replace an explicit conflicting invoice total with the image amount');
+  assert.match(conflictingInvoiceAmount.messageText, /does not match the total read from the screenshot/i);
+
+  const conflictingCurrencyText = 'Please prepare the journal for this invoice. Its total is USD 500.';
+  extractedImageResponse = clearInitialInvoiceVision;
+  proposedInvoice = invoiceProposal(0);
+  const conflictingInvoiceCurrency = await processAccountingQuery(
+    conflictingCurrencyText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: conflictingCurrencyText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(conflictingInvoiceCurrency.scenarioState, 'SFRS_I'), [],
+    'an explicit USD invoice instruction cannot be silently replaced by a verified SGD image');
+  assert.equal(conflictingInvoiceCurrency.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceCurrency');
+  assert.match(conflictingInvoiceCurrency.messageText, /request states USD, but the invoice image states SGD/i);
+
+  const [initialInvoiceEvidence] = clearInitialInvoiceVision.imageEvidence;
+  extractedImageResponse = { imageEvidence: [{
+    ...initialInvoiceEvidence, fields: { ...initialInvoiceEvidence.fields, currency: 'USD' }
+  }] };
+  const unsupportedInvoiceCurrency = await processAccountingQuery(
+    conflictingCurrencyText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: conflictingCurrencyText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(unsupportedInvoiceCurrency.scenarioState, 'SFRS_I'), []);
+  assert.match(unsupportedInvoiceCurrency.messageText, /supplier invoice currency is not confirmed as SGD/i);
+  assert.doesNotMatch(unsupportedInvoiceCurrency.messageText, /image states SGD/i);
+
+  extractedImageResponse = clearInitialInvoiceVision;
+  const conflictingDateText = 'Please prepare the journal for this invoice. The invoice date is 25/01/2025.';
+  const conflictingInvoiceDate = await processAccountingQuery(
+    conflictingDateText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: conflictingDateText }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(conflictingInvoiceDate.scenarioState, 'SFRS_I'), [],
+    'initial recovery withholds a posting date when the explicit invoice date conflicts with the image');
+  assert.equal(conflictingInvoiceDate.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceDate');
+  assert.match(conflictingInvoiceDate.messageText, /25\/01\/2025.*20\/01\/2025/i);
 
   const omittedSecondInvoice = {
     ...correctionImageTurn,
@@ -182,6 +357,63 @@ try {
   assert.equal(correctionProviderRequests.filter(request =>
     JSON.stringify(request).includes('Extract only visible document evidence')).length, 1,
   'the GST recovery clarification reuses the existing image extraction request');
+
+  const gstTreatmentReply = 'The GST is recoverable.';
+  const gstTreatmentFollowUp = await processAccountingQuery(
+    gstTreatmentReply, initialGstInvoice.scenarioState, 'SFRS_I', correctionProviderKey,
+    'gemini-3.5-flash-lite', [
+      { ...correctionImageTurn, id: 'gst-invoice-image', text: 'Attached invoice INV-203. Please prepare the journal from the screenshot.' },
+      { id: 'gst-treatment-reply', sender: 'user', timestamp: '', text: gstTreatmentReply }
+    ]
+  );
+  assert.match(gstTreatmentFollowUp.messageText, /image-derived invoice total of SGD 545 remains retained/i,
+    'an initial image-derived GST clarification retains its invoice amount through a text-only reply');
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(gstTreatmentFollowUp.scenarioState, 'SFRS_I'), [],
+    'a GST reply alone still does not create an input-tax journal line');
+  assert.equal(gstTreatmentFollowUp.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal'), false,
+  'the GST follow-up retains image evidence without fabricating user correction evidence');
+
+  extractedImageResponse = { imageEvidence: [{
+    imageIndex: 1, documentType: 'supplier_invoice', confidence: 0.97,
+    fields: { documentTitle: 'Supplier Invoice', invoiceDate: '20/01/2025', itemDescription: 'Consulting service',
+      total: 500, currency: 'SGD' }
+  }] };
+  proposedInvoice = invoiceProposal(0);
+  const paidUnclassifiedInvoiceText = 'Please prepare the journal for this invoice. It was paid in cash.';
+  const paidUnclassifiedInvoice = await processAccountingQuery(
+    paidUnclassifiedInvoiceText, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [{ ...digitFreeInvoiceTurn, text: paidUnclassifiedInvoiceText }]
+  );
+  assert.equal(paidUnclassifiedInvoice.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceAccountClassification');
+  assert.ok(paidUnclassifiedInvoice.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.imageId === 'image-202' &&
+    field.field === 'invoicePaymentStatus' && field.value === 'paid'),
+  'an initial payment fact is retained against the same image while the account is clarified');
+  assert.equal(paidUnclassifiedInvoice.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal'), false);
+
+  const accountReply = 'Classify this as Maintenance Expense.';
+  proposedInvoice = invoiceProposal(0);
+  const paidInvoiceAccountFollowUp = await processAccountingQuery(
+    accountReply, paidUnclassifiedInvoice.scenarioState, 'SFRS_I', correctionProviderKey,
+    'gemini-3.5-flash-lite', [
+      { ...digitFreeInvoiceTurn, text: paidUnclassifiedInvoiceText },
+      { id: 'invoice-account-reply', sender: 'user', timestamp: '', text: accountReply }
+    ]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(paidInvoiceAccountFollowUp.scenarioState, 'SFRS_I'), [],
+    'account classification cannot discard the paid fact and recover a Trade Payables journal');
+  assert.equal(paidInvoiceAccountFollowUp.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceSettlement');
+  assert.match(paidInvoiceAccountFollowUp.messageText, /transaction facts indicate that this invoice was paid/i);
+  assert.ok(paidInvoiceAccountFollowUp.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.imageId === 'image-202' &&
+    field.field === 'invoicePaymentStatus' && field.value === 'paid'));
+  assert.equal(paidInvoiceAccountFollowUp.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.field === 'correctedInvoiceTotal'), false,
+  'image-derived clarification continuity does not create corrected-total user evidence');
+
+  extractedImageResponse = correctionVision;
 
   const retainedInvoiceFactsWithoutJournal = {
     ...initialImageInvoice.scenarioState,
