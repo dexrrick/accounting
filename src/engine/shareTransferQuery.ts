@@ -42,6 +42,31 @@ export function answerShareStructureQuery(query: string, currentScenario?: Accou
   const holdingB = /company\s+([a-z0-9]+)\s+holds\s+(\d+(?:\.\d+)?)%\s*,?\s*([\d,]+)\s+units?\s+of\s+company\s+([a-z0-9]+)['’]s?\s+shares?/i.exec(q);
   const holdingC = /company\s+([a-z0-9]+)\s+holds\s+(\d+(?:\.\d+)?)%\s*,?\s*([\d,]+)\s+units?\s+of\s+company\s+([a-z0-9]+)['’]s?\s+shares?/i.exec(q.slice(holdingB?.index ? holdingB.index + holdingB[0].length : 0));
   const exchange = /trade\s+(?:company\s+)?([a-z0-9]+)?\s*([\d,]+)\s+units?\s+of\s+company\s+([a-z0-9]+)['’]?s?\s+shares?\s+for\s+([\d,]+)\s+units?\s+of\s+company\s+([a-z0-9]+)['’]?s?\s+shares?/i.exec(q);
+  const tradeEndsQuestion = followUp && /^[.!?]*$/.test(q.slice(followUp.index + followUp[0].length).trim());
+  if (!holdingB && !holdingC && tradeEndsQuestion && !currentScenario?.shareTransferAnalysis) {
+    const holder = `Company ${followUp[1].toUpperCase()}`;
+    const sourceCompany = `Company ${followUp[3].toUpperCase()}`;
+    const destinationCompany = `Company ${followUp[5].toUpperCase()}`;
+    const prompt = `How many shares of ${sourceCompany} and ${destinationCompany} did ${holder} hold before this trade?`;
+    return {
+      messageText: `### Opening shareholdings needed\n\n${prompt}`,
+      scenarioState: {
+        scenarioType: 'GROUP_SHARE_TRANSFER_ANALYSIS',
+        rawQuery: query,
+        transactionTitle: 'Group Share Transfer and Holding Analysis',
+        functionalCurrency: 'SGD',
+        transactionCurrency: 'SGD',
+        directGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'openingShareholdings',
+          fieldName: 'Opening shareholdings',
+          prompt,
+          whyNeeded: 'The trade quantities alone do not establish the opening balances.'
+        }]
+      }
+    };
+  }
   if (!holdingB || !holdingC || !exchange) return null;
 
   const holder = `Company ${holdingB[1].toUpperCase()}`;

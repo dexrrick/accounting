@@ -17,6 +17,17 @@ console.log('=== RUNNING PHASE 2: GROUNDED GEMINI REASONING PIPELINE TESTS ===\n
 async function runTests() {
   let passed = 0;
 
+  const equipmentPurchase = classifyQuestion(
+    'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?'
+  );
+  const leaseFact = /borrowing rate|lease duration/i;
+  assert.ok(equipmentPurchase.missingFacts.every(fact => !leaseFact.test(fact)),
+    'Polite wording does not create a lease evidence requirement for an equipment purchase');
+  const actualLease = classifyQuestion('The equipment lease costs SGD 1,200. Please prepare the double entry.');
+  assert.ok(actualLease.missingFacts.some(fact => leaseFact.test(fact)),
+    'An active lease still requests material lease facts');
+
+
   // =========================================================================
   // TEST 1: EVIDENCE HIERARCHY STRUCTURE & PROVENANCE
   // =========================================================================

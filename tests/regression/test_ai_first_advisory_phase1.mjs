@@ -1917,6 +1917,11 @@ for (const call of calls) {
     assert.equal(resetShareResponse.conversationBoundaryMessageId, 'boundary-reset-share-trade');
     assert.equal(resetShareResponse.scenarioState.shareTransferAnalysis, undefined,
       'an explicit reset prevents the share shortcut from reusing earlier holdings');
+    assert.match(resetShareResponse.messageText, /how many shares of Company C and Company B did Company A hold before this trade/i);
+    assert.equal(resetShareResponse.scenarioState.isComplete, false);
+    assert.deepEqual(resetShareResponse.scenarioState.directGroups, []);
+    assert.equal(boundaryCalls.length, callsBeforeShareCalculation,
+      'the recognised reset trade asks for opening holdings without a model call');
 
     const explicitResetCases = [
       {
