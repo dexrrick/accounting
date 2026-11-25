@@ -604,7 +604,13 @@ export function classifyQuestion(query: string): QuestionClassificationResult {
   if (hasUnresolvedSection14NBasisPeriod(q)) {
     missingFacts.push('Company financial year end and YA basis period containing the renovation expenditure');
   }
-  if (asksAboutSpecificTaxCase && hasGst && /\b(?:claim\w*|recover\w*|charge\w*|zero.rate|exempt)\b/i.test(q)) {
+  const asksAboutSpecificGstTreatment = q.split(/[!?;\n]+|(?<!\d)\.|\.(?!\d)/).some(clause =>
+    /\b(?:gst|goods and services tax|input tax|output tax)\b/i.test(clause) &&
+    (/\b(?:claim\w*|recover\w*|zero.rate|exempt|blocked input)\b/i.test(clause) ||
+      (/\bcharge\w*\b/i.test(clause) &&
+        /\b(?:can|could|should|must|do|does|did|is|are|whether|what|how|explain|guidance|check|confirm)\b/i.test(clause)))
+  );
+  if (asksAboutSpecificTaxCase && hasGst && asksAboutSpecificGstTreatment) {
     if (!/\b(?:gst.registered|registered for gst|not registered for gst)\b/i.test(q)) {
       missingFacts.push('Supplier and customer GST registration status, where relevant');
     }

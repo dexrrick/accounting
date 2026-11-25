@@ -268,7 +268,7 @@ type PendingImageCorrection =
   | { kind: 'clarification'; reason: 'conflicting_fields' | 'explicit_replacement' | 'amount_correction' | 'multiple_invoices' | 'supplier_direction_confirmation' | 'individual_invoice_required' | 'gst_treatment_unverified'; prompt: string }
   | {
       kind: 'correction';
-      source: 'explicit_replacement' | 'invoice_total_statement' | 'confirmed_supplier_invoice_total_statement' | 'retained_invoice_total';
+      source: 'explicit_replacement' | 'invoice_total_statement' | 'confirmed_supplier_invoice_total_statement' | 'retained_invoice_total' | 'initial_image_evidence';
       amount: number;
       imageIndex: number;
       fieldIndex: number;
@@ -772,13 +772,16 @@ function createImageCorrectionClarification(
     prompt,
     whyNeeded: detail?.missingFact || 'The supplier invoice amount must be clear before a journal can be proposed.'
   };
-  const correctionEvidence: ExtractedEvidence[] = detail ? [{
-    source: 'user_text',
-    imageId: scenario.imageEvidence?.[detail.correction.imageIndex]?.imageId,
-    field: 'correctedInvoiceTotal',
-    value: detail.correction.amount,
-    confidence: 1
-  }, ...(detail.correction.source === 'confirmed_supplier_invoice_total_statement' || detail.correction.supplierDirectionConfirmed
+  const correctionEvidence: ExtractedEvidence[] = detail ? [
+    ...(detail.correction.source === 'initial_image_evidence' ? [] : [{
+      source: 'user_text' as const,
+      imageId: scenario.imageEvidence?.[detail.correction.imageIndex]?.imageId,
+      field: 'correctedInvoiceTotal',
+      value: detail.correction.amount,
+      confidence: 1
+    }]),
+    ...(detail.correction.source !== 'initial_image_evidence' &&
+      (detail.correction.source === 'confirmed_supplier_invoice_total_statement' || detail.correction.supplierDirectionConfirmed)
     ? [{
       source: 'user_text' as const,
       imageId: scenario.imageEvidence?.[detail.correction.imageIndex]?.imageId,
@@ -786,7 +789,8 @@ function createImageCorrectionClarification(
       value: 'supplier purchase invoice',
       confidence: 1
     }]
-    : []), ...(detail.additionalEvidence || [])] : [];
+    : []), ...(detail.additionalEvidence || [])
+  ] : [];
   return {
     messageText: `### Screenshot journal clarification required\n\n${prompt}`,
     displayFullAnswer: true,
@@ -918,9 +922,27 @@ async function respondToPendingImageCorrection(
     normalizeImageMoneyFieldName(field.field)
   ));
   if (gstEvidence || (subtotalEvidence && parseImageAmountCents(subtotalEvidence.value) !== Math.round(correction.amount * 100))) {
+    const isInitialImageEvidence = correction.source === 'initial_image_evidence';
+    const subtotalCents = subtotalEvidence ? parseImageAmountCents(subtotalEvidence.value) : undefined;
+    const gstCents = gstEvidence ? parseImageAmountCents(gstEvidence.value) : undefined;
+    const totalCents = Math.round(correction.amount * 100);
+    const reconciles = subtotalCents !== undefined && gstCents !== undefined && subtotalCents + gstCents === totalCents;
+    const observedAmounts = [
+      subtotalCents === undefined ? undefined : `subtotal ${formatImageAmountCents(subtotalCents)}`,
+      gstCents === undefined ? undefined : `GST ${formatImageAmountCents(gstCents)}`,
+      `invoice total ${formatImageAmountCents(totalCents)}`
+    ].filter((amount): amount is string => Boolean(amount));
+    const gstPrompt = isInitialImageEvidence
+      ? `The supplier invoice image ${reconciles
+        ? `shows subtotal ${formatImageAmountCents(subtotalCents!)} + GST ${formatImageAmountCents(gstCents!)} = total ${formatImageAmountCents(totalCents)}`
+        : `shows ${observedAmounts.join(', ')}, but the full GST breakdown is not established`}.${reconciles
+        ? ' The image does not establish whether the GST is recoverable as input tax. Verify any recoverable input-tax amount against your GST records. This journal is withheld; no input-GST asset is recognized from the image alone.'
+        : ' Verify the missing invoice amount figures and any recoverable input-tax amount against your GST records. This journal is withheld; no input-GST asset is recognized from the image alone.'}`
+      : `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained. This image-correction flow cannot safely construct a GST split from the screenshot alone, so no journal proposal is shown. Before posting a GST-inclusive entry, have the subtotal and GST reconciled to the total and confirm the recoverable input-tax amount under your GST process. Restate the corrected total only if it changes.`;
     return createImageCorrectionClarification(scenario, userInput,
-      `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained. This image-correction flow cannot safely construct a GST split from the screenshot alone, so no journal proposal is shown. Before posting a GST-inclusive entry, have the subtotal and GST reconciled to the total and confirm the recoverable input-tax amount under your GST process. Restate the corrected total only if it changes.`,
-      { fieldKey: 'invoiceGstTreatment', fieldName: 'GST treatment', missingFact: 'GST recoverability and net expense amount', correction });
+      gstPrompt,
+      { fieldKey: 'invoiceGstTreatment', fieldName: 'GST treatment',
+        missingFact: isInitialImageEvidence ? 'verified GST recoverability for the invoice tax amount' : 'GST recoverability and net expense amount', correction });
   }
 
   const imageDebitAccount = getInvoiceDebitAccount(invoiceImage);
@@ -945,6 +967,13 @@ async function respondToPendingImageCorrection(
     totalAmount: correction.amount,
     fullAmountPayable: settlementCheck.allPayable
   });
+  const isInitialImageEvidence = correction.source === 'initial_image_evidence';
+  if (isInitialImageEvidence) {
+    proposal.rationalePoints = [
+      'The invoice amount and account are based on visible supplier invoice evidence.',
+      ...proposal.rationalePoints.slice(1)
+    ];
+  }
   const integrity = validateJournalGroups([proposal], {
     rawQuery: userInput,
     hasPriorContextAmount: correction.source === 'retained_invoice_total'
@@ -961,13 +990,14 @@ async function respondToPendingImageCorrection(
   const payableQualification = settlementCheck.allPayable
     ? ''
     : ' This conditional proposal assumes the invoice remains unpaid. Confirm settlement before posting.';
-  const resultEvidence = [...(scenario.evidence || flattenImageEvidence(rawImageEvidence)), {
+  const resultEvidence = [...(scenario.evidence || flattenImageEvidence(rawImageEvidence)),
+  ...(isInitialImageEvidence ? [] : [{
     source: 'user_text' as const,
     imageId: invoiceImage.imageId,
     field: correctedField.field,
     value: correction.amount,
     confidence: 1
-  }, ...(correction.accountClassification ? [
+  }]), ...(correction.accountClassification ? [
     {
       source: 'user_text' as const,
       imageId: invoiceImage.imageId,
@@ -984,7 +1014,9 @@ async function respondToPendingImageCorrection(
     }
   ] : [])];
   return {
-    messageText: `### Corrected invoice journal proposal\n\n${correction.accountClassification
+    messageText: isInitialImageEvidence
+      ? `### Initial supplier invoice journal proposal\n\nThe journal is based on the visible invoice evidence, remains conditional and uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`
+      : `### Corrected invoice journal proposal\n\n${correction.accountClassification
       ? `The retained corrected invoice total is SGD ${correction.amount.toLocaleString()}, and your explicit account classification is ${debitAccount.name}.`
       : `The invoice total was corrected to SGD ${correction.amount.toLocaleString()}.`} The proposed journal is balanced and remains uncommitted.${payableQualification}\n\n${dateWarning || 'Review the invoice date before posting.'}`,
     displayFullAnswer: true,
@@ -998,6 +1030,7 @@ async function respondToPendingImageCorrection(
       directGroups: [proposal],
       committedDirectGroups: scenario.committedDirectGroups,
       projectedGroups: undefined,
+      ...(isInitialImageEvidence ? { journalPreparationFailed: undefined } : {}),
       missingFields: [],
       missingFacts: [],
       isComplete: true,
@@ -1022,6 +1055,13 @@ export function getMaterialImageUncertainties(imageEvidence: ExtractedImageEvide
   return flattenImageEvidence(imageEvidence).filter((field) =>
     MATERIAL_IMAGE_FIELDS.test(field.field) && field.confidence !== undefined && field.confidence < 0.9
   );
+}
+
+function getInitialImageInvoiceCorrection(scenario: AccountingScenarioState): Extract<PendingImageCorrection, { kind: 'correction' }> | undefined {
+  if (scenario.imageEvidence?.length !== 1 || !isInvoiceCorrectionCandidate(scenario.imageEvidence[0])) return undefined;
+  const totals = getImageTotalFields(scenario);
+  if (totals.length !== 1) return undefined;
+  return { kind: 'correction', source: 'initial_image_evidence', amount: totals[0].value, ...totals[0] };
 }
 
 function getGuardrailErrorViolations(
@@ -1072,7 +1112,7 @@ export async function extractImageEvidenceWithGemini(
         contents: [{
           role: 'user',
           parts: [
-            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. For invoices, copy the exact visible document heading into fields.documentTitle, including generic labels such as "Invoice". Set documentType to supplier_invoice only when the printed title or type explicitly says "supplier invoice", "purchase invoice", "payable invoice", or "expense invoice"; otherwise use accounting_transaction. Copy an explicit invoice direction into fields.invoiceType when visible, including customer sales invoices and credit notes. Copy each visible goods or service line into fields.itemDescription, preserving its wording. Do not infer invoice direction from a name, item description, file name, user text, or accounting treatment. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
+            { text: 'Extract only visible document evidence from these images. Do not recommend accounting treatment, infer missing values, or cite standards. Return JSON only. For journals use {"imageEvidence":[{"imageIndex":1,"documentType":"journal","confidence":0.0,"fields":{},"journalLines":[{"accountName":"Inventory","accountCode":"GL 130","debit":1000},{"accountName":"Cash","accountCode":"GL 100","credit":200}]}]}. For transaction-task screenshots use {"imageEvidence":[{"imageIndex":1,"documentType":"accounting_transaction","confidence":0.0,"fields":{"transactionType":"equipment_purchase","assetName":"Office Equipment","totalAmount":1200,"immediatePayment":400,"remainingPayable":800,"paymentMethod":"bank_transfer","currency":"SGD"}}]}. For invoices, copy the exact visible document heading into fields.documentTitle, including generic labels such as "Invoice". Copy visible invoice number, date, currency, subtotal, GST, and total into fields.invoiceNo, fields.invoiceDate, fields.currency, fields.subtotal, fields.gst, and fields.total. Copy immediatePayment and remainingPayable only when explicitly printed. Do not infer direction, settlement, or GST recoverability. Set documentType to supplier_invoice only when the printed title or type explicitly says "supplier invoice", "purchase invoice", "payable invoice", or "expense invoice"; otherwise use accounting_transaction. Copy an explicit invoice direction into fields.invoiceType when visible, including customer sales invoices and credit notes. Copy each visible goods or service line into fields.itemDescription, preserving its wording. Do not infer invoice direction from a name, item description, file name, user text, or accounting treatment. When a screenshot contains a journal, include every visible line in journalLines with its debit or credit amount. Set imageIndex to the supplied one-based image number. Keep evidence from separate documents separate. Omit unreadable fields.' },
             ...createGeminiImageParts(attachments)
           ]
         }],
@@ -3459,7 +3499,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     profiler.logSummary();
     return renderJournalPreparationFailure(failureScenario, true);
   }
-  const result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
+  let result = postProcessAIResponse(parsed, currentScenario, userInput, context, deterministicScenario, standard);
   const deterministicFallback = getDeterministicFallbackGroups(currentScenario, deterministicScenario);
   if (imageEvidence.length > 0) {
     result.scenarioState.imageEvidence = imageEvidence;
@@ -3545,6 +3585,38 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         result.messageText = `### AI-Proposed Journal Rejected\n\n${buildGuardrailValidationMessage(aiErrors)}\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.`;
       }
     }
+  }
+
+  const [currentInvoiceImage] = imageEvidence;
+  const initialImageInvoiceCorrection = imageAttachments.length === 1 && imageEvidence.length === 1 &&
+    currentInvoiceImage.imageId === imageAttachments[0].id &&
+    currentInvoiceImage.confidence !== undefined && currentInvoiceImage.confidence >= 0.9 && currentInvoiceImage.confidence <= 1
+    ? getInitialImageInvoiceCorrection(result.scenarioState)
+    : undefined;
+  const imageJournalRequested = Boolean(isJournalRequest || context.classification.journalEntryRequired ||
+    classifyQuestion(userInput).journalEntryRequired);
+  const imageInvoice = initialImageInvoiceCorrection
+    ? result.scenarioState.imageEvidence?.[initialImageInvoiceCorrection.imageIndex]
+    : undefined;
+  const imageGstEvidence = imageInvoice?.fields.find(field => IMAGE_GST_AMOUNT_FIELD_ALIASES.has(
+    normalizeImageMoneyFieldName(field.field)
+  ) && parseImageAmountCents(field.value) !== 0);
+  const imageSubtotalEvidence = imageInvoice?.fields.find(field => IMAGE_SUBTOTAL_FIELD_ALIASES.has(
+    normalizeImageMoneyFieldName(field.field)
+  ));
+  const imageSubtotalCents = imageSubtotalEvidence ? parseImageAmountCents(imageSubtotalEvidence.value) : undefined;
+  const imageSubtotalMismatch = Boolean(initialImageInvoiceCorrection && imageSubtotalEvidence &&
+    imageSubtotalCents !== Math.round(initialImageInvoiceCorrection.amount * 100));
+  const invoiceGstRequiresClarification = Boolean(imageGstEvidence || imageSubtotalMismatch);
+  const imageVerificationPending = result.scenarioState.missingFields?.some(field => field.fieldKey === 'imageVerification');
+  const existingProviderGroups = result.scenarioState.directGroups || [];
+  const hasValidProviderJournal = existingProviderGroups.length > 0 && existingProviderGroups.every(group =>
+    group.totalDebit > 0 && group.totalDebit === group.totalCredit && validateJournalGroups([group]).isValid
+  );
+  if (imageJournalRequested && initialImageInvoiceCorrection && !imageVerificationPending &&
+      !deterministicFallback?.length && !result.scenarioState.committedDirectGroups?.length &&
+      (invoiceGstRequiresClarification || !hasValidProviderJournal)) {
+    result = await respondToPendingImageCorrection(userInput, result.scenarioState, initialImageInvoiceCorrection);
   }
 
   if (textJournalRequest && context.semanticUnderstanding?.isHypothetical && !result.scenarioState.isComplete) {

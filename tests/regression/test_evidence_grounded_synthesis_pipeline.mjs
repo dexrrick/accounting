@@ -1447,6 +1447,16 @@ try {
     'the mapped CPF source does not add another model interpretation call');
 
   const equipmentJournalQuery = 'We bought office equipment for SGD 1,200 on credit from a supplier on 23 November 2026. GST was not charged. Please prepare the double entry. Can we claim Singapore capital allowances on this equipment?';
+  const equipmentQuestionClassification = classifyQuestion(equipmentJournalQuery);
+  assert.ok(!equipmentQuestionClassification.missingFacts.some(fact => /GST registration status|tax invoice for the GST claim/i.test(fact)),
+    'a stated no-GST purchase does not inherit tax-claim facts from the separate capital-allowance question');
+  for (const gstQuery of [
+    'Can we claim SGD 80.50 GST on this business purchase?',
+    'Check GST recoverability on this company meal invoice.'
+  ]) {
+    assert.ok(classifyQuestion(gstQuery).missingFacts.some(fact => /GST registration status/i.test(fact)),
+      'specific GST queries still request applicable facts after decimal amounts or as directives');
+  }
   const equipmentInterpretation = {
     schemaVersion: 2, jurisdiction: ['Singapore'], authorityCandidates: ['UNKNOWN'], contextualAuthorities: [],
     domain: 'UNKNOWN', population: 'UNKNOWN', primarySubject: 'office equipment purchase accounting and capital allowances',
