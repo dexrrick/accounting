@@ -1566,7 +1566,7 @@ async function processAccountingQueryCore(
       profiler.recordFirstVisibleResponse();
       profiler.logSummary();
       const clarification: MissingFieldInfo = { fieldKey: 'aiEventExtraction', fieldName: 'AI event extraction', prompt: aiExtractionFailure || 'Gemini responded, but its event-fact sequence did not pass validation. Please retry or check the configured model.', whyNeeded: 'Multi-event journals are configured to require validated AI fact extraction before deterministic accounting treatment.' };
-      return attachAmendmentProvenance({ messageText: `### AI Event Extraction Required for Double Entry\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [clarification] }, clarifications: [clarification] });
+      return attachAmendmentProvenance({ providerStatus: 'FAILED', messageText: `### AI Event Extraction Required for Double Entry\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [clarification] }, clarifications: [clarification] });
     }
     const resolution = resolveEventSequence(userInput, standard, aiCandidate);
     if (resolution) {
