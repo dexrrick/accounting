@@ -38,7 +38,7 @@ import { isAcraAuditExemptionContextRequest } from '../retrieval/acraMomKnowledg
 import { supportsAcraSmallCompanyAuditFacts } from '../retrieval/momAcraMasCoverageRules';
 import { cleanHtmlText } from '../retrieval/sourceAdapters';
 import { evaluateEvidenceQuality, type EvidenceQualityAssessment } from '../retrieval/evidenceQualityGate';
-import { supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { GST_REGISTRATION_TURNOVER_TOPIC_IDS, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { provesMomSalaryPaymentSource, selectMomSalaryPaymentRuleQuote } from '../retrieval/momSalaryPaymentRule';
 import { provesIrasAcraPracticalRuleSource } from '../retrieval/irasAcraPracticalRules';
 import { provesCpfMasPracticalRuleSource } from '../retrieval/cpfMasPracticalRules';
@@ -79,7 +79,9 @@ import {
   getSemanticIrasDiscoveryContext,
   interpretSemanticQuestion,
   isShortSemanticFollowUp,
+  projectSemanticJournalClassification,
   reconcileQuestionUnderstanding,
+  queryWithSemanticIssueFollowOns,
   type ReconciledSemanticQuestionIssue,
   type RequestedQuestionConcept,
   type SemanticQuestionUnderstanding
@@ -419,6 +421,7 @@ export interface OfficialDomainSearchAdapter {
 }
 
 export interface MappedFallbackOptions {
+  advisoryJournalIntent?: boolean;
   webRetriever?: ControlledWebRetriever;
   fetchOptions?: Omit<ControlledFetchOptions, 'topicValidation'>;
   discoveryAdapter?: OfficialSourceDiscoveryAdapter;
@@ -2315,9 +2318,12 @@ export async function resolveMappedOfficialSourceFallback(
     const expansionQuotes = [
       ...selectPracticalExpansionQuotes(coverageRequest)
     ];
+    // The IRAS registration page places the turnover exceptions after both
+    // test sections and their examples. Preserve room for those conditions.
+    const excerptLimit = GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topic.id) ? 8_000 : 5_000;
     const legacyExcerpt = preferredStatutoryAdvisoryPassage || preferredIrasConceptPassage ||
       selectRelevantFetchedText(contentValidation.substantiveText || '',
-      [...expectation.topicTerms, ...requiredContentTerms], 5_000, query,
+      [...expectation.topicTerms, ...requiredContentTerms], excerptLimit, query,
       [...(momSalaryPaymentRuleQuote ? [momSalaryPaymentRuleQuote] : []), ...preferredAcraDeadlinePassages,
         ...(preferredRulePassage ? [preferredRulePassage] : [])]);
     const completeExpansionPassage = expansionQuotes.length > 0
@@ -3065,7 +3071,7 @@ export async function buildGroundedReasoningContext(
       missingFacts: [],
       missingFactDomains: []
     }
-    : reconciledQuestion.classification;
+    : projectSemanticJournalClassification(userInput, reconciledQuestion, retrievalOptions.advisoryJournalIntent);
   const questionUnderstanding = reconciledQuestion.understanding;
   const irasPolicy = usesIrasEvidencePolicy(classification, userInput);
   const hasContextualPriorReference = !startsNewAccountingScenario(userInput, currentScenario) &&
@@ -3076,13 +3082,31 @@ export async function buildGroundedReasoningContext(
     !hasContextualPriorReference);
   const relevantScenario = ignorePriorAccountingContext ? null : currentScenario;
   const conversationContext = extractAccountingContext(relevantScenario);
-  const semanticUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
-    userInput,
+  const mixedJournalIssue = irasPolicy && classification.intent === 'HYBRID' &&
+    questionUnderstanding.mode === 'SEMANTIC_PLUS_RULES' &&
+    reconciledQuestion.issuePlan.issues.find(issue => issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL');
+  const accountingQuery = mixedJournalIssue
+    ? queryWithSemanticIssueFollowOns(userInput, mixedJournalIssue.subject)
+    : undefined;
+  const accountingNumbers = accountingQuery?.match(/\d[\d,]*(?:\.\d+)?(?:\s*%)?/g)
+    ?.filter(number => !number.endsWith('%')) || [];
+  const amountBoundQuery = accountingNumbers.length === 1 ? accountingQuery : undefined;
+  const transactionUnderstanding = await defaultTransactionUnderstandingService.understandTransaction(
+    accountingQuery || userInput,
     relevantScenario?.functionalCurrency || 'SGD',
     'SG',
-    irasPolicy ? undefined : providerOrApiKey,
+    !irasPolicy || amountBoundQuery ? providerOrApiKey : undefined,
     conversationContext
   );
+  // Match the extracted amount to the current accounting clause; a number
+  // from another issue or an earlier turn cannot finance this proposal.
+  const statedAccountingAmount = amountBoundQuery
+    ? defaultTransactionUnderstandingService.understandTransactionSync(amountBoundQuery).amount
+    : undefined;
+  const semanticUnderstanding = mixedJournalIssue &&
+      (transactionUnderstanding.provenance.isFallback || transactionUnderstanding.amount !== statedAccountingAmount)
+    ? { ...transactionUnderstanding, amount: undefined }
+    : transactionUnderstanding;
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
   const retrievalHints = buildClassificationRetrievalHints(classification);
@@ -3499,7 +3523,7 @@ Return ONLY this concise, compact JSON payload:
   ],
   "bifurcateFx": true | false,
   "tradeDiscountHandling": "string",
-  "missingFacts": ["Any missing facts required to establish final treatment"],
+  "missingFacts": ["Only ask for a fact missing from the request if it materially changes the journal or treatment requested. Leave separate follow-on assessments out."],
   "assumptions": [
     { "field": "string", "assumedValue": "string", "basis": "string", "materiality": "HIGH" | "MEDIUM" | "LOW" }
   ],

@@ -9,7 +9,10 @@ import { classifyAdvisoryFailure } from '../../src/services/aiFirstAdvisory.ts';
 import { createRequestCompletenessContext } from '../../src/services/requestCompleteness.ts';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
-import { tryGenerateGroundedSynthesis } from '../../src/services/evidenceGroundedSynthesis.ts';
+import {
+  GroundedSynthesisClaimRejectionError,
+  tryGenerateGroundedSynthesis
+} from '../../src/services/evidenceGroundedSynthesis.ts';
 
 const provider = {
   activeProvider: 'openai',
@@ -135,6 +138,8 @@ const supportedRule = quote;
       fullText: 'Earlier guidance: the extent of business use is relevant to input tax treatment.' }
   ] }), { call: scripted.call });
   assert.ok(result);
+  assert.match(scripted.calls[0].system, /a historical result does not establish a forward-looking forecast/,
+    'separate source-defined periods remain distinct in natural-language statutory application');
   assert.match(result.messageText, /Regulations 26 and 27 generally disallow input tax/);
   assert.match(result.messageText, /\[IRAS:/, 'the inline citation comes from the verified record, not generated text');
   assert.equal(result.officialAnswerLinks[0]?.url, record.canonicalSourceUrl);
@@ -1533,7 +1538,11 @@ const supportedRule = quote;
 
 {
   const rateClaimCall = scriptedCall(() => ({ claims: [claim('invented-rate', 'The GST rate is 99%.')] }));
-  await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: rateClaimCall.call }), /no supportable claims/);
+  await assert.rejects(tryGenerateGroundedSynthesis(makeInput(), { call: rateClaimCall.call }), error =>
+    error instanceof GroundedSynthesisClaimRejectionError &&
+    error.code === 'NO_SUPPORTABLE_CLAIMS' &&
+    error.rejectionCodes.includes('NUMERIC_SUPPORT_MISSING'),
+  'an unsupported numeric assertion reports a sanitized evidence-rejection code');
   assert.equal(rateClaimCall.calls.length, 1, 'an unsupported statutory rate is rejected by deterministic source-provenance checks');
 }
 

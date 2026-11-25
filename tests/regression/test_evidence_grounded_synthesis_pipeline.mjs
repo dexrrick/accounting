@@ -644,8 +644,16 @@ try {
     providerStages.length = 0;
     supportFailure = failure === 'verification-error';
     rejectSupport = failure === 'all-claims-rejected';
-    const failed = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory);
-    assert.ok(failed.advisoryFailureStatus, `${failure} is reported as an advisory failure`);
+    const outcomes = [];
+    const failed = await processAccountingQuery(mixedQuery, oldShareScenario, 'SFRS_I', provider, 'unused', conflictingHistory,
+      undefined, { onProcessingOutcome: outcome => outcomes.push(outcome) });
+    if (supportFailure) {
+      assert.ok(failed.advisoryFailureStatus, 'the verification service error is reported as a provider failure');
+      assert.equal(outcomes.at(-1)?.rejectionReason, 'SYNTHESIS_PROVIDER_FAILURE');
+    } else {
+      assert.equal(failed.advisoryFailureStatus, undefined, 'unsupported verdicts do not report provider failure');
+      assert.equal(outcomes.at(-1)?.rejectionReason, 'EVIDENCE_CLAIMS_REJECTED');
+    }
     assert.equal(failed.displayFullAnswer, true, `${failure} exposes the safe fallback in full`);
     assert.doesNotMatch(failed.messageText, /office-expense description alone does not establish/,
       `${failure} does not display rejected statutory prose`);
@@ -741,9 +749,10 @@ try {
     const accountingOnlyResult = await processAccountingQuery(accountingOnlyQuery, null, 'SFRS_I', provider, 'unused', [], undefined, {
       onGroundedContext: value => { accountingOnlyClassification = value.classification; }
     });
-    assert.equal(accountingOnlyResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
-      `an unsolicited statutory claim is quarantined for an accounting-only request: ${claimText}`);
-    assert.match(accountingOnlyResult.messageText, /Statutory evidence unresolved/);
+    assert.notEqual(accountingOnlyResult.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+      `the journal-only answer remains available after removing an unsolicited statutory claim: ${claimText}`);
+    assert.match(accountingOnlyResult.messageText, /expense is recognized when incurred/);
+    assert.doesNotMatch(accountingOnlyResult.messageText, /Statutory evidence unresolved/i);
     assert.ok(!accountingOnlyResult.messageText.includes(claimText), 'unsupported statutory prose is removed');
     assert.ok(providerStages.includes('core-generation'), 'the accounting-only request reaches the provider');
     assert.equal(accountingOnlyClassification?.primaryDomain, 'ACCOUNTING');
@@ -828,7 +837,7 @@ try {
   accountingOnlyMode = false;
 
   const motorCarQuery = 'Our GST-registered Singapore company bought a private motor car for business use. We are not a motor dealer or driving school. Can we recover the input GST, and what restrictions or exceptions should we check? I only need advice, not a journal.';
-  const motorCarList = readFileSync(new URL('../fixtures/iras-motor-car-qualified-list.txt', import.meta.url), 'utf8').trim();
+  const motorCarList = readFileSync(new URL('../fixtures/iras-motor-car-qualified-list.txt', import.meta.url), 'utf8').replace(/\r\n/g, '\n').trim();
   const motorCarUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/common-scenarios---do-i-claim-gst/Motor-Vehicles-Expenses';
   const irasConditionsUrl = 'https://www.iras.gov.sg/taxes/goods-services-tax-(gst)/claiming-gst-(input-tax)/conditions-for-claiming-input-tax';
   const motorCarEligibilityIssue = {

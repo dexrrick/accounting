@@ -17,6 +17,53 @@ const initial = await parseAccountingQuery(initialQuery);
 assert.equal(initial.scenarioType, 'PAYROLL_CPF_SALARY');
 assert.equal(initial.amount, 60000);
 
+const loanProposal={
+  id:'uncommitted-intercompany-loan',transactionId:'loan-proposal',eventDate:'24/11/2026',title:'Intercompany loan advance',
+  summary:'Proposed loan advance',lines:[
+    {id:'receivable',accountCode:'1300',accountName:'Amount Due from Subsidiary B',category:'ASSET',debit:200,credit:0,lineExplanation:''},
+    {id:'bank',accountCode:'1000',accountName:'Bank',category:'ASSET',debit:0,credit:200,lineExplanation:''}
+  ],totalDebit:200,totalCredit:200,isBalanced:true,citations:[],rationalePoints:[],authorityStatus:'AI_PROPOSED'
+};
+const conditionalLoanProposal={...loanProposal,id:'conditional-loan',authorityStatus:'CONDITIONAL'};
+const emptyCommitContext=extractAccountingContext({
+  functionalCurrency:'SGD',transactionCurrency:'SGD',committedDirectGroups:[],
+  directGroups:[loanProposal],actualEvents:[]
+});
+assert.deepEqual(emptyCommitContext.priorJournals,[],
+  'an explicit empty committed journal list is authoritative over an uncommitted proposal');
+assert.deepEqual(emptyCommitContext.actualEvents,[]);
+assert.deepEqual(emptyCommitContext.outstandingBalances,[],
+  'an uncommitted proposal cannot create a receivable balance');
+const proposalOnlyContext=extractAccountingContext({
+  functionalCurrency:'SGD',transactionCurrency:'SGD',directGroups:[loanProposal,conditionalLoanProposal]
+});
+assert.deepEqual(proposalOnlyContext.priorJournals,[],
+  'legacy direct-group fallback excludes both AI-proposed and conditional journals');
+assert.deepEqual(proposalOnlyContext.actualEvents,[]);
+for (const legacyGroup of [
+  {...loanProposal,id:'deterministic-legacy',authorityStatus:'DETERMINISTIC'},
+  {...loanProposal,id:'statusless-legacy',authorityStatus:undefined}
+]) {
+  const legacyContext=extractAccountingContext({functionalCurrency:'SGD',transactionCurrency:'SGD',directGroups:[legacyGroup]});
+  assert.equal(legacyContext.priorJournals.length,1,
+    'legacy deterministic and status-less journals remain readable when no commit list exists');
+  assert.equal(legacyContext.actualEvents.length,1);
+  assert.equal(legacyContext.outstandingBalances[0]?.remainingAmount,200);
+}
+const explicitLoanEvent={
+  id:'committed-loan-event',transactionId:'committed-loan',type:'initial_transaction',eventDate:'24/11/2026',
+  amount:200,currency:'SGD',description:'Explicitly committed intercompany loan',journalLines:loanProposal.lines,
+  affectedAccounts:loanProposal.lines.map(line=>line.accountName),isHypothetical:false
+};
+const explicitEventContext=extractAccountingContext({
+  functionalCurrency:'SGD',transactionCurrency:'SGD',committedDirectGroups:[],directGroups:[loanProposal],
+  actualEvents:[explicitLoanEvent]
+});
+assert.deepEqual(explicitEventContext.priorJournals,[]);
+assert.deepEqual(explicitEventContext.actualEvents,[explicitLoanEvent],
+  'valid explicit actual events remain authoritative even beside an uncommitted proposal');
+assert.equal(explicitEventContext.outstandingBalances[0]?.remainingAmount,200);
+
 const understanding = defaultTransactionUnderstandingService.understandTransactionSync(
   resignationQuery, 'SGD', 'SG', extractAccountingContext(initial)
 );

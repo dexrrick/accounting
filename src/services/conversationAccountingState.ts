@@ -20,6 +20,11 @@ import { isMeasurementBasisApplicable } from '../engine/projectionBuilder';
 
 export type { TargetResolutionCriteria, EquityMeasurementBasis, UnderlyingTransactionState };
 
+/** A legacy direct-group snapshot may be treated as committed only when it was not a proposal. */
+export function isLegacyCommittedJournalGroup(group: JournalEntryGroup): boolean {
+  return !group.isHypothetical && group.authorityStatus !== 'AI_PROPOSED' && group.authorityStatus !== 'CONDITIONAL';
+}
+
 /**
  * Deterministically generates a standardized unique balance key.
  * Format: `${accountCode || normalize(accountName)}_${counterpartyRole || 'none'}_${transactionId || 'default'}`
@@ -345,9 +350,9 @@ export function extractAccountingContext(
   _chatHistory?: any[]
 ): ConversationAccountingContext {
   // Committed direct groups (excluding any hypothetical projections)
-  const priorJournals: JournalEntryGroup[] = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
-    ? [...currentScenario.committedDirectGroups]
-    : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+  const priorJournals: JournalEntryGroup[] = currentScenario?.committedDirectGroups !== undefined
+    ? currentScenario.committedDirectGroups.filter(isLegacyCommittedJournalGroup)
+    : (currentScenario?.directGroups ? currentScenario.directGroups.filter(isLegacyCommittedJournalGroup) : []);
 
   // Determine base actual events (source of truth - strictly committed history)
   let actualEvents: AccountingEvent[] = [];

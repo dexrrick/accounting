@@ -21,7 +21,7 @@ import { computeVerifiedStandardGst } from '../engine/verifiedGstCalculation';
 import { evaluateIrasApplications } from '../engine/irasApplicationEvaluator';
 import { hasVerifiedSourceUrlProvenance } from '../standards/approvedSourceRegistry';
 import { createIrasEvidencePresentation } from '../utils/irasEvidencePresentation';
-import { getGstMotorCarInputTaxExceptionKinds, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
+import { completeGstRegistrationExceptionQuote, getGstMotorCarInputTaxExceptionKinds, GST_REGISTRATION_TURNOVER_TOPIC_IDS, supportGeneralIrasRuleConcept } from '../retrieval/irasRuleConceptSupport';
 import { matchesRequestedQuestionConcept } from '../retrieval/evidenceQualityGate';
 import {
   getRequestedQuestionConcepts,
@@ -754,7 +754,21 @@ function selectEvidenceOnlyQuotes(
           requestedSupportTopicIds: selectedTopicIds.filter(topicId => recordHasRequestedTopicAssociation(record, topicId)) });
       }
     }
-    const topicLimit = localIntent ? 5 : bonusTimingRequested
+    const gstRegistrationTurnoverRequested = selectedTopicIds.some(topicId =>
+      GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topicId));
+    if (gstRegistrationTurnoverRequested && selectedTopicIds.some(topicId =>
+      GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topicId) && recordHasRequestedTopicAssociation(record, topicId))) {
+      const exceptionQuote = completeGstRegistrationExceptionQuote(record.sourceText);
+      if (exceptionQuote) candidates.push({
+        text: exceptionQuote, quote: exceptionQuote, recordId: record.id, kind: 'RULE', score: 200,
+        recordOrder, paragraphOrder: sourceBlocks.findIndex(block => /^you will not be required to register for gst if:\s*$/i.test(block)),
+        sourceUrl: record.canonicalSourceUrl || record.officialSourceUrl || '', topicIds: record.tags || [],
+        requestedSupportConceptIds: [],
+        requestedSupportTopicIds: selectedTopicIds.filter(topicId =>
+          GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topicId) && recordHasRequestedTopicAssociation(record, topicId))
+      });
+    }
+    const topicLimit = gstRegistrationTurnoverRequested ? 10 : localIntent ? 5 : bonusTimingRequested
       ? record.tags.includes('iras-ais-employment-income') ? 3 : 6
       : 5;
     selected.push(...candidates.sort((a, b) => compareCandidates(a, b)).slice(0, topicLimit));
@@ -763,9 +777,13 @@ function selectEvidenceOnlyQuotes(
   // Cover each registered concept first with a passage from its own admitted
   // topic association, then fill a small remaining budget by relevance. Keep
   // per-source and total bounds so fallback cannot turn into a page dump.
-  const maximumQuotes = localIntent ? Math.min(8, Math.max(5, selectedTopicIds.length + 2))
-    : bonusTimingRequested ? 9 : Math.min(8, Math.max(5, selectedTopicIds.length + 2));
-  const maximumPerSource = localIntent ? 3 : bonusTimingRequested ? 6 : 3;
+  const gstRegistrationTurnoverRequested = selectedTopicIds.some(topicId =>
+    GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topicId));
+  const maximumQuotes = gstRegistrationTurnoverRequested
+    ? Math.min(8, Math.max(8, selectedTopicIds.length + 5))
+    : localIntent ? Math.min(8, Math.max(5, selectedTopicIds.length + 2))
+      : bonusTimingRequested ? 9 : Math.min(8, Math.max(5, selectedTopicIds.length + 2));
+  const maximumPerSource = gstRegistrationTurnoverRequested ? 7 : localIntent ? 3 : bonusTimingRequested ? 6 : 3;
   const chosen: typeof selected = [];
   const sourceCounts = new Map<string, number>();
   const addCandidate = (candidate: typeof selected[number]): void => {
@@ -933,7 +951,8 @@ export function renderIrasEvidenceResponse(
   parsedValue: unknown, context: GroundedReasoningContext, query: string,
   deterministicScenario: AccountingScenarioState | null = null,
   standard: AccountingStandard = 'SFRS_I',
-  mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' = 'PROVIDER'
+  mode: 'PROVIDER' | 'LOCAL' | 'BLOCKED' | 'PROVIDER_FAILURE' | 'PROVIDER_NO_CLAIMS' |
+    'PROVIDER_CLAIMS_REJECTED' = 'PROVIDER'
 ) {
   const parsed = !isMalformedAIJsonFallback(parsedValue) && parsedValue && typeof parsedValue === 'object'
     ? parsedValue as Record<string, unknown>
@@ -977,7 +996,8 @@ export function renderIrasEvidenceResponse(
   const issueLocalSourceClaims = validatedIssueLocalGeneralExplainRule
     ? selectEvidenceOnlyQuotes(context, query, issueLocalTopics, true, true)
     : [];
-  const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' || mode === 'PROVIDER_NO_CLAIMS'
+  const inputClaims = mode === 'LOCAL' || mode === 'BLOCKED' || mode === 'PROVIDER_FAILURE' ||
+      mode === 'PROVIDER_NO_CLAIMS' || mode === 'PROVIDER_CLAIMS_REJECTED'
     ? selectEvidenceOnlyQuotes(context, query, validatedIssueLocalGeneralExplainRule ? issueLocalTopics : context.classification.topicIds,
       true, validatedIssueLocalGeneralExplainRule)
     : validatedIssueLocalGeneralExplainRule ? issueLocalSourceClaims
@@ -1099,7 +1119,8 @@ export function renderIrasEvidenceResponse(
   const { treatment, groups } = accountingGroups(parsed, context, query, deterministicScenario, standard);
   const providerStatus: 'SUCCEEDED' | 'FAILED' | 'NOT_ATTEMPTED' =
     mode === 'PROVIDER_FAILURE' ? 'FAILED'
-      : mode === 'PROVIDER' || mode === 'PROVIDER_NO_CLAIMS' ? 'SUCCEEDED' : 'NOT_ATTEMPTED';
+      : mode === 'PROVIDER' || mode === 'PROVIDER_NO_CLAIMS' || mode === 'PROVIDER_CLAIMS_REJECTED'
+        ? 'SUCCEEDED' : 'NOT_ATTEMPTED';
   const lines: string[] = [];
   if (calculation) {
     const record = quality.eligibleRecords.find(item => item.id === calculation.sourceRecordId)!;
@@ -1118,7 +1139,8 @@ export function renderIrasEvidenceResponse(
   }
   if (mode === 'PROVIDER_FAILURE') lines.push('The provider could not complete the answer. The available source evidence is shown below.');
   if (mode === 'PROVIDER_NO_CLAIMS') lines.push('The provider returned no verifiable tax claims. Only complete source paragraphs that passed claim verification are shown below.');
-  if (answerPath === 'PROVIDER_CLAIMS_REJECTED') lines.push('The provider claims did not pass verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
+  if (mode === 'PROVIDER_CLAIMS_REJECTED') lines.push('The generated tax claims did not pass evidence verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
+  if (answerPath === 'PROVIDER_CLAIMS_REJECTED' && mode !== 'PROVIDER_CLAIMS_REJECTED') lines.push('The provider claims did not pass verification. Independently selected source quotations are shown below if they also pass the evidence checks.');
   if (presentationQuality.status === 'INSUFFICIENT' || presentationQuality.uncoveredTopicIds.length > 0 ||
       (validatedGeneralRuleForRendering &&
         ((quality.status !== 'LOCAL_SUFFICIENT' && quality.status !== 'RETRIEVED_SUFFICIENT') ||

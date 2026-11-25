@@ -13,14 +13,35 @@ import type { AuthoritativeSourceRecord } from '../standards/unifiedSourceModel'
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { classifyQuestion } from '../classification/questionClassifier';
+import { removeNegatedJournalDirectives } from '../utils/journalRequestIntent';
 import {
   extractAccountingContext,
   calculateAccountingDelta,
   validateAccountingStateTransition,
-  commitAccountingEvent
+  commitAccountingEvent,
+  isLegacyCommittedJournalGroup
 } from '../services/conversationAccountingState';
 import { buildAccountingMeasurementProjection } from './projectionBuilder';
 import { hasSemanticRoutingConflict } from '../services/semanticScenarioResolver';
+
+function containsUnrequestedStatutoryClaim(text: string): boolean {
+  const classification = classifyQuestion(text);
+  return classification.taxAnalysisRequired;
+}
+
+function sanitizeAccountingOnlyText(text: string): string {
+  return text.split(/\r?\n/).map(line =>
+    line.split(/(?<=[.!?])\s+/).filter(sentence => !containsUnrequestedStatutoryClaim(sentence)).join(' ')
+  ).filter(line => line.trim()).join('\n');
+}
+
+function isPlainModelAccountLabel(value: string): boolean {
+  const label = value.trim();
+  return label.length > 0 && label.length <= 80 &&
+    /^[A-Za-z0-9][A-Za-z0-9 &/().,'-]*$/.test(label) &&
+    !/[`*_#<>\[\]]/.test(label);
+}
 
 function buildResponseGroundingEvidenceTrace(context: GroundedReasoningContext): GroundingEvidenceTrace[] {
   const records = [...context.primaryEvidence, ...context.officialGuidance, ...context.curatedSummaries];
@@ -288,6 +309,9 @@ export function assembleDeterministicResponse(
 
   const stdLabel = standard === 'SFRS_I' ? 'SFRS(I)' : 'IFRS';
   const queryMode = groundedContext.classification.intent;
+  if (!groundedContext.classification.journalEntryRequired && removeNegatedJournalDirectives(userInput) !== userInput) {
+    compact = { ...compact, requiredAccounts: undefined, directGroups: undefined };
+  }
   const retrievedEvidenceScope: AuthoritativeSourceRecord[] = [
     ...groundedContext.primaryEvidence,
     ...groundedContext.officialGuidance,
@@ -297,7 +321,8 @@ export function assembleDeterministicResponse(
   // 1. Determine Authority Status & Fixture Recognition
   const isRecognizedDeterministicFixture = Boolean(
     deterministicScenario &&
-    deterministicScenario.scenarioType !== 'UNRECOGNIZED'
+    deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
+    (deterministicScenario.scenarioType !== 'SINGAPORE_STATUTORY_ADVISORY' || queryMode === 'STATUTORY_ADVISORY')
   );
 
   const isHypotheticalQuery = Boolean(
@@ -308,8 +333,9 @@ export function assembleDeterministicResponse(
   const semanticRoutingConflict = hasSemanticRoutingConflict(deterministicScenario, groundedContext.semanticUnderstanding);
   const hasAuthoritativeDeterministicEntries = Boolean(
     isRecognizedDeterministicFixture &&
-    deterministicScenario!.directGroups &&
-    deterministicScenario!.directGroups.length > 0 &&
+    (queryMode === 'STATUTORY_ADVISORY'
+      ? deterministicScenario!.directGroups?.length
+      : deterministicScenario!.directGroups?.some(group => group.lines?.length > 0)) &&
     !isHypotheticalQuery &&
     !semanticRoutingConflict
   );
@@ -374,6 +400,13 @@ export function assembleDeterministicResponse(
     });
   }
 
+  const isAccountingOnly = groundedContext.classification.intent === 'TRANSACTION' &&
+    !groundedContext.classification.taxAnalysisRequired &&
+    !groundedContext.classification.regulatoryAnalysisRequired &&
+    groundedContext.classification.authorities.every(authority =>
+      authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'UNKNOWN'
+    );
+
   // 3. Assemble Direct Groups & Journal Entries
   let directGroups: JournalEntryGroup[] = [];
   let invalidJournalProposalReason: string | undefined;
@@ -386,15 +419,31 @@ export function assembleDeterministicResponse(
     ? (userInputOrScenario as AccountingScenarioState)
     : (typeof currentScenarioOrInput === 'object' && currentScenarioOrInput !== null ? (currentScenarioOrInput as AccountingScenarioState) : null);
 
-  let committedDirectGroups: JournalEntryGroup[] | undefined = currentScenario?.committedDirectGroups;
+  const candidateGroups = [...(currentScenario?.directGroups || []), ...(currentScenario?.committedDirectGroups || [])];
+  const committedTransactionIds = new Set(candidateGroups.filter(isLegacyCommittedJournalGroup)
+    .map(group => group.transactionId).filter((id): id is string => Boolean(id)));
+  const uncommittedGroupKeys = new Set(candidateGroups.filter(group => !isLegacyCommittedJournalGroup(group))
+    .flatMap(group => [group.id, ...(group.transactionId && !committedTransactionIds.has(group.transactionId) ? [group.transactionId] : [])])
+    .filter((id): id is string => Boolean(id)));
+  const withoutUncommittedEvents = <T extends { id: string; transactionId?: string }>(events?: T[]) =>
+    events?.filter(event => !uncommittedGroupKeys.has(event.id) &&
+      !(event.transactionId && uncommittedGroupKeys.has(event.transactionId)));
+  const accountingStateSource = currentScenario ? {
+    ...currentScenario,
+    committedDirectGroups: currentScenario.committedDirectGroups?.filter(isLegacyCommittedJournalGroup),
+    actualEvents: withoutUncommittedEvents(currentScenario.actualEvents),
+    accountingEvents: withoutUncommittedEvents(currentScenario.accountingEvents)
+  } : currentScenario;
+  let committedDirectGroups: JournalEntryGroup[] | undefined = accountingStateSource?.committedDirectGroups;
   let projectedGroups: JournalEntryGroup[] | undefined = undefined;
 
-  const priorCommittedGroups = (currentScenario?.committedDirectGroups && currentScenario.committedDirectGroups.length > 0)
-    ? [...currentScenario.committedDirectGroups]
-    : (currentScenario?.directGroups ? currentScenario.directGroups.filter(g => !g.isHypothetical) : []);
+  const priorJournalSource = accountingStateSource?.committedDirectGroups !== undefined
+    ? accountingStateSource.committedDirectGroups
+    : accountingStateSource?.directGroups;
+  const priorCommittedGroups = priorJournalSource?.filter(isLegacyCommittedJournalGroup) || [];
   const settlementCurrency = groundedContext.semanticUnderstanding?.currency?.value || currentScenario?.functionalCurrency || 'SGD';
   const settlementDelta = isSettlementFollowUp
-    ? calculateAccountingDelta(extractAccountingContext(currentScenario), followUp!, settlementCurrency)
+    ? calculateAccountingDelta(extractAccountingContext(accountingStateSource), followUp!, settlementCurrency)
     : null;
 
   // Never let a model fill a settlement gap with a generic journal.  A
@@ -437,7 +486,7 @@ export function assembleDeterministicResponse(
       ...grp,
       authorityStatus: grp.authorityStatus || authorityStatus
     }));
-    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
+    committedDirectGroups = directGroups.filter(isLegacyCommittedJournalGroup);
   } else if (
     followUp &&
     (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')
@@ -461,7 +510,7 @@ export function assembleDeterministicResponse(
         isBalanced: totalDebit > 0 && Math.abs(totalDebit - totalCredit) < 0.01,
         citations: verifiedCitations,
         rationalePoints: [delta.explanation],
-        authorityStatus: 'AI_PROPOSED'
+        authorityStatus: isHypo ? 'AI_PROPOSED' : 'DETERMINISTIC'
       };
 
       if (isHypo) {
@@ -480,7 +529,7 @@ export function assembleDeterministicResponse(
      followUp.eventType === 'reclassification' ||
      followUp.eventType === 'policy_election')
   ) {
-    const convContext = extractAccountingContext(currentScenario);
+    const convContext = extractAccountingContext(accountingStateSource);
     const targetBasis = followUp.targetMeasurementBasis || 'UNKNOWN';
     const proj = buildAccountingMeasurementProjection({
       committedContext: convContext,
@@ -558,25 +607,25 @@ export function assembleDeterministicResponse(
       const lines: JournalLine[] = compact.requiredAccounts.map((acc, aIdx) => ({
         id: `line-ai-${aIdx + 1}`,
         accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EQUITY' ? '3000' : acc.category === 'EXPENSE' ? '5000' : '4000',
-        accountName: acc.accountName,
+        accountName: isPlainModelAccountLabel(acc.accountName) ? acc.accountName.trim() : 'Unverified proposed account',
         category: acc.category,
         debit: 0,
         credit: 0,
-        lineExplanation: `${acc.rationale || `Recognition of ${acc.accountName}`} — [Valuation pending determination]`
+        lineExplanation: `${isAccountingOnly ? sanitizeAccountingOnlyText(acc.rationale || '') : acc.rationale || `Recognition of ${acc.accountName}`} — [Valuation pending determination]`
       }));
 
       directGroups = [{
         id: 'grp-ai-proposed-unvalued-1',
         eventDate: formatSingaporeDate(new Date()),
-        title: compact.transactionNature || 'AI-Proposed Double Entry (Pending Valuation)',
-        summary: compact.treatment || 'Illustrative journal proposal with uncalculated monetary amounts',
+        title: isAccountingOnly ? sanitizeAccountingOnlyText(compact.transactionNature || '') || 'AI-Proposed Double Entry (Pending Valuation)' : compact.transactionNature || 'AI-Proposed Double Entry (Pending Valuation)',
+        summary: isAccountingOnly ? sanitizeAccountingOnlyText(compact.treatment || '') || 'Illustrative journal proposal with uncalculated monetary amounts' : compact.treatment || 'Illustrative journal proposal with uncalculated monetary amounts',
         lines,
         totalDebit: 0,
         totalCredit: 0,
         isBalanced: false, // Cannot be balanced without valuations
         citations: verifiedCitations,
         rationalePoints: [
-          compact.treatment || 'Accounting treatment proposed by AI reasoning',
+          isAccountingOnly ? sanitizeAccountingOnlyText(compact.treatment || '') : compact.treatment || 'Accounting treatment proposed by AI reasoning',
           '⚠️ AMOUNTS PENDING: Transaction amounts/fair values were not specified in query. Journal structure is proposed by AI; monetary amounts must be determined before posting.',
           'Authority Status: CONDITIONAL (Subject to independent valuation and audit review)'
         ],
@@ -591,13 +640,13 @@ export function assembleDeterministicResponse(
         return {
           id: `line-ai-${aIdx + 1}`,
           accountCode: acc.category === 'ASSET' ? '1500' : acc.category === 'LIABILITY' ? '2000' : acc.category === 'EQUITY' ? '3000' : acc.category === 'EXPENSE' ? '5000' : '4000',
-          accountName: acc.accountName,
+          accountName: isPlainModelAccountLabel(acc.accountName) ? acc.accountName.trim() : 'Unverified proposed account',
           category: acc.category,
           debit: isDebit ? amt : 0,
           credit: !isDebit ? amt : 0,
           lineExplanation: amt > 0
-            ? (acc.rationale || `Recognition of ${acc.accountName}`)
-            : `${acc.accountName}: Amount pending individual allocation breakdown (aggregate ${displayCurrency} ${knownAmount!.toLocaleString()})`
+            ? (isAccountingOnly ? sanitizeAccountingOnlyText(acc.rationale || '') : acc.rationale) || `Recognition of ${acc.accountName}`
+            : `${isPlainModelAccountLabel(acc.accountName) ? acc.accountName.trim() : 'Unverified proposed account'}: Amount pending individual allocation breakdown (aggregate ${displayCurrency} ${knownAmount!.toLocaleString()})`
         };
       });
 
@@ -608,15 +657,15 @@ export function assembleDeterministicResponse(
       directGroups = [{
         id: 'grp-ai-proposed-1',
         eventDate: formatSingaporeDate(new Date()),
-        title: compact.transactionNature || 'AI-Proposed Double Entry',
-        summary: compact.treatment || 'Illustrative journal proposal',
+        title: isAccountingOnly ? sanitizeAccountingOnlyText(compact.transactionNature || '') || 'AI-Proposed Double Entry' : compact.transactionNature || 'AI-Proposed Double Entry',
+        summary: isAccountingOnly ? sanitizeAccountingOnlyText(compact.treatment || '') || 'Illustrative journal proposal' : compact.treatment || 'Illustrative journal proposal',
         lines,
         totalDebit,
         totalCredit,
         isBalanced,
         citations: verifiedCitations,
         rationalePoints: [
-          compact.treatment || 'Accounting treatment proposed by AI reasoning',
+          isAccountingOnly ? sanitizeAccountingOnlyText(compact.treatment || '') : compact.treatment || 'Accounting treatment proposed by AI reasoning',
           `Authority Status: ${authorityStatus} (Proposed by AI)`
         ],
         authorityStatus: authorityStatus === 'DETERMINISTIC' ? 'AI_PROPOSED' : authorityStatus
@@ -630,7 +679,7 @@ export function assembleDeterministicResponse(
 
   // Guardrail A & C Enforcement: Ensure follow-up settlements never credit Share Capital again
   if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
-    const convContext = extractAccountingContext(currentScenario);
+    const convContext = extractAccountingContext(accountingStateSource);
     for (const grp of directGroups) {
       const validation = validateAccountingStateTransition(convContext, grp.lines, followUp.eventType);
       if (!validation.isValid && validation.violations.some(v => v.includes('GUARDRAIL_VIOLATION_DUPLICATE_EQUITY'))) {
@@ -647,8 +696,6 @@ export function assembleDeterministicResponse(
   }
 
   // 4. Assemble Statutory Advisories
-  const isAccountingOnly = groundedContext.classification.primaryDomain === 'ACCOUNTING' &&
-    !groundedContext.classification.taxAnalysisRequired;
   const suppliedAdvisories: StatutoryAdvisoryInfo[] = [
     ...(deterministicScenario?.statutoryAdvisory || []),
     ...(compact.statutoryAdvisory || [])
@@ -786,7 +833,9 @@ export function assembleDeterministicResponse(
   }
 
   if (compact.keyParameters && compact.keyParameters.length > 0) {
-    keyParameters.push(...compact.keyParameters);
+    keyParameters.push(...compact.keyParameters.filter((fact: { label?: unknown; value?: unknown }) =>
+      !isAccountingOnly || !containsUnrequestedStatutoryClaim(`${String(fact.label || '')}: ${String(fact.value || '')}`)
+    ));
   }
 
   if (keyParameters.length === 0) {
@@ -829,15 +878,15 @@ export function assembleDeterministicResponse(
       ? { isGstClaimable: undefined }
       : {})
   }));
-  const selectedAccountingTreatmentSummary = compact.treatment ||
+  const selectedAccountingTreatmentSummary = (isAccountingOnly ? sanitizeAccountingOnlyText(compact.treatment || '') : compact.treatment) ||
     (isRecognizedDeterministicFixture ? deterministicScenario?.accountingTreatmentSummary : undefined);
-  const selectedSingaporeTaxImpact = compact.singaporeTaxImpact ||
+  const selectedSingaporeTaxImpact = isAccountingOnly ? undefined : compact.singaporeTaxImpact ||
     (isRecognizedDeterministicFixture ? deterministicScenario?.singaporeTaxTreatmentSummary : undefined);
-  const selectedRegulatoryMandatesSummary = isRecognizedDeterministicFixture
+  const selectedRegulatoryMandatesSummary = !isAccountingOnly && isRecognizedDeterministicFixture
     ? deterministicScenario?.regulatoryMandatesSummary
     : undefined;
   const guardedAccountingTreatmentSummary = typeof selectedAccountingTreatmentSummary === 'string'
-    ? guardUnconditionalMealInputTaxClaim(selectedAccountingTreatmentSummary, userInput, groundedContext, missingFacts)
+    ? guardUnconditionalMealInputTaxClaim(isAccountingOnly ? sanitizeAccountingOnlyText(selectedAccountingTreatmentSummary) : selectedAccountingTreatmentSummary, userInput, groundedContext, missingFacts)
     : selectedAccountingTreatmentSummary;
   const guardedSingaporeTaxImpact = typeof selectedSingaporeTaxImpact === 'string'
     ? guardUnconditionalMealInputTaxClaim(selectedSingaporeTaxImpact, userInput, groundedContext, missingFacts)
@@ -857,7 +906,7 @@ export function assembleDeterministicResponse(
   uncertaintyDisclaimer = guardUnconditionalMealInputTaxClaim(uncertaintyDisclaimer, userInput, groundedContext, missingFacts);
 
   // 8. Deterministic Markdown Response Construction (Eliminates LLM markdown token bloat!)
-  let messageText = compact.messageText || '';
+  let messageText = isAccountingOnly ? sanitizeAccountingOnlyText(compact.messageText || '') : compact.messageText || '';
 
   if (!messageText || messageText.length < 30) {
     const isAccountingOrJournal = Boolean(
@@ -945,12 +994,12 @@ export function assembleDeterministicResponse(
         messageText += `#### 2. Technical Rationale & Analysis\n${compact.reasoning}\n\n`;
       }
 
-      if (compact.singaporeTaxImpact) {
-        messageText += `#### 3. Singapore Statutory & Tax Implications\n${compact.singaporeTaxImpact}\n\n`;
+      if (guardedSingaporeTaxImpact) {
+        messageText += `#### 3. Singapore Statutory & Tax Implications\n${guardedSingaporeTaxImpact}\n\n`;
       }
 
       if (keyParameters.length > 0) {
-        messageText += `---\n\n#### 4. Key Statutory & Computational Facts\n`;
+        messageText += `---\n\n#### 4. ${isAccountingOnly ? 'Key Accounting & Transaction Facts' : 'Key Statutory & Computational Facts'}\n`;
         for (const p of keyParameters) {
           messageText += `* **${p.label}**: ${p.value}\n`;
         }
@@ -1000,13 +1049,13 @@ export function assembleDeterministicResponse(
     ? 'CONDITIONAL'
     : authorityStatus;
 
-  let finalActualEvents = currentScenario?.actualEvents;
-  let finalAccountingEvents = currentScenario?.accountingEvents;
+  let finalActualEvents = accountingStateSource?.actualEvents;
+  let finalAccountingEvents = accountingStateSource?.accountingEvents;
   let isHypoScenario = Boolean(currentScenario?.isHypothetical);
   let resolvedAmount: number | undefined = undefined;
 
   if (followUp && (followUp.eventType === 'settlement' || followUp.eventType === 'partial_settlement')) {
-    const convContext = extractAccountingContext(currentScenario);
+    const convContext = extractAccountingContext(accountingStateSource);
     const delta = settlementDelta;
     if (delta && delta.resultingAccountingEvent) {
       isHypoScenario = Boolean(delta.isHypothetical);
@@ -1016,10 +1065,17 @@ export function assembleDeterministicResponse(
       finalActualEvents = isHypoScenario
         ? priorActual
         : commitAccountingEvent(priorActual, delta.resultingAccountingEvent);
-      finalAccountingEvents = [...(currentScenario?.accountingEvents || priorActual), delta.resultingAccountingEvent];
+      finalAccountingEvents = [...(accountingStateSource?.accountingEvents || priorActual), delta.resultingAccountingEvent];
     }
   } else if (!finalActualEvents && directGroups.length > 0) {
-    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
+    // A generated proposal or conditional journal remains visible for review,
+    // but must not become committed accounting history by response assembly.
+    // Leave status-less legacy deterministic groups intact.
+    const isProjectionFollowUp = followUp &&
+      (followUp.eventType === 'hypothetical_branch' || followUp.eventType === 'reclassification' ||
+       followUp.eventType === 'policy_election');
+    committedDirectGroups = (isProjectionFollowUp ? priorCommittedGroups : directGroups)
+      .filter(isLegacyCommittedJournalGroup);
     finalActualEvents = committedDirectGroups.map((grp, idx) => ({
       id: grp.id || `evt-${idx + 1}`,
       transactionId: grp.transactionId || grp.id || `tx-${idx + 1}`,
@@ -1035,7 +1091,7 @@ export function assembleDeterministicResponse(
     }));
     finalAccountingEvents = [...(finalActualEvents ?? [])];
   } else if (hasAuthoritativeDeterministicEntries && !committedDirectGroups) {
-    committedDirectGroups = directGroups.filter(g => !g.isHypothetical);
+    committedDirectGroups = directGroups.filter(isLegacyCommittedJournalGroup);
   }
 
   if (resolvedAmount === undefined) {
@@ -1069,7 +1125,7 @@ export function assembleDeterministicResponse(
     }
   }
 
-  const convContextForState = extractAccountingContext(currentScenario);
+  const convContextForState = extractAccountingContext(accountingStateSource);
   const resolvedActualBasis = currentScenario?.actualMeasurementBasis ||
     deterministicScenario?.actualMeasurementBasis ||
     convContextForState.underlyingTransaction?.actualMeasurementBasis ||

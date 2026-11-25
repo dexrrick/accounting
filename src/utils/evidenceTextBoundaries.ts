@@ -155,6 +155,7 @@ export function visibleEvidenceListSpan(
     : introductionIsListItem && !isListItemIntroduction ? introIndex - 1 : introIndex;
   let itemCount = tableContinuation ? 1 : 0;
   let nextIndex = tableContinuation ? firstItemIndex + 1 : firstItemIndex;
+  let acceptsBulletScaffolding = firstItemKind === 'BULLET';
   while (nextIndex < blocks.length) {
     if (tableContinuation && isStructuralEvidenceDivider(blocks[nextIndex])) {
       nextIndex += 1;
@@ -162,12 +163,15 @@ export function visibleEvidenceListSpan(
     }
     const itemKind = visibleListItemKind(blocks[nextIndex]);
     if (itemKind) {
+      if (itemKind !== 'BULLET') {
+        acceptsBulletScaffolding = !tableContinuation && /[:—–-]$/.test(blocks[nextIndex].trim());
+      }
       listEndIndex = nextIndex;
       itemCount += 1;
       nextIndex += 1;
       continue;
     }
-    if (isVisibleEvidenceListMarker(blocks[nextIndex]) && firstItemKind === 'BULLET') {
+    if (isVisibleEvidenceListMarker(blocks[nextIndex]) && acceptsBulletScaffolding) {
       let nextItemIndex = nextIndex;
       while (nextItemIndex < blocks.length && isVisibleEvidenceListMarker(blocks[nextItemIndex])) nextItemIndex += 1;
       if (nextItemIndex < blocks.length && visibleListItemKind(blocks[nextItemIndex]) === 'BULLET') {
@@ -238,12 +242,23 @@ export function completeVisibleEvidenceListSpan(
     return bulletCount === span.itemCount ? span : undefined;
   }
 
-  if (orderedMarkers.length !== span.itemCount ||
-      listBlocks.some(block => !isStructuralEvidenceDivider(block) &&
-        (isVisibleEvidenceListItem(block) || isVisibleEvidenceListMarker(block) ||
-          (span.tableContinuation && !visibleOrderedListMarker(block) && !orderedMarkerInPipeDelimitedRow(block))))) {
-    return undefined;
+  let nestedBulletCount = 0;
+  let nestedListIntroduced = false;
+  let nestedListPending = false;
+  for (const block of listBlocks) {
+    if (isStructuralEvidenceDivider(block)) continue;
+    if (visibleOrderedListMarker(block) || (span.tableContinuation && orderedMarkerInPipeDelimitedRow(block))) {
+      if (nestedListPending) return undefined;
+      nestedListIntroduced = !span.tableContinuation && /[:—–-]$/.test(block.trim());
+      nestedListPending = nestedListIntroduced;
+    } else if (nestedListIntroduced && isVisibleEvidenceListItem(block)) {
+      nestedBulletCount += 1;
+      nestedListPending = false;
+    } else if (!(nestedListIntroduced && isVisibleEvidenceListMarker(block))) {
+      return undefined;
+    }
   }
+  if (nestedListPending || orderedMarkers.length + nestedBulletCount !== span.itemCount) return undefined;
   const first = orderedMarkers[0];
   if (first.ordinal !== 1 ||
       orderedMarkers.some((marker, index) => marker.kind !== first.kind || marker.ordinal !== index + 1)) {
@@ -251,5 +266,9 @@ export function completeVisibleEvidenceListSpan(
   }
   if (span.tableContinuation) return span;
   const lastListBlock = listBlocks[listBlocks.length - 1];
-  return lastListBlock && hasClearSentenceEnd(lastListBlock) ? span : undefined;
+  // Native nested bullets can end without terminal punctuation. Require a
+  // following source block to establish that the nested run actually ended.
+  const nestedRunClosed = nestedListIntroduced && isVisibleEvidenceListItem(lastListBlock) &&
+    Boolean(blocks[span.listEndIndex + 1]) && !isVisibleEvidenceListMarker(blocks[span.listEndIndex + 1]);
+  return lastListBlock && (hasClearSentenceEnd(lastListBlock) || nestedRunClosed) ? span : undefined;
 }

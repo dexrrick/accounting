@@ -53,6 +53,57 @@ const taxonomyPlan = query => reconcileQuestionUnderstanding(query, classifyQues
   mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER'
 }).issuePlan;
 
+const gstRegistrationQuery = 'Does our company need to register for GST if annual taxable turnover reaches SGD 1.2 million?';
+const gstRegistrationUnderstanding = reconcile(gstRegistrationQuery, {
+  domain: 'IRAS_GST',
+  population: 'COMPANY',
+  primarySubject: 'GST registration based on taxable turnover',
+  concepts: [{ concept: 'compulsory GST registration threshold', role: 'PRIMARY' }],
+  requestedOperation: 'CHECK_ELIGIBILITY',
+  requiresUserSpecificFacts: true,
+  issues: [{
+    subject: 'GST registration based on taxable turnover',
+    population: 'COMPANY',
+    domain: 'IRAS_GST',
+    governingAuthorities: ['IRAS'],
+    contextualAuthorities: [],
+    operation: 'CHECK_ELIGIBILITY',
+    mappedTopicIds: ['gst_compulsory_registration', 'iras-gst-turnover-tests'],
+    evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',
+    confidence: 0.94
+  }]
+});
+assert.deepEqual(gstRegistrationUnderstanding.classification.missingFacts, [],
+  'a GST turnover-threshold question does not request purchase-purpose or invoice facts');
+const registrationAndInputTax = `${gstRegistrationQuery} Can we also claim input tax on our laptop purchases?`;
+const registrationMeaning = gstRegistrationUnderstanding.understanding.interpretation;
+const mixedGstUnderstanding = reconcile(registrationAndInputTax, {
+  ...registrationMeaning,
+  issues: [...registrationMeaning.issues, {
+    ...registrationMeaning.issues[0],
+    subject: 'claim input tax on laptop purchases',
+    mappedTopicIds: ['iras-gst-input-tax']
+  }]
+});
+assert.ok(mixedGstUnderstanding.classification.missingFacts.some(fact => /tax invoice/i.test(fact)),
+  'a separate GST input-tax issue retains its purchase-related clarifications');
+const genericGstPurchaseFact='Nature and business purpose of the purchase or supply, parties’ GST status, and supporting tax invoice where relevant.';
+const registrationWithGenericFact=reconcileQuestionUnderstanding(gstRegistrationQuery,{
+  ...classifyQuestion(gstRegistrationQuery),missingFacts:[genericGstPurchaseFact]
+},semantic({
+  domain:'IRAS_GST',population:'COMPANY',primarySubject:'GST registration based on taxable turnover',
+  concepts:[{concept:'compulsory GST registration threshold',role:'PRIMARY'}],
+  requestedOperation:'CHECK_ELIGIBILITY',requiresUserSpecificFacts:true,
+  issues:[{
+    subject:'GST registration based on taxable turnover',population:'COMPANY',domain:'IRAS_GST',
+    governingAuthorities:['IRAS'],contextualAuthorities:[],operation:'CHECK_ELIGIBILITY',
+    mappedTopicIds:['gst_compulsory_registration','iras-gst-turnover-tests'],
+    evidenceRequirement:'AUTHORITATIVE_SOURCE_AND_CASE_FACTS',confidence:0.94
+  }]
+}));
+assert.deepEqual(registrationWithGenericFact.classification.missingFacts,[],
+  'the mapped registration issue filters an unrelated generic purchase and tax-invoice request');
+
 const cpfRoundedTotalQuery = 'Can payroll deduct the rounded total CPF contribution from the employee and then add an employer share on top?';
 const cpfRoundedTotalPlan = taxonomyPlan(cpfRoundedTotalQuery);
 assert.equal(cpfRoundedTotalPlan.issues.length, 1);

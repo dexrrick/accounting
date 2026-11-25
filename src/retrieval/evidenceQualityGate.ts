@@ -7,7 +7,7 @@ import { defaultTargetDateResolver } from './targetDateResolver';
 import { findRecordEligibilityRejection } from '../verification/claimEvidenceVerifier';
 import { verifySharedDocumentAdmission } from '../standards/sharedDocumentAdmission';
 import { hasUnresolvedSection14NBasisPeriod } from './statutoryDateScope';
-import { supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
+import { completeGstRegistrationExceptionQuote, GST_REGISTRATION_TURNOVER_TOPIC_IDS, supportGeneralIrasRuleConcept } from './irasRuleConceptSupport';
 import { hasStatutoryKnowledgeContradiction, STATUTORY_KNOWLEDGE_POINTERS_20261027B,
   supportStatutoryKnowledgeRule } from './statutoryKnowledge20261027b';
 import type { RequestedQuestionConcept } from '../services/semanticQuestionUnderstanding';
@@ -813,6 +813,9 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
     [...eligibleById.values()].some(record => record.provenance === 'LOCAL_STATIC' &&
       requestedConceptSupportForRecord(record, concept) === true)
   ).map(concept => concept.id));
+  const registrationTopicRequested = targetTopics.some(topic => GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topic.id));
+  const hasLocalRegistrationExceptions = registrationTopicRequested && [...eligibleById.values()].some(record =>
+    record.provenance === 'LOCAL_STATIC' && completeGstRegistrationExceptionQuote(record.sourceText));
 
   // Keep a live candidate for a topic or requested concept gap not already
   // supported by validated local content. This preserves local-first behavior
@@ -837,7 +840,12 @@ export function evaluateEvidenceQuality(input: EvidenceQualityInput): EvidenceQu
         (acceptedTopicIdsByRecord.get(localRecord.id) || new Set<string>()).has(requested.topic.id) &&
         provesExactIrasKnowledgePointer(localRecord, requested, input.query));
     });
-    return relatedTopics.length > 0 || supportsUncoveredConcept || suppliesMissingFullRule;
+    // The local registration threshold can cover the mapped topic while the
+    // official guidance supplies a complete exception list absent locally.
+    const suppliesRegistrationExceptions = registrationTopicRequested && !hasLocalRegistrationExceptions &&
+      [...(acceptedTopicIdsByRecord.get(record.id) || [])].some(topicId => GST_REGISTRATION_TURNOVER_TOPIC_IDS.has(topicId)) &&
+      Boolean(completeGstRegistrationExceptionQuote(record.sourceText));
+    return relatedTopics.length > 0 || supportsUncoveredConcept || suppliesMissingFullRule || suppliesRegistrationExceptions;
   });
   const eligibleRecords = [
     ...relevantLiveOnlyForGap.filter(record => record.provenance !== 'LIVE_EXTERNAL'),

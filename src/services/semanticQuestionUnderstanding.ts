@@ -902,7 +902,7 @@ Concept roles: PRIMARY is the main requested outcome; RELATED is a material desc
 
 Classify each issue by its requested outcome. An employee's own salary/employment-income tax is individual IRAS tax; employee-benefit/perquisite tax is employment-benefit tax. EMPLOYEE alone does not imply a benefit. Create a separate employer-reporting issue only when requested; if the reporter is unclear use population=UNKNOWN. An employer reporting duty uses EMPLOYER; COMPANY is the company's own tax position. Separate employee and employer CPF contribution amounts when both are requested.
 
-Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries, COMPARE for requested alternatives, and otherwise OTHER.
+Choose each issue's operation by the requested output. Use CALCULATE when the requested output is a numeric amount to pay, contribute, remit, deduct, withhold, charge, or provide—even if inputs are missing and no "amount", "how much", or "calculate" term appears. A number merely included as a case fact or illustration is not a calculation. Use DETERMINE_TREATMENT to apply a rule to a stated transaction, receipt, expense, benefit, or person's circumstances; a requested taxability or deductible-status outcome for a transaction is DETERMINE_TREATMENT. It also covers liability applicability or type even when phrased "explain" or "what tax applies". Use population=UNKNOWN if the affected party is unclear. Use CHECK_ELIGIBILITY for qualification or entitlement under a rule, scheme, or requirement; for relief, "what can I claim?" or "can I claim?" asks entitlement, while "how much can I claim?" asks an amount (CALCULATE). Use EXPLAIN_RULE for general principles or conditions without applying them to a case. Use EXPLAIN_INTERACTION only for a requested relationship between rules; multiple issues alone are not interaction. Use FILING_REQUIREMENT for filing, reporting, or notification procedures; a requested withholding amount is CALCULATE, while a separately requested procedure is FILING_REQUIREMENT. Use PREPARE_JOURNAL for requested entries when the user asks how to record a specific transaction, including natural bookkeeping wording without literal journal-entry or double-entry terminology. Use COMPARE for requested alternatives, and otherwise OTHER.
 
 Do not emit a requiresUserSpecificFacts field: the application derives case specificity and per-issue evidence from the query, independent of supplied-fact counts or provider hints. CALCULATE, DETERMINE_TREATMENT, and PREPARE_JOURNAL are always case-specific; CHECK_ELIGIBILITY is so only for a specific claimant or transaction. Generic employee/class eligibility, "who can claim/qualifies", conditions, and general rules are source-only. Distinguish an audience request from a claim about the user's circumstances. The root specificity is the OR of issue specificity plus mandatory root-operation bounds; keep mixed issues' evidence independent.
 
@@ -1534,7 +1534,7 @@ function queryClauseForSemanticIssue(query: string, subject: string): string | u
 }
 
 /** Bounded issue-local text includes only the selected request and its attached follow-on context. */
-function queryWithSemanticIssueFollowOns(query: string, subject: string): string | undefined {
+export function queryWithSemanticIssueFollowOns(query: string, subject: string): string | undefined {
   const clauses = queryClauses(query);
   const requestIndex = queryClauseIndexForSemanticIssue(query, subject);
   return requestIndex === undefined ? undefined : semanticIssueClauseWithFollowOns(query, clauses, requestIndex, subject);
@@ -2099,6 +2099,10 @@ function deterministicCaseFactGuard(
   query: string,
   classification: QuestionClassificationResult
 ): QuestionClassificationResult {
+  if (classification.topicIds.length && classification.topicIds.every(topicId =>
+    topicId === 'gst_compulsory_registration' || topicId === 'iras-gst-turnover-tests')) {
+    return classification;
+  }
   if (!classification.authorities.includes('IRAS') ||
       !(hasExplicitCaseReference(query) || hasFirstPersonOutcomeApplication(query)) || !asksForCaseOutcome(query)) {
     return classification;
@@ -4528,6 +4532,42 @@ export function reconcileQuestionUnderstanding(
   };
 }
 
+/** Projects explicit semantic journal intent only at the accounting runtime boundary. */
+export function projectSemanticJournalClassification(
+  query: string,
+  reconciled: ReconciledQuestionUnderstanding,
+  advisoryJournalIntent = false
+): QuestionClassificationResult {
+  const { classification, issuePlan, understanding } = reconciled;
+  const validatedJournalIntent = understanding.mode === 'SEMANTIC_PLUS_RULES' &&
+    issuePlan.issues.some(issue => issue.domain === 'ACCOUNTING' && issue.operation === 'PREPARE_JOURNAL');
+  const retainedAdvisoryIntent = advisoryJournalIntent && understanding.mode === 'DETERMINISTIC_FALLBACK' &&
+    !classification.taxAnalysisRequired && !classification.regulatoryAnalysisRequired;
+  if (removeNegatedJournalDirectives(query) !== query || (!validatedJournalIntent && !retainedAdvisoryIntent)) {
+    return classification;
+  }
+  const hasSeparateStatutoryIssue = issuePlan.issues.some(issue =>
+    issue.operation !== 'PREPARE_JOURNAL' &&
+    issue.governingAuthorities.some(authority => authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION')
+  );
+  const hasStatutoryScope = hasSeparateStatutoryIssue ||
+    classification.taxAnalysisRequired ||
+    classification.regulatoryAnalysisRequired ||
+    classification.authorities.some(authority =>
+      authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION' && authority !== 'UNKNOWN'
+    );
+  return {
+    ...classification,
+    primaryDomain: hasStatutoryScope ? 'MIXED' : 'ACCOUNTING',
+    authorities: [...new Set([...classification.authorities, 'ACCOUNTING_STANDARDS'])],
+    multiAuthority: hasStatutoryScope || classification.multiAuthority,
+    accountingAnalysisRequired: true,
+    journalEntryRequired: true,
+    intent: hasStatutoryScope ? 'HYBRID' : 'TRANSACTION',
+    reasoning: 'Validated semantic issues include a request to prepare an accounting journal.'
+  };
+}
+
 /** Safe allowlisted telemetry projection; user facts and contextual authority mentions are deliberately excluded. */
 export function projectQuestionUnderstandingDiagnostics(understanding: SemanticQuestionUnderstanding): QuestionUnderstandingDiagnostics | undefined {
   const semantic = validateSemanticQuestionInterpretation(understanding.interpretation);
@@ -4573,6 +4613,14 @@ function relevantDeterministicMissingFacts(
   semantic: SemanticQuestionInterpretation
 ): string[] {
   const { domain, population } = semantic;
+  if (domain === 'IRAS_GST' && semantic.requestedOperation === 'CHECK_ELIGIBILITY') {
+    const gstTopics = getCoverageTopicsByIds([
+      ...classification.topicIds,
+      ...(semantic.issues || []).filter(issue => issue.domain === 'IRAS_GST').flatMap(issue => issue.mappedTopicIds)
+    ]).filter(topic => topic.domainId === 'IRAS_GST');
+    if (gstTopics.length && gstTopics.every(topic =>
+      topic.id === 'gst_compulsory_registration' || topic.id === 'iras-gst-turnover-tests')) return [];
+  }
   const allowed = domain === 'IRAS_GST'
     ? /gst|input tax|output tax|meal|entertainment|supplier|customer|invoice|business|private|vehicle|supply|recipient|place of/i
     : domain === 'IRAS_INCOME_TAX'

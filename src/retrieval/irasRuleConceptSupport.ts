@@ -8,6 +8,25 @@ import {
   supportIrasMasKnowledgeRule
 } from './irasMasKnowledge20261027b';
 import { supportStatutoryWorkflowRule } from './statutoryWorkflows20261029';
+import { completeVisibleEvidenceListSpan, splitEvidenceTextBlocks } from '../utils/evidenceTextBoundaries';
+
+export const GST_REGISTRATION_TURNOVER_TOPIC_IDS: ReadonlySet<string> = new Set([
+  'gst_compulsory_registration',
+  'iras-gst-turnover-tests'
+]);
+
+/** Keep the two registration exceptions and all attached conditions together. */
+export function completeGstRegistrationExceptionQuote(sourceText: string): string | undefined {
+  const blocks = splitEvidenceTextBlocks(sourceText);
+  const introductionIndex = blocks.findIndex(block => /^you will not be required to register for gst if:\s*$/i.test(block));
+  if (introductionIndex < 0) return undefined;
+  const completeList = completeVisibleEvidenceListSpan(blocks, introductionIndex);
+  const quote = completeList?.contextQuote || completeList?.quote;
+  if (!quote) return undefined;
+  return /wholly or mainly from zero[ -]rated supplies/i.test(quote) &&
+    /retrospective view/i.test(quote) && /next 12 months/i.test(quote) &&
+    /supporting documentation|supporting documents/i.test(quote) ? quote : undefined;
+}
 
 export type GeneralIrasRuleSupport = true | false | undefined;
 
