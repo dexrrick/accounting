@@ -1,0 +1,19 @@
+[Telemetry] TRANSACTION (gemini-3.5-flash-lite): total=401.81ms (first_vis=376.86ms, gemini=1ms, ground=0ms, post=25ms) | tokens: in=0, out=0, think=0
+[Query outcome] query_mode=TRANSACTION processing_path=ACCOUNTING_ENGINE
+[Telemetry] TRANSACTION (gemini-3.5-flash-lite): total=170.8ms (first_vis=154.11ms, gemini=0ms, ground=0ms, post=17ms) | tokens: in=0, out=0, think=0
+[Query outcome] query_mode=TRANSACTION processing_path=ACCOUNTING_ENGINE
+[Telemetry] TRANSACTION (gemini-3.5-flash-lite): total=77.99ms (first_vis=55.48ms, gemini=1ms, ground=0ms, post=22ms) | tokens: in=0, out=0, think=0
+[Query outcome] query_mode=TRANSACTION processing_path=ACCOUNTING_ENGINE
+[Telemetry] TRANSACTION (gemini-3.5-flash-lite): total=74.61ms (first_vis=56.14ms, gemini=0ms, ground=0ms, post=19ms) | tokens: in=0, out=0, think=0
+[Query outcome] query_mode=TRANSACTION processing_path=ACCOUNTING_ENGINE
+[Telemetry] UNKNOWN (gemini-3.5-flash-lite): total=8.7ms (first_vis=8.68ms, gemini=0ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Query outcome] query_mode=HYBRID processing_path=ACCOUNTING_ENGINE
+[Telemetry] AUTHORITY_WORKSTREAM_EVIDENCE (gemini-3.5-flash-lite): total=117.75ms (first_vis=117.74ms, gemini=6.21ms, ground=0ms, post=0ms) | tokens: in=0, out=0, think=0
+[Evidence-grounded synthesis] Provider claims rejected; re-rendering admitted evidence. PACKET_REFERENCE_INVALID
+[Query outcome] query_mode=TRANSACTION processing_path=GROUNDED_EVIDENCE_FALLBACK rejection_reason=EVIDENCE_CLAIMS_REJECTED rejection_codes=PACKET_REFERENCE_INVALID
+PASS loan-parent 
+PASS loan-same-transaction 
+PASS loan-explicit-journal-follow-up 
+PASS loan-same-transaction-unsolicited-claim 
+PASS fine-parent 
+PASS fine-same-transaction-synthesis-rejected 

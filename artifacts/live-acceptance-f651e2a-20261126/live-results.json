@@ -1,0 +1,54 @@
+{
+  "head": "f651e2a91ee8a1344997e5bfa954b2a7f9c094bc",
+  "model": "gemini-3.5-flash-lite",
+  "caps": {
+    "attempts": 16,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retryLimit": 0
+  },
+  "terminal": "PROVIDER_HTTP_503",
+  "count": 3,
+  "turns": [
+    {
+      "id": "equity",
+      "journal": true,
+      "query": "Our holding company just injected SGD 500,000 cash via bank transfer into a newly incorporated operating subsidiary for 100% of its ordinary shares. How do we book this in the holding company’s standalone ledger?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "CORE_RESPONSE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "attempts": 3,
+      "answer": "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction.",
+      "currency": "SGD",
+      "complete": false,
+      "clarifications": [],
+      "directGroups": [],
+      "validJournal": false,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    }
+  ]
+}

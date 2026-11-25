@@ -1,0 +1,6 @@
+{"turn":"equity","attempt":1,"turnAttempt":1,"atUtc":"2026-11-25T23:21:46.643Z","stage":"question-interpretation","event":"dispatch"}
+{"turn":"equity","attempt":1,"turnAttempt":1,"atUtc":"2026-11-25T23:21:46.643Z","stage":"question-interpretation","event":"response","status":200,"inputTokens":1998}
+{"turn":"equity","attempt":2,"turnAttempt":2,"atUtc":"2026-11-25T23:21:52.347Z","stage":"event-extraction","event":"dispatch"}
+{"turn":"equity","attempt":2,"turnAttempt":2,"atUtc":"2026-11-25T23:21:52.347Z","stage":"event-extraction","event":"response","status":200,"inputTokens":277}
+{"turn":"equity","attempt":3,"turnAttempt":3,"atUtc":"2026-11-25T23:21:57.451Z","stage":"transaction-facts","event":"dispatch"}
+{"turn":"equity","attempt":3,"turnAttempt":3,"atUtc":"2026-11-25T23:21:57.451Z","stage":"transaction-facts","event":"response","status":503}
