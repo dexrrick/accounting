@@ -4548,14 +4548,17 @@ export function projectSemanticJournalClassification(
   }
   const hasSeparateStatutoryIssue = issuePlan.issues.some(issue =>
     issue.operation !== 'PREPARE_JOURNAL' &&
-    issue.governingAuthorities.some(authority => authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION')
+    issue.governingAuthorities.some(authority => authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION' &&
+      !(authority === 'ACRA' && issue.domain === 'ACCOUNTING'))
+  );
+  const requestedStatutoryAuthority = classification.authorities.some(authority =>
+    authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION' && authority !== 'UNKNOWN' &&
+    (authority !== 'ACRA' || classification.domains.some(domain => domain.startsWith('ACRA_')))
   );
   const hasStatutoryScope = hasSeparateStatutoryIssue ||
     classification.taxAnalysisRequired ||
     classification.regulatoryAnalysisRequired ||
-    classification.authorities.some(authority =>
-      authority !== 'ACCOUNTING_STANDARDS' && authority !== 'IFRS_FOUNDATION' && authority !== 'UNKNOWN'
-    );
+    requestedStatutoryAuthority;
   return {
     ...classification,
     primaryDomain: hasStatutoryScope ? 'MIXED' : 'ACCOUNTING',

@@ -588,7 +588,7 @@ export async function processAccountingQuery(
   const responseContainsUnverifiedStatutoryClaim = hasUnverifiedStatutoryClaim(response, deterministicScenario, true);
   if (!hasRequestScope) {
     return finish(responseContainsUnverifiedStatutoryClaim
-      ? sanitizeUnrequestedStatutoryContent(response, userInput, deterministicScenario)
+      ? sanitizeUnrequestedStatutoryContent(response, userInput, deterministicScenario, hasPriorContextAmount)
       : response);
   }
   const validatedProposalAccountNames = new Set((response.scenarioState.directGroups || [])
@@ -935,20 +935,21 @@ function stripUnverifiedStatutorySentences(text: string | undefined): string | u
 function sanitizeUnrequestedStatutoryContent(
   response: GeminiResponse,
   rawQuery: string,
-  deterministicScenario?: AccountingScenarioState
+  deterministicScenario?: AccountingScenarioState,
+  hasPriorContextAmount = false
 ): GeminiResponse {
   const trustedGroups = [
     ...(deterministicScenario?.directGroups || []),
     ...(deterministicScenario?.committedDirectGroups || []),
     ...(deterministicScenario?.projectedGroups || [])
   ].filter(group => isLegacyCommittedJournalGroup(group) &&
-    validateJournalGroups([group], { rawQuery }).isValid);
+    validateJournalGroups([group], { rawQuery, hasPriorContextAmount }).isValid);
   const trustedById = new Map(trustedGroups.map(group => [group.id, group]));
   const sanitizeGroups = (groups?: JournalEntryGroup[]) => (groups || []).flatMap(group => {
     const trusted = trustedById.get(group.id);
     if (trusted) return [trusted];
     if ((group.authorityStatus !== 'AI_PROPOSED' && group.authorityStatus !== 'CONDITIONAL') ||
-        group.isHypothetical || !validateJournalGroups([group], { rawQuery }).isValid) return [];
+        group.isHypothetical || !validateJournalGroups([group], { rawQuery, hasPriorContextAmount }).isValid) return [];
     return [{
       ...group,
       title: 'AI-proposed journal',

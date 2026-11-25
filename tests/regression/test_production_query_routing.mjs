@@ -183,8 +183,12 @@ globalThis.fetch = async (input, init) => {
     active.stages.push('accounting');
     const journal = active.accounting ? journalPayload(active.accounting) : {};
     if (active.unrequestedTaxClaim) {
-      journal.singaporeTaxImpact = 'The company must pay GST on the loan today.';
-      journal.treatment += ' Singapore GST is 70%.';
+      if (active.unrequestedTaxClaim === 'reasoning') {
+        journal.reasoning = 'The company must pay GST on the loan today. GST is 70%.';
+      } else {
+        journal.singaporeTaxImpact = 'The company must pay GST on the loan today.';
+        journal.treatment += ' Singapore GST is 70%.';
+      }
     }
     if (active.unsafeAccountLabel) journal.requiredAccounts[1].accountName = 'Bank <GST is 70%>';
     return modelReply(journal, streaming);
@@ -201,13 +205,15 @@ async function run(query, {
   active = { accounting, asksGst, rejectClaims, unrequestedTaxClaim, amountOverride, genericRegistrationIssue, unsafeAccountLabel, semanticUnavailable, stages: [] };
   recordedError = undefined;
   const trace = [];
+  let groundedClassification;
   const turns = [...priorTurns, { id: `user-${priorTurns.length}`, sender: 'user', text: query, timestamp: '' }];
   const response = await processAccountingQuery(query, priorScenario, standard, provider, model, turns, journal ? { journal: true } : undefined, {
-    onProcessingOutcome: value => trace.push(value)
+    onProcessingOutcome: value => trace.push(value),
+    onGroundedContext: context => { groundedClassification = context.classification; }
   });
   if (recordedError) throw recordedError;
   return {
-    response, stages: active.stages, trace,
+    response, stages: active.stages, trace, groundedClassification,
     turns: [...turns, { id: `assistant-${turns.length}`, sender: 'assistant', text: response.messageText, timestamp: '' }]
   };
 }
@@ -325,6 +331,41 @@ try {
 
   const priorLoan = await run(loan.query, { accounting: loan, journal: true });
   assertProposed(priorLoan, loan);
+  const amountFreeJournalFollowUp = 'Regarding the earlier transaction, please prepare the accounting entry again and explain the debit and credit.';
+  assert.doesNotMatch(amountFreeJournalFollowUp, /\d/);
+  result = await run(amountFreeJournalFollowUp, { accounting: loan, journal: true },
+    priorLoan.turns, priorLoan.response.scenarioState);
+  assertProposed(result, loan);
+  assert.notEqual(result.response.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK',
+    'an ACRA accounting standard-setter label alone does not route an accounting-only follow-up to statutory fallback');
+  assert.deepEqual(result.trace, [{ queryMode: 'TRANSACTION', processingPath: 'ACCOUNTING_ENGINE' }]);
+  assert.equal(result.groundedClassification.intent, 'TRANSACTION');
+  assert.ok(result.groundedClassification.authorities.includes('ACRA'),
+    'production classification retains ACRA as accounting-standard retrieval metadata');
+  assert.ok(!result.groundedClassification.domains.some(domain => domain.startsWith('ACRA_')),
+    'the retained ACRA label has no ACRA statutory domain for this accounting-only follow-up');
+  assert.match(result.response.messageText, /Amount Due from Subsidiary B/);
+  assert.match(result.response.messageText, /SGD 200,000/);
+
+  const sameLoanFollowUp = 'Regarding the earlier transaction, how should we record the advance to Subsidiary B?';
+  const cleanLoanFollowUp = await run(sameLoanFollowUp, { accounting: loan, journal: true },
+    priorLoan.turns, priorLoan.response.scenarioState);
+  assertProposed(cleanLoanFollowUp, loan);
+  result = await run(sameLoanFollowUp, { accounting: loan, journal: true, unrequestedTaxClaim: 'reasoning' },
+    priorLoan.turns, priorLoan.response.scenarioState);
+  assertProposed(result, loan);
+  assert.doesNotMatch(JSON.stringify(result.response), /GST is 70%|must pay GST on the loan/i,
+    'unrequested statutory prose in provider reasoning is removed while the verified amount context preserves the AI proposal');
+  assert.deepEqual(result.response.scenarioState.directGroups.map(group => ({
+    id: group.id,
+    authorityStatus: group.authorityStatus,
+    lines: group.lines.map(line => [line.accountName, line.debit, line.credit])
+  })), cleanLoanFollowUp.response.scenarioState.directGroups.map(group => ({
+    id: group.id,
+    authorityStatus: group.authorityStatus,
+    lines: group.lines.map(line => [line.accountName, line.debit, line.credit])
+  })), 'removing an unsolicited statutory claim preserves the same validated loan journal');
+
   const separateLoanFollowUp = 'Also, can you check the GST treatment and prepare a journal for a separate loan to Subsidiary C?';
   assert.equal(hasExplicitPriorFactReference(separateLoanFollowUp, priorLoan.response.scenarioState), false);
   assert.equal(isShortSemanticFollowUp(separateLoanFollowUp, priorLoan.response.scenarioState), true);

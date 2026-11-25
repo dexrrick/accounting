@@ -400,11 +400,13 @@ export function assembleDeterministicResponse(
     });
   }
 
+  // ACRA remains in retrieval metadata for SFRS evidence; only its accounting-standard role is non-statutory here.
   const isAccountingOnly = groundedContext.classification.intent === 'TRANSACTION' &&
     !groundedContext.classification.taxAnalysisRequired &&
     !groundedContext.classification.regulatoryAnalysisRequired &&
     groundedContext.classification.authorities.every(authority =>
-      authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'UNKNOWN'
+      authority === 'ACCOUNTING_STANDARDS' || authority === 'IFRS_FOUNDATION' || authority === 'UNKNOWN' ||
+      (authority === 'ACRA' && groundedContext.classification.domains?.every(domain => !domain.startsWith('ACRA_')) === true)
     );
 
   // 3. Assemble Direct Groups & Journal Entries
