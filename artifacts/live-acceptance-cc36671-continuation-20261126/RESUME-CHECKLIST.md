@@ -1,0 +1,8 @@
+# Live acceptance checklist for cc36671
+
+- [ ] **Before resuming.** Keep Gemini paused until explicitly approved. Verify commit `cc3667123dcee5c799b5ba768815d2f03f4b32fe` and a clean tracked checkout. Use the [published prompts](run-plan.json) and run GST separately from the paired loan case. Keep the shared cap of **16 Gemini attempts total**, with **at most 4 per turn** and **zero retries**.
+- [ ] **Standalone GST.** Ask whether SGD 1.2 million in annual taxable turnover requires registration. Pass if the answer distinguishes completed calendar-year turnover from a supported next-12-month forecast, explains the SGD 1 million threshold, gives the applicable application and effective dates, covers material exceptions, and cites verified IRAS guidance. No journal should be generated.
+- [ ] **Paired loan follow-up.** Use the opening loan as the first generation check. Confirm **Dr Intercompany Loan Receivable – Subsidiary B / Cr Bank, SGD 200,000**. Send the original follow-up without restating the amount, using the conversation state from that opening turn. Pass if the final answer and structured journal preserve both legs, label the entry as proposed or conditional, and create no committed journal or accounting event. Recovering the amount in intermediate state alone is insufficient.
+- [ ] **Stop and report.** Stop the active run on the first provider failure, before exceeding either cap, or on a material acceptance failure. Record the turn, stage, attempt count, and failure reason. Publish the captures and mark blocked or unrun checks explicitly. Recommend **GO only if both outstanding cases pass**.
+
+[Acceptance report and current NO-GO decision](README.md)
