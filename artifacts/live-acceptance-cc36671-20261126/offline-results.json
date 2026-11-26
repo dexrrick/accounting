@@ -1,0 +1,705 @@
+[
+  {
+    "id": "loan-parent",
+    "capture": {
+      "query": "We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?",
+      "stages": [
+        "interpretation",
+        "events",
+        "facts",
+        "accounting"
+      ],
+      "trace": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "scenario": "UNIVERSAL",
+      "currency": "SGD",
+      "amount": 200000,
+      "isComplete": false,
+      "journal": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Amount Due from Subsidiary B",
+          "summary": "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Amount Due from Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "Recognition of Amount Due from Subsidiary B"
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "Recognition of Bank"
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+            "Authority Status: AI_PROPOSED (Proposed by AI)"
+          ],
+          "authorityStatus": "AI_PROPOSED"
+        }
+      ],
+      "visible": [],
+      "committed": [],
+      "missing": [],
+      "metadata": {
+        "authorityStatus": "AI_PROPOSED"
+      },
+      "sources": [],
+      "answer": "### SFRS(I) Accounting Assessment: Amount Due from Subsidiary B\n\n**Authority Status**: **🤖 AI Grounded Proposal**\n\n#### 1. Accounting Treatment Principle\nThe lender recognizes a receivable for the funds advanced to Subsidiary B on demand.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Counterparty**: OTHER\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: AI Grounded Reasoning\n\n---\n\n### Double Entry Journal: Amount Due from Subsidiary B (26/11/2026)\n\n* **Debit**: **Amount Due from Subsidiary B** — **SGD 200,000.00** *(Recognition of Amount Due from Subsidiary B)*\n* **Credit**: **Bank** — **SGD 200,000.00** *(Recognition of Bank)*\n\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced\n"
+    },
+    "result": "PASS"
+  },
+  {
+    "id": "loan-same-transaction",
+    "capture": {
+      "query": "Regarding the earlier transaction, how should we record the advance to Subsidiary B?",
+      "stages": [
+        "interpretation",
+        "events",
+        "facts",
+        "accounting"
+      ],
+      "trace": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "scenario": "UNIVERSAL",
+      "currency": "SGD",
+      "amount": 200000,
+      "isComplete": false,
+      "journal": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Amount Due from Subsidiary B",
+          "summary": "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Amount Due from Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "Recognition of Amount Due from Subsidiary B"
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "Recognition of Bank"
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+            "Authority Status: AI_PROPOSED (Proposed by AI)"
+          ],
+          "authorityStatus": "AI_PROPOSED"
+        }
+      ],
+      "visible": [],
+      "committed": [],
+      "missing": [],
+      "metadata": {
+        "authorityStatus": "AI_PROPOSED"
+      },
+      "sources": [],
+      "answer": "### SFRS(I) Accounting Assessment: Amount Due from Subsidiary B\n\n**Authority Status**: **🤖 AI Grounded Proposal**\n\n#### 1. Accounting Treatment Principle\nThe lender recognizes a receivable for the funds advanced to Subsidiary B on demand.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Counterparty**: OTHER\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: AI Grounded Reasoning\n\n---\n\n### Double Entry Journal: Amount Due from Subsidiary B (26/11/2026)\n\n* **Debit**: **Amount Due from Subsidiary B** — **SGD 200,000.00** *(Recognition of Amount Due from Subsidiary B)*\n* **Credit**: **Bank** — **SGD 200,000.00** *(Recognition of Bank)*\n\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced\n"
+    },
+    "result": "PASS"
+  },
+  {
+    "id": "loan-explicit-journal-follow-up",
+    "capture": {
+      "query": "Regarding the earlier transaction, please prepare the accounting entry again and explain the debit and credit.",
+      "stages": [
+        "interpretation",
+        "events",
+        "facts",
+        "accounting"
+      ],
+      "trace": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [
+          "ACCOUNTING_SFRS"
+        ],
+        "topicIds": [],
+        "authorities": [
+          "ACRA",
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [
+          "Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26",
+          "Enforceable lease duration / term"
+        ],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "scenario": "UNIVERSAL",
+      "currency": "SGD",
+      "amount": 200000,
+      "isComplete": false,
+      "journal": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Amount Due from Subsidiary B",
+          "summary": "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Amount Due from Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "Recognition of Amount Due from Subsidiary B"
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "Recognition of Bank"
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.",
+            "Authority Status: CONDITIONAL (Proposed by AI)"
+          ],
+          "authorityStatus": "CONDITIONAL"
+        }
+      ],
+      "visible": [],
+      "committed": [],
+      "missing": [],
+      "metadata": {
+        "uncertaintyDisclaimer": "Conclusion is conditional upon establishing: Incremental borrowing rate (IBR) or rate implicit in lease under SFRS(I) 16 §26; Enforceable lease duration / term.",
+        "authorityStatus": "CONDITIONAL"
+      },
+      "sources": [],
+      "answer": "### SFRS(I) Accounting Assessment: Amount Due from Subsidiary B\n\n**Authority Status**: **⚠️ Conditional Proposal**\n\n#### 1. Accounting Treatment Principle\nThe lender recognizes a receivable for the funds advanced to Subsidiary B on demand.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Counterparty**: OTHER\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: AI Grounded Reasoning\n\n---\n\n### Double Entry Journal: Amount Due from Subsidiary B (26/11/2026)\n\n* **Debit**: **Amount Due from Subsidiary B** — **SGD 200,000.00** *(Recognition of Amount Due from Subsidiary B)*\n* **Credit**: **Bank** — **SGD 200,000.00** *(Recognition of Bank)*\n\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced\n"
+    },
+    "result": "PASS"
+  },
+  {
+    "id": "loan-same-transaction-unsolicited-claim",
+    "capture": {
+      "query": "Regarding the earlier transaction, how should we record the advance to Subsidiary B?",
+      "stages": [
+        "interpretation",
+        "events",
+        "facts",
+        "accounting"
+      ],
+      "trace": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "scenario": "UNIVERSAL",
+      "currency": "SGD",
+      "amount": 200000,
+      "isComplete": false,
+      "journal": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "AI-proposed journal",
+          "summary": "",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Amount Due from Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "Recognition of Amount Due from Subsidiary B"
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "Recognition of Bank"
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [],
+          "authorityStatus": "AI_PROPOSED"
+        }
+      ],
+      "visible": [],
+      "committed": [],
+      "missing": [],
+      "metadata": {
+        "authorityStatus": "AI_PROPOSED"
+      },
+      "sources": [],
+      "answer": "### SFRS(I) Accounting Assessment: Amount Due from Subsidiary B\n**Authority Status**: **🤖 AI Grounded Proposal**\n#### 1. Accounting Treatment Principle\nThe lender recognizes a receivable for the funds advanced to Subsidiary B on demand.\n#### 2. Technical Rationale & Analysis\n---\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Counterparty**: OTHER\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: AI Grounded Reasoning\n---\n### Double Entry Journal: Amount Due from Subsidiary B (26/11/2026)\n* **Debit**: **Amount Due from Subsidiary B** — **SGD 200,000.00** *(Recognition of Amount Due from Subsidiary B)*\n* **Credit**: **Bank** — **SGD 200,000.00** *(Recognition of Bank)*\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced"
+    },
+    "result": "PASS"
+  },
+  {
+    "id": "fine-parent",
+    "capture": {
+      "query": "The company paid a director traffic fine of SGD 2,000 by bank transfer on behalf of the director and will recover it from him. Prepare the journal.",
+      "stages": [],
+      "trace": [
+        {
+          "queryMode": "HYBRID",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "scenario": "DIRECTOR_PERSONAL_FINE",
+      "currency": "SGD",
+      "amount": 2000,
+      "isComplete": true,
+      "journal": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "visible": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "committed": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "missing": [],
+      "metadata": {
+        "uncertaintyDisclaimer": "Confirm whether the company will recover the amount from the director. If it will not, obtain advice on the appropriate governance and tax treatment.",
+        "authorityStatus": "DETERMINISTIC",
+        "tax": "The payment is non-deductible and must not be claimed as a Section 14 business expense; it is a personal penalty requiring an add-back if booked through profit or loss."
+      },
+      "sources": [],
+      "answer": "### Accounting Analysis: Company Payment of Director Personal Fine\n\n#### 1. Accounting Treatment\nRecord a receivable from the director, not a company operating expense, because the company settled the director’s personal obligation.\n\n---\n\n#### 2. Double Entry Schedule\n\n**Director Personal Fine Paid by Company** (26/11/2026):\n* **Debit**: **Amount Due from Director** — **SGD 2,000.00** *(Company payment creates a receivable from the director.)*\n* **Credit**: **Cash at Bank** — **SGD 2,000.00** *(Payment of the director’s personal fine.)*\n*Balance Check: Debits (SGD 2000.00) == Credits (SGD 2000.00) ✓ Balanced*\n\n---\n\n#### 3. Singapore Tax Implications\nThe payment is non-deductible and must not be claimed as a Section 14 business expense; it is a personal penalty requiring an add-back if booked through profit or loss.\n\nCheck the **Double Entry Journal** tab for complete ledger posting details."
+    },
+    "result": "PASS"
+  },
+  {
+    "id": "fine-same-transaction-synthesis-rejected",
+    "capture": {
+      "query": "Regarding the earlier transaction, prepare the journal for the director traffic fine and separately explain the MOM salary payment deadline.",
+      "stages": [
+        "interpretation",
+        "MOM-source",
+        "events",
+        "synthesis"
+      ],
+      "trace": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "GROUNDED_EVIDENCE_FALLBACK",
+          "rejectionReason": "EVIDENCE_CLAIMS_REJECTED",
+          "rejectionCodes": [
+            "PACKET_REFERENCE_INVALID"
+          ]
+        }
+      ],
+      "authorities": [
+        {
+          "authority": "ACCOUNTING_STANDARDS",
+          "issues": [
+            {
+              "claims": 0
+            }
+          ]
+        },
+        {
+          "authority": "MOM",
+          "issues": [
+            {
+              "claims": 1
+            }
+          ]
+        }
+      ],
+      "path": "AI_GROUNDED_SYNTHESIS_FALLBACK",
+      "scenario": "DIRECTOR_PERSONAL_FINE",
+      "currency": "SGD",
+      "amount": 2000,
+      "isComplete": true,
+      "journal": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "visible": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "committed": [
+        {
+          "id": "grp-director-fine",
+          "eventDate": "26/11/2026",
+          "title": "Director Personal Fine Paid by Company",
+          "summary": "Director receivable of SGD 2,000",
+          "totalDebit": 2000,
+          "totalCredit": 2000,
+          "isBalanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "citations": [
+            {
+              "standard": "Income Tax Act 1947 (IRAS)",
+              "paragraph": "Section 15(1)",
+              "title": "Selected Deductions Disallowed Under Section 15",
+              "text": "Section 15(1) disallows specified deductions, including domestic or private expenses; expenses not wholly and exclusively laid out to acquire income; capital withdrawn or amounts employed as capital; capital employed in improvements other than plantation replanting; sums recoverable under insurance or indemnity; specified rent or repair expenses; income tax; and specified motor-car expenses, subject to statutory exceptions. This is a summary of selected limbs, not an exhaustive list.",
+              "officialSourceUrl": "https://sso.agc.gov.sg/Act/ITA1947?ProvIds=P15-#pr15-",
+              "authority": "IRAS"
+            }
+          ],
+          "rationalePoints": [
+            "A personal fine is not incurred for the company’s business; recovery from the director is recorded as a receivable."
+          ],
+          "lines": [
+            {
+              "id": "dr-director",
+              "accountCode": "1155",
+              "accountName": "Amount Due from Director",
+              "category": "ASSET",
+              "debit": 2000,
+              "credit": 0,
+              "lineExplanation": "Company payment creates a receivable from the director."
+            },
+            {
+              "id": "cr-bank",
+              "accountCode": "1010",
+              "accountName": "Cash at Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 2000,
+              "lineExplanation": "Payment of the director’s personal fine."
+            }
+          ]
+        }
+      ],
+      "missing": [],
+      "metadata": {
+        "uncertaintyDisclaimer": "The original advisory response was not retained because its claims did not pass verification.",
+        "statutoryAdvisory": [],
+        "authorityStatus": "DETERMINISTIC"
+      },
+      "sources": [
+        {
+          "title": "Paying salary | Ministry of Manpower",
+          "url": "https://www.mom.gov.sg/employment-practices/salary/paying-salary"
+        }
+      ],
+      "answer": "### Statutory Compliance & Legal Authority\n\n**Whole-question status:** Evidence is incomplete for one or more material issues.\n\nDeterministic journal entries are calculated by the accounting engine.\n\n#### Singapore accounting standards — Accounting treatment\n\n**Status:** Evidence incomplete\n\n**director personal traffic fine recoverable from the director** (party in scope: Company)\n- **Application unresolved:** For director personal traffic fine recoverable from the director, case-specific treatment or calculation has not been verified. The relevant facts and statutory conditions still need to be established.\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** director personal traffic fine recoverable from the director: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n#### Ministry of Manpower — Employment requirements\n\n**Status:** Evidence incomplete\n\n**MOM salary-payment duties** (party in scope: Employer)\n- **Evidence gap:** Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- **Evidence gap:** MOM salary-payment duties: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n\n**Source:** Paying salary | Ministry of Manpower (live external)\n- **Verified official source excerpt** (supports MOM salary-payment duties): Non-payment of salary is an offence.\n- Official source: [Paying salary | Ministry of Manpower](https://www.mom.gov.sg/employment-practices/salary/paying-salary)\n\n**Whole-question gaps:**\n- Issue plan: The reconciled issue plan does not establish coverage of the complete question.\n- Salary Periods, Payment and Deductions: A taxonomy topic remained unresolved because no validated requested issue claimed it.\n- director personal traffic fine recoverable from the director: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- MOM salary-payment duties: A material concept without a reviewed topic was not assigned to a uniquely matching requested issue.\n- director personal traffic fine recoverable from the director: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- MOM salary-payment duties: Available evidence does not establish complete coverage for this issue; supported official guidance remains separately verifiable.\n- director personal traffic fine recoverable from the director: No reviewed topic was resolved for this issue\n- MOM salary-payment duties: No reviewed topic was resolved for this issue\n- Salary Periods, Payment and Deductions: A requested issue was not assigned to a supported topic"
+    },
+    "result": "PASS"
+  }
+]

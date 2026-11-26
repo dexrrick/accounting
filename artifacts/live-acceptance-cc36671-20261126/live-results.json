@@ -1,0 +1,67 @@
+{
+  "head": "cc3667123dcee5c799b5ba768815d2f03f4b32fe",
+  "model": "gemini-3.5-flash-lite",
+  "caps": {
+    "attempts": 16,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retryLimit": 0,
+    "reservedAvailabilityAttempts": 1
+  },
+  "terminal": "PROVIDER_TRANSPORT_OR_BODY_FAILURE",
+  "count": 1,
+  "totalApiAttempts": 2,
+  "turns": [
+    {
+      "id": "loan",
+      "journal": true,
+      "query": "We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?",
+      "outcome": [
+        {
+          "queryMode": "STATUTORY_ADVISORY",
+          "processingPath": "CORE_RESPONSE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "GENERAL",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": false,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": false,
+        "missingFacts": [],
+        "intent": "STATUTORY_ADVISORY",
+        "reasoning": "Single-domain GENERAL question governed by Singapore Law."
+      },
+      "groundedFacts": {
+        "amount": 200000,
+        "currency": {
+          "value": "SGD",
+          "source": "explicit",
+          "confidence": 1,
+          "rationale": "Explicitly stated as SGD / Singapore Dollar"
+        },
+        "usedFactFallback": true,
+        "factsMissing": [
+          "Settlement/payment timing is unspecified"
+        ]
+      },
+      "attempts": 1,
+      "answer": "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction.",
+      "currency": "SGD",
+      "complete": false,
+      "clarifications": [],
+      "directGroups": [],
+      "validJournal": false,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    }
+  ]
+}

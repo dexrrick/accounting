@@ -1,0 +1,2 @@
+{"turn":"loan","attempt":1,"turnAttempt":1,"atUtc":"2026-11-26T05:26:27.524Z","stage":"question-interpretation","event":"dispatch"}
+{"turn":"loan","attempt":1,"turnAttempt":1,"atUtc":"2026-11-26T05:26:27.524Z","stage":"question-interpretation","event":"response","status":"TRANSPORT_OR_BODY_FAILURE"}

@@ -1,0 +1,35 @@
+{
+  "head": "cc3667123dcee5c799b5ba768815d2f03f4b32fe",
+  "standard": "SFRS_I",
+  "model": "gemini-3.5-flash-lite",
+  "caps": {
+    "attempts": 16,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retryLimit": 0,
+    "reservedAvailabilityAttempts": 1
+  },
+  "expected": {
+    "loan": "Lender, SGD 200,000 Dr loan receivable from Subsidiary B and Cr bank. On-demand terms and applicable ECL qualifications must remain distinct.",
+    "loan-follow-up": "Same parties, correct accounts, both SGD 200,000 legs retained without a new event or amount. No unsolicited statutory conclusion.",
+    "gst": "Distinguish completed calendar-year actual taxable turnover from a reasonably supported next-12-month forecast. Explain the SGD 1 million threshold, timing and material exceptions using admitted IRAS support. No journal."
+  },
+  "plan": [
+    {
+      "id": "loan",
+      "journal": true,
+      "query": "We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?"
+    },
+    {
+      "id": "loan-follow-up",
+      "journal": true,
+      "parent": "loan",
+      "query": "Regarding the earlier transaction, how should we record the advance to Subsidiary B?"
+    },
+    {
+      "id": "gst",
+      "journal": false,
+      "query": "Does our company need to register for GST if annual taxable turnover reaches SGD 1.2 million?"
+    }
+  ]
+}
