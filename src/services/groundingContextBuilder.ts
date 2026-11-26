@@ -18,10 +18,12 @@ import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/source
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
+import { validateJournalGroups } from '../verification/journalIntegrity';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
 import { assembleDeterministicResponse, guardUnconditionalMealInputTaxClaim, hasUnresolvedMealInputTaxEligibility } from '../engine/responseAssembler';
 import { extractAccountingContext } from './conversationAccountingState';
+import { resolveFactAmendment } from './factAmendmentService';
 import { hasVerifiedSourceUrlProvenance, isApprovedSingaporeSourceUrl } from '../standards/approvedSourceRegistry';
 import {
   getIrasTaxRouteArea,
@@ -2977,6 +2979,55 @@ export function extractUserFacts(
   return facts;
 }
 
+function referencedPriorJournalAmount(
+  query: string,
+  scenario: AccountingScenarioState | null | undefined,
+  currentCurrency: TransactionUnderstanding['currency']
+): number | undefined {
+  if (!scenario || scenario.isHypothetical || !scenario.rawQuery ||
+      startsNewAccountingScenario(query, scenario) || !hasExplicitPriorFactReference(query, scenario)) {
+    return undefined;
+  }
+
+  const priorGroups = scenario.directGroups || [];
+  if (priorGroups.length !== 1) return undefined;
+
+  const [priorGroup] = priorGroups;
+  const amount = priorGroup.totalDebit;
+  if (priorGroup.isHypothetical || !['AI_PROPOSED', 'CONDITIONAL'].includes(priorGroup.authorityStatus || '') ||
+      !Number.isFinite(amount) || amount <= 0 || amount !== priorGroup.totalCredit ||
+      !validateJournalGroups([priorGroup], { rawQuery: scenario.rawQuery }).isValid) {
+    return undefined;
+  }
+
+  const subjectReference = query.match(
+    /\b(?:the|this|that)\s+(?:advance|loan)\s+to\s+([^,.;!?]+)[.!?]*$/iu
+  );
+  const normalizePhrase = (text: string): string => text.normalize('NFKC').toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
+  const normalizedSubjectParty = subjectReference ? ` ${normalizePhrase(subjectReference[1])} ` : '';
+  const normalizedOriginalQuery = ` ${normalizePhrase(scenario.rawQuery)} `;
+  const debitLines = priorGroup.lines.filter(line => line.debit > 0);
+  const debitAccountText = debitLines.length === 1 ? ` ${normalizePhrase(debitLines[0].accountName)} ` : '';
+  if (!normalizedSubjectParty.trim() || !normalizedOriginalQuery.includes(' intercompany loan ') ||
+      !normalizedOriginalQuery.includes(normalizedSubjectParty) ||
+      !debitAccountText.endsWith(normalizedSubjectParty)) return undefined;
+
+  const priorUserFacts = defaultTransactionUnderstandingService.understandTransactionSync(
+    scenario.rawQuery,
+    scenario.functionalCurrency || 'SGD'
+  );
+  if (priorUserFacts.amount !== amount ||
+      (typeof scenario.amount === 'number' && scenario.amount !== amount) ||
+      !priorUserFacts.currency.value ||
+      priorUserFacts.currency.value.toLocaleUpperCase() !== scenario.functionalCurrency?.toLocaleUpperCase() ||
+      (currentCurrency.source === 'explicit' && currentCurrency.value !== priorUserFacts.currency.value)) {
+    return undefined;
+  }
+
+  return amount;
+}
+
 /**
  * Formulates deterministic application and calculation rules relevant to query.
  * Eliminates domain cross-contamination (e.g. no FX or lease rules in tax/employment queries).
@@ -3103,10 +3154,20 @@ export async function buildGroundedReasoningContext(
   const statedAccountingAmount = amountBoundQuery
     ? defaultTransactionUnderstandingService.understandTransactionSync(amountBoundQuery).amount
     : undefined;
-  const semanticUnderstanding = mixedJournalIssue &&
+  let semanticUnderstanding = mixedJournalIssue &&
       (transactionUnderstanding.provenance.isFallback || transactionUnderstanding.amount !== statedAccountingAmount)
     ? { ...transactionUnderstanding, amount: undefined }
     : transactionUnderstanding;
+  const inheritedPriorJournalAmount = classification.intent === 'TRANSACTION' &&
+    classification.journalEntryRequired && !irasPolicy && !mixedJournalIssue &&
+    transactionUnderstanding.provenance.isFallback && transactionUnderstanding.amount === undefined &&
+    !transactionUnderstanding.isHypothetical && !transactionUnderstanding.followUpAnalysis &&
+    resolveFactAmendment(userInput, relevantScenario).intent === 'QUESTION'
+    ? referencedPriorJournalAmount(userInput, relevantScenario, transactionUnderstanding.currency)
+    : undefined;
+  if (inheritedPriorJournalAmount !== undefined) {
+    semanticUnderstanding = { ...semanticUnderstanding, amount: inheritedPriorJournalAmount };
+  }
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
   const retrievalHints = buildClassificationRetrievalHints(classification);

@@ -20,7 +20,7 @@ const equity = {
 const loan = {
   query: 'We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?',
   paraphrase: 'Our company sent SGD 200,000 by bank to Subsidiary B as repayable-on-demand funding. Which accounts in our books change?',
-  debit: 'Amount Due from Subsidiary B',
+  debit: 'Intercompany Loan Receivable - Subsidiary B',
   amount: 200_000,
   subject: 'lender accounting for an on-demand intercompany loan paid by bank',
   treatment: 'The lender recognizes a receivable for the funds advanced to Subsidiary B on demand.',
@@ -173,7 +173,8 @@ globalThis.fetch = async (input, init) => {
       assert.ok(active.accounting, 'the standalone GST question skips transaction fact extraction');
       if (active.semanticUnavailable) return new Response(null, { status: 503 });
       if (active.asksGst) assert.doesNotMatch(prompt, /annual taxable turnover|SGD 1\.2 million/i);
-      return modelReply({ ...accountingFacts(active.accounting), ...(active.amountOverride !== undefined
+      return modelReply({ ...accountingFacts(active.accounting), ...(active.invalidTransactionFactCategory
+        ? { transactionType: active.invalidTransactionFactCategory } : {}), ...(active.amountOverride !== undefined
         ? { amount: active.amountOverride } : {}) });
     }
     if (prompt.startsWith('Extract chronological accounting EVENT FACTS')) {
@@ -200,9 +201,11 @@ globalThis.fetch = async (input, init) => {
 
 async function run(query, {
   accounting, asksGst = false, rejectClaims = false, journal = false, unrequestedTaxClaim = false, amountOverride,
-  genericRegistrationIssue = false, unsafeAccountLabel = false, semanticUnavailable = false
+  genericRegistrationIssue = false, unsafeAccountLabel = false, semanticUnavailable = false,
+  invalidTransactionFactCategory
 } = {}, priorTurns = [], priorScenario = null) {
-  active = { accounting, asksGst, rejectClaims, unrequestedTaxClaim, amountOverride, genericRegistrationIssue, unsafeAccountLabel, semanticUnavailable, stages: [] };
+  active = { accounting, asksGst, rejectClaims, unrequestedTaxClaim, amountOverride, genericRegistrationIssue, unsafeAccountLabel,
+    semanticUnavailable, invalidTransactionFactCategory, stages: [] };
   recordedError = undefined;
   const trace = [];
   let groundedClassification;
@@ -329,7 +332,9 @@ try {
   assert.doesNotMatch(JSON.stringify(result.response), /Bank <|GST is 70%/i,
     'structural balance does not make an unsafe model account label safe to display');
 
-  const priorLoan = await run(loan.query, { accounting: loan, journal: true });
+  const priorLoan = await run(loan.query, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_loan'
+  });
   assertProposed(priorLoan, loan);
   const amountFreeJournalFollowUp = 'Regarding the earlier transaction, please prepare the accounting entry again and explain the debit and credit.';
   assert.doesNotMatch(amountFreeJournalFollowUp, /\d/);
@@ -344,14 +349,23 @@ try {
     'production classification retains ACRA as accounting-standard retrieval metadata');
   assert.ok(!result.groundedClassification.domains.some(domain => domain.startsWith('ACRA_')),
     'the retained ACRA label has no ACRA statutory domain for this accounting-only follow-up');
-  assert.match(result.response.messageText, /Amount Due from Subsidiary B/);
+  assert.match(result.response.messageText, /Intercompany Loan Receivable - Subsidiary B/);
   assert.match(result.response.messageText, /SGD 200,000/);
 
   const sameLoanFollowUp = 'Regarding the earlier transaction, how should we record the advance to Subsidiary B?';
-  const cleanLoanFollowUp = await run(sameLoanFollowUp, { accounting: loan, journal: true },
+  const cleanLoanFollowUp = await run(sameLoanFollowUp, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_advance'
+  },
     priorLoan.turns, priorLoan.response.scenarioState);
   assertProposed(cleanLoanFollowUp, loan);
-  result = await run(sameLoanFollowUp, { accounting: loan, journal: true, unrequestedTaxClaim: 'reasoning' },
+  assert.equal(cleanLoanFollowUp.response.scenarioState.semanticUnderstanding.amount, loan.amount,
+    'a valid prior loan amount is carried into the transaction-facts fallback context');
+  assert.equal(cleanLoanFollowUp.response.scenarioState.semanticUnderstanding.provenance.isFallback, true,
+    'the same-transaction follow-up uses the deterministic fallback after the provider category is rejected');
+  result = await run(sameLoanFollowUp, {
+    accounting: loan, journal: true, unrequestedTaxClaim: 'reasoning',
+    invalidTransactionFactCategory: 'intercompany_advance'
+  },
     priorLoan.turns, priorLoan.response.scenarioState);
   assertProposed(result, loan);
   assert.doesNotMatch(JSON.stringify(result.response), /GST is 70%|must pay GST on the loan/i,
@@ -376,6 +390,34 @@ try {
   assert.doesNotMatch(separateLoanFollowUp, /\d/);
   assert.deepEqual(separateLoan.response.scenarioState.directGroups, [],
     'a new loan without its own amount cannot inherit the unrelated prior loan journal');
+
+  const changedCounterpartyFollowUp = 'Regarding the earlier transaction, how should we record the advance to subsidiary c?';
+  const changedCounterparty = await run(changedCounterpartyFollowUp, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_advance'
+  }, priorLoan.turns, priorLoan.response.scenarioState);
+  assert.deepEqual(changedCounterparty.response.scenarioState.directGroups, [],
+    'an explicit prior reference to a different counterparty cannot inherit the prior loan amount');
+
+  const anotherAdvanceFollowUp = 'Regarding the earlier transaction, how should we record another advance to Subsidiary B?';
+  const anotherAdvance = await run(anotherAdvanceFollowUp, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_advance'
+  }, priorLoan.turns, priorLoan.response.scenarioState);
+  assert.deepEqual(anotherAdvance.response.scenarioState.directGroups, [],
+    'a newly stated advance cannot inherit the earlier transaction amount');
+
+  const donationFollowUp = 'Regarding the earlier transaction, how should we record the donation to Subsidiary B?';
+  const donation = await run(donationFollowUp, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_advance'
+  }, priorLoan.turns, priorLoan.response.scenarioState);
+  assert.deepEqual(donation.response.scenarioState.directGroups, [],
+    'a different transaction subject cannot inherit the earlier intercompany loan amount');
+
+  const conflictingCurrencyFollowUp = 'Regarding the earlier transaction, in USD how should we record the advance to Subsidiary B?';
+  const conflictingCurrency = await run(conflictingCurrencyFollowUp, {
+    accounting: loan, journal: true, invalidTransactionFactCategory: 'intercompany_advance'
+  }, priorLoan.turns, priorLoan.response.scenarioState);
+  assert.equal(conflictingCurrency.response.scenarioState.semanticUnderstanding.amount, undefined,
+    'a conflicting explicit currency cannot import the prior SGD amount');
 } finally {
   globalThis.fetch = unmockedFetch;
   defaultSourceCache.clear();
