@@ -1,7 +1,7 @@
 import type { AccountingEventSequence, AccountingStandard, AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ExtractedEvidence, ExtractedImageEvidence, ExtractedJournalLine, MissingFieldInfo, ChatMessage, JournalEntryGroup } from '../types/accounting';
 import type { AccountingEvent } from '../types/conversationState';
 import type { ProviderSettings } from '../types/provider';
-import type { TransactionUnderstanding } from './transactionUnderstandingService';
+import { defaultTransactionUnderstandingService, type TransactionUnderstanding } from './transactionUnderstandingService';
 import type { AuthorityWorkstreamsResult } from '../types/authorityEvidence';
 import { parseAccountingQuery, isDeterministicFixture } from '../engine/scenarioParser';
 import { buildSupplierInvoiceCorrectionJournal, calculateDoubleEntries } from '../engine/accountingEngine';
@@ -849,18 +849,19 @@ function createImageCorrectionClarification(
     missingFact: string;
     correction: Extract<PendingImageCorrection, { kind: 'correction' }>;
     additionalEvidence?: ExtractedEvidence[];
+    paymentStatus?: InvoicePaymentStatus;
   }
 ): GeminiResponse {
   const statutoryResponse = getCurrentInvoiceStatutoryResponse(scenario, userInput);
+  const understoodPaymentStatus = detail?.paymentStatus ?? scenario.semanticUnderstanding?.paymentStatus;
   const paymentStatus = detail?.correction.source === 'initial_image_evidence' &&
-    isKnownInvoicePaymentStatus(scenario.semanticUnderstanding?.paymentStatus) &&
-    !scenario.evidence?.some(field => field.source === 'user_text' && field.imageId === detail.correction.imageId &&
-      field.field === 'invoicePaymentStatus' && field.value === scenario.semanticUnderstanding?.paymentStatus)
+    isKnownInvoicePaymentStatus(understoodPaymentStatus) &&
+    getInvoicePaymentStatus(scenario, undefined, detail.correction.imageId) !== understoodPaymentStatus
     ? [{
       source: 'user_text' as const,
       imageId: detail.correction.imageId,
       field: 'invoicePaymentStatus',
-      value: scenario.semanticUnderstanding.paymentStatus
+      value: understoodPaymentStatus
     }]
     : [];
   const clarification: MissingFieldInfo = {
@@ -918,7 +919,10 @@ async function respondToPendingImageCorrection(
   userInput: string,
   scenario: AccountingScenarioState,
   correction: PendingImageCorrection,
-  semanticUnderstanding?: TransactionUnderstanding
+  { invoiceUnderstanding, replyUnderstanding }: {
+    invoiceUnderstanding?: TransactionUnderstanding;
+    replyUnderstanding?: TransactionUnderstanding;
+  } = {}
 ): Promise<GeminiResponse> {
   if (correction.kind === 'clarification') {
     const retainedCorrection = getRetainedInvoiceCorrection(scenario);
@@ -960,15 +964,14 @@ async function respondToPendingImageCorrection(
     }
     const statedTotalValues = getLabeledImageAmounts(userInput).get('total') || [];
     const statedTotals = [...new Set(statedTotalValues)];
-    const explicitAmount = statedTotals[0] ?? (statedTotals.length === 0
-      ? semanticUnderstanding?.amount
-      : undefined);
+    const explicitAmount = statedTotals[0] ?? invoiceUnderstanding?.amount;
     if (statedTotals.length > 1 || (explicitAmount !== undefined &&
         Math.round(explicitAmount * 100) !== Math.round(correction.amount * 100))) {
       return createImageCorrectionClarification(scenario, userInput,
         `The invoice amount stated in your request does not match the total read from the screenshot (${formatImageAmountCents(Math.round(correction.amount * 100))}). Please confirm which invoice total is correct before I prepare a journal. No journal proposal is shown.`);
     }
   }
+  const semanticUnderstanding = replyUnderstanding ?? invoiceUnderstanding;
   const invoicePaymentStatus = getInvoicePaymentStatus(scenario, semanticUnderstanding, invoiceImage.imageId);
 
   const invoiceCurrency = invoiceImage.fields.find(field => /currency/i.test(field.field))?.value;
@@ -976,7 +979,7 @@ async function respondToPendingImageCorrection(
     return createImageCorrectionClarification(scenario, userInput,
       'The supplier invoice currency is not confirmed as SGD. Please confirm the invoice currency and corrected total before I prepare a journal. No journal proposal is shown.');
   }
-  const userCurrency = semanticUnderstanding?.currency;
+  const userCurrency = invoiceUnderstanding?.currency;
   if (correction.source === 'initial_image_evidence' && userCurrency?.source === 'explicit' &&
       userCurrency.value && userCurrency.value.toUpperCase() !== 'SGD') {
     return createImageCorrectionClarification(scenario, userInput,
@@ -1105,7 +1108,7 @@ async function respondToPendingImageCorrection(
     return createImageCorrectionClarification(scenario, userInput,
       `The transaction facts indicate that this invoice ${invoicePaymentStatus === 'paid' ? 'was paid' : 'was partly paid'}, but the invoice recovery proposal can only credit Trade Payables. Please confirm the payment account and any amount that remains payable before a journal is prepared. No journal proposal is shown.`,
       { fieldKey: 'invoiceSettlement', fieldName: 'Invoice settlement',
-        missingFact: 'payment account and amount remaining payable', correction });
+        missingFact: 'payment account and amount remaining payable', correction, paymentStatus: invoicePaymentStatus });
   }
 
   const invoiceNumber = invoiceImage.fields.find(field => /invoice(?:.?no|.?number|.?id)/i.test(field.field))?.value;
@@ -2270,10 +2273,14 @@ async function processAccountingQueryCore(
           (['conflicting_fields', 'explicit_replacement', 'supplier_direction_confirmation'].includes(pendingImageCorrection.reason) ||
             pendingImageCorrection.reason === 'gst_treatment_unverified' ||
             (pendingImageCorrection.reason === 'amount_correction' && EXPLICIT_WRONG_AMOUNT.test(userInput) && !userInput.includes('?')))))) {
+    const replyUnderstanding = pendingImageCorrection.kind === 'correction' && pendingImageCorrection.accountClassification
+      ? defaultTransactionUnderstandingService.understandTransactionSync(userInput, activeScenario.functionalCurrency)
+      : undefined;
     return respondToPendingImageCorrection(
       userInput,
       activeScenario,
-      pendingImageCorrection
+      pendingImageCorrection,
+      { replyUnderstanding }
     );
   }
   if (independentStatutoryRequest) {
@@ -3797,7 +3804,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       requestedAccountClassification
         ? { ...initialImageInvoiceCorrection, accountClassification: requestedAccountClassification }
         : initialImageInvoiceCorrection,
-      context.semanticUnderstanding
+      { invoiceUnderstanding: context.semanticUnderstanding }
     );
   }
 

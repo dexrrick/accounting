@@ -413,6 +413,33 @@ try {
     field.source === 'user_text' && field.field === 'correctedInvoiceTotal'), false,
   'image-derived clarification continuity does not create corrected-total user evidence');
 
+  const unclassifiedInvoice = await processAccountingQuery(
+    digitFreeInvoiceTurn.text, null, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite', [digitFreeInvoiceTurn]
+  );
+  assert.equal(unclassifiedInvoice.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceAccountClassification');
+  assert.equal(unclassifiedInvoice.scenarioState.evidence.some(field => field.field === 'invoicePaymentStatus'), false);
+
+  for (const [accountAndPaymentReply, paymentStatus] of [
+    ['Classify this as Maintenance Expense. It was paid in cash.', 'paid'],
+    ['Classify this as Maintenance Expense. It was partially paid, SGD 100 in cash.', 'partially_paid']
+  ]) {
+    const requestCountBeforeReply = correctionProviderRequests.length;
+    const { scenarioState: followUp } = await processAccountingQuery(
+      accountAndPaymentReply, unclassifiedInvoice.scenarioState, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+      [digitFreeInvoiceTurn, { id: 'invoice-account-and-payment-reply', sender: 'user', timestamp: '', text: accountAndPaymentReply }]
+    );
+    assert.deepEqual(getDisplayableUncommittedJournalGroups(followUp, 'SFRS_I'), [],
+      'payment first stated in the account clarification prevents a Trade Payables proposal');
+    assert.equal(followUp.missingFields?.[0]?.fieldKey, 'invoiceSettlement');
+    assert.equal(followUp.amount, 500, 'a partial payment does not replace the image-derived invoice total');
+    assert.ok(followUp.evidence.some(field =>
+      field.source === 'image' && field.imageId === 'image-202' && field.field === 'total' && field.value === 500));
+    assert.ok(followUp.evidence.some(field =>
+      field.source === 'user_text' && field.imageId === 'image-202' && field.field === 'invoicePaymentStatus' && field.value === paymentStatus));
+    assert.equal(correctionProviderRequests.length, requestCountBeforeReply,
+      'an invoice clarification uses the existing local understanding with no provider requests');
+  }
+
   extractedImageResponse = correctionVision;
 
   const retainedInvoiceFactsWithoutJournal = {
