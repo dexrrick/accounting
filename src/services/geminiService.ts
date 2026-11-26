@@ -1101,7 +1101,7 @@ async function respondToPendingImageCorrection(
       : `The corrected invoice total of SGD ${correction.amount.toLocaleString()} is retained`;
     return createImageCorrectionClarification(scenario, userInput,
       `${retainedAmountText}, but the image or your reply does not establish a consistent expense, inventory, or fixed-asset account. Reply in one of these forms: “Classify this as Maintenance Expense,” “Classify this as inventory for resale,” or “Classify this as fixed asset: Office Equipment.” Restate the total only if it changes. No journal proposal is shown until the account is clear.`,
-      { fieldKey: 'invoiceAccountClassification', fieldName: 'Invoice account classification', missingFact: 'invoice account classification', correction });
+      { fieldKey: 'invoiceAccountClassification', fieldName: 'Invoice account classification', missingFact: 'invoice account classification', correction, paymentStatus: invoicePaymentStatus });
   }
 
   if (invoicePaymentStatus === 'paid' || invoicePaymentStatus === 'partially_paid') {

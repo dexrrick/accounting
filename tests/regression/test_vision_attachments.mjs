@@ -258,6 +258,29 @@ try {
   assert.equal(incompatibleClassification.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceAccountClassification');
   assert.match(incompatibleClassification.messageText, /does not establish a consistent expense, inventory, or fixed-asset account/i);
 
+  const classificationClarificationHistory = [{ ...digitFreeInvoiceTurn, text: incompatibleClassificationText }];
+  const incompatibleCashReply = 'Classify this as inventory for resale. It was paid in cash.';
+  classificationClarificationHistory.push({ id: 'incompatible-cash-reply', sender: 'user', timestamp: '', text: incompatibleCashReply });
+  const requestsBeforeClassificationReplies = correctionProviderRequests.length;
+  const stillIncompatible = await processAccountingQuery(
+    incompatibleCashReply, incompatibleClassification.scenarioState, 'SFRS_I', correctionProviderKey,
+    'gemini-3.5-flash-lite', classificationClarificationHistory
+  );
+  assert.equal(stillIncompatible.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceAccountClassification');
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(stillIncompatible.scenarioState, 'SFRS_I'), []);
+
+  const compatibleAccountReply = 'Classify this as Maintenance Expense.';
+  const clarifiedClassification = await processAccountingQuery(
+    compatibleAccountReply, stillIncompatible.scenarioState, 'SFRS_I', correctionProviderKey, 'gemini-3.5-flash-lite',
+    [...classificationClarificationHistory, { id: 'compatible-account-reply', sender: 'user', timestamp: '', text: compatibleAccountReply }]
+  );
+  assert.deepEqual(getDisplayableUncommittedJournalGroups(clarifiedClassification.scenarioState, 'SFRS_I'), [],
+    'the cash payment survives further account clarification and prevents a Trade Payables proposal');
+  assert.equal(clarifiedClassification.scenarioState.missingFields?.[0]?.fieldKey, 'invoiceSettlement');
+  assert.ok(stillIncompatible.scenarioState.evidence.some(field =>
+    field.source === 'user_text' && field.imageId === 'image-202' && field.field === 'invoicePaymentStatus' && field.value === 'paid'));
+  assert.equal(correctionProviderRequests.length, requestsBeforeClassificationReplies);
+
   proposedInvoice = invoiceProposal(0);
   const paidInvoiceText = 'Please prepare the journal for this invoice. It was paid in cash.';
   const paidInvoice = await processAccountingQuery(
