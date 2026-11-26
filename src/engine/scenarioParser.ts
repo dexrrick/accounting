@@ -228,12 +228,13 @@ function buildGstRegistrationMeasurementBasisScenario(query: string): Accounting
 export async function parseAccountingQuery(
   query: string,
   currentScenario?: AccountingScenarioState | null,
-  questionUnderstanding?: SemanticQuestionUnderstanding
+  questionUnderstanding?: SemanticQuestionUnderstanding,
+  signal?: AbortSignal
 ): Promise<AccountingScenarioState> {
   // Apply the boundary before any scenario-specific follow-up or missing-field
   // resolution, so a new narrative cannot satisfy an old workflow by accident.
   if (currentScenario && startsNewAccountingScenario(query, currentScenario)) {
-    return parseAccountingQuery(query, null, questionUnderstanding);
+    return parseAccountingQuery(query, null, questionUnderstanding, signal);
   }
 
   const basicOwnerDrawingsFollowUp = resolveBasicOwnerDrawingsFollowUp(query, currentScenario);
@@ -2739,126 +2740,174 @@ export async function parseAccountingQuery(
     quantity = parseInt(qtyMatch[1].replace(/,/g, ''), 10);
   }
 
-  let purchaseAmountForeign = 0;
-  const buyMatch = query.match(/(?:invested|bought|purchased|acquired|cost|paid)\s*(?:(?:an amount of|sum of|value of)\s*)?(?:usd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i)
-    || query.match(/(?:usd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:into|for|in)?/i);
+  const saleActionMatch = /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i.exec(query);
+  const purchaseEventText = saleActionMatch ? query.slice(0, saleActionMatch.index) : query;
+  const saleEventText = saleActionMatch ? query.slice(saleActionMatch.index) : '';
+  const amountPattern = /(?:invested|bought|purchased|acquired|cost|paid)\s*(?:(?:an amount of|sum of|value of)\s*)?(?:usd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i;
+  const buyMatch = purchaseEventText.match(amountPattern)
+    || purchaseEventText.match(/(?:usd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:into|for|in)?/i);
+  const toAmount = (match: RegExpMatchArray | null): number | undefined => {
+    if (!match) return undefined;
+    let amount = Number(match[1].replace(/,/g, ''));
+    const unit = match[2]?.toLowerCase();
+    if (unit === 'k' || unit === 'thousand') amount *= 1000;
+    if (unit === 'm' || unit === 'million') amount *= 1000000;
+    return Number.isFinite(amount) && amount > 0 ? amount : undefined;
+  };
+  const purchaseAmountForeign = toAmount(buyMatch);
+  const sellForMatch = saleEventText.match(/(?:sold|disposed|derecognised|sale)\s*(?:(?:all|the)?\s*[\d,]*\s*(?:apple\s*)?shares\s*)?(?:(?:for|with proceeds of|amounting to)\s*(?:usd|\$)?|at\s*(?:usd|\$))\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
+  const saleAmountForeign = toAmount(sellForMatch);
 
-  if (buyMatch) {
-    let rawVal = parseFloat(buyMatch[1].replace(/,/g, ''));
-    const unit = buyMatch[2]?.toLowerCase();
-    if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
-    if (unit === 'm' || unit === 'million') rawVal *= 1000000;
-    purchaseAmountForeign = rawVal;
-  } else if (q.includes('300k')) {
-    purchaseAmountForeign = 300000;
-  }
+  const dateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/;
+  const makeEventDate = (match: RegExpMatchArray | null): { display: string; iso: string } | undefined => {
+    if (!match) return undefined;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+    return {
+      display: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`,
+      iso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    };
+  };
+  const parseEventDate = (text: string, actionPattern: RegExp): { display: string; iso: string } | undefined => {
+    const actionMatch = actionPattern.exec(text);
+    if (!actionMatch) return undefined;
 
-  let saleAmountForeign: number | undefined = undefined;
-  const sellForMatch = query.match(/(?:sold|disposed|derecognised|sale)\s*(?:(?:all|the)?\s*[\d,]*\s*(?:apple\s*)?shares\s*)?(?:for|at|with proceeds of|amounting to)\s*(?:usd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
+    const textAfterAction = text.slice(actionMatch.index + actionMatch[0].length)
+      .split(/(?<=[!?])\s+|(?<=\.)\s+(?=[A-Z])/, 1)[0];
+    const dateAfterAction = textAfterAction.match(new RegExp(`\\b(?:on|dated)\\s+${dateRegex.source}`, 'i'));
+    if (dateAfterAction) return makeEventDate(dateAfterAction);
 
-  if (sellForMatch) {
-    let rawVal = parseFloat(sellForMatch[1].replace(/,/g, ''));
-    const unit = sellForMatch[2]?.toLowerCase();
-    if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
-    if (unit === 'm' || unit === 'million') rawVal *= 1000000;
-    saleAmountForeign = rawVal;
+    // Support a transaction date placed immediately before the event verb, while
+    // excluding unrelated dates such as a reporting date in an earlier sentence.
+    const textBeforeAction = text.slice(0, actionMatch.index);
+    const dateBeforeAction = textBeforeAction.match(new RegExp(
+      `\\bon\\s+${dateRegex.source}\\s*,?\\s*(?:(?:the\\s+)?(?:company|entity)|it|we|they)\\s*$`,
+      'i'
+    ));
+    return makeEventDate(dateBeforeAction);
+  };
+  const purchaseDateFact = parseEventDate(purchaseEventText, /\b(?:invested|bought|purchased|acquired)\b/i);
+  const saleDateFact = saleActionMatch
+    ? parseEventDate(saleEventText, /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i)
+    : undefined;
+  const purchaseDate = purchaseDateFact?.display;
+  const saleDate = saleDateFact?.display;
+
+  const ratePattern = /\b(?:(?<leadingPair>sgd\s*\/\s*usd|usd\s*\/\s*sgd)\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>sgd\s*\/\s*usd|usd\s*\/\s*sgd)?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))/i;
+  const parseExplicitRate = (text: string): number | undefined => {
+    const match = text.match(ratePattern);
+    const rate = match?.groups?.rate ? Number(match.groups.rate) : undefined;
+    if (rate === undefined || !Number.isFinite(rate) || rate <= 0) return undefined;
+    const pair = (match?.groups?.leadingPair || match?.groups?.trailingPair || '').replace(/\s/g, '').toUpperCase();
+    const normalizedRate = pair === 'USD/SGD' ? 1 / rate : rate;
+    return Number.isFinite(normalizedRate) && normalizedRate > 0 ? normalizedRate : undefined;
+  };
+
+  let purchaseFxRate = functionalCurrency === transactionCurrency ? 1 : parseExplicitRate(purchaseEventText);
+  let saleFxRate = functionalCurrency === transactionCurrency && saleActionMatch
+    ? 1
+    : saleActionMatch ? parseExplicitRate(saleEventText) : undefined;
+  const fxSources: string[] = [];
+  if (functionalCurrency === transactionCurrency) {
+    fxSources.push('Identical transaction and functional currencies');
   } else {
-    const allAmounts = [...query.matchAll(/(?:usd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/gi)];
-    if (allAmounts.length >= 2) {
-      let rawVal = parseFloat(allAmounts[1][1].replace(/,/g, ''));
-      const unit = allAmounts[1][2]?.toLowerCase();
-      if (unit === 'k' || unit === 'thousand') rawVal *= 1000;
-      if (unit === 'm' || unit === 'million') rawVal *= 1000000;
-      saleAmountForeign = rawVal;
-    } else if (q.includes('400k')) {
-      saleAmountForeign = 400000;
+    if (purchaseFxRate !== undefined) fxSources.push('Acquisition rate provided by user');
+    if (saleFxRate !== undefined) fxSources.push('Disposal rate provided by user');
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const lookupHistoricalRate = async (eventDate: { display: string; iso: string } | undefined): Promise<number | undefined> => {
+    if (functionalCurrency === transactionCurrency || !eventDate || eventDate.iso > today) return undefined;
+    try {
+      const rate = await getExchangeRate(transactionCurrency, functionalCurrency, eventDate.iso, signal);
+      fxSources.push(rate.source);
+      return rate.rate;
+    } catch {
+      signal?.throwIfAborted();
+      return undefined;
+    }
+  };
+
+  if (purchaseFxRate === undefined) {
+    purchaseFxRate = await lookupHistoricalRate(purchaseDateFact);
+    if (purchaseFxRate === undefined) fxSources.push('Acquisition rate unavailable');
+  }
+  if (saleActionMatch && saleFxRate === undefined) {
+    saleFxRate = await lookupHistoricalRate(saleDateFact);
+    if (saleFxRate === undefined) fxSources.push('Disposal rate unavailable');
+  }
+
+  const fxSource = fxSources.join('; ');
+  const missingFields: MissingFieldInfo[] = [];
+  if (!purchaseAmountForeign) {
+    missingFields.push({ fieldKey: 'purchaseAmountForeign', fieldName: 'Acquisition amount', prompt: 'What was the foreign-currency acquisition amount?', whyNeeded: 'The acquisition cannot be measured without the amount.' });
+  }
+  if (!purchaseDate) {
+    missingFields.push({ fieldKey: 'purchaseDate', fieldName: 'Acquisition date', prompt: 'What was the acquisition date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the journal and its spot-rate basis.' });
+  }
+  if (purchaseFxRate === undefined) {
+    missingFields.push({ fieldKey: 'purchaseFxRate', fieldName: 'Acquisition exchange rate', prompt: 'What spot exchange rate applied on the acquisition date?', whyNeeded: 'The acquisition amount cannot be translated without an evidenced transaction-date rate.' });
+  }
+  if (saleActionMatch) {
+    if (!saleAmountForeign) {
+      missingFields.push({ fieldKey: 'saleAmountForeign', fieldName: 'Disposal proceeds', prompt: 'What were the foreign-currency disposal proceeds?', whyNeeded: 'The disposal journal cannot be measured without the proceeds.' });
+    }
+    if (!saleDate) {
+      missingFields.push({ fieldKey: 'saleDate', fieldName: 'Disposal date', prompt: 'What was the disposal date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the disposal journal and its spot-rate basis.' });
+    }
+    if (saleFxRate === undefined) {
+      missingFields.push({ fieldKey: 'saleFxRate', fieldName: 'Disposal exchange rate', prompt: 'What spot exchange rate applied on the disposal date?', whyNeeded: 'The proceeds cannot be translated without an evidenced transaction-date rate.' });
     }
   }
 
-  const dateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/g;
-  const foundDates: string[] = [];
-  const isoDates: string[] = [];
-  let dMatch;
-  while ((dMatch = dateRegex.exec(query)) !== null) {
-    const day = dMatch[1].padStart(2, '0');
-    const month = dMatch[2].padStart(2, '0');
-    const year = dMatch[3];
-    foundDates.push(`${day}/${month}/${year}`);
-    isoDates.push(`${year}-${month}-${day}`);
+  if (missingFields.length > 0) {
+    return {
+      scenarioType: 'EQUITY_INVESTMENT_FX',
+      authorityStatus: 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'ACCOUNTING_SFRS',
+      rawQuery: query,
+      transactionTitle: `Investment & Sale of ${assetName} (USD/SGD)`,
+      functionalCurrency,
+      transactionCurrency,
+      assetName,
+      quantity,
+      purchaseDate,
+      purchaseAmountForeign,
+      purchaseFxRate,
+      saleDate,
+      saleAmountForeign,
+      saleFxRate,
+      classification: 'FVTPL',
+      actualMeasurementBasis: 'FVTPL',
+      ownershipContext: 'external_investment',
+      bifurcateFxGain: true,
+      fxSource,
+      directGroups: [],
+      isComplete: false,
+      missingFields
+    };
   }
 
-  let purchaseDate = foundDates[0] || '13/11/2026';
-  let saleDate = foundDates[1] || (saleAmountForeign ? '15/12/2026' : undefined);
-  let purchaseDateIso = isoDates[0] || '2026-11-13';
-  let saleDateIso = isoDates[1] || '2026-12-15';
-
-  // FETCH REAL SPOT RATES OR BENCHMARK RATES
-  let purchaseFxRate = 1.34;
-  let saleFxRate = 1.36;
-  let fxSource = 'Benchmark Spot Rates (1.34 buy / 1.36 sell SGD/USD)';
-
-  // 1. Check if user provided explicit spot rates in the prompt (e.g. "spot rate 1.34", "at 1.35", "sold at 1.37")
-  const rateMatches = [...query.matchAll(/(?:rate|spot|fx|exchange rate|at|@)\s*(?:of|is|:)?\s*(?:sgd\s*\/\s*usd\s*)?([01]\.\d{2,4})/gi)];
-  let userProvidedRates = false;
-  if (rateMatches.length >= 2) {
-    purchaseFxRate = parseFloat(rateMatches[0][1]);
-    saleFxRate = parseFloat(rateMatches[1][1]);
-    fxSource = `User Specified Rates (${purchaseFxRate} buy / ${saleFxRate} sell)`;
-    userProvidedRates = true;
-  } else if (rateMatches.length === 1) {
-    purchaseFxRate = parseFloat(rateMatches[0][1]);
-    saleFxRate = Math.round((purchaseFxRate + 0.02) * 10000) / 10000;
-    fxSource = `User Specified Rate (${purchaseFxRate} buy / ${saleFxRate} sell)`;
-    userProvidedRates = true;
-  }
-
-  // 2. If not specified by user, check Frankfurter for historical dates
-  if (!userProvidedRates && functionalCurrency !== transactionCurrency) {
-    const now = new Date();
-    const isPurchaseFuture = new Date(purchaseDateIso) > now;
-    const isSaleFuture = saleDateIso ? new Date(saleDateIso) > now : false;
-
-    if (!isPurchaseFuture && (!saleDate || !isSaleFuture)) {
-      // Historical dates: Frankfurter API has genuine historical rates
-      try {
-        const buyRateObj = await getExchangeRate(transactionCurrency, functionalCurrency, purchaseDateIso);
-        purchaseFxRate = Math.round(buyRateObj.rate * 10000) / 10000;
-        fxSource = buyRateObj.source;
-
-        if (saleDate) {
-          const sellRateObj = await getExchangeRate(transactionCurrency, functionalCurrency, saleDateIso);
-          saleFxRate = Math.round(sellRateObj.rate * 10000) / 10000;
-          if (saleFxRate === purchaseFxRate) {
-            saleFxRate = Math.round((purchaseFxRate + 0.02) * 10000) / 10000;
-            fxSource += ' (+0.02 demonstration spread for FX gain)';
-          }
-        }
-      } catch {
-        purchaseFxRate = 1.34;
-        saleFxRate = 1.36;
-        fxSource = 'Benchmark Spot Rates (1.34 buy / 1.36 sell SGD/USD)';
-      }
-    } else {
-      // Future dates: Frankfurter API has no future rates and collapses all future dates to identical 'latest'
-      // Retain standard benchmark spot rates (1.34 buy / 1.36 sell) to ensure currency gain separation is explicitly demonstrated.
-      purchaseFxRate = 1.34;
-      saleFxRate = 1.36;
-      fxSource = 'Benchmark Spot Rates for Future Dates (1.34 buy / 1.36 sell SGD/USD)';
-    }
-  }
-
-  const initialCostSGD = Math.round(purchaseAmountForeign * purchaseFxRate * 100) / 100;
-  const proceedsSGD = saleAmountForeign ? Math.round(saleAmountForeign * saleFxRate * 100) / 100 : 0;
-  const stockGainSGD = saleAmountForeign ? Math.round((saleAmountForeign - purchaseAmountForeign) * saleFxRate * 100) / 100 : 0;
-  const fxGainSGD = saleAmountForeign ? Math.round(purchaseAmountForeign * (saleFxRate - purchaseFxRate) * 100) / 100 : 0;
+  const purchaseAmount = purchaseAmountForeign!;
+  const acquisitionRate = purchaseFxRate!;
+  const purchaseEventDate = purchaseDate!;
+  const disposalRate = saleFxRate;
+  const initialCostSGD = Math.round(purchaseAmount * acquisitionRate * 100) / 100;
+  const proceedsSGD = saleAmountForeign !== undefined && disposalRate !== undefined ? Math.round(saleAmountForeign * disposalRate * 100) / 100 : 0;
+  const stockGainSGD = saleAmountForeign !== undefined && disposalRate !== undefined ? Math.round((saleAmountForeign - purchaseAmount) * disposalRate * 100) / 100 : 0;
+  const fxGainSGD = saleAmountForeign !== undefined && disposalRate !== undefined ? Math.round(purchaseAmount * (disposalRate - acquisitionRate) * 100) / 100 : 0;
 
   // Build direct groups to guarantee explicit FX gain/loss separation in journal table
   const directGroups: JournalEntryGroup[] = [
     {
       id: 'grp-purchase',
-      eventDate: formatSingaporeDate(purchaseDate),
+      eventDate: formatSingaporeDate(purchaseEventDate),
       title: `Initial Acquisition of ${assetName}`,
-      summary: `Acquisition of USD ${purchaseAmountForeign.toLocaleString()} translated at ${purchaseFxRate} SGD/USD`,
+      summary: `Acquisition of USD ${purchaseAmount.toLocaleString()} translated at ${acquisitionRate} SGD/USD`,
       lines: [
         {
           id: 'line-buy-dr',
@@ -2868,9 +2917,9 @@ export async function parseAccountingQuery(
           debit: initialCostSGD,
           credit: 0,
           foreignCurrency: 'USD',
-          foreignDebit: purchaseAmountForeign,
-          exchangeRate: purchaseFxRate,
-          lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1 translated at spot rate of ${purchaseFxRate} SGD/USD.`
+          foreignDebit: purchaseAmount,
+          exchangeRate: acquisitionRate,
+          lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1 translated at spot rate of ${acquisitionRate} SGD/USD.`
         },
         {
           id: 'line-buy-cr',
@@ -2880,9 +2929,9 @@ export async function parseAccountingQuery(
           debit: 0,
           credit: initialCostSGD,
           foreignCurrency: 'USD',
-          foreignCredit: purchaseAmountForeign,
-          exchangeRate: purchaseFxRate,
-          lineExplanation: `Disbursement of USD ${purchaseAmountForeign.toLocaleString()} translated at transaction spot rate.`
+          foreignCredit: purchaseAmount,
+          exchangeRate: acquisitionRate,
+          lineExplanation: `Disbursement of USD ${purchaseAmount.toLocaleString()} translated at transaction spot rate.`
         }
       ],
       totalDebit: initialCostSGD,
@@ -2894,17 +2943,17 @@ export async function parseAccountingQuery(
       ],
       rationalePoints: [
         `Under SFRS(I) 9 §5.1.1: Financial assets at FVTPL are initially recognized at fair value.`,
-        `Under SFRS(I) 1-21 §21: A foreign currency transaction is recorded on initial recognition in functional currency using the spot exchange rate (${purchaseFxRate} SGD/USD).`
+        `Under SFRS(I) 1-21 §21: A foreign currency transaction is recorded on initial recognition in functional currency using the spot exchange rate (${acquisitionRate} SGD/USD).`
       ]
     }
   ];
 
-  if (saleAmountForeign && saleDate) {
+  if (saleAmountForeign !== undefined && saleDate && disposalRate !== undefined) {
     directGroups.push({
       id: 'grp-disposal',
       eventDate: formatSingaporeDate(saleDate),
       title: `Derecognition / Disposal of ${assetName}`,
-      summary: `Disposal of USD ${saleAmountForeign.toLocaleString()} translated at ${saleFxRate} SGD/USD`,
+      summary: `Disposal of USD ${saleAmountForeign.toLocaleString()} translated at ${disposalRate} SGD/USD`,
       lines: [
         {
           id: 'line-sell-dr-bank',
@@ -2915,8 +2964,8 @@ export async function parseAccountingQuery(
           credit: 0,
           foreignCurrency: 'USD',
           foreignDebit: saleAmountForeign,
-          exchangeRate: saleFxRate,
-          lineExplanation: `Gross disposal proceeds of USD ${saleAmountForeign.toLocaleString()} translated at spot rate of ${saleFxRate} SGD/USD.`
+          exchangeRate: disposalRate,
+          lineExplanation: `Gross disposal proceeds of USD ${saleAmountForeign.toLocaleString()} translated at spot rate of ${disposalRate} SGD/USD.`
         },
         {
           id: 'line-sell-cr-asset',
@@ -2926,9 +2975,9 @@ export async function parseAccountingQuery(
           debit: 0,
           credit: initialCostSGD,
           foreignCurrency: 'USD',
-          foreignCredit: purchaseAmountForeign,
-          exchangeRate: purchaseFxRate,
-          lineExplanation: `Derecognition of original carrying amount of USD ${purchaseAmountForeign.toLocaleString()} @ ${purchaseFxRate} SGD/USD.`
+          foreignCredit: purchaseAmount,
+          exchangeRate: acquisitionRate,
+          lineExplanation: `Derecognition of original carrying amount of USD ${purchaseAmount.toLocaleString()} @ ${acquisitionRate} SGD/USD.`
         },
         {
           id: 'line-sell-stock-gain',
@@ -2937,7 +2986,7 @@ export async function parseAccountingQuery(
           category: 'REVENUE',
           debit: 0,
           credit: stockGainSGD,
-          lineExplanation: `Stock appreciation gain of USD ${(saleAmountForeign - purchaseAmountForeign).toLocaleString()} translated at disposal spot rate of ${saleFxRate} SGD/USD.`
+          lineExplanation: `Stock appreciation gain of USD ${(saleAmountForeign - purchaseAmount).toLocaleString()} translated at disposal spot rate of ${disposalRate} SGD/USD.`
         },
         {
           id: 'line-sell-fx-gain',
@@ -2946,7 +2995,7 @@ export async function parseAccountingQuery(
           category: 'REVENUE',
           debit: 0,
           credit: fxGainSGD,
-          lineExplanation: `Realized foreign currency appreciation on original investment capital of USD ${purchaseAmountForeign.toLocaleString()} from ${purchaseFxRate} to ${saleFxRate} (+${(saleFxRate - purchaseFxRate).toFixed(4)} SGD/USD).`
+          lineExplanation: `Realized foreign currency appreciation on original investment capital of USD ${purchaseAmount.toLocaleString()} from ${acquisitionRate} to ${disposalRate} (+${(disposalRate - acquisitionRate).toFixed(4)} SGD/USD).`
         }
       ],
       totalDebit: proceedsSGD,
@@ -2974,15 +3023,15 @@ export async function parseAccountingQuery(
     transactionTitle: `Investment & Sale of ${assetName} (USD/SGD)`,
     functionalCurrency,
     transactionCurrency,
-    accountingTreatmentSummary: `Under SFRS(I) 9 §5.1.1 and SFRS(I) 1-21 §21, foreign currency equity investments at FVTPL are recognized at transaction spot exchange rates. Upon derecognition, profit is explicitly bifurcated into Fair Value Stock Appreciation (SGD ${stockGainSGD.toLocaleString()}) and Realized Foreign Exchange Gain (SGD ${fxGainSGD.toLocaleString()}).`,
+    accountingTreatmentSummary: `Under SFRS(I) 9 §5.1.1 and SFRS(I) 1-21 §21, foreign currency equity investments at FVTPL are recognized at transaction spot exchange rates.${saleAmountForeign !== undefined ? ` Upon derecognition, profit is explicitly bifurcated into Fair Value Stock Appreciation (SGD ${stockGainSGD.toLocaleString()}) and Realized Foreign Exchange Gain (SGD ${fxGainSGD.toLocaleString()}).` : ''}`,
     singaporeTaxTreatmentSummary: 'Capital gains on foreign shares held as long-term capital investments are not taxable in Singapore (no capital gains tax). Short-term trading profits by active traders/dealers are subject to 17% corporate income tax.',
     regulatoryMandatesSummary: 'MAS Act 1970 zero exchange control policy applies: multi-currency balances and capital remittances are unrestricted in Singapore.',
     effectiveDateOrTiming: `${fxSource}; 17% headline CIT rate.`,
     assetName,
     quantity,
     purchaseDate,
-    purchaseAmountForeign,
-    purchaseFxRate,
+    purchaseAmountForeign: purchaseAmount,
+    purchaseFxRate: acquisitionRate,
     saleDate,
     saleAmountForeign,
     saleFxRate,
@@ -2996,14 +3045,14 @@ export async function parseAccountingQuery(
       ownershipContext: 'external_investment',
       instrument: 'financial_asset_equity',
       actualMeasurementBasis: 'FVTPL',
-      totalAmount: purchaseAmountForeign,
+      totalAmount: purchaseAmount,
       currency: transactionCurrency,
       functionalCurrency,
-      transactionDate: purchaseDate,
+      transactionDate: purchaseEventDate,
       disposalDate: saleDate,
       disposalAmount: saleAmountForeign,
-      acquisitionFxRate: purchaseFxRate,
-      disposalFxRate: saleFxRate,
+      acquisitionFxRate: acquisitionRate,
+      disposalFxRate: disposalRate,
       assetName,
       quantity
     },
@@ -3011,8 +3060,10 @@ export async function parseAccountingQuery(
     fxSource,
     directGroups,
     keyParameters: [
-      { label: 'Initial Outlay', value: `USD ${purchaseAmountForeign.toLocaleString()} @ ${purchaseFxRate} = SGD ${initialCostSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Acquisition' },
-      { label: 'Disposal Proceeds', value: `USD ${(saleAmountForeign || 0).toLocaleString()} @ ${saleFxRate} = SGD ${proceedsSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Derecognition' },
+      { label: 'Initial Outlay', value: `USD ${purchaseAmount.toLocaleString()} @ ${acquisitionRate} = SGD ${initialCostSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Acquisition' },
+      { label: 'Disposal Proceeds', value: saleAmountForeign !== undefined && disposalRate !== undefined
+        ? `USD ${saleAmountForeign.toLocaleString()} @ ${disposalRate} = SGD ${proceedsSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        : 'No disposal provided', badge: 'Derecognition' },
       { label: 'Fair Value Stock Gain', value: `SGD ${stockGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SFRS(I) 9' },
       { label: 'Realized FX Gain', value: `SGD ${fxGainSGD.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SFRS(I) 1-21', highlight: true }
     ],

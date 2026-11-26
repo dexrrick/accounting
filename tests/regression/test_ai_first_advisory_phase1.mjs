@@ -2824,11 +2824,18 @@ try {
         stateSlots[index] = typeof value === 'function' ? value(stateSlots[index]) : value;
       }];
     },
+    useRef(initial) {
+      const index = stateCursor++;
+      if (!(index in stateSlots)) stateSlots[index] = { current: initial };
+      return stateSlots[index];
+    },
     useEffect() {}
   };
-  const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useEffect: fakeReact.useEffect };
+  const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useRef: fakeReact.useRef, useEffect: fakeReact.useEffect };
   const appCalls = [];
   let resolveDeferredProcessing;
+  const cancelledQuestion = 'New question: Prepare a separate consulting expense journal';
+  const failedQuestion = 'New question: Prepare another consulting expense journal';
   const scenarioA = { scenarioType: 'EXPENSE', rawQuery: offlineQuestion, transactionTitle: 'Transaction A', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
   const scenarioB = { ...scenarioA, rawQuery: laterTransactionText, transactionTitle: 'Transaction B' };
   const emptyScenario = { scenarioType: 'UNRECOGNIZED', rawQuery: '', transactionTitle: 'No current scenario', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: false };
@@ -2966,8 +2973,11 @@ try {
           ? { messageText: 'Retryable answer.', scenarioState: scenarioB, advisoryFailureStatus: 'NETWORK' }
           : { messageText: 'Retried answer.', scenarioState: scenarioB };
       }
-      if (query === 'deferred follow-up while processing') {
+      if (query === 'deferred follow-up while processing' || query === cancelledQuestion) {
         return new Promise(resolve => { resolveDeferredProcessing = resolve; });
+      }
+      if (query === failedQuestion) {
+        return { messageText: 'Provider unavailable.', scenarioState: unrelatedConfirmedScenario, providerStatus: 'FAILED' };
       }
       if (query === 'What are annual filing deadlines?') {
         return {
@@ -3029,10 +3039,15 @@ try {
   const appContext = {
     module: appModule, exports: appModule.exports, require: appRequire,
     localStorage: { getItem: () => null, setItem() {} }, Date: nextUserMessageIdTime,
-    setInterval() { return 0; }, clearInterval() {}, console
+    AbortController, DOMException, setInterval() { return 0; }, clearInterval() {}, console
   };
   vm.runInNewContext(appJavaScript, appContext);
-  const renderApp = () => { stateCursor = 0; appModule.exports.App(); return { chatProps, inputProps, journalProps }; };
+  const renderApp = () => {
+    stateCursor = 0;
+    journalProps = undefined;
+    appModule.exports.App();
+    return { chatProps, inputProps, journalProps };
+  };
   let appUi = renderApp();
   await appUi.chatProps.onSendMessage(offlineQuestion);
   appUi = renderApp();
@@ -3200,6 +3215,34 @@ try {
     'journal recall still returns the prior committed entry after an advisory-only response');
   assert.equal(appUi.journalProps.groups[0].totalDebit, 72000,
     'the advisory-only response preserves the last committed amount');
+
+  const cancelledRequest = appUi.chatProps.onSendMessage(cancelledQuestion);
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, true, 'the new request is in flight');
+  assert.equal(appUi.journalProps?.groups[0].totalDebit, 72000,
+    'starting a separate request keeps the last committed journal visible until a result succeeds');
+  const requestSignal = appCalls.at(-1).at(-1);
+  assert.ok(requestSignal instanceof AbortSignal, 'the App supplies the request controller to the service');
+  const loadingMarkup = renderToStaticMarkup(React.createElement(ChatPanel, appUi.chatProps));
+  assert.ok(loadingMarkup.includes('aria-label="Cancel request"'), 'the chat offers cancellation while processing');
+  appUi.chatProps.onCancelRequest();
+  assert.equal(requestSignal.aborted, true, 'Cancel aborts the in-flight service request');
+  resolveDeferredProcessing({ messageText: 'Late success.', scenarioState: unrelatedConfirmedScenario });
+  await cancelledRequest;
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, false, 'cancellation releases the chat');
+  assert.match(appUi.chatProps.messages.at(-1).text, /cancel/i, 'cancellation is explained in chat');
+  assert.equal(appUi.journalProps?.groups[0].totalDebit, 72000,
+    'a late completion after cancellation cannot replace the committed journal');
+
+  await appUi.chatProps.onSendMessage(failedQuestion);
+  appUi = renderApp();
+  assert.match(appUi.chatProps.messages.at(-1).text, /provider unavailable/i);
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1]?.amount, 72000, 'journal recall still uses the last confirmed scenario after provider failure');
+  assert.equal(appUi.journalProps?.groups[0].totalDebit, 72000,
+    'a separate provider failure cannot clear or replace the visible committed journal');
 
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();

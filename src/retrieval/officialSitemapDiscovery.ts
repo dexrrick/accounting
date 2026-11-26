@@ -443,14 +443,14 @@ export function isOfficialSourceCandidateMateriallyRelevant(
  */
 export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryAdapter {
   private readonly retriever: ControlledWebRetriever;
-  private readonly fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> };
+  private readonly fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal };
   private readonly sitemapCache = new Map<string, SitemapCacheEntry>();
   private readonly candidateIndex = new Map<string, OfficialSourceIndexEntry>();
   private lastFetchTrace: Array<{ topicId: string; status: string }> = [];
 
   constructor(
     retriever: ControlledWebRetriever,
-    fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response> } = {}
+    fetchOptions: { timeoutMs?: number; customFetch?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal } = {}
   ) {
     this.retriever = retriever;
     this.fetchOptions = { timeoutMs: 1200, ...fetchOptions };
@@ -479,7 +479,8 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     content: string,
     sitemapUrl: string,
     approvedHosts: readonly string[],
-    request: OfficialSourceDiscoveryRequest
+    request: OfficialSourceDiscoveryRequest,
+    signal?: AbortSignal
   ): Promise<OfficialSourceIndexEntry[]> {
     if (!/<(?:urlset|sitemapindex)\b/i.test(content)) {
       return readHtmlSitemapEntries(content, sitemapUrl, approvedHosts, request.authority);
@@ -494,6 +495,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       for (const childSitemapUrl of childSitemaps) {
         const childSitemap = await this.retriever.fetchOfficialSource(childSitemapUrl, {
           ...this.fetchOptions,
+          signal,
           useCache: false
         });
         this.recordFetchStatus(request, childSitemap.status);
@@ -519,7 +521,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     return [...entries.values()];
   }
 
-  private async getSitemapEntries(host: string, approvedHosts: readonly string[], request: OfficialSourceDiscoveryRequest): Promise<OfficialSourceIndexEntry[]> {
+  private async getSitemapEntries(host: string, approvedHosts: readonly string[], request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<OfficialSourceIndexEntry[]> {
     const allowedHosts = new Set(approvedHosts.map(item => item.toLowerCase()));
     // CPF publishes separate employer/member indexes. Select the relevant one
     // before applying the existing one-sitemap cap; never crawl both broadly.
@@ -547,6 +549,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       for (const sitemapUrl of configuredSitemaps) {
       const sitemap = await this.retriever.fetchOfficialSource(sitemapUrl, {
         ...this.fetchOptions,
+        signal,
         useCache: false
       });
       this.recordFetchStatus(request, sitemap.status);
@@ -555,7 +558,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
       })();
       if (sitemap.status === 'SUCCESS' && sitemap.content && allowedHosts.has(finalHost)) {
         const entries = await this.readConfiguredSitemapEntries(
-          sitemap.content, sitemap.finalUrl || sitemapUrl, [...allowedHosts], request
+          sitemap.content, sitemap.finalUrl || sitemapUrl, [...allowedHosts], request, signal
         );
         if (entries.length > 0) {
           this.sitemapCache.set(cacheKey, { expiresAt: Date.now() + SITEMAP_CACHE_MS, entries });
@@ -568,6 +571,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
 
     const robots = await this.retriever.fetchOfficialSource(`https://${host}/robots.txt`, {
       ...this.fetchOptions,
+      signal,
       useCache: false
     });
     this.recordFetchStatus(request, robots.status);
@@ -597,6 +601,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     for (const sitemapUrl of sitemapUrls) {
       const sitemap = await this.retriever.fetchOfficialSource(sitemapUrl, {
         ...this.fetchOptions,
+        signal,
         useCache: false
       });
       this.recordFetchStatus(request, sitemap.status);
@@ -614,6 +619,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
         for (const childSitemapUrl of childSitemaps) {
           const childSitemap = await this.retriever.fetchOfficialSource(childSitemapUrl, {
             ...this.fetchOptions,
+            signal,
             useCache: false
           });
           this.recordFetchStatus(request, childSitemap.status);
@@ -643,7 +649,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     return entries;
   }
 
-  public async discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
+  public async discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]> {
     this.lastFetchTrace = [];
     const approvedHosts = [...new Set(request.approvedHosts.map(host => host.toLowerCase()))];
     const distinctHosts = approvedHosts.filter(host => {
@@ -661,7 +667,7 @@ export class OfficialSitemapDiscoveryAdapter implements OfficialSourceDiscoveryA
     const candidates = new Map<string, OfficialSourceIndexEntry>();
 
     for (const host of preferredHosts) {
-      const entries = await this.getSitemapEntries(host, approvedHosts, request);
+      const entries = await this.getSitemapEntries(host, approvedHosts, request, signal);
       for (const entry of entries) {
         if (candidateScore(entry, request) > 0) {
           candidates.set(entry.canonicalUrl, entry);
@@ -766,7 +772,7 @@ export class OfficialDomainSearchAdapter {
     return topicSpecificPairBoost + newWords * 5 + queryOverlap * 2;
   }
 
-  public async searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]> {
+  public async searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]> {
     const approvedHosts = new Set(request.approvedHosts.map(host => host.toLowerCase()));
     if (request.lexicalDiscovery !== true || !request.searchSite || !request.searchEndpoint ||
         !request.searchRedirectHost || !request.searchRedirectParameter) return [];
@@ -804,6 +810,11 @@ export class OfficialDomainSearchAdapter {
     // phrase if needed. Both variants stay restricted to the configured site;
     // result titles/snippets remain metadata and pages still require a fetch.
     for (const [queryIndex, searchQuery] of queries.entries()) {
+      if (signal?.aborted) {
+        const error = new Error('Official-domain search was canceled.');
+        error.name = 'AbortError';
+        throw error;
+      }
       if (found.size >= candidateLimit) break;
       const variant = queryIndex === 0 ? 'FULL_QUERY' as const : `TOPIC_HINT_${queryIndex}` as 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3';
       const queryCandidateUrls = new Set<string>();
@@ -812,6 +823,8 @@ export class OfficialDomainSearchAdapter {
       endpoint.searchParams.set('q', searchQuery);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.fetchOptions.timeoutMs);
+      const onExternalAbort = () => controller.abort();
+      signal?.addEventListener('abort', onExternalAbort, { once: true });
       try {
         let html = '';
         let searchHost = endpoint.hostname;
@@ -888,11 +901,13 @@ export class OfficialDomainSearchAdapter {
           queryCandidateUrls.add(canonicalUrl);
           if (!variantCandidates.has(canonicalUrl) || candidate.title) variantCandidates.set(canonicalUrl, candidate.title);
         }
-      } catch {
+      } catch (error) {
+        if (signal?.aborted) throw error;
         // A failed/empty full-query attempt must not prevent the bounded topic
         // query from running.
       } finally {
         clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', onExternalAbort);
         const rankByContext = (entries: Array<[string, string]>) => entries.sort(([urlA, titleA], [urlB, titleB]) => {
           const score = (url: string, title: string) => {
             const candidateWords = new Set(normalizeWords(`${title} ${url}`));

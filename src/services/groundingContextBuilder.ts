@@ -17,6 +17,7 @@ import { getCoverageTopicsByIds, SINGAPORE_COVERAGE_REGISTRY, SINGAPORE_DOMAIN_T
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
+import { getRequestTimeoutMs } from './requestDeadline';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -404,7 +405,7 @@ export interface OfficialSourceDiscoveryRequest {
 
 /** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
 export interface OfficialSourceDiscoveryAdapter {
-  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   /** Status-only transport trace for sitemap/robots fetches; never evidence. */
   getLastFetchTrace?(): Array<{ topicId: string; status: string }>;
@@ -412,7 +413,7 @@ export interface OfficialSourceDiscoveryAdapter {
 
 /** Search returns candidate URLs only; every candidate is independently fetched and validated. */
 export interface OfficialDomainSearchAdapter {
-  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   getCandidateQueryVariant?(url: string): 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3' | undefined;
   getLastSearchTrace?(): Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }>;
@@ -443,6 +444,7 @@ export interface MappedFallbackOptions {
   evidenceScope?: AuthorityEvidenceScope;
   /** Validated issue-local IRAS rule intent; the original user query remains unchanged. */
   authorityIssue?: GroundedReasoningContext['authorityIssue'];
+  signal?: AbortSignal;
 }
 
 function topicMatchesEvidenceScope(topic: SingaporeCoverageTopic, scope?: AuthorityEvidenceScope): boolean {
@@ -2596,9 +2598,10 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       sitemapStageAttempted = true;
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates(
-        cloneOfficialSourceDiscoveryRequest(discoveryRequest)
+        cloneOfficialSourceDiscoveryRequest(discoveryRequest), options.signal
       );
-    } catch {
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
@@ -2786,9 +2789,10 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       onlineSearchStageAttempted = true;
       searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates(
-        cloneOfficialSourceDiscoveryRequest(searchRequest)
+        cloneOfficialSourceDiscoveryRequest(searchRequest), options.signal
       );
-    } catch {
+    } catch (error) {
+      if (options.signal?.aborted) throw error;
       searchCandidates = [];
     }
     for (const searchTrace of officialDomainSearchAdapter.getLastSearchTrace?.() || []) {
@@ -3037,7 +3041,8 @@ export async function buildGroundedReasoningContext(
       initialQuestionUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' };
     } else {
       requestCompletenessContext = createRequestCompletenessContext(userInput);
-      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey,
+        undefined, undefined, retrievalOptions.signal);
     }
   }
   requestCompletenessContext = ensureRequestCompletenessContext(userInput, requestCompletenessContext, initialQuestionUnderstanding);
@@ -3174,6 +3179,13 @@ export async function buildGroundedReasoningContext(
     (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
     ...retrievalOptions,
+    ...(retrievalOptions.signal ? {
+      fetchOptions: {
+        ...retrievalOptions.fetchOptions,
+        signal: retrievalOptions.signal,
+        timeoutMs: getRequestTimeoutMs(retrievalOptions.signal, retrievalOptions.fetchOptions?.timeoutMs ?? 3000)
+      }
+    } : {}),
     questionUnderstanding,
     semanticDiscoveryQuery: semanticIrasContext ? semanticDiscoveryQuery : undefined,
     authorityLevelDiscovery: retrievalOptions.localOnly ? false : retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,

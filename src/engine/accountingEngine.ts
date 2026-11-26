@@ -31,6 +31,40 @@ export function calculateDoubleEntries(
       ? 'AI_PROPOSED'
       : (scenario.missingFacts && scenario.missingFacts.length > 0 ? 'CONDITIONAL' : 'DETERMINISTIC'));
 
+  const saleRequested = scenario.saleAmountForeign !== undefined ||
+    /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i.test(scenario.rawQuery);
+  const isValidSingaporeDate = (value?: string): boolean => {
+    const match = value?.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!match) return false;
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  };
+  const hasCompleteFxFacts = Boolean(
+    isValidSingaporeDate(scenario.purchaseDate) &&
+    Number.isFinite(scenario.purchaseAmountForeign) && (scenario.purchaseAmountForeign ?? 0) > 0 &&
+    Number.isFinite(scenario.purchaseFxRate) && (scenario.purchaseFxRate ?? 0) > 0 &&
+    (!saleRequested || (isValidSingaporeDate(scenario.saleDate) &&
+      Number.isFinite(scenario.saleAmountForeign) && (scenario.saleAmountForeign ?? 0) > 0 &&
+      Number.isFinite(scenario.saleFxRate) && (scenario.saleFxRate ?? 0) > 0))
+  );
+  if ((scenario.scenarioType === 'EQUITY_INVESTMENT_FX' || (scenario.purchaseAmountForeign ?? 0) > 0) &&
+      (!scenario.isComplete || scenario.missingFields.length > 0 || !hasCompleteFxFacts)) {
+    return {
+      groups: [],
+      financialImpact: {
+        totalAssetsDelta: 0,
+        totalLiabilitiesDelta: 0,
+        totalEquityDelta: 0,
+        pnlImpact: 0,
+        ociImpact: 0,
+        functionalCurrency: func
+      }
+    };
+  }
+
   // =========================================================================
   // SCENARIO 0: UNIVERSAL DIRECT GROUPS (From Gemini API or Smart Engine)
   // =========================================================================
@@ -286,8 +320,8 @@ export function calculateDoubleEntries(
   // SCENARIO 3: EQUITY INVESTMENTS IN FOREIGN CURRENCY (IFRS 9 / IAS 21)
   // =========================================================================
   else if (scenario.scenarioType === 'EQUITY_INVESTMENT_FX' || ((scenario.purchaseAmountForeign ?? 0) > 0)) {
-    const purchaseAmountForeign = scenario.purchaseAmountForeign ?? 0;
-    const buyRate = scenario.purchaseFxRate ?? 1.34;
+    const purchaseAmountForeign = scenario.purchaseAmountForeign!;
+    const buyRate = scenario.purchaseFxRate!;
     const purchaseFunctional = Math.round((purchaseAmountForeign * buyRate) * 100) / 100;
     const classification = scenario.classification || 'FVTPL';
 
@@ -321,7 +355,7 @@ export function calculateDoubleEntries(
 
     groups.push({
       id: 'grp-purchase',
-      eventDate: formatSingaporeDate(scenario.purchaseDate || '13/11/2026'),
+      eventDate: formatSingaporeDate(scenario.purchaseDate!),
       title: `Initial Recognition of ${scenario.assetName || 'Investment'}`,
       summary: `Acquisition of ${foreign} ${purchaseAmountForeign.toLocaleString()} shares at spot rate ${buyRate} ${func}/${foreign}`,
       lines: buyLines,
@@ -341,7 +375,7 @@ export function calculateDoubleEntries(
 
     // Entry 2: Sale / Derecognition
     if (scenario.saleAmountForeign && scenario.saleAmountForeign > 0) {
-      const sellRate = scenario.saleFxRate ?? 1.36;
+      const sellRate = scenario.saleFxRate!;
       const saleFunctional = Math.round((scenario.saleAmountForeign * sellRate) * 100) / 100;
       const totalNetGainLoss = Math.round((saleFunctional - purchaseFunctional) * 100) / 100;
 
@@ -452,7 +486,7 @@ export function calculateDoubleEntries(
 
       groups.push({
         id: 'grp-sale',
-        eventDate: formatSingaporeDate(scenario.saleDate || '15/12/2026'),
+        eventDate: formatSingaporeDate(scenario.saleDate!),
         title: `Derecognition / Disposal of ${scenario.assetName || 'Investment'}`,
         summary: `Sale of ${foreign} ${scenario.saleAmountForeign.toLocaleString()} shares at spot rate ${sellRate} ${func}/${foreign}`,
         lines: sellLines,

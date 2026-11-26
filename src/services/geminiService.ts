@@ -33,6 +33,7 @@ import {
 } from './conversationBoundary';
 import { getDisplayableUncommittedJournalGroups } from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
+import { createRequestDeadline, getRequestTimeoutMs, raceRequestWithAbort, throwIfRequestAborted } from './requestDeadline';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
 import { UNIFIED_SOURCE_REGISTRY } from '../standards/unifiedSourceModel';
@@ -102,13 +103,20 @@ export interface AccountingQueryDiagnostics {
 }
 
 /** AI may identify factual events only; strict normalization blocks journals and invented schema. */
-export async function extractEventSequenceWithGemini(text: string, apiKey: string, modelName: string): Promise<AccountingEventSequence | undefined> {
+export async function extractEventSequenceWithGemini(
+  text: string, apiKey: string, modelName: string, signal?: AbortSignal
+): Promise<AccountingEventSequence | undefined> {
+  throwIfRequestAborted(signal);
+  const timeoutMs = signal ? getRequestTimeoutMs(signal, 45_000) : 45_000;
+  const headers = new Headers({ 'Content-Type': 'application/json', 'x-goog-api-key': apiKey });
   const response = await fetchGemini(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, apiKey, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|lease_commencement|lease_payment|lease_modification|sale_and_leaseback|depreciation|correction|reversal|reclassification|asset_disposal|foreign_currency_purchase|treasury_share_reissue|sale_with_right_of_return|fx_remeasurement|fvoci_equity_acquisition|fvtpl_portfolio_valuation|fvoci_equity_valuation|investment_distribution|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
-  });
+    method: 'POST', headers,
+    body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Extract chronological accounting EVENT FACTS from the text below. Do not calculate, recommend accounts, create journal entries, infer omitted facts, or cite standards. Return JSON only: {"events":[{"id":"event-1","date":"DD Mon YYYY","type":"purchase|purchase_return|supplier_settlement|purchase_discount|sale|sales_return|customer_settlement|credit_note|lease_commencement|lease_payment|lease_modification|sale_and_leaseback|depreciation|correction|reversal|reclassification|asset_disposal|foreign_currency_purchase|treasury_share_reissue|sale_with_right_of_return|fx_remeasurement|fvoci_equity_acquisition|fvtpl_portfolio_valuation|fvoci_equity_valuation|investment_distribution|other","description":"verbatim concise fact","currency":"SGD","amount":number,"quantity":number,"unitPrice":number,"tax":{"rate":number},"relatesTo":["event-1"],"confidence":0.0}]}. Omit unavailable numeric fields.\n\n${text}` }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } }),
+    signal
+  }, timeoutMs);
   if (!response.ok) throw new Error(`Gemini event extraction returned HTTP ${response.status}.`);
   const responseText = (await response.json())?.candidates?.[0]?.content?.parts?.[0]?.text;
+  throwIfRequestAborted(signal);
   return responseText ? normaliseAiEventSequence(repairAndParseAIJson(responseText)) : undefined;
 }
 
@@ -240,17 +248,24 @@ function getDeterministicFallbackGroups(
 export async function extractImageEvidenceWithGemini(
   apiKey: string,
   modelName: string,
-  attachments: ChatImageAttachment[]
+  attachments: ChatImageAttachment[],
+  signal?: AbortSignal
 ): Promise<ExtractedImageEvidence[]> {
   if (!attachments.length) return [];
   if (!supportsGeminiVision(modelName)) throw new Error('The selected Gemini model cannot analyse images.');
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutMs = signal ? getRequestTimeoutMs(signal, 30000) : 30000;
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', onExternalAbort, { once: true });
   try {
+    throwIfRequestAborted(signal);
+    const headers = new Headers({ 'Content-Type': 'application/json', 'x-goog-api-key': apiKey });
     const response = await fetchGemini(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`, apiKey, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      headers,
       body: JSON.stringify({
         contents: [{
           role: 'user',
@@ -262,7 +277,7 @@ export async function extractImageEvidenceWithGemini(
         generationConfig: { temperature: 0, responseMimeType: 'application/json' }
       }),
       signal: controller.signal
-    });
+    }, timeoutMs);
     if (!response.ok) throw new Error(`Gemini image extraction failed with HTTP ${response.status}.`);
     const data = await response.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -270,6 +285,7 @@ export async function extractImageEvidenceWithGemini(
     return normaliseImageEvidence(repairAndParseAIJson(text)?.imageEvidence, attachments);
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', onExternalAbort);
   }
 }
 
@@ -483,8 +499,34 @@ export async function processAccountingQuery(
   chatHistory: ChatMessage[] = [],
   outputPreference?: OutputPreference,
   diagnostics?: AccountingQueryDiagnostics,
-  journalRecallProposal?: AccountingScenarioState
+  journalRecallProposal?: AccountingScenarioState,
+  callerSignal?: AbortSignal
 ): Promise<GeminiResponse> {
+  const deadline = createRequestDeadline(callerSignal);
+  try {
+    const operation = () => processAccountingQueryWithinDeadline(
+      userInput, currentScenario, standard, providerOrApiKey, modelName, chatHistory,
+      outputPreference, diagnostics, journalRecallProposal, deadline.signal
+    );
+    return await raceRequestWithAbort(operation, deadline);
+  } finally {
+    deadline.dispose();
+  }
+}
+
+async function processAccountingQueryWithinDeadline(
+  userInput: string,
+  currentScenario: AccountingScenarioState | null,
+  standard: AccountingStandard,
+  providerOrApiKey?: ProviderSettings | string,
+  modelName: string = 'gemini-3.5-flash-lite',
+  chatHistory: ChatMessage[] = [],
+  outputPreference?: OutputPreference,
+  diagnostics?: AccountingQueryDiagnostics,
+  journalRecallProposal?: AccountingScenarioState,
+  signal?: AbortSignal
+): Promise<GeminiResponse> {
+  throwIfRequestAborted(signal);
   let groundedContext: GroundedReasoningContext | undefined;
   let authorityWorkstreams: AuthorityWorkstreamsResult | undefined;
   let deterministicScenario: AccountingScenarioState | undefined;
@@ -506,8 +548,10 @@ export async function processAccountingQuery(
       synthesisHistory = history;
       conversationBoundaryMessageId = history.find(message => message.sender === 'user')?.id;
     },
-    scenario => { deterministicScenario = structuredClone(scenario); }
+    scenario => { deterministicScenario = structuredClone(scenario); },
+    signal
   );
+  throwIfRequestAborted(signal);
   if (conversationBoundaryMessageId) response.conversationBoundaryMessageId = conversationBoundaryMessageId;
   // Reuse the governed result and its evidence; never restart a failed provider
   // request or let synthesis produce accounting state or image-derived facts.
@@ -532,9 +576,12 @@ export async function processAccountingQuery(
         .filter(topic => topic.authorities.includes('IRAS')).map(topic => topic.id) : [];
       const requestedConcepts = irasIssue ? [{ id: `synthesis-rule-${irasIssue.id}`, topicIds: retrievalTopicIds,
         label: irasIssue.subject, terms: [irasIssue.subject] }] : [];
+      throwIfRequestAborted(signal);
       groundedContext = await buildGroundedReasoningContext(userInput, null, undefined, undefined, {
         questionUnderstanding: { mode: 'DETERMINISTIC_FALLBACK', failure: 'NO_PROVIDER' },
         requestCompletenessContext: response.scenarioState.requestCompletenessContext,
+        signal,
+        fetchOptions: signal ? { signal } : undefined,
         ...(irasIssue ? {
           evidenceScope: {
             authority: 'IRAS' as const, domain: irasIssue.domain, topicIds: retrievalTopicIds, requestedConcepts,
@@ -544,12 +591,15 @@ export async function processAccountingQuery(
           authorityIssue: { authority: 'IRAS' as const, issue: irasIssue, requestedConcepts }
         } : {})
       });
+      throwIfRequestAborted(signal);
       diagnostics?.onGroundedContext?.(groundedContext);
     }
+    throwIfRequestAborted(signal);
     const synthesis = await tryGenerateGroundedSynthesis({
       query: userInput, standard, provider: providerOrApiKey, history: synthesisHistory,
       response, context: groundedContext, workstreams: authorityWorkstreams
-    });
+    }, { signal });
+    throwIfRequestAborted(signal);
     if (!synthesis) {
       const accountingOnlyPlan = hasOnlyAccountingAuthorityPlan(authorityWorkstreams);
       const responseContainsStatutoryClaim = hasUnverifiedStatutoryClaim(response, deterministicScenario);
@@ -580,6 +630,7 @@ export async function processAccountingQuery(
       }
     };
   } catch (error) {
+    throwIfRequestAborted(signal);
     const advisoryFailureStatus = classifyAdvisoryFailure(error);
     console.warn('[Evidence-grounded synthesis] Re-rendering admitted evidence after synthesis failure.', advisoryFailureStatus);
     return createGroundedSynthesisFailureResponse(
@@ -895,8 +946,10 @@ async function processAccountingQueryCore(
   journalRecallProposal?: AccountingScenarioState,
   diagnostics?: AccountingQueryDiagnostics,
   onConversationScope?: (history: ChatMessage[]) => void,
-  onDeterministicScenario?: (scenario: AccountingScenarioState) => void
+  onDeterministicScenario?: (scenario: AccountingScenarioState) => void,
+  signal?: AbortSignal
 ): Promise<GeminiResponse> {
+  throwIfRequestAborted(signal);
   const profiler = new RequestProfiler(userInput, modelName);
   let imageAttachments = getCurrentImageAttachments(chatHistory);
   let hasImages = imageAttachments.length > 0;
@@ -1083,8 +1136,9 @@ async function processAccountingQueryCore(
     try {
       const advisory = await generateAiFirstAdvisory(
         userInput, activeScenario, standard, providerOrApiKey, relevantChatHistory,
-        { onGroundedContext: context => diagnostics?.onGroundedContext?.(context) }
+        { onGroundedContext: context => diagnostics?.onGroundedContext?.(context), signal }
       );
+      throwIfRequestAborted(signal);
       profiler.setQueryMode('AI_FIRST_ADVISORY');
       profiler.recordFirstVisibleResponse();
       profiler.logSummary();
@@ -1094,6 +1148,7 @@ async function processAccountingQueryCore(
         displayFullAnswer: true
       });
     } catch (error) {
+      throwIfRequestAborted(signal);
       advisoryFailureStatus = classifyAdvisoryFailure(error);
       console.warn('[AI-first advisory] Generation failed; using the existing offline response path.', advisoryFailureStatus);
       profiler.recordFallback();
@@ -1157,7 +1212,9 @@ async function processAccountingQueryCore(
     const localContext = await buildGroundedReasoningContext(userInput, null, undefined, undefined, {
       questionUnderstanding: localUnderstanding,
       authorityLevelDiscovery: false,
-      localOnly: true
+      localOnly: true,
+      signal,
+      fetchOptions: signal ? { signal } : undefined
     });
     const localQuality = localContext.evidenceQuality;
     if (localQuality?.status === 'LOCAL_SUFFICIENT' && localQuality.uncoveredTopicIds.length === 0 &&
@@ -1176,8 +1233,9 @@ async function processAccountingQueryCore(
     ? buildAdvisoryConversation(relevantChatHistory, userInput)
     : undefined;
   const rawQuestionUnderstanding = await interpretSemanticQuestion(
-    userInput, providerOrApiKey, undefined, semanticConversation
+    userInput, providerOrApiKey, undefined, semanticConversation, signal
   );
+  throwIfRequestAborted(signal);
   if (!['NO_PROVIDER', 'QUERY_TOO_LONG'].includes(rawQuestionUnderstanding.failure || '')) {
     profiler.recordGeminiCall({ durationMs: performance.now() - questionUnderstandingStarted });
   }
@@ -1227,8 +1285,10 @@ async function processAccountingQueryCore(
     authorityEvidenceQueryIntent = classification.intent;
     const authorityResult = await buildAuthorityWorkstreams(userInput, reconciledQuestionUnderstanding.issuePlan, {
       questionUnderstanding,
-      requestCompletenessContext
+      requestCompletenessContext,
+      signal
     });
+    throwIfRequestAborted(signal);
     diagnostics?.onAuthorityWorkstreams?.(authorityResult);
     authorityEvidencePresentation = createAuthorityEvidencePresentation(authorityResult);
     authorityEvidenceMessage = renderAuthorityEvidenceResponseText(
@@ -1305,8 +1365,10 @@ async function processAccountingQueryCore(
   const governedOfflineResponse = async (scenario: AccountingScenarioState): Promise<GeminiResponse> => {
     if (!irasEvidenceRequired) return renderStructuredOfflineResponse(scenario, standard);
     const context = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, {
-      questionUnderstanding, requestCompletenessContext
+      questionUnderstanding, requestCompletenessContext, signal,
+      fetchOptions: signal ? { signal } : undefined
     });
+    throwIfRequestAborted(signal);
     if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
     diagnostics?.onGroundedContext?.(context);
     return renderIrasEvidenceResponse(
@@ -1325,12 +1387,13 @@ async function processAccountingQueryCore(
       if (!irasEvidenceRequired && apiKey?.trim() && apiKey.trim().length > 10) {
         const extractionStarted = performance.now();
         try {
-          aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName);
+          aiCandidate = await extractEventSequenceWithGemini(userInput, apiKey.trim(), geminiConfig?.model || modelName, signal);
         } finally {
           profiler.recordGeminiCall({ durationMs: performance.now() - extractionStarted });
         }
       }
     } catch (error) {
+      throwIfRequestAborted(signal);
       aiExtractionFailure = error instanceof Error ? error.message : 'Gemini event extraction failed.';
     }
     if (aiExtractionRequired && !aiCandidate) {
@@ -1338,7 +1401,7 @@ async function processAccountingQueryCore(
       profiler.recordFirstVisibleResponse();
       profiler.logSummary();
       const clarification: MissingFieldInfo = { fieldKey: 'aiEventExtraction', fieldName: 'AI event extraction', prompt: aiExtractionFailure || 'Gemini responded, but its event-fact sequence did not pass validation. Please retry or check the configured model.', whyNeeded: 'Multi-event journals are configured to require validated AI fact extraction before deterministic accounting treatment.' };
-      return attachAmendmentProvenance({ messageText: `### AI Event Extraction Required for Double Entry\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [clarification] }, clarifications: [clarification] });
+      return attachAmendmentProvenance({ messageText: `### AI Event Extraction Failed\n\n${clarification.prompt}`, scenarioState: { scenarioType: 'EVENT_SEQUENCE', rawQuery: userInput, transactionTitle: 'Pending AI event extraction', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], isComplete: false, missingFields: [] }, providerStatus: 'FAILED' });
     }
     const resolution = resolveEventSequence(userInput, standard, aiCandidate);
     if (resolution) {
@@ -1391,7 +1454,9 @@ async function processAccountingQueryCore(
     }
   }
   const tDet0 = Date.now();
-  deterministicScenario = await parseAccountingQuery(userInput, activeScenario, questionUnderstanding);
+  throwIfRequestAborted(signal);
+  deterministicScenario = await parseAccountingQuery(userInput, activeScenario, questionUnderstanding, signal);
+  throwIfRequestAborted(signal);
   onDeterministicScenario?.(deterministicScenario);
   profiler.recordStage('deterministic_engine', Date.now() - tDet0);
 
@@ -1484,8 +1549,10 @@ async function processAccountingQueryCore(
   // 2. Build grounded context to evaluate evidence provenance and classification
   const tGround0 = Date.now();
   const groundedContext = await buildGroundedReasoningContext(userInput, activeScenario, undefined, providerOrApiKey, {
-    questionUnderstanding, requestCompletenessContext
+    questionUnderstanding, requestCompletenessContext, signal,
+    fetchOptions: signal ? { signal } : undefined
   });
+  throwIfRequestAborted(signal);
   if (groundedContext.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(groundedContext.sourceMapFallbackTrace);
   diagnostics?.onGroundedContext?.(groundedContext);
   profiler.recordStage('grounding', Date.now() - tGround0);
@@ -1531,8 +1598,9 @@ async function processAccountingQueryCore(
       }
       if (active === 'azure' && providerOrApiKey.azure?.apiKey && providerOrApiKey.azure.endpoint) {
         try {
-          return validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario)));
+          return validateJournalResponse(attachAmendmentProvenance(await callAzureOpenAI(userInput, activeScenario, standard, providerOrApiKey.azure, relevantChatHistory, groundedContext, deterministicScenario, signal)));
         } catch (err: any) {
+        throwIfRequestAborted(signal);
           console.warn('Azure OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Azure OpenAI Error';
           profiler.recordFallback();
@@ -1549,9 +1617,11 @@ async function processAccountingQueryCore(
             groundedContext,
             deterministicScenario,
             profiler,
-            imageAttachments
+            imageAttachments,
+            signal
           )));
         } catch (err: any) {
+          throwIfRequestAborted(signal);
           console.warn('Gemini API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'Gemini API Error';
           profiler.recordFallback();
@@ -1565,9 +1635,11 @@ async function processAccountingQueryCore(
             providerOrApiKey.openai,
             relevantChatHistory,
             groundedContext,
-            deterministicScenario
+            deterministicScenario,
+            signal
           )));
         } catch (err: any) {
+          throwIfRequestAborted(signal);
           console.warn('OpenAI API call failed, falling back to smart universal engine:', err);
           apiErrorMessage = err?.message || 'OpenAI API Error';
           profiler.recordFallback();
@@ -1585,9 +1657,11 @@ async function processAccountingQueryCore(
           groundedContext,
           deterministicScenario,
           profiler,
-          imageAttachments
+          imageAttachments,
+          signal
         )));
       } catch (err: any) {
+        throwIfRequestAborted(signal);
         console.warn('Gemini API call failed, falling back to smart universal engine:', err);
         apiErrorMessage = err?.message || 'Gemini API Error';
         profiler.recordFallback();
@@ -1601,10 +1675,12 @@ async function processAccountingQueryCore(
   if (groundedContext.evidenceQuality) {
     const response = renderIrasEvidenceResponse({ treatment: deterministicScenario.accountingTreatmentSummary }, groundedContext, userInput, deterministicScenario, standard,
       apiErrorMessage ? 'PROVIDER_FAILURE' : 'BLOCKED');
+    if (apiErrorMessage) response.providerStatus = 'FAILED';
     profiler.logSummary();
     return attachAmendmentProvenance(response);
   }
   const fallbackResponse = attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard, apiErrorMessage, groundedContext));
+  if (apiErrorMessage) fallbackResponse.providerStatus = 'FAILED';
   fallbackResponse.imageAnalysisFailed = hasImages && Boolean(apiErrorMessage);
   profiler.logSummary();
   return fallbackResponse;
@@ -2141,17 +2217,19 @@ export function renderStructuredOfflineResponse(
   }
 
   // 9. EQUITY SHARES WITH FOREX (IFRS 9 / IAS 21)
-  if (parsed.scenarioType === 'EQUITY_INVESTMENT_FX') {
-    const buyRate = parsed.purchaseFxRate ?? 1.34;
-    const sellRate = parsed.saleFxRate ?? 1.36;
-    const initialSGD = (parsed.purchaseAmountForeign || 0) * buyRate;
-    const proceedsSGD = (parsed.saleAmountForeign || 0) * sellRate;
-    const stockGainSGD = ((parsed.saleAmountForeign || 0) - (parsed.purchaseAmountForeign || 0)) * sellRate;
-    const fxGainSGD = (parsed.purchaseAmountForeign || 0) * (sellRate - buyRate);
+  if (parsed.scenarioType === 'EQUITY_INVESTMENT_FX' && parsed.isComplete &&
+      parsed.purchaseDate && parsed.purchaseAmountForeign && parsed.purchaseFxRate !== undefined &&
+      parsed.saleDate && parsed.saleAmountForeign !== undefined && parsed.saleFxRate !== undefined) {
+    const buyRate = parsed.purchaseFxRate;
+    const sellRate = parsed.saleFxRate;
+    const initialSGD = parsed.purchaseAmountForeign * buyRate;
+    const proceedsSGD = parsed.saleAmountForeign * sellRate;
+    const stockGainSGD = (parsed.saleAmountForeign - parsed.purchaseAmountForeign) * sellRate;
+    const fxGainSGD = parsed.purchaseAmountForeign * (sellRate - buyRate);
 
     const replyText = `### Under ${std9} (*Financial Instruments*) & ${std21} (*Foreign Exchange*)\n\n` +
-      `For **${parsed.assetName}** (invested USD ${(parsed.purchaseAmountForeign || 0).toLocaleString()} on ${parsed.purchaseDate}, sold for USD ${parsed.saleAmountForeign?.toLocaleString()} on ${parsed.saleDate}):\n\n` +
-      `**Spot Exchange Rates (Powered by Frankfurter API - European Central Bank)**:\n` +
+      `For **${parsed.assetName}** (invested USD ${parsed.purchaseAmountForeign.toLocaleString()} on ${parsed.purchaseDate}, sold for USD ${parsed.saleAmountForeign.toLocaleString()} on ${parsed.saleDate}):\n\n` +
+      `**Spot Exchange Rates (${parsed.fxSource || 'source recorded in the scenario'})**:\n` +
       `* Purchase Spot Rate: **${buyRate} SGD/USD**\n` +
       `* Sale Spot Rate: **${sellRate} SGD/USD**\n\n` +
       `#### Double Entries (Explicit Realized FX Gain View):\n` +
@@ -2232,16 +2310,19 @@ export async function callGeminiAPI(
   groundedContext?: GroundedReasoningContext,
   deterministicScenario?: AccountingScenarioState | null,
   existingProfiler?: RequestProfiler,
-  imageAttachments: ChatImageAttachment[] = []
+  imageAttachments: ChatImageAttachment[] = [],
+  signal?: AbortSignal
 ): Promise<GeminiResponse> {
   if (imageAttachments.length > 0 && !supportsGeminiVision(modelName)) {
     throw new Error('The selected Gemini model cannot analyse images.');
   }
   const profiler = existingProfiler || new RequestProfiler(userInput, modelName);
-  const imageEvidence = await extractImageEvidenceWithGemini(apiKey, modelName, imageAttachments);
+  const imageEvidence = await extractImageEvidenceWithGemini(apiKey, modelName, imageAttachments, signal);
   const imageEvidenceSummary = formatImageEvidenceForAccounting(imageEvidence);
   const tGround0 = Date.now();
-  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, apiKey);
+  const context = groundedContext || await buildGroundedReasoningContext(userInput, currentScenario, undefined, apiKey, {
+    signal, fetchOptions: signal ? { signal } : undefined
+  });
   if (context.sourceMapFallbackTrace) profiler.recordOfficialSourceFallback(context.sourceMapFallbackTrace);
   const systemInstruction = formatGroundedSystemPrompt(context, standard);
   profiler.recordStage('grounding', Date.now() - tGround0);
@@ -2329,14 +2410,19 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
   };
 
   // 45-second AbortController timeout to guarantee reliable completion of complex statutory reasoning
+  const timeoutMs = signal ? getRequestTimeoutMs(signal, 45000) : 45000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const onExternalAbort = () => controller.abort();
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', onExternalAbort, { once: true });
 
   const tReq0 = Date.now();
   let rawJsonText = '';
   let usage: any = null;
 
   try {
+    throwIfRequestAborted(signal);
     // Attempt streaming with Server-Sent Events (?alt=sse) to measure genuine Time to First Visible Response (TTFVR)
     const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:streamGenerateContent?alt=sse`;
     const streamRes = await fetchGemini(streamUrl, apiKey, {
@@ -2344,7 +2430,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(requestBody),
       signal: controller.signal
-    });
+    }, timeoutMs);
 
     if (streamRes.ok && streamRes.body) {
       const reader = streamRes.body.getReader();
@@ -2397,7 +2483,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify(requestBody),
         signal: controller.signal
-      });
+      }, timeoutMs);
       profiler.recordFirstVisibleResponse();
 
       if (!res.ok) {
@@ -2419,6 +2505,7 @@ ${currentScenario.imageEvidence?.length ? `Previously extracted image evidence (
     }
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', onExternalAbort);
   }
 
   profiler.recordStage('gemini_request', Date.now() - tReq0);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type {
   AccountingStandard,
   AccountingScenarioState,
@@ -80,6 +80,7 @@ export const App: React.FC = () => {
   const [analysisStartMessageId, setAnalysisStartMessageId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'entries' | 'compliance'>('entries');
   const [isLoading, setIsLoading] = useState(false);
+  const requestControllerRef = useRef<AbortController | null>(null);
   const [outputPreference, setOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [appliedOutputPreference, setAppliedOutputPreference] = useState<OutputPreference>({ journal: false, statutory: false });
   const [pendingRelation, setPendingRelation] = useState<{ text: string; userMessage: ChatMessage } | null>(null);
@@ -100,6 +101,8 @@ export const App: React.FC = () => {
     retryHistory?: ChatMessage[],
     options?: { startNewScenario?: boolean; useProvidedScenario?: boolean }
   ) => {
+    const requestController = new AbortController();
+    requestControllerRef.current = requestController;
     setIsLoading(true);
     const isJournalRecall = isJournalDisplayRequest(text);
     setAppliedOutputPreference(isJournalRecall ? { ...outputPreference, journal: true } : outputPreference);
@@ -131,8 +134,30 @@ export const App: React.FC = () => {
         relevantChatHistory,
         outputPreference,
         undefined,
-        journalRecallProposal
+        journalRecallProposal,
+        requestController.signal
       );
+      if (requestController.signal.aborted) {
+        const cancellationError = new Error('This request was canceled.');
+        cancellationError.name = 'AbortError';
+        throw cancellationError;
+      }
+
+      if (response.providerStatus === 'FAILED' || response.advisoryFailureStatus) {
+        setMessages((prev) => [...prev, {
+          id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
+          text: response.messageText,
+          fullText: response.messageText,
+          displayFullAnswer: response.displayFullAnswer,
+          scenarioSnapshot: requestScenario || undefined,
+          advisoryFailureStatus: response.advisoryFailureStatus,
+          advisoryRetryPayload: response.advisoryFailureStatus
+            ? { text, scenarioSnapshot: requestScenario, originalUserMessageId: userMsg.id }
+            : undefined,
+          retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
+        }]);
+        return;
+      }
 
       const answerState: AccountingScenarioState = {
         ...response.scenarioState,
@@ -140,6 +165,8 @@ export const App: React.FC = () => {
       };
       if (response.conversationBoundaryMessageId) {
         setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      } else if (options?.startNewScenario) {
+        setAnalysisStartMessageId(userMsg.id);
       }
       setScenario(answerState);
       setCommittedJournalScenario(previous => updateCommittedJournalScenario(
@@ -169,8 +196,16 @@ export const App: React.FC = () => {
         retryPayload: response.imageAnalysisFailed ? { text, images: userMsg.images || [] } : undefined
       }]);
     } catch (err: any) {
+      if (requestController.signal.aborted || err?.name === 'RequestTimeoutError' || err?.name === 'AbortError') {
+        const message = err?.name === 'RequestTimeoutError'
+          ? 'This request exceeded its processing deadline. Your last committed journal was preserved.'
+          : 'This request was canceled. Your last committed journal was preserved.';
+        setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: message }]);
+        return;
+      }
       setMessages((prev) => [...prev, { id: `err-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(), text: `⚠️ **Processing Error**: ${err?.message || 'Unable to process query'}` }]);
     } finally {
+      if (requestControllerRef.current === requestController) requestControllerRef.current = null;
       setIsLoading(false);
     }
   };
@@ -206,11 +241,6 @@ export const App: React.FC = () => {
       return;
     }
     const startNewScenario = relation === 'NEW';
-    if (startNewScenario) {
-      setAnalysisStartMessageId(userMsg.id);
-      setScenario(null);
-      setCommittedJournalScenario(null);
-    }
     await processMessage(text, scenario, userMsg, undefined, { startNewScenario });
   };
 
@@ -218,11 +248,6 @@ export const App: React.FC = () => {
     if (!pendingRelation || isLoading) return;
     const pending = pendingRelation;
     setPendingRelation(null);
-    if (!isRelated) {
-      setAnalysisStartMessageId(pending.userMessage.id);
-      setScenario(null);
-      setCommittedJournalScenario(null);
-    }
     void processMessage(pending.text, isRelated ? scenario : null, pending.userMessage, undefined, { startNewScenario: !isRelated });
   };
 
@@ -243,6 +268,10 @@ export const App: React.FC = () => {
     setCommittedJournalScenario(null);
     setAnalysisStartMessageId(null);
     setPendingRelation(null);
+  };
+
+  const handleCancelRequest = () => {
+    requestControllerRef.current?.abort();
   };
 
   const computed = scenario
@@ -295,6 +324,7 @@ export const App: React.FC = () => {
               onRetryAiAnswer={handleRetryAiAnswer}
               onSelectSuggestion={handleSelectSuggestion}
               onResolveRelation={handleResolveRelation}
+              onCancelRequest={handleCancelRequest}
               isLoading={isLoading}
               isAwaitingRelation={Boolean(pendingRelation)}
               outputPreference={outputPreference}

@@ -11,6 +11,7 @@ import { isMomSalaryPeriodPaymentQuestion } from '../retrieval/acraMomKnowledge2
 import { identifyAcraAnnualReturnCompanyFacts, isAcraAnnualReturnApplicationQuestion } from '../engine/acraAnnualReturnApplication';
 import type { ProviderSettings } from '../types/provider';
 import { executeStructuredLlmCall, type TransportAttemptDiagnostic } from './aiTransport';
+import { getRequestTimeoutMs } from './requestDeadline';
 import {
   ensureRequestCompletenessContext,
   type RequestCompletenessContext
@@ -956,7 +957,8 @@ export async function interpretSemanticQuestion(
   query: string,
   provider?: ProviderSettings | string,
   callStructured: typeof executeStructuredLlmCall = executeStructuredLlmCall,
-  conversation?: AdvisoryConversation
+  conversation?: AdvisoryConversation,
+  signal?: AbortSignal
 ): Promise<SemanticQuestionUnderstanding> {
   const transportAttempts: TransportAttemptDiagnostic[] = [];
   if (!hasConfiguredProvider(provider)) return {
@@ -980,12 +982,13 @@ export async function interpretSemanticQuestion(
   const structuredOptions = {
     jsonMode: true,
     responseJsonSchema: SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
-    timeoutMs: SEMANTIC_QUESTION_TIMEOUT_MS,
+    timeoutMs: signal ? getRequestTimeoutMs(signal, SEMANTIC_QUESTION_TIMEOUT_MS) : SEMANTIC_QUESTION_TIMEOUT_MS,
     temperature: 0,
     ...(callStructured === executeStructuredLlmCall ? {
       retryGeminiTransientFailures: true,
       captureTransportAttemptDiagnostics: transportAttempts
-    } : {})
+    } : {}),
+    ...(signal ? { signal } : {})
   };
   try {
     const response = await callStructured(prompt, SYSTEM_INSTRUCTION, provider, structuredOptions);
@@ -1021,6 +1024,11 @@ export async function interpretSemanticQuestion(
           normalizeIssueLocalCpfTaxOutcome(query, interpretation)))
     };
   } catch (error) {
+    if (signal?.aborted) {
+      const cancellation = new Error('Semantic interpretation was canceled.');
+      cancellation.name = 'AbortError';
+      throw cancellation;
+    }
     // aiTransport deliberately withholds provider bodies and includes only the HTTP status.
     // Preserve 429 as a transport outcome so callers can retry without scoring it as model quality.
     const providerStatusMatch = error instanceof Error

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { AdvisoryFailureStatus, AccountingScenarioState, ChatImageAttachment, ChatMessage, MissingFieldInfo } from '../types/accounting';
-import { Send, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
+import { Send, Square, Bot, User, Sparkles, AlertCircle, ArrowRight, ArrowDown, ChevronLeft, ChevronRight, MoveHorizontal, Eye, EyeOff, ImagePlus } from 'lucide-react';
 import { SAMPLE_PROMPTS } from '../data/sampleScenarios';
 import type { OutputPreference } from '../services/geminiService';
 import { createImageAttachment, validateImageFile } from '../utils/imageUtils';
@@ -28,6 +28,7 @@ interface ChatPanelProps {
   onRetryAiAnswer: (text: string, scenarioSnapshot: AccountingScenarioState | null, originalUserMessageId: string) => void;
   onSelectSuggestion: (fieldKey: string, value: number | string) => void;
   onResolveRelation: (isRelated: boolean) => void;
+  onCancelRequest: () => void;
   isLoading: boolean;
   isAwaitingRelation: boolean;
   outputPreference: OutputPreference;
@@ -41,6 +42,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onRetryAiAnswer,
   onSelectSuggestion,
   onResolveRelation,
+  onCancelRequest,
   isLoading,
   isAwaitingRelation,
   outputPreference,
@@ -417,19 +419,27 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             rows={2}
             className="w-full min-h-20 pl-3 pr-12 py-3 text-sm bg-workspace-raised dark:bg-workspace-input border border-slate-300 dark:border-workspace-border rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-workspace-accent focus:border-transparent resize-none leading-relaxed font-sans"
           />
-          <button
-            type="submit"
-            disabled={(!inputText.trim() && attachments.length === 0) || isLoading || isAwaitingRelation}
-            className={`absolute right-2 p-2 rounded-lg transition-all ${
-              (inputText.trim() || attachments.length > 0) && !isLoading && !isAwaitingRelation
-                ? 'bg-workspace-accent text-white hover:bg-workspace-accent-hover shadow-sm'
-                : 'bg-slate-200 dark:bg-workspace-raised text-workspace-muted dark:text-workspace-muted cursor-not-allowed'
-            }`}
-            title="Send query"
-            aria-label="Send query"
-          >
-            <Send className="w-4 h-4" />
-          </button>
+          {isLoading ? (
+            <button type="button" onClick={onCancelRequest}
+              className="absolute right-2 p-2 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200 dark:bg-rose-950/40 dark:text-rose-200"
+              title="Cancel request" aria-label="Cancel request">
+              <Square className="w-4 h-4" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={(!inputText.trim() && attachments.length === 0) || isAwaitingRelation}
+              className={`absolute right-2 p-2 rounded-lg transition-all ${
+                (inputText.trim() || attachments.length > 0) && !isAwaitingRelation
+                  ? 'bg-workspace-accent text-white hover:bg-workspace-accent-hover shadow-sm'
+                  : 'bg-slate-200 dark:bg-workspace-raised text-workspace-muted dark:text-workspace-muted cursor-not-allowed'
+              }`}
+              title="Send query"
+              aria-label="Send query"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="mt-2 flex flex-wrap gap-3 px-1 text-[11px] text-slate-600 dark:text-workspace-secondary">
           <label className="inline-flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={outputPreference.journal} disabled={isLoading || isAwaitingRelation} onChange={(e) => onOutputPreferenceChange({ ...outputPreference, journal: e.target.checked })} /> Double Entry Journal</label>

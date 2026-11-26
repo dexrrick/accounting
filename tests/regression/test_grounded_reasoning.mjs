@@ -441,7 +441,7 @@ const fallbackInstruction = "I couldn't verify the applicable current source fro
   passed++;
 
   // 7D. AI cannot override deterministic journal calculations
-  const appleQuery = 'A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026, subsequently the company sold 300 shares for USD400k on 15/12/2026. What are the double entries and FX gain?';
+  const appleQuery = 'A company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at SGD/USD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at SGD/USD spot rate of 1.36. What are the double entries and FX gain?';
   const deterministicApple = await parseAccountingQuery(appleQuery);
   assert(deterministicApple.directGroups && deterministicApple.directGroups.length > 0, 'Deterministic engine must generate Apple shares entries');
 

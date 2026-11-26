@@ -140,6 +140,7 @@ export interface AuthorityWorkstreamOptions {
   providers?: Partial<Record<SemanticAuthority, AuthorityEvidenceProvider>>;
   localOnly?: boolean;
   referenceDate?: string;
+  signal?: AbortSignal;
 }
 
 interface PlannedIssue {
@@ -1212,7 +1213,11 @@ function defaultIrasProvider(
           requestCompletenessContext: options.requestCompletenessContext,
           evidenceScope: scope,
           authorityIssue: validatedIrasAuthorityIssue(request.issue, request.retrievalIntent.requestedConcepts, understanding, query),
-          fetchOptions: options.groundingOptions?.fetchOptions
+          fetchOptions: {
+            ...options.groundingOptions?.fetchOptions,
+            signal: options.signal || options.groundingOptions?.fetchOptions?.signal
+          },
+          signal: options.signal || options.groundingOptions?.signal
         }
       );
       const quality = groundingContext.evidenceQuality;
