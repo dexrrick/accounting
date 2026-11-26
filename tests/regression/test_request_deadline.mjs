@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { handleGeminiProxyRequest } from '../../src/worker/geminiProxy.ts';
 import { createRequestDeadline, throwIfRequestAborted } from '../../src/services/requestDeadline.ts';
+import { TransactionUnderstandingService, defaultTransactionUnderstandingService } from '../../src/services/transactionUnderstandingService.ts';
 
 const originalFetch = globalThis.fetch;
 const waitFor = async (predicate, label) => {
@@ -12,6 +13,23 @@ const waitFor = async (predicate, label) => {
 };
 
 try {
+  const stageTimeoutError = new Error('The extraction stage timed out.');
+  stageTimeoutError.name = 'AbortError';
+  const stageTimeoutService = new TransactionUnderstandingService(undefined, {
+    async extract() { throw stageTimeoutError; }
+  });
+  const stageTimeoutQuery = 'The company received SGD 500 as a customer advance.';
+  const stageTimeoutFallback = await stageTimeoutService.understandTransaction(
+    stageTimeoutQuery,
+    'SGD',
+    'SG',
+    { activeProvider: 'gemini', gemini: { apiKey: 'offline-test-gemini-key', model: 'gemini-3.5-flash-lite' }, azure: {}, openai: {} }
+  );
+  const deterministicUnderstanding = defaultTransactionUnderstandingService.understandTransactionSync(stageTimeoutQuery);
+  assert.equal(stageTimeoutFallback.amount, deterministicUnderstanding.amount,
+    'a stage-local AbortError while the shared request remains live keeps the deterministic extraction fallback');
+  assert.equal(stageTimeoutFallback.transactionType, deterministicUnderstanding.transactionType);
+
   const deadline = createRequestDeadline();
   const originalNow = Date.now;
   try {
@@ -63,6 +81,93 @@ try {
   assert.equal(providerSignal.aborted, true, 'the caller signal reaches the in-flight provider fetch');
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(queryCalls, 1, 'an aborted provider request does not start another request stage');
+
+  const extractionController = new AbortController();
+  let extractionCalls = 0;
+  let extractionSignal;
+  globalThis.fetch = async (input, init = {}) => {
+    const requestBody = typeof init.body === 'string' ? init.body : '';
+    if (requestBody.includes('Analyze the following commercial query and extract structured economic facts')) {
+      extractionCalls += 1;
+      extractionSignal = init.signal;
+      return new Promise((_, reject) => {
+        const abort = () => {
+          const error = new Error('stubbed transaction extraction canceled');
+          error.name = 'AbortError';
+          reject(error);
+        };
+        if (extractionSignal?.aborted) abort();
+        else extractionSignal?.addEventListener('abort', abort, { once: true });
+      });
+    }
+    return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 503 });
+  };
+  const extractionQuery = processAccountingQuery(
+    'Prepare journal entries for the issue of a convertible note payable for SGD 100,000 with a conversion option.',
+    null,
+    'SFRS_I',
+    { activeProvider: 'gemini', gemini: { apiKey: 'offline-test-gemini-key', model: 'gemini-3.5-flash-lite' }, azure: {}, openai: {} },
+    'gemini-3.5-flash-lite',
+    [],
+    { journal: true, statutory: false },
+    undefined,
+    undefined,
+    extractionController.signal
+  );
+  await waitFor(() => extractionCalls > 0, 'the public query reaches transaction-fact Gemini extraction');
+  extractionController.abort();
+  await assert.rejects(extractionQuery, error => error.name === 'AbortError',
+    'canceling transaction-fact extraction remains an AbortError');
+  assert.equal(extractionSignal.aborted, true,
+    'the public request cancellation reaches the in-flight transaction-fact Gemini request');
+
+  const authorityController = new AbortController();
+  let acraFetchCount = 0;
+  let firstAcraSignal;
+  let releaseFirstAcraFetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = new URL(String(input));
+    if (url.hostname === 'generativelanguage.googleapis.com') {
+      return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 503 });
+    }
+    if (url.hostname === 'www.acra.gov.sg') {
+      acraFetchCount += 1;
+      if (acraFetchCount === 1) {
+        firstAcraSignal = init.signal;
+        return new Promise(resolve => {
+          releaseFirstAcraFetch = () => resolve(new Response(
+            '<html><head><title>ACRA</title></head><body><main>Company filing information.</main></body></html>',
+            { status: 200, headers: { 'content-type': 'text/html' } }
+          ));
+        });
+      }
+      return new Response('Offline test stub', { status: 503 });
+    }
+    return new Response('Offline test stub', { status: 503 });
+  };
+  const authorityQuery = processAccountingQuery(
+    'What does ACRA require when a Singapore company changes its registered office address?',
+    null,
+    'SFRS_I',
+    { activeProvider: 'gemini', gemini: { apiKey: 'offline-test-gemini-key', model: 'gemini-3.5-flash-lite' }, azure: {}, openai: {} },
+    'gemini-3.5-flash-lite',
+    [],
+    undefined,
+    undefined,
+    undefined,
+    authorityController.signal
+  );
+  await waitFor(() => typeof releaseFirstAcraFetch === 'function',
+    'the public ACRA query reaches its first official-source fetch');
+  authorityController.abort();
+  await assert.rejects(authorityQuery, error => error.name === 'AbortError',
+    'canceling ACRA retrieval rejects the public query as an abort');
+  assert.equal(firstAcraSignal.aborted, true,
+    'the shared request cancellation reaches the in-flight ACRA source request');
+  releaseFirstAcraFetch();
+  await new Promise(resolve => setTimeout(resolve, 40));
+  assert.equal(acraFetchCount, 1,
+    'a late first ACRA response cannot advance the canceled request to more source fetches');
 
   const endpoint = 'https://app.example.test/api/gemini/v1beta/models/gemini-3.5-flash-lite:generateContent';
   const proxyToken = 'offline-test-proxy-token-with-enough-length';

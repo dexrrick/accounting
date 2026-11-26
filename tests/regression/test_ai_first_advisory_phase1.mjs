@@ -2834,6 +2834,8 @@ try {
   const reactExports = { __esModule: true, default: fakeReact, useState: fakeReact.useState, useRef: fakeReact.useRef, useEffect: fakeReact.useEffect };
   const appCalls = [];
   let resolveDeferredProcessing;
+  let resolvePendingEquipmentRequest;
+  let pendingEquipmentSignal;
   const cancelledQuestion = 'New question: Prepare a separate consulting expense journal';
   const failedQuestion = 'New question: Prepare another consulting expense journal';
   const scenarioA = { scenarioType: 'EXPENSE', rawQuery: offlineQuestion, transactionTitle: 'Transaction A', functionalCurrency: 'SGD', transactionCurrency: 'SGD', directGroups: [], missingFields: [], isComplete: true };
@@ -2871,6 +2873,34 @@ try {
     rawQuery: 'Paid an unrelated consulting expense of SGD 2,000',
     transactionTitle: 'Unrelated consulting expense',
     directGroups: [makeGroup('unrelated-confirmed', 'Unrelated confirmed journal', 'DETERMINISTIC', 2000)]
+  };
+  const firstQuestionRetry = 'First question retry regression';
+  const failedNewBoundaryQuestion = 'When must a Singapore company file its annual return with ACRA?';
+  const rentQuestion = 'Paid rent and need to confirm the amount';
+  const rentMissingScenario = {
+    ...emptyScenario, scenarioType: 'GENERAL_EXPENSE', rawQuery: rentQuestion,
+    transactionTitle: 'Rent', isComplete: false,
+    missingFields: [{ fieldKey: 'rentAmount', fieldName: 'Rent amount', prompt: 'What was the rent amount?', whyNeeded: 'The expense amount is needed.' }]
+  };
+  const rentScenario = {
+    ...rentMissingScenario, rawQuery: 'SGD 1000', isComplete: true, missingFields: [],
+    directGroups: [makeGroup('rent-journal', 'Rent journal', 'DETERMINISTIC', 1000)]
+  };
+  const pendingEquipmentQuestion = 'New question: We bought equipment for SGD 2000.';
+  const pendingEquipmentScenario = {
+    ...scenarioB, rawQuery: pendingEquipmentQuestion, transactionTitle: 'Late equipment journal',
+    directGroups: [makeGroup('late-equipment', 'Late equipment journal', 'DETERMINISTIC', 9000)]
+  };
+  const failedEquipmentQuestion = 'New question: We bought equipment for SGD 2000 and need a journal.';
+  const equipmentClarificationQuestion = 'What details are still needed for this equipment?';
+  const incompleteEquipmentScenario = {
+    ...emptyScenario, scenarioType: 'BUSINESS_EQUIPMENT_ACQUISITION', rawQuery: failedEquipmentQuestion,
+    transactionTitle: 'Pending equipment acquisition', functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+    missingFields: [{ fieldKey: 'paymentMethod', fieldName: 'Payment method', prompt: 'How was the equipment paid for?', whyNeeded: 'The payment account is needed.' }]
+  };
+  const correctedEquipmentScenario = {
+    ...scenarioB, rawQuery: 'Actually the amount is SGD 3000.', transactionTitle: 'Equipment journal',
+    directGroups: [makeGroup('equipment-3000', 'Equipment journal', 'DETERMINISTIC', 3000)]
   };
   assert.strictEqual(selectAccountingScenarioForRequest(salaryCorrection, unrelatedConfirmedScenario, deterministicScenario), deterministicScenario,
     'a payroll salary correction stays bound to its committed payroll even when another confirmed journal is active');
@@ -2972,6 +3002,41 @@ try {
         return appCalls.filter(call => call[0] === query).length === 1
           ? { messageText: 'Retryable answer.', scenarioState: scenarioB, advisoryFailureStatus: 'NETWORK' }
           : { messageText: 'Retried answer.', scenarioState: scenarioB };
+      }
+      if (query === firstQuestionRetry) {
+        return appCalls.filter(call => call[0] === query).length === 1
+          ? { messageText: 'Offline guidance retained.', scenarioState: emptyScenario, advisoryFailureStatus: 'NETWORK' }
+          : { messageText: 'First question retry succeeded.', scenarioState: scenarioB };
+      }
+      if (query === failedNewBoundaryQuestion) {
+        const userTurn = args[5].find(message => message.sender === 'user' && message.text === query);
+        return {
+          messageText: 'Offline ACRA guidance retained.', scenarioState: emptyScenario,
+          advisoryFailureStatus: 'NETWORK', conversationBoundaryMessageId: userTurn?.id
+        };
+      }
+      if (query === rentQuestion) {
+        return {
+          messageText: 'Please confirm the rent amount.', scenarioState: rentMissingScenario,
+          clarifications: [{
+            fieldKey: 'rentAmount', fieldName: 'Rent amount', prompt: 'What was the rent amount?',
+            whyNeeded: 'The expense amount is needed.', suggestions: [{ label: 'SGD 9,000', value: 'SGD 9000' }]
+          }]
+        };
+      }
+      if (query === 'SGD 1000') return { messageText: 'Rent journal prepared.', scenarioState: rentScenario };
+      if (query === pendingEquipmentQuestion) {
+        pendingEquipmentSignal = args.at(-1);
+        return new Promise(resolve => { resolvePendingEquipmentRequest = resolve; });
+      }
+      if (query === failedEquipmentQuestion) {
+        return { messageText: 'The equipment analysis could not be completed.', scenarioState: emptyScenario, advisoryFailureStatus: 'NETWORK' };
+      }
+      if (query === equipmentClarificationQuestion) {
+        return { messageText: 'Please confirm how the equipment was paid for.', scenarioState: incompleteEquipmentScenario };
+      }
+      if (query === 'Actually the amount is SGD 3000.') {
+        return { messageText: 'Equipment journal prepared.', scenarioState: correctedEquipmentScenario };
       }
       if (query === 'deferred follow-up while processing' || query === cancelledQuestion) {
         return new Promise(resolve => { resolveDeferredProcessing = resolve; });
@@ -3361,6 +3426,129 @@ try {
   assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
     'What are annual filing deadlines?', 'The statutory answer is shown here.', 'What did you say about the deadline?'
   ], 'the App persists the service-selected statutory boundary for the next contextual follow-up');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage(firstQuestionRetry);
+  appUi = renderApp();
+  const firstFailure = appUi.chatProps.messages.find(message =>
+    message.advisoryRetryPayload?.text === firstQuestionRetry
+  )?.advisoryRetryPayload;
+  assert.ok(firstFailure, 'the first failed question retains its own retry payload');
+  const callsBeforeFirstRetry = appCalls.length;
+  appUi.chatProps.onRetryAiAnswer(firstFailure.text, firstFailure.scenarioSnapshot, firstFailure.originalUserMessageId);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(appCalls.length, callsBeforeFirstRetry + 1,
+    'Retry AI answer dispatches a service call after the first question fails');
+  assert.equal(appCalls.at(-1)[1], null, 'the first-question retry does not inherit an older transaction scenario');
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [firstQuestionRetry],
+    'the first-question retry retains its own analysis boundary and history');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage(rentQuestion);
+  appUi = renderApp();
+  assert.ok(appUi.chatProps.messages.some(message => message.clarificationPrompt?.some(field => field.fieldKey === 'rentAmount')),
+    'the rent analysis produces a clarification suggestion that remains in the transcript');
+  await appUi.chatProps.onSendMessage('SGD 1000');
+  appUi = renderApp();
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the clarification answer commits the S$1,000 rent journal');
+
+  const pendingEquipment = appUi.chatProps.onSendMessage(pendingEquipmentQuestion);
+  appUi = renderApp();
+  assert.equal(appUi.chatProps.isLoading, true, 'the separate equipment analysis is in flight');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the previous rent journal remains displayed while equipment is processing');
+  const clarificationMarkup = renderToStaticMarkup(React.createElement(ChatPanel, appUi.chatProps));
+  assert.match(clarificationMarkup, /disabled=""[^>]*><span>SGD 9,000/,
+    'historical clarification suggestions are disabled while another request is processing');
+  const callCountBeforeHistoricalSuggestion = appCalls.length;
+  appUi.chatProps.onSelectSuggestion('rentAmount', 'SGD 9000');
+  assert.equal(appCalls.length, callCountBeforeHistoricalSuggestion,
+    'a stale clarification callback cannot start a second request during processing');
+  assert.equal(appUi.chatProps.messages.some(message => message.sender === 'user' && message.text === 'SGD 9000'), false,
+    'a rejected historical suggestion does not enter the active conversation');
+  appUi.chatProps.onCancelRequest();
+  assert.equal(pendingEquipmentSignal.aborted, true,
+    'Cancel aborts the active equipment request even when an old suggestion was clicked');
+  resolvePendingEquipmentRequest({ messageText: 'Late S$9,000 equipment journal.', scenarioState: pendingEquipmentScenario });
+  await pendingEquipment;
+  appUi = renderApp();
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the late canceled equipment response cannot replace the committed rent journal');
+
+  await appUi.chatProps.onSendMessage(failedEquipmentQuestion);
+  appUi = renderApp();
+  assert.ok(appUi.chatProps.messages.some(message => message.advisoryRetryPayload?.text === failedEquipmentQuestion),
+    'a failed new equipment analysis remains available as the active turn');
+  await appUi.chatProps.onSendMessage(equipmentClarificationQuestion);
+  appUi = renderApp();
+  assert.equal(stateSlots[3].scenarioType, incompleteEquipmentScenario.scenarioType,
+    'a successful incomplete equipment response becomes the active scenario');
+  assert.equal(stateSlots[3].rawQuery, failedEquipmentQuestion,
+    'the active incomplete scenario retains the failed equipment question');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the earlier committed rent journal remains visible while equipment facts are incomplete');
+  await appUi.chatProps.onSendMessage('Actually the amount is SGD 3000.');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1].scenarioType, incompleteEquipmentScenario.scenarioType,
+    'the amount correction uses the active incomplete equipment scenario type');
+  assert.equal(appCalls.at(-1)[1].rawQuery, failedEquipmentQuestion,
+    'the amount correction uses the active equipment facts without the old committed rent scenario');
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    failedEquipmentQuestion,
+    'The equipment analysis could not be completed.',
+    equipmentClarificationQuestion,
+    'Please confirm how the equipment was paid for.',
+    'Actually the amount is SGD 3000.'
+  ], 'the correction receives the failed equipment question and current analysis history');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 3000,
+    'the correction completes the equipment journal while preserving its own facts');
+
+  appUi.inputProps.onResetToDefaults();
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage(rentQuestion);
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage('SGD 1000');
+  appUi = renderApp();
+  assert.equal(assessConversationRelation(failedNewBoundaryQuestion, rentScenario, rentScenario), 'RELATED',
+    'the App relation gate permits the standalone ACRA query to reach service-level boundary resolution');
+  await appUi.chatProps.onSendMessage(failedNewBoundaryQuestion);
+  appUi = renderApp();
+  const acraFailure = appUi.chatProps.messages.find(message =>
+    message.advisoryRetryPayload?.text === failedNewBoundaryQuestion
+  );
+  assert.ok(acraFailure, 'the failed ACRA request remains retryable after the service selects a new boundary');
+  assert.equal(acraFailure.advisoryRetryPayload.scenarioSnapshot, null,
+    'a service-selected new boundary removes the previous rent scenario from the retry payload');
+  assert.equal(stateSlots[3], null, 'the old rent scenario is cleared from active analysis after boundary resolution');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the committed rent journal remains visible after a failed ACRA analysis');
+  const currentAcraHistory = buildAnalysisConversationHistory(appUi.chatProps.messages, acraFailure.advisoryRetryPayload.originalUserMessageId);
+  assert.deepEqual(Array.from(currentAcraHistory, message => message.text), [failedNewBoundaryQuestion, 'Offline ACRA guidance retained.'],
+    'the service-selected boundary isolates the failed ACRA turn from the prior rent analysis');
+  const acraRetry = acraFailure.advisoryRetryPayload;
+  appUi.chatProps.onRetryAiAnswer(acraRetry.text, acraRetry.scenarioSnapshot, acraRetry.originalUserMessageId);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1], null, 'retry after service boundary resolution does not restore the prior rent scenario');
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [failedNewBoundaryQuestion],
+    'retry uses only the question inside its new analysis boundary');
+
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1].directGroups[0].totalDebit, 1000,
+    'journal recall reads the committed rent journal');
+  assert.equal(stateSlots[3], null, 'journal recall does not restore the rent journal as active analysis context');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the committed rent journal remains visible after read-only recall');
+  await appUi.chatProps.onSendMessage('Actually the amount is SGD 3000.');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1], null,
+    'a follow-up after journal recall remains in the failed ACRA analysis without rent context');
+  assert.equal(appCalls.at(-1)[5].some(message => message.text === rentQuestion), false,
+    'journal recall does not reintroduce pre-boundary rent conversation history');
 } finally {
   globalThis.fetch = originalFetch;
   delete globalThis.localStorage;

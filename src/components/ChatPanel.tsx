@@ -249,8 +249,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           {field.suggestions.map((sug, idx) => (
                             <button
                               key={idx}
+                              type="button"
                               onClick={() => onSelectSuggestion(field.fieldKey, sug.value)}
-                              className="px-2.5 py-1 bg-workspace-raised hover:bg-slate-200 dark:bg-workspace-raised dark:hover:bg-workspace-hover text-slate-800 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1"
+                              disabled={isLoading || isAwaitingRelation}
+                              className="px-2.5 py-1 bg-workspace-raised hover:bg-slate-200 dark:bg-workspace-raised dark:hover:bg-workspace-hover text-slate-800 dark:text-workspace-secondary border border-workspace-border dark:border-workspace-border rounded-lg text-[11px] font-medium transition-colors flex items-center gap-1 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <span>{sug.label}</span>
                               <ArrowRight className="w-2.5 h-2.5 opacity-60" />

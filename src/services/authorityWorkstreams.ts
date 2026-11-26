@@ -86,6 +86,7 @@ import {
 } from './groundingContextBuilder';
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import { ensureRequestCompletenessContext, type RequestCompletenessContext } from './requestCompleteness';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 import {
   canonicalAccountingWorkstreamAuthority,
   hasBoundedGstInputTaxRecoveryAnchors,
@@ -1138,7 +1139,9 @@ function defaultOfficialStatutoryProvider(
   return {
     authority,
     async retrieve(request: AuthorityEvidenceRequest): Promise<AuthorityEvidenceProviderResult> {
+      throwIfRequestAborted(options.signal);
       const local = await localProvider.retrieve(request);
+      throwIfRequestAborted(options.signal);
       if (options.localOnly || options.groundingOptions?.localOnly) return local;
       const topics = getCoverageTopicsByIds(request.retrievalIntent.topicIds);
       const requireAcraDeadlineEvidence = requiresAcraAnnualReturnDeadlineEvidence(
@@ -1163,9 +1166,19 @@ function defaultOfficialStatutoryProvider(
       const scope = issueScope(request.issue, plan,
         request.retrievalIntent.topicIds, request.retrievalIntent.requestedConcepts);
       if (!scope) return local;
+      const signal = options.signal || options.groundingOptions?.signal;
+      const fetchOptions = options.groundingOptions?.fetchOptions;
       const fetched = await resolveMappedOfficialSourceFallback(
         request.retrievalIntent.topicIds, request.originalQuery, retriever, {
           ...options.groundingOptions,
+          ...(signal ? {
+            signal,
+            fetchOptions: {
+              ...fetchOptions,
+              signal,
+              timeoutMs: getRequestTimeoutMs(signal, fetchOptions?.timeoutMs ?? 3000)
+            }
+          } : {}),
           referenceDate,
           authorityLevelDiscovery: true,
           allowTransientAuthorityIssueDiscovery: issueMatchesValidatedSemanticUnderstanding(
@@ -1177,6 +1190,7 @@ function defaultOfficialStatutoryProvider(
           localOnly: false
         }
       );
+      throwIfRequestAborted(signal);
       return {
         candidates: [...local.candidates, ...fetched.records],
         documentContexts: fetched.documentContexts,
@@ -2555,6 +2569,7 @@ async function evaluateIssue(
   semanticOwnerCandidates: ReconciledSemanticQuestionIssue[],
   acraCandidateIssues: ReconciledSemanticQuestionIssue[]
 ): Promise<AuthorityIssueEvidence> {
+  throwIfRequestAborted(options.signal);
   const issue = plannedIssue.issue;
   const topicIds = plannedIssue.topicIds;
   const topics = getCoverageTopicsByIds(topicIds);
@@ -2623,6 +2638,7 @@ async function evaluateIssue(
   let providerResult: AuthorityEvidenceProviderResult;
   try {
     const rawResult: unknown = await provider.retrieve(request);
+    throwIfRequestAborted(options.signal);
     const candidateResult = rawResult as AuthorityEvidenceProviderResult | undefined;
     const candidatesAreValid = Array.isArray(candidateResult?.candidates) && candidateResult.candidates.every(record =>
       record && typeof record.id === 'string' && typeof record.authority === 'string' && typeof record.domain === 'string' &&
@@ -2641,6 +2657,7 @@ async function evaluateIssue(
       providerResult = rawResult as AuthorityEvidenceProviderResult;
     }
   } catch {
+    throwIfRequestAborted(options.signal);
     providerResult = { candidates: [], error: 'PROVIDER_ERROR' };
   }
   const retrievalTrace = safeProviderTrace(providerResult.trace, providerResult.candidates.length > 0);
@@ -2937,6 +2954,7 @@ export async function buildAuthorityWorkstreams(
   issuePlan: SemanticIssueReconciliation,
   options: AuthorityWorkstreamOptions = {}
 ): Promise<AuthorityWorkstreamsResult> {
+  throwIfRequestAborted(options.signal);
   const referenceDate = options.referenceDate || TargetDateResolver.CURRENT_SYSTEM_DATE;
   const understanding = options.questionUnderstanding || { mode: 'DETERMINISTIC_FALLBACK' as const };
   const requestCompletenessContext = ensureRequestCompletenessContext(
@@ -2972,6 +2990,7 @@ export async function buildAuthorityWorkstreams(
       query, plan, issuePlanItem, options, retriever, understanding, referenceDate, candidateIssues,
       issuePlan.issues, acraCandidateIssues
     )));
+    throwIfRequestAborted(options.signal);
     const verifiedClaims = [...new Map(results.flatMap(item => item.verifiedClaims).map(claim =>
       [`${claim.recordId}\n${claim.quote}`, claim]
     )).values()];

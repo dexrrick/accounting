@@ -7,7 +7,12 @@ import { getExchangeRate } from '../../src/services/frankfurterService.ts';
 
 let unexpectedExternalRequests = 0;
 const originalPlatformFetch = globalThis.fetch;
-globalThis.fetch = async () => {
+globalThis.fetch = async input => {
+  const { hostname, pathname } = new URL(typeof input === 'string' ? input : input.url);
+  if (pathname === '/robots.txt' && ['www.ifrs.org', 'asc.acra.gov.sg'].includes(hostname)) {
+    // An acquisition without an explicit journal request may discover standards evidence.
+    return new Response(null, { status: 404 });
+  }
   unexpectedExternalRequests += 1;
   throw new Error('Unexpected external request in FX integrity regression.');
 };
@@ -16,6 +21,94 @@ const missingDisposalRateQuery =
   'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at SGD/USD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099. What are the double entries?';
 const explicitRatesQuery =
   'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at SGD/USD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 at SGD/USD spot rate of 1.31 on 15/12/2099. What are the double entries?';
+
+const explicitDirectionQuery =
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, meaning one USD equals SGD 1.30.';
+const rateReply = 'The disposal SGD/USD spot rate is 1.31.';
+const acquisitionAnswer = await processAccountingQuery(explicitDirectionQuery, null, 'SFRS_I', undefined);
+const pendingAnswer = await processAccountingQuery(missingDisposalRateQuery, null, 'SFRS_I', undefined);
+const resumedAnswer = await processAccountingQuery(rateReply, pendingAnswer.scenarioState, 'SFRS_I', undefined, undefined, [
+  { id: 'user-initial', sender: 'user', text: missingDisposalRateQuery, timestamp: '' },
+  { id: 'assistant-clarification', sender: 'assistant', text: pendingAnswer.messageText, timestamp: '' },
+  { id: 'user-rate', sender: 'user', text: rateReply, timestamp: '' }
+]);
+
+assert.equal(acquisitionAnswer.scenarioState.purchaseFxRate, 1.30);
+const acquisition = acquisitionAnswer.scenarioState.directGroups?.find(group => group.id === 'grp-purchase');
+assert.equal(acquisition?.eventDate, '13/11/2025');
+assert.deepEqual(acquisition?.lines.map(line => [line.accountCode, line.debit, line.credit]),
+  [['1210', 1300, 0], ['1010', 0, 1300]]);
+assert.equal(updateCommittedJournalScenario(null, acquisitionAnswer.scenarioState, 'SFRS_I')?.purchaseFxRate, 1.30);
+
+const resumedScenario = resumedAnswer.scenarioState;
+assert.equal(resumedScenario.scenarioType, 'EQUITY_INVESTMENT_FX');
+assert.equal(resumedScenario.isComplete, true);
+assert.equal(resumedScenario.purchaseDate, '13/11/2099');
+assert.equal(resumedScenario.purchaseAmountForeign, 1000);
+assert.equal(resumedScenario.purchaseFxRate, 1.30);
+assert.equal(resumedScenario.saleDate, '15/12/2099');
+assert.equal(resumedScenario.saleAmountForeign, 1100);
+assert.equal(resumedScenario.saleFxRate, 1.31);
+assert.equal(resumedScenario.directGroups?.find(group => group.id === 'grp-disposal')?.lines[0].debit, 1441);
+assert.ok(resumedScenario.directGroups?.every(group => group.isBalanced && group.totalDebit === group.totalCredit));
+assert.equal(updateCommittedJournalScenario(null, resumedScenario, 'SFRS_I')?.saleFxRate, 1.31);
+const rateWithUnits = await parseAccountingQuery('It was 1.31 SGD per USD.', pendingAnswer.scenarioState);
+assert.equal(rateWithUnits.isComplete, true);
+assert.equal(rateWithUnits.saleFxRate, 1.31);
+const ambiguousRate = await parseAccountingQuery('1.31', pendingAnswer.scenarioState);
+assert.equal(ambiguousRate.isComplete, false);
+assert.equal(ambiguousRate.purchaseAmountForeign, 1000);
+assert.match(ambiguousRate.missingFields[0].prompt, /SGD for one USD/);
+const euroPending = await parseAccountingQuery(
+  'Our functional currency is EUR. We acquired USD 1,000 of Apple shares on 13/11/2099. Prepare the journal entries.'
+);
+const wrongCurrency = await parseAccountingQuery('One USD equals SGD 1.31.', euroPending);
+assert.equal(wrongCurrency.isComplete, false);
+assert.equal(wrongCurrency.purchaseAmountForeign, 1000);
+assert.match(wrongCurrency.missingFields[0].prompt, /EUR for one USD/);
+assert.equal(updateCommittedJournalScenario(null, wrongCurrency, 'SFRS_I'), null);
+const euroAnswer = await processAccountingQuery('One USD equals EUR 0.91.', euroPending, 'SFRS_I', undefined);
+const euroJournal = euroAnswer.scenarioState.directGroups?.[0];
+assert.equal(euroAnswer.scenarioState.functionalCurrency, 'EUR');
+assert.equal(euroJournal?.totalDebit, 910);
+assert.equal(euroJournal?.totalCredit, 910);
+assert.match(euroJournal?.summary, /0\.91 EUR\/USD/);
+assert.match(euroAnswer.scenarioState.keyParameters[0].value, /= EUR 910\.00/);
+
+const conflictingDirection = await processAccountingQuery(
+  explicitDirectionQuery.replace('SGD 1.30.', 'SGD 1.40.'), null, 'SFRS_I', undefined
+);
+assert.equal(conflictingDirection.scenarioState.isComplete, false);
+assert.ok(conflictingDirection.clarifications?.some(field => field.fieldKey === 'purchaseFxRate'));
+assert.equal(updateCommittedJournalScenario(null, conflictingDirection.scenarioState, 'SFRS_I'), null);
+const clarifiedDirection = await parseAccountingQuery('One USD equals SGD 1.30.', conflictingDirection.scenarioState);
+assert.equal(clarifiedDirection.isComplete, true);
+assert.equal(clarifiedDirection.purchaseFxRate, 1.30);
+assert.equal(clarifiedDirection.purchaseAmountForeign, 1000);
+
+const inverseDirection = await parseAccountingQuery(explicitDirectionQuery.replace(
+  'of 1.30, meaning one USD equals SGD 1.30', 'of 0.80, meaning one SGD equals USD 0.80'
+));
+assert.equal(inverseDirection.purchaseFxRate, 1.25);
+
+const directionPrefix = explicitDirectionQuery.split(', meaning')[0];
+for (const direction of [' (SGD 1.30 per USD).', ', where each USD equals SGD 1.30.', ', meaning 1 USD = S$1.30.']) {
+  const scenario = await parseAccountingQuery(directionPrefix + direction);
+  assert.equal(scenario.purchaseFxRate, 1.30, direction);
+}
+const contradictoryDirections = await parseAccountingQuery(
+  `${directionPrefix}, meaning one USD equals SGD 1.30 and one USD equals SGD 1.40.`
+);
+assert.equal(contradictoryDirections.isComplete, false);
+assert.ok(contradictoryDirections.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
+for (const query of [
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2025, meaning one USD equals SGD 1.30.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at SGD 1.30 per USD (USD/SGD spot rate of 1.30).'
+]) {
+  const scenario = await parseAccountingQuery(query);
+  assert.equal(scenario.purchaseFxRate, 1.30, query);
+  assert.equal(scenario.directGroups?.[0].totalDebit, 1300);
+}
 
 const missingDisposalRate = await parseAccountingQuery(missingDisposalRateQuery);
 assert.equal(missingDisposalRate.isComplete, false);
