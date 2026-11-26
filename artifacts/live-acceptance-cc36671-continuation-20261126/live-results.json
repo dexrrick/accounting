@@ -1,0 +1,166 @@
+{
+  "head": "cc3667123dcee5c799b5ba768815d2f03f4b32fe",
+  "model": "gemini-3.5-flash-lite",
+  "caps": {
+    "attempts": 16,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retryLimit": 0
+  },
+  "terminal": "PROVIDER_HTTP_503",
+  "count": 7,
+  "totalApiAttempts": 7,
+  "turns": [
+    {
+      "id": "loan",
+      "journal": true,
+      "query": "We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "groundedFacts": {
+        "amount": 200000,
+        "currency": {
+          "value": "SGD",
+          "source": "explicit",
+          "confidence": 1,
+          "rationale": "Explicitly stated as SGD / Singapore Dollar"
+        },
+        "usedFactFallback": true,
+        "factsMissing": [
+          "Settlement/payment timing is unspecified"
+        ]
+      },
+      "attempts": 4,
+      "answer": "### SFRS(I) Accounting Assessment: Intercompany loan advance to subsidiary\n\n**Authority Status**: **⚠️ Conditional Proposal**\n\n#### 1. Accounting Treatment Principle\nThe advance of funds to a subsidiary under an open-account intercompany loan repayable on demand should be recognized by the parent company as an intercompany loan receivable (financial asset classified at amortised cost under SFRS(I) 9) and a derecognition of cash.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: Deterministic Heuristic Fallback\n\n---\n\n### Double Entry Journal: Intercompany loan advance to subsidiary (26/11/2026)\n\n* **Debit**: **Intercompany Loan Receivable - Subsidiary B** — **SGD 200,000.00** *(To record the amount owed by the subsidiary to the parent under the loan agreement.)*\n* **Credit**: **Cash and Cash Equivalents** — **SGD 200,000.00** *(To record the outflow of cash wired from the bank account.)*\n\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced\n",
+      "amount": 200000,
+      "currency": "SGD",
+      "complete": false,
+      "missingFacts": [
+        "Settlement/payment timing is unspecified",
+        "Whether interest is charged on the intercompany loan at market rate or if it is interest-free",
+        "The functional currency of Subsidiary B to determine if translation or foreign exchange considerations apply"
+      ],
+      "clarifications": [],
+      "directGroups": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Intercompany loan advance to subsidiary",
+          "summary": "The advance of funds to a subsidiary under an open-account intercompany loan repayable on demand should be recognized by the parent company as an intercompany loan receivable (financial asset classified at amortised cost under SFRS(I) 9) and a derecognition of cash.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Intercompany Loan Receivable - Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "To record the amount owed by the subsidiary to the parent under the loan agreement."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash and Cash Equivalents",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "To record the outflow of cash wired from the bank account."
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "The advance of funds to a subsidiary under an open-account intercompany loan repayable on demand should be recognized by the parent company as an intercompany loan receivable (financial asset classified at amortised cost under SFRS(I) 9) and a derecognition of cash.",
+            "Authority Status: CONDITIONAL (Proposed by AI)"
+          ],
+          "authorityStatus": "CONDITIONAL"
+        }
+      ],
+      "validJournal": true,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": [],
+      "journalAcceptanceGate": true
+    },
+    {
+      "id": "loan-follow-up",
+      "journal": true,
+      "parent": "loan",
+      "query": "Regarding the earlier transaction, how should we record the advance to Subsidiary B?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "CORE_RESPONSE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "groundedFacts": {
+        "amount": 200000,
+        "currency": {
+          "value": null,
+          "source": "unknown",
+          "confidence": 0,
+          "rationale": "No currency specified in query"
+        },
+        "usedFactFallback": true,
+        "factsMissing": [
+          "Reporting entity perspective is unspecified",
+          "Transaction currency is unspecified"
+        ]
+      },
+      "attempts": 3,
+      "answer": "### Unsupported transaction offline\\n\\nThis transaction type is not supported by the offline journal engine. Configure an AI provider or provide a more specific supported transaction.",
+      "currency": "SGD",
+      "complete": false,
+      "clarifications": [],
+      "directGroups": [],
+      "validJournal": false,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    }
+  ]
+}

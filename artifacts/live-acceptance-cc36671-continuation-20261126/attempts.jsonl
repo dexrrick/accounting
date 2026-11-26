@@ -1,0 +1,14 @@
+{"turn":"loan","attempt":1,"turnAttempt":1,"atUtc":"2026-11-26T05:52:38.786Z","stage":"question-interpretation","event":"dispatch"}
+{"turn":"loan","attempt":1,"turnAttempt":1,"atUtc":"2026-11-26T05:52:38.786Z","stage":"question-interpretation","event":"response","status":200,"inputTokens":1991}
+{"turn":"loan","attempt":2,"turnAttempt":2,"atUtc":"2026-11-26T05:52:43.899Z","stage":"event-extraction","event":"dispatch"}
+{"turn":"loan","attempt":2,"turnAttempt":2,"atUtc":"2026-11-26T05:52:43.899Z","stage":"event-extraction","event":"response","status":200,"inputTokens":270}
+{"turn":"loan","attempt":3,"turnAttempt":3,"atUtc":"2026-11-26T05:52:49.002Z","stage":"transaction-facts","event":"dispatch"}
+{"turn":"loan","attempt":3,"turnAttempt":3,"atUtc":"2026-11-26T05:52:49.002Z","stage":"transaction-facts","event":"response","status":200,"inputTokens":1743}
+{"turn":"loan","attempt":4,"turnAttempt":4,"atUtc":"2026-11-26T05:52:54.109Z","stage":"accounting-or-advisory","event":"dispatch"}
+{"turn":"loan","attempt":4,"turnAttempt":4,"atUtc":"2026-11-26T05:52:54.109Z","stage":"accounting-or-advisory","event":"response","status":200,"inputTokens":1531}
+{"turn":"loan-follow-up","attempt":5,"turnAttempt":1,"atUtc":"2026-11-26T05:53:00.492Z","stage":"question-interpretation","event":"dispatch"}
+{"turn":"loan-follow-up","attempt":5,"turnAttempt":1,"atUtc":"2026-11-26T05:53:00.492Z","stage":"question-interpretation","event":"response","status":200,"inputTokens":2376}
+{"turn":"loan-follow-up","attempt":6,"turnAttempt":2,"atUtc":"2026-11-26T05:53:05.600Z","stage":"event-extraction","event":"dispatch"}
+{"turn":"loan-follow-up","attempt":6,"turnAttempt":2,"atUtc":"2026-11-26T05:53:05.600Z","stage":"event-extraction","event":"response","status":200,"inputTokens":243}
+{"turn":"loan-follow-up","attempt":7,"turnAttempt":3,"atUtc":"2026-11-26T05:53:10.709Z","stage":"transaction-facts","event":"dispatch"}
+{"turn":"loan-follow-up","attempt":7,"turnAttempt":3,"atUtc":"2026-11-26T05:53:10.709Z","stage":"transaction-facts","event":"response","status":503}
