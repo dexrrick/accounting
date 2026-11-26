@@ -1,0 +1,18 @@
+{
+  "checkedAtUtc": "2026-11-26T03:47:38.325Z",
+  "providerStatus": "All Systems Operational",
+  "dashboard": "https://aistudio.google.com/status",
+  "endpoint": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite",
+  "method": "GET",
+  "apiAttempts": 1,
+  "generationAttempts": 0,
+  "model": "gemini-3.5-flash-lite",
+  "httpStatus": 200,
+  "supportedGenerationMethods": [
+    "generateContent",
+    "countTokens",
+    "createCachedContent",
+    "batchGenerateContent"
+  ],
+  "modelConfirmed": true
+}

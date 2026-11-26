@@ -1,0 +1,277 @@
+{
+  "head": "f651e2a91ee8a1344997e5bfa954b2a7f9c094bc",
+  "model": "gemini-3.5-flash-lite",
+  "caps": {
+    "attempts": 16,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retryLimit": 0,
+    "reservedAvailabilityAttempts": 1
+  },
+  "terminal": "PROVIDER_HTTP_503",
+  "count": 13,
+  "totalApiAttempts": 14,
+  "turns": [
+    {
+      "id": "equity",
+      "journal": true,
+      "query": "Our holding company just injected SGD 500,000 cash via bank transfer into a newly incorporated operating subsidiary for 100% of its ordinary shares. How do we book this in the holding company’s standalone ledger?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "attempts": 4,
+      "answer": "### SFRS(I) Accounting Assessment: Investment in subsidiary by holding company via cash injection for 100% ordinary shares\n\n**Authority Status**: **🤖 AI Grounded Proposal**\n\n#### 1. Accounting Treatment Principle\nIn the holding company's standalone financial statements, investments in subsidiaries are accounted for at cost or in accordance with SFRS(I) 9 Financial Instruments, or using the equity method as permitted under SFRS(I) 1-27 Separate Financial Statements.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Payment Status**: PAID\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 500,000\n* **Semantic Provenance**: Deterministic Heuristic Fallback\n\n---\n\n### Double Entry Journal: Investment in subsidiary by holding company via cash injection for 100% ordinary shares (26/11/2026)\n\n* **Debit**: **Investment in Subsidiary** — **SGD 500,000.00** *(To record the cost of acquiring 100% of the ordinary shares of the newly incorporated subsidiary.)*\n* **Credit**: **Cash and Cash Equivalents / Bank** — **SGD 500,000.00** *(To record the outflow of cash transferred from the bank for the share injection.)*\n\n**Balance Check**: Total Debits (SGD 500,000) == Total Credits (SGD 500,000)  ✓ Balanced\n",
+      "amount": 500000,
+      "currency": "SGD",
+      "complete": false,
+      "clarifications": [],
+      "directGroups": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Investment in subsidiary by holding company via cash injection for 100% ordinary shares",
+          "summary": "In the holding company's standalone financial statements, investments in subsidiaries are accounted for at cost or in accordance with SFRS(I) 9 Financial Instruments, or using the equity method as permitted under SFRS(I) 1-27 Separate Financial Statements.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Investment in Subsidiary",
+              "category": "ASSET",
+              "debit": 500000,
+              "credit": 0,
+              "lineExplanation": "To record the cost of acquiring 100% of the ordinary shares of the newly incorporated subsidiary."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash and Cash Equivalents / Bank",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 500000,
+              "lineExplanation": "To record the outflow of cash transferred from the bank for the share injection."
+            }
+          ],
+          "totalDebit": 500000,
+          "totalCredit": 500000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "In the holding company's standalone financial statements, investments in subsidiaries are accounted for at cost or in accordance with SFRS(I) 9 Financial Instruments, or using the equity method as permitted under SFRS(I) 1-27 Separate Financial Statements.",
+            "Authority Status: AI_PROPOSED (Proposed by AI)"
+          ],
+          "authorityStatus": "AI_PROPOSED"
+        }
+      ],
+      "validJournal": true,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    },
+    {
+      "id": "loan",
+      "journal": true,
+      "query": "We wired SGD 200,000 from our bank account to fund working capital for Subsidiary B on an open-account intercompany loan (repayable on demand). How should this be recorded?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "ACCOUNTING_ENGINE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "attempts": 4,
+      "answer": "### SFRS(I) Accounting Assessment: Intercompany loan advance to subsidiary\n\n**Authority Status**: **⚠️ Conditional Proposal**\n\n#### 1. Accounting Treatment Principle\nThe transaction represents the recognition of an intercompany loan receivable by the parent entity. Under SFRS(I) 9, loans receivable are initially recognized at fair value plus transaction costs and subsequently measured at amortized cost using the effective interest method, subject to the expected credit loss (ECL) impairment model.\n\n---\n\n#### 4. Key Accounting & Transaction Facts\n* **Evaluation Mode**: AI Grounded Reasoning\n* **Detected Domain**: ACCOUNTING\n* **AI Status**: Live Grounded Pipeline Connected\n* **Reporting Entity**: COMPANY\n* **Currency**: SGD (explicit)\n* **Transaction Amount**: SGD 200,000\n* **Semantic Provenance**: Deterministic Heuristic Fallback\n\n---\n\n### Double Entry Journal: Intercompany loan advance to subsidiary (26/11/2026)\n\n* **Debit**: **Intercompany Loan Receivable - Subsidiary B** — **SGD 200,000.00** *(To record the amount advanced to the subsidiary as a loan receivable.)*\n* **Credit**: **Cash and Cash Equivalents** — **SGD 200,000.00** *(To record the cash outflow from the bank account for the wire transfer.)*\n\n**Balance Check**: Total Debits (SGD 200,000) == Total Credits (SGD 200,000)  ✓ Balanced\n",
+      "amount": 200000,
+      "currency": "SGD",
+      "complete": false,
+      "missingFacts": [
+        "Settlement/payment timing is unspecified",
+        "Terms of repayment, interest rate, and whether the loan is interest-free or at market rate.",
+        "Assessment of expected credit losses (ECL) under SFRS(I) 9."
+      ],
+      "clarifications": [],
+      "directGroups": [
+        {
+          "id": "grp-ai-proposed-1",
+          "eventDate": "26/11/2026",
+          "title": "Intercompany loan advance to subsidiary",
+          "summary": "The transaction represents the recognition of an intercompany loan receivable by the parent entity. Under SFRS(I) 9, loans receivable are initially recognized at fair value plus transaction costs and subsequently measured at amortized cost using the effective interest method, subject to the expected credit loss (ECL) impairment model.",
+          "lines": [
+            {
+              "id": "line-ai-1",
+              "accountCode": "1500",
+              "accountName": "Intercompany Loan Receivable - Subsidiary B",
+              "category": "ASSET",
+              "debit": 200000,
+              "credit": 0,
+              "lineExplanation": "To record the amount advanced to the subsidiary as a loan receivable."
+            },
+            {
+              "id": "line-ai-2",
+              "accountCode": "1500",
+              "accountName": "Cash and Cash Equivalents",
+              "category": "ASSET",
+              "debit": 0,
+              "credit": 200000,
+              "lineExplanation": "To record the cash outflow from the bank account for the wire transfer."
+            }
+          ],
+          "totalDebit": 200000,
+          "totalCredit": 200000,
+          "isBalanced": true,
+          "citations": [],
+          "rationalePoints": [
+            "The transaction represents the recognition of an intercompany loan receivable by the parent entity. Under SFRS(I) 9, loans receivable are initially recognized at fair value plus transaction costs and subsequently measured at amortized cost using the effective interest method, subject to the expected credit loss (ECL) impairment model.",
+            "Authority Status: CONDITIONAL (Proposed by AI)"
+          ],
+          "authorityStatus": "CONDITIONAL"
+        }
+      ],
+      "validJournal": true,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    },
+    {
+      "id": "loan-follow-up",
+      "journal": true,
+      "parent": "loan",
+      "query": "Regarding the earlier transaction, how should we record the advance to Subsidiary B?",
+      "outcome": [
+        {
+          "queryMode": "TRANSACTION",
+          "processingPath": "CORE_RESPONSE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "ACCOUNTING",
+        "domains": [],
+        "topicIds": [],
+        "authorities": [
+          "ACCOUNTING_STANDARDS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": false,
+        "accountingAnalysisRequired": true,
+        "taxAnalysisRequired": false,
+        "regulatoryAnalysisRequired": false,
+        "calculationRequired": false,
+        "journalEntryRequired": true,
+        "missingFacts": [],
+        "intent": "TRANSACTION",
+        "reasoning": "Validated semantic issues include a request to prepare an accounting journal."
+      },
+      "attempts": 4,
+      "answer": "### AI-Proposed Journal Rejected\n\n### Accounting Validation Issue\n\nThe proposed journal failed one or more accounting safety checks:\n- DOUBLE_ENTRY_IMBALANCE: Group 'Intercompany loan advance to subsidiary' is imbalanced: Total Dr (0.00) != Total Cr (0.00).\n\nThis entry has been rejected to prevent an incorrect accounting record.\n\nNo deterministic journal is available. Please provide additional facts so a valid double entry can be prepared.",
+      "currency": "SGD",
+      "complete": false,
+      "missingFacts": [
+        "Reporting entity perspective is unspecified",
+        "Transaction currency is unspecified",
+        "Whether the intercompany loan bears a market-related interest rate or is interest-free.",
+        "Fair value or transaction price for exchange consideration"
+      ],
+      "clarifications": [
+        {
+          "fieldKey": "guardrail-DOUBLE_ENTRY_IMBALANCE",
+          "fieldName": "Accounting guardrail validation",
+          "prompt": "DOUBLE_ENTRY_IMBALANCE: Group 'Intercompany loan advance to subsidiary' is imbalanced: Total Dr (0.00) != Total Cr (0.00).",
+          "whyNeeded": "The AI-proposed journal violates an accounting safety check and cannot be posted automatically."
+        }
+      ],
+      "directGroups": [],
+      "validJournal": false,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    },
+    {
+      "id": "gst",
+      "journal": false,
+      "query": "Does our company need to register for GST if annual taxable turnover reaches SGD 1.2 million?",
+      "outcome": [
+        {
+          "queryMode": "STATUTORY_ADVISORY",
+          "processingPath": "CORE_RESPONSE"
+        }
+      ],
+      "classification": {
+        "primaryDomain": "GST",
+        "domains": [
+          "IRAS_GST"
+        ],
+        "topicIds": [
+          "gst_compulsory_registration",
+          "iras-gst-turnover-tests"
+        ],
+        "authorities": [
+          "IRAS"
+        ],
+        "multiAuthority": false,
+        "currentInformationRequired": true,
+        "accountingAnalysisRequired": false,
+        "taxAnalysisRequired": true,
+        "regulatoryAnalysisRequired": true,
+        "calculationRequired": false,
+        "journalEntryRequired": false,
+        "missingFacts": [],
+        "intent": "STATUTORY_ADVISORY",
+        "reasoning": "Single-domain GST question governed by IRAS."
+      },
+      "attempts": 1,
+      "answer": "The provider could not complete the answer. The available source evidence is shown below.\n\nThe available verified evidence does not cover the full tax question. I cannot establish the tax treatment from it.\n\nAdmitted source evidence and reviewed summaries:\n\n> A person who makes taxable supplies but is not registered shall be liable to be registered— (a) at the end of any calendar year if the total value of taxable supplies made by him in that year has exceeded $1,000,000; or (b) at any time if there are reasonable grounds for believing that the total value of taxable supplies to be made by him in the period of 12 months then beginning will exceed $1,000,000.\n\nGoods and Services Tax Act 1993 — validated local evidence; public URL not independently verified; recorded scope 2024-01-01 to open-ended.\n\nThis evidence states the recorded rules; it does not by itself confirm that every condition is met in this case.",
+      "path": "PROVIDER_FAILURE",
+      "status": "FAILED",
+      "currency": "SGD",
+      "complete": false,
+      "missingFacts": [],
+      "clarifications": [],
+      "directGroups": [],
+      "validJournal": false,
+      "visibleJournal": [],
+      "committed": [],
+      "actualEvents": [],
+      "sources": []
+    }
+  ]
+}
