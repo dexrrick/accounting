@@ -445,6 +445,7 @@ export const App: React.FC = () => {
                         groups={displayedJournal.groups}
                         standard={standard}
                         functionalCurrency={displayedJournalScenario?.functionalCurrency || 'SGD'}
+                        scenarioType={displayedJournalScenario?.scenarioType}
                         assumptions={displayedJournalScenario?.assumptions}
                       />
                     )}

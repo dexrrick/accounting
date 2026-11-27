@@ -20,6 +20,7 @@ import { matchBasicTransaction, resolveBasicOwnerDrawingsFollowUp } from './basi
 import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 import type { SemanticQuestionUnderstanding } from '../services/semanticQuestionUnderstanding';
 import { isSemanticallyNonPayroll } from '../services/semanticScenarioResolver';
+import { formatFxRateEquation } from '../utils/fxRatePresentation';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -273,10 +274,14 @@ function isStandaloneShareFxMeaning(text: string): boolean {
   return matchedMeanings > 0;
 }
 
-function isEventNamedShareFxQuote(text: string, actionPattern: RegExp): boolean {
+function isEventNamedShareFxQuote(text: string, actionPattern: RegExp, quote?: RegExpExecArray): boolean {
   const isAcquisition = /invested|bought|purchased|acquired/i.test(actionPattern.source);
   const eventName = isAcquisition ? /^(?:the\s+)?(?:acquisition|purchase)\b/i : /^(?:the\s+)?(?:disposal|sale)\b/i;
-  return eventName.test(text.trim()) && findShareFxRateMatches(text).length > 0;
+  const namedQuote = findShareFxRateMatches(text)[0];
+  const namedEventPrefix = namedQuote && /^(?:the\s+)?(?:acquisition|purchase|disposal|sale)\s*$/i.test(
+    text.slice(0, namedQuote.index).trim()
+  );
+  return eventName.test(text.trim()) && !!namedQuote && !!namedEventPrefix && (!quote || quote.index === namedQuote.index);
 }
 
 function getShareFxEventScope(text: string, actionPattern: RegExp): string {
@@ -298,38 +303,105 @@ function getShareFxEventScope(text: string, actionPattern: RegExp): string {
     : eventSentence;
 }
 
-function getOwnedInitialShareFxText(eventScope: string): string {
+function isPositivelyAttachedShareFxEvidence(
+  sentence: string,
+  evidenceIndex: number,
+  actionPattern: RegExp
+): boolean {
+  const precedingText = sentence.slice(0, evidenceIndex);
+  const attachment = /\b(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.exec(precedingText);
+  if (!attachment) return false;
+
+  const clausePrefix = precedingText.slice(0, attachment.index);
+  const clauses = clausePrefix.split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i);
+  const lastClause = clauses.at(-1)?.trim() ?? '';
+  const precedingEventIndex = lastClause ? -1 : clauses.findLastIndex(clause => actionPattern.test(clause));
+  const precedingEventClause = precedingEventIndex >= 0 ? clauses[precedingEventIndex].trim() : '';
+  const interveningClausesAreRejectedEvidence = precedingEventIndex >= 0 &&
+    clauses.slice(precedingEventIndex + 1, -1).every(clause => /^\s*(?:not|never|without)\b/i.test(clause));
+  const isAcquisition = /invested|bought|purchased|acquired/i.test(actionPattern.source);
+  const eventName = isAcquisition ? /^(?:the\s+)?(?:acquisition|purchase)\b/i : /^(?:the\s+)?(?:disposal|sale)\b/i;
+  const inheritedClause = !lastClause && interveningClausesAreRejectedEvidence ? precedingEventClause : '';
+  const eventClause = lastClause || inheritedClause;
+  return actionPattern.test(eventClause) || eventName.test(eventClause);
+}
+
+function isParentheticalShareFxEvidence(sentence: string, evidenceIndex: number, actionPattern: RegExp): boolean {
+  const precedingText = sentence.slice(0, evidenceIndex);
+  if (!/\(\s*$/.test(precedingText)) return false;
+  const clausePrefix = precedingText.slice(0, precedingText.lastIndexOf('('));
+  const eventClause = clausePrefix.split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i).at(-1) ?? '';
+  return actionPattern.test(eventClause);
+}
+
+function hasDisqualifyingShareFxQualification(sentence: string, start: number, end: number): boolean {
+  const precedingClause = sentence.slice(0, start)
+    .split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i).at(-1) ?? '';
+  const followingClause = sentence.slice(end).split(/[.!?;]/, 1)[0].replace(
+    /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
+    ''
+  );
+  return /\b(?:(?:not|never|without)(?:\s+(?:actually|really|ever|in\s+fact))?|as\s+opposed\s+to)\s+(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.test(precedingClause) ||
+    /\b(?:budget(?:ing)?|forecast(?:ing)?|plan(?:ning)?)\b[^,.!?;]*\b(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.test(precedingClause) ||
+    /^\s*(?:[,;]\s*)?(?:\(\s*)?(?:(?:which|that)\s+)?(?:(?:was|is|has\s+been)\s+)?(?:rejected|declined|excluded|invalid|not\s+(?:accepted|used|applied))\b/i.test(followingClause) ||
+    /^\s*(?:[,;]\s*)?for\s+(?:the\s+)?(?:budget(?:ing)?(?:\s+purposes?)?|planning|forecast(?:ing)?)\s+only\b/i.test(followingClause) ||
+    /^\s*\(\s*(?:rejected|declined|excluded|invalid|not\s+(?:accepted|used|applied))\s*\)/i.test(followingClause);
+}
+
+function getOwnedInitialShareFxText(eventScope: string, actionPattern: RegExp): string {
   const owned: string[] = [];
   const sentences = eventScope.split(/(?<=[.!?])\s+/);
   const meanings = [shareFxEquation, shareFxPerUnit];
+  const evidenceConnectors = /^\s*(?:(?:[,;()]|\band\b|\bbut\b)\s*)*(?:(?:at|using|with)\s+(?:(?:a|an|the)\s+)?)?$/i;
   for (const sentence of sentences) {
     const quotes = findShareFxRateMatches(sentence);
-    if (quotes.length > 0) owned.push(...quotes.map(quote => quote[0]));
     if (isStandaloneShareFxMeaning(sentence)) {
       owned.push(sentence);
       continue;
     }
 
-    const sentenceMeanings = meanings.flatMap(pattern => [...sentence.matchAll(pattern)])
-      .sort((first, second) => first.index - second.index);
-    let lastOwnedMeaningEnd: number | undefined;
-    for (const meaning of sentenceMeanings) {
-      const previousQuote = quotes.filter(quote => quote.index + quote[0].length <= meaning.index).at(-1);
-      const precedingText = previousQuote
-        ? sentence.slice(previousQuote.index + previousQuote[0].length, meaning.index)
-        : sentence.slice(0, meaning.index);
-      const attachedToEvent = /\b(?:at|using|with)\s*$/i.test(precedingText);
-      const quoteExplanationLead = precedingText.replace(
-        /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
-        ''
-      );
-      const explainsQuote = previousQuote !== undefined &&
-        /^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(quoteExplanationLead);
-      const continuesOwnedMeaning = lastOwnedMeaningEnd !== undefined &&
-        /^\s*(?:,?\s*(?:and|but)\s+|,\s*)$/i.test(sentence.slice(lastOwnedMeaningEnd, meaning.index));
-      if (attachedToEvent || explainsQuote || continuesOwnedMeaning) {
-        owned.push(meaning[0]);
-        lastOwnedMeaningEnd = meaning.index + meaning[0].length;
+    const sentenceMeanings = meanings.flatMap(pattern => [...sentence.matchAll(pattern)]);
+    const evidence = [
+      ...quotes.map(quote => ({ kind: 'quote' as const, match: quote, start: quote.index, end: quote.index + quote[0].length })),
+      ...sentenceMeanings.map(meaning => ({ kind: 'meaning' as const, match: meaning, start: meaning.index, end: meaning.index + meaning[0].length }))
+    ].sort((first, second) => first.start - second.start);
+    let lastOwnedQuote: RegExpExecArray | undefined;
+    let lastOwnedMeaning: RegExpMatchArray | undefined;
+
+    for (const item of evidence) {
+      const isDisqualified = hasDisqualifyingShareFxQualification(sentence, item.start, item.end);
+      let isOwned = !isDisqualified &&
+        (isPositivelyAttachedShareFxEvidence(sentence, item.start, actionPattern) ||
+          (item.kind === 'quote' && isParentheticalShareFxEvidence(sentence, item.start, actionPattern)));
+
+      if (!isOwned && !isDisqualified && item.kind === 'quote') {
+        isOwned = isEventNamedShareFxQuote(sentence, actionPattern, item.match);
+        if (!isOwned && lastOwnedQuote) {
+          isOwned = evidenceConnectors.test(sentence.slice(lastOwnedQuote.index + lastOwnedQuote[0].length, item.start));
+        }
+        if (!isOwned && lastOwnedMeaning) {
+          isOwned = evidenceConnectors.test(sentence.slice(lastOwnedMeaning.index! + lastOwnedMeaning[0].length, item.start));
+        }
+      }
+
+      if (!isOwned && !isDisqualified && item.kind === 'meaning' && lastOwnedQuote) {
+        const quoteExplanationLead = sentence.slice(lastOwnedQuote.index + lastOwnedQuote[0].length, item.start).replace(
+          /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
+          ''
+        );
+        isOwned = /^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(quoteExplanationLead);
+      }
+
+      if (!isOwned && !isDisqualified && item.kind === 'meaning' && lastOwnedMeaning) {
+        isOwned = /^\s*(?:,?\s*(?:and|but)\s+|,\s*)$/i.test(
+          sentence.slice(lastOwnedMeaning.index! + lastOwnedMeaning[0].length, item.start)
+        );
+      }
+
+      if (isOwned) {
+        owned.push(item.match[0]);
+        if (item.kind === 'quote') lastOwnedQuote = item.match;
+        else lastOwnedMeaning = item.match;
       }
     }
   }
@@ -423,7 +495,7 @@ function readInitialShareFxRate(
   transactionCurrency: string
 ) {
   const eventScope = getShareFxEventScope(text, actionPattern);
-  const ownedFxText = getOwnedInitialShareFxText(eventScope);
+  const ownedFxText = getOwnedInitialShareFxText(eventScope, actionPattern);
   return readShareFxRate(ownedFxText, functionalCurrency, transactionCurrency);
 }
 
@@ -3134,11 +3206,14 @@ export async function parseAccountingQuery(
 
 function buildForeignEquityJournal(scenario: AccountingScenarioState): AccountingScenarioState {
   const { saleDate, saleAmountForeign, functionalCurrency, transactionCurrency, assetName, quantity, fxSource } = scenario;
-  const rateUnits = `${functionalCurrency}/${transactionCurrency}`;
   const purchaseAmount = scenario.purchaseAmountForeign!;
   const acquisitionRate = scenario.purchaseFxRate!;
+  const acquisitionRateEquation = formatFxRateEquation(acquisitionRate, transactionCurrency, functionalCurrency);
   const purchaseEventDate = scenario.purchaseDate!;
   const disposalRate = scenario.saleFxRate;
+  const disposalRateEquation = disposalRate === undefined
+    ? undefined
+    : formatFxRateEquation(disposalRate, transactionCurrency, functionalCurrency);
   const initialCost = Math.round(purchaseAmount * acquisitionRate * 100) / 100;
   const proceeds = saleAmountForeign !== undefined && disposalRate !== undefined ? Math.round(saleAmountForeign * disposalRate * 100) / 100 : 0;
   const stockGain = saleAmountForeign !== undefined && disposalRate !== undefined ? Math.round((saleAmountForeign - purchaseAmount) * disposalRate * 100) / 100 : 0;
@@ -3150,7 +3225,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
       id: 'grp-purchase',
       eventDate: formatSingaporeDate(purchaseEventDate),
       title: `Initial Acquisition of ${assetName}`,
-      summary: `Acquisition of ${transactionCurrency} ${purchaseAmount.toLocaleString()} translated at ${acquisitionRate} ${rateUnits}`,
+      summary: `Acquisition of ${transactionCurrency} ${purchaseAmount.toLocaleString()} translated at ${acquisitionRateEquation}`,
       lines: [
         {
           id: 'line-buy-dr',
@@ -3162,7 +3237,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
           foreignCurrency: transactionCurrency,
           foreignDebit: purchaseAmount,
           exchangeRate: acquisitionRate,
-          lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1 translated at spot rate of ${acquisitionRate} ${rateUnits}.`
+          lineExplanation: `Initial fair value recognition under SFRS(I) 9 §5.1.1 translated at spot rate of ${acquisitionRateEquation}.`
         },
         {
           id: 'line-buy-cr',
@@ -3186,7 +3261,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
       ],
       rationalePoints: [
         `Under SFRS(I) 9 §5.1.1: Financial assets at FVTPL are initially recognized at fair value.`,
-        `Under SFRS(I) 1-21 §21: A foreign currency transaction is recorded on initial recognition in functional currency using the spot exchange rate (${acquisitionRate} ${rateUnits}).`
+        `Under SFRS(I) 1-21 §21: A foreign currency transaction is recorded on initial recognition in functional currency using the spot exchange rate (${acquisitionRateEquation}).`
       ]
     }
   ];
@@ -3196,7 +3271,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
       id: 'grp-disposal',
       eventDate: formatSingaporeDate(saleDate),
       title: `Derecognition / Disposal of ${assetName}`,
-      summary: `Disposal of ${transactionCurrency} ${saleAmountForeign.toLocaleString()} translated at ${disposalRate} ${rateUnits}`,
+      summary: `Disposal of ${transactionCurrency} ${saleAmountForeign.toLocaleString()} translated at ${disposalRateEquation}`,
       lines: [
         {
           id: 'line-sell-dr-bank',
@@ -3208,7 +3283,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
           foreignCurrency: transactionCurrency,
           foreignDebit: saleAmountForeign,
           exchangeRate: disposalRate,
-          lineExplanation: `Gross disposal proceeds of ${transactionCurrency} ${saleAmountForeign.toLocaleString()} translated at spot rate of ${disposalRate} ${rateUnits}.`
+          lineExplanation: `Gross disposal proceeds of ${transactionCurrency} ${saleAmountForeign.toLocaleString()} translated at spot rate of ${disposalRateEquation}.`
         },
         {
           id: 'line-sell-cr-asset',
@@ -3220,7 +3295,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
           foreignCurrency: transactionCurrency,
           foreignCredit: purchaseAmount,
           exchangeRate: acquisitionRate,
-          lineExplanation: `Derecognition of original carrying amount of ${transactionCurrency} ${purchaseAmount.toLocaleString()} @ ${acquisitionRate} ${rateUnits}.`
+          lineExplanation: `Derecognition of original carrying amount of ${transactionCurrency} ${purchaseAmount.toLocaleString()} at ${acquisitionRateEquation}.`
         },
         {
           id: 'line-sell-stock-gain',
@@ -3229,7 +3304,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
           category: 'REVENUE',
           debit: 0,
           credit: stockGain,
-          lineExplanation: `Stock appreciation gain of ${transactionCurrency} ${(saleAmountForeign - purchaseAmount).toLocaleString()} translated at disposal spot rate of ${disposalRate} ${rateUnits}.`
+          lineExplanation: `Stock appreciation gain of ${transactionCurrency} ${(saleAmountForeign - purchaseAmount).toLocaleString()} translated at disposal spot rate of ${disposalRateEquation}.`
         },
         {
           id: 'line-sell-fx-gain',
@@ -3238,7 +3313,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
           category: 'REVENUE',
           debit: 0,
           credit: fxGain,
-          lineExplanation: `Realized foreign currency appreciation on original investment capital of ${transactionCurrency} ${purchaseAmount.toLocaleString()} from ${acquisitionRate} to ${disposalRate} (+${(disposalRate - acquisitionRate).toFixed(4)} ${rateUnits}).`
+          lineExplanation: `Realized foreign currency appreciation on original investment capital of ${transactionCurrency} ${purchaseAmount.toLocaleString()} from ${acquisitionRateEquation} to ${disposalRateEquation}.`
         }
       ],
       totalDebit: proceeds,
@@ -3284,9 +3359,9 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
     },
     directGroups,
     keyParameters: [
-      { label: 'Initial Outlay', value: `${transactionCurrency} ${purchaseAmount.toLocaleString()} @ ${acquisitionRate} = ${functionalCurrency} ${initialCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Acquisition' },
+      { label: 'Initial Outlay', value: `${transactionCurrency} ${purchaseAmount.toLocaleString()} at ${acquisitionRateEquation} = ${functionalCurrency} ${initialCost.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Acquisition' },
       { label: 'Disposal Proceeds', value: saleAmountForeign !== undefined && disposalRate !== undefined
-        ? `${transactionCurrency} ${saleAmountForeign.toLocaleString()} @ ${disposalRate} = ${functionalCurrency} ${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+        ? `${transactionCurrency} ${saleAmountForeign.toLocaleString()} at ${disposalRateEquation} = ${functionalCurrency} ${proceeds.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
         : 'No disposal provided', badge: 'Derecognition' },
       { label: 'Fair Value Stock Gain', value: `${functionalCurrency} ${stockGain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SFRS(I) 9' },
       { label: 'Realized FX Gain', value: `${functionalCurrency} ${fxGain.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SFRS(I) 1-21', highlight: true }

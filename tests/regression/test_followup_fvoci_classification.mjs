@@ -59,6 +59,8 @@ console.log('--- TEST A: Full End-to-End User Turn 1 -> Turn 2 (FVOCI Follow-Up)
   assert(acqGroup.isBalanced, 'Turn 2 acq group must be balanced');
   assert(dispGroup.totalDebit > 0, `Turn 2 disp totalDebit must be > 0, got ${dispGroup.totalDebit}`);
   assert(dispGroup.isBalanced, 'Turn 2 disp group must be balanced');
+  assert(acqGroup.rationalePoints?.some(point => point.includes('1 USD = SGD 1.34')));
+  assert(dispGroup.lines.some(line => line.lineExplanation?.includes('1 USD = SGD 1.36')));
 
   // Invariant 5: All lines must have non-zero debits and credits
   for (const line of acqGroup.lines) {

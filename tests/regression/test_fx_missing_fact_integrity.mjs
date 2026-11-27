@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { JournalTable } from '../../src/components/JournalTable.tsx';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
@@ -62,6 +65,14 @@ const eventNamedAdjacentQuote = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099. The acquisition USD/SGD spot rate is 1.30.',
   null, 'SFRS_I', undefined
 );
+const eventRateWithArticle = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at the USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const preciseRateAnswer = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at SGD 1.3004 per USD.',
+  null, 'SFRS_I', undefined
+);
 const budgetRateInEventSentence = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 while our budget assumed SGD 1.30 per USD.',
   null, 'SFRS_I', undefined
@@ -80,6 +91,83 @@ const conflictingQuoteAfterDate = await processAccountingQuery(
 );
 const conflictingPairLabels = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate in EUR/GBP of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const connectedPairRateConflict = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, and at USD/SGD spot rate of 1.40.',
+  null, 'SFRS_I', undefined
+);
+const connectedUnitRateConflict = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at SGD 1.30 per USD (USD/SGD spot rate of 1.40).',
+  null, 'SFRS_I', undefined
+);
+const acquisitionBudgetPreparedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, the budget was prepared using SGD 1.30 per USD.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionBudgetAssumedPairRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, and the budget assumed a USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionNegatedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, not at USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionPlannedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, we planned using SGD 1.30 per USD.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionCommaRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, at USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionParentheticalRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 (USD/SGD spot rate of 1.30).',
+  null, 'SFRS_I', undefined
+);
+const acquisitionCorrectedAfterRejectedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, not using SGD 1.30 per USD but at USD/SGD spot rate of 1.28.',
+  null, 'SFRS_I', undefined
+);
+const disposalNegatedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099, not actually at USD/SGD spot rate of 1.32.',
+  null, 'SFRS_I', undefined
+);
+const acquisitionInlineBudgetRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099 for budgeting only.',
+  null, 'SFRS_I', undefined
+);
+const disposalNamedUnusedRate = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099. The disposal USD/SGD spot rate of 1.32 was not used.',
+  null, 'SFRS_I', undefined
+);
+const rejectedRateDescriptions = [
+  '. The acquisition USD/SGD spot rate of 1.30 was rejected.',
+  '. The acquisition USD/SGD spot rate of 1.30 was not used.',
+  '. The acquisition USD/SGD spot rate is 1.30 for budgeting only.',
+  ', not actually at USD/SGD spot rate of 1.30.',
+  ', at USD/SGD spot rate of 1.30, which was rejected.',
+  ', at USD/SGD spot rate of 1.30 (rejected).',
+  ', only for the budget using SGD 1.30 per USD.',
+  ', the budget was prepared, using SGD 1.30 per USD.',
+  ', the budget was prepared, at USD/SGD spot rate of 1.30.',
+  ' as opposed to using SGD 1.30 per USD.',
+  ' as opposed to using a USD/SGD spot rate of 1.30.',
+  ', at USD/SGD spot rate of 1.30 for budget purposes only.'
+];
+const rejectedRateAnswers = [];
+for (const description of rejectedRateDescriptions) {
+  rejectedRateAnswers.push(await processAccountingQuery(
+    `Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099${description}`,
+    null, 'SFRS_I', undefined
+  ));
+}
+const actualRateWithRejectedComparison = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.28, not at USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const actualRateWithOpposedComparison = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.28 as opposed to using SGD 1.30 per USD.',
   null, 'SFRS_I', undefined
 );
 const unlabelledRateAnswer = await processAccountingQuery(
@@ -112,7 +200,13 @@ for (const [answer, expectedRate, expectedSgd] of [
   [explicitUnitsMatchReciprocalPair, 1.30, 1300],
   [explicitUnitsMatchOppositeQuote, 1.25, 1250],
   [explicitUnitsClarifyUnlabelledQuote, 1.30, 1300],
-  [eventNamedAdjacentQuote, 1.30, 1300]
+  [eventNamedAdjacentQuote, 1.30, 1300],
+  [eventRateWithArticle, 1.30, 1300],
+  [acquisitionCommaRate, 1.30, 1300],
+  [acquisitionParentheticalRate, 1.30, 1300],
+  [acquisitionCorrectedAfterRejectedRate, 1.28, 1280],
+  [actualRateWithOpposedComparison, 1.28, 1280],
+  [preciseRateAnswer, 1.3004, 1300.4]
 ]) {
   assert.equal(answer.scenarioState.isComplete, true);
   assert.equal(answer.scenarioState.purchaseFxRate, expectedRate);
@@ -121,14 +215,29 @@ for (const [answer, expectedRate, expectedSgd] of [
   assert.equal(purchase?.totalCredit, expectedSgd);
   assert.equal(purchase?.isBalanced, true);
 }
+assert.match(preciseRateAnswer.scenarioState.directGroups?.[0].summary, /1 USD = SGD 1\.3004/);
+assert.match(explicitUnitsMatchReciprocalPair.scenarioState.directGroups?.[0].summary, /1 USD = SGD 1\.30/);
 for (const answer of [
   conflictingUnitQuotes, conflictingLabelAnswer, conflictingQuoteAfterDate, conflictingPairLabels,
-  unlabelledRateAnswer, budgetRateAnswer, budgetRateInEventSentence
+  connectedPairRateConflict, connectedUnitRateConflict,
+  unlabelledRateAnswer, budgetRateAnswer, budgetRateInEventSentence,
+  acquisitionBudgetPreparedRate, acquisitionBudgetAssumedPairRate, acquisitionNegatedRate, acquisitionPlannedRate,
+  acquisitionInlineBudgetRate, ...rejectedRateAnswers
 ]) {
   assert.equal(answer.scenarioState.isComplete, false);
   assert.ok(answer.clarifications?.some(field => field.fieldKey === 'purchaseFxRate'));
   assert.equal(answer.scenarioState.directGroups?.length, 0);
 }
+assert.equal(disposalNegatedRate.scenarioState.isComplete, false);
+assert.ok(disposalNegatedRate.clarifications?.some(field => field.fieldKey === 'saleFxRate'));
+assert.equal(disposalNegatedRate.scenarioState.directGroups?.length, 0);
+assert.equal(disposalNamedUnusedRate.scenarioState.isComplete, false);
+assert.ok(disposalNamedUnusedRate.clarifications?.some(field => field.fieldKey === 'saleFxRate'));
+assert.equal(disposalNamedUnusedRate.scenarioState.directGroups?.length, 0);
+assert.equal(actualRateWithRejectedComparison.scenarioState.isComplete, true);
+assert.equal(actualRateWithRejectedComparison.scenarioState.purchaseFxRate, 1.28);
+assert.equal(actualRateWithRejectedComparison.scenarioState.directGroups?.[0].totalDebit, 1280);
+assert.equal(actualRateWithRejectedComparison.scenarioState.directGroups?.[0].totalCredit, 1280);
 
 const resumedScenario = resumedAnswer.scenarioState;
 assert.equal(resumedScenario.scenarioType, 'EQUITY_INVESTMENT_FX');
@@ -162,8 +271,9 @@ const euroJournal = euroAnswer.scenarioState.directGroups?.[0];
 assert.equal(euroAnswer.scenarioState.functionalCurrency, 'EUR');
 assert.equal(euroJournal?.totalDebit, 910);
 assert.equal(euroJournal?.totalCredit, 910);
-assert.match(euroJournal?.summary, /0\.91 EUR\/USD/);
+assert.match(euroJournal?.summary, /1 USD = EUR 0\.91/);
 assert.match(euroAnswer.scenarioState.keyParameters[0].value, /= EUR 910\.00/);
+assert.match(euroAnswer.scenarioState.keyParameters[0].value, /1 USD = EUR 0\.91/);
 
 const conflictingDirection = await processAccountingQuery(
   explicitDirectionQuery.replace('SGD 1.30.', 'SGD 1.40.'), null, 'SFRS_I', undefined
@@ -251,6 +361,24 @@ assert.equal(explicitlyRated.directGroups?.[0].lines[0].debit, 1300);
 const disposal = explicitlyRated.directGroups?.find(group => group.id === 'grp-disposal');
 assert.equal(disposal?.lines.find(line => line.accountCode === '4600')?.credit, 10);
 assert.equal(disposal?.isBalanced, true);
+assert.match(explicitlyRated.directGroups?.[0].summary, /1 USD = SGD 1\.30/);
+assert.match(disposal?.summary, /1 USD = SGD 1\.31/);
+assert.ok(explicitlyRated.directGroups?.flatMap(group => group.lines)
+  .every(line => !line.lineExplanation?.match(/\b(?:SGD|EUR|GBP)\/USD\b/)));
+const journalMarkup = renderToStaticMarkup(React.createElement(JournalTable, {
+  groups: explicitlyRated.directGroups ?? [],
+  standard: 'SFRS_I',
+  functionalCurrency: explicitlyRated.functionalCurrency,
+  scenarioType: explicitlyRated.scenarioType
+}));
+assert.match(journalMarkup, /FX: USD 1,000 \(1 USD = SGD 1\.30\)/);
+assert.match(journalMarkup, /FX: USD 1,100 \(1 USD = SGD 1\.31\)/);
+const fallbackJournal = calculateDoubleEntries({
+  ...explicitlyRated,
+  directGroups: []
+}, 'SFRS_I');
+assert.match(fallbackJournal.groups.find(group => group.id === 'grp-purchase')?.summary, /1 USD = SGD 1\.30/);
+assert.match(fallbackJournal.groups.find(group => group.id === 'grp-sale')?.summary, /1 USD = SGD 1\.31/);
 
 const blockedEngineFallback = calculateDoubleEntries({
   ...missingDisposalRate,
@@ -313,6 +441,16 @@ try {
 
 const committed = updateCommittedJournalScenario(null, explicitlyRated, 'SFRS_I');
 assert.ok(committed?.committedDirectGroups?.length);
+const retainedAfterRejectedAcquisitionRate = updateCommittedJournalScenario(
+  committed, acquisitionNegatedRate.scenarioState, 'SFRS_I'
+);
+assert.equal(retainedAfterRejectedAcquisitionRate, committed);
+for (const answer of rejectedRateAnswers) {
+  assert.equal(updateCommittedJournalScenario(committed, answer.scenarioState, 'SFRS_I'), committed);
+}
+assert.equal(updateCommittedJournalScenario(committed, disposalNegatedRate.scenarioState, 'SFRS_I'), committed);
+assert.equal(updateCommittedJournalScenario(committed, disposalNamedUnusedRate.scenarioState, 'SFRS_I'), committed);
+assert.equal(updateCommittedJournalScenario(committed, acquisitionInlineBudgetRate.scenarioState, 'SFRS_I'), committed);
 const retained = updateCommittedJournalScenario(committed, missingDisposalRate, 'SFRS_I');
 assert.equal(retained, committed);
 
