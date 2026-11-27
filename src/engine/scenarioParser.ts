@@ -3541,9 +3541,7 @@ function buildForeignEquityJournal(scenario: AccountingScenarioState): Accountin
     ...scenario,
     authorityStatus: 'DETERMINISTIC',
     accountingTreatmentSummary: `Under SFRS(I) 9 §5.1.1 and SFRS(I) 1-21 §21, foreign currency equity investments at FVTPL are recognized at transaction spot exchange rates.${saleAmountForeign !== undefined ? ` Upon derecognition, profit is explicitly bifurcated into Fair Value Stock Appreciation (${functionalCurrency} ${stockGain.toLocaleString()}) and Realized Foreign Exchange Gain (${functionalCurrency} ${fxGain.toLocaleString()}).` : ''}`,
-    singaporeTaxTreatmentSummary: 'Capital gains on foreign shares held as long-term capital investments are not taxable in Singapore (no capital gains tax). Short-term trading profits by active traders/dealers are subject to 17% corporate income tax.',
-    regulatoryMandatesSummary: 'MAS Act 1970 zero exchange control policy applies: multi-currency balances and capital remittances are unrestricted in Singapore.',
-    effectiveDateOrTiming: `${fxSource}; 17% headline CIT rate.`,
+    effectiveDateOrTiming: fxSource,
     underlyingTransaction: {
       transactionId: 'tx-apple-shares-1',
       type: 'equity_investment_acquisition',

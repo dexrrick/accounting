@@ -7,6 +7,7 @@ import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { getExchangeRate } from '../../src/services/frankfurterService.ts';
+import { buildAnalysisConversationHistory } from '../../src/services/conversationBoundary.ts';
 import {
   interpretSemanticQuestion,
   SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA
@@ -603,7 +604,7 @@ assert.equal(unrelatedWireOptions.responseJsonSchema, SEMANTIC_QUESTION_V2_RESPO
 
 async function runMockFxSemanticQuery(query, evidenceText, options = {}) {
   const semanticReply = {
-    ...accountingSemanticInterpretation,
+    ...(options.semanticReply || accountingSemanticInterpretation),
     fxTransactionEvidence: fxEvidenceFor(query, evidenceText, options)
   };
   const originalFetch = globalThis.fetch;
@@ -611,6 +612,8 @@ async function runMockFxSemanticQuery(query, evidenceText, options = {}) {
   let semanticCalls = 0;
   let eventExtractionCalls = 0;
   let requestBody;
+  const authorityWorkstreams = [];
+  const groundedContexts = [];
   globalThis.fetch = async (input, init) => {
     const url = new URL(typeof input === 'string' ? input : input.url);
     if (url.hostname === 'generativelanguage.googleapis.com') {
@@ -630,15 +633,100 @@ async function runMockFxSemanticQuery(query, evidenceText, options = {}) {
     if (url.pathname === '/robots.txt' && ['www.ifrs.org', 'asc.acra.gov.sg'].includes(url.hostname)) {
       return new Response(null, { status: 404 });
     }
+    if (url.hostname === 'iras.gov.sg' || url.hostname.endsWith('.iras.gov.sg') ||
+        url.hostname === 'mas.gov.sg' || url.hostname.endsWith('.mas.gov.sg')) {
+      return new Response(null, { status: 404 });
+    }
     throw new Error(`Unexpected request in mocked FX semantic regression: ${url.hostname}`);
   };
   try {
-    const response = await processAccountingQuery(query, null, 'SFRS_I', fxProviderSettings);
-    return { response, providerCalls, semanticCalls, eventExtractionCalls, requestBody };
+    const response = await processAccountingQuery(
+      query,
+      null,
+      'SFRS_I',
+      fxProviderSettings,
+      undefined,
+      options.chatHistory || [],
+      options.outputPreference,
+      {
+        onAuthorityWorkstreams: result => { authorityWorkstreams.push(result); },
+        onGroundedContext: context => { groundedContexts.push(context); }
+      }
+    );
+    return { response, providerCalls, semanticCalls, eventExtractionCalls, requestBody, authorityWorkstreams, groundedContexts };
   } finally {
     globalThis.fetch = originalFetch;
   }
 }
+
+const capturedFxAcquisitionQuery =
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. Prepare the journal entries.';
+const capturedFxAcquisitionHistory = buildAnalysisConversationHistory([
+  { id: 'captured-fx-acquisition', sender: 'user', text: capturedFxAcquisitionQuery, timestamp: '2026-11-27T06:32:00.000Z' }
+], 'captured-fx-acquisition');
+const capturedFxAcquisition = await runMockFxSemanticQuery(capturedFxAcquisitionQuery, '', {
+  eventText: capturedFxAcquisitionQuery,
+  chatHistory: capturedFxAcquisitionHistory,
+  outputPreference: { journal: true, statutory: false }
+});
+assert.equal(capturedFxAcquisition.semanticCalls, 1);
+assert.equal(capturedFxAcquisition.eventExtractionCalls, 1);
+assert.notEqual(capturedFxAcquisition.response.providerStatus, 'FAILED',
+  'the app must not treat the valid deterministic journal response as a provider failure');
+assert.equal(capturedFxAcquisition.response.advisoryFailureStatus, undefined,
+  'a journal-only FX acquisition with successful provider responses must not fail statutory synthesis');
+assert.notEqual(capturedFxAcquisition.response.answerPath, 'AI_GROUNDED_SYNTHESIS_FALLBACK');
+assert.equal(capturedFxAcquisition.authorityWorkstreams.some(result =>
+  result.workstreams.some(workstream => !['ACCOUNTING_STANDARDS', 'IFRS_FOUNDATION'].includes(workstream.authority))), false,
+  'a journal-only acquisition does not start Singapore statutory evidence workstreams');
+assert.equal(capturedFxAcquisition.response.scenarioState.scenarioType, 'EQUITY_INVESTMENT_FX');
+assert.equal(capturedFxAcquisition.response.scenarioState.isComplete, true);
+assert.equal(capturedFxAcquisition.response.scenarioState.functionalCurrency, 'SGD');
+assert.equal(capturedFxAcquisition.response.scenarioState.purchaseDate, '13/11/2025');
+assert.equal(capturedFxAcquisition.response.scenarioState.purchaseFxRate, 1.30);
+assert.equal(capturedFxAcquisition.response.scenarioState.fxSource, 'Acquisition rate provided by user',
+  'the scenario preserves user-provided transaction-date rate provenance');
+assert.equal(capturedFxAcquisition.response.scenarioState.effectiveDateOrTiming,
+  capturedFxAcquisition.response.scenarioState.fxSource);
+assert.doesNotMatch(capturedFxAcquisition.response.scenarioState.effectiveDateOrTiming, /17%|headline CIT/i);
+assert.equal(capturedFxAcquisition.response.scenarioState.singaporeTaxTreatmentSummary, undefined);
+assert.equal(capturedFxAcquisition.response.scenarioState.regulatoryMandatesSummary, undefined);
+assert.doesNotMatch(capturedFxAcquisition.response.messageText, /capital gains tax|corporate income tax|exchange control|headline CIT|MAS Act/i);
+const capturedFxAcquisitionGroups = capturedFxAcquisition.response.scenarioState.directGroups;
+assert.deepEqual(capturedFxAcquisitionGroups?.[0].lines.map(line => [line.accountCode, line.debit, line.credit]),
+  [['1210', 1300, 0], ['1010', 0, 1300]]);
+assert.equal(capturedFxAcquisitionGroups?.[0].eventDate, '13/11/2025');
+assert.equal(capturedFxAcquisitionGroups?.[0].totalDebit, 1300);
+assert.equal(capturedFxAcquisitionGroups?.[0].totalCredit, 1300);
+const capturedFxAcquisitionCommit = updateCommittedJournalScenario(
+  null, capturedFxAcquisition.response.scenarioState, 'SFRS_I'
+);
+assert.deepEqual(capturedFxAcquisitionCommit?.committedDirectGroups?.[0].lines.map(line =>
+  [line.accountCode, line.debit, line.credit]), [['1210', 1300, 0], ['1010', 0, 1300]]);
+
+const explicitShareTaxQuery =
+  'What Singapore corporate income tax treatment applies to gains when a Singapore company sells foreign shares?';
+const explicitShareTaxSubject = 'Singapore corporate income tax treatment of foreign share sale gains';
+const explicitShareTaxAdvice = await runMockFxSemanticQuery(explicitShareTaxQuery, '', {
+  semanticReply: {
+    ...accountingSemanticInterpretation,
+    domain: 'TAX',
+    authorityCandidates: ['IRAS'],
+    primarySubject: explicitShareTaxSubject,
+    concepts: [{ concept: 'Singapore corporate income tax treatment of foreign share sale gains', role: 'PRIMARY' }],
+    requestedOperation: 'EXPLAIN_RULE',
+    issues: [{ subject: explicitShareTaxSubject, population: 'COMPANY', domain: 'IRAS_INCOME_TAX',
+      governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE', mappedTopicIds: [],
+      evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }]
+  },
+  outputPreference: { journal: false, statutory: true }
+});
+assert.ok(explicitShareTaxAdvice.groundedContexts.some(context => context.classification.taxAnalysisRequired &&
+  context.classification.authorities.includes('IRAS') && context.evidenceQuality),
+  'an explicit share-tax question uses IRAS evidence and the existing grounded advisory workflow');
+assert.equal(explicitShareTaxAdvice.response.scenarioState.directGroups?.length, 0);
+assert.doesNotMatch(explicitShareTaxAdvice.response.messageText, /no capital gains tax|17% corporate income tax/,
+  'unavailable mocked IRAS evidence does not yield an unsupported tax assertion');
 
 const cleanLocalProofQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30. Prepare the journal entries.';
 const ambiguousAssessmentOnCleanProof = await runMockFxSemanticQuery(cleanLocalProofQuery, '', {
