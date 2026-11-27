@@ -21,6 +21,7 @@ import { isFinalSalaryAmountRequest } from '../utils/momFinalPayIntent';
 import type { SemanticQuestionUnderstanding } from '../services/semanticQuestionUnderstanding';
 import { isSemanticallyNonPayroll } from '../services/semanticScenarioResolver';
 import { formatFxRateEquation } from '../utils/fxRatePresentation';
+import { isForeignEquityInvestmentQuery } from '../utils/foreignEquityFxRecognition';
 /**
  * Detects whether a query matches a Singapore statutory inquiry pattern.
  */
@@ -232,6 +233,8 @@ const shareFxPair = String.raw`${shareFxCurrency}\s*\/\s*${shareFxCurrency}`;
 const shareFxRatePattern = new RegExp(String.raw`\b(?:(?<leadingPair>${shareFxPair})\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>${shareFxPair})?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))`, 'gi');
 const shareFxEquation = new RegExp(String.raw`(?<![\w.,$])(?:one|each|1)\s+(?<unit>${shareFxCurrency})\s*(?:equals?|is|=)\s*${shareFxAmount}(?!\w|\.\d)`, 'gi');
 const shareFxPerUnit = new RegExp(String.raw`(?<![\w.,$])${shareFxAmount}\s+per\s+(?:one\s+|1\s+)?(?<unit>${shareFxCurrency})(?!\w)`, 'gi');
+const shareFxAcquisitionAction = /\b(?:invested|bought|purchased|acquired)\b/i;
+const shareFxDisposalAction = /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i;
 
 function normalizeShareFxCurrency(currency: string): string {
   return currency.replace(/\s/g, '').toUpperCase().replace('S$', 'SGD');
@@ -287,125 +290,180 @@ function isEventNamedShareFxQuote(text: string, actionPattern: RegExp, quote?: R
 function getShareFxEventScope(text: string, actionPattern: RegExp): string {
   const action = actionPattern.exec(text);
   if (!action) return '';
-  const sentenceBreaks = [...text.matchAll(/(?<=[.!?])\s+/g)];
-  const sentenceStart = sentenceBreaks.findLast(match => match.index < action.index);
-  const sentenceEnd = sentenceBreaks.find(match => match.index >= action.index);
-  const start = sentenceStart ? sentenceStart.index + sentenceStart[0].length : 0;
-  const end = sentenceEnd?.index ?? text.length;
-  const eventSentence = text.slice(start, end);
-  if (!sentenceEnd) return eventSentence;
-
-  const nextStart = sentenceEnd.index + sentenceEnd[0].length;
-  const nextEnd = sentenceBreaks.find(match => match.index >= nextStart)?.index ?? text.length;
-  const adjacentSentence = text.slice(nextStart, nextEnd);
-  return isStandaloneShareFxMeaning(adjacentSentence) || isEventNamedShareFxQuote(adjacentSentence, actionPattern)
-    ? `${eventSentence} ${adjacentSentence}`
-    : eventSentence;
+  const leadingCurrencyPreamble = new RegExp(String.raw`^\s*(?:(?:our|a\s+company|the\s+company|company|the\s+entity|an?\s+entity)\s+)?(?:primary|functional|presentation)\s+currency\s+is\s+${shareFxCurrency}\s*[,.;]?\s*`, 'i');
+  return stripCleanShareFxJournalDirective(text.replace(leadingCurrencyPreamble, ''))
+    .replace(/\s*(?:,|;)?\s*(?:(?:and\s+)?(?:then|subsequently|afterwards)\s+)?(?:(?:the\s+)?(?:company|entity)|we|they|it)\s*$/i, '')
+    .replace(/[\s,;]+$/, '')
+    .trim();
 }
 
-function isPositivelyAttachedShareFxEvidence(
+function stripCleanShareFxJournalDirective(text: string): string {
+  return text.replace(/\s*(?:(?:prepare|show|give|provide)\s+(?:(?:the|me)\s+)?(?:(?:double|journal|accounting)\s+)?entries|what(?:\s+are|['’]s)\s+(?:the\s+)?(?:(?:double|journal|accounting)\s+)?entries(?:\s+and\s+FX\s+gain)?)\s*[.!]?\s*\??\s*$/i, '').trim();
+}
+
+function hasAffirmativeShareFxActor(sentence: string, actionIndex: number): boolean {
+  const actorText = sentence.slice(0, actionIndex)
+    .replace(/^\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i, '');
+  const hasSequentialSubjectEllipsis = /^[\s,;]*(?:(?:and\s+)?(?:then|subsequently|afterwards))\s*$/i.test(actorText);
+  const actor = actorText.replace(/^[\s,;]*(?:(?:and\s+)?(?:then|subsequently|afterwards)\s+)?/i, '').trim();
+  return hasSequentialSubjectEllipsis || /^(?:we|i|it|they|the company|a company|company|the entity|an entity|entity|our company|the company then|the company subsequently|the company afterwards)$/i.test(actor);
+}
+
+function isAffirmativeShareFxEventSentence(sentence: string, actionPattern: RegExp, quoteStart: number): boolean {
+  const action = actionPattern.exec(sentence);
+  if (!action || !hasAffirmativeShareFxActor(sentence, action.index)) return false;
+
+  const rateAttachment = /\b(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.exec(sentence.slice(0, quoteStart));
+  if (!rateAttachment || rateAttachment.index < action.index + action[0].length) return false;
+  const descriptor = sentence.slice(action.index + action[0].length, rateAttachment.index)
+    .replace(/\b(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/gi, ' ')
+    .replace(/\b(?:USD|SGD|EUR|GBP|S\$)\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|thousand|million))?\b/gi, ' ')
+    .replace(/\b\d[\d,]*(?:\.\d+)?\s*(?:shares?|stock|equity|investment|securities)?\b/gi, ' ')
+    .replace(/\b(?:of|in|into|for|the|a|an|apple|aapl|tesla|tsla|microsoft|corp|inc|ltd|shares?|stock|equity|investment|securities|ordinary|common)\b/gi, ' ')
+    .replace(/[.!?(),;$\s]/g, '');
+  return descriptor.length === 0;
+}
+
+function isBalancedParentheticalShareFxEvidence(sentence: string, actionPattern: RegExp, quoteIndex: number): boolean {
+  const openParen = sentence.lastIndexOf('(', quoteIndex);
+  if (openParen < 0 || sentence.slice(openParen + 1, quoteIndex).trim()) return false;
+  const quote = findShareFxRateMatches(sentence).find(match => match.index === quoteIndex);
+  const meaning = [...sentence.matchAll(shareFxEquation), ...sentence.matchAll(shareFxPerUnit)]
+    .find(match => match.index === quoteIndex);
+  const evidenceEnd = quote ? quote.index + quote[0].length : meaning ? meaning.index! + meaning[0].length : -1;
+  if (evidenceEnd < 0) return false;
+  const closeParen = sentence.indexOf(')', evidenceEnd);
+  if (closeParen < evidenceEnd || sentence.slice(evidenceEnd, closeParen).trim()) return false;
+  const prefix = sentence.slice(0, openParen).trimEnd();
+  const syntheticSentence = `${prefix} at ${sentence.slice(quoteIndex, closeParen)}${sentence.slice(closeParen + 1)}`;
+  const syntheticQuoteIndex = prefix.length + ' at '.length;
+  return isAffirmativeShareFxEventSentence(syntheticSentence, actionPattern, syntheticQuoteIndex);
+}
+
+function hasOnlyShareFxStructuralTail(text: string): boolean {
+  let tail = text.trim().replace(/[.!?;,)]+\s*$/, '').trim();
+  tail = tail.replace(/^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i, '');
+  tail = tail.replace(/^\s*,?\s*(?:\(\s*)?(?:(?:meaning|where|i\.e\.)\s*)?(?:one|each|1)\s+(?:USD|SGD|EUR|GBP|S\$)\s*(?:equals?|is|=)\s*(?:USD|SGD|EUR|GBP|S\$)\s*\d[\d,]*(?:\.\d+)?\s*\)?\s*$/i, '');
+  tail = tail.replace(/^\s*,?\s*(?:\(\s*)?(?:(?:USD|SGD|EUR|GBP|S\$)\s*\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s*(?:USD|SGD|EUR|GBP|S\$))\s+per\s+(?:one\s+|1\s+)?(?:USD|SGD|EUR|GBP|S\$)\s*\)?\s*$/i, '');
+  return tail.length === 0;
+}
+
+function isClosedPositiveShareFxSentence(
   sentence: string,
-  evidenceIndex: number,
-  actionPattern: RegExp
+  actionPattern: RegExp,
+  functionalCurrency: string,
+  transactionCurrency: string
 ): boolean {
-  const precedingText = sentence.slice(0, evidenceIndex);
-  const attachment = /\b(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.exec(precedingText);
-  if (!attachment) return false;
-
-  const clausePrefix = precedingText.slice(0, attachment.index);
-  const clauses = clausePrefix.split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i);
-  const lastClause = clauses.at(-1)?.trim() ?? '';
-  const precedingEventIndex = lastClause ? -1 : clauses.findLastIndex(clause => actionPattern.test(clause));
-  const precedingEventClause = precedingEventIndex >= 0 ? clauses[precedingEventIndex].trim() : '';
-  const interveningClausesAreRejectedEvidence = precedingEventIndex >= 0 &&
-    clauses.slice(precedingEventIndex + 1, -1).every(clause => /^\s*(?:not|never|without)\b/i.test(clause));
-  const isAcquisition = /invested|bought|purchased|acquired/i.test(actionPattern.source);
-  const eventName = isAcquisition ? /^(?:the\s+)?(?:acquisition|purchase)\b/i : /^(?:the\s+)?(?:disposal|sale)\b/i;
-  const inheritedClause = !lastClause && interveningClausesAreRejectedEvidence ? precedingEventClause : '';
-  const eventClause = lastClause || inheritedClause;
-  return actionPattern.test(eventClause) || eventName.test(eventClause);
+  if ((sentence.match(/\(/g)?.length || 0) !== (sentence.match(/\)/g)?.length || 0)) return false;
+  const quotes = findShareFxRateMatches(sentence);
+  const meanings = [...sentence.matchAll(shareFxEquation), ...sentence.matchAll(shareFxPerUnit)]
+    .sort((first, second) => first.index - second.index);
+  if (quotes.length + meanings.length === 0) return isCleanShareFxEventSentence(sentence, actionPattern);
+  const firstEvidenceIndex = Math.min(...[
+    ...quotes.map(quote => quote.index), ...meanings.map(meaning => meaning.index!)
+  ]);
+  const actionMatch = actionPattern.exec(sentence);
+  const isAttachedEventSentence = Boolean(actionMatch && (isAffirmativeShareFxEventSentence(sentence, actionPattern, firstEvidenceIndex) ||
+    isBalancedParentheticalShareFxEvidence(sentence, actionPattern, firstEvidenceIndex)));
+  const isNamedEventSentence = isEventNamedShareFxQuote(sentence, actionPattern, quotes[0]);
+  if (!isAttachedEventSentence && !isNamedEventSentence && !isStandaloneShareFxMeaning(sentence)) return false;
+  if ((quotes.length > 1 || meanings.length > 1) && !isStandaloneShareFxMeaning(sentence)) return false;
+  if (actionMatch && isAttachedEventSentence) {
+    if (!isAffirmativeShareFxEventSentence(sentence, actionPattern, firstEvidenceIndex) &&
+        !isBalancedParentheticalShareFxEvidence(sentence, actionPattern, firstEvidenceIndex)) return false;
+    const quoteEnd = quotes[0] ? quotes[0].index + quotes[0][0].length : meanings[0].index! + meanings[0][0].length;
+    if (!hasOnlyShareFxStructuralTail(sentence.slice(quoteEnd))) return false;
+  } else if (quotes[0] && isNamedEventSentence) {
+    const quoteEnd = quotes[0].index + quotes[0][0].length;
+    if (!hasOnlyShareFxStructuralTail(sentence.slice(quoteEnd))) return false;
+  }
+  const parsed = readShareFxRate(sentence, functionalCurrency, transactionCurrency);
+  return parsed?.rate !== null && parsed?.rate !== undefined;
 }
 
-function isParentheticalShareFxEvidence(sentence: string, evidenceIndex: number, actionPattern: RegExp): boolean {
-  const precedingText = sentence.slice(0, evidenceIndex);
-  if (!/\(\s*$/.test(precedingText)) return false;
-  const clausePrefix = precedingText.slice(0, precedingText.lastIndexOf('('));
-  const eventClause = clausePrefix.split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i).at(-1) ?? '';
-  return actionPattern.test(eventClause);
+function isCleanShareFxEventSentence(sentence: string, actionPattern: RegExp): boolean {
+  const action = actionPattern.exec(sentence);
+  if (!action || !hasAffirmativeShareFxActor(sentence, action.index)) {
+    return false;
+  }
+  const descriptor = sentence.slice(action.index + action[0].length)
+    .replace(/\b(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\b/gi, ' ')
+    .replace(/\b(?:USD|SGD|EUR|GBP|S\$)\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|thousand|million))?\b/gi, ' ')
+    .replace(/\b\d[\d,]*(?:\.\d+)?\s*(?:shares?|stock|equity|investment|securities)?\b/gi, ' ')
+    .replace(/\b(?:of|in|into|for|the|a|an|apple|aapl|tesla|tsla|microsoft|corp|inc|ltd|shares?|stock|equity|investment|securities|ordinary|common)\b/gi, ' ')
+    .replace(/[.!?(),;$\s]/g, '');
+  return descriptor.length === 0;
 }
 
-function hasDisqualifyingShareFxQualification(sentence: string, start: number, end: number): boolean {
-  const precedingClause = sentence.slice(0, start)
-    .split(/,\s+|;|\s+(?:and|but|while|whereas|although|though|however)\s+/i).at(-1) ?? '';
-  const followingClause = sentence.slice(end).split(/[.!?;]/, 1)[0].replace(
-    /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
-    ''
-  );
-  return /\b(?:(?:not|never|without)(?:\s+(?:actually|really|ever|in\s+fact))?|as\s+opposed\s+to)\s+(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.test(precedingClause) ||
-    /\b(?:budget(?:ing)?|forecast(?:ing)?|plan(?:ning)?)\b[^,.!?;]*\b(?:at|using|with)\s+(?:(?:a|an|the)\s+)?$/i.test(precedingClause) ||
-    /^\s*(?:[,;]\s*)?(?:\(\s*)?(?:(?:which|that)\s+)?(?:(?:was|is|has\s+been)\s+)?(?:rejected|declined|excluded|invalid|not\s+(?:accepted|used|applied))\b/i.test(followingClause) ||
-    /^\s*(?:[,;]\s*)?for\s+(?:the\s+)?(?:budget(?:ing)?(?:\s+purposes?)?|planning|forecast(?:ing)?)\s+only\b/i.test(followingClause) ||
-    /^\s*\(\s*(?:rejected|declined|excluded|invalid|not\s+(?:accepted|used|applied))\s*\)/i.test(followingClause);
+function readClosedPositiveShareFxRate(
+  eventScope: string,
+  actionPattern: RegExp,
+  functionalCurrency: string,
+  transactionCurrency: string
+) {
+  const sentences = splitShareFxSentences(eventScope);
+  const validStatements = sentences.filter(sentence => isClosedPositiveShareFxSentence(
+    sentence, actionPattern, functionalCurrency, transactionCurrency
+  ));
+  const structurallyValid = sentences.every(sentence => isClosedPositiveShareFxSentence(
+    sentence, actionPattern, functionalCurrency, transactionCurrency
+  ) || isCleanShareFxEventSentence(sentence, actionPattern));
+  const hasRateEvidence = findShareFxRateMatches(eventScope).length > 0 ||
+    [...eventScope.matchAll(shareFxEquation), ...eventScope.matchAll(shareFxPerUnit)].length > 0;
+  if (!hasRateEvidence) return undefined;
+  if (!structurallyValid || validStatements.length === 0) return { rate: null, start: 0, end: eventScope.length };
+  const rateStatements = sentences.filter(sentence => findShareFxRateMatches(sentence).length > 0 ||
+    [...sentence.matchAll(shareFxEquation), ...[...sentence.matchAll(shareFxPerUnit)]].length > 0);
+  const parsed = readShareFxRate(rateStatements.join(' '), functionalCurrency, transactionCurrency);
+  return parsed?.rate === null || parsed?.rate === undefined
+    ? { rate: null, start: 0, end: eventScope.length }
+    : parsed;
 }
 
-function getOwnedInitialShareFxText(eventScope: string, actionPattern: RegExp): string {
-  const owned: string[] = [];
-  const sentences = eventScope.split(/(?<=[.!?])\s+/);
-  const meanings = [shareFxEquation, shareFxPerUnit];
-  const evidenceConnectors = /^\s*(?:(?:[,;()]|\band\b|\bbut\b)\s*)*(?:(?:at|using|with)\s+(?:(?:a|an|the)\s+)?)?$/i;
-  for (const sentence of sentences) {
-    const quotes = findShareFxRateMatches(sentence);
-    if (isStandaloneShareFxMeaning(sentence)) {
-      owned.push(sentence);
-      continue;
-    }
+function splitShareFxSentencesWithOffsets(text: string): Array<{ sentence: string; start: number }> {
+  const breaks = [...text.matchAll(/(?<=[.!?])\s+/g)];
+  const sentences: Array<{ sentence: string; start: number }> = [];
+  let start = 0;
+  for (const lineBreak of breaks) {
+    const raw = text.slice(start, lineBreak.index);
+    const sentence = raw.trim();
+    if (sentence) sentences.push({ sentence, start: start + raw.indexOf(sentence) });
+    start = lineBreak.index + lineBreak[0].length;
+  }
+  const rawLast = text.slice(start);
+  const last = rawLast.trim();
+  if (last) sentences.push({ sentence: last, start: start + rawLast.indexOf(last) });
+  return sentences;
+}
 
-    const sentenceMeanings = meanings.flatMap(pattern => [...sentence.matchAll(pattern)]);
-    const evidence = [
-      ...quotes.map(quote => ({ kind: 'quote' as const, match: quote, start: quote.index, end: quote.index + quote[0].length })),
-      ...sentenceMeanings.map(meaning => ({ kind: 'meaning' as const, match: meaning, start: meaning.index, end: meaning.index + meaning[0].length }))
-    ].sort((first, second) => first.start - second.start);
-    let lastOwnedQuote: RegExpExecArray | undefined;
-    let lastOwnedMeaning: RegExpMatchArray | undefined;
+function splitShareFxSentences(text: string): string[] {
+  return splitShareFxSentencesWithOffsets(text).map(({ sentence }) => sentence);
+}
 
-    for (const item of evidence) {
-      const isDisqualified = hasDisqualifyingShareFxQualification(sentence, item.start, item.end);
-      let isOwned = !isDisqualified &&
-        (isPositivelyAttachedShareFxEvidence(sentence, item.start, actionPattern) ||
-          (item.kind === 'quote' && isParentheticalShareFxEvidence(sentence, item.start, actionPattern)));
-
-      if (!isOwned && !isDisqualified && item.kind === 'quote') {
-        isOwned = isEventNamedShareFxQuote(sentence, actionPattern, item.match);
-        if (!isOwned && lastOwnedQuote) {
-          isOwned = evidenceConnectors.test(sentence.slice(lastOwnedQuote.index + lastOwnedQuote[0].length, item.start));
-        }
-        if (!isOwned && lastOwnedMeaning) {
-          isOwned = evidenceConnectors.test(sentence.slice(lastOwnedMeaning.index! + lastOwnedMeaning[0].length, item.start));
-        }
-      }
-
-      if (!isOwned && !isDisqualified && item.kind === 'meaning' && lastOwnedQuote) {
-        const quoteExplanationLead = sentence.slice(lastOwnedQuote.index + lastOwnedQuote[0].length, item.start).replace(
-          /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
-          ''
-        );
-        isOwned = /^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(quoteExplanationLead);
-      }
-
-      if (!isOwned && !isDisqualified && item.kind === 'meaning' && lastOwnedMeaning) {
-        isOwned = /^\s*(?:,?\s*(?:and|but)\s+|,\s*)$/i.test(
-          sentence.slice(lastOwnedMeaning.index! + lastOwnedMeaning[0].length, item.start)
-        );
-      }
-
-      if (isOwned) {
-        owned.push(item.match[0]);
-        if (item.kind === 'quote') lastOwnedQuote = item.match;
-        else lastOwnedMeaning = item.match;
-      }
+function getAffirmativeShareFxEventStats(text: string, actionPattern: RegExp): {
+  count: number;
+  firstActionPosition?: number;
+} {
+  let count = 0;
+  let firstActionPosition: number | undefined;
+  for (const { sentence, start } of splitShareFxSentencesWithOffsets(text)) {
+    const actions = [...sentence.matchAll(new RegExp(actionPattern.source, 'gi'))];
+    let previousOwnedActionEnd = -1;
+    for (const action of actions) {
+      const actionIndex = action.index ?? -1;
+      if (actionIndex < 0) continue;
+      const actorOwned = hasAffirmativeShareFxActor(sentence, actionIndex);
+      const subsequentEvent = previousOwnedActionEnd >= 0 &&
+        /(?:,\s*|\s+)(?:(?:and\s+)?(?:then|subsequently|afterwards)|and)\s*(?:(?:the|a)\s+)?(?:company|entity|we|they|it)?\s*$/i
+          .test(sentence.slice(previousOwnedActionEnd, actionIndex)) &&
+        /^(?:invested|bought|purchased|acquired|sold|sell|selling|disposed|derecognised)$/i.test(action[0]);
+      if (!actorOwned && !subsequentEvent) continue;
+      count += 1;
+      previousOwnedActionEnd = actionIndex + action[0].length;
+      firstActionPosition ??= start + actionIndex;
     }
   }
-  return owned.join(' ');
+  return { count, firstActionPosition };
 }
 
 function readShareFxRate(
@@ -493,14 +551,63 @@ function readInitialShareFxRate(
   actionPattern: RegExp,
   functionalCurrency: string,
   transactionCurrency: string
-) {
+): { rate: number | null; start: number; end: number; eventScopeAmbiguous?: boolean } | undefined {
   const eventScope = getShareFxEventScope(text, actionPattern);
-  const ownedFxText = getOwnedInitialShareFxText(eventScope, actionPattern);
-  return readShareFxRate(ownedFxText, functionalCurrency, transactionCurrency);
+  if (!eventScope) return undefined;
+  const eventStats = getAffirmativeShareFxEventStats(eventScope, actionPattern);
+  if (eventStats.count !== 1 || eventStats.firstActionPosition === undefined) {
+    return { rate: null, start: 0, end: eventScope.length, eventScopeAmbiguous: eventStats.count > 1 };
+  }
+  const firstRatePosition = [
+    ...findShareFxRateMatches(eventScope).map(match => match.index),
+    ...[...eventScope.matchAll(shareFxEquation), ...eventScope.matchAll(shareFxPerUnit)].map(match => match.index!)
+  ].sort((first, second) => first - second)[0];
+  if (firstRatePosition !== undefined && firstRatePosition < eventStats.firstActionPosition) {
+    return { rate: null, start: 0, end: eventScope.length };
+  }
+  return readClosedPositiveShareFxRate(eventScope, actionPattern, functionalCurrency, transactionCurrency);
+}
+
+function addShareFxEventDisambiguation(scenario: AccountingScenarioState, ambiguousRateFields: string[] = []): AccountingScenarioState {
+  if (ambiguousRateFields.length === 0) return scenario;
+  const purchaseAmbiguous = ambiguousRateFields.includes('purchaseFxRate');
+  const saleAmbiguous = ambiguousRateFields.includes('saleFxRate');
+  const ambiguousFieldKeys = new Set(ambiguousRateFields);
+  const eventScopes = [
+    ...(purchaseAmbiguous ? [{ fieldKey: 'purchaseEventScope', fieldName: 'Acquisition scope', eventName: 'acquisition' }] : []),
+    ...(saleAmbiguous ? [{ fieldKey: 'saleEventScope', fieldName: 'Disposal scope', eventName: 'disposal' }] : [])
+  ];
+  return {
+    ...scenario,
+    missingFields: [
+      ...scenario.missingFields.filter(field => !ambiguousFieldKeys.has(field.fieldKey)),
+      ...eventScopes.map(({ fieldKey, fieldName, eventName }) => ({
+        fieldKey,
+        fieldName,
+        prompt: `This request contains multiple ${eventName} events, and this journal can represent only one at a time. Submit one ${eventName} with its amount, date and transaction-specific rate before requesting the journal.`,
+        whyNeeded: `The ${eventName} rate cannot be assigned to one transaction while the request contains multiple ${eventName} events.`
+      }))
+    ]
+  };
+}
+
+function getScopedFxEvidenceForClarification(
+  eventText: string,
+  actionPattern: RegExp,
+  evidence?: { status: 'AFFIRMED' | 'AMBIGUOUS' | 'MISSING'; eventText: string; evidenceText: string }
+): string | undefined {
+  if (!evidence || evidence.status === 'MISSING' || !evidence.eventText || !evidence.evidenceText) return undefined;
+  const eventScope = getShareFxEventScope(eventText, actionPattern);
+  if (!eventScope || !evidence.eventText.includes(eventScope) || !eventScope.includes(evidence.evidenceText) ||
+      eventScope.indexOf(evidence.evidenceText) !== eventScope.lastIndexOf(evidence.evidenceText)) return undefined;
+  return evidence.evidenceText.replace(/\s+/g, ' ').trim().slice(0, 180);
 }
 
 function resolvePendingShareFxRate(query: string, scenario?: AccountingScenarioState | null): AccountingScenarioState | undefined {
   if (scenario?.scenarioType !== 'EQUITY_INVESTMENT_FX' || scenario.isComplete) return undefined;
+  if (scenario.missingFields.some(field => field.fieldKey === 'purchaseEventScope' || field.fieldKey === 'saleEventScope')) {
+    return scenario;
+  }
   const event = /^\s*(?:(?:the|it\s+was)\s+)?(?:(acquisition|purchase|disposal|sale)\s+)?/i.exec(query)!;
   const rateText = query.slice(event[0].length);
   const quote = readShareFxRate(rateText, scenario.functionalCurrency, scenario.transactionCurrency, true);
@@ -531,6 +638,15 @@ function resolvePendingShareFxRate(query: string, scenario?: AccountingScenarioS
     missingFields
   };
   return missingFields.length > 0 ? updated : buildForeignEquityJournal(updated);
+}
+
+function findShareFxEventStart(text: string, actionIndex: number): number {
+  const prefix = text.slice(0, actionIndex);
+  const actorBoundary = /(?:,\s*|\s+)(?:(?:and\s+)?(?:then|subsequently|afterwards)\s+)?(?:(?:(?:the|a)\s+)?(?:company|entity)|we|they|it)\s*$/i.exec(prefix);
+  if (actorBoundary) return actorBoundary.index;
+  const ellipticalBoundary = /(?:,\s*|\s+)(?:and\s+)?(?:then|subsequently|afterwards)\s*$/i.exec(prefix);
+  if (ellipticalBoundary) return ellipticalBoundary.index;
+  return actionIndex;
 }
 
 export async function parseAccountingQuery(
@@ -2821,19 +2937,7 @@ export async function parseAccountingQuery(
   // SCENARIO C: EXPLICIT FOREIGN EQUITY SHARES & FOREX FIXTURE (IFRS 9 & IAS 21)
   // Controlled fixture for Apple/Tesla multi-currency quoted equity tests
   // =========================================================================
-  const isForeignSharesFixture = 
-    (q.includes('apple') || 
-     q.includes('aapl') || 
-     q.includes('tesla') || 
-     q.includes('tsla') || 
-     q.includes('microsoft') || 
-     ((q.includes('fvtpl') || q.includes('fvtoci')) && (q.includes('foreign') || q.includes('usd')))) &&
-    !q.includes('own company') &&
-    !q.includes('share capital') &&
-    !q.includes('unpaid') &&
-    !q.includes('director');
-
-  if (!isForeignSharesFixture) {
+  if (!isForeignEquityInvestmentQuery(query)) {
     const skipsPriorPayrollSettlement =
       currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       hasNonRemunerationOutlayClause &&
@@ -3051,9 +3155,10 @@ export async function parseAccountingQuery(
     quantity = parseInt(qtyMatch[1].replace(/,/g, ''), 10);
   }
 
-  const saleActionMatch = /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i.exec(query);
-  const purchaseEventText = saleActionMatch ? query.slice(0, saleActionMatch.index) : query;
-  const saleEventText = saleActionMatch ? query.slice(saleActionMatch.index) : '';
+  const saleActionMatch = shareFxDisposalAction.exec(query);
+  const saleEventStart = saleActionMatch ? findShareFxEventStart(query, saleActionMatch.index) : -1;
+  const purchaseEventText = saleActionMatch ? query.slice(0, saleEventStart) : query;
+  const saleEventText = saleActionMatch ? query.slice(saleEventStart) : '';
   const amountPattern = /(?:invested|bought|purchased|acquired|cost|paid)\s*(?:(?:an amount of|sum of|value of)\s*)?(?:usd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i;
   const buyMatch = purchaseEventText.match(amountPattern)
     || purchaseEventText.match(/(?:usd|\$)\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?\s*(?:into|for|in)?/i);
@@ -3100,9 +3205,9 @@ export async function parseAccountingQuery(
     ));
     return makeEventDate(dateBeforeAction);
   };
-  const purchaseDateFact = parseEventDate(purchaseEventText, /\b(?:invested|bought|purchased|acquired)\b/i);
+  const purchaseDateFact = parseEventDate(purchaseEventText, shareFxAcquisitionAction);
   const saleDateFact = saleActionMatch
-    ? parseEventDate(saleEventText, /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i)
+    ? parseEventDate(saleEventText, shareFxDisposalAction)
     : undefined;
   const purchaseDate = purchaseDateFact?.display;
   const saleDate = saleDateFact?.display;
@@ -3110,13 +3215,13 @@ export async function parseAccountingQuery(
   const sameCurrency = functionalCurrency === transactionCurrency;
   const purchaseQuote = sameCurrency ? undefined : readInitialShareFxRate(
     purchaseEventText,
-    /\b(?:invested|bought|purchased|acquired)\b/i,
+    shareFxAcquisitionAction,
     functionalCurrency,
     transactionCurrency
   );
   const saleQuote = sameCurrency || !saleActionMatch ? undefined : readInitialShareFxRate(
     saleEventText,
-    /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i,
+    shareFxDisposalAction,
     functionalCurrency,
     transactionCurrency
   );
@@ -3153,6 +3258,16 @@ export async function parseAccountingQuery(
   }
 
   const fxSource = fxSources.join('; ');
+  const acquisitionEvidenceQuote = getScopedFxEvidenceForClarification(
+    purchaseEventText,
+    shareFxAcquisitionAction,
+    questionUnderstanding?.fxTransactionEvidence?.acquisition
+  );
+  const disposalEvidenceQuote = saleActionMatch ? getScopedFxEvidenceForClarification(
+    saleEventText,
+    shareFxDisposalAction,
+    questionUnderstanding?.fxTransactionEvidence?.disposal
+  ) : undefined;
   const missingFields: MissingFieldInfo[] = [];
   if (!purchaseAmountForeign) {
     missingFields.push({ fieldKey: 'purchaseAmountForeign', fieldName: 'Acquisition amount', prompt: 'What was the foreign-currency acquisition amount?', whyNeeded: 'The acquisition cannot be measured without the amount.' });
@@ -3161,7 +3276,12 @@ export async function parseAccountingQuery(
     missingFields.push({ fieldKey: 'purchaseDate', fieldName: 'Acquisition date', prompt: 'What was the acquisition date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the journal and its spot-rate basis.' });
   }
   if (purchaseFxRate === undefined) {
-    missingFields.push({ fieldKey: 'purchaseFxRate', fieldName: 'Acquisition exchange rate', prompt: purchaseQuote?.rate === null ? `Please confirm the acquisition spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.` : 'What spot exchange rate applied on the acquisition date?', whyNeeded: 'The acquisition amount cannot be translated without an evidenced transaction-date rate.' });
+    const prompt = purchaseQuote?.rate === null
+      ? acquisitionEvidenceQuote
+        ? `Please confirm whether “${acquisitionEvidenceQuote}” was the rate that actually applied to the acquisition. State the amount in ${functionalCurrency} for one ${transactionCurrency} if it was, or provide the actual acquisition-date rate if it was not.`
+        : `Please confirm the acquisition spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.`
+      : 'What spot exchange rate applied on the acquisition date?';
+    missingFields.push({ fieldKey: 'purchaseFxRate', fieldName: 'Acquisition exchange rate', prompt, whyNeeded: 'The acquisition amount cannot be translated without an evidenced transaction-date rate.' });
   }
   if (saleActionMatch) {
     if (!saleAmountForeign) {
@@ -3171,7 +3291,12 @@ export async function parseAccountingQuery(
       missingFields.push({ fieldKey: 'saleDate', fieldName: 'Disposal date', prompt: 'What was the disposal date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the disposal journal and its spot-rate basis.' });
     }
     if (saleFxRate === undefined) {
-      missingFields.push({ fieldKey: 'saleFxRate', fieldName: 'Disposal exchange rate', prompt: saleQuote?.rate === null ? `Please confirm the disposal spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.` : 'What spot exchange rate applied on the disposal date?', whyNeeded: 'The proceeds cannot be translated without an evidenced transaction-date rate.' });
+      const prompt = saleQuote?.rate === null
+        ? disposalEvidenceQuote
+          ? `Please confirm whether “${disposalEvidenceQuote}” was the rate that actually applied to the disposal. State the amount in ${functionalCurrency} for one ${transactionCurrency} if it was, or provide the actual disposal-date rate if it was not.`
+          : `Please confirm the disposal spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.`
+        : 'What spot exchange rate applied on the disposal date?';
+      missingFields.push({ fieldKey: 'saleFxRate', fieldName: 'Disposal exchange rate', prompt, whyNeeded: 'The proceeds cannot be translated without an evidenced transaction-date rate.' });
     }
   }
 
@@ -3201,7 +3326,14 @@ export async function parseAccountingQuery(
     isComplete: false,
     missingFields
   };
-  return missingFields.length > 0 ? scenario : buildForeignEquityJournal(scenario);
+  const ambiguousFxEventScopes = [
+    ...(purchaseQuote?.eventScopeAmbiguous ? ['purchaseFxRate'] : []),
+    ...(saleQuote?.eventScopeAmbiguous ? ['saleFxRate'] : [])
+  ];
+  return addShareFxEventDisambiguation(
+    missingFields.length > 0 ? scenario : buildForeignEquityJournal(scenario),
+    ambiguousFxEventScopes
+  );
 }
 
 function buildForeignEquityJournal(scenario: AccountingScenarioState): AccountingScenarioState {

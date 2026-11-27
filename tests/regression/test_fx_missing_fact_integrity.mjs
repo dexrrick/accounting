@@ -7,6 +7,10 @@ import { calculateDoubleEntries } from '../../src/engine/accountingEngine.ts';
 import { processAccountingQuery } from '../../src/services/geminiService.ts';
 import { updateCommittedJournalScenario } from '../../src/services/committedJournal.ts';
 import { getExchangeRate } from '../../src/services/frankfurterService.ts';
+import {
+  interpretSemanticQuestion,
+  SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA
+} from '../../src/services/semanticQuestionUnderstanding.ts';
 
 let unexpectedExternalRequests = 0;
 const originalPlatformFetch = globalThis.fetch;
@@ -109,6 +113,30 @@ const acquisitionBudgetAssumedPairRate = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, and the budget assumed a USD/SGD spot rate of 1.30.',
   null, 'SFRS_I', undefined
 );
+const retrospectiveBudgetQualifier = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, but that was only the budget rate. Prepare the journal entries.',
+  null, 'SFRS_I', undefined
+);
+const budgetingPurposeQualifier = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30 for budgeting purposes. Prepare the journal entries.',
+  null, 'SFRS_I', undefined
+);
+const laterBudgetQualifier = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30. That was the figure in the budget.',
+  null, 'SFRS_I', undefined
+);
+const earlierBudgetScope = await processAccountingQuery(
+  'Our functional currency is SGD. This is a budget illustration. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30.',
+  null, 'SFRS_I', undefined
+);
+const conditionalAcquisitionRate = await processAccountingQuery(
+  'Our functional currency is SGD. If we acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, what would the journal entries be?',
+  null, 'SFRS_I', undefined
+);
+const disposalBudgetPurpose = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099 at USD/SGD spot rate of 1.32 for budgeting purposes. Prepare the journal entries.',
+  null, 'SFRS_I', undefined
+);
 const acquisitionNegatedRate = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, not at USD/SGD spot rate of 1.30.',
   null, 'SFRS_I', undefined
@@ -124,6 +152,22 @@ const acquisitionCommaRate = await processAccountingQuery(
 const acquisitionParentheticalRate = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 (USD/SGD spot rate of 1.30).',
   null, 'SFRS_I', undefined
+);
+const rateBeforeAcquisitionEvent = await processAccountingQuery(
+  'One USD equals SGD 1.30. Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099.',
+  null, 'SFRS_I', undefined
+);
+const repeatedAcquisitionEvents = await processAccountingQuery(
+  'A company primary currency is SGD, it acquired USD 1,000 of Apple shares on 13/11/2099. It acquired USD 2,000 of Tesla shares on 14/11/2099 at USD/SGD spot rate of 1.30. Prepare the journal entries.',
+  null, 'SFRS_I', undefined
+);
+const repeatedAcquisitionRateReply = await processAccountingQuery(
+  '1.31', repeatedAcquisitionEvents.scenarioState, 'SFRS_I', undefined,
+  undefined, [
+    { id: 'repeat-acquisition-initial', sender: 'user', text: repeatedAcquisitionEvents.scenarioState.rawQuery, timestamp: '' },
+    { id: 'repeat-acquisition-clarification', sender: 'assistant', text: repeatedAcquisitionEvents.messageText, timestamp: '' },
+    { id: 'repeat-acquisition-rate', sender: 'user', text: '1.31', timestamp: '' }
+  ]
 );
 const acquisitionCorrectedAfterRejectedRate = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, not using SGD 1.30 per USD but at USD/SGD spot rate of 1.28.',
@@ -204,8 +248,6 @@ for (const [answer, expectedRate, expectedSgd] of [
   [eventRateWithArticle, 1.30, 1300],
   [acquisitionCommaRate, 1.30, 1300],
   [acquisitionParentheticalRate, 1.30, 1300],
-  [acquisitionCorrectedAfterRejectedRate, 1.28, 1280],
-  [actualRateWithOpposedComparison, 1.28, 1280],
   [preciseRateAnswer, 1.3004, 1300.4]
 ]) {
   assert.equal(answer.scenarioState.isComplete, true);
@@ -222,22 +264,39 @@ for (const answer of [
   connectedPairRateConflict, connectedUnitRateConflict,
   unlabelledRateAnswer, budgetRateAnswer, budgetRateInEventSentence,
   acquisitionBudgetPreparedRate, acquisitionBudgetAssumedPairRate, acquisitionNegatedRate, acquisitionPlannedRate,
+  acquisitionCorrectedAfterRejectedRate, actualRateWithRejectedComparison, actualRateWithOpposedComparison,
+  retrospectiveBudgetQualifier, budgetingPurposeQualifier, laterBudgetQualifier, earlierBudgetScope,
+  conditionalAcquisitionRate,
   acquisitionInlineBudgetRate, ...rejectedRateAnswers
 ]) {
   assert.equal(answer.scenarioState.isComplete, false);
   assert.ok(answer.clarifications?.some(field => field.fieldKey === 'purchaseFxRate'));
   assert.equal(answer.scenarioState.directGroups?.length, 0);
 }
+assert.equal(rateBeforeAcquisitionEvent.scenarioState.isComplete, false,
+  'A standalone unit equation preceding the transaction must not be assigned to it.');
+assert.equal(rateBeforeAcquisitionEvent.scenarioState.directGroups?.length, 0);
+assert.ok(rateBeforeAcquisitionEvent.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
+assert.equal(repeatedAcquisitionEvents.scenarioState.isComplete, false,
+  'A rate attached to the second acquisition must not be assigned to the first.');
+assert.equal(repeatedAcquisitionEvents.scenarioState.directGroups?.length, 0);
+assert.ok(repeatedAcquisitionEvents.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseEventScope'));
+assert.match(repeatedAcquisitionEvents.clarifications[0].prompt, /multiple acquisition events/i);
+assert.equal(repeatedAcquisitionRateReply.scenarioState.isComplete, false,
+  'A bare rate reply cannot resolve which of multiple acquisitions it belongs to.');
+assert.equal(repeatedAcquisitionRateReply.scenarioState.directGroups?.length, 0);
 assert.equal(disposalNegatedRate.scenarioState.isComplete, false);
 assert.ok(disposalNegatedRate.clarifications?.some(field => field.fieldKey === 'saleFxRate'));
 assert.equal(disposalNegatedRate.scenarioState.directGroups?.length, 0);
 assert.equal(disposalNamedUnusedRate.scenarioState.isComplete, false);
 assert.ok(disposalNamedUnusedRate.clarifications?.some(field => field.fieldKey === 'saleFxRate'));
 assert.equal(disposalNamedUnusedRate.scenarioState.directGroups?.length, 0);
-assert.equal(actualRateWithRejectedComparison.scenarioState.isComplete, true);
-assert.equal(actualRateWithRejectedComparison.scenarioState.purchaseFxRate, 1.28);
-assert.equal(actualRateWithRejectedComparison.scenarioState.directGroups?.[0].totalDebit, 1280);
-assert.equal(actualRateWithRejectedComparison.scenarioState.directGroups?.[0].totalCredit, 1280);
+assert.equal(disposalBudgetPurpose.scenarioState.isComplete, false);
+assert.ok(disposalBudgetPurpose.clarifications?.some(field => field.fieldKey === 'saleFxRate'));
+assert.equal(disposalBudgetPurpose.scenarioState.directGroups?.length, 0);
+assert.equal(actualRateWithRejectedComparison.scenarioState.isComplete, false);
+assert.ok(actualRateWithRejectedComparison.clarifications?.some(field => field.fieldKey === 'purchaseFxRate'));
+assert.equal(actualRateWithRejectedComparison.scenarioState.directGroups?.length, 0);
 
 const resumedScenario = resumedAnswer.scenarioState;
 assert.equal(resumedScenario.scenarioType, 'EQUITY_INVESTMENT_FX');
@@ -285,6 +344,166 @@ const clarifiedDirection = await parseAccountingQuery('One USD equals SGD 1.30.'
 assert.equal(clarifiedDirection.isComplete, true);
 assert.equal(clarifiedDirection.purchaseFxRate, 1.30);
 assert.equal(clarifiedDirection.purchaseAmountForeign, 1000);
+
+const fxProviderSettings = {
+  activeProvider: 'gemini',
+  gemini: { apiKey: 'offline-test-provider-key', model: 'gemini-3.5-flash-lite' },
+  azure: {},
+  openai: {}
+};
+const accountingSemanticInterpretation = {
+  schemaVersion: 2,
+  jurisdiction: ['Singapore'],
+  authorityCandidates: ['ACCOUNTING_STANDARDS'],
+  contextualAuthorities: [],
+  domain: 'ACCOUNTING',
+  population: 'COMPANY',
+  primarySubject: 'foreign equity investment journal',
+  concepts: [{ concept: 'foreign equity journal entries', role: 'PRIMARY' }],
+  requestedOperation: 'PREPARE_JOURNAL',
+  factsExplicitlyProvided: [],
+  confidence: 0.95,
+  issues: [{
+    subject: 'foreign equity investment journal',
+    population: 'COMPANY',
+    domain: 'ACCOUNTING',
+    governingAuthorities: ['ACCOUNTING_STANDARDS'],
+    contextualAuthorities: [],
+    operation: 'PREPARE_JOURNAL',
+    mappedTopicIds: [],
+    evidenceRequirement: 'CASE_FACTS',
+    confidence: 0.95
+  }]
+};
+const fxEvidenceFor = (query, evidenceText, { status = 'AFFIRMED', eventText = query, disposalEvidence } = {}) => ({
+  acquisition: { status, eventText, evidenceText },
+  disposal: disposalEvidence || { status: 'MISSING', eventText: '', evidenceText: '' }
+});
+const fxWireQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30.';
+let fxWireOptions;
+const fxWireUnderstanding = await interpretSemanticQuestion(
+  fxWireQuery,
+  fxProviderSettings,
+  async (_prompt, _system, _provider, options) => {
+    fxWireOptions = options;
+    return JSON.stringify({
+      ...accountingSemanticInterpretation,
+      fxTransactionEvidence: fxEvidenceFor(fxWireQuery, 'We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30.')
+    });
+  }
+);
+assert.equal(fxWireUnderstanding.assessmentStatus, 'PASSED');
+assert.equal(fxWireOptions.responseJsonSchema.required.at(-1), 'fxTransactionEvidence');
+assert.ok(fxWireOptions.responseJsonSchema.properties.fxTransactionEvidence);
+assert.equal(fxWireUnderstanding.fxTransactionEvidence.acquisition.evidenceText,
+  'We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30.');
+let unrelatedWireOptions;
+await interpretSemanticQuestion('How should an ordinary office expense be recorded?', fxProviderSettings,
+  async (_prompt, _system, _provider, options) => { unrelatedWireOptions = options; return '{malformed'; });
+assert.equal(unrelatedWireOptions.responseJsonSchema, SEMANTIC_QUESTION_V2_RESPONSE_JSON_SCHEMA,
+  'Unrelated semantic calls retain the exact standard schema object.');
+
+async function runMockFxSemanticQuery(query, evidenceText, options = {}) {
+  const semanticReply = {
+    ...accountingSemanticInterpretation,
+    fxTransactionEvidence: fxEvidenceFor(query, evidenceText, options)
+  };
+  const originalFetch = globalThis.fetch;
+  let providerCalls = 0;
+  let semanticCalls = 0;
+  let eventExtractionCalls = 0;
+  let requestBody;
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(typeof input === 'string' ? input : input.url);
+    if (url.hostname === 'generativelanguage.googleapis.com') {
+      providerCalls += 1;
+      const body = JSON.parse(init.body);
+      const prompt = body.contents?.[0]?.parts?.[0]?.text || '';
+      if (/Extract chronological accounting EVENT FACTS/.test(prompt)) {
+        eventExtractionCalls += 1;
+        return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: '{"events":[]}' }] } }] }), { status: 200 });
+      }
+      semanticCalls += 1;
+      requestBody = body;
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: JSON.stringify(semanticReply) }] } }]
+      }), { status: 200 });
+    }
+    if (url.pathname === '/robots.txt' && ['www.ifrs.org', 'asc.acra.gov.sg'].includes(url.hostname)) {
+      return new Response(null, { status: 404 });
+    }
+    throw new Error(`Unexpected request in mocked FX semantic regression: ${url.hostname}`);
+  };
+  try {
+    const response = await processAccountingQuery(query, null, 'SFRS_I', fxProviderSettings);
+    return { response, providerCalls, semanticCalls, eventExtractionCalls, requestBody };
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+}
+
+const cleanLocalProofQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30. Prepare the journal entries.';
+const ambiguousAssessmentOnCleanProof = await runMockFxSemanticQuery(cleanLocalProofQuery, '', {
+  status: 'AMBIGUOUS', eventText: ''
+});
+assert.equal(ambiguousAssessmentOnCleanProof.response.scenarioState.isComplete, true,
+  'A failed or ambiguous assessment cannot block a complete local affirmative proof.');
+assert.equal(ambiguousAssessmentOnCleanProof.response.scenarioState.purchaseFxRate, 1.30);
+assert.equal(ambiguousAssessmentOnCleanProof.response.scenarioState.directGroups?.[0].totalDebit, 1300);
+assert.equal(ambiguousAssessmentOnCleanProof.response.scenarioState.directGroups?.[0].totalCredit, 1300);
+
+const budgetScopeQuery = 'Our functional currency is SGD. This is a budget illustration. We acquired USD 1,000 of Apple shares on 13/11/2099. The acquisition USD/SGD spot rate is 1.28. Prepare the journal entries.';
+const closingEvidence = 'The acquisition USD/SGD spot rate is 1.28.';
+const aiGuidedConfirmation = await runMockFxSemanticQuery(budgetScopeQuery, closingEvidence);
+assert.equal(aiGuidedConfirmation.semanticCalls, 1, 'FX ownership uses the existing semantic interpretation call once.');
+assert.equal(aiGuidedConfirmation.eventExtractionCalls, 1, 'The existing journal event extractor remains a separate unchanged call.');
+assert.ok(aiGuidedConfirmation.requestBody.generationConfig.responseFormat.text.schema.required.includes('fxTransactionEvidence'));
+assert.match(aiGuidedConfirmation.requestBody.contents[0].parts[0].text, /FX event ownership/i);
+assert.equal(aiGuidedConfirmation.response.scenarioState.isComplete, false,
+  'An affirmative model assessment cannot upgrade a rate from a budget-framed event scope.');
+assert.equal(aiGuidedConfirmation.response.scenarioState.directGroups?.length, 0);
+assert.match(aiGuidedConfirmation.response.clarifications[0].prompt, /The acquisition USD\/SGD spot rate is 1\.28/);
+assert.doesNotMatch(aiGuidedConfirmation.response.clarifications[0].prompt, /;/);
+const confirmedAcquisitionRate = 'The acquisition USD/SGD spot rate is 1.28.';
+const aiGuidedJournal = await processAccountingQuery(confirmedAcquisitionRate,
+  aiGuidedConfirmation.response.scenarioState, 'SFRS_I', undefined, undefined, [
+    { id: 'fx-user-initial', sender: 'user', text: budgetScopeQuery, timestamp: '' },
+    { id: 'fx-assistant-clarification', sender: 'assistant', text: aiGuidedConfirmation.response.messageText, timestamp: '' },
+    { id: 'fx-user-confirmation', sender: 'user', text: confirmedAcquisitionRate, timestamp: '' }
+  ]);
+assert.equal(aiGuidedJournal.scenarioState.isComplete, true);
+assert.equal(aiGuidedJournal.scenarioState.purchaseFxRate, 1.28);
+assert.equal(aiGuidedJournal.scenarioState.directGroups?.[0].totalDebit, 1280);
+assert.equal(aiGuidedJournal.scenarioState.directGroups?.[0].totalCredit, 1280);
+assert.equal(updateCommittedJournalScenario(null, aiGuidedJournal.scenarioState, 'SFRS_I')?.purchaseFxRate, 1.28);
+
+const budgetOnlyProviderQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, but that was only the budget rate. Prepare the journal entries.';
+const budgetOnlyProviderEvidence = await runMockFxSemanticQuery(budgetOnlyProviderQuery, 'USD/SGD spot rate of 1.30');
+assert.equal(budgetOnlyProviderEvidence.response.scenarioState.isComplete, false,
+  'A provider copying the exact budget-only numeric snippet cannot authorize it.');
+assert.equal(budgetOnlyProviderEvidence.response.scenarioState.directGroups?.length, 0);
+
+const laterQualifiedProviderQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30. That was the figure in the budget. Prepare the journal entries.';
+const earlierSentence = 'We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30.';
+const laterQualifiedProviderEvidence = await runMockFxSemanticQuery(laterQualifiedProviderQuery, earlierSentence);
+assert.equal(laterQualifiedProviderEvidence.response.scenarioState.isComplete, false,
+  'A complete earlier sentence quote cannot omit a later event-scope qualification.');
+assert.equal(laterQualifiedProviderEvidence.response.scenarioState.directGroups?.length, 0);
+
+const invalidContextProviderEvidence = await runMockFxSemanticQuery(laterQualifiedProviderQuery, earlierSentence, {
+  eventText: 'This exact context is not present in the current question.'
+});
+assert.equal(invalidContextProviderEvidence.response.scenarioState.isComplete, false,
+  'An unverifiable provider quote remains unresolved.');
+assert.equal(invalidContextProviderEvidence.response.scenarioState.directGroups?.length, 0);
+
+const wrongEventProviderQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099, subsequently the company sold 300 shares for USD 1,100 on 15/12/2099 at USD/SGD spot rate of 1.31. Prepare the journal entries.';
+const wrongEventProviderEvidence = await runMockFxSemanticQuery(wrongEventProviderQuery,
+  'USD/SGD spot rate of 1.31.');
+assert.equal(wrongEventProviderEvidence.response.scenarioState.isComplete, false,
+  'Disposal-scoped evidence cannot fill the acquisition rate.');
+assert.ok(wrongEventProviderEvidence.response.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
+assert.equal(wrongEventProviderEvidence.response.scenarioState.directGroups?.length, 0);
 
 const inverseDirection = await parseAccountingQuery(explicitDirectionQuery.replace(
   'USD/SGD spot rate of 1.30, meaning one USD equals SGD 1.30.', 'SGD/USD spot rate of 0.80, meaning one SGD equals USD 0.80.'

@@ -1247,7 +1247,9 @@ async function processAccountingQueryCore(
   );
   requestCompletenessContext = reconciledQuestionUnderstanding.requestCompletenessContext;
   const classification = reconciledQuestionUnderstanding.classification;
-  const questionUnderstanding = reconciledQuestionUnderstanding.understanding;
+  const questionUnderstanding = rawQuestionUnderstanding.assessmentStatus === 'PASSED' && rawQuestionUnderstanding.fxTransactionEvidence
+    ? { ...reconciledQuestionUnderstanding.understanding, fxTransactionEvidence: rawQuestionUnderstanding.fxTransactionEvidence }
+    : reconciledQuestionUnderstanding.understanding;
   profiler.recordClassification(performance.now() - classificationStarted);
   profiler.setQuestionUnderstanding(projectQuestionUnderstandingDiagnostics(questionUnderstanding));
   if (questionUnderstanding.mode === 'DETERMINISTIC_FALLBACK' && rawQuestionUnderstanding.mode !== 'DETERMINISTIC_FALLBACK') profiler.recordFallback();
