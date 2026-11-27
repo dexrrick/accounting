@@ -100,7 +100,8 @@ try {
         else extractionSignal?.addEventListener('abort', abort, { once: true });
       });
     }
-    return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 503 });
+    // Earlier provider stages should fall back without a retry before extraction.
+    return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 400 });
   };
   const extractionQuery = processAccountingQuery(
     'Prepare journal entries for the issue of a convertible note payable for SGD 100,000 with a conversion option.',
@@ -128,7 +129,8 @@ try {
   globalThis.fetch = async (input, init = {}) => {
     const url = new URL(String(input));
     if (url.hostname === 'generativelanguage.googleapis.com') {
-      return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 503 });
+      // Reach the authority fetch without waiting for a Gemini retry.
+      return new Response(JSON.stringify({ error: { message: 'Offline test stub' } }), { status: 400 });
     }
     if (url.hostname === 'www.acra.gov.sg') {
       acraFetchCount += 1;
