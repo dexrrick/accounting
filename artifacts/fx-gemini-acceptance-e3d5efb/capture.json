@@ -1,0 +1,1430 @@
+{
+  "frozenCommit": "e3d5efb2ce918568b2dfbede7219e0be85a90fe6",
+  "model": "gemini-3.5-flash-lite",
+  "plan": [
+    {
+      "id": "valid-acquisition",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. Prepare the journal entries.",
+      "groups": [
+        {
+          "date": "13/11/2025",
+          "lines": [
+            [
+              "1210",
+              1300,
+              0
+            ],
+            [
+              "1010",
+              0,
+              1300
+            ]
+          ]
+        }
+      ],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3
+      }
+    },
+    {
+      "id": "valid-disposal",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares (300 shares) on 13/11/2025 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2025 at USD/SGD spot rate of 1.31. What are the double entries?",
+      "groups": [
+        {
+          "date": "13/11/2025",
+          "lines": [
+            [
+              "1210",
+              1300,
+              0
+            ],
+            [
+              "1010",
+              0,
+              1300
+            ]
+          ]
+        },
+        {
+          "date": "15/12/2025",
+          "lines": [
+            [
+              "1010",
+              1441,
+              0
+            ],
+            [
+              "1210",
+              0,
+              1300
+            ],
+            [
+              "4510",
+              0,
+              131
+            ],
+            [
+              "4600",
+              0,
+              10
+            ]
+          ]
+        }
+      ],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": "15/12/2025",
+        "saleFxRate": 1.31
+      }
+    },
+    {
+      "id": "missing-acquisition-date",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares at a USD/SGD spot rate of 1.30 dated 14/11/2025. Prepare the journal entries.",
+      "groups": [],
+      "facts": {
+        "purchaseDate": null,
+        "purchaseFxRate": null
+      },
+      "clarify": "purchaseDate"
+    },
+    {
+      "id": "missing-disposal-date",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold all 300 shares for USD 1,100 at a USD/SGD spot rate of 1.31 dated 16/12/2025. Prepare the journal entries.",
+      "groups": [],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": null,
+        "saleFxRate": null
+      },
+      "clarify": "saleDate"
+    },
+    {
+      "id": "mismatched-acquisition-rate-date",
+      "query": "Our functional currency is SGD. On 13/11/2025, our company acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025. Prepare the journal entries.",
+      "groups": [],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": null
+      },
+      "clarify": "purchaseFxRate",
+      "mismatch": "13/11/2025"
+    },
+    {
+      "id": "mismatched-disposal-rate-date",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares (300 shares) on 13/11/2025 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025.",
+      "groups": [],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": "15/12/2025",
+        "saleFxRate": null
+      },
+      "clarify": "saleFxRate",
+      "mismatch": "15/12/2025"
+    },
+    {
+      "id": "follow-up",
+      "parent": "mismatched-disposal-rate-date",
+      "query": "The disposal USD/SGD spot rate is 1.31.",
+      "groups": [
+        {
+          "date": "13/11/2025",
+          "lines": [
+            [
+              "1210",
+              1300,
+              0
+            ],
+            [
+              "1010",
+              0,
+              1300
+            ]
+          ]
+        },
+        {
+          "date": "15/12/2025",
+          "lines": [
+            [
+              "1010",
+              1441,
+              0
+            ],
+            [
+              "1210",
+              0,
+              1300
+            ],
+            [
+              "4510",
+              0,
+              131
+            ],
+            [
+              "4600",
+              0,
+              10
+            ]
+          ]
+        }
+      ],
+      "facts": {
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": "15/12/2025",
+        "saleFxRate": 1.31
+      }
+    },
+    {
+      "id": "cancel-in-flight",
+      "baseline": "valid-disposal",
+      "query": "Prepare a journal for transaction 2: acquire equipment and later dispose of it.",
+      "cancel": true
+    }
+  ],
+  "caps": {
+    "totalAttempts": 24,
+    "perTurn": 4,
+    "minimumGapMs": 5100,
+    "retries": 0
+  },
+  "live": {
+    "status": "UNRUN",
+    "total": 0,
+    "attempts": [],
+    "turns": []
+  },
+  "offline": {
+    "head": "e3d5efb2ce918568b2dfbede7219e0be85a90fe6",
+    "mode": "offline",
+    "model": "gemini-3.5-flash-lite",
+    "standard": "SFRS_I",
+    "caps": {
+      "totalAttempts": 24,
+      "perTurn": 4,
+      "minimumGapMs": 5100,
+      "retries": 0
+    },
+    "total": 0,
+    "turns": [
+      {
+        "id": "valid-acquisition",
+        "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. Prepare the journal entries.",
+        "startedAt": "2026-11-27T06:23:09.989Z",
+        "priorCommitted": [],
+        "sourceRequests": [],
+        "responseMs": 200,
+        "status": "PASS",
+        "answer": "### Accounting Analysis: Investment & Sale of Apple Inc. (AAPL) Shares (USD/SGD)\n\n#### 1. Accounting Treatment\nUnder SFRS(I) 9 §5.1.1 and SFRS(I) 1-21 §21, foreign currency equity investments at FVTPL are recognized at transaction spot exchange rates.\n\n---\n\n#### 2. Double Entry Schedule\n\n**Initial Acquisition of Apple Inc. (AAPL) Shares** (13/11/2025):\n* **Debit**: **Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)** — **SGD 1,300.00** *(Initial fair value recognition under SFRS(I) 9 §5.1.1 translated at spot rate of 1 USD = SGD 1.30.)*\n* **Credit**: **Cash at Bank (USD Account)** — **SGD 1,300.00** *(Disbursement of USD 1,000 translated at transaction spot rate.)*\n*Balance Check: Debits (SGD 1300.00) == Credits (SGD 1300.00) ✓ Balanced*\n\n---\n\n#### 3. Singapore Tax Implications\nCapital gains on foreign shares held as long-term capital investments are not taxable in Singapore (no capital gains tax). Short-term trading profits by active traders/dealers are subject to 17% corporate income tax.\n\nCheck the **Double Entry Journal** tab for complete ledger posting details.\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**SFRS(I) 9 §5.1.1 §5.1.1**](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/) \n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*",
+        "chatPreview": "I prepared the balanced initial acquisition of apple inc. (aapl) shares journal (SGD 1,300.00 on each side).",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025",
+          "purchaseFxRate": 1.3
+        },
+        "complete": true,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "missingFields": [],
+        "groups": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 202
+      },
+      {
+        "id": "valid-disposal",
+        "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares (300 shares) on 13/11/2025 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2025 at USD/SGD spot rate of 1.31. What are the double entries?",
+        "startedAt": "2026-11-27T06:23:10.192Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 44,
+        "status": "PASS",
+        "answer": "### Under SFRS(I) 9 (*Financial Instruments*) & SFRS(I) 1-21 (*Foreign Exchange*)\n\nFor **Apple Inc. (AAPL) Shares** (invested USD 1,000 on 13/11/2025, sold for USD 1,100 on 15/12/2025):\n\n**Spot Exchange Rates (Acquisition rate provided by user; Disposal rate provided by user)**:\n* Purchase Spot Rate: **1.3 SGD/USD**\n* Sale Spot Rate: **1.31 SGD/USD**\n\n#### Double Entries (Explicit Realized FX Gain View):\n1. **On Acquisition (13/11/2025)**:\n   * **Dr. Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)**: SGD 1,300.00\n   * **Cr. Cash / Bank (USD Account)**: SGD 1,300.00\n\n2. **On Sale / Disposal (15/12/2025)**:\n   * **Dr. Cash / Bank (USD Account)**: SGD 1,441.00 *(Gross proceeds)*\n   * **Cr. Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)**: SGD 1,300.00 *(Derecognition)*\n   * **Cr. Fair Value Gain on Shares (P&L)**: SGD 131.00 *(Stock appreciation)*\n   * **Cr. Realized Foreign Exchange Gain (P&L / SFRS(I) 1-21)**: SGD 10.00 *(Currency gain on capital)*\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**SFRS(I) 9 §5.1.1 §5.1.1**](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/) \n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*",
+        "chatPreview": "I prepared the balanced derecognition / disposal of apple inc. (aapl) shares journal (SGD 1,441.00 on each side).",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025",
+          "purchaseFxRate": 1.3,
+          "saleDate": "15/12/2025",
+          "saleFxRate": 1.31
+        },
+        "complete": true,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "missingFields": [],
+        "groups": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          },
+          {
+            "id": "grp-disposal",
+            "date": "15/12/2025",
+            "title": "Derecognition / Disposal of Apple Inc. (AAPL) Shares",
+            "summary": "Disposal of USD 1,100 translated at 1 USD = SGD 1.31",
+            "debit": 1441,
+            "credit": 1441,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 1441,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1100,
+                "exchangeRate": 1.31
+              },
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "4510",
+                "accountName": "Fair Value Gain on Shares (Apple Inc. (AAPL) Shares) [P&L]",
+                "debit": 0,
+                "credit": 131
+              },
+              {
+                "accountCode": "4600",
+                "accountName": "Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]",
+                "debit": 0,
+                "credit": 10
+              }
+            ]
+          }
+        ],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          },
+          {
+            "id": "grp-disposal",
+            "date": "15/12/2025",
+            "title": "Derecognition / Disposal of Apple Inc. (AAPL) Shares",
+            "summary": "Disposal of USD 1,100 translated at 1 USD = SGD 1.31",
+            "debit": 1441,
+            "credit": 1441,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 1441,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1100,
+                "exchangeRate": 1.31
+              },
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "4510",
+                "accountName": "Fair Value Gain on Shares (Apple Inc. (AAPL) Shares) [P&L]",
+                "debit": 0,
+                "credit": 131
+              },
+              {
+                "accountCode": "4600",
+                "accountName": "Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]",
+                "debit": 0,
+                "credit": 10
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 46
+      },
+      {
+        "id": "missing-acquisition-date",
+        "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares at a USD/SGD spot rate of 1.30 dated 14/11/2025. Prepare the journal entries.",
+        "startedAt": "2026-11-27T06:23:10.244Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 25,
+        "status": "PASS",
+        "answer": "### Clarification Required for Double Entry\n\nWhat was the acquisition date (DD/MM/YYYY)?\nPlease confirm the acquisition spot rate as the amount in SGD for one USD.",
+        "chatPreview": "I need one detail to continue: What was the acquisition date (DD/MM/YYYY)?",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD"
+        },
+        "complete": false,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "clarifications": [
+          {
+            "fieldKey": "purchaseDate",
+            "fieldName": "Acquisition date",
+            "prompt": "What was the acquisition date (DD/MM/YYYY)?",
+            "whyNeeded": "A transaction date is required for the journal and its spot-rate basis."
+          },
+          {
+            "fieldKey": "purchaseFxRate",
+            "fieldName": "Acquisition exchange rate",
+            "prompt": "Please confirm the acquisition spot rate as the amount in SGD for one USD.",
+            "whyNeeded": "The acquisition amount cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "missingFields": [
+          {
+            "fieldKey": "purchaseDate",
+            "fieldName": "Acquisition date",
+            "prompt": "What was the acquisition date (DD/MM/YYYY)?",
+            "whyNeeded": "A transaction date is required for the journal and its spot-rate basis."
+          },
+          {
+            "fieldKey": "purchaseFxRate",
+            "fieldName": "Acquisition exchange rate",
+            "prompt": "Please confirm the acquisition spot rate as the amount in SGD for one USD.",
+            "whyNeeded": "The acquisition amount cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "groups": [],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 30
+      },
+      {
+        "id": "missing-disposal-date",
+        "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold all 300 shares for USD 1,100 at a USD/SGD spot rate of 1.31 dated 16/12/2025. Prepare the journal entries.",
+        "startedAt": "2026-11-27T06:23:10.275Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 10,
+        "status": "PASS",
+        "answer": "### Clarification Required for Double Entry\n\nWhat was the disposal date (DD/MM/YYYY)?\nPlease confirm the disposal spot rate as the amount in SGD for one USD.",
+        "chatPreview": "I need one detail to continue: What was the disposal date (DD/MM/YYYY)?",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025",
+          "purchaseFxRate": 1.3
+        },
+        "complete": false,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "clarifications": [
+          {
+            "fieldKey": "saleDate",
+            "fieldName": "Disposal date",
+            "prompt": "What was the disposal date (DD/MM/YYYY)?",
+            "whyNeeded": "A transaction date is required for the disposal journal and its spot-rate basis."
+          },
+          {
+            "fieldKey": "saleFxRate",
+            "fieldName": "Disposal exchange rate",
+            "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+            "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "missingFields": [
+          {
+            "fieldKey": "saleDate",
+            "fieldName": "Disposal date",
+            "prompt": "What was the disposal date (DD/MM/YYYY)?",
+            "whyNeeded": "A transaction date is required for the disposal journal and its spot-rate basis."
+          },
+          {
+            "fieldKey": "saleFxRate",
+            "fieldName": "Disposal exchange rate",
+            "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+            "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "groups": [],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 15
+      },
+      {
+        "id": "mismatched-acquisition-rate-date",
+        "query": "Our functional currency is SGD. On 13/11/2025, our company acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025. Prepare the journal entries.",
+        "startedAt": "2026-11-27T06:23:10.293Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 8,
+        "status": "PASS",
+        "answer": "### Clarification Required for Double Entry\n\nThe stated acquisition rate date does not match the acquisition date (13/11/2025). Please provide the spot rate that applied on the acquisition date as the amount in SGD for one USD.",
+        "chatPreview": "I need one detail to continue: The stated acquisition rate date does not match the acquisition date (13/11/2025). Please provide the spot rate that applied on the acquisition date as the amount in SGD for one USD.",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025"
+        },
+        "complete": false,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "clarifications": [
+          {
+            "fieldKey": "purchaseFxRate",
+            "fieldName": "Acquisition exchange rate",
+            "prompt": "The stated acquisition rate date does not match the acquisition date (13/11/2025). Please provide the spot rate that applied on the acquisition date as the amount in SGD for one USD.",
+            "whyNeeded": "The acquisition amount cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "missingFields": [
+          {
+            "fieldKey": "purchaseFxRate",
+            "fieldName": "Acquisition exchange rate",
+            "prompt": "The stated acquisition rate date does not match the acquisition date (13/11/2025). Please provide the spot rate that applied on the acquisition date as the amount in SGD for one USD.",
+            "whyNeeded": "The acquisition amount cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "groups": [],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 12
+      },
+      {
+        "id": "mismatched-disposal-rate-date",
+        "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares (300 shares) on 13/11/2025 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025.",
+        "startedAt": "2026-11-27T06:23:10.309Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 10,
+        "status": "PASS",
+        "answer": "### Clarification Required for Double Entry\n\nThe stated disposal rate date does not match the disposal date (15/12/2025). Please provide the spot rate that applied on the disposal date as the amount in SGD for one USD.",
+        "chatPreview": "I need one detail to continue: The stated disposal rate date does not match the disposal date (15/12/2025). Please provide the spot rate that applied on the disposal date as the amount in SGD for one USD.",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025",
+          "purchaseFxRate": 1.3,
+          "saleDate": "15/12/2025"
+        },
+        "complete": false,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "clarifications": [
+          {
+            "fieldKey": "saleFxRate",
+            "fieldName": "Disposal exchange rate",
+            "prompt": "The stated disposal rate date does not match the disposal date (15/12/2025). Please provide the spot rate that applied on the disposal date as the amount in SGD for one USD.",
+            "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "missingFields": [
+          {
+            "fieldKey": "saleFxRate",
+            "fieldName": "Disposal exchange rate",
+            "prompt": "The stated disposal rate date does not match the disposal date (15/12/2025). Please provide the spot rate that applied on the disposal date as the amount in SGD for one USD.",
+            "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+          }
+        ],
+        "groups": [],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 15
+      },
+      {
+        "id": "follow-up",
+        "query": "The disposal USD/SGD spot rate is 1.31.",
+        "startedAt": "2026-11-27T06:23:10.327Z",
+        "priorCommitted": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          }
+        ],
+        "sourceRequests": [],
+        "responseMs": 8,
+        "status": "PASS",
+        "answer": "### Under SFRS(I) 9 (*Financial Instruments*) & SFRS(I) 1-21 (*Foreign Exchange*)\n\nFor **Apple Inc. (AAPL) Shares** (invested USD 1,000 on 13/11/2025, sold for USD 1,100 on 15/12/2025):\n\n**Spot Exchange Rates (Acquisition rate provided by user; Disposal rate provided by user)**:\n* Purchase Spot Rate: **1.3 SGD/USD**\n* Sale Spot Rate: **1.31 SGD/USD**\n\n#### Double Entries (Explicit Realized FX Gain View):\n1. **On Acquisition (13/11/2025)**:\n   * **Dr. Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)**: SGD 1,300.00\n   * **Cr. Cash / Bank (USD Account)**: SGD 1,300.00\n\n2. **On Sale / Disposal (15/12/2025)**:\n   * **Dr. Cash / Bank (USD Account)**: SGD 1,441.00 *(Gross proceeds)*\n   * **Cr. Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)**: SGD 1,300.00 *(Derecognition)*\n   * **Cr. Fair Value Gain on Shares (P&L)**: SGD 131.00 *(Stock appreciation)*\n   * **Cr. Realized Foreign Exchange Gain (P&L / SFRS(I) 1-21)**: SGD 10.00 *(Currency gain on capital)*\n\n---\n\n🏛️ **Official Statutory & Regulatory Verification Sources**:\n* 🔗 [**SFRS(I) 9 §5.1.1 §5.1.1**](https://www.ifrs.org/issued-standards/list-of-standards/ifrs-9-financial-instruments/) \n*(Click any link to verify directly on the official Singapore legislation, agency source, or Ask.gov.sg FAQ used)*",
+        "chatPreview": "I prepared the balanced derecognition / disposal of apple inc. (aapl) shares journal (SGD 1,441.00 on each side).",
+        "answerOrigin": "DETERMINISTIC_RENDER",
+        "facts": {
+          "functionalCurrency": "SGD",
+          "transactionCurrency": "USD",
+          "purchaseDate": "13/11/2025",
+          "purchaseFxRate": 1.3,
+          "saleDate": "15/12/2025",
+          "saleFxRate": 1.31
+        },
+        "complete": true,
+        "checks": {
+          "transactionFacts": true,
+          "exactJournal": true,
+          "journalAndCurrency": true,
+          "lifecycle": true,
+          "clarification": true
+        },
+        "missingFields": [],
+        "groups": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          },
+          {
+            "id": "grp-disposal",
+            "date": "15/12/2025",
+            "title": "Derecognition / Disposal of Apple Inc. (AAPL) Shares",
+            "summary": "Disposal of USD 1,100 translated at 1 USD = SGD 1.31",
+            "debit": 1441,
+            "credit": 1441,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 1441,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1100,
+                "exchangeRate": 1.31
+              },
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "4510",
+                "accountName": "Fair Value Gain on Shares (Apple Inc. (AAPL) Shares) [P&L]",
+                "debit": 0,
+                "credit": 131
+              },
+              {
+                "accountCode": "4600",
+                "accountName": "Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]",
+                "debit": 0,
+                "credit": 10
+              }
+            ]
+          }
+        ],
+        "committed": [
+          {
+            "id": "grp-purchase",
+            "date": "13/11/2025",
+            "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+            "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+            "debit": 1300,
+            "credit": 1300,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 1300,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              }
+            ]
+          },
+          {
+            "id": "grp-disposal",
+            "date": "15/12/2025",
+            "title": "Derecognition / Disposal of Apple Inc. (AAPL) Shares",
+            "summary": "Disposal of USD 1,100 translated at 1 USD = SGD 1.31",
+            "debit": 1441,
+            "credit": 1441,
+            "balanced": true,
+            "authorityStatus": "DETERMINISTIC",
+            "lines": [
+              {
+                "accountCode": "1010",
+                "accountName": "Cash at Bank (USD Account)",
+                "debit": 1441,
+                "credit": 0,
+                "foreignCurrency": "USD",
+                "foreignDebit": 1100,
+                "exchangeRate": 1.31
+              },
+              {
+                "accountCode": "1210",
+                "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+                "debit": 0,
+                "credit": 1300,
+                "foreignCurrency": "USD",
+                "foreignCredit": 1000,
+                "exchangeRate": 1.3
+              },
+              {
+                "accountCode": "4510",
+                "accountName": "Fair Value Gain on Shares (Apple Inc. (AAPL) Shares) [P&L]",
+                "debit": 0,
+                "credit": 131
+              },
+              {
+                "accountCode": "4600",
+                "accountName": "Realized Foreign Exchange Gain (USD/SGD) [P&L / SFRS(I) 1-21]",
+                "debit": 0,
+                "credit": 10
+              }
+            ]
+          }
+        ],
+        "attempts": 0,
+        "elapsedMs": 11
+      }
+    ],
+    "attempts": []
+  },
+  "offlineWordingProbes": [
+    {
+      "id": "valid-disposal",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold all 300 shares for USD 1,100 on 15/12/2025 at USD/SGD spot rate of 1.31. Prepare the journal entries.",
+      "startedAt": "2026-11-27T06:20:37.420Z",
+      "priorCommitted": [
+        {
+          "id": "grp-purchase",
+          "date": "13/11/2025",
+          "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+          "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+          "debit": 1300,
+          "credit": 1300,
+          "balanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "lines": [
+            {
+              "accountCode": "1210",
+              "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+              "debit": 1300,
+              "credit": 0,
+              "foreignCurrency": "USD",
+              "foreignDebit": 1000,
+              "exchangeRate": 1.3
+            },
+            {
+              "accountCode": "1010",
+              "accountName": "Cash at Bank (USD Account)",
+              "debit": 0,
+              "credit": 1300,
+              "foreignCurrency": "USD",
+              "foreignCredit": 1000,
+              "exchangeRate": 1.3
+            }
+          ]
+        }
+      ],
+      "sourceRequests": [],
+      "status": "FAIL",
+      "answer": "### Clarification Required for Double Entry\n\nPlease confirm the disposal spot rate as the amount in SGD for one USD.",
+      "chatPreview": "I need one detail to continue: Please confirm the disposal spot rate as the amount in SGD for one USD.",
+      "answerOrigin": "NO_GEMINI_ANSWER_GENERATION",
+      "facts": {
+        "functionalCurrency": "SGD",
+        "transactionCurrency": "USD",
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": "15/12/2025"
+      },
+      "complete": false,
+      "checks": {
+        "transactionFacts": false,
+        "exactJournal": false,
+        "journalAndCurrency": false,
+        "lifecycle": false,
+        "clarification": true
+      },
+      "clarifications": [
+        {
+          "fieldKey": "saleFxRate",
+          "fieldName": "Disposal exchange rate",
+          "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+          "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+        }
+      ],
+      "missingFields": [
+        {
+          "fieldKey": "saleFxRate",
+          "fieldName": "Disposal exchange rate",
+          "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+          "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+        }
+      ],
+      "groups": [],
+      "committed": [
+        {
+          "id": "grp-purchase",
+          "date": "13/11/2025",
+          "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+          "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+          "debit": 1300,
+          "credit": 1300,
+          "balanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "lines": [
+            {
+              "accountCode": "1210",
+              "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+              "debit": 1300,
+              "credit": 0,
+              "foreignCurrency": "USD",
+              "foreignDebit": 1000,
+              "exchangeRate": 1.3
+            },
+            {
+              "accountCode": "1010",
+              "accountName": "Cash at Bank (USD Account)",
+              "debit": 0,
+              "credit": 1300,
+              "foreignCurrency": "USD",
+              "foreignCredit": 1000,
+              "exchangeRate": 1.3
+            }
+          ]
+        }
+      ],
+      "attempts": 0,
+      "elapsedMs": 60
+    },
+    {
+      "id": "mismatched-disposal-rate-date",
+      "query": "Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold all 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025. Prepare the journal entries.",
+      "startedAt": "2026-11-27T06:20:37.537Z",
+      "priorCommitted": [
+        {
+          "id": "grp-purchase",
+          "date": "13/11/2025",
+          "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+          "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+          "debit": 1300,
+          "credit": 1300,
+          "balanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "lines": [
+            {
+              "accountCode": "1210",
+              "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+              "debit": 1300,
+              "credit": 0,
+              "foreignCurrency": "USD",
+              "foreignDebit": 1000,
+              "exchangeRate": 1.3
+            },
+            {
+              "accountCode": "1010",
+              "accountName": "Cash at Bank (USD Account)",
+              "debit": 0,
+              "credit": 1300,
+              "foreignCurrency": "USD",
+              "foreignCredit": 1000,
+              "exchangeRate": 1.3
+            }
+          ]
+        }
+      ],
+      "sourceRequests": [],
+      "status": "FAIL",
+      "answer": "### Clarification Required for Double Entry\n\nPlease confirm the disposal spot rate as the amount in SGD for one USD.",
+      "chatPreview": "I need one detail to continue: Please confirm the disposal spot rate as the amount in SGD for one USD.",
+      "answerOrigin": "DETERMINISTIC_RENDER",
+      "facts": {
+        "functionalCurrency": "SGD",
+        "transactionCurrency": "USD",
+        "purchaseDate": "13/11/2025",
+        "purchaseFxRate": 1.3,
+        "saleDate": "15/12/2025"
+      },
+      "complete": false,
+      "checks": {
+        "transactionFacts": true,
+        "exactJournal": true,
+        "journalAndCurrency": true,
+        "lifecycle": true,
+        "clarification": false
+      },
+      "clarifications": [
+        {
+          "fieldKey": "saleFxRate",
+          "fieldName": "Disposal exchange rate",
+          "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+          "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+        }
+      ],
+      "missingFields": [
+        {
+          "fieldKey": "saleFxRate",
+          "fieldName": "Disposal exchange rate",
+          "prompt": "Please confirm the disposal spot rate as the amount in SGD for one USD.",
+          "whyNeeded": "The proceeds cannot be translated without an evidenced transaction-date rate."
+        }
+      ],
+      "groups": [],
+      "committed": [
+        {
+          "id": "grp-purchase",
+          "date": "13/11/2025",
+          "title": "Initial Acquisition of Apple Inc. (AAPL) Shares",
+          "summary": "Acquisition of USD 1,000 translated at 1 USD = SGD 1.30",
+          "debit": 1300,
+          "credit": 1300,
+          "balanced": true,
+          "authorityStatus": "DETERMINISTIC",
+          "lines": [
+            {
+              "accountCode": "1210",
+              "accountName": "Financial Asset at FVTPL (Apple Inc. (AAPL) Shares)",
+              "debit": 1300,
+              "credit": 0,
+              "foreignCurrency": "USD",
+              "foreignDebit": 1000,
+              "exchangeRate": 1.3
+            },
+            {
+              "accountCode": "1010",
+              "accountName": "Cash at Bank (USD Account)",
+              "debit": 0,
+              "credit": 1300,
+              "foreignCurrency": "USD",
+              "foreignCredit": 1000,
+              "exchangeRate": 1.3
+            }
+          ]
+        }
+      ],
+      "attempts": 0,
+      "elapsedMs": 12
+    }
+  ],
+  "offlineTransportPreflight": {
+    "status": "PASS",
+    "simulatedProviderStatus": 503,
+    "simulatedDispatches": 1,
+    "attempts": [
+      {
+        "turn": "valid-acquisition",
+        "attempt": 1,
+        "turnAttempt": 1,
+        "stage": "semantic-interpretation",
+        "event": "dispatch",
+        "atUtc": "2026-11-27T06:22:56.294Z"
+      },
+      {
+        "turn": "valid-acquisition",
+        "attempt": 1,
+        "turnAttempt": 1,
+        "stage": "semantic-interpretation",
+        "status": 503,
+        "outcome": "PROVIDER_HTTP_503",
+        "event": "result",
+        "elapsedMs": 2
+      }
+    ]
+  },
+  "focusedOfflineRegressions": {
+    "test_fx_missing_fact_integrity.mjs": "PASS",
+    "test_request_deadline.mjs": "PASS"
+  }
+}
