@@ -2037,8 +2037,102 @@ export async function parseAccountingQuery(
   const formatMoney = (value: number): string =>
     `${functionalCurrency} ${value.toLocaleString(undefined, { minimumFractionDigits: value % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
 
+  const resolveGstPriceBasis = (text: string): 'exclusive' | 'inclusive' | 'conflict' | undefined => {
+    const hasInclusive = /\b(?:inclusive\s+of(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst|incl\.?(?:\s+of)?(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst|gst[-\s]?inclusive|including(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst|with(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst\s+included)\b/i.test(text);
+    const hasExclusive = /\b(?:exclusive\s+of(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst|excl\.?(?:\s+of)?(?:\s+\d+(?:\.\d+)?\s*%)?\s+gst|gst[-\s]?exclusive|ex[-\s]?gst|before\s+gst|(?:\+|plus)\s*(?:\d+(?:\.\d+)?\s*%\s*)?gst|subject\s+to\s+\d+(?:\.\d+)?\s*%\s*gst)\b/i.test(text);
+    if (hasInclusive && hasExclusive) return 'conflict';
+    if (hasInclusive) return 'inclusive';
+    if (hasExclusive) return 'exclusive';
+    return undefined;
+  };
+
+  const resolveInputGstRecoverability = (
+    text: string
+  ): { status: 'recoverable' | 'non_recoverable' | 'conflict' | undefined; isNonGstRegisteredEntity: boolean } => {
+    const isNonGstRegisteredEntity = /\b(?:not\s+gst[-\s]?registered|non[-\s]?gst[-\s]?registered|non[-\s]?gst\s+registered|unregistered\s+for\s+gst)\b/i.test(text);
+    const hasExplicitNonRecoverable =
+      isNonGstRegisteredEntity ||
+      /\b(?:non[-\s]?recoverable(?:\s+input)?\s+gst|irrecoverable(?:\s+input)?\s+gst|cannot\s+claim\s+(?:input\s+)?gst|ineligible\s+(?:for|to\s+claim)\s+(?:input\s+)?gst|blocked\s+(?:input\s+)?(?:gst|tax)|exempt\s+suppl(?:y|ies)|(?:input\s+)?gst\s+is\s+not\s+(?:claimable|recoverable))\b/i.test(text);
+    const hasExplicitRecoverableClaim =
+      /\b(?:recoverable(?:\s+input)?\s+gst|claimable(?:\s+input)?\s+gst|input\s+gst\s+(?:is\s+)?(?:recoverable|claimable)|fully\s+taxable\s+suppl(?:y|ies))\b/i.test(text);
+    const hasGstRegisteredEntity =
+      !isNonGstRegisteredEntity &&
+      /\b(?:gst[-\s]?registered|registered\s+for\s+gst)\b/i.test(text);
+
+    if (isNonGstRegisteredEntity && (hasExplicitRecoverableClaim || /\b(?<!not\s+)(?<!non[-\s])gst[-\s]?registered\b/i.test(text))) {
+      return { status: 'conflict', isNonGstRegisteredEntity };
+    }
+    if (hasExplicitNonRecoverable && hasExplicitRecoverableClaim) {
+      return { status: 'conflict', isNonGstRegisteredEntity };
+    }
+    if (hasExplicitNonRecoverable) {
+      return { status: 'non_recoverable', isNonGstRegisteredEntity };
+    }
+    if (hasGstRegisteredEntity || hasExplicitRecoverableClaim) {
+      return { status: 'recoverable', isNonGstRegisteredEntity: false };
+    }
+    return { status: undefined, isNonGstRegisteredEntity: false };
+  };
+
+  const extractLeaseCommencementDates = (
+    text: string
+  ): { validDates: Array<{ formatted: string; year: number; month: number; day: number }>; hasInvalid: boolean } => {
+    const dateTokenSource = '(?:\\d{1,2}(?:st|nd|rd|th)?\\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+\\d{4}|(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\\s+\\d{1,2}(?:st|nd|rd|th)?,?\\s+\\d{4}|\\d{4}-\\d{1,2}-\\d{1,2}|\\d{1,2}\\/\\d{1,2}\\/\\d{4})';
+    const afterCueRegex = new RegExp(
+      `\\b(?:commenc(?:e|es|ed|ing)|commencement(?:\\s+date)?|start(?:s|ed|ing)?(?:\\s+date)?|begin(?:s|ning)?|began|effective(?:\\s+date)?|available\\s+for\\s+use|lease\\s+(?:term|period)\\s+from)\\s*(?:(?:on|from|date|is|was|:|=|of)\\s*){0,2}(${dateTokenSource})\\b`,
+      'gi'
+    );
+    const beforeCueRegex = new RegExp(
+      `\\b(${dateTokenSource})\\s*(?:as\\s+(?:the\\s+)?)?(?:lease\\s+)?(?:commencement(?:\\s+date)?|start\\s+date)\\b`,
+      'gi'
+    );
+    const seenIso = new Set<string>();
+    const validDates: Array<{ formatted: string; year: number; month: number; day: number }> = [];
+    let hasInvalid = false;
+
+    const recordToken = (rawToken: string) => {
+      const cleaned = rawToken.replace(/(\d{1,2})(?:st|nd|rd|th)\b/i, '$1');
+      const parsed = parseExplicitDate(cleaned);
+      if (parsed.invalid) {
+        hasInvalid = true;
+        return;
+      }
+      if (parsed.formatted && parsed.year && parsed.month && parsed.day) {
+        const iso = `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(parsed.day).padStart(2, '0')}`;
+        if (!seenIso.has(iso)) {
+          seenIso.add(iso);
+          validDates.push({
+            formatted: parsed.formatted,
+            year: parsed.year,
+            month: parsed.month,
+            day: parsed.day
+          });
+        }
+      }
+    };
+
+    for (const regex of [afterCueRegex, beforeCueRegex]) {
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(text)) !== null) {
+        if (m[1]) recordToken(m[1]);
+      }
+    }
+
+    return { validDates, hasInvalid };
+  };
+
+  const looksLikeNewPurchaseTransaction =
+    !/\b(?:what\s+if|suppose|assuming|instead|change|update|revise|amend)\b/i.test(query) && (
+      /\b(?:another|separate|different)\s+(?:purchase|acquisition|machine|machinery|equipment|asset|transaction)\b/i.test(query) ||
+      /\b(?:a|an)\s+new\s+(?:purchase|acquisition|machine|machinery|equipment|asset|transaction)\b/i.test(query) ||
+      (/(?:^|[.!?;]\s*)(?:on\s+[^,]+,\s*)?(?:a\s+|an\s+)?(?:(?:non[-\s]?)?gst[-\s]?registered\s+)?(?:company|entity|business|firm|we)\s+(?:purchas(?:es?|ed)|bought|acquir(?:es?|ed))\b/i.test(query) &&
+        !/\b(?:same|above|earlier|previous|prior|that|this)\b/i.test(query))
+    );
+
   const isFollowUpOnPpe = currentScenario?.scenarioType === 'PPE_IAS16' &&
     Boolean(currentScenario.isComplete) &&
+    !startsNewAccountingScenario(query, currentScenario) &&
+    !looksLikeNewPurchaseTransaction &&
     (q.includes('interest') || q.includes('loan') || q.includes('trade-in') || q.includes('trade in') || q.includes('cash') || q.includes('depreciation') || q.includes('what if') || q.includes('change') || q.includes('how about') || q.includes('why') || q.includes('explain'));
 
   const hasPpeAssetKeyword = /\b(?:machinery|machine|equipment|fixed asset|ppe)\b/i.test(query);
@@ -2085,18 +2179,18 @@ export async function parseAccountingQuery(
     }
 
     // 2. New machine cost & GST
-    let newCost: number | undefined;
+    let newCostRaw: number | undefined;
     if (canInheritPpe) {
-      newCost = extractParamNumber(currentScenario, 'New Machine Cost');
+      newCostRaw = extractParamNumber(currentScenario, 'New Machine Cost');
     }
     const newCostMatch =
       query.match(/(?:purchas(?:es?|ed)|bought|acquir(?:es?|ed))\s+(?:a\s+|an\s+)?(?:new\s+)?(?:machinery|machine|equipment|asset)[^\n]*?(?:for|at|costing)\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
       query.match(/new\s+(?:machinery|machine|equipment|asset)\s*(?:cost(?:ing)?|price)?\s*(?:is|was|of|for|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
     if (newCostMatch?.[1]) {
       const parsedVal = parseAmountToken(newCostMatch[1], newCostMatch[2]);
-      if (Number.isFinite(parsedVal) && parsedVal > 0) newCost = parsedVal;
+      if (Number.isFinite(parsedVal) && parsedVal > 0) newCostRaw = parsedVal;
     }
-    if (newCost === undefined || !(newCost > 0)) {
+    if (newCostRaw === undefined || !(newCostRaw > 0)) {
       missingFields.push({
         fieldKey: 'newCost',
         fieldName: 'New machinery purchase price',
@@ -2105,11 +2199,12 @@ export async function parseAccountingQuery(
       });
     }
 
-    // GST rate parsing: preserve explicit 0%, fail closed if GST mentioned without rate, default 0 if not mentioned
+    // GST rate parsing: preserve explicit 0% and distinguish non-GST-registered buyer paying supplier GST
     let gstRate: number | undefined;
-    const explicitNoGst = /\b(?:no\s+gst|non[-\s]?gst|not\s+gst[-\s]?registered|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
+    const explicitZeroGstSupply = /\b(?:no\s+gst|0(?:\.0+)?\s*%\s*gst|gst\s*(?:at|of|rate)?\s*0(?:\.0+)?\s*%|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
     const gstPctMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*gst/i) || query.match(/gst\s*(?:at|of|rate)?\s*(\d+(?:\.\d+)?)\s*%/i);
-    if (explicitNoGst) {
+    const gstRecoverabilityInfo = resolveInputGstRecoverability(query);
+    if (explicitZeroGstSupply) {
       gstRate = 0;
     } else if (gstPctMatch?.[1]) {
       const rate = parseFloat(gstPctMatch[1]) / 100;
@@ -2128,6 +2223,8 @@ export async function parseAccountingQuery(
           gstRate = 0;
         }
       }
+    } else if (gstRecoverabilityInfo.isNonGstRegisteredEntity) {
+      gstRate = 0;
     } else if (/\bgst\b/i.test(query)) {
       missingFields.push({
         fieldKey: 'gstRate',
@@ -2137,6 +2234,77 @@ export async function parseAccountingQuery(
       });
     } else {
       gstRate = 0;
+    }
+
+    // Determine new-machine GST price basis (exclusive vs inclusive) and input GST recoverability when gstRate > 0
+    let newMachineGstBasis: 'exclusive' | 'inclusive' | undefined;
+    let inputGstRecoverability: 'recoverable' | 'non_recoverable' | undefined;
+    let isNonGstRegisteredEntity = gstRecoverabilityInfo.isNonGstRegisteredEntity;
+
+    if (gstRate !== undefined && gstRate > 0) {
+      const purchaseClause = newCostMatch
+        ? query.slice(
+            Math.max(0, newCostMatch.index ?? 0),
+            Math.min(query.length, (newCostMatch.index ?? 0) + newCostMatch[0].length + 60)
+          )
+        : query.split(/trade[-\s]?in/i)[0] || query;
+      const clauseBasis = resolveGstPriceBasis(purchaseClause);
+      const globalAllPricesBasis = /\b(?:all\s+(?:prices?|amounts?|figures?|values?)|both\s+(?:prices?|amounts?))\b/i.test(query)
+        ? resolveGstPriceBasis(query)
+        : undefined;
+      const resolvedPurchaseBasis = clauseBasis ?? globalAllPricesBasis;
+
+      if (resolvedPurchaseBasis === 'conflict') {
+        missingFields.push({
+          fieldKey: 'newMachineGstBasis',
+          fieldName: 'Conflicting GST basis for new machinery price',
+          prompt: 'The new machinery purchase price states both GST-inclusive and GST-exclusive wording. Please confirm whether the quoted price is exclusive or inclusive of GST.',
+          whyNeeded: 'Asset cost and input GST cannot be computed when inclusive and exclusive price bases conflict.'
+        });
+      } else if (resolvedPurchaseBasis) {
+        newMachineGstBasis = resolvedPurchaseBasis;
+      } else if (canInheritPpe) {
+        const priorCostParam = currentScenario?.keyParameters?.find(p => p.label.includes('New Machine Cost'));
+        if (priorCostParam?.label.includes('Incl.')) newMachineGstBasis = 'inclusive';
+        else if (priorCostParam?.label.includes('Excl.')) newMachineGstBasis = 'exclusive';
+      }
+
+      if (!newMachineGstBasis && resolvedPurchaseBasis !== 'conflict') {
+        missingFields.push({
+          fieldKey: 'newMachineGstBasis',
+          fieldName: 'GST-inclusive or GST-exclusive purchase price',
+          prompt: 'Is the new machinery purchase price exclusive or inclusive of GST?',
+          whyNeeded: 'Asset capitalization and input GST depend on whether the quoted purchase price includes or excludes GST.'
+        });
+      }
+
+      if (gstRecoverabilityInfo.status === 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstRecoverability',
+          fieldName: 'Conflicting input GST recoverability',
+          prompt: 'The query contains conflicting GST registration / input GST recoverability facts. Please confirm whether the entity is GST-registered and whether the input GST is recoverable.',
+          whyNeeded: 'Under SFRS(I) 1-16 §16(a), recoverable input GST is recorded as a tax receivable whereas non-recoverable input GST is capitalised into asset cost.'
+        });
+      } else if (gstRecoverabilityInfo.status) {
+        inputGstRecoverability = gstRecoverabilityInfo.status;
+      } else if (canInheritPpe) {
+        const priorInputGstParam = currentScenario?.keyParameters?.find(p => p.label.includes('Input GST'));
+        if (priorInputGstParam?.label.includes('Non-Recoverable')) {
+          inputGstRecoverability = 'non_recoverable';
+          isNonGstRegisteredEntity = Boolean(currentScenario?.keyParameters?.some(p => p.label.includes('Output GST') && p.value.includes('0')));
+        } else if (priorInputGstParam?.label.includes('Claimable')) {
+          inputGstRecoverability = 'recoverable';
+        }
+      }
+
+      if (!inputGstRecoverability && gstRecoverabilityInfo.status !== 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstRecoverability',
+          fieldName: 'Input GST recoverability',
+          prompt: 'Is the company GST-registered and eligible to recover the input GST from IRAS, or is the input GST non-recoverable?',
+          whyNeeded: 'Under SFRS(I) 1-16 §16(a), non-recoverable purchase taxes must be capitalised into PPE cost rather than recognised as Input GST Receivable.'
+        });
+      }
     }
 
     // 3. Old machine cost, trade-in value, accumulated / catch-up depreciation
@@ -2159,25 +2327,66 @@ export async function parseAccountingQuery(
       });
     }
 
-    let agreedTradeInGross: number | undefined;
+    let agreedTradeInRaw: number | undefined;
     if (canInheritPpe) {
-      agreedTradeInGross = extractParamNumber(currentScenario, 'Agreed Trade-In Value');
+      agreedTradeInRaw = extractParamNumber(currentScenario, 'Agreed Trade-In Value');
     }
     const zeroTradeIn = /\b(?:no\s+trade[-\s]?in\s+(?:value|allowance|credit)|trade[-\s]?in\s*(?:value|allowance)?\s*(?:is|was|of|at|=)?\s*(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b)/i.test(query);
     const tradeInMatch = query.match(/trade[-\s]?in\s*(?:value|allowance|credit|consideration)?\s*(?:of|is|was|at|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
     if (zeroTradeIn) {
-      agreedTradeInGross = 0;
+      agreedTradeInRaw = 0;
     } else if (tradeInMatch?.[1]) {
       const parsedVal = parseAmountToken(tradeInMatch[1], tradeInMatch[2]);
-      if (Number.isFinite(parsedVal) && parsedVal >= 0) agreedTradeInGross = parsedVal;
+      if (Number.isFinite(parsedVal) && parsedVal >= 0) agreedTradeInRaw = parsedVal;
     }
-    if (agreedTradeInGross === undefined || agreedTradeInGross < 0) {
+    if (agreedTradeInRaw === undefined || agreedTradeInRaw < 0) {
       missingFields.push({
         fieldKey: 'tradeInValue',
         fieldName: 'Agreed trade-in value',
         prompt: 'What is the agreed trade-in value for the old machine (and is it inclusive or exclusive of GST)?',
         whyNeeded: 'Disposal gain/loss and net balance payable depend on the trade-in consideration.'
       });
+    }
+
+    // Trade-in GST basis (when entity is GST-registered and gstRate > 0 and trade-in > 0)
+    const outputGstApplies = Boolean(gstRate && gstRate > 0 && agreedTradeInRaw && agreedTradeInRaw > 0 && !isNonGstRegisteredEntity);
+    let tradeInGstBasis: 'exclusive' | 'inclusive' | undefined;
+    if (outputGstApplies) {
+      const tradeInClause = tradeInMatch
+        ? query.slice(
+            Math.max(0, tradeInMatch.index ?? 0),
+            Math.min(query.length, (tradeInMatch.index ?? 0) + tradeInMatch[0].length + 60)
+          )
+        : '';
+      const clauseBasis = resolveGstPriceBasis(tradeInClause);
+      const globalAllPricesBasis = /\b(?:all\s+(?:prices?|amounts?|figures?|values?)|both\s+(?:prices?|amounts?))\b/i.test(query)
+        ? resolveGstPriceBasis(query)
+        : undefined;
+      const resolvedTradeInBasis = clauseBasis ?? globalAllPricesBasis;
+
+      if (resolvedTradeInBasis === 'conflict') {
+        missingFields.push({
+          fieldKey: 'tradeInGstBasis',
+          fieldName: 'Conflicting GST basis for trade-in value',
+          prompt: 'The agreed trade-in value states both GST-inclusive and GST-exclusive wording. Please confirm whether the trade-in value is inclusive or exclusive of GST.',
+          whyNeeded: 'Output GST and disposal gain/loss require an unambiguous trade-in GST basis.'
+        });
+      } else if (resolvedTradeInBasis) {
+        tradeInGstBasis = resolvedTradeInBasis;
+      } else if (canInheritPpe) {
+        const priorTradeInParam = currentScenario?.keyParameters?.find(p => p.label.includes('Agreed Trade-In Value'));
+        if (priorTradeInParam?.label.includes('Excl.')) tradeInGstBasis = 'exclusive';
+        else if (priorTradeInParam) tradeInGstBasis = 'inclusive';
+      }
+
+      if (!tradeInGstBasis && resolvedTradeInBasis !== 'conflict') {
+        missingFields.push({
+          fieldKey: 'tradeInGstBasis',
+          fieldName: 'GST-inclusive or GST-exclusive trade-in value',
+          prompt: 'Is the agreed trade-in value inclusive or exclusive of GST?',
+          whyNeeded: 'Output GST on trade-in and net disposal proceeds depend on whether the trade-in value includes or excludes GST.'
+        });
+      }
     }
 
     // Depreciation / Accumulated Depreciation at disposal
@@ -2296,10 +2505,28 @@ export async function parseAccountingQuery(
       if (Number.isFinite(parsedVal) && parsedVal >= 0) cashPaid = parsedVal;
     }
 
-    const tempInputGst = newCost !== undefined && gstRate !== undefined ? round2(newCost * gstRate) : undefined;
-    const tempGrossNewCost = newCost !== undefined && tempInputGst !== undefined ? round2(newCost + tempInputGst) : undefined;
+    const tempNetNewCost = newCostRaw !== undefined && gstRate !== undefined
+      ? (gstRate > 0 && newMachineGstBasis === 'inclusive'
+          ? round2(newCostRaw / (1 + gstRate))
+          : newCostRaw)
+      : undefined;
+    const tempInputGst = newCostRaw !== undefined && tempNetNewCost !== undefined && gstRate !== undefined
+      ? (gstRate > 0 && newMachineGstBasis === 'inclusive'
+          ? round2(newCostRaw - tempNetNewCost)
+          : round2(tempNetNewCost * gstRate))
+      : undefined;
+    const tempGrossNewCost = tempNetNewCost !== undefined && tempInputGst !== undefined
+      ? round2(tempNetNewCost + tempInputGst)
+      : undefined;
+
+    const tempAgreedTradeInGross = agreedTradeInRaw !== undefined
+      ? (outputGstApplies && tradeInGstBasis === 'exclusive' && gstRate
+          ? round2(agreedTradeInRaw * (1 + gstRate))
+          : round2(agreedTradeInRaw))
+      : undefined;
+
     if (cashPaid === undefined) {
-      if (tempGrossNewCost !== undefined && agreedTradeInGross !== undefined && Math.abs(tempGrossNewCost - agreedTradeInGross) < 0.01) {
+      if (tempGrossNewCost !== undefined && tempAgreedTradeInGross !== undefined && Math.abs(tempGrossNewCost - tempAgreedTradeInGross) < 0.01) {
         cashPaid = 0;
       } else {
         missingFields.push({
@@ -2316,13 +2543,13 @@ export async function parseAccountingQuery(
     let loanYears: number | undefined;
     let flatInterestRate: number | undefined;
 
-    if (tempGrossNewCost !== undefined && agreedTradeInGross !== undefined && cashPaid !== undefined) {
-      loanPrincipal = round2(tempGrossNewCost - agreedTradeInGross - cashPaid);
+    if (tempGrossNewCost !== undefined && tempAgreedTradeInGross !== undefined && cashPaid !== undefined) {
+      loanPrincipal = round2(tempGrossNewCost - tempAgreedTradeInGross - cashPaid);
       if (loanPrincipal < -0.005) {
         missingFields.push({
           fieldKey: 'paymentConflict',
           fieldName: 'Conflicting cash and trade-in amounts',
-          prompt: `Cash paid (${formatMoney(cashPaid)}) plus agreed trade-in value (${formatMoney(agreedTradeInGross)}) exceeds the gross purchase cost (${formatMoney(tempGrossNewCost)}). Please confirm the correct figures.`,
+          prompt: `Cash paid (${formatMoney(cashPaid)}) plus agreed trade-in value (${formatMoney(tempAgreedTradeInGross)}) exceeds the gross purchase cost (${formatMoney(tempGrossNewCost)}). Please confirm the correct figures.`,
           whyNeeded: 'Settlement consideration cannot exceed the gross acquisition price without an explicit refund arrangement.'
         });
       } else if (Math.abs(loanPrincipal) < 0.005) {
@@ -2377,7 +2604,21 @@ export async function parseAccountingQuery(
       }
     }
 
-    if (missingFields.length > 0 || newCost === undefined || gstRate === undefined || oldCost === undefined || agreedTradeInGross === undefined || totalAccDeprAtDisposal === undefined || cashPaid === undefined || loanPrincipal === undefined || !eventDate) {
+    if (
+      missingFields.length > 0 ||
+      newCostRaw === undefined ||
+      tempNetNewCost === undefined ||
+      tempInputGst === undefined ||
+      tempGrossNewCost === undefined ||
+      gstRate === undefined ||
+      oldCost === undefined ||
+      agreedTradeInRaw === undefined ||
+      tempAgreedTradeInGross === undefined ||
+      totalAccDeprAtDisposal === undefined ||
+      cashPaid === undefined ||
+      loanPrincipal === undefined ||
+      !eventDate
+    ) {
       return {
         scenarioType: 'PPE_IAS16',
         authorityStatus: 'CONDITIONAL',
@@ -2393,10 +2634,20 @@ export async function parseAccountingQuery(
       };
     }
 
-    const inputGst = round2(newCost * gstRate);
+    const netNewMachineExGst = tempNetNewCost;
+    const totalInputGst = tempInputGst;
+    const grossNewMachineCost = tempGrossNewCost;
+    const isInputGstRecoverable = gstRate > 0 && inputGstRecoverability === 'recoverable';
+    const recoverableInputGst = isInputGstRecoverable ? totalInputGst : 0;
+    const nonRecoverableInputGst = gstRate > 0 && inputGstRecoverability === 'non_recoverable' ? totalInputGst : 0;
+    const capitalizedNewMachineCost = isInputGstRecoverable ? netNewMachineExGst : grossNewMachineCost;
+
     const netBookValueOld = round2(oldCost - totalAccDeprAtDisposal);
-    const netTradeInProceeds = gstRate > 0 ? round2(agreedTradeInGross / (1 + gstRate)) : round2(agreedTradeInGross);
-    const outputGst = round2(agreedTradeInGross - netTradeInProceeds);
+    const agreedTradeInGross = tempAgreedTradeInGross;
+    const netTradeInProceeds = outputGstApplies
+      ? (tradeInGstBasis === 'exclusive' ? round2(agreedTradeInRaw) : round2(agreedTradeInGross / (1 + gstRate)))
+      : round2(agreedTradeInGross);
+    const outputGst = outputGstApplies ? round2(agreedTradeInGross - netTradeInProceeds) : 0;
     const lossOnDisposal = round2(netBookValueOld - netTradeInProceeds);
     const effectiveLoanYears = loanYears ?? 0;
     const effectiveFlatRate = flatInterestRate ?? 0;
@@ -2478,7 +2729,7 @@ export async function parseAccountingQuery(
         category: 'ASSET',
         debit: agreedTradeInGross,
         credit: 0,
-        lineExplanation: `Agreed trade-in value${gstRate > 0 ? ` (inclusive of ${gstPctLabel} GST)` : ''} receivable as offset against new machinery purchase.`
+        lineExplanation: `Agreed trade-in value${outputGst > 0 ? ` (gross inclusive of ${gstPctLabel} Output GST)` : ''} receivable as offset against new machinery purchase.`
       });
     }
     disposalLines.push({
@@ -2540,7 +2791,7 @@ export async function parseAccountingQuery(
       rationalePoints: [
         `Under IAS 16 / SFRS(I) 1-16 §67-§71: The carrying amount (${formatMoney(netBookValueOld)}) is derecognised on disposal against net proceeds (${formatMoney(netTradeInProceeds)}), resulting in ${gainLossLabel}.`,
         ...(outputGst > 0
-          ? [`Singapore GST Act: A trade-in is a taxable supply. Output tax (${formatMoney(outputGst)}) applies on the agreed trade-in value (${formatMoney(agreedTradeInGross)} gross).`]
+          ? [`Singapore GST Act: A trade-in by a GST-registered entity is a taxable supply. Output tax (${formatMoney(outputGst)}) applies on the net trade-in consideration (${formatMoney(netTradeInProceeds)}).`]
           : []),
         `Sum of Debits (${formatMoney(dispDrCents / 100)}) = Sum of Credits (${formatMoney(dispCrCents / 100)}).`
       ]
@@ -2552,18 +2803,20 @@ export async function parseAccountingQuery(
         accountCode: '1600',
         accountName: 'Machinery - Cost (New Machine)',
         category: 'ASSET',
-        debit: newCost,
+        debit: capitalizedNewMachineCost,
         credit: 0,
-        lineExplanation: 'Initial recognition of new machinery at purchase price exclusive of recoverable GST (IAS 16 §16).'
+        lineExplanation: nonRecoverableInputGst > 0
+          ? `Initial recognition of new machinery including non-recoverable ${gstPctLabel} input GST (${formatMoney(nonRecoverableInputGst)}) under IAS 16 §16(a).`
+          : 'Initial recognition of new machinery at purchase price exclusive of recoverable GST (IAS 16 §16).'
       }
     ];
-    if (inputGst > 0) {
+    if (recoverableInputGst > 0) {
       acqLines.push({
         id: 'l3-input-gst',
         accountCode: '1190',
         accountName: `GST Input Tax (IRAS ${gstPctLabel} Receivable)`,
         category: 'ASSET',
-        debit: inputGst,
+        debit: recoverableInputGst,
         credit: 0,
         lineExplanation: `${gstPctLabel} recoverable input GST claimable against IRAS in the GST return.`
       });
@@ -2622,16 +2875,18 @@ export async function parseAccountingQuery(
       id: 'grp-acq-new',
       eventDate,
       title: `${acqEntryPrefix}: Acquisition of New Machinery${grossLoanPayable > 0 ? ' & Equipment Loan Financing' : ''}`,
-      summary: `Capitalize new machine at cost ${formatMoney(newCost)}${inputGst > 0 ? `, claim ${gstPctLabel} input GST ${formatMoney(inputGst)}` : ''}${agreedTradeInGross > 0 ? `, offset trade-in ${formatMoney(agreedTradeInGross)}` : ''}${cashPaid > 0 ? `, bank cash ${formatMoney(cashPaid)}` : ''}${grossLoanPayable > 0 ? `, and ${effectiveLoanYears}-year loan ${formatMoney(grossLoanPayable)}${unexpiredInterest > 0 ? ` (with unexpired interest contra ${formatMoney(unexpiredInterest)})` : ''}` : ''}`,
+      summary: `Capitalize new machine at cost ${formatMoney(capitalizedNewMachineCost)}${recoverableInputGst > 0 ? `, claim ${gstPctLabel} input GST ${formatMoney(recoverableInputGst)}` : nonRecoverableInputGst > 0 ? ` (includes non-recoverable ${gstPctLabel} input GST ${formatMoney(nonRecoverableInputGst)})` : ''}${agreedTradeInGross > 0 ? `, offset trade-in ${formatMoney(agreedTradeInGross)}` : ''}${cashPaid > 0 ? `, bank cash ${formatMoney(cashPaid)}` : ''}${grossLoanPayable > 0 ? `, and ${effectiveLoanYears}-year loan ${formatMoney(grossLoanPayable)}${unexpiredInterest > 0 ? ` (with unexpired interest contra ${formatMoney(unexpiredInterest)})` : ''}` : ''}`,
       lines: acqLines,
       totalDebit: acqDrCents / 100,
       totalCredit: acqCrCents / 100,
       isBalanced: acqDrCents > 0 && acqDrCents === acqCrCents,
       citations: acqCitations,
       rationalePoints: [
-        ...(inputGst > 0
-          ? [`Under IAS 16 §16: Recoverable taxes (Input GST ${formatMoney(inputGst)}) are excluded from asset cost.`]
-          : ['Under IAS 16 §16: New machinery is capitalized at purchase price.']),
+        ...(recoverableInputGst > 0
+          ? [`Under IAS 16 §16: Recoverable taxes (Input GST ${formatMoney(recoverableInputGst)}) are excluded from asset cost.`]
+          : nonRecoverableInputGst > 0
+            ? [`Under IAS 16 §16(a): Non-recoverable purchase taxes (${gstPctLabel} Input GST ${formatMoney(nonRecoverableInputGst)}) are capitalised into the cost of the asset.`]
+            : ['Under IAS 16 §16: New machinery is capitalized at purchase price.']),
         ...(grossLoanPayable > 0
           ? [`Under IFRS 9: Net loan obligation initially recognized is ${formatMoney(loanPrincipal)} (Gross note ${formatMoney(grossLoanPayable)}${unexpiredInterest > 0 ? ` less Unexpired Interest contra ${formatMoney(unexpiredInterest)}` : ''}).`]
           : []),
@@ -2642,6 +2897,16 @@ export async function parseAccountingQuery(
     directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
 
     const rateLabel = `${round2(effectiveFlatRate * 100)}%`;
+    const newMachineCostParamLabel = gstRate > 0
+      ? (newMachineGstBasis === 'inclusive' ? 'New Machine Cost (Incl. GST)' : 'New Machine Cost (Excl. GST)')
+      : 'New Machine Cost';
+    const inputGstParamLabel = gstRate > 0
+      ? (isInputGstRecoverable ? `Input GST (${gstPctLabel} Claimable)` : `Input GST (${gstPctLabel} Non-Recoverable — Capitalized)`)
+      : `Input GST (${gstPctLabel})`;
+    const tradeInParamLabel = outputGstApplies
+      ? (tradeInGstBasis === 'exclusive' ? 'Agreed Trade-In Value (Excl. GST)' : 'Agreed Trade-In Value (Gross Incl. GST)')
+      : 'Agreed Trade-In Value';
+
     return {
       scenarioType: 'PPE_IAS16',
       authorityStatus: 'DETERMINISTIC',
@@ -2653,8 +2918,8 @@ export async function parseAccountingQuery(
         : 'Machinery Acquisition with Trade-In',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: `${catchUpDepr > 0 ? `Under SFRS(I) 1-16 §55, record catch-up depreciation (${formatMoney(catchUpDepr)}) up to ${eventDate}. ` : ''}Derecognize the carrying amount of the old asset (${formatMoney(netBookValueOld)}) under §67-§71 and recognize ${gainLossLabel} in P&L. New machine is recognized at cost (${formatMoney(newCost)}) net of recoverable GST.${grossLoanPayable > 0 ? ` Under SFRS(I) 9, equipment loan (${formatMoney(grossLoanPayable)}) is recognized with net principal ${formatMoney(loanPrincipal)}${unexpiredInterest > 0 ? ` and upfront unexpired interest contra-liability ${formatMoney(unexpiredInterest)}` : ''}.` : ''}`,
-      singaporeTaxTreatmentSummary: `${outputGst > 0 ? `The trade-in consideration is a taxable supply subject to ${gstPctLabel} Output GST (${formatMoney(outputGst)}). ${gstPctLabel} Input GST on new machine (${formatMoney(inputGst)}) is recoverable from IRAS. ` : 'No GST was charged on this transaction. '}Accounting gain/loss on disposal is not taxable/deductible; accounting depreciation is added back in tax computation and qualifying plant & machinery claims Section 19A Capital Allowances.`,
+      accountingTreatmentSummary: `${catchUpDepr > 0 ? `Under SFRS(I) 1-16 §55, record catch-up depreciation (${formatMoney(catchUpDepr)}) up to ${eventDate}. ` : ''}Derecognize the carrying amount of the old asset (${formatMoney(netBookValueOld)}) under §67-§71 and recognize ${gainLossLabel} in P&L. New machine is recognized at cost (${formatMoney(capitalizedNewMachineCost)})${recoverableInputGst > 0 ? ' net of recoverable GST' : nonRecoverableInputGst > 0 ? ' inclusive of non-recoverable GST under §16(a)' : ''}.${grossLoanPayable > 0 ? ` Under SFRS(I) 9, equipment loan (${formatMoney(grossLoanPayable)}) is recognized with net principal ${formatMoney(loanPrincipal)}${unexpiredInterest > 0 ? ` and upfront unexpired interest contra-liability ${formatMoney(unexpiredInterest)}` : ''}.` : ''}`,
+      singaporeTaxTreatmentSummary: `${outputGst > 0 ? `The trade-in consideration is a taxable supply subject to ${gstPctLabel} Output GST (${formatMoney(outputGst)}). ` : ''}${recoverableInputGst > 0 ? `${gstPctLabel} Input GST on new machine (${formatMoney(recoverableInputGst)}) is recoverable from IRAS. ` : nonRecoverableInputGst > 0 ? `${gstPctLabel} Input GST on new machine (${formatMoney(nonRecoverableInputGst)}) is non-recoverable and capitalised into asset cost. ` : outputGst === 0 ? 'No GST was charged on this transaction. ' : ''}Accounting gain/loss on disposal is not taxable/deductible; accounting depreciation is added back in tax computation and qualifying plant & machinery claims Section 19A Capital Allowances.`,
       regulatoryMandatesSummary: 'Record keeping compliance under Section 199 of the Companies Act 1967.',
       effectiveDateOrTiming: gstRate > 0
         ? `Transaction date ${eventDate}; ${gstPctLabel} GST applied; Section 19A Capital Allowances active.`
@@ -2662,9 +2927,10 @@ export async function parseAccountingQuery(
       directGroups,
       keyParameters: [
         { label: 'Transaction Date', value: eventDate, badge: 'Date' },
-        { label: 'New Machine Cost (Excl. GST)', value: `${functionalCurrency} ${newCost.toLocaleString()}`, badge: 'Asset Cost' },
-        { label: `Input GST (${gstPctLabel} Claimable)`, value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
-        { label: 'Agreed Trade-In Value (Gross)', value: `${functionalCurrency} ${agreedTradeInGross.toLocaleString()}`, badge: 'Trade-In Gross' },
+        { label: newMachineCostParamLabel, value: `${functionalCurrency} ${newCostRaw.toLocaleString()}`, badge: 'Quoted Price' },
+        { label: 'Capitalized New Machine Cost', value: `${functionalCurrency} ${capitalizedNewMachineCost.toLocaleString()}`, badge: 'Asset Cost' },
+        { label: inputGstParamLabel, value: `${functionalCurrency} ${totalInputGst.toLocaleString()}`, badge: isInputGstRecoverable ? 'Tax Receivable' : 'Capitalized' },
+        { label: tradeInParamLabel, value: `${functionalCurrency} ${agreedTradeInRaw.toLocaleString()}`, badge: 'Trade-In' },
         { label: 'Net Trade-In Consideration', value: `${functionalCurrency} ${netTradeInProceeds.toLocaleString()}`, badge: 'Proceeds' },
         { label: `Output GST on Trade-In (${gstPctLabel})`, value: `${functionalCurrency} ${outputGst.toLocaleString()}`, badge: 'Tax Payable' },
         { label: 'Old Machine Original Cost', value: `${functionalCurrency} ${oldCost.toLocaleString()}`, badge: 'Historical Cost' },
@@ -2690,7 +2956,9 @@ export async function parseAccountingQuery(
   // =========================================================================
   const isFollowUpOnDiscount = currentScenario?.scenarioType === 'ASSET_PURCHASE_DISCOUNT' &&
     Boolean(currentScenario.isComplete) &&
-    (q.includes('discount') || q.includes('cash') || q.includes('bank') || q.includes('price') || q.includes('pay') || q.includes('settle') || q.includes('what if') || q.includes('change') || q.includes('how about') || q.includes('why') || q.includes('explain') || q.includes('compound') || q.includes('depreciation'));
+    !startsNewAccountingScenario(query, currentScenario) &&
+    !looksLikeNewPurchaseTransaction &&
+    (q.includes('discount') || q.includes('cash') || q.includes('bank') || q.includes('price') || q.includes('pay') || q.includes('paid') || q.includes('settle') || q.includes('what if') || q.includes('change') || q.includes('how about') || q.includes('why') || q.includes('explain') || q.includes('compound') || q.includes('depreciation'));
 
   const isAssetPurchaseWithDiscount =
     isFollowUpOnDiscount ||
@@ -2789,23 +3057,32 @@ export async function parseAccountingQuery(
       }
     }
 
-    // 4. GST
+    // 4. GST rate, price basis (exclusive vs inclusive), and input GST recoverability
     let gstRate: number | undefined;
-    const explicitNoGst = /\b(?:no\s+gst|non[-\s]?gst|not\s+gst[-\s]?registered|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
+    const explicitZeroGstSupply = /\b(?:no\s+gst|0(?:\.0+)?\s*%\s*gst|gst\s*(?:at|of|rate)?\s*0(?:\.0+)?\s*%|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
     const gstPctMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*gst/i) || query.match(/gst\s*(?:at|of|rate)?\s*(\d+(?:\.\d+)?)\s*%/i);
-    if (explicitNoGst) {
+    const gstRecoverabilityInfo = resolveInputGstRecoverability(query);
+    if (explicitZeroGstSupply) {
       gstRate = 0;
     } else if (gstPctMatch?.[1]) {
       const rate = parseFloat(gstPctMatch[1]) / 100;
       if (Number.isFinite(rate) && rate >= 0 && rate < 1) gstRate = rate;
     } else if (canInheritDiscount) {
-      const priorGst = extractParamNumber(currentScenario, 'Input GST');
-      const priorNetCost = extractParamNumber(currentScenario, 'Net Capitalized Cost');
-      if (priorGst !== undefined && priorNetCost && priorNetCost > 0) {
-        gstRate = round2((priorGst / priorNetCost) * 100) / 100;
+      const priorGstParam = currentScenario?.keyParameters?.find(p => p.label.includes('Input GST'));
+      const labelRateMatch = priorGstParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (labelRateMatch?.[1]) {
+        gstRate = parseFloat(labelRateMatch[1]) / 100;
       } else {
-        gstRate = 0;
+        const priorGst = extractParamNumber(currentScenario, 'Input GST');
+        const priorNetCost = extractParamNumber(currentScenario, 'Net Capitalized Cost');
+        if (priorGst !== undefined && priorNetCost && priorNetCost > 0) {
+          gstRate = round2((priorGst / priorNetCost) * 100) / 100;
+        } else {
+          gstRate = 0;
+        }
       }
+    } else if (gstRecoverabilityInfo.isNonGstRegisteredEntity) {
+      gstRate = 0;
     } else if (/\bgst\b/i.test(query)) {
       missingFields.push({
         fieldKey: 'gstRate',
@@ -2817,7 +3094,80 @@ export async function parseAccountingQuery(
       gstRate = 0;
     }
 
-    const isSettlement = q.includes('settle') || q.includes('pay the remaining') || q.includes('paid balance') || q.includes('settlement');
+    let gstPriceBasis: 'exclusive' | 'inclusive' | undefined;
+    let inputGstRecoverability: 'recoverable' | 'non_recoverable' | undefined;
+
+    if (gstRate !== undefined && gstRate > 0) {
+      const resolvedBasis = resolveGstPriceBasis(query);
+      if (resolvedBasis === 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstPriceBasis',
+          fieldName: 'Conflicting GST price basis',
+          prompt: 'The query states both GST-inclusive and GST-exclusive wording. Please confirm whether the quoted list price is exclusive or inclusive of GST.',
+          whyNeeded: 'Asset cost and input GST cannot be computed when inclusive and exclusive price bases conflict.'
+        });
+      } else if (resolvedBasis) {
+        gstPriceBasis = resolvedBasis;
+      } else if (canInheritDiscount) {
+        const priorListParam = currentScenario?.keyParameters?.find(p => p.label.includes('List Price'));
+        if (priorListParam?.label.includes('Incl.')) gstPriceBasis = 'inclusive';
+        else if (priorListParam?.label.includes('Excl.')) gstPriceBasis = 'exclusive';
+      }
+
+      if (!gstPriceBasis && resolvedBasis !== 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstPriceBasis',
+          fieldName: 'GST-inclusive or GST-exclusive purchase price',
+          prompt: 'Is the quoted list/purchase price exclusive or inclusive of GST?',
+          whyNeeded: 'Asset capitalization and input GST depend on whether the quoted price includes or excludes GST.'
+        });
+      }
+
+      if (gstRecoverabilityInfo.status === 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstRecoverability',
+          fieldName: 'Conflicting input GST recoverability',
+          prompt: 'The query contains conflicting GST registration / input GST recoverability facts. Please confirm whether the entity is GST-registered and whether the input GST is recoverable.',
+          whyNeeded: 'Under SFRS(I) 1-16 §16(a), recoverable input GST is recognised as a receivable whereas non-recoverable input GST is capitalised into asset cost.'
+        });
+      } else if (gstRecoverabilityInfo.status) {
+        inputGstRecoverability = gstRecoverabilityInfo.status;
+      } else if (canInheritDiscount) {
+        const priorGstParam = currentScenario?.keyParameters?.find(p => p.label.includes('Input GST'));
+        if (priorGstParam?.label.includes('Non-Recoverable')) inputGstRecoverability = 'non_recoverable';
+        else if (priorGstParam?.label.includes('Claimable')) inputGstRecoverability = 'recoverable';
+      }
+
+      if (!inputGstRecoverability && gstRecoverabilityInfo.status !== 'conflict') {
+        missingFields.push({
+          fieldKey: 'gstRecoverability',
+          fieldName: 'Input GST recoverability',
+          prompt: 'Is the company GST-registered and eligible to recover the input GST from IRAS, or is the input GST non-recoverable?',
+          whyNeeded: 'Under SFRS(I) 1-16 §16(a), non-recoverable purchase taxes must be capitalised into asset cost rather than recognised as Input GST Receivable.'
+        });
+      }
+    }
+
+    const semanticDiscountFollowUp = canInheritDiscount
+      ? defaultTransactionUnderstandingService.understandTransactionSync(
+          query,
+          functionalCurrency,
+          'SG',
+          extractAccountingContext(currentScenario)
+        )
+      : undefined;
+
+    const mentionsImmediatePayment = /\b(?:immediate(?:ly)?|upfront|down\s*payment|initially|at\s+purchase)\b/i.test(query);
+    const mentionsExplicitSettlement = /\b(?:settle|settled|settlement|settling|pay(?:s|ing)?\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable|vendor|supplier)|paid\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable)|partial(?:ly)?\s+(?:settle|settled|settlement|payment|paid)|part[-\s]?payment)\b/i.test(query);
+    const isSettlement =
+      mentionsExplicitSettlement ||
+      Boolean(
+        canInheritDiscount &&
+        !mentionsImmediatePayment &&
+        semanticDiscountFollowUp?.followUpAnalysis?.isFollowUp &&
+        (semanticDiscountFollowUp.followUpAnalysis.eventType === 'settlement' ||
+         semanticDiscountFollowUp.followUpAnalysis.eventType === 'partial_settlement')
+      );
 
     // 5. Immediate cash paid
     let immediateCash: number | undefined;
@@ -2844,7 +3194,7 @@ export async function parseAccountingQuery(
         missingFields.push({
           fieldKey: 'immediateCash',
           fieldName: 'Immediate cash payment',
-          prompt: 'How much (if any, including SGD 0 if fully on credit) was paid immediately by cash/bank?',
+          prompt: 'How much (if any, including SGD 0 if none) was paid immediately by cash/bank?',
           whyNeeded: 'The split between Cash at Bank and Trade Payables cannot be determined without the upfront payment amount.'
         });
       }
@@ -2896,9 +3246,22 @@ export async function parseAccountingQuery(
     }
 
     const tradeDiscountAmount = round2(listPrice * discountRate);
-    const netAssetCost = round2(listPrice - tradeDiscountAmount);
-    const inputGst = round2(netAssetCost * gstRate);
-    const grossInvoice = round2(netAssetCost + inputGst);
+    const discountedQuotedPrice = round2(listPrice - tradeDiscountAmount);
+    const isInclusivePrice = gstRate > 0 && gstPriceBasis === 'inclusive';
+    const netPriceExGst = isInclusivePrice
+      ? round2(discountedQuotedPrice / (1 + gstRate))
+      : discountedQuotedPrice;
+    const totalInputGst = isInclusivePrice
+      ? round2(discountedQuotedPrice - netPriceExGst)
+      : round2(netPriceExGst * gstRate);
+    const grossInvoice = isInclusivePrice
+      ? discountedQuotedPrice
+      : round2(netPriceExGst + totalInputGst);
+
+    const isInputGstRecoverable = gstRate > 0 && inputGstRecoverability === 'recoverable';
+    const recoverableInputGst = isInputGstRecoverable ? totalInputGst : 0;
+    const nonRecoverableInputGst = gstRate > 0 && inputGstRecoverability === 'non_recoverable' ? totalInputGst : 0;
+    const capitalizedAssetCost = isInputGstRecoverable ? netPriceExGst : grossInvoice;
     const creditBalance = round2(grossInvoice - immediateCash);
 
     if (creditBalance < -0.005) {
@@ -2932,18 +3295,20 @@ export async function parseAccountingQuery(
         accountCode: '1500',
         accountName: `${assetTitle} - Cost (Non-Current Asset)`,
         category: 'ASSET',
-        debit: netAssetCost,
+        debit: capitalizedAssetCost,
         credit: 0,
-        lineExplanation: `Capitalization of ${assetTitle.toLowerCase()} at net purchase price${discountRate > 0 ? ` after deducting ${discountPctLabel} trade discount` : ''} under IAS 16 §16(a).`
+        lineExplanation: nonRecoverableInputGst > 0
+          ? `Capitalization of ${assetTitle.toLowerCase()} at net purchase price${discountRate > 0 ? ` after deducting ${discountPctLabel} trade discount` : ''} plus non-recoverable ${gstPctLabel} input GST (${formatMoney(nonRecoverableInputGst)}) under IAS 16 §16(a).`
+          : `Capitalization of ${assetTitle.toLowerCase()} at net purchase price${discountRate > 0 ? ` after deducting ${discountPctLabel} trade discount` : ''} under IAS 16 §16(a).`
       }
     ];
-    if (inputGst > 0) {
+    if (recoverableInputGst > 0) {
       lines.push({
         id: 'l-gst-input',
         accountCode: '1190',
         accountName: `GST Input Tax (IRAS ${gstPctLabel} Receivable)`,
         category: 'ASSET',
-        debit: inputGst,
+        debit: recoverableInputGst,
         credit: 0,
         lineExplanation: `${gstPctLabel} recoverable input GST on net purchase price claimable from IRAS.`
       });
@@ -2980,7 +3345,7 @@ export async function parseAccountingQuery(
         id: 'grp-equip-purchase',
         eventDate: transDate,
         title: `${grp1TitlePrefix}: Purchase of ${assetTitle}`,
-        summary: `Purchase of ${assetTitle} with list price ${formatMoney(listPrice)}${discountRate > 0 ? ` less ${discountPctLabel} trade discount` : ''}${inputGst > 0 ? ` + ${gstPctLabel} GST` : ''}`,
+        summary: `Purchase of ${assetTitle} with list price ${formatMoney(listPrice)}${isInclusivePrice ? ` (inclusive of ${gstPctLabel} GST)` : ''}${discountRate > 0 ? ` less ${discountPctLabel} trade discount` : ''}${recoverableInputGst > 0 ? ` + ${gstPctLabel} recoverable GST` : nonRecoverableInputGst > 0 ? ` (includes ${gstPctLabel} non-recoverable GST)` : ''}`,
         lines,
         totalDebit: grp1DrCents / 100,
         totalCredit: grp1CrCents / 100,
@@ -2991,61 +3356,216 @@ export async function parseAccountingQuery(
         ],
         rationalePoints: [
           `Under IAS 16 / SFRS(I) 1-16 §16(a): Trade discounts (${formatMoney(tradeDiscountAmount)}) are deducted from list price to determine initial cost. Trade discounts are never recorded as separate ledger lines.`,
-          ...(inputGst > 0
-            ? [`Under Singapore GST Act: ${gstPctLabel} GST is calculated on the net selling price after trade discount (${formatMoney(netAssetCost)} × ${gstPctLabel} = ${formatMoney(inputGst)}).`]
-            : []),
+          ...(recoverableInputGst > 0
+            ? [`Under Singapore GST Act: ${gstPctLabel} recoverable input GST (${formatMoney(recoverableInputGst)}) is recognised separately on the net ex-GST purchase price (${formatMoney(netPriceExGst)}).`]
+            : nonRecoverableInputGst > 0
+              ? [`Under IAS 16 / SFRS(I) 1-16 §16(a): Non-recoverable ${gstPctLabel} input GST (${formatMoney(nonRecoverableInputGst)}) is capitalised into asset cost (${formatMoney(capitalizedAssetCost)}).`]
+              : []),
           `Sum of Debits (${formatMoney(grp1DrCents / 100)}) = Sum of Credits (${formatMoney(grp1CrCents / 100)}).`
         ]
       }
     ];
 
-    if (isSettlement && normalizedCreditBalance > 0) {
-      const chosenSettlementDate = !canInheritDiscount && validDates.length >= 2
-        ? validDates[1]
-        : firstValidDate;
-      const settlementDate = chosenSettlementDate ? formatSingaporeDate(chosenSettlementDate) : 'Settlement Date';
-      const settleLines: JournalLine[] = [
-        {
-          id: 'l-settle-payable',
-          accountCode: '2010',
-          accountName: 'Trade Payables / Other Payables (Current Liability)',
-          category: 'LIABILITY',
-          debit: normalizedCreditBalance,
-          credit: 0,
-          lineExplanation: 'Derecognition of financial liability upon discharge of payment obligation.'
-        },
-        {
-          id: 'l-settle-bank',
-          accountCode: '1010',
-          accountName: 'Cash at Bank',
-          category: 'ASSET',
-          debit: 0,
-          credit: normalizedCreditBalance,
-          lineExplanation: 'Disbursement of funds via bank transfer to settle vendor invoice.'
+    const priorSettlementGroups = canInheritDiscount
+      ? (currentScenario?.directGroups || []).filter(g => g.id.startsWith('grp-equip-settle'))
+      : [];
+    const priorSettledCents = priorSettlementGroups.reduce((sum, g) => sum + toCents(g.totalDebit), 0);
+    const initialCreditCents = toCents(normalizedCreditBalance);
+
+    if (priorSettledCents > initialCreditCents) {
+      return {
+        scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'MULTI_AUTHORITY',
+        rawQuery: query,
+        transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'paymentConflict',
+          fieldName: 'Settlement exceeds Trade Payables balance',
+          prompt: `Prior settlements (${formatMoney(priorSettledCents / 100)}) exceed the revised Trade Payables balance (${formatMoney(normalizedCreditBalance)}). Please confirm the correct figures.`,
+          whyNeeded: 'Cumulative settlements cannot exceed the recognised Trade Payables liability.'
+        }]
+      };
+    }
+
+    const remainingPayableBeforeCents = initialCreditCents - priorSettledCents;
+
+    if (isSettlement) {
+      // Preserve any previously committed partial settlement entries first
+      for (const existingSettle of priorSettlementGroups) {
+        directGroups.push(existingSettle);
+      }
+
+      const explicitZeroSettlement = /\b(?:paid|pay|settl(?:e|ed|ement)|remit(?:ted)?)\s+(?:of\s+)?(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b/i.test(query);
+      let explicitSettlementAmount: number | undefined;
+      if (explicitZeroSettlement) {
+        explicitSettlementAmount = 0;
+      } else if (canInheritDiscount) {
+        const semanticAmt = semanticDiscountFollowUp?.followUpAnalysis?.settlementAmount ?? semanticDiscountFollowUp?.amount;
+        if (typeof semanticAmt === 'number' && Number.isFinite(semanticAmt) && semanticAmt >= 0) {
+          explicitSettlementAmount = semanticAmt;
+        } else {
+          const followUpAmtMatch =
+            query.match(/(?:paid|pay|settl(?:e|ed|ement)|transfer(?:red)?|remit(?:ted)?)\s+(?:of\s+)?(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+            query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:by\s+bank|via\s+bank|in\s+cash|as\s+(?:a\s+)?partial|towards|to\s+settle)/i);
+          if (followUpAmtMatch?.[1]) {
+            const parsedVal = parseAmountToken(followUpAmtMatch[1], followUpAmtMatch[2]);
+            if (Number.isFinite(parsedVal) && parsedVal >= 0) explicitSettlementAmount = parsedVal;
+          }
         }
-      ];
-      const settleDrCents = settleLines.reduce((s, l) => s + toCents(l.debit), 0);
-      const settleCrCents = settleLines.reduce((s, l) => s + toCents(l.credit), 0);
-      directGroups.push({
-        id: 'grp-equip-settle',
-        eventDate: settlementDate,
-        title: 'Subsequent Settlement of Trade Payables',
-        summary: `Settlement of outstanding balance of ${formatMoney(normalizedCreditBalance)} via bank transfer under IFRS 9 §3.3.1`,
-        lines: settleLines,
-        totalDebit: settleDrCents / 100,
-        totalCredit: settleCrCents / 100,
-        isBalanced: settleDrCents > 0 && settleDrCents === settleCrCents,
-        citations: [getCitation('IFRS9_DERECOGNITION_LIABILITY', 'SFRS_I')],
-        rationalePoints: [
-          'Under IFRS 9 §3.3.1: An entity removes a financial liability from its balance sheet when the contractual obligation is discharged.',
-          'Debit: Trade Payables decreases on settlement.',
-          'Credit: Cash at Bank decreases on disbursement.'
-        ]
-      });
-    } else if (canInheritDiscount && currentScenario?.directGroups && currentScenario.directGroups.length > 1 && normalizedCreditBalance > 0) {
-      for (let i = 1; i < currentScenario.directGroups.length; i++) {
-        const existingGrp = currentScenario.directGroups[i];
-        if (existingGrp.id === 'grp-equip-settle') {
+      } else {
+        const singleTurnSettleMatch =
+          query.match(/(?:subsequent(?:ly)?|later|partial(?:ly)?\s+settl\w*|settl\w*)[^.\n]*?(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+          query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:as\s+(?:a\s+)?)?(?:partial\s+)?settlement/i);
+        if (singleTurnSettleMatch?.[1]) {
+          const parsedVal = parseAmountToken(singleTurnSettleMatch[1], singleTurnSettleMatch[2]);
+          if (Number.isFinite(parsedVal) && parsedVal >= 0) explicitSettlementAmount = parsedVal;
+        }
+      }
+
+      const isExplicitPartial = /\b(?:partial|partially|part[-\s]?payment|install?ment|instalment|towards)\b/i.test(query);
+
+      if (remainingPayableBeforeCents === 0) {
+        if (explicitSettlementAmount !== undefined && explicitSettlementAmount > 0) {
+          return {
+            scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+            authorityStatus: 'CONDITIONAL',
+            queryIntent: 'TRANSACTION',
+            primaryDomain: 'MULTI_AUTHORITY',
+            rawQuery: query,
+            transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+            functionalCurrency,
+            transactionCurrency: functionalCurrency,
+            directGroups: [],
+            isComplete: false,
+            missingFields: [{
+              fieldKey: 'paymentConflict',
+              fieldName: 'Trade Payables already settled in full',
+              prompt: `Trade Payables has no remaining unpaid balance to settle with ${formatMoney(explicitSettlementAmount)}. Please confirm whether this is a separate transaction or an overpayment.`,
+              whyNeeded: 'A fully extinguished liability cannot be derecognised again.'
+            }]
+          };
+        }
+      } else if (explicitSettlementAmount === undefined && isExplicitPartial) {
+        return {
+          scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+          authorityStatus: 'CONDITIONAL',
+          queryIntent: 'TRANSACTION',
+          primaryDomain: 'MULTI_AUTHORITY',
+          rawQuery: query,
+          transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+          functionalCurrency,
+          transactionCurrency: functionalCurrency,
+          directGroups: [],
+          isComplete: false,
+          missingFields: [{
+            fieldKey: 'settlementAmount',
+            fieldName: 'Partial settlement payment amount',
+            prompt: `How much was paid in this partial settlement against the remaining Trade Payables balance of ${formatMoney(remainingPayableBeforeCents / 100)}?`,
+            whyNeeded: 'Partial settlement must record the exact payment amount and preserve the unpaid liability.'
+          }]
+        };
+      } else {
+        const requestedSettlementCents = explicitSettlementAmount !== undefined
+          ? toCents(explicitSettlementAmount)
+          : remainingPayableBeforeCents;
+
+        if (requestedSettlementCents > remainingPayableBeforeCents) {
+          return {
+            scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+            authorityStatus: 'CONDITIONAL',
+            queryIntent: 'TRANSACTION',
+            primaryDomain: 'MULTI_AUTHORITY',
+            rawQuery: query,
+            transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+            functionalCurrency,
+            transactionCurrency: functionalCurrency,
+            directGroups: [],
+            isComplete: false,
+            missingFields: [{
+              fieldKey: 'paymentConflict',
+              fieldName: 'Settlement payment exceeds remaining payable',
+              prompt: `Settlement payment (${formatMoney(requestedSettlementCents / 100)}) exceeds the remaining Trade Payables balance (${formatMoney(remainingPayableBeforeCents / 100)}). Please confirm the correct settlement amount.`,
+              whyNeeded: 'A settlement entry cannot derecognise more Trade Payables than remains outstanding.'
+            }]
+          };
+        }
+
+        if (requestedSettlementCents > 0) {
+          const settlementAmt = requestedSettlementCents / 100;
+          const remainingAfterCents = remainingPayableBeforeCents - requestedSettlementCents;
+          const isPartialResult = remainingAfterCents > 0;
+          const chosenSettlementDate = !canInheritDiscount && validDates.length >= 2
+            ? validDates[1]
+            : firstValidDate;
+          const settlementDate = chosenSettlementDate ? formatSingaporeDate(chosenSettlementDate) : 'Settlement Date';
+          const settleIndex = priorSettlementGroups.length + 1;
+          const settleGroupId = settleIndex === 1 ? 'grp-equip-settle' : `grp-equip-settle-${settleIndex}`;
+          const settleLines: JournalLine[] = [
+            {
+              id: settleIndex === 1 ? 'l-settle-payable' : `l-settle-payable-${settleIndex}`,
+              accountCode: '2010',
+              accountName: 'Trade Payables / Other Payables (Current Liability)',
+              category: 'LIABILITY',
+              debit: settlementAmt,
+              credit: 0,
+              lineExplanation: isPartialResult
+                ? `Partial derecognition of Trade Payables for payment of ${formatMoney(settlementAmt)}; remaining payable balance is ${formatMoney(remainingAfterCents / 100)}.`
+                : 'Derecognition of remaining financial liability upon full discharge of payment obligation.'
+            },
+            {
+              id: settleIndex === 1 ? 'l-settle-bank' : `l-settle-bank-${settleIndex}`,
+              accountCode: '1010',
+              accountName: 'Cash at Bank',
+              category: 'ASSET',
+              debit: 0,
+              credit: settlementAmt,
+              lineExplanation: isPartialResult
+                ? `Disbursement of ${formatMoney(settlementAmt)} via bank transfer as partial settlement of vendor invoice.`
+                : 'Disbursement of funds via bank transfer to settle remaining vendor invoice balance.'
+            }
+          ];
+          const settleDrCents = settleLines.reduce((s, l) => s + toCents(l.debit), 0);
+          const settleCrCents = settleLines.reduce((s, l) => s + toCents(l.credit), 0);
+          directGroups.push({
+            id: settleGroupId,
+            eventDate: settlementDate,
+            title: isPartialResult
+              ? 'Partial Settlement of Trade Payables'
+              : 'Subsequent Settlement of Trade Payables',
+            summary: isPartialResult
+              ? `Partial settlement of ${formatMoney(settlementAmt)} via bank transfer (remaining Trade Payables: ${formatMoney(remainingAfterCents / 100)}) under IFRS 9 §3.3.1`
+              : `Settlement of outstanding balance of ${formatMoney(settlementAmt)} via bank transfer under IFRS 9 §3.3.1`,
+            lines: settleLines,
+            totalDebit: settleDrCents / 100,
+            totalCredit: settleCrCents / 100,
+            isBalanced: settleDrCents > 0 && settleDrCents === settleCrCents,
+            citations: [getCitation('IFRS9_DERECOGNITION_LIABILITY', 'SFRS_I')],
+            rationalePoints: [
+              isPartialResult
+                ? `Under IFRS 9 §3.3.1: Partial settlement derecognizes only the settled portion (${formatMoney(settlementAmt)}); the remaining unpaid Trade Payables balance (${formatMoney(remainingAfterCents / 100)}) stays recognized.`
+                : 'Under IFRS 9 §3.3.1: An entity removes a financial liability from its balance sheet when the contractual obligation is discharged.',
+              'Debit: Trade Payables decreases by the actual payment amount.',
+              'Credit: Cash at Bank decreases on disbursement.'
+            ]
+          });
+        }
+      }
+    } else if (canInheritDiscount && priorSettlementGroups.length > 0 && normalizedCreditBalance > 0) {
+      // Non-settlement amendment (e.g. changing discount/price): preserve existing settlement groups as-is
+      // unless there was a single prior full settlement whose amount matched the old credit balance.
+      const priorInitialCredit = extractParamNumber(currentScenario, 'Trade Payables');
+      const wasSingleFullSettlement =
+        priorSettlementGroups.length === 1 &&
+        priorInitialCredit !== undefined &&
+        Math.abs(priorSettlementGroups[0].totalDebit - priorInitialCredit) < 0.01;
+      for (const existingGrp of priorSettlementGroups) {
+        if (wasSingleFullSettlement) {
           const updatedLines = existingGrp.lines.map(l => ({
             ...l,
             debit: l.debit > 0 ? normalizedCreditBalance : 0,
@@ -3066,8 +3586,20 @@ export async function parseAccountingQuery(
       }
     }
 
-    const hasSettlement = directGroups.some(g => g.id === 'grp-equip-settle');
+    const allSettlementGroups = directGroups.filter(g => g.id.startsWith('grp-equip-settle'));
+    const totalSettledCents = allSettlementGroups.reduce((sum, g) => sum + toCents(g.totalDebit), 0);
+    const remainingPayableAfterCents = Math.max(0, initialCreditCents - totalSettledCents);
+    const hasSettlement = allSettlementGroups.length > 0;
+    const isFullySettled = hasSettlement && remainingPayableAfterCents === 0;
+    const isPartiallySettled = hasSettlement && remainingPayableAfterCents > 0;
     directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
+
+    const listPriceLabel = gstRate > 0
+      ? (isInclusivePrice ? 'List Price (Incl. GST)' : 'List Price (Excl. GST)')
+      : 'List Price';
+    const inputGstParamLabel = gstRate > 0
+      ? (isInputGstRecoverable ? `Input GST (${gstPctLabel} Claimable)` : `Input GST (${gstPctLabel} Non-Recoverable — Capitalized)`)
+      : `Input GST (${gstPctLabel})`;
 
     return {
       scenarioType: 'ASSET_PURCHASE_DISCOUNT',
@@ -3078,24 +3610,33 @@ export async function parseAccountingQuery(
       transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: `Under SFRS(I) 1-16 §16(a), trade discounts are deducted directly from the list price to arrive at the asset cost (${formatMoney(netAssetCost)}). Trade discounts are never recorded as separate ledger accounts.${normalizedCreditBalance > 0 ? ' Unsettled balance is recorded in Trade Payables under SFRS(I) 9.' : ''}`,
-      singaporeTaxTreatmentSummary: inputGst > 0
-        ? `Under Singapore GST law, ${gstPctLabel} GST (${formatMoney(inputGst)}) is calculated on the net discounted price and claimed as an input tax asset. Qualifying equipment is eligible for Section 19A Capital Allowances.`
-        : 'No GST was charged on this transaction. Qualifying equipment is eligible for Section 19A Capital Allowances.',
+      accountingTreatmentSummary: `Under SFRS(I) 1-16 §16(a), trade discounts are deducted directly from the list price to arrive at the initial asset cost (${formatMoney(capitalizedAssetCost)})${nonRecoverableInputGst > 0 ? `, including non-recoverable ${gstPctLabel} input GST (${formatMoney(nonRecoverableInputGst)})` : ''}. Trade discounts are never recorded as separate ledger accounts.${normalizedCreditBalance > 0 ? (isPartiallySettled ? ` After partial settlement of ${formatMoney(totalSettledCents / 100)}, remaining Trade Payables is ${formatMoney(remainingPayableAfterCents / 100)} under SFRS(I) 9.` : isFullySettled ? ' Trade Payables has been settled in full under SFRS(I) 9.' : ' Unsettled balance is recorded in Trade Payables under SFRS(I) 9.') : ''}`,
+      singaporeTaxTreatmentSummary: recoverableInputGst > 0
+        ? `Under Singapore GST law, ${gstPctLabel} recoverable input GST (${formatMoney(recoverableInputGst)}) is calculated on the net ex-GST discounted price (${formatMoney(netPriceExGst)}) and claimed as an input tax asset. Qualifying equipment is eligible for Section 19A Capital Allowances.`
+        : nonRecoverableInputGst > 0
+          ? `Under Singapore GST law and SFRS(I) 1-16 §16(a), ${gstPctLabel} input GST (${formatMoney(nonRecoverableInputGst)}) is non-recoverable and is capitalised into the cost of the asset rather than recognised as Input GST Receivable. Qualifying equipment is eligible for Section 19A Capital Allowances.`
+          : 'No GST was charged on this transaction. Qualifying equipment is eligible for Section 19A Capital Allowances.',
       regulatoryMandatesSummary: 'Tax invoices and commercial receipts must be retained for 5 years under Section 199 of the Companies Act 1967.',
-      effectiveDateOrTiming: inputGst > 0
+      effectiveDateOrTiming: totalInputGst > 0
         ? `${gstPctLabel} GST applied on ${transDate}.`
         : `Transaction date: ${transDate}.`,
       directGroups,
       keyParameters: [
-        { label: 'List Price (Excl. GST)', value: `${functionalCurrency} ${listPrice.toLocaleString()}`, badge: 'List Price' },
+        { label: listPriceLabel, value: `${functionalCurrency} ${listPrice.toLocaleString()}`, badge: 'List Price' },
         { label: `Trade Discount (${discountPctLabel})`, value: `-${functionalCurrency} ${tradeDiscountAmount.toLocaleString()}`, badge: 'IAS 16 §16(a)' },
-        { label: 'Net Capitalized Cost', value: `${functionalCurrency} ${netAssetCost.toLocaleString()}`, badge: 'Asset Cost' },
-        { label: `Input GST (${gstPctLabel} Claimable)`, value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
+        { label: 'Net Capitalized Cost', value: `${functionalCurrency} ${capitalizedAssetCost.toLocaleString()}`, badge: 'Asset Cost' },
+        { label: inputGstParamLabel, value: `${functionalCurrency} ${totalInputGst.toLocaleString()}`, badge: isInputGstRecoverable ? 'Tax Receivable' : 'Capitalized' },
         { label: 'Total Invoice Payable', value: `${functionalCurrency} ${grossInvoice.toLocaleString()}`, badge: 'Gross Payable' },
         { label: 'Immediate Bank Payment', value: `${functionalCurrency} ${immediateCash.toLocaleString()}`, badge: 'Bank Outflow' },
         { label: 'Trade Payables (Credit Terms)', value: `${functionalCurrency} ${normalizedCreditBalance.toLocaleString()}`, badge: 'Liability', highlight: !hasSettlement },
-        ...(hasSettlement ? [{ label: 'Settlement Status', value: `Settled in Full (${functionalCurrency} ${normalizedCreditBalance.toLocaleString()})`, badge: 'Discharged' }] : [])
+        ...(isPartiallySettled ? [
+          { label: 'Remaining Trade Payables', value: `${functionalCurrency} ${(remainingPayableAfterCents / 100).toLocaleString()}`, badge: 'Outstanding Liability', highlight: true },
+          { label: 'Settlement Status', value: `Partially Settled (${functionalCurrency} ${(totalSettledCents / 100).toLocaleString()} paid; ${functionalCurrency} ${(remainingPayableAfterCents / 100).toLocaleString()} remaining)`, badge: 'Partial' }
+        ] : []),
+        ...(isFullySettled ? [
+          { label: 'Remaining Trade Payables', value: `${functionalCurrency} 0`, badge: 'Discharged' },
+          { label: 'Settlement Status', value: `Settled in Full (${functionalCurrency} ${(totalSettledCents / 100).toLocaleString()})`, badge: 'Discharged' }
+        ] : [])
       ],
       isComplete: true,
       missingFields: []
@@ -3330,8 +3871,8 @@ export async function parseAccountingQuery(
       };
     }
 
-    const parsedDates = extractAllExplicitDates(query);
-    if (parsedDates.some(d => d.formatted === 'INVALID')) {
+    const { validDates: explicitCommDates, hasInvalid: hasInvalidCommDate } = extractLeaseCommencementDates(query);
+    if (hasInvalidCommDate) {
       return {
         scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
         primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
@@ -3339,14 +3880,30 @@ export async function parseAccountingQuery(
         transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
         missingFields: [{ fieldKey: 'leaseCommencementDate', fieldName: 'Valid lease commencement date',
           prompt: 'The stated lease commencement date is not a valid calendar date. Please provide a valid date (DD/MM/YYYY).',
-          whyNeeded: 'Lease inception and Month 1 payment/depreciation dates require a valid calendar date.' }]
+          whyNeeded: 'Lease commencement and Month 1 payment/depreciation dates require a valid calendar date.' }]
       };
     }
-    const explicitCommDate = parsedDates[0];
+    if (explicitCommDates.length > 1) {
+      return {
+        scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
+        transactionTitle: 'Conflicting lease commencement dates', functionalCurrency,
+        transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
+        missingFields: [{ fieldKey: 'leaseCommencementDate', fieldName: 'Conflicting lease commencement dates',
+          prompt: `Multiple conflicting lease commencement dates were stated (${explicitCommDates.map(d => d.formatted).join(' vs ')}). Please confirm the exact lease commencement date.`,
+          whyNeeded: 'Under SFRS(I) 16 §22, lease recognition occurs on a single commencement date when the underlying asset is made available for use.' }]
+      };
+    }
+    const explicitCommDate = explicitCommDates[0];
     let leaseCommencementDate: string | undefined = explicitCommDate
       ? `${explicitCommDate.year}-${String(explicitCommDate.month).padStart(2, '0')}-${String(explicitCommDate.day).padStart(2, '0')}`
       : undefined;
-    if (!leaseCommencementDate && currentScenario?.scenarioType === 'LEASE_IFRS16' && currentScenario.leaseCommencementDate) {
+    if (
+      !leaseCommencementDate &&
+      currentScenario?.scenarioType === 'LEASE_IFRS16' &&
+      currentScenario.leaseCommencementDate &&
+      !startsNewAccountingScenario(query, currentScenario)
+    ) {
       leaseCommencementDate = currentScenario.leaseCommencementDate;
     }
 

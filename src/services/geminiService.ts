@@ -1111,7 +1111,8 @@ async function processAccountingQueryCore(
     if (groups.length === 0) return response;
     const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(
       activeScenario,
-      response.scenarioState
+      response.scenarioState,
+      userInput
     );
     const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
     const hasImageEvidence =
@@ -1435,7 +1436,7 @@ async function processAccountingQueryCore(
     const groups = deterministicScenario.directGroups?.length
       ? deterministicScenario.directGroups
       : calculatedDeterministicGroups;
-    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario);
+    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario, userInput);
     const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
     const integrity = groups.length > 0
       ? validateJournalGroups(groups, {
@@ -1530,7 +1531,7 @@ async function processAccountingQueryCore(
       /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
     const payrollIntegrity = validateJournalGroups(deterministicScenario.directGroups, {
       rawQuery: userInput,
-      hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario),
+      hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario, userInput),
       hasImageEvidence: hasVerifiedImageMonetaryEvidence(deterministicScenario) || hasVerifiedImageMonetaryEvidence(activeScenario),
       evidenceTexts: relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
     });
@@ -2131,6 +2132,7 @@ export function renderStructuredOfflineResponse(
     const discountParam = parsed.keyParameters?.find(p => p.label.includes('Trade Discount'));
     const gstParam = parsed.keyParameters?.find(p => p.label.includes('Input GST'));
     const gstRateLabel = gstParam?.label.match(/(\d+(?:\.\d+)?%)/)?.[1] ?? '0%';
+    const isNonRecoverableGst = Boolean(gstParam?.label.includes('Non-Recoverable'));
 
     const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
     const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
@@ -2143,32 +2145,47 @@ export function renderStructuredOfflineResponse(
       })
       .join('\n');
 
-    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a))${gstVal > 0 ? ' & Singapore GST Act' : ''}\n\n` +
+    const gstSection = gstVal > 0
+      ? `#### 2. Recoverable Input GST & Invoice Total\n` +
+        `* **Recoverable Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
+        `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+      : isNonRecoverableGst
+        ? `#### 2. Non-Recoverable Input GST & Invoice Total\n` +
+          `* **Non-Recoverable Input GST (${gstRateLabel})**: **${gstParam?.value ?? `${currency} 0.00`}** *(capitalised into asset cost under ${std16Name} §16(a); no GST Input Tax Receivable is recognised)*\n` +
+          `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+        : `#### 2. GST & Invoice Total\n` +
+          `* **Input GST (${gstRateLabel})**: **${currency} 0.00**\n` +
+          `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`;
+
+    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a))${gstVal > 0 || isNonRecoverableGst ? ' & Singapore GST Act' : ''}\n\n` +
       `Here is the journal entry on **${grp.eventDate}** to record the purchase of **${assetName}**:\n\n` +
       `---\n\n` +
       `#### 1. Asset Capitalization & Trade Discount Deduction (${std16Name} §16(a))\n` +
-      `${listPriceParam ? `* **List Price**: **${listPriceParam.value}**\n` : ''}` +
+      `${listPriceParam ? `* **${listPriceParam.label}**: **${listPriceParam.value}**\n` : ''}` +
       `${discountParam ? `* **Less ${discountParam.label}**: **${discountParam.value}**\n` : ''}` +
-      `* **Net Initial Cost Recognized**: **${currency} ${fmt2(costVal)}**\n` +
-      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price and are never recorded as separate ledger lines.)*\n\n` +
+      `* **Initial Capitalized Asset Cost**: **${currency} ${fmt2(costVal)}**\n` +
+      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price and are never recorded as separate ledger lines${isNonRecoverableGst ? '; non-recoverable purchase taxes are included in asset cost' : ''}.)*\n\n` +
       `---\n\n` +
-      `#### 2. Recoverable Input GST & Invoice Total\n` +
-      `* **Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
-      `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n` +
+      gstSection +
       `---\n\n` +
       `#### 3. Settlement Breakdown\n` +
       `* **Immediate Bank Transfer**: **${currency} ${fmt2(bankVal)}**\n` +
-      `* **Remaining Balance on Credit Terms (Trade Payables)**: **${currency} ${fmt2(payableVal)}**\n\n` +
+      `* **Initial Balance on Credit Terms (Trade Payables)**: **${currency} ${fmt2(payableVal)}**\n\n` +
       `---\n\n` +
       `### ${grp.title} (${grp.eventDate})\n\n` +
       `${lineBullets}\n\n` +
       `**Balance Check**: ${currency} ${fmt2(totalDrCents / 100)} == ${currency} ${fmt2(totalCrCents / 100)} ${grpBalanced ? '✓ Balanced' : '✗ Imbalanced'}`;
 
+    let runningRemainingPayableCents = Math.round(payableVal * 100);
     for (let i = 1; i < parsed.directGroups.length; i++) {
       const nextGrp = parsed.directGroups[i];
       const nDrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
       const nCrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
       const nBalanced = nDrCents > 0 && nDrCents === nCrCents;
+      const settledPayableCents = nextGrp.lines
+        .filter(l => l.accountCode === '2010')
+        .reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      runningRemainingPayableCents = Math.max(0, runningRemainingPayableCents - settledPayableCents);
       const nLines = nextGrp.lines
         .map(l => {
           const side = l.debit > 0 ? 'Debit' : 'Credit';
@@ -2176,9 +2193,12 @@ export function renderStructuredOfflineResponse(
           return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
         })
         .join('\n');
+      const settlementFootnote = runningRemainingPayableCents > 0
+        ? `*(Under ${std9} §3.3.1, only the settled portion of ${currency} ${fmt2(settledPayableCents / 100)} is derecognised; remaining Trade Payables balance is **${currency} ${fmt2(runningRemainingPayableCents / 100)}**).*`
+        : `*(Under ${std9} §3.3.1, the financial liability is extinguished upon full settlement).*`;
       replyText += `\n\n---\n\n### Subsequent Event: ${nextGrp.title} (${nextGrp.eventDate})\n\n${nLines}\n\n` +
         `**Balance Check**: ${currency} ${fmt2(nDrCents / 100)} == ${currency} ${fmt2(nCrCents / 100)} ${nBalanced ? '✓ Balanced' : '✗ Imbalanced'}\n\n` +
-        `*(Under ${std9} §3.3.1, the financial liability is extinguished upon settlement).*`;
+        settlementFootnote;
     }
 
     return {

@@ -214,4 +214,61 @@ async function withMockedFetch(handler, fn) {
   assert.equal(updateCommittedJournalScenario(null, missingRent, 'SFRS_I'), null);
 }
 
+// ---------------------------------------------------------------------------
+// 7. Finding 4: Lease commencement date must be explicitly associated with
+//    commencement, never blindly picked as the first date in the query
+// ---------------------------------------------------------------------------
+{
+  // 7a. Signing date precedes commencement date -> must select 1 July 2026, NOT 15 June 2026
+  const qSignedThenCommencing = 'Signed on 15 June 2026, a 3-year office lease commencing 1 July 2026 at SGD 4,000 per month with 6% IBR.';
+  const parsedSigned = await parseAccountingQuery(qSignedThenCommencing, null);
+  assert.equal(parsedSigned.scenarioType, 'LEASE_IFRS16');
+  assert.equal(parsedSigned.isComplete, true);
+  assert.equal(parsedSigned.leaseCommencementDate, '2026-07-01',
+    'Must select explicit commencement date (2026-07-01), not earlier signing date (2026-06-15)');
+  const computedSigned = calculateDoubleEntries(parsedSigned, 'SFRS_I');
+  assert.equal(computedSigned.groups[0].eventDate, '01/07/2026');
+  assert.equal(computedSigned.groups[1].eventDate, '31/07/2026');
+  assert.equal(computedSigned.groups[2].eventDate, '31/07/2026');
+  assert.equal(validateJournalGroups(computedSigned.groups, { rawQuery: qSignedThenCommencing }).isValid, true);
+
+  // 7b. Signing date ONLY (no commencement date) -> leaseCommencementDate stays undefined
+  const qSigningOnly = 'Signed on 15 June 2026, a 3-year office lease at SGD 4,000 per month with 6% IBR.';
+  const parsedSigningOnly = await parseAccountingQuery(qSigningOnly, null);
+  assert.equal(parsedSigningOnly.isComplete, true);
+  assert.equal(parsedSigningOnly.leaseCommencementDate, undefined,
+    'Signing date alone must not be treated as lease commencement date');
+  const computedSigningOnly = calculateDoubleEntries(parsedSigningOnly, 'SFRS_I');
+  assert.equal(computedSigningOnly.groups[0].eventDate, 'Commencement Date');
+  assert.equal(computedSigningOnly.groups[1].eventDate, 'End of Month 1');
+  assert.doesNotMatch(JSON.stringify(computedSigningOnly.groups), /15\/06\/2026/);
+
+  // 7c. Expiry/end date ONLY (no commencement date) -> leaseCommencementDate stays undefined
+  const qExpiryOnly = 'A 3-year office lease ending 31 December 2028 at SGD 4,000 per month with 6% IBR.';
+  const parsedExpiryOnly = await parseAccountingQuery(qExpiryOnly, null);
+  assert.equal(parsedExpiryOnly.isComplete, true);
+  assert.equal(parsedExpiryOnly.leaseCommencementDate, undefined,
+    'Expiry date alone must not be treated as lease commencement date');
+
+  // 7d. Conflicting multiple commencement dates -> fail closed, uncommitted
+  const qConflicting = 'A 3-year office lease commencing 1 July 2026 with commencement date 1 August 2026 at SGD 4,000 per month with 6% IBR.';
+  const parsedConflicting = await parseAccountingQuery(qConflicting, null);
+  assert.equal(parsedConflicting.isComplete, false, 'Conflicting lease commencement dates must fail closed');
+  assert.deepEqual(parsedConflicting.directGroups, []);
+  assert.ok(parsedConflicting.missingFields.some(f => f.fieldKey === 'leaseCommencementDate'));
+  assert.equal(updateCommittedJournalScenario(null, parsedConflicting, 'SFRS_I'), null);
+
+  // 7e. New dateless lease after an earlier committed lease must not inherit prior commencement date
+  const priorLease = await parseAccountingQuery(
+    '3-year office lease commencing 1 July 2026 at SGD 4,000 per month with 6% IBR.',
+    null
+  );
+  const newDatelessLease = await parseAccountingQuery(
+    'Signed a new 2-year warehouse lease at SGD 5,000 per month with 5% IBR.',
+    priorLease
+  );
+  assert.equal(newDatelessLease.leaseCommencementDate, undefined,
+    'New separate lease without commencement date must not inherit prior lease commencement date');
+}
+
 console.log('✓ Step 1 lease dates, 0% IBR zero-line omission, and validation suite passed.');

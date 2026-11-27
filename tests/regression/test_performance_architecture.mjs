@@ -35,7 +35,7 @@ async function runTests() {
     {
       id: 'Q3',
       name: 'Office Equipment Purchase with Trade Discount',
-      query: 'Bought office equipment for SGD 20,000 list price with 10% trade discount, paid 5k cash, balance on 30-day credit with 9% GST',
+      query: 'A GST-registered company bought office equipment for SGD 20,000 list price (exclusive of 9% GST) with 10% trade discount, paid 5k cash, balance on 30-day credit',
       expectedIntent: 'TRANSACTION',
       expectedDomain: 'ACCOUNTING_SFRS'
     },
