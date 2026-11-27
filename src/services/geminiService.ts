@@ -1061,11 +1061,14 @@ async function processAccountingQueryCore(
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&
     isSingleMonthlySalaryAmendment(userInput);
-  const isFactualClarificationReply = Boolean(activeScenario?.missingFields?.length) &&
+  const isFactualClarificationReply = Boolean(
+      activeScenario?.missingFields?.length ||
+      (activeScenario?.authorityStatus === 'CONDITIONAL' && activeScenario?.assumptions?.length)
+    ) &&
     !/[?]/.test(userInput) &&
     !/\b(?:what|when|which|how|why|who|where|explain|describe|outline|actually|instead)\b/i.test(userInput) &&
     (/^\s*(?:(?:sgd|usd|eur|s\$|\$)\s*)?[\d,]+(?:\.\d+)?\s*$/i.test(userInput) ||
-      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
+      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business|input\s+gst|gst))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
   const retainConversationContext = isContextualFollowUp ||
     (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
   const independentStatutoryRequest = deterministicClassification.intent === 'STATUTORY_ADVISORY' &&
@@ -1306,7 +1309,7 @@ async function processAccountingQueryCore(
   const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isContextualFollowUp;
+    !retainConversationContext;
   if (standaloneIrasQuestion) {
     activeScenario = null;
     amendmentResolution = resolveFactAmendment(userInput, null);
@@ -1566,7 +1569,9 @@ async function processAccountingQueryCore(
   // model has already manufactured a tax answer. Local knowledge remains first.
   if (groundedContext.evidenceQuality) {
     const quality = groundedContext.evidenceQuality;
-    const accountingRequested = groundedContext.classification.accountingAnalysisRequired || groundedContext.classification.journalEntryRequired;
+    const accountingRequested = groundedContext.classification.accountingAnalysisRequired ||
+      groundedContext.classification.journalEntryRequired ||
+      isFactualClarificationReply;
     const localCoversQuestion = quality.eligibleRecords.length > 0 && quality.uncoveredTopicIds.length === 0 &&
       quality.eligibleRecords.every(record => record.provenance !== 'LIVE_EXTERNAL');
     if (!accountingRequested && (localCoversQuestion || quality.status === 'INSUFFICIENT')) {
@@ -2133,6 +2138,7 @@ export function renderStructuredOfflineResponse(
     const gstParam = parsed.keyParameters?.find(p => p.label.includes('Input GST'));
     const gstRateLabel = gstParam?.label.match(/(\d+(?:\.\d+)?%)/)?.[1] ?? '0%';
     const isNonRecoverableGst = Boolean(gstParam?.label.includes('Non-Recoverable'));
+    const isConditionalGst = Boolean(parsed.authorityStatus === 'CONDITIONAL' || gstParam?.label.includes('Conditional'));
 
     const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
     const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
@@ -2145,10 +2151,18 @@ export function renderStructuredOfflineResponse(
       })
       .join('\n');
 
+    const conditionalCallout = isConditionalGst && parsed.uncertaintyDisclaimer
+      ? `> ⚠️ **Conditional Journal (Input GST Recoverability Unconfirmed)**: ${parsed.uncertaintyDisclaimer}\n\n`
+      : '';
+
     const gstSection = gstVal > 0
-      ? `#### 2. Recoverable Input GST & Invoice Total\n` +
-        `* **Recoverable Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
-        `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+      ? (isConditionalGst
+          ? `#### 2. Conditional Input GST (Subject to IRAS Recovery Conditions) & Invoice Total\n` +
+            `* **Conditional Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}** *(shown as recoverable on a conditional basis; if non-recoverable, capitalise into asset cost under ${std16Name} §16(a))*\n` +
+            `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+          : `#### 2. Recoverable Input GST & Invoice Total\n` +
+            `* **Recoverable Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
+            `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`)
       : isNonRecoverableGst
         ? `#### 2. Non-Recoverable Input GST & Invoice Total\n` +
           `* **Non-Recoverable Input GST (${gstRateLabel})**: **${gstParam?.value ?? `${currency} 0.00`}** *(capitalised into asset cost under ${std16Name} §16(a); no GST Input Tax Receivable is recognised)*\n` +
@@ -2158,7 +2172,8 @@ export function renderStructuredOfflineResponse(
           `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`;
 
     let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a))${gstVal > 0 || isNonRecoverableGst ? ' & Singapore GST Act' : ''}\n\n` +
-      `Here is the journal entry on **${grp.eventDate}** to record the purchase of **${assetName}**:\n\n` +
+      conditionalCallout +
+      `Here is the ${isConditionalGst ? 'conditional ' : ''}journal entry on **${grp.eventDate}** to record the purchase of **${assetName}**:\n\n` +
       `---\n\n` +
       `#### 1. Asset Capitalization & Trade Discount Deduction (${std16Name} §16(a))\n` +
       `${listPriceParam ? `* **${listPriceParam.label}**: **${listPriceParam.value}**\n` : ''}` +
@@ -2220,6 +2235,7 @@ export function renderStructuredOfflineResponse(
     const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const currency = parsed.functionalCurrency || 'SGD';
     const primaryDate = parsed.directGroups[0]?.eventDate || '';
+    const isConditionalPpe = parsed.authorityStatus === 'CONDITIONAL' && Boolean(parsed.uncertaintyDisclaimer);
     const factRows = (parsed.keyParameters || [])
       .map(param => `* **${param.label}**: **${param.value}**`)
       .join('\n');
@@ -2241,8 +2257,13 @@ export function renderStructuredOfflineResponse(
         `**Balance Check**: ${currency} ${fmt2(drCents / 100)} == ${currency} ${fmt2(crCents / 100)} ${balanced ? '✓ Balanced' : '✗ Imbalanced'}`;
     }).join('\n\n---\n\n');
 
+    const ppeConditionalCallout = isConditionalPpe
+      ? `> ⚠️ **Conditional Journal (Input GST Recoverability Unconfirmed)**: ${parsed.uncertaintyDisclaimer}\n\n`
+      : '';
+
     const replyText = `### Under ${std16Name} (*Property, Plant and Equipment*), Singapore GST Act, & ${std9} (*Financial Instruments*)\n\n` +
-      `Here is the statutory accounting breakdown and double-entry schedule${primaryDate ? ` on **${primaryDate}**` : ''}:\n\n` +
+      ppeConditionalCallout +
+      `Here is the ${isConditionalPpe ? 'conditional ' : ''}statutory accounting breakdown and double-entry schedule${primaryDate ? ` on **${primaryDate}**` : ''}:\n\n` +
       `${factRows ? `#### Key Figures\n${factRows}\n\n---\n\n` : ''}` +
       `${groupSections}`;
 

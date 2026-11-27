@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 import { processAccountingQuery, renderStructuredOfflineResponse } from '../../src/services/geminiService.ts';
 import {
+  getDisplayableUncommittedJournalGroups,
   hasSameTransactionPriorMonetaryEvidence,
   hasVerifiedImageMonetaryEvidence,
   updateCommittedJournalScenario
@@ -11,6 +12,7 @@ import {
   hasVerifiedNumericImageEvidence,
   validateJournalGroups
 } from '../../src/verification/journalIntegrity.ts';
+import { calculateAccountingDelta } from '../../src/services/conversationAccountingState.ts';
 
 console.log('=== RUNNING STEP 1 PPE, TRADE DISCOUNT & INTEGRITY REGRESSION SUITE ===\n');
 
@@ -281,7 +283,7 @@ for (const nonMonetaryQuery of [
 
 // DISC-3-OFFLINE: Explicit SGD 0 cash + Computer Equipment + 9% GST -> balanced 3-line entry omitting Bank line
 {
-  const q = 'On 10 September 2026, a GST-registered company purchases computer equipment with a list price of SGD 12,000 (exclusive of 9% GST). The vendor grants a 20% trade discount on the list price. The company pays SGD 0 immediately and places the remaining balance on credit terms. Prepare the journal entry.';
+  const q = 'On 10 September 2026, a GST-registered company purchases computer equipment with a list price of SGD 12,000 (exclusive of recoverable 9% GST). The vendor grants a 20% trade discount on the list price. The company pays SGD 0 immediately and places the remaining balance on credit terms. Prepare the journal entry.';
   const res = await processAccountingQuery(q, null, 'SFRS_I');
   assert.equal(res.scenarioState.scenarioType, 'ASSET_PURCHASE_DISCOUNT');
   assert.equal(res.scenarioState.isComplete, true);
@@ -305,7 +307,7 @@ for (const nonMonetaryQuery of [
 
 // DISC-4: Conflicting cash 15,000 > invoice 9,810 -> incomplete, uncommitted, no negative payable
 {
-  const q = 'A GST-registered company purchases office equipment with a list price of SGD 10,000 (exclusive of 9% GST), 10% trade discount, paid SGD 15,000 immediately by bank transfer with remaining balance on credit terms.';
+  const q = 'A GST-registered company purchases office equipment with a list price of SGD 10,000 (exclusive of recoverable 9% GST), 10% trade discount, paid SGD 15,000 immediately by bank transfer with remaining balance on credit terms.';
   const parsed = await parseAccountingQuery(q, null);
   assert.equal(parsed.isComplete, false, 'DISC-4 must fail closed when immediateCash > grossInvoice');
   assert.deepEqual(parsed.directGroups, []);
@@ -318,7 +320,7 @@ for (const nonMonetaryQuery of [
 // ---------------------------------------------------------------------------
 // Valid same-transaction follow-up with no dollar digit in Turn 2 (ASSET_PURCHASE_DISCOUNT)
 {
-  const turn1Query = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry on 1 August 2026.';
+  const turn1Query = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry on 1 August 2026.';
   const turn1Res = await processAccountingQuery(turn1Query, null, 'SFRS_I');
   const committed1 = updateCommittedJournalScenario(null, turn1Res.scenarioState, 'SFRS_I', false, {
     rawQuery: turn1Query,
@@ -411,7 +413,7 @@ for (const nonMonetaryQuery of [
 
 // Unrelated / superseded transaction does NOT inherit prior monetary facts, and resetPrevious clears to null
 {
-  const validDiscountQuery = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry.';
+  const validDiscountQuery = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry.';
   const validDiscountScenario = await parseAccountingQuery(validDiscountQuery, null);
   const committedDiscount = updateCommittedJournalScenario(null, validDiscountScenario, 'SFRS_I', false, {
     rawQuery: validDiscountQuery
@@ -448,7 +450,7 @@ for (const nonMonetaryQuery of [
   assert.equal(updateCommittedJournalScenario(committedDiscount, unstatedPpeCandidate, 'SFRS_I', false, {
     rawQuery: 'Trade in old machinery on 15 May 2026',
     evidenceTexts: [
-      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
       'Trade in old machinery on 15 May 2026'
     ]
   }), committedDiscount, 'Invalid unrelated candidate with Turn 1 amount in evidenceTexts must still fail closed and preserve committed journal');
@@ -489,7 +491,7 @@ for (const nonMonetaryQuery of [
   assert.equal(updateCommittedJournalScenario(committedDiscount, unrelatedUniversalCandidate, 'SFRS_I', false, {
     rawQuery: unrelatedUniversalCandidate.rawQuery,
     evidenceTexts: [
-      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST).',
+      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST).',
       unrelatedUniversalCandidate.rawQuery
     ]
   }), committedDiscount, 'Unrelated UNIVERSAL candidate must not overwrite committed discount journal');
@@ -523,7 +525,7 @@ for (const nonMonetaryQuery of [
 // NB-1 & NB-8: PPE follow-up preserves 9% GST when newCost changes; hardened hasMonetaryEvidence edge cases
 {
   const ppeTurn1 = await parseAccountingQuery(
-    'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.',
+    'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.',
     null
   );
   assert.equal(ppeTurn1.isComplete, true);
@@ -541,7 +543,7 @@ for (const nonMonetaryQuery of [
 // Deterministic fast-path rejects structurally invalid / negative-line groups
 {
   const negativeFastPathRes = await processAccountingQuery(
-    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 10,000 (exclusive of 9% GST), 10% trade discount, paid SGD 20,000 immediately by bank transfer with remaining balance on credit terms. Prepare the journal entry.',
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 10,000 (exclusive of recoverable 9% GST), 10% trade discount, paid SGD 20,000 immediately by bank transfer with remaining balance on credit terms. Prepare the journal entry.',
     null,
     'SFRS_I'
   );
@@ -553,7 +555,7 @@ for (const nonMonetaryQuery of [
 // 5. Finding 1: Partial settlement uses actual payment & preserves remaining payable
 // ---------------------------------------------------------------------------
 {
-  const turn1Query = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry on 1 August 2026.';
+  const turn1Query = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry on 1 August 2026.';
   const turn1Res = await processAccountingQuery(turn1Query, null, 'SFRS_I');
   const committed1 = updateCommittedJournalScenario(null, turn1Res.scenarioState, 'SFRS_I', false, {
     rawQuery: turn1Query,
@@ -617,7 +619,7 @@ for (const nonMonetaryQuery of [
 // 6. Finding 2: Matching scenarioType alone must NOT establish same-transaction ownership
 // ---------------------------------------------------------------------------
 {
-  const priorDiscountQuery = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.';
+  const priorDiscountQuery = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.';
   const priorDiscount = updateCommittedJournalScenario(
     null,
     await parseAccountingQuery(priorDiscountQuery, null),
@@ -739,7 +741,7 @@ for (const nonMonetaryQuery of [
   );
 
   // 6c. Same scenarioType (PPE_IAS16 -> PPE_IAS16) unrelated trade-in without amounts -> must NOT inherit
-  const ppeTurn1Query = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const ppeTurn1Query = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
   const ppeTurn1 = updateCommittedJournalScenario(null, await parseAccountingQuery(ppeTurn1Query, null), 'SFRS_I', false, { rawQuery: ppeTurn1Query });
   assert.ok(ppeTurn1);
   const newPpeQuery = 'On 15 May 2026, the company purchased another machine with a trade-in of an old machine.';
@@ -830,7 +832,7 @@ for (const nonMonetaryQuery of [
 {
   // 8a. ASSET_PURCHASE_DISCOUNT: GST-inclusive list price (SGD 21,800 incl. 9% GST, 10% discount, GST-registered, SGD 5,000 cash)
   // 21,800 * 0.90 = 19,620 gross; 19,620 / 1.09 = 18,000 net cost; Input GST = 1,620; Payable = 14,620
-  const qDiscInclusive = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 21,800 (inclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the journal entry.';
+  const qDiscInclusive = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 21,800 (inclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the journal entry.';
   const resDiscInc = await processAccountingQuery(qDiscInclusive, null, 'SFRS_I');
   assert.equal(resDiscInc.scenarioState.isComplete, true, 'GST-inclusive discount purchase must complete');
   const grpInc = resDiscInc.scenarioState.directGroups[0];
@@ -869,7 +871,7 @@ for (const nonMonetaryQuery of [
   assert.ok(parsedMissingRecov.missingFields.some(f => f.fieldKey === 'gstRecoverability'));
 
   // 8e. PPE_IAS16: GST-inclusive new machine price (SGD 109,000 incl. 9% GST) + GST-exclusive trade-in (SGD 20,000 excl. 9% GST) -> exact math
-  const qPpeInclNewExclTradeIn = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 109,000 (inclusive of 9% GST). Trade-in: old machine agreed trade-in value of SGD 20,000 (exclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const qPpeInclNewExclTradeIn = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 109,000 (inclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 20,000 (exclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
   const parsedPpeMixed = await parseAccountingQuery(qPpeInclNewExclTradeIn, null);
   assert.equal(parsedPpeMixed.isComplete, true, 'PPE trade-in with inclusive new cost and exclusive trade-in must complete');
   const dispGrp = parsedPpeMixed.directGroups.find(g => g.id === 'grp-disposal-old');
@@ -901,6 +903,350 @@ for (const nonMonetaryQuery of [
   assert.equal(parsedPpeMissingRecov.isComplete, false, 'PPE with 9% GST and unestablished recoverability must fail closed');
   assert.deepEqual(parsedPpeMissingRecov.directGroups, []);
   assert.ok(parsedPpeMissingRecov.missingFields.some(f => f.fieldKey === 'gstRecoverability'));
+}
+
+// ---------------------------------------------------------------------------
+// 9. Historical settlement preservation on price/discount amendment
+// ---------------------------------------------------------------------------
+{
+  const turn1Query = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms. Prepare the single compound journal entry.';
+  const committed1 = updateCommittedJournalScenario(
+    null,
+    (await processAccountingQuery(turn1Query, null, 'SFRS_I')).scenarioState,
+    'SFRS_I',
+    false,
+    { rawQuery: turn1Query, evidenceTexts: [turn1Query] }
+  );
+  assert.ok(committed1);
+
+  const turn2Query = 'Settle the remaining balance by bank transfer on 15 August 2026';
+  const committed2 = updateCommittedJournalScenario(
+    committed1,
+    (await processAccountingQuery(turn2Query, committed1, 'SFRS_I')).scenarioState,
+    'SFRS_I',
+    false,
+    { rawQuery: turn2Query, evidenceTexts: [turn1Query, turn2Query] }
+  );
+  assert.ok(committed2);
+  assert.equal(committed2.committedDirectGroups?.length, 2);
+  assert.equal(committed2.committedDirectGroups[1].totalDebit, 14620);
+
+  // 9a. Amend list price to SGD 25,000 -> net = 22,500, GST = 2,025, gross = 24,525, payable = 19,525.
+  // Historical cash settlement of 14,620 MUST be preserved (NOT rewritten to 19,525), leaving SGD 4,905.
+  const amendListPriceQuery = 'Actually the list price was SGD 25,000';
+  const amendedPriceRes = await processAccountingQuery(amendListPriceQuery, committed2, 'SFRS_I');
+  assert.equal(amendedPriceRes.scenarioState.isComplete, true);
+  assert.equal(amendedPriceRes.scenarioState.directGroups?.length, 2);
+  assert.equal(amendedPriceRes.scenarioState.directGroups[0].lines.find(l => l.accountCode === '1010')?.credit, 5000);
+  assert.equal(amendedPriceRes.scenarioState.directGroups[0].lines.find(l => l.accountCode === '2010')?.credit, 19525);
+  assert.equal(amendedPriceRes.scenarioState.directGroups[1].eventDate, '15/08/2026');
+  assert.equal(amendedPriceRes.scenarioState.directGroups[1].totalDebit, 14620, 'Historical settlement of 14,620 must NOT be rewritten to 19,525');
+  assert.equal(amendedPriceRes.scenarioState.directGroups[1].totalCredit, 14620);
+  assert.equal(amendedPriceRes.scenarioState.keyParameters?.find(p => p.label === 'Remaining Trade Payables')?.value, 'SGD 4,905');
+  assert.match(amendedPriceRes.scenarioState.keyParameters?.find(p => p.label === 'Settlement Status')?.value || '', /Partially Settled/i);
+
+  // 9b. Amend trade discount to 5% -> net = 19,000, GST = 1,710, gross = 20,710, payable = 15,710.
+  // Historical cash settlement of 14,620 MUST be preserved (NOT rewritten to 15,710), leaving SGD 1,090.
+  const amendDiscountQuery = 'Amend the trade discount to 5%';
+  const amendedDiscRes = await processAccountingQuery(amendDiscountQuery, committed2, 'SFRS_I');
+  assert.equal(amendedDiscRes.scenarioState.isComplete, true);
+  assert.equal(amendedDiscRes.scenarioState.directGroups?.length, 2);
+  assert.equal(amendedDiscRes.scenarioState.directGroups[0].lines.find(l => l.accountCode === '1010')?.credit, 5000);
+  assert.equal(amendedDiscRes.scenarioState.directGroups[0].lines.find(l => l.accountCode === '2010')?.credit, 15710);
+  assert.equal(amendedDiscRes.scenarioState.directGroups[1].totalDebit, 14620, 'Historical settlement of 14,620 must NOT be rewritten to 15,710');
+  assert.equal(amendedDiscRes.scenarioState.keyParameters?.find(p => p.label === 'Remaining Trade Payables')?.value, 'SGD 1,090');
+  assert.match(amendedDiscRes.scenarioState.keyParameters?.find(p => p.label === 'Settlement Status')?.value || '', /Partially Settled/i);
+
+  // 9c. Amend trade discount to 20% -> payable = 12,440 < historical 14,620 -> fail closed & preserve committed2
+  const amendExceedQuery = 'Amend the trade discount to 20%';
+  const amendedExceedParsed = await parseAccountingQuery(amendExceedQuery, committed2);
+  assert.equal(amendedExceedParsed.isComplete, false, 'Revised Trade Payables below historical settlement must fail closed');
+  assert.deepEqual(amendedExceedParsed.directGroups, []);
+  assert.ok(amendedExceedParsed.missingFields.some(f => f.fieldKey === 'paymentConflict'));
+  const preservedCommitted = updateCommittedJournalScenario(committed2, amendedExceedParsed, 'SFRS_I', false, {
+    rawQuery: amendExceedQuery,
+    evidenceTexts: [turn1Query, turn2Query, amendExceedQuery]
+  });
+  assert.equal(preservedCommitted, committed2, 'Failed amendment must leave committed journal payment 14,620 untouched');
+
+  // 9d. Multi-settlement (4,620 + 10,000) followed by list price amendment to 25,000 preserves both settlements
+  const partial1 = updateCommittedJournalScenario(
+    committed1,
+    (await processAccountingQuery('On 15 August 2026, paid SGD 4,620 by bank transfer as a partial settlement.', committed1, 'SFRS_I')).scenarioState,
+    'SFRS_I',
+    false,
+    { rawQuery: 'On 15 August 2026, paid SGD 4,620 by bank transfer as a partial settlement.' }
+  );
+  const partial2 = updateCommittedJournalScenario(
+    partial1,
+    (await processAccountingQuery('On 30 August 2026, paid SGD 10,000 by bank transfer to settle the remaining balance.', partial1, 'SFRS_I')).scenarioState,
+    'SFRS_I',
+    false,
+    { rawQuery: 'On 30 August 2026, paid SGD 10,000 by bank transfer to settle the remaining balance.' }
+  );
+  assert.ok(partial2);
+  const multiAmendRes = await parseAccountingQuery('Revise the list price to SGD 25,000', partial2);
+  assert.equal(multiAmendRes.isComplete, true);
+  assert.equal(multiAmendRes.directGroups?.length, 3);
+  assert.equal(multiAmendRes.directGroups[1].totalDebit, 4620);
+  assert.equal(multiAmendRes.directGroups[2].totalDebit, 10000);
+  assert.equal(multiAmendRes.keyParameters?.find(p => p.label === 'Remaining Trade Payables')?.value, 'SGD 4,905');
+
+  // 9e. PPE follow-up amending newCost preserves historical Cash Paid (30,000)
+  const ppeBaseQuery = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const ppeBase = await parseAccountingQuery(ppeBaseQuery, null);
+  const ppeAmend = await parseAccountingQuery('Actually the new machine purchase price was SGD 120,000', ppeBase);
+  assert.equal(ppeAmend.isComplete, true);
+  assert.equal(ppeAmend.directGroups[2]?.lines.find(l => l.accountCode === '1010')?.credit, 30000, 'PPE amendment must preserve historical Cash Paid of 30,000');
+  assert.equal(ppeAmend.directGroups[2]?.lines.find(l => l.accountCode === '1600')?.debit, 120000);
+}
+
+// ---------------------------------------------------------------------------
+// 10. Finding 2: GST registration alone != input GST recoverability
+// ---------------------------------------------------------------------------
+{
+  // 10a. GST-registered alone (ASSET_PURCHASE_DISCOUNT) -> explicitly CONDITIONAL journal, NOT committed as deterministic
+  const qDiscRegOnly = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.';
+  const resDiscRegOnly = await processAccountingQuery(qDiscRegOnly, null, 'SFRS_I');
+  const parsedDiscRegOnly = resDiscRegOnly.scenarioState;
+  assert.equal(parsedDiscRegOnly.authorityStatus, 'CONDITIONAL', 'GST-registered alone must be CONDITIONAL, never DETERMINISTIC');
+  assert.ok(parsedDiscRegOnly.directGroups.every(g => g.authorityStatus === 'CONDITIONAL'));
+  assert.ok(parsedDiscRegOnly.assumptions?.some(a => a.field === 'Input GST Recoverability'));
+  assert.match(parsedDiscRegOnly.uncertaintyDisclaimer || '', /GST registration alone does not establish input GST recoverability/i);
+  assert.match(resDiscRegOnly.messageText, /Conditional Journal/i);
+  assert.equal(updateCommittedJournalScenario(null, parsedDiscRegOnly, 'SFRS_I', false, { rawQuery: qDiscRegOnly }), null,
+    'CONDITIONAL GST-registered-only journal must NOT be committed');
+  assert.equal(getDisplayableUncommittedJournalGroups(parsedDiscRegOnly, 'SFRS_I', { rawQuery: qDiscRegOnly }).length, 1,
+    'CONDITIONAL GST-registered-only journal must remain displayable as uncommitted conditional');
+
+  // Follow-up confirming "The input GST is recoverable." upgrades to DETERMINISTIC and commits
+  const discConfirmedRecov = await processAccountingQuery('The input GST is recoverable.', parsedDiscRegOnly, 'SFRS_I');
+  assert.equal(discConfirmedRecov.scenarioState.authorityStatus, 'DETERMINISTIC');
+  assert.equal(discConfirmedRecov.scenarioState.directGroups[0].lines.find(l => l.accountCode === '1190')?.debit, 1620);
+  assert.ok(updateCommittedJournalScenario(null, discConfirmedRecov.scenarioState, 'SFRS_I', false, {
+    rawQuery: 'The input GST is recoverable.',
+    evidenceTexts: [qDiscRegOnly, 'The input GST is recoverable.']
+  }));
+
+  // Follow-up stating "The input GST is non-recoverable." upgrades to DETERMINISTIC, capitalises GST into 1500, and omits 1190
+  const discConfirmedNonRecov = await processAccountingQuery('The input GST is non-recoverable.', parsedDiscRegOnly, 'SFRS_I');
+  assert.equal(discConfirmedNonRecov.scenarioState.authorityStatus, 'DETERMINISTIC');
+  assert.equal(discConfirmedNonRecov.scenarioState.directGroups[0].lines.find(l => l.accountCode === '1500')?.debit, 19620);
+  assert.equal(discConfirmedNonRecov.scenarioState.directGroups[0].lines.some(l => l.accountCode === '1190'), false);
+
+  // 10b. GST-registered alone (PPE_IAS16) -> explicitly CONDITIONAL journal, NOT committed as deterministic
+  const qPpeRegOnly = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const resPpeRegOnly = await processAccountingQuery(qPpeRegOnly, null, 'SFRS_I');
+  const parsedPpeRegOnly = resPpeRegOnly.scenarioState;
+  assert.equal(parsedPpeRegOnly.authorityStatus, 'CONDITIONAL', 'PPE GST-registered alone must be CONDITIONAL, never DETERMINISTIC');
+  assert.ok(parsedPpeRegOnly.directGroups.every(g => g.authorityStatus === 'CONDITIONAL'));
+  assert.ok(parsedPpeRegOnly.assumptions?.some(a => a.field === 'Input GST Recoverability'));
+  assert.match(parsedPpeRegOnly.uncertaintyDisclaimer || '', /GST registration alone does not establish input GST recoverability/i);
+  assert.match(resPpeRegOnly.messageText, /Conditional Journal/i);
+  assert.equal(updateCommittedJournalScenario(null, parsedPpeRegOnly, 'SFRS_I', false, { rawQuery: qPpeRegOnly }), null,
+    'CONDITIONAL PPE GST-registered-only journal must NOT be committed');
+
+  // 10c. Unstated registration & unstated recoverability ("A company...") -> requests clarification (isComplete: false), and clarification reply completes as DETERMINISTIC
+  const qDiscUnstated = 'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST) and 10% trade discount, paid SGD 5,000 immediately and remaining balance on credit terms.';
+  const parsedDiscUnstated = await parseAccountingQuery(qDiscUnstated, null);
+  assert.equal(parsedDiscUnstated.isComplete, false);
+  assert.ok(parsedDiscUnstated.missingFields.some(f => f.fieldKey === 'gstRecoverability'));
+  const discUnstatedClarified = await processAccountingQuery('The input GST is recoverable.', parsedDiscUnstated, 'SFRS_I');
+  assert.equal(discUnstatedClarified.scenarioState.isComplete, true);
+  assert.equal(discUnstatedClarified.scenarioState.authorityStatus, 'DETERMINISTIC');
+}
+
+// ---------------------------------------------------------------------------
+// 11. Finding 3: Zero-payment detection (SGD 0, SGD 0.00, SGD 0.01, SGD 0.50)
+// ---------------------------------------------------------------------------
+{
+  // 11a. ASSET_PURCHASE_DISCOUNT immediate payment (inline & standalone clarification reply)
+  const pendingImmediateCash = await parseAccountingQuery(
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price and places the remaining balance on credit terms.',
+    null
+  );
+  assert.equal(pendingImmediateCash.isComplete, false);
+  assert.ok(pendingImmediateCash.missingFields.some(f => f.fieldKey === 'immediateCash'));
+
+  for (const [cashText, expectedBankCredit, expectedPayable] of [
+    ['SGD 0', undefined, 19620],
+    ['SGD 0.00', undefined, 19620],
+    ['SGD 0.01', 0.01, 19619.99],
+    ['SGD 0.50', 0.5, 19619.5]
+  ]) {
+    const q = `On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays ${cashText} immediately by bank transfer and the remaining balance is placed on credit terms.`;
+    const parsed = await parseAccountingQuery(q, null);
+    assert.equal(parsed.isComplete, true, `Immediate payment ${cashText} must complete`);
+    const grp = parsed.directGroups[0];
+    assert.equal(grp.isBalanced, true);
+    const bankLine = grp.lines.find(l => l.accountCode === '1010');
+    const payableLine = grp.lines.find(l => l.accountCode === '2010');
+    assert.equal(bankLine?.credit, expectedBankCredit, `Immediate ${cashText} bank credit mismatch`);
+    assert.equal(payableLine?.credit, expectedPayable, `Immediate ${cashText} payable credit mismatch`);
+    assert.equal(validateJournalGroups(parsed.directGroups, { rawQuery: q }).isValid, true);
+
+    const clarified = await parseAccountingQuery(cashText, pendingImmediateCash);
+    assert.equal(clarified.isComplete, true, `Standalone clarification ${cashText} must complete`);
+    assert.equal(clarified.directGroups[0].lines.find(l => l.accountCode === '1010')?.credit, expectedBankCredit);
+    assert.equal(clarified.directGroups[0].lines.find(l => l.accountCode === '2010')?.credit, expectedPayable);
+  }
+
+  // 11b. ASSET_PURCHASE_DISCOUNT subsequent settlement
+  const baseDiscQuery = 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.';
+  const baseDisc = await parseAccountingQuery(baseDiscQuery, null);
+  for (const [settleText, expectedGroups, expectedSettleAmt, expectedRemaining] of [
+    ['SGD 0', 1, undefined, undefined],
+    ['SGD 0.00', 1, undefined, undefined],
+    ['SGD 0.01', 2, 0.01, 'SGD 14,619.99'],
+    ['SGD 0.50', 2, 0.5, 'SGD 14,619.50']
+  ]) {
+    const followUp = await parseAccountingQuery(`On 15 August 2026, paid ${settleText} by bank transfer to settle the balance.`, baseDisc);
+    assert.equal(followUp.isComplete, true);
+    assert.equal(followUp.directGroups?.length, expectedGroups, `Subsequent settlement ${settleText} group count mismatch`);
+    if (expectedSettleAmt !== undefined) {
+      assert.equal(followUp.directGroups[1].totalDebit, expectedSettleAmt);
+      assert.equal(followUp.directGroups[1].totalCredit, expectedSettleAmt);
+      assert.equal(followUp.keyParameters?.find(p => p.label === 'Remaining Trade Payables')?.value, expectedRemaining);
+    } else {
+      assert.equal(followUp.keyParameters?.find(p => p.label === 'Trade Payables (Credit Terms)')?.value, 'SGD 14,620');
+    }
+  }
+
+  // 11c. PPE_IAS16 upfront cash paid
+  for (const [cashText, expectedBankCredit, expectedLoanPrincipal] of [
+    ['SGD 0', undefined, 87200],
+    ['SGD 0.00', undefined, 87200],
+    ['SGD 0.01', 0.01, 87199.99],
+    ['SGD 0.50', 0.5, 87199.5]
+  ]) {
+    const q = `A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: ${cashText} paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.`;
+    const parsed = await parseAccountingQuery(q, null);
+    assert.equal(parsed.isComplete, true, `PPE cash paid ${cashText} must complete`);
+    const acqGrp = parsed.directGroups.find(g => g.id === 'grp-acq-new');
+    assert.equal(acqGrp?.isBalanced, true);
+    assert.equal(acqGrp?.lines.find(l => l.accountCode === '1010')?.credit, expectedBankCredit, `PPE ${cashText} bank line mismatch`);
+    const expectedInterest = Math.round(expectedLoanPrincipal * 0.05 * 2 * 100) / 100;
+    const expectedGrossLoan = Math.round((expectedLoanPrincipal + expectedInterest) * 100) / 100;
+    assert.equal(acqGrp?.lines.find(l => l.accountCode === '2520')?.debit, expectedInterest);
+    assert.equal(acqGrp?.lines.find(l => l.accountCode === '2510')?.credit, expectedGrossLoan);
+  }
+
+  // 11d. Generic calculateAccountingDelta / UNIVERSAL settlement follow-up
+  const univCtx = {
+    underlyingTransaction: {
+      id: 'tx-univ-zero',
+      type: 'share_capital_issuance',
+      subject: 'ordinary share capital',
+      ownershipContext: 'own_equity',
+      currency: 'SGD',
+      totalAmount: 100
+    },
+    outstandingBalances: [
+      {
+        transactionId: 'tx-univ-zero',
+        accountCode: '1150',
+        accountName: 'Amount Due from Shareholder',
+        category: 'ASSET',
+        nature: 'RECEIVABLE',
+        counterpartyRole: 'shareholder',
+        originalAmount: 100,
+        settledAmount: 0,
+        remainingAmount: 100,
+        currency: 'SGD'
+      }
+    ],
+    recognizedEquityTotal: 100,
+    events: []
+  };
+  for (const zeroAmt of [0, 0.0]) {
+    const deltaZero = calculateAccountingDelta(
+      univCtx,
+      {
+        eventType: 'partial_settlement',
+        isFollowUp: true,
+        targetTransactionId: 'tx-univ-zero',
+        targetOutstandingAccount: 'Amount Due from Shareholder',
+        settlementAmount: zeroAmt,
+        isHypothetical: false,
+        explanation: 'Zero settlement'
+      },
+      'SGD'
+    );
+    assert.equal(deltaZero, null, `calculateAccountingDelta must return null for settlementAmount=${zeroAmt}`);
+  }
+  for (const posAmt of [0.01, 0.5]) {
+    const deltaPos = calculateAccountingDelta(
+      univCtx,
+      {
+        eventType: 'partial_settlement',
+        isFollowUp: true,
+        targetTransactionId: 'tx-univ-zero',
+        targetOutstandingAccount: 'Amount Due from Shareholder',
+        settlementAmount: posAmt,
+        isHypothetical: false,
+        explanation: 'Small positive settlement'
+      },
+      'SGD'
+    );
+    assert.ok(deltaPos, `calculateAccountingDelta must accept settlementAmount=${posAmt}`);
+    assert.equal(deltaPos.amount, posAmt);
+    assert.equal(deltaPos.journalLines.reduce((s, l) => s + l.debit, 0), posAmt);
+    assert.equal(deltaPos.journalLines.reduce((s, l) => s + l.credit, 0), posAmt);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 12. Finding 4: "non-recoverable input GST" wording detection & true conflicts
+// ---------------------------------------------------------------------------
+{
+  const nonRecovPrompts = [
+    'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of non-recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST) with non-recoverable input GST. The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+    'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The 9% input GST is not recoverable. The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+    'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The input GST is non-recoverable. The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+    'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST) with non-claimable input GST. The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.'
+  ];
+  for (const q of nonRecovPrompts) {
+    const parsed = await parseAccountingQuery(q, null);
+    assert.equal(parsed.isComplete, true, `Non-recoverable wording must complete without false conflict: ${q}`);
+    const grp = parsed.directGroups[0];
+    assert.equal(grp.lines.find(l => l.accountCode === '1500')?.debit, 19620, 'Non-recoverable 9% GST must be capitalised');
+    assert.equal(grp.lines.some(l => l.accountCode === '1190'), false, 'Must omit 1190 Input GST Receivable');
+    assert.equal(grp.isBalanced, true);
+  }
+
+  // PPE_IAS16 with non-recoverable input GST (both generic company without trade-in GST and GST-registered company with trade-in GST)
+  const ppeNonRecovGeneric = 'A company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST) with non-recoverable input GST. Trade-in: old machine agreed trade-in value of SGD 20,000. Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const parsedPpeNonRecovGeneric = await parseAccountingQuery(ppeNonRecovGeneric, null);
+  assert.equal(parsedPpeNonRecovGeneric.isComplete, true, 'PPE non-recoverable input GST must complete without inventing Output GST');
+  assert.equal(parsedPpeNonRecovGeneric.directGroups.find(g => g.id === 'grp-acq-new')?.lines.find(l => l.accountCode === '1600')?.debit, 109000);
+  assert.equal(parsedPpeNonRecovGeneric.directGroups.find(g => g.id === 'grp-acq-new')?.lines.some(l => l.accountCode === '1190'), false);
+  assert.equal(parsedPpeNonRecovGeneric.directGroups.find(g => g.id === 'grp-disposal-old')?.lines.some(l => l.accountCode === '2200'), false);
+
+  const ppeNonRecovRegistered = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST) with non-recoverable input GST. Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const parsedPpeNonRecovReg = await parseAccountingQuery(ppeNonRecovRegistered, null);
+  assert.equal(parsedPpeNonRecovReg.isComplete, true, 'GST-registered PPE with non-recoverable input GST must complete and still apply Output GST on trade-in');
+  assert.equal(parsedPpeNonRecovReg.directGroups.find(g => g.id === 'grp-acq-new')?.lines.find(l => l.accountCode === '1600')?.debit, 109000);
+  assert.equal(parsedPpeNonRecovReg.directGroups.find(g => g.id === 'grp-acq-new')?.lines.some(l => l.accountCode === '1190'), false);
+  assert.equal(parsedPpeNonRecovReg.directGroups.find(g => g.id === 'grp-disposal-old')?.lines.find(l => l.accountCode === '2200')?.credit, 1800);
+
+  // Follow-up amendment on GST-registered non-recoverable PPE preserves Output GST (1,800), Cash Paid (30,000), and non-recoverable capitalization (130,800)
+  const ppeNonRecovAmended = await parseAccountingQuery('Actually the new machine purchase price was SGD 120,000', parsedPpeNonRecovReg);
+  assert.equal(ppeNonRecovAmended.isComplete, true);
+  assert.equal(ppeNonRecovAmended.directGroups.find(g => g.id === 'grp-acq-new')?.lines.find(l => l.accountCode === '1600')?.debit, 130800);
+  assert.equal(ppeNonRecovAmended.directGroups.find(g => g.id === 'grp-acq-new')?.lines.find(l => l.accountCode === '1010')?.credit, 30000);
+  assert.equal(ppeNonRecovAmended.directGroups.find(g => g.id === 'grp-disposal-old')?.lines.find(l => l.accountCode === '2200')?.credit, 1800);
+
+  // True conflicts must still fail closed with gstRecoverability
+  for (const conflictQuery of [
+    'On 1 August 2026, a company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST) with recoverable input GST and non-recoverable input GST, paid SGD 5,000 immediately and remaining balance on credit terms.',
+    'On 1 August 2026, a non-GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST) with recoverable input GST, paid SGD 5,000 immediately and remaining balance on credit terms.'
+  ]) {
+    const parsedConflict = await parseAccountingQuery(conflictQuery, null);
+    assert.equal(parsedConflict.isComplete, false, `True GST recoverability conflict must fail closed: ${conflictQuery}`);
+    assert.deepEqual(parsedConflict.directGroups, []);
+    assert.ok(parsedConflict.missingFields.some(f => f.fieldKey === 'gstRecoverability'));
+  }
 }
 
 console.log('✅ PASS | Step 1 PPE, Trade Discount, and Journal Integrity regression suite passed.');
