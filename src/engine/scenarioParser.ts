@@ -2084,6 +2084,64 @@ export async function parseAccountingQuery(
     return undefined;
   };
 
+  const partitionPaymentClauses = (rawText: string): { upfrontText: string; settlementText: string } => {
+    const settlementCueRegex =
+      /\b(?:settle|settled|settlement|settling|subsequent(?:ly)?|later|thereafter|(?:pay(?:s|ing)?|paid)\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable|vendor|supplier|loan)|partial(?:ly)?\s+(?:settle|settled|settlement|payment|paid)|part[-\s]?payment|towards\s+(?:the\s+)?(?:remaining|outstanding|balance|payable|invoice|loan))\b/i;
+    const upfrontOrPurchaseCueRegex =
+      /\b(?:immediate(?:ly)?|upfront|down\s*payment|initially|at\s+purchase|upon\s+purchase|on\s+acquisition|cash\s*paid|initial\s+(?:cash|bank)?\s*payment|purchas\w*|bought|acquir\w*|list\s*price|catalogue\s*price|trade\s*discount|trade[-\s]?in)\b/i;
+
+    const sentences = rawText
+      .split(/(?:(?<!\d)\.(?=\s|$)|[;\n])+/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const clauses: string[] = [];
+    for (const sentence of sentences) {
+      if (settlementCueRegex.test(sentence) && upfrontOrPurchaseCueRegex.test(sentence)) {
+        const rawParts = sentence
+          .split(/(?<!\d),(?!\d)|\b(?:and|but|while|whereas|then)\b/i)
+          .map(p => p.trim())
+          .filter(Boolean);
+        let pendingDatePrefix = '';
+        for (const part of rawParts) {
+          if (
+            /^(?:on|as\s+of|dated)\s+[^0-9]*\d[^a-z]*(?:[a-z]+\s+\d{4}|\d{1,4})?$/i.test(part) &&
+            !settlementCueRegex.test(part) &&
+            !upfrontOrPurchaseCueRegex.test(part) &&
+            !/(?:sgd|s\$|\$)/i.test(part)
+          ) {
+            pendingDatePrefix = pendingDatePrefix ? `${pendingDatePrefix}, ${part}` : part;
+            continue;
+          }
+          clauses.push(pendingDatePrefix ? `${pendingDatePrefix}, ${part}` : part);
+          pendingDatePrefix = '';
+        }
+        if (pendingDatePrefix) clauses.push(pendingDatePrefix);
+      } else {
+        clauses.push(sentence);
+      }
+    }
+
+    const upfrontClauses: string[] = [];
+    const settlementClauses: string[] = [];
+    for (const clause of clauses) {
+      const hasSettlement = settlementCueRegex.test(clause);
+      const hasExplicitUpfrontOnly =
+        /\b(?:immediate(?:ly)?|upfront|down\s*payment|initially|at\s+purchase|upon\s+purchase|on\s+acquisition|cash\s*paid)\b/i.test(clause) &&
+        !/\b(?:settle|settled|settlement|settling|subsequent(?:ly)?|later|thereafter)\b/i.test(clause);
+      if (hasSettlement && !hasExplicitUpfrontOnly) {
+        settlementClauses.push(clause);
+      } else {
+        upfrontClauses.push(clause);
+      }
+    }
+
+    return {
+      upfrontText: upfrontClauses.join(' ; '),
+      settlementText: settlementClauses.join(' ; ')
+    };
+  };
+
   const resolveInputGstRecoverability = (
     text: string
   ): {
@@ -2570,18 +2628,19 @@ export async function parseAccountingQuery(
       });
     }
 
-    // 4. Cash paid
+    // 4. Cash paid (scoped to upfront/acquisition clauses so subsequent loan/settlement clauses never collide)
+    const { upfrontText: ppeUpfrontScope } = partitionPaymentClauses(query);
     let cashPaid: number | undefined;
     if (canInheritPpe) {
       cashPaid = extractParamNumber(currentScenario, 'Cash Paid');
     }
-    const explicitZeroCash = new RegExp(
-      `\\b(?:no\\s+cash\\s+(?:paid|payment)|(?:pays?|paid)\\s+(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|cash\\s*(?:paid\\s*(?:via\\s+bank(?:\\s+transfer)?\\s*)?)?(?:is|was|=|:)?\\s*(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|fully\\s+financed|100%\\s+(?:on\\s+)?(?:loan|credit|financed))\\b`,
+    const explicitZeroCash = Boolean(ppeUpfrontScope) && new RegExp(
+      `(?:\\b(?:no\\s+cash\\s+(?:paid|payment)|(?:pays?|paid)\\s+(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|cash\\s*(?:paid\\s*(?:via\\s+bank(?:\\s+transfer)?\\s*)?)?(?:is|was|=|:)?\\s*(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|fully\\s+financed|100%\\s+(?:on\\s+)?(?:loan|credit|financed))\\b|(?:(?:\\bsgd\\b|s\\$|\\$)\\s*|\\b)${ZERO_AMOUNT_TOKEN}\\s+(?:paid\\s+)?(?:immediately|upfront|down\\s*payment|in\\s+cash)\\b)`,
       'i'
-    ).test(query);
+    ).test(ppeUpfrontScope);
     const cashMatch =
-      query.match(/(?:cash\s*paid(?:\s+via\s+bank(?:\s+transfer)?)?|(?:pays?|paid)(?:\s+(?:immediately|upfront))?(?:\s+(?:in\s+cash|via\s+bank(?:\s+transfer)?|by\s+bank(?:\s+transfer)?))?|bank\s+transfer\s+of|down\s*payment\s+of)\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?!\s+for\s+(?:a\s+|an\s+|the\s+)?(?:new|old)\b)/i) ||
-      query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:cash\s*(?:paid|via\s+bank)?|paid\s+(?:immediately\s+)?(?:via\s+bank|by\s+bank(?:\s+transfer)?|in\s+cash))/i);
+      ppeUpfrontScope.match(/(?:cash\s*paid(?:\s+via\s+bank(?:\s+transfer)?)?|(?:pays?|paid)(?:\s+(?:immediately|upfront))?(?:\s+(?:in\s+cash|via\s+bank(?:\s+transfer)?|by\s+bank(?:\s+transfer)?))?|bank\s+transfer\s+of|down\s*payment\s+of)\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?!\s+for\s+(?:a\s+|an\s+|the\s+)?(?:new|old)\b)/i) ||
+      ppeUpfrontScope.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:cash\s*(?:paid|via\s+bank)?|(?:paid\s+)?(?:immediately|upfront|down\s*payment)|paid\s+(?:immediately\s+)?(?:via\s+bank|by\s+bank(?:\s+transfer)?|in\s+cash))/i);
     if (explicitZeroCash) {
       cashPaid = 0;
     } else if (cashMatch?.[1]) {
@@ -3268,17 +3327,21 @@ export async function parseAccountingQuery(
       }
     }
 
+    const { upfrontText: rawUpfrontScope, settlementText: rawSettlementScope } = partitionPaymentClauses(query);
+    const mentionsImmediatePayment = /\b(?:immediate(?:ly)?|upfront|down\s*payment|initially|at\s+purchase|upon\s+purchase|on\s+acquisition)\b/i.test(rawUpfrontScope);
+    const mentionsExplicitSettlement =
+      Boolean(rawSettlementScope) &&
+      /\b(?:settle|settled|settlement|settling|subsequent(?:ly)?\s+(?:settl\w*|payment|paid|pays?)|later\s+(?:settl\w*|paid|pays?)|(?:pay(?:s|ing)?|paid)\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable|vendor|supplier)|partial(?:ly)?\s+(?:settle|settled|settlement|payment|paid)|part[-\s]?payment|towards\s+(?:the\s+)?(?:remaining|outstanding|balance|payable|invoice))\b/i.test(rawSettlementScope);
+
     const semanticDiscountFollowUp = canInheritDiscount
       ? defaultTransactionUnderstandingService.understandTransactionSync(
-          query,
+          rawSettlementScope || query,
           functionalCurrency,
           'SG',
           extractAccountingContext(currentScenario)
         )
       : undefined;
 
-    const mentionsImmediatePayment = /\b(?:immediate(?:ly)?|upfront|down\s*payment|initially|at\s+purchase)\b/i.test(query);
-    const mentionsExplicitSettlement = /\b(?:settle|settled|settlement|settling|pay(?:s|ing)?\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable|vendor|supplier)|paid\s+(?:off\s+)?(?:the\s+)?(?:remaining|outstanding|balance|payable)|partial(?:ly)?\s+(?:settle|settled|settlement|payment|paid)|part[-\s]?payment)\b/i.test(query);
     const isSettlement =
       mentionsExplicitSettlement ||
       Boolean(
@@ -3289,7 +3352,14 @@ export async function parseAccountingQuery(
          semanticDiscountFollowUp.followUpAnalysis.eventType === 'partial_settlement')
       );
 
-    // 5. Immediate cash paid
+    const upfrontPaymentScope = canInheritDiscount && isSettlement && !mentionsImmediatePayment
+      ? ''
+      : rawUpfrontScope;
+    const settlementPaymentScope = isSettlement
+      ? (rawSettlementScope || (canInheritDiscount && !mentionsImmediatePayment ? query : ''))
+      : '';
+
+    // 5. Immediate cash paid (evaluated strictly on upfrontPaymentScope)
     const sourcePriorGroups = canInheritDiscount
       ? (currentScenario?.committedDirectGroups?.length
           ? currentScenario.committedDirectGroups
@@ -3301,23 +3371,24 @@ export async function parseAccountingQuery(
         extractParamNumber(currentScenario, 'Immediate Bank Payment') ??
         sourcePriorGroups[0]?.lines.find(l => l.accountCode === '1010')?.credit;
     }
-    const explicitZeroImmediateCash = new RegExp(
-      `\\b(?:no\\s+cash\\s+(?:paid|payment)|no\\s+upfront\\s+payment|(?:pays?|paid)\\s+(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\s+immediately|(?:immediate(?:ly)?|upfront|cash\\s*paid|bank\\s*payment|down\\s*payment)\\s*(?:is|was|of|to|=|:)?\\s*(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|entirely\\s+on\\s+credit|100%\\s+on\\s+credit|full\\s+amount\\s+on\\s+credit)\\b`,
+    const explicitZeroImmediateCash = Boolean(upfrontPaymentScope) && new RegExp(
+      `(?:\\b(?:no\\s+cash\\s+(?:paid|payment)|no\\s+upfront\\s+payment|(?:pays?|paid)\\s+(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|(?:immediate(?:ly)?(?:\\s+(?:cash|bank)?\\s*payment)?|upfront(?:\\s+(?:cash|bank)?\\s*payment)?|cash\\s*paid|bank\\s*payment|down\\s*payment)\\s*(?:is|was|of|to|=|:)?\\s*(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|entirely\\s+on\\s+credit|100%\\s+on\\s+credit|full\\s+amount\\s+on\\s+credit)\\b|(?:(?:\\bsgd\\b|s\\$|\\$)\\s*|\\b)${ZERO_AMOUNT_TOKEN}\\s+(?:paid\\s+)?(?:immediately|upfront|down\\s*payment|in\\s+cash|initially|at\\s+purchase)\\b)`,
       'i'
-    ).test(query);
-    const immediateCashMatch = !(canInheritDiscount && isSettlement)
-      ? (query.match(/(?:pays?|paid)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?:\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank))?/i) ||
-         query.match(/(?:pays?|paid)\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank)\b/i) ||
-         query.match(/(?:immediate(?:ly)?|upfront|cash\s*paid|bank\s*payment|down\s*payment)\s*(?:is|was|of|to|=|:)?\s*(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i))
+    ).test(upfrontPaymentScope);
+    const immediateCashMatch = upfrontPaymentScope
+      ? (upfrontPaymentScope.match(/(?:pays?|paid)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?:\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank))?/i) ||
+         upfrontPaymentScope.match(/(?:pays?|paid)\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank)\b/i) ||
+         upfrontPaymentScope.match(/(?:immediate(?:ly)?(?:\s+(?:cash|bank)?\s*payment)?|upfront(?:\s+(?:cash|bank)?\s*payment)?|cash\s*paid|bank\s*payment|down\s*payment)\s*(?:is|was|of|to|=|:)?\s*(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+         upfrontPaymentScope.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:paid\s+)?(?:immediately|upfront|down\s*payment|at\s+purchase|initially)\b/i))
       : null;
-    if (explicitZeroImmediateCash && !(canInheritDiscount && isSettlement)) {
+    if (explicitZeroImmediateCash) {
       immediateCash = 0;
     } else if (immediateCashMatch?.[1]) {
       const parsedVal = parseAmountToken(immediateCashMatch[1], immediateCashMatch[2]);
       if (Number.isFinite(parsedVal) && parsedVal >= 0) immediateCash = parsedVal;
     } else if (immediateCash === undefined) {
-      const mentionsRemainingOrPartial = /\b(?:remaining\s+balance|partial(?:ly)?\s+paid|balance\s+(?:is\s+)?(?:placed\s+)?on\s+credit)\b/i.test(query);
-      const isPureCreditTerms = /\bcredit\s+terms\b/i.test(query) && !mentionsRemainingOrPartial;
+      const mentionsRemainingOrPartial = /\b(?:remaining\s+balance|partial(?:ly)?\s+paid|balance\s+(?:is\s+)?(?:placed\s+)?on\s+credit)\b/i.test(upfrontPaymentScope);
+      const isPureCreditTerms = /\bcredit\s+terms\b/i.test(upfrontPaymentScope) && !mentionsRemainingOrPartial;
       if (isPureCreditTerms) {
         immediateCash = 0;
       } else {
@@ -3342,14 +3413,22 @@ export async function parseAccountingQuery(
     }
 
     const validDates = allDates.filter(d => d.formatted !== 'INVALID').map(d => d.formatted);
+    const upfrontValidDates = upfrontPaymentScope
+      ? extractAllExplicitDates(upfrontPaymentScope).filter(d => d.formatted !== 'INVALID').map(d => d.formatted)
+      : [];
+    const settlementValidDates = settlementPaymentScope
+      ? extractAllExplicitDates(settlementPaymentScope).filter(d => d.formatted !== 'INVALID').map(d => d.formatted)
+      : [];
     const firstValidDate = validDates[0];
 
     let transDate = canInheritDiscount && currentScenario?.directGroups?.[0]?.eventDate
       ? currentScenario.directGroups[0].eventDate
       : 'Transaction Date';
-    if (!isSettlement && firstValidDate) {
+    if (upfrontValidDates[0]) {
+      transDate = formatSingaporeDate(upfrontValidDates[0]);
+    } else if (!isSettlement && firstValidDate) {
       transDate = formatSingaporeDate(firstValidDate);
-    } else if (isSettlement && !canInheritDiscount && firstValidDate) {
+    } else if (isSettlement && !canInheritDiscount && firstValidDate && !settlementValidDates.includes(firstValidDate)) {
       transDate = formatSingaporeDate(firstValidDate);
     }
 
@@ -3621,10 +3700,19 @@ export async function parseAccountingQuery(
       // Preserve any previously committed settlement entries with exact historical cash/payable amounts
       appendPreservedSettlementGroups();
 
-      const explicitZeroSettlement = new RegExp(
-        `\\b(?:paid|pays?|settl(?:e|ed|ement|ing)|remit(?:ted)?|transfer(?:red)?)\\s+(?:of\\s+)?(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b`,
+      const explicitZeroSettlement = Boolean(settlementPaymentScope) && new RegExp(
+        `(?:\\b(?:paid|pays?|settl(?:e|ed|ement|ing)|remit(?:ted)?|transfer(?:red)?|subsequent(?:ly)?\\s+(?:settl\\w*|paid|pays?|payment(?:\\s+of)?))\\s*(?:of|is|was|=|:)?\\s*(?:(?:sgd|s\\$|\\$)\\s*)?${ZERO_AMOUNT_TOKEN}\\b|(?:(?:\\bsgd\\b|s\\$|\\$)\\s*|\\b)${ZERO_AMOUNT_TOKEN}\\s*(?:paid\\s+)?(?:(?:as|for|in)\\s+(?:a\\s+)?)?(?:subsequent\\s+)?(?:partial\\s+)?(?:settlement|payment)\\b)`,
         'i'
-      ).test(query);
+      ).test(settlementPaymentScope);
+      const extractScopedSettlementAmount = (scopeText: string): number | undefined => {
+        if (!scopeText) return undefined;
+        const m =
+          scopeText.match(/(?:paid|pays?|pay|subsequent(?:ly)?(?:\s+settl\w*)?|later|partial(?:ly)?\s+settl\w*|settl\w*|remit(?:ted)?|transfer(?:red)?)\s*(?:of|is|was|=|:)?[^\n;]*?(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+          scopeText.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:paid\s+)?(?:by\s+bank|via\s+bank|in\s+cash|(?:(?:as|for|in)\s+(?:a\s+)?)?(?:subsequent\s+)?(?:partial\s+)?(?:settlement|payment)|subsequently|towards|to\s+settle)/i);
+        if (!m?.[1]) return undefined;
+        const parsedVal = parseAmountToken(m[1], m[2]);
+        return Number.isFinite(parsedVal) && parsedVal >= 0 ? parsedVal : undefined;
+      };
       let explicitSettlementAmount: number | undefined;
       if (explicitZeroSettlement) {
         explicitSettlementAmount = 0;
@@ -3633,25 +3721,15 @@ export async function parseAccountingQuery(
         if (typeof semanticAmt === 'number' && Number.isFinite(semanticAmt) && semanticAmt >= 0) {
           explicitSettlementAmount = semanticAmt;
         } else {
-          const followUpAmtMatch =
-            query.match(/(?:paid|pay|settl(?:e|ed|ement)|transfer(?:red)?|remit(?:ted)?)\s+(?:of\s+)?(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
-            query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:by\s+bank|via\s+bank|in\s+cash|as\s+(?:a\s+)?partial|towards|to\s+settle)/i);
-          if (followUpAmtMatch?.[1]) {
-            const parsedVal = parseAmountToken(followUpAmtMatch[1], followUpAmtMatch[2]);
-            if (Number.isFinite(parsedVal) && parsedVal >= 0) explicitSettlementAmount = parsedVal;
-          }
+          explicitSettlementAmount = extractScopedSettlementAmount(settlementPaymentScope);
         }
       } else {
-        const singleTurnSettleMatch =
-          query.match(/(?:subsequent(?:ly)?|later|partial(?:ly)?\s+settl\w*|settl\w*)[^.\n]*?(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
-          query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:as\s+(?:a\s+)?)?(?:partial\s+)?settlement/i);
-        if (singleTurnSettleMatch?.[1]) {
-          const parsedVal = parseAmountToken(singleTurnSettleMatch[1], singleTurnSettleMatch[2]);
-          if (Number.isFinite(parsedVal) && parsedVal >= 0) explicitSettlementAmount = parsedVal;
-        }
+        explicitSettlementAmount = extractScopedSettlementAmount(settlementPaymentScope);
       }
 
-      const isExplicitPartial = /\b(?:partial|partially|part[-\s]?payment|install?ment|instalment|towards)\b/i.test(query);
+      const isExplicitPartial =
+        Boolean(settlementPaymentScope) &&
+        /\b(?:partial|partially|part[-\s]?payment|install?ment|instalment|towards)\b/i.test(settlementPaymentScope);
 
       if (remainingPayableBeforeCents === 0) {
         if (explicitSettlementAmount !== undefined && explicitSettlementAmount > 0) {
@@ -3721,9 +3799,9 @@ export async function parseAccountingQuery(
 
         if (requestedSettlementCents > 0) {
           const remainingAfterCents = remainingPayableBeforeCents - requestedSettlementCents;
-          const chosenSettlementDate = !canInheritDiscount && validDates.length >= 2
-            ? validDates[1]
-            : firstValidDate;
+          const chosenSettlementDate = settlementValidDates[0]
+            ? settlementValidDates[0]
+            : (canInheritDiscount ? firstValidDate : (validDates.length >= 2 ? validDates[1] : undefined));
           const settlementDate = chosenSettlementDate ? formatSingaporeDate(chosenSettlementDate) : 'Settlement Date';
           const settleIndex = priorSettlementGroups.length + 1;
           const settleGroupId = settleIndex === 1 ? 'grp-equip-settle' : `grp-equip-settle-${settleIndex}`;

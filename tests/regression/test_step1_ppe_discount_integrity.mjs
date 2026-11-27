@@ -1249,4 +1249,91 @@ for (const nonMonetaryQuery of [
   }
 }
 
+// ---------------------------------------------------------------------------
+// 13. Payment-clause evidence ownership (combined upfront + subsequent settlement)
+// ---------------------------------------------------------------------------
+{
+  // 13a. S$5,000 upfront, S$0 subsequent settlement -> preserve S$5,000 upfront payment, omit zero settlement entry
+  const upfrontPositiveZeroSettleCases = [
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST) and a 10% trade discount: S$5,000 upfront, S$0 subsequent settlement.',
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays S$5,000 upfront by bank transfer and places the remaining balance on credit terms. On 15 August 2026, the company paid SGD 0.00 as a subsequent settlement.',
+    'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST) and a 10% trade discount, with S$0 subsequent settlement and S$5,000 upfront.'
+  ];
+
+  for (const q of upfrontPositiveZeroSettleCases) {
+    const res = await processAccountingQuery(q, null, 'SFRS_I');
+    const parsed = res.scenarioState;
+    assert.equal(parsed.scenarioType, 'ASSET_PURCHASE_DISCOUNT');
+    assert.equal(parsed.isComplete, true, `Combined S$5,000 upfront + S$0 settlement must complete: ${q}`);
+    assert.equal(parsed.directGroups?.length, 1, `Zero subsequent settlement must not emit a second group: ${q}`);
+
+    const grp1 = parsed.directGroups[0];
+    assert.equal(grp1.eventDate, '01/08/2026');
+    assert.equal(grp1.lines.find(l => l.accountCode === '1500')?.debit, 18000);
+    assert.equal(grp1.lines.find(l => l.accountCode === '1190')?.debit, 1620);
+    assert.equal(grp1.lines.find(l => l.accountCode === '1010')?.credit, 5000, 'Upfront S$5,000 payment must be preserved and never overwritten to 0');
+    assert.equal(grp1.lines.find(l => l.accountCode === '2010')?.credit, 14620);
+    assert.equal(grp1.isBalanced, true);
+    assert.equal(parsed.keyParameters?.find(p => p.label === 'Immediate Bank Payment')?.value, 'SGD 5,000');
+    assert.equal(parsed.keyParameters?.find(p => p.label === 'Trade Payables (Credit Terms)')?.value, 'SGD 14,620');
+    assert.equal(validateJournalGroups(parsed.directGroups, { rawQuery: q }).isValid, true);
+  }
+
+  // 13b. S$0 upfront, S$500 subsequent settlement -> record S$0 upfront (omit bank line in Group 1) and record S$500 settlement in Group 2
+  const upfrontZeroPositiveSettleCases = [
+    {
+      q: 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST) and a 10% trade discount: S$0 upfront, S$500 subsequent settlement.',
+      expectedSettleDate: 'Settlement Date',
+      expectedSettleAmt: 500,
+      expectedRemaining: 'SGD 19,120'
+    },
+    {
+      q: 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 0.00 upfront and places the balance on credit terms. On 15 August 2026, the company paid S$500 by bank transfer as subsequent settlement.',
+      expectedSettleDate: '15/08/2026',
+      expectedSettleAmt: 500,
+      expectedRemaining: 'SGD 19,120'
+    },
+    {
+      q: 'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of recoverable 9% GST) and a 10% trade discount: S$0.00 upfront, S$0.50 subsequent settlement.',
+      expectedSettleDate: 'Settlement Date',
+      expectedSettleAmt: 0.5,
+      expectedRemaining: 'SGD 19,619.50'
+    }
+  ];
+
+  for (const { q, expectedSettleDate, expectedSettleAmt, expectedRemaining } of upfrontZeroPositiveSettleCases) {
+    const res = await processAccountingQuery(q, null, 'SFRS_I');
+    const parsed = res.scenarioState;
+    assert.equal(parsed.scenarioType, 'ASSET_PURCHASE_DISCOUNT');
+    assert.equal(parsed.isComplete, true, `Combined S$0 upfront + S$${expectedSettleAmt} settlement must complete: ${q}`);
+    assert.equal(parsed.directGroups?.length, 2, `Positive subsequent settlement must emit Group 2: ${q}`);
+
+    const grp1 = parsed.directGroups[0];
+    assert.equal(grp1.eventDate, '01/08/2026');
+    assert.equal(grp1.lines.some(l => l.accountCode === '1010'), false, 'Upfront S$0 must omit Cash at Bank line in Group 1');
+    assert.equal(grp1.lines.find(l => l.accountCode === '2010')?.credit, 19620);
+    assert.equal(grp1.isBalanced, true);
+
+    const grp2 = parsed.directGroups[1];
+    assert.equal(grp2.id, 'grp-equip-settle');
+    assert.equal(grp2.eventDate, expectedSettleDate);
+    assert.equal(grp2.lines.find(l => l.accountCode === '2010')?.debit, expectedSettleAmt, 'Subsequent settlement must record exact positive settlement amount');
+    assert.equal(grp2.lines.find(l => l.accountCode === '1010')?.credit, expectedSettleAmt);
+    assert.equal(grp2.totalDebit, expectedSettleAmt);
+    assert.equal(grp2.totalCredit, expectedSettleAmt);
+    assert.equal(grp2.isBalanced, true);
+    assert.equal(parsed.keyParameters?.find(p => p.label === 'Immediate Bank Payment')?.value, 'SGD 0');
+    assert.equal(parsed.keyParameters?.find(p => p.label === 'Remaining Trade Payables')?.value, expectedRemaining);
+    assert.equal(validateJournalGroups(parsed.directGroups, { rawQuery: q }).isValid, true);
+  }
+
+  // 13c. PPE_IAS16 combined S$30,000 upfront cash + subsequent S$0 loan settlement clause -> preserve S$30,000 upfront cash
+  const ppeCombined = 'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of recoverable 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 with accumulated depreciation of SGD 22,500. Cash Paid: S$30,000 paid via bank transfer on 1 April 2026, and subsequently paid S$0 towards the loan on 15 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.';
+  const parsedPpeCombined = await parseAccountingQuery(ppeCombined, null);
+  assert.equal(parsedPpeCombined.isComplete, true);
+  const ppeAcqGrp = parsedPpeCombined.directGroups.find(g => g.id === 'grp-acq-new');
+  assert.equal(ppeAcqGrp?.lines.find(l => l.accountCode === '1010')?.credit, 30000, 'PPE upfront S$30,000 cash must not be overwritten by subsequent S$0 loan clause');
+  assert.equal(ppeAcqGrp?.isBalanced, true);
+}
+
 console.log('✅ PASS | Step 1 PPE, Trade Discount, and Journal Integrity regression suite passed.');
