@@ -1,16 +1,16 @@
 # FX and cancellation Gemini acceptance
 
-**NO-GO for live acceptance. Dispatch is pending confirmation that other callers on the shared Gemini project are coordinated.**
+**NO-GO for live acceptance. A journal-only acquisition returned an unrelated statutory-evidence fallback and did not commit its correctly calculated journal.**
 
 GitHub branch `codex/review-fx-request-deadline-20261126` and the tracked-clean local worktree resolved to [`e3d5efb2ce918568b2dfbede7219e0be85a90fe6`](https://github.com/dexrrick/accounting/commit/e3d5efb2ce918568b2dfbede7219e0be85a90fe6). The test profile was SFRS(I) with `gemini-3.5-flash-lite` for live dispatch.
 
-Gemini attempts were **0 of 24**. There are no live responses or live provider timings in this checkpoint. A local quota ledger covers instrumented calls on this machine. Project-wide caller usage was unavailable.
+The shared-project coordination was confirmed before dispatch. The batch used **2 of 24** Gemini attempts, with a highest per-turn count of **2 of 4** and **zero retries**.
 
-The harness called `processAccountingQuery` at the frozen revision and used the application’s journal state and recall helpers. It captured the service response and the chat preview. It exercised the service cancellation signal. The browser Stop button, hosted proxy and deployment were outside this live capture. The checked-in offline deadline suite also exercised the proxy with scripted transport.
+The harness called `processAccountingQuery` at the frozen revision and captured the service reply and chat preview. It applied the app’s commit guard to the captured response. Browser rendering, the Stop button, the hosted proxy and deployment were outside the live capture. The checked-in offline deadline suite exercised the service cancellation signal and proxy with scripted transport.
 
 | Workflow | Offline control | Live result | Gemini attempts | Service response time | Reply origin |
 | --- | --- | --- | ---: | ---: | --- |
-| Dated acquisition | PASS | Unrun | 0 | — | — |
+| Dated acquisition | PASS | FAIL · stopped | 2 | 6207 ms | Deterministic fallback |
 | Dated acquisition and full disposal | PASS | Unrun | 0 | — | — |
 | Missing acquisition date | PASS | Unrun | 0 | — | — |
 | Missing disposal date | PASS | Unrun | 0 | — | — |
@@ -18,6 +18,31 @@ The harness called `processAccountingQuery` at the frozen revision and used the 
 | Disposal quote dated one day later | PASS | Unrun | 0 | — | — |
 | Follow-up with the matching disposal rate | PASS | Unrun | 0 | — | — |
 | Cancel an in-flight request and recall the committed journal | Scripted abort regression | Unrun | 0 | — | — |
+
+## Live stop and review focus
+
+| Attempt | Provider stage | HTTP | Provider response time |
+| ---: | --- | ---: | ---: |
+| 1 | semantic-interpretation | 200 | 2080 ms |
+| 2 | event-extraction | 200 | 885 ms |
+
+Both calls completed with Gemini finish reason `STOP`. The app made no answer-generation call. It returned `AI_GROUNDED_SYNTHESIS_FALLBACK` with `advisoryFailureStatus = OTHER`. The harness stopped at that first application failure signal under its conservative stop rule and recorded `APPLICATION_REPORTED_PROVIDER_FAILURE`. The transport record contains no upstream HTTP or transport failure.
+
+The exact application reply is reproduced below.
+
+```text
+### Statutory evidence unresolved
+
+The available evidence did not support a verified answer to the statutory question.
+
+The deterministic journal remains available in the Double Entry Journal tab.
+```
+
+The response retained a balanced SGD 1,300 acquisition journal candidate, dated 13/11/2025 at 1.30, with a debit to the FVTPL asset and a credit to cash. The app’s failure branch bypasses the journal commit and displays the failure message. There was no prior journal on this first turn. The service capture does not establish what the browser showed.
+
+Review the acquisition’s transition from the deterministic journal to the statutory fallback and the subsequent commit gate. [Synthesis decision](https://github.com/dexrrick/accounting/blob/e3d5efb2ce918568b2dfbede7219e0be85a90fe6/src/services/geminiService.ts#L600-L621) · [App commit gate](https://github.com/dexrrick/accounting/blob/e3d5efb2ce918568b2dfbede7219e0be85a90fe6/src/App.tsx#L173-L207)
+
+The seven remaining live turns were unrun, including live cancellation and preservation. Their offline controls are recorded below.
 
 ## Journal checks
 
