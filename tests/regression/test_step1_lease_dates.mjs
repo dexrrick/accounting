@@ -86,16 +86,37 @@ async function withMockedFetch(handler, fn) {
   assert.match(offlineRes.messageText, /✓ Balanced/);
   assert.doesNotMatch(offlineRes.messageText, /01\/01\/2026|31\/01\/2026/);
 
+  const wrongProviderLeasePayload = {
+    transactionTitle: 'Wrong Provider Lease',
+    messageText: 'Wrong provider dates',
+    directGroups: [{
+      id: 'ai-wrong-lease',
+      eventDate: '01/01/2026',
+      title: 'Wrong Lease Date',
+      summary: 'Wrong',
+      lines: [
+        { id: '1', accountCode: '1700', accountName: 'Right-of-Use Asset', category: 'ASSET', debit: 100000, credit: 0, lineExplanation: 'Dr' },
+        { id: '2', accountCode: '2600', accountName: 'Lease Liability', category: 'LIABILITY', debit: 0, credit: 100000, lineExplanation: 'Cr' }
+      ],
+      totalDebit: 100000,
+      totalCredit: 100000,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: []
+    }]
+  };
   const onlineRes = await withMockedFetch(async () => new Response(JSON.stringify({
-    choices: [{ message: { content: JSON.stringify({ transactionTitle: 'Lease', directGroups: [] }) } }]
+    choices: [{ message: { content: JSON.stringify(wrongProviderLeasePayload) } }]
   }), { status: 200, headers: { 'Content-Type': 'application/json' } }), () =>
     processAccountingQuery(q, null, 'SFRS_I', mockedOnlineProvider)
   );
   assert.equal(onlineRes.scenarioState.leaseCommencementDate, '2026-07-01');
-  const onlineGroups = calculateDoubleEntries(onlineRes.scenarioState, 'SFRS_I').groups;
-  assert.equal(onlineGroups[0]?.eventDate, '01/07/2026');
-  assert.equal(onlineGroups[1]?.eventDate, '31/07/2026');
-  assert.equal(onlineGroups[2]?.eventDate, '31/07/2026');
+  assert.equal(onlineRes.scenarioState.directGroups?.length, 3, 'Online LEASE-2 must keep deterministic 3-group schedule');
+  assert.equal(onlineRes.scenarioState.directGroups?.[0]?.eventDate, '01/07/2026');
+  assert.equal(onlineRes.scenarioState.directGroups?.[1]?.eventDate, '31/07/2026');
+  assert.equal(onlineRes.scenarioState.directGroups?.[2]?.eventDate, '31/07/2026');
+  assert.equal(onlineRes.scenarioState.directGroups?.[0]?.totalDebit, 131484.06);
+  assert.doesNotMatch(onlineRes.messageText, /01\/01\/2026|31\/01\/2026/);
 }
 
 // ---------------------------------------------------------------------------

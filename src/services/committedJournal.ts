@@ -43,12 +43,36 @@ export function hasSameTransactionPriorMonetaryEvidence(
   candidate: AccountingScenarioState
 ): boolean {
   if (!prior || !hasVerifiedPriorMonetaryFacts(prior)) return false;
-  if (prior.transactionId && candidate.transactionId && prior.transactionId === candidate.transactionId) {
-    return true;
+
+  // Conflicting explicit transactionIds are strictly separate transactions.
+  if (prior.transactionId && candidate.transactionId) {
+    return prior.transactionId === candidate.transactionId;
   }
+
+  // Explicit targetTransactionId linkage from candidate groups to prior groups/transaction.
+  const priorTxIds = new Set<string>();
+  if (prior.transactionId) priorTxIds.add(prior.transactionId);
+  for (const grp of [...(prior.committedDirectGroups || []), ...(prior.directGroups || [])]) {
+    if (grp.transactionId) priorTxIds.add(grp.transactionId);
+  }
+  if (priorTxIds.size > 0) {
+    const candidateTargetsPrior = (candidate.directGroups || []).some(
+      grp => Boolean(grp.targetTransactionId && priorTxIds.has(grp.targetTransactionId))
+    );
+    if (candidateTargetsPrior) return true;
+  }
+
+  // Shared verified image evidence linkage.
+  const priorImageIds = new Set((prior.imageEvidence || []).map(img => img.imageId).filter(Boolean));
+  if (priorImageIds.size > 0 && hasVerifiedImageMonetaryEvidence(prior)) {
+    const sharesImage = (candidate.imageEvidence || []).some(img => Boolean(img.imageId && priorImageIds.has(img.imageId)));
+    if (sharesImage) return true;
+  }
+
   if (candidate.scenarioType === 'UNIVERSAL') {
-    return true;
+    return prior.scenarioType === 'UNIVERSAL';
   }
+
   return Boolean(
     prior.scenarioType &&
     candidate.scenarioType &&
@@ -82,11 +106,12 @@ export function updateCommittedJournalScenario(
     validationContext?.hasPriorContextAmount ||
     sameTransactionPrior
   );
+  const allowContextEvidenceTexts = !resetPrevious && (!priorScenario || sameTransactionPrior);
   const integrity = validateJournalGroups(groups, {
     rawQuery: effectiveRawQuery,
     hasPriorContextAmount,
     hasImageEvidence,
-    evidenceTexts: resetPrevious ? undefined : validationContext?.evidenceTexts
+    evidenceTexts: allowContextEvidenceTexts ? validationContext?.evidenceTexts : undefined
   });
   if (groups.length === 0 || !integrity.isValid) return priorScenario;
   return {

@@ -447,11 +447,95 @@ for (const nonMonetaryQuery of [
     'Unrelated PPE_IAS16 candidate must not inherit ASSET_PURCHASE_DISCOUNT monetary facts');
   assert.equal(updateCommittedJournalScenario(committedDiscount, unstatedPpeCandidate, 'SFRS_I', false, {
     rawQuery: 'Trade in old machinery on 15 May 2026',
-    evidenceTexts: ['Trade in old machinery on 15 May 2026']
-  }), committedDiscount, 'Invalid unrelated candidate preserves last valid committed journal');
+    evidenceTexts: [
+      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount on the list price. The company pays SGD 5,000 immediately by bank transfer and the remaining balance is placed on credit terms.',
+      'Trade in old machinery on 15 May 2026'
+    ]
+  }), committedDiscount, 'Invalid unrelated candidate with Turn 1 amount in evidenceTexts must still fail closed and preserve committed journal');
   assert.equal(updateCommittedJournalScenario(committedDiscount, unstatedPpeCandidate, 'SFRS_I', true, {
     rawQuery: 'Trade in old machinery on 15 May 2026'
   }), null, 'resetPrevious = true clears committed journal to null');
+
+  // BLOCKING #1: Unrelated UNIVERSAL candidate after a committed non-UNIVERSAL scenario or conflicting transactionId must NOT bypass UNSTATED_AMOUNT
+  const unrelatedUniversalCandidate = {
+    scenarioType: 'UNIVERSAL',
+    transactionId: 'tx-loan-2',
+    authorityStatus: 'DETERMINISTIC',
+    rawQuery: 'Prepare the journal entry for a bank loan with 5% interest on 15 May 2026',
+    transactionTitle: 'Bank Loan',
+    functionalCurrency: 'SGD',
+    transactionCurrency: 'SGD',
+    isComplete: true,
+    missingFields: [],
+    directGroups: [{
+      id: 'g-bad-loan',
+      eventDate: '15/05/2026',
+      title: 'Fabricated Bank Loan',
+      summary: 'Fabricated',
+      lines: [
+        { id: '1', accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 50000, credit: 0, lineExplanation: 'Dr' },
+        { id: '2', accountCode: '2500', accountName: 'Bank Loan', category: 'LIABILITY', debit: 0, credit: 50000, lineExplanation: 'Cr' }
+      ],
+      totalDebit: 50000,
+      totalCredit: 50000,
+      isBalanced: true,
+      citations: [],
+      rationalePoints: [],
+      authorityStatus: 'DETERMINISTIC'
+    }]
+  };
+  assert.equal(hasSameTransactionPriorMonetaryEvidence(committedDiscount, unrelatedUniversalCandidate), false,
+    'Unrelated UNIVERSAL candidate must not inherit prior ASSET_PURCHASE_DISCOUNT monetary facts');
+  assert.equal(updateCommittedJournalScenario(committedDiscount, unrelatedUniversalCandidate, 'SFRS_I', false, {
+    rawQuery: unrelatedUniversalCandidate.rawQuery,
+    evidenceTexts: [
+      'On 1 August 2026, a GST-registered company purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST).',
+      unrelatedUniversalCandidate.rawQuery
+    ]
+  }), committedDiscount, 'Unrelated UNIVERSAL candidate must not overwrite committed discount journal');
+
+  const priorUniversalTx1 = {
+    ...unrelatedUniversalCandidate,
+    transactionId: 'tx-1',
+    rawQuery: 'Received SGD 10,000 share capital',
+    directGroups: [{ ...unrelatedUniversalCandidate.directGroups[0], transactionId: 'tx-1', totalDebit: 10000, totalCredit: 10000, lines: [
+      { id: '1', accountCode: '1010', accountName: 'Cash at Bank', category: 'ASSET', debit: 10000, credit: 0, lineExplanation: 'Dr' },
+      { id: '2', accountCode: '3000', accountName: 'Share Capital', category: 'EQUITY', debit: 0, credit: 10000, lineExplanation: 'Cr' }
+    ] }]
+  };
+  assert.equal(hasSameTransactionPriorMonetaryEvidence(priorUniversalTx1, unrelatedUniversalCandidate), false,
+    'Conflicting transactionId between UNIVERSAL scenarios must not inherit prior monetary facts');
+
+  // NB-5: Settlement follow-up stating exact settlement amount must not overwrite Group 1 immediateCash
+  const explicitSettlementFollowUp = await parseAccountingQuery(
+    'On 15 August 2026, paid SGD 14,620 by bank transfer to settle the remaining balance.',
+    committedDiscount
+  );
+  assert.equal(explicitSettlementFollowUp.isComplete, true);
+  assert.equal(explicitSettlementFollowUp.directGroups.length, 2);
+  assert.equal(explicitSettlementFollowUp.directGroups[0].lines.find(l => l.accountCode === '1010')?.credit, 5000,
+    'Settlement follow-up must preserve original Group 1 immediateCash of 5,000');
+  assert.equal(explicitSettlementFollowUp.directGroups[0].lines.find(l => l.accountCode === '2010')?.credit, 14620);
+  assert.equal(explicitSettlementFollowUp.directGroups[1].eventDate, '15/08/2026');
+  assert.equal(explicitSettlementFollowUp.directGroups[1].totalDebit, 14620);
+}
+
+// NB-1 & NB-8: PPE follow-up preserves 9% GST when newCost changes; hardened hasMonetaryEvidence edge cases
+{
+  const ppeTurn1 = await parseAccountingQuery(
+    'A GST-registered company purchased new machinery on 1 April 2026 for SGD 100,000 (exclusive of 9% GST). Trade-in: old machine agreed trade-in value of SGD 21,800 (inclusive of 9% GST). Old machine cost: SGD 50,000 on 1 January 2024. Depreciation: 20% per annum straight-line, depreciated up to 31 December 2025. Cash Paid: SGD 30,000 paid via bank transfer on 1 April 2026. Loan: 2-year equipment loan with a 5% per annum flat interest rate.',
+    null
+  );
+  assert.equal(ppeTurn1.isComplete, true);
+  const ppeTurn2 = await parseAccountingQuery('What if the new machine cost is SGD 200,000?', ppeTurn1);
+  assert.equal(ppeTurn2.isComplete, true);
+  const inputGstLine = ppeTurn2.directGroups[2]?.lines.find(l => l.accountCode === '1190');
+  assert.equal(inputGstLine?.debit, 18000, 'Follow-up changing newCost must retain 9% GST (18,000 on 200,000), not 4.5%');
+
+  for (const nonMonetary of ['Issue 5k shares', 'Allot 100 thousand shares', 'Under §55 of IAS 16', 'Employee age: 62', 'Order #456']) {
+    assert.equal(hasMonetaryEvidence(nonMonetary), false, `Must reject non-monetary text: ${nonMonetary}`);
+  }
+  assert.equal(hasMonetaryEvidence("company's 500 office supplies"), true, "Possessive 's must not strip genuine monetary 500");
 }
 
 // Deterministic fast-path rejects structurally invalid / negative-line groups

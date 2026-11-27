@@ -3828,6 +3828,14 @@ export function postProcessAIResponse(
     missingFacts: groundedContext.missingFacts.length > 0 ? groundedContext.missingFacts : undefined,
     ownershipContext: deterministicScenario?.ownershipContext || groundedContext.semanticUnderstanding?.ownershipContext || currentScenario?.ownershipContext,
     semanticUnderstanding: groundedContext.semanticUnderstanding || currentScenario?.semanticUnderstanding,
+    ...(deterministicScenario?.scenarioType === 'LEASE_IFRS16' ? {
+      purchaseDate: deterministicScenario.purchaseDate,
+      leaseTermYears: deterministicScenario.leaseTermYears,
+      leaseTermMonths: deterministicScenario.leaseTermMonths,
+      leasePaymentMonthly: deterministicScenario.leasePaymentMonthly,
+      leaseDiscountRateAnnual: deterministicScenario.leaseDiscountRateAnnual,
+      leaseCommencementDate: deterministicScenario.leaseCommencementDate
+    } : {}),
     isComplete: groundedContext.missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

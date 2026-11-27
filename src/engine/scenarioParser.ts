@@ -2090,8 +2090,8 @@ export async function parseAccountingQuery(
       newCost = extractParamNumber(currentScenario, 'New Machine Cost');
     }
     const newCostMatch =
-      query.match(/(?:purchases?|bought|acquires?)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:machinery|machine|equipment|asset)[^\n]*?(?:for|at|costing)\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
-      query.match(/new\s+(?:machinery|machine|equipment|asset)\s*(?:cost(?:ing)?|price)?\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+      query.match(/(?:purchas(?:es?|ed)|bought|acquir(?:es?|ed))\s+(?:a\s+|an\s+)?(?:new\s+)?(?:machinery|machine|equipment|asset)[^\n]*?(?:for|at|costing)\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+      query.match(/new\s+(?:machinery|machine|equipment|asset)\s*(?:cost(?:ing)?|price)?\s*(?:is|was|of|for|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
     if (newCostMatch?.[1]) {
       const parsedVal = parseAmountToken(newCostMatch[1], newCostMatch[2]);
       if (Number.isFinite(parsedVal) && parsedVal > 0) newCost = parsedVal;
@@ -2115,11 +2115,18 @@ export async function parseAccountingQuery(
       const rate = parseFloat(gstPctMatch[1]) / 100;
       if (Number.isFinite(rate) && rate >= 0 && rate < 1) gstRate = rate;
     } else if (canInheritPpe) {
-      const priorInputGst = extractParamNumber(currentScenario, 'Input GST');
-      if (priorInputGst !== undefined && newCost && newCost > 0) {
-        gstRate = round2((priorInputGst / newCost) * 100) / 100;
+      const priorInputGstParam = currentScenario?.keyParameters?.find(p => p.label.includes('Input GST'));
+      const labelRateMatch = priorInputGstParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (labelRateMatch?.[1]) {
+        gstRate = parseFloat(labelRateMatch[1]) / 100;
       } else {
-        gstRate = 0;
+        const priorInputGst = extractParamNumber(currentScenario, 'Input GST');
+        const priorNewCost = extractParamNumber(currentScenario, 'New Machine Cost');
+        if (priorInputGst !== undefined && priorNewCost && priorNewCost > 0) {
+          gstRate = round2((priorInputGst / priorNewCost) * 100) / 100;
+        } else {
+          gstRate = 0;
+        }
       }
     } else if (/\bgst\b/i.test(query)) {
       missingFields.push({
@@ -2222,13 +2229,19 @@ export async function parseAccountingQuery(
 
         if (depUpToDate && !depUpToDate.invalid && depUpToDate.year && depUpToDate.month && depUpToDate.day) {
           const upToParts = { year: depUpToDate.year, month: depUpToDate.month, day: depUpToDate.day };
-          priorMonths = monthsBetweenInclusive(startParts, upToParts);
-          const totalMonths = monthsBetweenInclusive(startParts, endParts);
-          catchUpMonths = totalMonths >= 0 && priorMonths >= 0 ? Math.max(0, totalMonths - priorMonths) : -1;
-          if (priorMonths >= 0 && catchUpMonths >= 0) {
-            priorAccDepr = round2(oldCost * deprRateAnnual * (priorMonths / 12));
-            catchUpDepr = round2(oldCost * deprRateAnnual * (catchUpMonths / 12));
-            totalAccDeprAtDisposal = round2(priorAccDepr + catchUpDepr);
+          const upToUtc = Date.UTC(upToParts.year, upToParts.month - 1, upToParts.day);
+          const endUtc = Date.UTC(endParts.year, endParts.month - 1, endParts.day);
+          if (upToUtc <= endUtc) {
+            priorMonths = monthsBetweenInclusive(startParts, upToParts);
+            const totalMonths = monthsBetweenInclusive(startParts, endParts);
+            catchUpMonths = totalMonths >= 0 && priorMonths >= 0 && totalMonths >= priorMonths
+              ? totalMonths - priorMonths
+              : -1;
+            if (priorMonths >= 0 && catchUpMonths >= 0) {
+              priorAccDepr = round2(oldCost * deprRateAnnual * (priorMonths / 12));
+              catchUpDepr = round2(oldCost * deprRateAnnual * (catchUpMonths / 12));
+              totalAccDeprAtDisposal = round2(priorAccDepr + catchUpDepr);
+            }
           }
         } else {
           const totalMonths = monthsBetweenInclusive(startParts, endParts);
@@ -2337,9 +2350,12 @@ export async function parseAccountingQuery(
         } else if (flatInterestMatch?.[1]) {
           flatInterestRate = parseFloat(flatInterestMatch[1]) / 100;
         } else if (canInheritPpe) {
-          const priorInterestParam = currentScenario?.keyParameters?.find(p => p.label.includes('Unexpired Interest'));
-          const rMatch = priorInterestParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
-          if (rMatch?.[1]) flatInterestRate = parseFloat(rMatch[1]) / 100;
+          const priorLoanPrincipal = extractParamNumber(currentScenario, 'Equipment Loan Principal');
+          if (priorLoanPrincipal !== undefined && priorLoanPrincipal > 0) {
+            const priorInterestParam = currentScenario?.keyParameters?.find(p => p.label.includes('Unexpired Interest'));
+            const rMatch = priorInterestParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
+            if (rMatch?.[1]) flatInterestRate = parseFloat(rMatch[1]) / 100;
+          }
         }
 
         if (loanYears === undefined || !(loanYears > 0)) {
@@ -2801,17 +2817,20 @@ export async function parseAccountingQuery(
       gstRate = 0;
     }
 
+    const isSettlement = q.includes('settle') || q.includes('pay the remaining') || q.includes('paid balance') || q.includes('settlement');
+
     // 5. Immediate cash paid
     let immediateCash: number | undefined;
     if (canInheritDiscount) {
       immediateCash = extractParamNumber(currentScenario, 'Immediate Bank Payment');
     }
     const explicitZeroImmediateCash = /\b(?:no\s+cash\s+(?:paid|payment)|no\s+upfront\s+payment|paid\s+(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b|0(?:\.0+)?\s+immediately|entirely\s+on\s+credit|100%\s+on\s+credit|full\s+amount\s+on\s+credit)\b/i.test(query);
-    const immediateCashMatch =
-      query.match(/(?:pays?|paid)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?:\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank))?/i) ||
-      query.match(/(?:pays?|paid)\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank)\b/i) ||
-      query.match(/(?:immediate(?:ly)?|upfront|cash\s*paid|bank\s*payment|down\s*payment)\s*(?:is|was|of|to|=|:)?\s*(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
-    if (explicitZeroImmediateCash) {
+    const immediateCashMatch = !(canInheritDiscount && isSettlement)
+      ? (query.match(/(?:pays?|paid)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?:\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank))?/i) ||
+         query.match(/(?:pays?|paid)\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank)\b/i) ||
+         query.match(/(?:immediate(?:ly)?|upfront|cash\s*paid|bank\s*payment|down\s*payment)\s*(?:is|was|of|to|=|:)?\s*(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i))
+      : null;
+    if (explicitZeroImmediateCash && !(canInheritDiscount && isSettlement)) {
       immediateCash = 0;
     } else if (immediateCashMatch?.[1]) {
       const parsedVal = parseAmountToken(immediateCashMatch[1], immediateCashMatch[2]);
@@ -2842,8 +2861,8 @@ export async function parseAccountingQuery(
       });
     }
 
-    const isSettlement = q.includes('settle') || q.includes('pay the remaining') || q.includes('paid balance') || q.includes('settlement');
-    const firstValidDate = allDates.find(d => d.formatted !== 'INVALID')?.formatted;
+    const validDates = allDates.filter(d => d.formatted !== 'INVALID').map(d => d.formatted);
+    const firstValidDate = validDates[0];
 
     let transDate = canInheritDiscount && currentScenario?.directGroups?.[0]?.eventDate
       ? currentScenario.directGroups[0].eventDate
@@ -2981,7 +3000,10 @@ export async function parseAccountingQuery(
     ];
 
     if (isSettlement && normalizedCreditBalance > 0) {
-      const settlementDate = firstValidDate ? formatSingaporeDate(firstValidDate) : 'Settlement Date';
+      const chosenSettlementDate = !canInheritDiscount && validDates.length >= 2
+        ? validDates[1]
+        : firstValidDate;
+      const settlementDate = chosenSettlementDate ? formatSingaporeDate(chosenSettlementDate) : 'Settlement Date';
       const settleLines: JournalLine[] = [
         {
           id: 'l-settle-payable',

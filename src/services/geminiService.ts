@@ -1109,16 +1109,19 @@ async function processAccountingQueryCore(
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
     const groups = response.scenarioState.directGroups || [];
     if (groups.length === 0) return response;
-    const hasImageEvidence =
-      hasVerifiedImageMonetaryEvidence(response.scenarioState) ||
-      hasVerifiedImageMonetaryEvidence(activeScenario);
     const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(
       activeScenario,
       response.scenarioState
     );
-    const evidenceTexts = relevantChatHistory
-      .filter(message => message.sender === 'user')
-      .map(message => message.text);
+    const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
+    const hasImageEvidence =
+      hasVerifiedImageMonetaryEvidence(response.scenarioState) ||
+      (canUseActiveTurnHistory && hasVerifiedImageMonetaryEvidence(activeScenario));
+    const evidenceTexts = canUseActiveTurnHistory
+      ? relevantChatHistory
+          .filter(message => message.sender === 'user')
+          .map(message => message.text)
+      : undefined;
     const integrity = validateJournalGroups(groups, {
       rawQuery: userInput,
       hasPriorContextAmount,
@@ -1423,21 +1426,38 @@ async function processAccountingQueryCore(
   // A complete deterministic journal wins. Otherwise permit the existing AI
   // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
-    const groups = deterministicScenario.directGroups || [];
+    const calculatedDeterministicGroups = !deterministicScenario.directGroups?.length &&
+      deterministicScenario.isComplete &&
+      deterministicScenario.authorityStatus === 'DETERMINISTIC' &&
+      deterministicScenario.scenarioType === 'LEASE_IFRS16'
+      ? calculateDoubleEntries(deterministicScenario, standard).groups
+      : [];
+    const groups = deterministicScenario.directGroups?.length
+      ? deterministicScenario.directGroups
+      : calculatedDeterministicGroups;
+    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario);
+    const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
     const integrity = groups.length > 0
       ? validateJournalGroups(groups, {
           rawQuery: userInput,
-          hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario),
-          hasImageEvidence: hasVerifiedImageMonetaryEvidence(deterministicScenario) || hasVerifiedImageMonetaryEvidence(activeScenario),
-          evidenceTexts: relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+          hasPriorContextAmount,
+          hasImageEvidence:
+            hasVerifiedImageMonetaryEvidence(deterministicScenario) ||
+            (canUseActiveTurnHistory && hasVerifiedImageMonetaryEvidence(activeScenario)),
+          evidenceTexts: canUseActiveTurnHistory
+            ? relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+            : undefined
         })
       : { isValid: false, issues: [] };
     const grounded = deterministicScenario.isComplete && groups.length > 0 && integrity.isValid;
     if (grounded) {
+      const groundedScenario = deterministicScenario.directGroups?.length
+        ? deterministicScenario
+        : { ...deterministicScenario, directGroups: groups };
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
-      return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
+      return attachAmendmentProvenance(await governedOfflineResponse(groundedScenario));
     }
     if (groups.length > 0 && !integrity.isValid) {
       const validationClarification: MissingFieldInfo = {
@@ -2000,7 +2020,7 @@ export function renderStructuredOfflineResponse(
     const sdlParam = findParam('Skills Development Levy')?.value || `${currency} ${fmt2(sdlAmount)}`;
 
     const isProrated = Boolean(workingDaysParam && /\bProrated\b/i.test(workingDaysParam));
-    const isCpfExempt = Boolean(cpfExemptParam) || (totalCpf === 0 && employerCpf === 0 && employeeCpf === 0);
+    const isCpfExempt = Boolean(cpfExemptParam) || Boolean(statusParam && /Foreign Worker/i.test(statusParam));
 
     const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
     const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);

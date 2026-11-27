@@ -135,17 +135,18 @@ function stripNonMonetaryTokens(text: string): string {
     .replace(/\b(?:\d{1,2}(?:st|nd|rd|th)?\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{1,2}(?:st|nd|rd|th)?,?)?(?:\s+\d{4})?\b/gi, ' ')
     // Reference / invoice / receipt / PO / GL / standard / section numbers
     .replace(/\b(?:sfrs\(i\)|frs|ias|ifrs)\s*\d+(?:-\d+)?(?:\s*(?:§|para(?:graph)?|p\.?)\s*\d+(?:\.\d+)*)?\b/gi, ' ')
-    .replace(/\b(?:section|sec\.?|s\.?|regulation|reg\.?|schedule|sched\.?|article|art\.?|paragraph|para\.?)\s*\d+[a-z0-9()./-]*\b/gi, ' ')
-    .replace(/\b(?:inv(?:oice)?|receipt|rcpt|ref(?:erence)?|po|gl|acct|account|doc|voucher|cheque|check|no\.?|#)\s*[:#-]?\s*[a-z]*\d+[a-z0-9-]*\b/gi, ' ')
+    .replace(/§\s*\d+[a-z0-9()./-]*/gi, ' ')
+    .replace(/(?<!['’])\b(?:section|sec\.?|s\.|regulation|reg\.?|schedule|sched\.?|article|art\.?|paragraph|para\.?)\s*\d+[a-z0-9()./-]*\b/gi, ' ')
+    .replace(/(?:\b(?:inv(?:oice)?|receipt|rcpt|ref(?:erence)?|po|gl|acct|account|doc|voucher|cheque|check|order|no\.?)\s*[:#-]?\s*|#\s*)[a-z]*\d+[a-z0-9-]*\b/gi, ' ')
     .replace(/\b[a-z]{1,6}-\d[\d-]*\b/gi, ' ')
     // Percentages
     .replace(/\b\d+(?:\.\d+)?\s*%/g, ' ')
     .replace(/\b\d+(?:\.\d+)?\s*percent\b/gi, ' ')
     // Ages and durations
-    .replace(/\b(?:age\s*\d+|aged\s*\d+|\d+\s*-?\s*year(?:s)?[\s-]*old)\b/gi, ' ')
+    .replace(/\b(?:age\s*[:=]?\s*\d+|aged\s*[:=]?\s*\d+|\d+\s*-?\s*year(?:s)?[\s-]*old)\b/gi, ' ')
     .replace(/\b\d+(?:\.\d+)?\s*-?\s*(?:years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|hrs?)\b/gi, ' ')
-    // Share/unit counts (e.g., "100 shares", "300 apple shares")
-    .replace(/\b\d[\d,]*(?:\.\d+)?\s+(?:[a-z]+\s+)?shares?\b/gi, ' ')
+    // Share/unit counts (e.g., "100 shares", "5k shares", "100 thousand shares", "300 apple shares")
+    .replace(/\b\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|bn|thousand|million|billion))?\s+(?:[a-z]+\s+)?shares?\b/gi, ' ')
     // Standalone 4-digit years (1900-2099)
     .replace(/\b(?:19|20)\d{2}\b/g, ' ');
 }
@@ -161,13 +162,15 @@ export function hasMonetaryEvidence(text: string): boolean {
 
   if (
     CURRENCY_PREFIXED_AMOUNT_REGEX.test(trimmed) ||
-    ABBREVIATED_AMOUNT_REGEX.test(trimmed) ||
     SPELLED_CURRENCY_AMOUNT_REGEX.test(trimmed)
   ) {
     return true;
   }
 
   const stripped = stripNonMonetaryTokens(trimmed);
+  if (ABBREVIATED_AMOUNT_REGEX.test(stripped)) {
+    return true;
+  }
   return /\b\d[\d,]*(?:\.\d+)?\b/.test(stripped);
 }
 
