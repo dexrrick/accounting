@@ -31,7 +31,11 @@ import {
   isJournalDisplayRequest,
   startsNewAccountingScenario
 } from './conversationBoundary';
-import { getDisplayableUncommittedJournalGroups } from './committedJournal';
+import {
+  getDisplayableUncommittedJournalGroups,
+  hasSameTransactionPriorMonetaryEvidence,
+  hasVerifiedImageMonetaryEvidence
+} from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
 import { getCitation } from '../standards/standardsKnowledge';
@@ -1103,15 +1107,23 @@ async function processAccountingQueryCore(
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
-    if (hasImages) return response;
     const groups = response.scenarioState.directGroups || [];
     if (groups.length === 0) return response;
-    if (!journalRequested && Boolean(deterministicScenario?.directGroups?.length)) {
-      return response;
-    }
+    const hasImageEvidence =
+      hasVerifiedImageMonetaryEvidence(response.scenarioState) ||
+      hasVerifiedImageMonetaryEvidence(activeScenario);
+    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(
+      activeScenario,
+      response.scenarioState
+    );
+    const evidenceTexts = relevantChatHistory
+      .filter(message => message.sender === 'user')
+      .map(message => message.text);
     const integrity = validateJournalGroups(groups, {
       rawQuery: userInput,
-      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length)
+      hasPriorContextAmount,
+      hasImageEvidence,
+      evidenceTexts
     });
     if (integrity.isValid) return response;
 
@@ -1412,13 +1424,38 @@ async function processAccountingQueryCore(
   // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
     const groups = deterministicScenario.directGroups || [];
-    const grounded = groups.length > 0 && groups.every(g =>
-      g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
+    const integrity = groups.length > 0
+      ? validateJournalGroups(groups, {
+          rawQuery: userInput,
+          hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario),
+          hasImageEvidence: hasVerifiedImageMonetaryEvidence(deterministicScenario) || hasVerifiedImageMonetaryEvidence(activeScenario),
+          evidenceTexts: relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+        })
+      : { isValid: false, issues: [] };
+    const grounded = deterministicScenario.isComplete && groups.length > 0 && integrity.isValid;
     if (grounded) {
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
       return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
+    }
+    if (groups.length > 0 && !integrity.isValid) {
+      const validationClarification: MissingFieldInfo = {
+        fieldKey: 'journalValidation',
+        fieldName: 'Transaction details',
+        prompt: integrity.issues[0]?.message || 'The transaction details could not be validated into a balanced journal entry. Please confirm the figures.',
+        whyNeeded: 'Only validated, balanced double-entry journals may be emitted.'
+      };
+      return attachAmendmentProvenance({
+        messageText: `### Clarification Required for Double Entry\n\n${validationClarification.prompt}`,
+        scenarioState: {
+          ...deterministicScenario,
+          directGroups: [],
+          isComplete: false,
+          missingFields: [validationClarification]
+        },
+        clarifications: [validationClarification]
+      });
     }
     if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
         !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
@@ -1991,57 +2028,82 @@ export function renderStructuredOfflineResponse(
   }
 
   // 5. ASSET PURCHASE WITH TRADE DISCOUNT, GST, CASH & CREDIT TERMS
-  if (parsed.scenarioType === 'ASSET_PURCHASE_DISCOUNT' && parsed.directGroups) {
+  if (parsed.scenarioType === 'ASSET_PURCHASE_DISCOUNT') {
+    if (!parsed.isComplete || !parsed.directGroups?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the asset list price, discount, GST, and payment terms before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
     const grp = parsed.directGroups[0];
-    const equipLine = grp.lines.find(l => l.category === 'ASSET' && l.debit > 0 && l.accountCode === '1500');
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const equipLine = grp.lines.find(l => l.accountCode === '1500');
     const gstLine = grp.lines.find(l => l.accountCode === '1190');
     const bankLine = grp.lines.find(l => l.accountCode === '1010');
     const payableLine = grp.lines.find(l => l.accountCode === '2010');
 
-    const costVal = equipLine?.debit || 18000;
-    const gstVal = gstLine?.debit || 1620;
-    const bankVal = bankLine?.credit || 5000;
-    const payableVal = payableLine?.credit || 14620;
+    const assetName = equipLine?.accountName.replace(/\s*-\s*Cost.*$/i, '') || 'Equipment';
+    const costVal = equipLine?.debit ?? 0;
+    const gstVal = gstLine?.debit ?? 0;
+    const bankVal = bankLine?.credit ?? 0;
+    const payableVal = payableLine?.credit ?? 0;
+    const grossVal = Math.round((costVal + gstVal) * 100) / 100;
 
     const listPriceParam = parsed.keyParameters?.find(p => p.label.includes('List Price'));
     const discountParam = parsed.keyParameters?.find(p => p.label.includes('Trade Discount'));
-    const listPriceStr = listPriceParam?.value || 'SGD 20,000.00';
-    const discountLabel = discountParam?.label || 'Trade Discount (10%)';
-    const discountValStr = discountParam?.value || '-SGD 2,000.00';
+    const gstParam = parsed.keyParameters?.find(p => p.label.includes('Input GST'));
+    const gstRateLabel = gstParam?.label.match(/(\d+(?:\.\d+)?%)/)?.[1] ?? '0%';
 
-    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a)) & Singapore GST Act\n\n` +
-      `Here is the single compound journal entry on **${grp.eventDate}** to record the purchase of office equipment:\n\n` +
+    const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+    const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+    const grpBalanced = totalDrCents > 0 && totalDrCents === totalCrCents;
+    const lineBullets = grp.lines
+      .map(l => {
+        const side = l.debit > 0 ? 'Debit' : 'Credit';
+        const amt = l.debit > 0 ? l.debit : l.credit;
+        return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+      })
+      .join('\n');
+
+    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a))${gstVal > 0 ? ' & Singapore GST Act' : ''}\n\n` +
+      `Here is the journal entry on **${grp.eventDate}** to record the purchase of **${assetName}**:\n\n` +
       `---\n\n` +
       `#### 1. Asset Capitalization & Trade Discount Deduction (${std16Name} §16(a))\n` +
-      `* **List Price**: **${listPriceStr}** (exclusive of 9% GST)\n` +
-      `* **Less ${discountLabel}**: $\\mathbf{${discountValStr}}$\n` +
-      `* **Net Initial Cost Recognized**:\n` +
-      `  $$\\text{Asset Cost} = \\mathbf{SGD\\ ${costVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n` +
-      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price. Trade discounts are **never** recorded as a separate ledger line in accounting).* \n\n` +
+      `${listPriceParam ? `* **List Price**: **${listPriceParam.value}**\n` : ''}` +
+      `${discountParam ? `* **Less ${discountParam.label}**: **${discountParam.value}**\n` : ''}` +
+      `* **Net Initial Cost Recognized**: **${currency} ${fmt2(costVal)}**\n` +
+      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price and are never recorded as separate ledger lines.)*\n\n` +
       `---\n\n` +
-      `#### 2. Singapore 9% Recoverable Input GST (IRAS)\n` +
-      `* Under IRAS guidelines, 9% GST is levied on the **discounted selling price**:\n` +
-      `  $$\\text{Input GST (9\\%)} = \\text{SGD } ${costVal.toLocaleString()} \\times 9\\% = \\mathbf{SGD\\ ${gstVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n` +
-      `* **Total Gross Invoice Payable**: $\\text{SGD } ${costVal.toLocaleString()} + \\text{SGD } ${gstVal.toLocaleString()} = \\mathbf{SGD\\ ${(costVal + gstVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n\n` +
+      `#### 2. Recoverable Input GST & Invoice Total\n` +
+      `* **Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
+      `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n` +
       `---\n\n` +
       `#### 3. Settlement Breakdown\n` +
-      `* **Immediate Bank Transfer**: **SGD ${bankVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Remaining Balance on Credit Terms (Trade Payables)**:\n` +
-      `  $$\\text{Trade Payables} = ${(costVal + gstVal).toLocaleString()} - ${bankVal.toLocaleString()} = \\mathbf{SGD\\ ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n\n` +
+      `* **Immediate Bank Transfer**: **${currency} ${fmt2(bankVal)}**\n` +
+      `* **Remaining Balance on Credit Terms (Trade Payables)**: **${currency} ${fmt2(payableVal)}**\n\n` +
       `---\n\n` +
-      `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
-      `* **Debit**: **Office Equipment - Cost (Non-Current Asset)** — **SGD ${costVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Debit**: **GST Input Tax (IRAS 9% Claimable Receivable)** — **SGD ${gstVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Cash at Bank (Current Asset)** — **SGD ${bankVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Trade Payables / Other Payables (Current Liability)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
-      `**Balance Check**: $\\text{Total Debits (SGD } ${(costVal + gstVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${(bankVal + payableVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
+      `### ${grp.title} (${grp.eventDate})\n\n` +
+      `${lineBullets}\n\n` +
+      `**Balance Check**: ${currency} ${fmt2(totalDrCents / 100)} == ${currency} ${fmt2(totalCrCents / 100)} ${grpBalanced ? '✓ Balanced' : '✗ Imbalanced'}`;
 
-    if (parsed.directGroups.length > 1) {
-      const grp2 = parsed.directGroups[1];
-      replyText += `\n\n---\n\n### Subsequent Event: ${grp2.title} (${grp2.eventDate})\n\n` +
-        `* **Debit**: **Trade Payables (Current Liability)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Derecognition of liability)*\n` +
-        `* **Credit**: **Cash at Bank (Current Asset)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Cash outflow)*\n\n` +
-        `*(Under ${std9} §3.3.1, the financial liability is extinguished upon full settlement).*`;
+    for (let i = 1; i < parsed.directGroups.length; i++) {
+      const nextGrp = parsed.directGroups[i];
+      const nDrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const nCrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const nBalanced = nDrCents > 0 && nDrCents === nCrCents;
+      const nLines = nextGrp.lines
+        .map(l => {
+          const side = l.debit > 0 ? 'Debit' : 'Credit';
+          const amt = l.debit > 0 ? l.debit : l.credit;
+          return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+        })
+        .join('\n');
+      replyText += `\n\n---\n\n### Subsequent Event: ${nextGrp.title} (${nextGrp.eventDate})\n\n${nLines}\n\n` +
+        `**Balance Check**: ${currency} ${fmt2(nDrCents / 100)} == ${currency} ${fmt2(nCrCents / 100)} ${nBalanced ? '✓ Balanced' : '✗ Imbalanced'}\n\n` +
+        `*(Under ${std9} §3.3.1, the financial liability is extinguished upon settlement).*`;
     }
 
     return {
@@ -2051,43 +2113,43 @@ export function renderStructuredOfflineResponse(
   }
 
   // 6. PPE MACHINERY ACQUISITION WITH TRADE-IN, GST, DEPRECIATION & LOAN
-  if (parsed.scenarioType === 'PPE_IAS16' && parsed.directGroups) {
+  if (parsed.scenarioType === 'PPE_IAS16') {
+    if (!parsed.isComplete || !parsed.directGroups?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the missing machinery, depreciation, trade-in, and settlement details before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const primaryDate = parsed.directGroups[0]?.eventDate || '';
+    const factRows = (parsed.keyParameters || [])
+      .map(param => `* **${param.label}**: **${param.value}**`)
+      .join('\n');
+
+    const groupSections = parsed.directGroups.map((grp, idx) => {
+      const drCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const crCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const balanced = drCents > 0 && drCents === crCents;
+      const lineBullets = grp.lines
+        .map(l => {
+          const side = l.debit > 0 ? 'Debit' : 'Credit';
+          const amt = l.debit > 0 ? l.debit : l.credit;
+          return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+        })
+        .join('\n');
+      return `#### ${idx + 1}. ${grp.title} (${grp.eventDate})\n` +
+        `${grp.summary}\n\n` +
+        `${lineBullets}\n\n` +
+        `**Balance Check**: ${currency} ${fmt2(drCents / 100)} == ${currency} ${fmt2(crCents / 100)} ${balanced ? '✓ Balanced' : '✗ Imbalanced'}`;
+    }).join('\n\n---\n\n');
+
     const replyText = `### Under ${std16Name} (*Property, Plant and Equipment*), Singapore GST Act, & ${std9} (*Financial Instruments*)\n\n` +
-      `Here is the complete statutory accounting schedule and double entries on **1 April 2026** for your machinery purchase, trade-in derecognition, and equipment loan:\n\n` +
-      `---\n\n` +
-      `#### 1. Depreciation Catch-Up Schedule (1 Jan 2026 – 31 Mar 2026)\n` +
-      `* Under **${std16Name} §55**, depreciation ceases at the date of derecognition. Therefore, depreciation for Jan–Mar 2026 (3 months) must be recognized **prior to disposal**:\n` +
-      `  $$\\text{Catch-up Depreciation} = \\text{SGD } 50,000 \\times 20\\% \\times \\frac{3}{12} = \\mathbf{SGD\\ 2,500.00}$$\n` +
-      `* **Total Accumulated Depreciation at 1 April 2026**:\n` +
-      `  $$\\text{SGD } 20,000 \\text{ (2024–2025)} + \\text{SGD } 2,500 \\text{ (Jan–Mar 2026)} = \\mathbf{SGD\\ 22,500.00}$$\n` +
-      `* **Carrying Amount / Net Book Value (NBV) at Disposal**:\n` +
-      `  $$\\text{SGD } 50,000 - \\text{SGD } 22,500 = \\mathbf{SGD\\ 27,500.00}$$\n\n` +
-      `---\n\n` +
-      `#### 2. Trade-in Valuation & Singapore 9% GST Breakdown (IRAS)\n` +
-      `* Under the Singapore GST Act, a trade-in constitutes a taxable supply (disposal of business asset):\n` +
-      `  * **Agreed Trade-in Value (Gross)**: **SGD 21,800.00** (inclusive of 9% GST)\n` +
-      `  * **Net Trade-in Consideration**: $\\text{SGD } 21,800 / 1.09 = \\mathbf{SGD\\ 20,000.00}$\n` +
-      `  * **Output GST Payable to IRAS (9%)**: $\\text{SGD } 21,800 - 20,000 = \\mathbf{SGD\\ 1,800.00}$\n` +
-      `* **Loss on Disposal Recognized in P&L (${std16Name} §68 & §71)**:\n` +
-      `  $$\\text{Loss on Disposal} = \\text{Carrying Amount } (\\text{SGD } 27,500) - \\text{Net Consideration } (\\text{SGD } 20,000) = \\mathbf{SGD\\ 7,500.00}$$\n\n` +
-      `---\n\n` +
-      `#### 3. New Machinery Cost & Equipment Loan Funding\n` +
-      `* **New Machine Cost (${std16Name} §16)**: **SGD 100,000.00** (capitalized net of recoverable tax)\n` +
-      `* **Input GST (9% Claimable Receivable)**: **SGD 9,000.00** $\\rightarrow$ Total invoice: **SGD 109,000.00**\n` +
-      `* **Less Trade-in credit**: SGD 21,800.00\n` +
-      `* **Less Bank cash paid**: SGD 30,000.00\n` +
-      `* **Remaining Balance Funded via Equipment Loan**:\n` +
-      `  $$\\text{Loan Principal} = 109,000 - 21,800 - 30,000 = \\mathbf{SGD\\ 57,200.00}$$\n` +
-      `* **2-Year 5% p.a. Flat Interest**:\n` +
-      `  $$\\text{Unexpired Loan Interest} = 57,200 \\times 5\\% \\times 2 = \\mathbf{SGD\\ 5,720.00}$$\n` +
-      `* **Gross Equipment Loan Payable**: $57,200 + 5,720 = \\mathbf{SGD\\ 62,920.00}$\n` +
-      `  *(The SGD 5,720 unexpired interest is recorded upfront as a contra-liability account, so the net loan obligation on initial recognition is exactly SGD 57,200 under ${std9})*.\n\n` +
-      `---\n\n` +
-      `### Summary of Double Entries (1 April 2026)\n` +
-      `1. **Catch-up Depreciation**: Dr. Depreciation Expense SGD 2,500 | Cr. Accumulated Depreciation SGD 2,500\n` +
-      `2. **Disposal of Old Machine**: Dr. Acc. Depr SGD 22,500 | Dr. Loss on Disposal SGD 7,500 | Dr. Vendor Clearing SGD 21,800 || Cr. Machinery Cost SGD 50,000 | Cr. GST Output Tax SGD 1,800\n` +
-      `3. **Acquisition & Financing**: Dr. Machinery Cost SGD 100,000 | Dr. GST Input Tax SGD 9,000 | Dr. Unexpired Loan Interest SGD 5,720 || Cr. Vendor Clearing SGD 21,800 | Cr. Cash at Bank SGD 30,000 | Cr. Equipment Loan Payable SGD 62,920\n\n` +
-      `Review the **Double Entry Journal** tab for the full verified ledger table with citations!`;
+      `Here is the statutory accounting breakdown and double-entry schedule${primaryDate ? ` on **${primaryDate}**` : ''}:\n\n` +
+      `${factRows ? `#### Key Figures\n${factRows}\n\n---\n\n` : ''}` +
+      `${groupSections}`;
 
     return {
       messageText: finalizeMessage(replyText, parsed),

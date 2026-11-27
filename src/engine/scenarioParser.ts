@@ -371,7 +371,11 @@ export async function parseAccountingQuery(
     currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
     !isSingleMonthlySalaryAmendment(query)
   );
-  const amendmentResolution = (isMeasurementBasisFollowUp || isNonSalaryPayrollCorrection)
+  const isMultiFieldTemplateFollowUp = Boolean(
+    currentScenario &&
+    (currentScenario.scenarioType === 'PPE_IAS16' || currentScenario.scenarioType === 'ASSET_PURCHASE_DISCOUNT')
+  );
+  const amendmentResolution = (isMeasurementBasisFollowUp || isNonSalaryPayrollCorrection || isMultiFieldTemplateFollowUp)
     ? { intent: 'QUESTION' as const }
     : resolveFactAmendment(query, currentScenario);
   if (currentScenario && amendmentResolution.intent === 'FACT_AMENDMENT' && amendmentResolution.clarificationNeeded) {
@@ -1636,333 +1640,735 @@ export async function parseAccountingQuery(
   // SCENARIO 0: PPE MACHINERY ACQUISITION WITH TRADE-IN, GST, DEPRECIATION & LOAN
   // e.g. "A GST-registered company purchases new machinery on 1 April 2026 for SGD 100,000..."
   // =========================================================================
+  const round2 = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100;
+  const toCents = (value: number): number => Math.round((value + Number.EPSILON) * 100);
+  const parseAmountToken = (rawAmount: string, unit?: string): number => {
+    const base = parseFloat(rawAmount.replace(/,/g, ''));
+    if (!Number.isFinite(base)) return NaN;
+    const u = (unit || '').toLowerCase();
+    if (u === 'k' || u === 'thousand') return base * 1000;
+    if (u === 'm' || u === 'million') return base * 1000000;
+    return base;
+  };
+  const MONTH_NAMES: Record<string, number> = {
+    jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+    may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8,
+    sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+  };
+  const isValidCalendarDateParts = (year: number, month: number, day: number): boolean => {
+    if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return false;
+    if (year < 1900 || year > 2100 || month < 1 || month > 12 || day < 1) return false;
+    const leapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+    return day <= daysInMonth;
+  };
+  const parseExplicitDate = (text: string): { formatted?: string; year?: number; month?: number; day?: number; invalid?: boolean } => {
+    const dmyMonth = text.match(/\b(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})\b/i);
+    if (dmyMonth) {
+      const day = parseInt(dmyMonth[1], 10);
+      const month = MONTH_NAMES[dmyMonth[2].toLowerCase()];
+      const year = parseInt(dmyMonth[3], 10);
+      if (!isValidCalendarDateParts(year, month, day)) return { invalid: true };
+      return { formatted: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`, year, month, day };
+    }
+    const mdyMonth = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}),?\s+(\d{4})\b/i);
+    if (mdyMonth) {
+      const month = MONTH_NAMES[mdyMonth[1].toLowerCase()];
+      const day = parseInt(mdyMonth[2], 10);
+      const year = parseInt(mdyMonth[3], 10);
+      if (!isValidCalendarDateParts(year, month, day)) return { invalid: true };
+      return { formatted: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`, year, month, day };
+    }
+    const isoDate = text.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/);
+    if (isoDate) {
+      const year = parseInt(isoDate[1], 10);
+      const month = parseInt(isoDate[2], 10);
+      const day = parseInt(isoDate[3], 10);
+      if (!isValidCalendarDateParts(year, month, day)) return { invalid: true };
+      return { formatted: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`, year, month, day };
+    }
+    const slashDate = text.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+    if (slashDate) {
+      const day = parseInt(slashDate[1], 10);
+      const month = parseInt(slashDate[2], 10);
+      const year = parseInt(slashDate[3], 10);
+      if (!isValidCalendarDateParts(year, month, day)) return { invalid: true };
+      return { formatted: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`, year, month, day };
+    }
+    return {};
+  };
+  const extractAllExplicitDates = (text: string): Array<{ formatted: string; year: number; month: number; day: number; index: number }> => {
+    const found: Array<{ formatted: string; year: number; month: number; day: number; index: number }> = [];
+    const regex = /\b(?:(\d{1,2})\s+(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{4})|(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2}),?\s+(\d{4})|(\d{4})-(\d{1,2})-(\d{1,2})|(\d{1,2})\/(\d{1,2})\/(\d{4}))\b/gi;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(text)) !== null) {
+      const parsedDate = parseExplicitDate(m[0]);
+      if (parsedDate.invalid) {
+        return [{ formatted: 'INVALID', year: -1, month: -1, day: -1, index: m.index }];
+      }
+      if (parsedDate.formatted && parsedDate.year && parsedDate.month && parsedDate.day) {
+        found.push({
+          formatted: parsedDate.formatted,
+          year: parsedDate.year,
+          month: parsedDate.month,
+          day: parsedDate.day,
+          index: m.index
+        });
+      }
+    }
+    return found;
+  };
+  const monthsBetweenInclusive = (
+    start: { year: number; month: number; day: number },
+    end: { year: number; month: number; day: number }
+  ): number => {
+    const startUtc = Date.UTC(start.year, start.month - 1, start.day);
+    const endUtc = Date.UTC(end.year, end.month - 1, end.day);
+    if (endUtc < startUtc) return -1;
+    // Day-after-period-end (e.g. 31 Dec 2025 -> 1 Apr 2026) or start-of-month to start-of-month (1 Jan 2024 -> 1 Apr 2026)
+    let months = (end.year - start.year) * 12 + (end.month - start.month);
+    if (end.day >= 28 && start.day <= 2) {
+      months += 1;
+    } else if (end.day < start.day && end.day < 28) {
+      months -= 1;
+    }
+    return Math.max(0, months);
+  };
+  const extractParamNumber = (scenario: AccountingScenarioState | null | undefined, labelFragment: string): number | undefined => {
+    const param = scenario?.keyParameters?.find(p => p.label.toLowerCase().includes(labelFragment.toLowerCase()));
+    if (!param) return undefined;
+    const m = param.value.match(/-?[\d,]+(?:\.\d+)?/);
+    if (!m) return undefined;
+    const n = parseFloat(m[0].replace(/,/g, ''));
+    return Number.isFinite(n) ? n : undefined;
+  };
+  const formatMoney = (value: number): string =>
+    `${functionalCurrency} ${value.toLocaleString(undefined, { minimumFractionDigits: value % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })}`;
+
   const isFollowUpOnPpe = currentScenario?.scenarioType === 'PPE_IAS16' &&
+    Boolean(currentScenario.isComplete) &&
     (q.includes('interest') || q.includes('loan') || q.includes('trade-in') || q.includes('trade in') || q.includes('cash') || q.includes('depreciation') || q.includes('what if') || q.includes('change') || q.includes('how about') || q.includes('why') || q.includes('explain'));
 
-  const isPpeTradeIn = 
-    isFollowUpOnPpe ||
-    ((q.includes('machinery') || q.includes('machine') || q.includes('equipment') || q.includes('fixed asset') || q.includes('ppe')) &&
-    (q.includes('trade-in') || q.includes('trade in') || q.includes('disposal') || q.includes('derecognition') || q.includes('depreciation')));
+  const hasPpeAssetKeyword = /\b(?:machinery|machine|equipment|fixed asset|ppe)\b/i.test(query);
+  const hasExplicitTradeInKeyword = /\b(?:trade[-\s]?in|trades?\s+in|traded\s+in|part[-\s]?exchange|exchanged\s+an\s+old)\b/i.test(query);
+  const isPpeTradeIn = isFollowUpOnPpe || (hasPpeAssetKeyword && hasExplicitTradeInKeyword);
 
   if (isPpeTradeIn) {
-    // 1. New machine cost & GST
-    let newCost = 100000;
-    if (isFollowUpOnPpe && currentScenario?.keyParameters) {
-      const priorParam = currentScenario.keyParameters.find(p => p.label.includes('New Machine Cost'));
-      if (priorParam) {
-        const num = parseFloat(priorParam.value.replace(/[^0-9.]/g, ''));
-        if (num > 1000) newCost = num;
+    const canInheritPpe = Boolean(isFollowUpOnPpe && currentScenario?.isComplete);
+    const missingFields: MissingFieldInfo[] = [];
+
+    // 1. Transaction / Disposal Date
+    const allDates = extractAllExplicitDates(query);
+    const hasInvalidDate = allDates.some(d => d.formatted === 'INVALID');
+    let transactionDateObj = allDates.find(d => d.formatted !== 'INVALID');
+    const explicitOnDisposalMatch = query.match(/(?:purchases?|bought|acquires?|prepare(?:\s+the)?\s+journal(?:\s+entries)?|dispos(?:al|e)|trade[-\s]?in)\s+[^.;\n]*?\bon\s+([^\n.;,]+)/i);
+    if (!hasInvalidDate && explicitOnDisposalMatch?.[1]) {
+      const parsedDisposal = parseExplicitDate(explicitOnDisposalMatch[1]);
+      if (parsedDisposal.invalid) {
+        transactionDateObj = { formatted: 'INVALID', year: -1, month: -1, day: -1, index: 0 };
+      } else if (parsedDisposal.formatted && parsedDisposal.year && parsedDisposal.month && parsedDisposal.day) {
+        transactionDateObj = { ...parsedDisposal, formatted: parsedDisposal.formatted, year: parsedDisposal.year, month: parsedDisposal.month, day: parsedDisposal.day, index: 0 };
       }
     }
-    const newCostMatch = query.match(/(?:purchases?|bought|acquires?|cost(?:\s*of)?)\s*(?:new\s*)?(?:machinery|machine|equipment)?[^0-9]*?(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i);
-    if (newCostMatch && newCostMatch[1]) {
-      const parsedVal = parseFloat(newCostMatch[1].replace(/,/g, ''));
-      if (parsedVal > 1000) newCost = parsedVal;
+    let eventDate: string | undefined = transactionDateObj && transactionDateObj.formatted !== 'INVALID'
+      ? transactionDateObj.formatted
+      : undefined;
+    if (!eventDate && canInheritPpe) {
+      eventDate = currentScenario?.directGroups?.[0]?.eventDate;
+    }
+    if (hasInvalidDate || transactionDateObj?.formatted === 'INVALID') {
+      missingFields.push({
+        fieldKey: 'transactionDate',
+        fieldName: 'Valid transaction date',
+        prompt: 'The stated date is not a valid calendar date. Please provide a valid transaction and disposal date (DD/MM/YYYY).',
+        whyNeeded: 'Depreciation cut-off and derecognition timing require a valid calendar date.'
+      });
+    } else if (!eventDate) {
+      missingFields.push({
+        fieldKey: 'transactionDate',
+        fieldName: 'Transaction / disposal date',
+        prompt: 'What is the exact acquisition and trade-in disposal date?',
+        whyNeeded: 'IAS 16 §55 requires the exact disposal date to determine catch-up depreciation.'
+      });
     }
 
-    let gstRate = 0.09;
-    const gstMatch = query.match(/(\d+)%\s*gst/i);
-    if (gstMatch && gstMatch[1]) {
-      gstRate = parseFloat(gstMatch[1]) / 100;
+    // 2. New machine cost & GST
+    let newCost: number | undefined;
+    if (canInheritPpe) {
+      newCost = extractParamNumber(currentScenario, 'New Machine Cost');
     }
-    const inputGst = Math.round(newCost * gstRate * 100) / 100;
-    const grossNewCost = newCost + inputGst;
+    const newCostMatch =
+      query.match(/(?:purchases?|bought|acquires?)\s+(?:a\s+|an\s+)?(?:new\s+)?(?:machinery|machine|equipment|asset)[^\n]*?(?:for|at|costing)\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+      query.match(/new\s+(?:machinery|machine|equipment|asset)\s*(?:cost(?:ing)?|price)?\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (newCostMatch?.[1]) {
+      const parsedVal = parseAmountToken(newCostMatch[1], newCostMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal > 0) newCost = parsedVal;
+    }
+    if (newCost === undefined || !(newCost > 0)) {
+      missingFields.push({
+        fieldKey: 'newCost',
+        fieldName: 'New machinery purchase price',
+        prompt: 'What is the purchase price of the new machinery (and whether it is exclusive or inclusive of GST)?',
+        whyNeeded: 'Initial recognition of the new PPE asset under IAS 16 §16 requires a stated purchase cost.'
+      });
+    }
 
-    // 2. Old machine cost & depreciation
-    let oldCost = 50000;
-    if (isFollowUpOnPpe && currentScenario?.keyParameters) {
-      const priorCostParam = currentScenario.keyParameters.find(p => p.label.includes('Old Machine Original Cost'));
-      if (priorCostParam) {
-        const num = parseFloat(priorCostParam.value.replace(/[^0-9.]/g, ''));
-        if (num > 1000) oldCost = num;
+    // GST rate parsing: preserve explicit 0%, fail closed if GST mentioned without rate, default 0 if not mentioned
+    let gstRate: number | undefined;
+    const explicitNoGst = /\b(?:no\s+gst|non[-\s]?gst|not\s+gst[-\s]?registered|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
+    const gstPctMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*gst/i) || query.match(/gst\s*(?:at|of|rate)?\s*(\d+(?:\.\d+)?)\s*%/i);
+    if (explicitNoGst) {
+      gstRate = 0;
+    } else if (gstPctMatch?.[1]) {
+      const rate = parseFloat(gstPctMatch[1]) / 100;
+      if (Number.isFinite(rate) && rate >= 0 && rate < 1) gstRate = rate;
+    } else if (canInheritPpe) {
+      const priorInputGst = extractParamNumber(currentScenario, 'Input GST');
+      if (priorInputGst !== undefined && newCost && newCost > 0) {
+        gstRate = round2((priorInputGst / newCost) * 100) / 100;
+      } else {
+        gstRate = 0;
       }
-    }
-    const oldCostMatch = query.match(/old\s*(?:machine|machinery|equipment)\s*cost\s*(?:is|=|:)?\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i);
-    if (oldCostMatch && oldCostMatch[1]) {
-      const parsedVal = parseFloat(oldCostMatch[1].replace(/,/g, ''));
-      if (parsedVal > 1000) oldCost = parsedVal;
+    } else if (/\bgst\b/i.test(query)) {
+      missingFields.push({
+        fieldKey: 'gstRate',
+        fieldName: 'GST rate',
+        prompt: 'What GST rate applies to this purchase and trade-in (for example, 9% or 0%)?',
+        whyNeeded: 'GST was mentioned without specifying the applicable percentage rate.'
+      });
+    } else {
+      gstRate = 0;
     }
 
-    let deprRateAnnual = 0.20;
-    const deprRateMatch = query.match(/(\d+)%\s*(?:per\s*annum|p\.a\.|annual)/i);
-    if (deprRateMatch && deprRateMatch[1]) {
+    // 3. Old machine cost, trade-in value, accumulated / catch-up depreciation
+    let oldCost: number | undefined;
+    if (canInheritPpe) {
+      oldCost = extractParamNumber(currentScenario, 'Old Machine Original Cost');
+    }
+    const oldCostMatch =
+      query.match(/old\s*(?:machinery|machine|equipment|asset)\s*(?:original\s*)?(?:cost(?:ing)?|purchased\s*for|bought\s*for)?\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (oldCostMatch?.[1]) {
+      const parsedVal = parseAmountToken(oldCostMatch[1], oldCostMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal > 0) oldCost = parsedVal;
+    }
+    if (oldCost === undefined || !(oldCost > 0)) {
+      missingFields.push({
+        fieldKey: 'oldCost',
+        fieldName: 'Old machine original cost',
+        prompt: 'What was the original historical cost of the old machine being traded in?',
+        whyNeeded: 'Derecognition under IAS 16 §67 requires the original cost of the disposed asset.'
+      });
+    }
+
+    let agreedTradeInGross: number | undefined;
+    if (canInheritPpe) {
+      agreedTradeInGross = extractParamNumber(currentScenario, 'Agreed Trade-In Value');
+    }
+    const zeroTradeIn = /\b(?:no\s+trade[-\s]?in\s+(?:value|allowance|credit)|trade[-\s]?in\s*(?:value|allowance)?\s*(?:is|was|of|at|=)?\s*(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b)/i.test(query);
+    const tradeInMatch = query.match(/trade[-\s]?in\s*(?:value|allowance|credit|consideration)?\s*(?:of|is|was|at|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (zeroTradeIn) {
+      agreedTradeInGross = 0;
+    } else if (tradeInMatch?.[1]) {
+      const parsedVal = parseAmountToken(tradeInMatch[1], tradeInMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal >= 0) agreedTradeInGross = parsedVal;
+    }
+    if (agreedTradeInGross === undefined || agreedTradeInGross < 0) {
+      missingFields.push({
+        fieldKey: 'tradeInValue',
+        fieldName: 'Agreed trade-in value',
+        prompt: 'What is the agreed trade-in value for the old machine (and is it inclusive or exclusive of GST)?',
+        whyNeeded: 'Disposal gain/loss and net balance payable depend on the trade-in consideration.'
+      });
+    }
+
+    // Depreciation / Accumulated Depreciation at disposal
+    let catchUpDepr = 0;
+    let priorAccDepr = 0;
+    let totalAccDeprAtDisposal: number | undefined;
+    let deprRateAnnual: number | undefined;
+    let catchUpMonths = 0;
+    let priorMonths = 0;
+
+    const explicitAccDeprMatch = query.match(/accumulated\s+depreciation\s*(?:up\s+to\s+[^0-9]*|as\s+at\s+[^0-9]*|of|is|was|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    const explicitNbvMatch = query.match(/(?:net\s+book\s+value|nbv|carrying\s+(?:amount|value))\s*(?:of|is|was|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    const deprRateMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:per\s*annum|p\.a\.|annual|straight[-\s]?line)/i);
+    if (deprRateMatch?.[1]) {
       deprRateAnnual = parseFloat(deprRateMatch[1]) / 100;
     }
 
-    // Jan-Mar 2026 catch up depr = 3 months
-    const catchUpDepr = Math.round(oldCost * deprRateAnnual * (3 / 12) * 100) / 100; // 2500
-    // Prior 2 years depr (2024 to 2025) = 2 years
-    const priorAccDepr = Math.round(oldCost * deprRateAnnual * 2 * 100) / 100; // 20000
-    const totalAccDeprAtDisposal = priorAccDepr + catchUpDepr; // 22500
-    const netBookValueOld = oldCost - totalAccDeprAtDisposal; // 27500
+    if (explicitAccDeprMatch?.[1]) {
+      const parsedAcc = parseAmountToken(explicitAccDeprMatch[1], explicitAccDeprMatch[2]);
+      if (Number.isFinite(parsedAcc) && parsedAcc >= 0) {
+        priorAccDepr = parsedAcc;
+        catchUpDepr = 0;
+        totalAccDeprAtDisposal = parsedAcc;
+      }
+    } else if (explicitNbvMatch?.[1] && oldCost !== undefined) {
+      const parsedNbv = parseAmountToken(explicitNbvMatch[1], explicitNbvMatch[2]);
+      if (Number.isFinite(parsedNbv) && parsedNbv >= 0) {
+        totalAccDeprAtDisposal = round2(oldCost - parsedNbv);
+        priorAccDepr = totalAccDeprAtDisposal;
+        catchUpDepr = 0;
+      }
+    } else {
+      // Option B: Compute from explicit old acquisition date, annual depreciation rate, and optional "depreciated up to" date
+      const oldAcqMatch = query.match(/old\s*(?:machinery|machine|equipment|asset)[^.\n]*?\bon\s+(\d{1,2}\s+[a-z]+\s+\d{4}|[a-z]+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+      const depUpToMatch = query.match(/depreciated\s+up\s+to\s+(\d{1,2}\s+[a-z]+\s+\d{4}|[a-z]+\s+\d{1,2},?\s+\d{4}|\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\/\d{1,2}\/\d{4})/i);
+      const oldAcqDate = oldAcqMatch?.[1] ? parseExplicitDate(oldAcqMatch[1]) : undefined;
+      const depUpToDate = depUpToMatch?.[1] ? parseExplicitDate(depUpToMatch[1]) : undefined;
+      const disposalDateParts = eventDate ? parseExplicitDate(eventDate) : undefined;
 
-    // 3. Trade-in value
-    let agreedTradeInGross = 21800;
-    if (isFollowUpOnPpe && currentScenario?.keyParameters) {
-      const priorTradeInParam = currentScenario.keyParameters.find(p => p.label.includes('Agreed Trade-In Value'));
-      if (priorTradeInParam) {
-        const num = parseFloat(priorTradeInParam.value.replace(/[^0-9.]/g, ''));
-        if (num > 500) agreedTradeInGross = num;
+      if (
+        oldCost !== undefined &&
+        deprRateAnnual !== undefined &&
+        deprRateAnnual >= 0 &&
+        oldAcqDate && !oldAcqDate.invalid && oldAcqDate.year && oldAcqDate.month && oldAcqDate.day &&
+        disposalDateParts && !disposalDateParts.invalid && disposalDateParts.year && disposalDateParts.month && disposalDateParts.day
+      ) {
+        const startParts = { year: oldAcqDate.year, month: oldAcqDate.month, day: oldAcqDate.day };
+        const endParts = { year: disposalDateParts.year, month: disposalDateParts.month, day: disposalDateParts.day };
+
+        if (depUpToDate && !depUpToDate.invalid && depUpToDate.year && depUpToDate.month && depUpToDate.day) {
+          const upToParts = { year: depUpToDate.year, month: depUpToDate.month, day: depUpToDate.day };
+          priorMonths = monthsBetweenInclusive(startParts, upToParts);
+          const totalMonths = monthsBetweenInclusive(startParts, endParts);
+          catchUpMonths = totalMonths >= 0 && priorMonths >= 0 ? Math.max(0, totalMonths - priorMonths) : -1;
+          if (priorMonths >= 0 && catchUpMonths >= 0) {
+            priorAccDepr = round2(oldCost * deprRateAnnual * (priorMonths / 12));
+            catchUpDepr = round2(oldCost * deprRateAnnual * (catchUpMonths / 12));
+            totalAccDeprAtDisposal = round2(priorAccDepr + catchUpDepr);
+          }
+        } else {
+          const totalMonths = monthsBetweenInclusive(startParts, endParts);
+          if (totalMonths >= 0) {
+            priorMonths = totalMonths;
+            catchUpMonths = 0;
+            priorAccDepr = round2(oldCost * deprRateAnnual * (totalMonths / 12));
+            catchUpDepr = 0;
+            totalAccDeprAtDisposal = priorAccDepr;
+          }
+        }
+      } else if (canInheritPpe) {
+        const inheritedTotalAcc = extractParamNumber(currentScenario, 'Total Acc. Depr');
+        const inheritedCatchUp = extractParamNumber(currentScenario, 'Catch-up Depr') ?? 0;
+        if (inheritedTotalAcc !== undefined) {
+          totalAccDeprAtDisposal = inheritedTotalAcc;
+          catchUpDepr = inheritedCatchUp;
+          priorAccDepr = round2(inheritedTotalAcc - inheritedCatchUp);
+        }
       }
     }
-    const tradeInMatch = query.match(/trade-?in\s*(?:value\s*)?(?:of|is|at)?\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i);
-    if (tradeInMatch && tradeInMatch[1]) {
-      const parsedVal = parseFloat(tradeInMatch[1].replace(/,/g, ''));
-      if (parsedVal > 500) agreedTradeInGross = parsedVal;
-    }
 
-    const netTradeInProceeds = Math.round((agreedTradeInGross / (1 + gstRate)) * 100) / 100; // 20000
-    const outputGst = Math.round((agreedTradeInGross - netTradeInProceeds) * 100) / 100; // 1800
-    const lossOnDisposal = Math.round((netBookValueOld - netTradeInProceeds) * 100) / 100; // 7500
+    if (totalAccDeprAtDisposal === undefined) {
+      missingFields.push({
+        fieldKey: 'accumulatedDepreciation',
+        fieldName: 'Accumulated depreciation / depreciation facts',
+        prompt: 'What is the old machine’s accumulated depreciation to date (or its original acquisition date and annual depreciation rate)?',
+        whyNeeded: 'Carrying amount and gain/loss on disposal cannot be calculated without accumulated depreciation.'
+      });
+    } else if (oldCost !== undefined && (totalAccDeprAtDisposal < 0 || totalAccDeprAtDisposal > oldCost)) {
+      missingFields.push({
+        fieldKey: 'accumulatedDepreciation',
+        fieldName: 'Valid accumulated depreciation',
+        prompt: `Accumulated depreciation (${formatMoney(totalAccDeprAtDisposal)}) cannot exceed the old machine cost (${formatMoney(oldCost)}) or be negative. Please confirm the depreciation details.`,
+        whyNeeded: 'Accumulated depreciation cannot exceed historical cost.'
+      });
+    }
 
     // 4. Cash paid
-    let cashPaid = 30000;
-    if (isFollowUpOnPpe && currentScenario?.keyParameters) {
-      const priorCashParam = currentScenario.keyParameters.find(p => p.label.includes('Cash Paid'));
-      if (priorCashParam) {
-        const num = parseFloat(priorCashParam.value.replace(/[^0-9.]/g, ''));
-        if (num >= 0) cashPaid = num;
+    let cashPaid: number | undefined;
+    if (canInheritPpe) {
+      cashPaid = extractParamNumber(currentScenario, 'Cash Paid');
+    }
+    const explicitZeroCash = /\b(?:no\s+cash\s+(?:paid|payment)|paid\s+(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b|cash\s*(?:paid\s*(?:via\s+bank(?:\s+transfer)?\s*)?)?(?:is|was|=|:)?\s*(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b|fully\s+financed|100%\s+(?:on\s+)?(?:loan|credit|financed))\b/i.test(query);
+    const cashMatch =
+      query.match(/(?:cash\s*paid(?:\s+via\s+bank(?:\s+transfer)?)?|pays?\s+(?:in\s+cash|via\s+bank|by\s+bank(?:\s+transfer)?)?|paid\s+(?:in\s+cash|via\s+bank|by\s+bank(?:\s+transfer)?)|bank\s+transfer\s+of|down\s*payment\s+of)\s*(?:is|was|of|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+      query.match(/(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s*(?:cash\s*(?:paid|via\s+bank)?|paid\s+(?:immediately\s+)?(?:via\s+bank|by\s+bank(?:\s+transfer)?|in\s+cash))/i);
+    if (explicitZeroCash) {
+      cashPaid = 0;
+    } else if (cashMatch?.[1]) {
+      const parsedVal = parseAmountToken(cashMatch[1], cashMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal >= 0) cashPaid = parsedVal;
+    }
+
+    const tempInputGst = newCost !== undefined && gstRate !== undefined ? round2(newCost * gstRate) : undefined;
+    const tempGrossNewCost = newCost !== undefined && tempInputGst !== undefined ? round2(newCost + tempInputGst) : undefined;
+    if (cashPaid === undefined) {
+      if (tempGrossNewCost !== undefined && agreedTradeInGross !== undefined && Math.abs(tempGrossNewCost - agreedTradeInGross) < 0.01) {
+        cashPaid = 0;
+      } else {
+        missingFields.push({
+          fieldKey: 'cashPaid',
+          fieldName: 'Cash paid at acquisition',
+          prompt: 'How much cash or bank payment (if any, including SGD 0 if none) is paid upfront on acquisition?',
+          whyNeeded: 'Cash disbursement and any remaining loan/payable balance must be explicitly stated.'
+        });
       }
     }
-    const cashMatch = query.match(/(?:cash\s*paid|paid\s*via\s*bank|bank\s*transfer|cash)[^0-9]*?(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i);
-    if (cashMatch && cashMatch[1]) {
-      const parsedVal = parseFloat(cashMatch[1].replace(/,/g, ''));
-      if (parsedVal > 100) cashPaid = parsedVal;
-    }
 
-    // 5. Loan financing
-    const loanPrincipal = grossNewCost - agreedTradeInGross - cashPaid; // 57200
-    let loanYears = 2;
-    const loanYearsMatch = query.match(/(\d+)\s*-?\s*years?\s*(?:equipment\s*)?loan/i);
-    if (loanYearsMatch && loanYearsMatch[1]) {
-      loanYears = parseInt(loanYearsMatch[1], 10);
-    }
+    // 5. Loan principal, tenure, and interest check
+    let loanPrincipal: number | undefined;
+    let loanYears: number | undefined;
+    let flatInterestRate: number | undefined;
 
-    let flatInterestRate = 0.05;
-    if (isFollowUpOnPpe && currentScenario?.keyParameters) {
-      const priorInterestParam = currentScenario.keyParameters.find(p => p.label.includes('Unexpired Interest'));
-      if (priorInterestParam) {
-        const match = priorInterestParam.label.match(/(\d+(?:\.\d+)?)\s*%/);
-        if (match && match[1]) flatInterestRate = parseFloat(match[1]) / 100;
+    if (tempGrossNewCost !== undefined && agreedTradeInGross !== undefined && cashPaid !== undefined) {
+      loanPrincipal = round2(tempGrossNewCost - agreedTradeInGross - cashPaid);
+      if (loanPrincipal < -0.005) {
+        missingFields.push({
+          fieldKey: 'paymentConflict',
+          fieldName: 'Conflicting cash and trade-in amounts',
+          prompt: `Cash paid (${formatMoney(cashPaid)}) plus agreed trade-in value (${formatMoney(agreedTradeInGross)}) exceeds the gross purchase cost (${formatMoney(tempGrossNewCost)}). Please confirm the correct figures.`,
+          whyNeeded: 'Settlement consideration cannot exceed the gross acquisition price without an explicit refund arrangement.'
+        });
+      } else if (Math.abs(loanPrincipal) < 0.005) {
+        loanPrincipal = 0;
+        loanYears = 0;
+        flatInterestRate = 0;
+      } else if (loanPrincipal > 0) {
+        const loanYearsMatch = query.match(/(\d+(?:\.\d+)?)\s*-?\s*years?\s*(?:equipment\s*)?loan/i) ||
+          query.match(/loan\s*(?:term|tenure|period)?\s*(?:of|for)?\s*(\d+(?:\.\d+)?)\s*-?\s*years?/i);
+        if (loanYearsMatch?.[1]) {
+          loanYears = parseFloat(loanYearsMatch[1]);
+        } else if (canInheritPpe) {
+          const priorInterestParam = currentScenario?.keyParameters?.find(p => p.label.includes('Unexpired Interest'));
+          const yMatch = priorInterestParam?.label.match(/x\s*(\d+(?:\.\d+)?)\s*y/i);
+          if (yMatch?.[1]) loanYears = parseFloat(yMatch[1]);
+        }
+
+        const isInterestFree = /\b(?:0\s*%\s*(?:per\s*annum\s*)?(?:flat\s*)?interest|interest[-\s]?free)\b/i.test(query);
+        const flatInterestMatch =
+          query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:per\s*annum\s*|p\.a\.\s*)?(?:flat\s*)?interest/i) ||
+          query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:per\s*annum\s*)?flat/i) ||
+          query.match(/interest\s*(?:rate)?\s*(?:is|=|to|of)?\s*(\d+(?:\.\d+)?)\s*%/i);
+        if (isInterestFree) {
+          flatInterestRate = 0;
+        } else if (flatInterestMatch?.[1]) {
+          flatInterestRate = parseFloat(flatInterestMatch[1]) / 100;
+        } else if (canInheritPpe) {
+          const priorInterestParam = currentScenario?.keyParameters?.find(p => p.label.includes('Unexpired Interest'));
+          const rMatch = priorInterestParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
+          if (rMatch?.[1]) flatInterestRate = parseFloat(rMatch[1]) / 100;
+        }
+
+        if (loanYears === undefined || !(loanYears > 0)) {
+          missingFields.push({
+            fieldKey: 'loanYears',
+            fieldName: 'Equipment loan tenure',
+            prompt: `A remaining balance of ${formatMoney(loanPrincipal)} is financed. What is the loan tenure (in years) and interest rate?`,
+            whyNeeded: 'Loan interest and liability schedules require an explicit loan tenure.'
+          });
+        }
+        if (flatInterestRate === undefined || flatInterestRate < 0) {
+          missingFields.push({
+            fieldKey: 'flatInterestRate',
+            fieldName: 'Equipment loan interest rate',
+            prompt: `What is the interest rate on the ${formatMoney(loanPrincipal)} equipment loan (or confirm if it is 0% interest-free)?`,
+            whyNeeded: 'Unexpired loan interest cannot be calculated without an explicit interest rate.'
+          });
+        }
       }
     }
-    const flatInterestMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:per\s*annum\s*)?flat/i) || query.match(/interest\s*(?:rate)?\s*(?:is|=|to)?\s*(\d+(?:\.\d+)?)\s*%/i);
-    if (flatInterestMatch && flatInterestMatch[1]) {
-      flatInterestRate = parseFloat(flatInterestMatch[1]) / 100;
+
+    if (missingFields.length > 0 || newCost === undefined || gstRate === undefined || oldCost === undefined || agreedTradeInGross === undefined || totalAccDeprAtDisposal === undefined || cashPaid === undefined || loanPrincipal === undefined || !eventDate) {
+      return {
+        scenarioType: 'PPE_IAS16',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'MULTI_AUTHORITY',
+        rawQuery: query,
+        transactionTitle: 'Machinery Acquisition with Trade-In',
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        isComplete: false,
+        missingFields
+      };
     }
 
-    const unexpiredInterest = Math.round(loanPrincipal * flatInterestRate * loanYears * 100) / 100; // 5720
-    const grossLoanPayable = loanPrincipal + unexpiredInterest; // 62920
+    const inputGst = round2(newCost * gstRate);
+    const netBookValueOld = round2(oldCost - totalAccDeprAtDisposal);
+    const netTradeInProceeds = gstRate > 0 ? round2(agreedTradeInGross / (1 + gstRate)) : round2(agreedTradeInGross);
+    const outputGst = round2(agreedTradeInGross - netTradeInProceeds);
+    const lossOnDisposal = round2(netBookValueOld - netTradeInProceeds);
+    const effectiveLoanYears = loanYears ?? 0;
+    const effectiveFlatRate = flatInterestRate ?? 0;
+    const unexpiredInterest = loanPrincipal > 0 ? round2(loanPrincipal * effectiveFlatRate * effectiveLoanYears) : 0;
+    const grossLoanPayable = round2(loanPrincipal + unexpiredInterest);
+    const gstPctLabel = `${round2(gstRate * 100)}%`;
 
-    const directGroups: JournalEntryGroup[] = [
-      {
+    const directGroups: JournalEntryGroup[] = [];
+
+    if (catchUpDepr > 0) {
+      const catchUpLines: JournalLine[] = [
+        {
+          id: 'l1-depr-exp',
+          accountCode: '5200',
+          accountName: 'Depreciation Expense - Machinery (P&L)',
+          category: 'EXPENSE',
+          debit: catchUpDepr,
+          credit: 0,
+          lineExplanation: `Recognition of ${catchUpMonths > 0 ? `${catchUpMonths}-month ` : ''}catch-up depreciation up to ${eventDate} in profit or loss.`
+        },
+        {
+          id: 'l1-acc-depr',
+          accountCode: '1690',
+          accountName: 'Accumulated Depreciation - Machinery',
+          category: 'ASSET',
+          debit: 0,
+          credit: catchUpDepr,
+          lineExplanation: 'Contra-asset increase to bring accumulated depreciation up to date as of disposal date.'
+        }
+      ];
+      const drCents = catchUpLines.reduce((s, l) => s + toCents(l.debit), 0);
+      const crCents = catchUpLines.reduce((s, l) => s + toCents(l.credit), 0);
+      directGroups.push({
         id: 'grp-catchup-depr',
-        eventDate: '01/04/2026',
-        title: 'Entry 1: Catch-Up Depreciation for Jan–Mar 2026',
-        summary: `Record 3 months depreciation ($50,000 × 20% × 3/12 = SGD 2,500) prior to derecognition under IAS 16 §55`,
-        lines: [
-          {
-            id: 'l1-depr-exp',
-            accountCode: '5200',
-            accountName: 'Depreciation Expense - Machinery (P&L)',
-            category: 'EXPENSE',
-            debit: catchUpDepr,
-            credit: 0,
-            lineExplanation: 'Recognition of 3-month depreciation from 1 Jan 2026 to 31 Mar 2026 in profit or loss.'
-          },
-          {
-            id: 'l1-acc-depr',
-            accountCode: '1690',
-            accountName: 'Accumulated Depreciation - Machinery',
-            category: 'ASSET',
-            debit: 0,
-            credit: catchUpDepr,
-            lineExplanation: 'Contra-asset increase to bring accumulated depreciation up to date as of disposal date.'
-          }
-        ],
-        totalDebit: catchUpDepr,
-        totalCredit: catchUpDepr,
-        isBalanced: true,
-        citations: [
-          getCitation('IAS16_DEPRECIATION_CATCHUP', 'SFRS_I')
-        ],
+        eventDate,
+        title: `Entry 1: Catch-Up Depreciation up to ${eventDate}`,
+        summary: `Record ${catchUpMonths > 0 ? `${catchUpMonths} months ` : ''}catch-up depreciation (${formatMoney(catchUpDepr)}) prior to derecognition under IAS 16 §55`,
+        lines: catchUpLines,
+        totalDebit: drCents / 100,
+        totalCredit: crCents / 100,
+        isBalanced: drCents > 0 && drCents === crCents,
+        citations: [getCitation('IAS16_DEPRECIATION_CATCHUP', 'SFRS_I')],
         rationalePoints: [
-          'Under IAS 16 / SFRS(I) 1-16 §55: Depreciation ceases on derecognition. Depreciation up to 31 March 2026 must be recognized before computing disposal gain/loss.',
+          `Under IAS 16 / SFRS(I) 1-16 §55: Depreciation ceases on derecognition. Catch-up depreciation (${formatMoney(catchUpDepr)}) up to ${eventDate} is recognized before computing disposal gain/loss.`,
           'Debit Rule: Depreciation increases operating expenses in P&L.',
           'Credit Rule: Accumulated depreciation (contra-asset) increases.'
         ]
-      },
+      });
+    }
+
+    const disposalLines: JournalLine[] = [];
+    if (totalAccDeprAtDisposal > 0) {
+      disposalLines.push({
+        id: 'l2-acc-depr',
+        accountCode: '1690',
+        accountName: 'Accumulated Depreciation - Machinery',
+        category: 'ASSET',
+        debit: totalAccDeprAtDisposal,
+        credit: 0,
+        lineExplanation: `Derecognition of total accumulated depreciation (${formatMoney(totalAccDeprAtDisposal)}) on disposal.`
+      });
+    }
+    if (lossOnDisposal > 0) {
+      disposalLines.push({
+        id: 'l2-loss-disposal',
+        accountCode: '5520',
+        accountName: 'Loss on Disposal of Machinery (P&L)',
+        category: 'EXPENSE',
+        debit: lossOnDisposal,
+        credit: 0,
+        lineExplanation: `Loss arising from carrying amount (${formatMoney(netBookValueOld)}) exceeding net disposal proceeds (${formatMoney(netTradeInProceeds)}) under IAS 16 §68.`
+      });
+    }
+    if (agreedTradeInGross > 0) {
+      disposalLines.push({
+        id: 'l2-tradein-clearing',
+        accountCode: '1150',
+        accountName: 'Vendor Clearing Account / Trade-in Consideration',
+        category: 'ASSET',
+        debit: agreedTradeInGross,
+        credit: 0,
+        lineExplanation: `Agreed trade-in value${gstRate > 0 ? ` (inclusive of ${gstPctLabel} GST)` : ''} receivable as offset against new machinery purchase.`
+      });
+    }
+    disposalLines.push({
+      id: 'l2-old-asset-cost',
+      accountCode: '1600',
+      accountName: 'Machinery - Historical Cost (Old Machine)',
+      category: 'ASSET',
+      debit: 0,
+      credit: oldCost,
+      lineExplanation: 'Derecognition of the original gross cost of the old machine from balance sheet.'
+    });
+    if (lossOnDisposal < 0) {
+      const gainOnDisposal = round2(Math.abs(lossOnDisposal));
+      disposalLines.push({
+        id: 'l2-gain-disposal',
+        accountCode: '4520',
+        accountName: 'Gain on Disposal of Machinery (P&L)',
+        category: 'REVENUE',
+        debit: 0,
+        credit: gainOnDisposal,
+        lineExplanation: `Gain arising from net disposal proceeds (${formatMoney(netTradeInProceeds)}) exceeding carrying amount (${formatMoney(netBookValueOld)}) under IAS 16 §68.`
+      });
+    }
+    if (outputGst > 0) {
+      disposalLines.push({
+        id: 'l2-output-gst',
+        accountCode: '2200',
+        accountName: `GST Output Tax (IRAS ${gstPctLabel} Payable)`,
+        category: 'LIABILITY',
+        debit: 0,
+        credit: outputGst,
+        lineExplanation: `${gstPctLabel} Output GST payable to IRAS on disposal/trade-in of business asset (${formatMoney(netTradeInProceeds)} × ${gstPctLabel}).`
+      });
+    }
+
+    const dispDrCents = disposalLines.reduce((s, l) => s + toCents(l.debit), 0);
+    const dispCrCents = disposalLines.reduce((s, l) => s + toCents(l.credit), 0);
+    const dispCitations = [getCitation('IAS16_DERECOGNITION', 'SFRS_I')];
+    if (outputGst > 0) dispCitations.push(getCitation('SINGAPORE_GST_TRADE_IN', 'SFRS_I'));
+
+    const entryPrefix = catchUpDepr > 0 ? 'Entry 2' : 'Entry 1';
+    const acqEntryPrefix = catchUpDepr > 0 ? 'Entry 3' : 'Entry 2';
+    const gainLossLabel = lossOnDisposal > 0
+      ? `loss on disposal ${formatMoney(lossOnDisposal)}`
+      : lossOnDisposal < 0
+        ? `gain on disposal ${formatMoney(Math.abs(lossOnDisposal))}`
+        : 'nil gain/loss on disposal';
+
+    directGroups.push({
+      id: 'grp-disposal-old',
+      eventDate,
+      title: `${entryPrefix}: Derecognition / Disposal of Old Machinery`,
+      summary: `Derecognize old machine (Cost ${formatMoney(oldCost)}, Acc Depr ${formatMoney(totalAccDeprAtDisposal)}), record net trade-in value ${formatMoney(netTradeInProceeds)}${outputGst > 0 ? ` + ${gstPctLabel} Output GST ${formatMoney(outputGst)}` : ''}, and ${gainLossLabel}`,
+      lines: disposalLines,
+      totalDebit: dispDrCents / 100,
+      totalCredit: dispCrCents / 100,
+      isBalanced: dispDrCents > 0 && dispDrCents === dispCrCents,
+      citations: dispCitations,
+      rationalePoints: [
+        `Under IAS 16 / SFRS(I) 1-16 §67-§71: The carrying amount (${formatMoney(netBookValueOld)}) is derecognised on disposal against net proceeds (${formatMoney(netTradeInProceeds)}), resulting in ${gainLossLabel}.`,
+        ...(outputGst > 0
+          ? [`Singapore GST Act: A trade-in is a taxable supply. Output tax (${formatMoney(outputGst)}) applies on the agreed trade-in value (${formatMoney(agreedTradeInGross)} gross).`]
+          : []),
+        `Sum of Debits (${formatMoney(dispDrCents / 100)}) = Sum of Credits (${formatMoney(dispCrCents / 100)}).`
+      ]
+    });
+
+    const acqLines: JournalLine[] = [
       {
-        id: 'grp-disposal-old',
-        eventDate: '01/04/2026',
-        title: 'Entry 2: Derecognition / Disposal of Old Machinery',
-        summary: `Derecognize old machine (Cost SGD 50,000, Acc Depr SGD 22,500), record net trade-in value SGD 20,000 + 9% Output GST SGD 1,800, and loss on disposal SGD 7,500`,
-        lines: [
-          {
-            id: 'l2-acc-depr',
-            accountCode: '1690',
-            accountName: 'Accumulated Depreciation - Machinery',
-            category: 'ASSET',
-            debit: totalAccDeprAtDisposal,
-            credit: 0,
-            lineExplanation: 'Derecognition of total accumulated depreciation ($20,000 prior + $2,500 catch-up) on disposal.'
-          },
-          {
-            id: 'l2-loss-disposal',
-            accountCode: '5520',
-            accountName: 'Loss on Disposal of Machinery (P&L)',
-            category: 'EXPENSE',
-            debit: lossOnDisposal,
-            credit: 0,
-            lineExplanation: 'Loss arising from carrying amount ($27,500) exceeding net disposal proceeds ($20,000) under IAS 16 §68.'
-          },
-          {
-            id: 'l2-tradein-clearing',
-            accountCode: '1150',
-            accountName: 'Vendor Clearing Account / Trade-in Consideration',
-            category: 'ASSET',
-            debit: agreedTradeInGross,
-            credit: 0,
-            lineExplanation: 'Agreed trade-in value (inclusive of 9% GST) receivable as offset against new machinery purchase.'
-          },
-          {
-            id: 'l2-old-asset-cost',
-            accountCode: '1600',
-            accountName: 'Machinery - Historical Cost (Old Machine)',
-            category: 'ASSET',
-            debit: 0,
-            credit: oldCost,
-            lineExplanation: 'Derecognition of the original gross cost of the old machine from balance sheet.'
-          },
-          {
-            id: 'l2-output-gst',
-            accountCode: '2200',
-            accountName: 'GST Output Tax (IRAS 9% Payable)',
-            category: 'LIABILITY',
-            debit: 0,
-            credit: outputGst,
-            lineExplanation: '9% Output GST payable to IRAS on disposal/trade-in of business asset ($21,800 / 1.09 × 9%).'
-          }
-        ],
-        totalDebit: totalAccDeprAtDisposal + lossOnDisposal + agreedTradeInGross,
-        totalCredit: oldCost + outputGst,
-        isBalanced: true,
-        citations: [
-          getCitation('IAS16_DERECOGNITION', 'SFRS_I'),
-          getCitation('SINGAPORE_GST_TRADE_IN', 'SFRS_I')
-        ],
-        rationalePoints: [
-          'Under IAS 16 / SFRS(I) 1-16 §67-§71: The carrying amount of an asset is derecognised on disposal. Loss on disposal = Carrying Amount ($27,500) - Net Proceeds ($20,000) = SGD 7,500.',
-          'Singapore GST Act: A trade-in is a taxable supply. The company must account for 9% output tax (SGD 1,800) on the agreed trade-in value ($21,800 gross).',
-          'Sum of Debits ($51,800) = Sum of Credits ($51,800).'
-        ]
-      },
-      {
-        id: 'grp-acq-new',
-        eventDate: '01/04/2026',
-        title: 'Entry 3: Acquisition of New Machinery & Equipment Loan Financing',
-        summary: `Capitalize new machine at cost SGD 100,000, claim 9% input GST SGD 9,000, offset trade-in SGD 21,800, bank cash SGD 30,000, and 2-year loan SGD 62,920 (with unexpired interest contra SGD 5,720)`,
-        lines: [
-          {
-            id: 'l3-new-asset-cost',
-            accountCode: '1600',
-            accountName: 'Machinery - Cost (New Machine)',
-            category: 'ASSET',
-            debit: newCost,
-            credit: 0,
-            lineExplanation: 'Initial recognition of new machinery at purchase price exclusive of recoverable GST (IAS 16 §16).'
-          },
-          {
-            id: 'l3-input-gst',
-            accountCode: '1190',
-            accountName: 'GST Input Tax (IRAS 9% Receivable)',
-            category: 'ASSET',
-            debit: inputGst,
-            credit: 0,
-            lineExplanation: '9% recoverable input GST claimable against IRAS in the quarterly GST return.'
-          },
-          {
-            id: 'l3-unexpired-interest',
-            accountCode: '2520',
-            accountName: 'Unexpired Loan Interest (Contra-Liability)',
-            category: 'LIABILITY',
-            debit: unexpiredInterest,
-            credit: 0,
-            lineExplanation: 'Deferred finance charge presented upfront as contra-liability offset against gross equipment loan.'
-          },
-          {
-            id: 'l3-tradein-clearing',
-            accountCode: '1150',
-            accountName: 'Vendor Clearing Account / Trade-in Consideration',
-            category: 'ASSET',
-            debit: 0,
-            credit: agreedTradeInGross,
-            lineExplanation: 'Application of trade-in credit against new machinery purchase liability.'
-          },
-          {
-            id: 'l3-bank',
-            accountCode: '1010',
-            accountName: 'Cash at Bank',
-            category: 'ASSET',
-            debit: 0,
-            credit: cashPaid,
-            lineExplanation: 'Cash disbursement via bank transfer on 1 April 2026.'
-          },
-          {
-            id: 'l3-loan-payable',
-            accountCode: '2510',
-            accountName: 'Equipment Loan Payable (Gross Note Amount)',
-            category: 'LIABILITY',
-            debit: 0,
-            credit: grossLoanPayable,
-            lineExplanation: 'Gross note payable for 2-year equipment loan ($57,200 principal + $5,720 flat interest).'
-          }
-        ],
-        totalDebit: newCost + inputGst + unexpiredInterest,
-        totalCredit: agreedTradeInGross + cashPaid + grossLoanPayable,
-        isBalanced: true,
-        citations: [
-          getCitation('IAS16_PPE_RECOGNITION', 'SFRS_I'),
-          getCitation('IFRS9_LOAN_UNEXPIRED_INTEREST', 'SFRS_I')
-        ],
-        rationalePoints: [
-          'Under IAS 16 §16: Recoverable taxes (Input GST SGD 9,000) are excluded from asset cost.',
-          'Under IFRS 9: Net loan obligation initially recognized is SGD 57,200 (Gross note SGD 62,920 less Unexpired Interest contra SGD 5,720).',
-          'Sum of Debits ($114,720) = Sum of Credits ($114,720).'
-        ]
+        id: 'l3-new-asset-cost',
+        accountCode: '1600',
+        accountName: 'Machinery - Cost (New Machine)',
+        category: 'ASSET',
+        debit: newCost,
+        credit: 0,
+        lineExplanation: 'Initial recognition of new machinery at purchase price exclusive of recoverable GST (IAS 16 §16).'
       }
     ];
+    if (inputGst > 0) {
+      acqLines.push({
+        id: 'l3-input-gst',
+        accountCode: '1190',
+        accountName: `GST Input Tax (IRAS ${gstPctLabel} Receivable)`,
+        category: 'ASSET',
+        debit: inputGst,
+        credit: 0,
+        lineExplanation: `${gstPctLabel} recoverable input GST claimable against IRAS in the GST return.`
+      });
+    }
+    if (unexpiredInterest > 0) {
+      acqLines.push({
+        id: 'l3-unexpired-interest',
+        accountCode: '2520',
+        accountName: 'Unexpired Loan Interest (Contra-Liability)',
+        category: 'LIABILITY',
+        debit: unexpiredInterest,
+        credit: 0,
+        lineExplanation: 'Deferred finance charge presented upfront as contra-liability offset against gross equipment loan.'
+      });
+    }
+    if (agreedTradeInGross > 0) {
+      acqLines.push({
+        id: 'l3-tradein-clearing',
+        accountCode: '1150',
+        accountName: 'Vendor Clearing Account / Trade-in Consideration',
+        category: 'ASSET',
+        debit: 0,
+        credit: agreedTradeInGross,
+        lineExplanation: 'Application of trade-in credit against new machinery purchase liability.'
+      });
+    }
+    if (cashPaid > 0) {
+      acqLines.push({
+        id: 'l3-bank',
+        accountCode: '1010',
+        accountName: 'Cash at Bank',
+        category: 'ASSET',
+        debit: 0,
+        credit: cashPaid,
+        lineExplanation: `Cash disbursement via bank transfer on ${eventDate}.`
+      });
+    }
+    if (grossLoanPayable > 0) {
+      acqLines.push({
+        id: 'l3-loan-payable',
+        accountCode: '2510',
+        accountName: 'Equipment Loan Payable (Gross Note Amount)',
+        category: 'LIABILITY',
+        debit: 0,
+        credit: grossLoanPayable,
+        lineExplanation: `Gross note payable for ${effectiveLoanYears}-year equipment loan (${formatMoney(loanPrincipal)} principal${unexpiredInterest > 0 ? ` + ${formatMoney(unexpiredInterest)} flat interest` : ''}).`
+      });
+    }
+
+    const acqDrCents = acqLines.reduce((s, l) => s + toCents(l.debit), 0);
+    const acqCrCents = acqLines.reduce((s, l) => s + toCents(l.credit), 0);
+    const acqCitations = [getCitation('IAS16_PPE_RECOGNITION', 'SFRS_I')];
+    if (grossLoanPayable > 0) acqCitations.push(getCitation('IFRS9_LOAN_UNEXPIRED_INTEREST', 'SFRS_I'));
+
+    directGroups.push({
+      id: 'grp-acq-new',
+      eventDate,
+      title: `${acqEntryPrefix}: Acquisition of New Machinery${grossLoanPayable > 0 ? ' & Equipment Loan Financing' : ''}`,
+      summary: `Capitalize new machine at cost ${formatMoney(newCost)}${inputGst > 0 ? `, claim ${gstPctLabel} input GST ${formatMoney(inputGst)}` : ''}${agreedTradeInGross > 0 ? `, offset trade-in ${formatMoney(agreedTradeInGross)}` : ''}${cashPaid > 0 ? `, bank cash ${formatMoney(cashPaid)}` : ''}${grossLoanPayable > 0 ? `, and ${effectiveLoanYears}-year loan ${formatMoney(grossLoanPayable)}${unexpiredInterest > 0 ? ` (with unexpired interest contra ${formatMoney(unexpiredInterest)})` : ''}` : ''}`,
+      lines: acqLines,
+      totalDebit: acqDrCents / 100,
+      totalCredit: acqCrCents / 100,
+      isBalanced: acqDrCents > 0 && acqDrCents === acqCrCents,
+      citations: acqCitations,
+      rationalePoints: [
+        ...(inputGst > 0
+          ? [`Under IAS 16 §16: Recoverable taxes (Input GST ${formatMoney(inputGst)}) are excluded from asset cost.`]
+          : ['Under IAS 16 §16: New machinery is capitalized at purchase price.']),
+        ...(grossLoanPayable > 0
+          ? [`Under IFRS 9: Net loan obligation initially recognized is ${formatMoney(loanPrincipal)} (Gross note ${formatMoney(grossLoanPayable)}${unexpiredInterest > 0 ? ` less Unexpired Interest contra ${formatMoney(unexpiredInterest)}` : ''}).`]
+          : []),
+        `Sum of Debits (${formatMoney(acqDrCents / 100)}) = Sum of Credits (${formatMoney(acqCrCents / 100)}).`
+      ]
+    });
 
     directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
 
+    const rateLabel = `${round2(effectiveFlatRate * 100)}%`;
     return {
       scenarioType: 'PPE_IAS16',
       authorityStatus: 'DETERMINISTIC',
       queryIntent: 'TRANSACTION',
       primaryDomain: 'MULTI_AUTHORITY',
       rawQuery: query,
-      transactionTitle: 'Machinery Acquisition with Trade-In & Equipment Loan',
+      transactionTitle: grossLoanPayable > 0
+        ? 'Machinery Acquisition with Trade-In & Equipment Loan'
+        : 'Machinery Acquisition with Trade-In',
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: 'Under SFRS(I) 1-16 §55, record catch-up depreciation up to the disposal date. Derecognize the carrying amount of the old asset (§67-§71) and recognize Loss on Disposal in P&L. New machine is recognized at cost net of recoverable GST. Under SFRS(I) 9, equipment loan is recognized at gross note amount with upfront unexpired loan interest contra-liability.',
-      singaporeTaxTreatmentSummary: 'The trade-in consideration represents a taxable supply subject to 9% Output GST (SGD 1,800). 9% Input GST on new machine (SGD 9,000) is recoverable from IRAS. Loss on disposal is not tax-deductible; accounting depreciation is added back in tax computation and qualifying plant & machinery claims Section 19A Capital Allowances.',
+      accountingTreatmentSummary: `${catchUpDepr > 0 ? `Under SFRS(I) 1-16 §55, record catch-up depreciation (${formatMoney(catchUpDepr)}) up to ${eventDate}. ` : ''}Derecognize the carrying amount of the old asset (${formatMoney(netBookValueOld)}) under §67-§71 and recognize ${gainLossLabel} in P&L. New machine is recognized at cost (${formatMoney(newCost)}) net of recoverable GST.${grossLoanPayable > 0 ? ` Under SFRS(I) 9, equipment loan (${formatMoney(grossLoanPayable)}) is recognized with net principal ${formatMoney(loanPrincipal)}${unexpiredInterest > 0 ? ` and upfront unexpired interest contra-liability ${formatMoney(unexpiredInterest)}` : ''}.` : ''}`,
+      singaporeTaxTreatmentSummary: `${outputGst > 0 ? `The trade-in consideration is a taxable supply subject to ${gstPctLabel} Output GST (${formatMoney(outputGst)}). ${gstPctLabel} Input GST on new machine (${formatMoney(inputGst)}) is recoverable from IRAS. ` : 'No GST was charged on this transaction. '}Accounting gain/loss on disposal is not taxable/deductible; accounting depreciation is added back in tax computation and qualifying plant & machinery claims Section 19A Capital Allowances.`,
       regulatoryMandatesSummary: 'Record keeping compliance under Section 199 of the Companies Act 1967.',
-      effectiveDateOrTiming: 'Singapore standard 9% GST rate; Section 19A Capital Allowances active.',
+      effectiveDateOrTiming: gstRate > 0
+        ? `Transaction date ${eventDate}; ${gstPctLabel} GST applied; Section 19A Capital Allowances active.`
+        : `Transaction date ${eventDate}; Section 19A Capital Allowances active.`,
       directGroups,
       keyParameters: [
+        { label: 'Transaction Date', value: eventDate, badge: 'Date' },
         { label: 'New Machine Cost (Excl. GST)', value: `${functionalCurrency} ${newCost.toLocaleString()}`, badge: 'Asset Cost' },
-        { label: 'Input GST (9% Claimable)', value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
+        { label: `Input GST (${gstPctLabel} Claimable)`, value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
         { label: 'Agreed Trade-In Value (Gross)', value: `${functionalCurrency} ${agreedTradeInGross.toLocaleString()}`, badge: 'Trade-In Gross' },
         { label: 'Net Trade-In Consideration', value: `${functionalCurrency} ${netTradeInProceeds.toLocaleString()}`, badge: 'Proceeds' },
-        { label: 'Output GST on Trade-In (9%)', value: `${functionalCurrency} ${outputGst.toLocaleString()}`, badge: 'Tax Payable' },
+        { label: `Output GST on Trade-In (${gstPctLabel})`, value: `${functionalCurrency} ${outputGst.toLocaleString()}`, badge: 'Tax Payable' },
         { label: 'Old Machine Original Cost', value: `${functionalCurrency} ${oldCost.toLocaleString()}`, badge: 'Historical Cost' },
-        { label: 'Catch-up Depr (Jan–Mar 2026)', value: `${functionalCurrency} ${catchUpDepr.toLocaleString()}`, badge: 'P&L Expense' },
+        { label: 'Catch-up Depr', value: `${functionalCurrency} ${catchUpDepr.toLocaleString()}`, badge: 'P&L Expense' },
         { label: 'Total Acc. Depr at Disposal', value: `${functionalCurrency} ${totalAccDeprAtDisposal.toLocaleString()}`, badge: 'Contra-Asset' },
         { label: 'Net Book Value at Disposal', value: `${functionalCurrency} ${netBookValueOld.toLocaleString()}`, badge: 'Carrying Value' },
-        { label: 'Loss on Disposal (P&L)', value: `${functionalCurrency} ${lossOnDisposal.toLocaleString()}`, badge: 'P&L Loss', highlight: true },
+        ...(lossOnDisposal < 0
+          ? [{ label: 'Gain on Disposal (P&L)', value: `${functionalCurrency} ${Math.abs(lossOnDisposal).toLocaleString()}`, badge: 'P&L Gain', highlight: true }]
+          : [{ label: 'Loss on Disposal (P&L)', value: `${functionalCurrency} ${lossOnDisposal.toLocaleString()}`, badge: 'P&L Loss', highlight: true }]),
         { label: 'Cash Paid via Bank', value: `${functionalCurrency} ${cashPaid.toLocaleString()}`, badge: 'Bank Outflow' },
         { label: 'Equipment Loan Principal', value: `${functionalCurrency} ${loanPrincipal.toLocaleString()}`, badge: 'Net Borrowing' },
-        { label: 'Unexpired Interest (5% x 2y)', value: `${functionalCurrency} ${unexpiredInterest.toLocaleString()}`, badge: 'Contra-Liability' },
+        { label: `Unexpired Interest (${rateLabel} x ${effectiveLoanYears}y)`, value: `${functionalCurrency} ${unexpiredInterest.toLocaleString()}`, badge: 'Contra-Liability' },
         { label: 'Gross Equipment Loan Payable', value: `${functionalCurrency} ${grossLoanPayable.toLocaleString()}`, badge: 'Gross Liability' }
       ],
       isComplete: true,
@@ -1975,21 +2381,27 @@ export async function parseAccountingQuery(
   // e.g. "purchases office equipment with a list price of SGD 20,000 (exclusive of 9% GST). The vendor grants a 10% trade discount..."
   // =========================================================================
   const isFollowUpOnDiscount = currentScenario?.scenarioType === 'ASSET_PURCHASE_DISCOUNT' &&
+    Boolean(currentScenario.isComplete) &&
     (q.includes('discount') || q.includes('cash') || q.includes('bank') || q.includes('price') || q.includes('pay') || q.includes('settle') || q.includes('what if') || q.includes('change') || q.includes('how about') || q.includes('why') || q.includes('explain') || q.includes('compound') || q.includes('depreciation'));
 
-  const isAssetPurchaseWithDiscount = 
+  const isAssetPurchaseWithDiscount =
     isFollowUpOnDiscount ||
     (((q.includes('purchas') || q.includes('bought') || q.includes('acquir')) &&
       (q.includes('discount') || q.includes('list price') || q.includes('credit terms')) &&
       (q.includes('equipment') || q.includes('furniture') || q.includes('machinery') || q.includes('computer') || q.includes('asset') || q.includes('inventory'))));
 
   if (isAssetPurchaseWithDiscount) {
+    const canInheritDiscount = Boolean(isFollowUpOnDiscount && currentScenario?.isComplete);
+    const missingFields: MissingFieldInfo[] = [];
+
     // 1. Asset Name
-    let assetTitle = 'Office Equipment';
-    if (isFollowUpOnDiscount && currentScenario?.transactionTitle) {
-      if (currentScenario.transactionTitle.includes('Machinery')) assetTitle = 'Machinery';
+    let assetTitle = 'Equipment';
+    if (canInheritDiscount && currentScenario?.transactionTitle) {
+      if (currentScenario.transactionTitle.includes('Office Equipment')) assetTitle = 'Office Equipment';
+      else if (currentScenario.transactionTitle.includes('Machinery')) assetTitle = 'Machinery';
       else if (currentScenario.transactionTitle.includes('Furniture')) assetTitle = 'Furniture & Fixtures';
       else if (currentScenario.transactionTitle.includes('Computer')) assetTitle = 'Computer Equipment';
+      else if (currentScenario.transactionTitle.includes('Motor Vehicles')) assetTitle = 'Motor Vehicles';
     }
     if (q.includes('office equipment')) assetTitle = 'Office Equipment';
     else if (q.includes('machinery')) assetTitle = 'Machinery';
@@ -1998,74 +2410,210 @@ export async function parseAccountingQuery(
     else if (q.includes('vehicle')) assetTitle = 'Motor Vehicles';
 
     // 2. List Price
-    let listPrice = 20000;
-    if (isFollowUpOnDiscount && currentScenario?.keyParameters) {
-      const priorParam = currentScenario.keyParameters.find(p => p.label.includes('List Price'));
-      if (priorParam) {
-        const num = parseFloat(priorParam.value.replace(/[^0-9.]/g, ''));
-        if (num > 100) listPrice = num;
-      }
+    let listPrice: number | undefined;
+    if (canInheritDiscount) {
+      listPrice = extractParamNumber(currentScenario, 'List Price');
     }
-    const listPriceMatch = query.match(/(?:list\s*price|price|cost|for)\s*(?:of|is|at|to)?\s*(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)/i);
-    if (listPriceMatch && listPriceMatch[1]) {
-      const parsedVal = parseFloat(listPriceMatch[1].replace(/,/g, ''));
-      if (parsedVal > 100) listPrice = parsedVal;
+    const listPriceMatch =
+      query.match(/(?:list\s*price|catalogue\s*price)\s*(?:of|is|at|to|=|:)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i) ||
+      query.match(/(?:purchas\w*|bought|acquir\w*)[^.\n]*?\b(?:for|at)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (listPriceMatch?.[1]) {
+      const parsedVal = parseAmountToken(listPriceMatch[1], listPriceMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal > 0) listPrice = parsedVal;
+    }
+    if (listPrice === undefined || !(listPrice > 0)) {
+      missingFields.push({
+        fieldKey: 'listPrice',
+        fieldName: 'Asset list price',
+        prompt: 'What is the list price / purchase price of the asset?',
+        whyNeeded: 'The asset cost cannot be measured without a stated list price.'
+      });
     }
 
     // 3. Trade discount %
-    let discountRate = 0.10;
-    if (isFollowUpOnDiscount && currentScenario?.keyParameters) {
+    let discountRate: number | undefined;
+    if (canInheritDiscount && currentScenario?.keyParameters) {
       const priorDiscountParam = currentScenario.keyParameters.find(p => p.label.includes('Trade Discount'));
-      if (priorDiscountParam) {
-        const match = priorDiscountParam.label.match(/(\d+(?:\.\d+)?)\s*%/);
-        if (match && match[1]) discountRate = parseFloat(match[1]) / 100;
+      const m = priorDiscountParam?.label.match(/(\d+(?:\.\d+)?)\s*%/);
+      if (m?.[1]) discountRate = parseFloat(m[1]) / 100;
+    }
+    const noTradeDiscount = /\b(?:no\s+trade\s+discount|0\s*%\s*(?:trade\s*)?discount)\b/i.test(query);
+    const discountPctMatch =
+      query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:trade\s*)?discount/i) ||
+      query.match(/(?:trade\s*)?discount\s*(?:is|of|at|=|to)?\s*(\d+(?:\.\d+)?)\s*%/i);
+    const discountDollarMatch = query.match(/(?:trade\s*)?discount\s*(?:of|is|at|=)?\s*(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (noTradeDiscount) {
+      discountRate = 0;
+    } else if (discountPctMatch?.[1]) {
+      const parsedRate = parseFloat(discountPctMatch[1]) / 100;
+      if (parsedRate < 0 || parsedRate >= 1) {
+        missingFields.push({
+          fieldKey: 'discountRate',
+          fieldName: 'Valid trade discount rate',
+          prompt: `Trade discount rate (${discountPctMatch[1]}%) must be at least 0% and below 100%. Please confirm the discount rate.`,
+          whyNeeded: 'A trade discount of 100% or negative is invalid for a purchase.'
+        });
+      } else {
+        discountRate = parsedRate;
+      }
+    } else if (discountDollarMatch?.[1] && listPrice && listPrice > 0) {
+      const discAmt = parseAmountToken(discountDollarMatch[1], discountDollarMatch[2]);
+      if (discAmt < 0 || discAmt >= listPrice) {
+        missingFields.push({
+          fieldKey: 'discountRate',
+          fieldName: 'Valid trade discount amount',
+          prompt: 'The trade discount amount must be non-negative and less than the list price.',
+          whyNeeded: 'A trade discount cannot equal or exceed the full list price.'
+        });
+      } else {
+        discountRate = discAmt / listPrice;
+      }
+    } else if (discountRate === undefined) {
+      if (/\bdiscount\b/i.test(query)) {
+        missingFields.push({
+          fieldKey: 'discountRate',
+          fieldName: 'Trade discount percentage or amount',
+          prompt: 'What is the trade discount percentage or dollar amount?',
+          whyNeeded: 'A trade discount was mentioned without specifying its rate or amount.'
+        });
+      } else {
+        discountRate = 0;
       }
     }
-    const discountMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:trade\s*)?discount/i) || query.match(/discount\s*(?:is|=|to)?\s*(\d+(?:\.\d+)?)\s*%/i);
-    if (discountMatch && discountMatch[1]) {
-      discountRate = parseFloat(discountMatch[1]) / 100;
-    }
-    const tradeDiscountAmount = Math.round(listPrice * discountRate * 100) / 100;
-    const netAssetCost = listPrice - tradeDiscountAmount; // e.g. 18000
 
     // 4. GST
-    let gstRate = 0.09;
-    const gstMatch = query.match(/(\d+)%\s*gst/i);
-    if (gstMatch && gstMatch[1]) {
-      gstRate = parseFloat(gstMatch[1]) / 100;
+    let gstRate: number | undefined;
+    const explicitNoGst = /\b(?:no\s+gst|non[-\s]?gst|not\s+gst[-\s]?registered|gst[-\s]?exempt|exempt\s+from\s+gst|without\s+gst)\b/i.test(query);
+    const gstPctMatch = query.match(/(\d+(?:\.\d+)?)\s*%\s*gst/i) || query.match(/gst\s*(?:at|of|rate)?\s*(\d+(?:\.\d+)?)\s*%/i);
+    if (explicitNoGst) {
+      gstRate = 0;
+    } else if (gstPctMatch?.[1]) {
+      const rate = parseFloat(gstPctMatch[1]) / 100;
+      if (Number.isFinite(rate) && rate >= 0 && rate < 1) gstRate = rate;
+    } else if (canInheritDiscount) {
+      const priorGst = extractParamNumber(currentScenario, 'Input GST');
+      const priorNetCost = extractParamNumber(currentScenario, 'Net Capitalized Cost');
+      if (priorGst !== undefined && priorNetCost && priorNetCost > 0) {
+        gstRate = round2((priorGst / priorNetCost) * 100) / 100;
+      } else {
+        gstRate = 0;
+      }
+    } else if (/\bgst\b/i.test(query)) {
+      missingFields.push({
+        fieldKey: 'gstRate',
+        fieldName: 'GST rate',
+        prompt: 'What GST rate applies to this purchase (for example, 9% or 0%)?',
+        whyNeeded: 'GST was mentioned without specifying the applicable percentage rate.'
+      });
+    } else {
+      gstRate = 0;
     }
-    const inputGst = Math.round(netAssetCost * gstRate * 100) / 100; // e.g. 1620
-    const grossInvoice = netAssetCost + inputGst; // e.g. 19620
 
     // 5. Immediate cash paid
-    let immediateCash = 5000;
-    if (isFollowUpOnDiscount && currentScenario?.keyParameters) {
-      const priorCashParam = currentScenario.keyParameters.find(p => p.label.includes('Immediate Bank Payment') || p.label.includes('Cash Paid'));
-      if (priorCashParam) {
-        const num = parseFloat(priorCashParam.value.replace(/[^0-9.]/g, ''));
-        if (num >= 0) immediateCash = num;
+    let immediateCash: number | undefined;
+    if (canInheritDiscount) {
+      immediateCash = extractParamNumber(currentScenario, 'Immediate Bank Payment');
+    }
+    const explicitZeroImmediateCash = /\b(?:no\s+cash\s+(?:paid|payment)|no\s+upfront\s+payment|paid\s+(?:sgd|s\$|\$)?\s*0(?:\.0+)?\b|0(?:\.0+)?\s+immediately|entirely\s+on\s+credit|100%\s+on\s+credit|full\s+amount\s+on\s+credit)\b/i.test(query);
+    const immediateCashMatch =
+      query.match(/(?:pays?|paid)\s+(?:sgd|s\$|\$)\s*([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?(?:\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank))?/i) ||
+      query.match(/(?:pays?|paid)\s+(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?\s+(?:in\s+)?(?:cash|immediately|upfront|deposit|now|by\s+bank|via\s+bank)\b/i) ||
+      query.match(/(?:immediate(?:ly)?|upfront|cash\s*paid|bank\s*payment|down\s*payment)\s*(?:is|was|of|to|=|:)?\s*(?:(?:sgd|s\$|\$)\s*)?([\d,]+(?:\.\d+)?)(?:\s*(k|m|thousand|million))?/i);
+    if (explicitZeroImmediateCash) {
+      immediateCash = 0;
+    } else if (immediateCashMatch?.[1]) {
+      const parsedVal = parseAmountToken(immediateCashMatch[1], immediateCashMatch[2]);
+      if (Number.isFinite(parsedVal) && parsedVal >= 0) immediateCash = parsedVal;
+    } else if (immediateCash === undefined) {
+      const mentionsRemainingOrPartial = /\b(?:remaining\s+balance|partial(?:ly)?\s+paid|balance\s+(?:is\s+)?(?:placed\s+)?on\s+credit)\b/i.test(query);
+      const isPureCreditTerms = /\bcredit\s+terms\b/i.test(query) && !mentionsRemainingOrPartial;
+      if (isPureCreditTerms) {
+        immediateCash = 0;
+      } else {
+        missingFields.push({
+          fieldKey: 'immediateCash',
+          fieldName: 'Immediate cash payment',
+          prompt: 'How much (if any, including SGD 0 if fully on credit) was paid immediately by cash/bank?',
+          whyNeeded: 'The split between Cash at Bank and Trade Payables cannot be determined without the upfront payment amount.'
+        });
       }
     }
-    const cashMatch = query.match(/(?:pays?|paid|cash|bank\s*transfer)[^0-9]*?(?:sgd|\$)?\s*([\d,]+(?:\.\d+)?)\s*(?:immediately|by|via|bank)?/i);
-    if (cashMatch && cashMatch[1]) {
-      const parsedVal = parseFloat(cashMatch[1].replace(/,/g, ''));
-      if (parsedVal >= 0) immediateCash = parsedVal;
+
+    // 6. Transaction Date & Settlement Date validation
+    const allDates = extractAllExplicitDates(query);
+    if (allDates.some(d => d.formatted === 'INVALID')) {
+      missingFields.push({
+        fieldKey: 'transactionDate',
+        fieldName: 'Valid transaction date',
+        prompt: 'The stated date is not a valid calendar date. Please provide a valid date (DD/MM/YYYY).',
+        whyNeeded: 'Journal entries require a valid calendar date.'
+      });
     }
 
-    // 6. Remaining balance on credit terms (Trade / Other Payables)
-    const creditBalance = grossInvoice - immediateCash; // e.g. 14620
+    const isSettlement = q.includes('settle') || q.includes('pay the remaining') || q.includes('paid balance') || q.includes('settlement');
+    const firstValidDate = allDates.find(d => d.formatted !== 'INVALID')?.formatted;
 
-    // 7. Transaction Date
-    let transDate = '01/08/2026';
-    if (isFollowUpOnDiscount && currentScenario?.directGroups?.[0]?.eventDate) {
-      transDate = currentScenario.directGroups[0].eventDate;
+    let transDate = canInheritDiscount && currentScenario?.directGroups?.[0]?.eventDate
+      ? currentScenario.directGroups[0].eventDate
+      : 'Transaction Date';
+    if (!isSettlement && firstValidDate) {
+      transDate = formatSingaporeDate(firstValidDate);
+    } else if (isSettlement && !canInheritDiscount && firstValidDate) {
+      transDate = formatSingaporeDate(firstValidDate);
     }
-    const dateMatch = query.match(/(\d{1,2})\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s*(\d{4})/i);
-    if (dateMatch) {
-      const monthMap: Record<string, string> = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
-      const mStr = dateMatch[2].toLowerCase().slice(0, 3);
-      transDate = `${dateMatch[1].padStart(2, '0')}/${monthMap[mStr] || '08'}/${dateMatch[3]}`;
+
+    if (
+      missingFields.length > 0 ||
+      listPrice === undefined ||
+      discountRate === undefined ||
+      gstRate === undefined ||
+      immediateCash === undefined
+    ) {
+      return {
+        scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'MULTI_AUTHORITY',
+        rawQuery: query,
+        transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        isComplete: false,
+        missingFields
+      };
     }
+
+    const tradeDiscountAmount = round2(listPrice * discountRate);
+    const netAssetCost = round2(listPrice - tradeDiscountAmount);
+    const inputGst = round2(netAssetCost * gstRate);
+    const grossInvoice = round2(netAssetCost + inputGst);
+    const creditBalance = round2(grossInvoice - immediateCash);
+
+    if (creditBalance < -0.005) {
+      return {
+        scenarioType: 'ASSET_PURCHASE_DISCOUNT',
+        authorityStatus: 'CONDITIONAL',
+        queryIntent: 'TRANSACTION',
+        primaryDomain: 'MULTI_AUTHORITY',
+        rawQuery: query,
+        transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
+        functionalCurrency,
+        transactionCurrency: functionalCurrency,
+        directGroups: [],
+        isComplete: false,
+        missingFields: [{
+          fieldKey: 'paymentConflict',
+          fieldName: 'Conflicting upfront cash payment',
+          prompt: `Immediate cash paid (${formatMoney(immediateCash)}) exceeds the gross invoice payable (${formatMoney(grossInvoice)}). Please confirm the correct payment and invoice amounts.`,
+          whyNeeded: 'Immediate cash paid cannot exceed the total discounted invoice amount.'
+        }]
+      };
+    }
+
+    const normalizedCreditBalance = Math.abs(creditBalance) < 0.005 ? 0 : creditBalance;
+    const discountPctLabel = `${round2(discountRate * 100)}%`;
+    const gstPctLabel = `${round2(gstRate * 100)}%`;
 
     const lines: JournalLine[] = [
       {
@@ -2075,18 +2623,22 @@ export async function parseAccountingQuery(
         category: 'ASSET',
         debit: netAssetCost,
         credit: 0,
-        lineExplanation: `Capitalization of ${assetTitle.toLowerCase()} at net purchase price after deducting ${discountRate * 100}% trade discount under IAS 16 §16(a).`
-      },
-      {
+        lineExplanation: `Capitalization of ${assetTitle.toLowerCase()} at net purchase price${discountRate > 0 ? ` after deducting ${discountPctLabel} trade discount` : ''} under IAS 16 §16(a).`
+      }
+    ];
+    if (inputGst > 0) {
+      lines.push({
         id: 'l-gst-input',
         accountCode: '1190',
-        accountName: 'GST Input Tax (IRAS 9% Receivable)',
+        accountName: `GST Input Tax (IRAS ${gstPctLabel} Receivable)`,
         category: 'ASSET',
         debit: inputGst,
         credit: 0,
-        lineExplanation: '9% recoverable input GST on net purchase price claimable from IRAS.'
-      },
-      {
+        lineExplanation: `${gstPctLabel} recoverable input GST on net purchase price claimable from IRAS.`
+      });
+    }
+    if (immediateCash > 0) {
+      lines.push({
         id: 'l-bank-pay',
         accountCode: '1010',
         accountName: 'Cash at Bank',
@@ -2094,102 +2646,113 @@ export async function parseAccountingQuery(
         debit: 0,
         credit: immediateCash,
         lineExplanation: 'Immediate partial settlement paid via bank transfer.'
-      },
-      {
+      });
+    }
+    if (normalizedCreditBalance > 0) {
+      lines.push({
         id: 'l-trade-payable',
         accountCode: '2010',
         accountName: 'Trade Payables / Other Payables (Current Liability)',
         category: 'LIABILITY',
         debit: 0,
-        credit: creditBalance,
+        credit: normalizedCreditBalance,
         lineExplanation: 'Unsettled balance placed on commercial credit terms.'
-      }
-    ];
+      });
+    }
 
-    const isSettlement = q.includes('settle') || q.includes('pay the remaining') || q.includes('paid balance') || q.includes('settlement');
+    const grp1DrCents = lines.reduce((s, l) => s + toCents(l.debit), 0);
+    const grp1CrCents = lines.reduce((s, l) => s + toCents(l.credit), 0);
+    const grp1TitlePrefix = lines.length > 2 ? 'Single Compound Journal Entry' : 'Journal Entry';
 
     const directGroups: JournalEntryGroup[] = [
       {
         id: 'grp-equip-purchase',
-        eventDate: formatSingaporeDate(transDate),
-        title: `Single Compound Journal Entry: Purchase of ${assetTitle}`,
-        summary: `Purchase of ${assetTitle} with list price ${functionalCurrency} ${listPrice.toLocaleString()} less ${discountRate * 100}% trade discount + 9% GST`,
+        eventDate: transDate,
+        title: `${grp1TitlePrefix}: Purchase of ${assetTitle}`,
+        summary: `Purchase of ${assetTitle} with list price ${formatMoney(listPrice)}${discountRate > 0 ? ` less ${discountPctLabel} trade discount` : ''}${inputGst > 0 ? ` + ${gstPctLabel} GST` : ''}`,
         lines,
-        totalDebit: netAssetCost + inputGst,
-        totalCredit: immediateCash + creditBalance,
-        isBalanced: true,
+        totalDebit: grp1DrCents / 100,
+        totalCredit: grp1CrCents / 100,
+        isBalanced: grp1DrCents > 0 && grp1DrCents === grp1CrCents,
         citations: [
           getCitation('IAS16_TRADE_DISCOUNT', 'SFRS_I'),
           getCitation('IAS16_PPE_RECOGNITION', 'SFRS_I')
         ],
         rationalePoints: [
-          `Under IAS 16 / SFRS(I) 1-16 §16(a): Trade discounts (${functionalCurrency} ${tradeDiscountAmount.toLocaleString()}) are deducted from list price to determine initial cost. Trade discounts are never recorded as separate ledger lines.`,
-          `Under Singapore GST Act: 9% GST is calculated on the net selling price after trade discount (${functionalCurrency} ${netAssetCost.toLocaleString()} × 9% = ${functionalCurrency} ${inputGst.toLocaleString()}).`,
-          `Sum of Debits (${functionalCurrency} ${(netAssetCost + inputGst).toLocaleString()}) = Sum of Credits (${functionalCurrency} ${(immediateCash + creditBalance).toLocaleString()}). Single compound entry is 100% balanced.`
+          `Under IAS 16 / SFRS(I) 1-16 §16(a): Trade discounts (${formatMoney(tradeDiscountAmount)}) are deducted from list price to determine initial cost. Trade discounts are never recorded as separate ledger lines.`,
+          ...(inputGst > 0
+            ? [`Under Singapore GST Act: ${gstPctLabel} GST is calculated on the net selling price after trade discount (${formatMoney(netAssetCost)} × ${gstPctLabel} = ${formatMoney(inputGst)}).`]
+            : []),
+          `Sum of Debits (${formatMoney(grp1DrCents / 100)}) = Sum of Credits (${formatMoney(grp1CrCents / 100)}).`
         ]
       }
     ];
 
-    if (isSettlement && creditBalance > 0) {
+    if (isSettlement && normalizedCreditBalance > 0) {
+      const settlementDate = firstValidDate ? formatSingaporeDate(firstValidDate) : 'Settlement Date';
+      const settleLines: JournalLine[] = [
+        {
+          id: 'l-settle-payable',
+          accountCode: '2010',
+          accountName: 'Trade Payables / Other Payables (Current Liability)',
+          category: 'LIABILITY',
+          debit: normalizedCreditBalance,
+          credit: 0,
+          lineExplanation: 'Derecognition of financial liability upon discharge of payment obligation.'
+        },
+        {
+          id: 'l-settle-bank',
+          accountCode: '1010',
+          accountName: 'Cash at Bank',
+          category: 'ASSET',
+          debit: 0,
+          credit: normalizedCreditBalance,
+          lineExplanation: 'Disbursement of funds via bank transfer to settle vendor invoice.'
+        }
+      ];
+      const settleDrCents = settleLines.reduce((s, l) => s + toCents(l.debit), 0);
+      const settleCrCents = settleLines.reduce((s, l) => s + toCents(l.credit), 0);
       directGroups.push({
         id: 'grp-equip-settle',
-        eventDate: '15/08/2026',
+        eventDate: settlementDate,
         title: 'Subsequent Settlement of Trade Payables',
-        summary: `Settlement of outstanding balance of ${functionalCurrency} ${creditBalance.toLocaleString()} via bank transfer under IFRS 9 §3.3.1`,
-        lines: [
-          {
-            id: 'l-settle-payable',
-            accountCode: '2010',
-            accountName: 'Trade Payables / Other Payables (Current Liability)',
-            category: 'LIABILITY',
-            debit: creditBalance,
-            credit: 0,
-            lineExplanation: 'Derecognition of financial liability upon discharge of payment obligation.'
-          },
-          {
-            id: 'l-settle-bank',
-            accountCode: '1010',
-            accountName: 'Cash at Bank',
-            category: 'ASSET',
-            debit: 0,
-            credit: creditBalance,
-            lineExplanation: 'Disbursement of funds via bank transfer to settle vendor invoice.'
-          }
-        ],
-        totalDebit: creditBalance,
-        totalCredit: creditBalance,
-        isBalanced: true,
-        citations: [
-          getCitation('IFRS9_DERECOGNITION_LIABILITY', 'SFRS_I')
-        ],
+        summary: `Settlement of outstanding balance of ${formatMoney(normalizedCreditBalance)} via bank transfer under IFRS 9 §3.3.1`,
+        lines: settleLines,
+        totalDebit: settleDrCents / 100,
+        totalCredit: settleCrCents / 100,
+        isBalanced: settleDrCents > 0 && settleDrCents === settleCrCents,
+        citations: [getCitation('IFRS9_DERECOGNITION_LIABILITY', 'SFRS_I')],
         rationalePoints: [
-          `Under IFRS 9 §3.3.1: An entity removes a financial liability from its balance sheet when the contractual obligation is discharged.`,
-          `Debit: Trade Payables decreases on settlement.`,
-          `Credit: Cash at Bank decreases on disbursement.`
+          'Under IFRS 9 §3.3.1: An entity removes a financial liability from its balance sheet when the contractual obligation is discharged.',
+          'Debit: Trade Payables decreases on settlement.',
+          'Credit: Cash at Bank decreases on disbursement.'
         ]
       });
-    } else if (currentScenario?.directGroups && currentScenario.directGroups.length > 1) {
+    } else if (canInheritDiscount && currentScenario?.directGroups && currentScenario.directGroups.length > 1 && normalizedCreditBalance > 0) {
       for (let i = 1; i < currentScenario.directGroups.length; i++) {
         const existingGrp = currentScenario.directGroups[i];
         if (existingGrp.id === 'grp-equip-settle') {
-          const grpClone = {
+          const updatedLines = existingGrp.lines.map(l => ({
+            ...l,
+            debit: l.debit > 0 ? normalizedCreditBalance : 0,
+            credit: l.credit > 0 ? normalizedCreditBalance : 0
+          }));
+          const sDrCents = updatedLines.reduce((s, l) => s + toCents(l.debit), 0);
+          const sCrCents = updatedLines.reduce((s, l) => s + toCents(l.credit), 0);
+          directGroups.push({
             ...existingGrp,
-            lines: existingGrp.lines.map(l => ({
-              ...l,
-              debit: l.debit > 0 ? creditBalance : 0,
-              credit: l.credit > 0 ? creditBalance : 0
-            })),
-            totalDebit: creditBalance,
-            totalCredit: creditBalance
-          };
-          directGroups.push(grpClone);
+            lines: updatedLines,
+            totalDebit: sDrCents / 100,
+            totalCredit: sCrCents / 100,
+            isBalanced: sDrCents > 0 && sDrCents === sCrCents
+          });
         } else {
           directGroups.push(existingGrp);
         }
       }
     }
 
-    const hasSettlement = isSettlement || directGroups.some(g => g.id === 'grp-equip-settle');
+    const hasSettlement = directGroups.some(g => g.id === 'grp-equip-settle');
     directGroups.forEach(g => { g.authorityStatus = 'DETERMINISTIC'; });
 
     return {
@@ -2201,20 +2764,24 @@ export async function parseAccountingQuery(
       transactionTitle: `Purchase of ${assetTitle} (Trade Discount & Credit Terms)`,
       functionalCurrency,
       transactionCurrency: functionalCurrency,
-      accountingTreatmentSummary: `Under SFRS(I) 1-16 §16(a), trade discounts are deducted directly from the list price to arrive at the asset cost (${functionalCurrency} ${netAssetCost.toLocaleString()}). Trade discounts are never recorded as separate ledger accounts. Unsettled balance is recorded in Trade Payables under SFRS(I) 9.`,
-      singaporeTaxTreatmentSummary: `Under Singapore GST law, 9% GST (${functionalCurrency} ${inputGst.toLocaleString()}) is calculated on the net discounted price and claimed as an input tax asset. Qualifying equipment is eligible for Section 19A Capital Allowances (e.g. 100% 1-year write-off for computers or low-value assets $\\le$ $5,000).`,
+      accountingTreatmentSummary: `Under SFRS(I) 1-16 §16(a), trade discounts are deducted directly from the list price to arrive at the asset cost (${formatMoney(netAssetCost)}). Trade discounts are never recorded as separate ledger accounts.${normalizedCreditBalance > 0 ? ' Unsettled balance is recorded in Trade Payables under SFRS(I) 9.' : ''}`,
+      singaporeTaxTreatmentSummary: inputGst > 0
+        ? `Under Singapore GST law, ${gstPctLabel} GST (${formatMoney(inputGst)}) is calculated on the net discounted price and claimed as an input tax asset. Qualifying equipment is eligible for Section 19A Capital Allowances.`
+        : 'No GST was charged on this transaction. Qualifying equipment is eligible for Section 19A Capital Allowances.',
       regulatoryMandatesSummary: 'Tax invoices and commercial receipts must be retained for 5 years under Section 199 of the Companies Act 1967.',
-      effectiveDateOrTiming: 'Singapore standard 9% GST rate (effective 1 January 2024).',
+      effectiveDateOrTiming: inputGst > 0
+        ? `${gstPctLabel} GST applied on ${transDate}.`
+        : `Transaction date: ${transDate}.`,
       directGroups,
       keyParameters: [
         { label: 'List Price (Excl. GST)', value: `${functionalCurrency} ${listPrice.toLocaleString()}`, badge: 'List Price' },
-        { label: `Trade Discount (${discountRate * 100}%)`, value: `-${functionalCurrency} ${tradeDiscountAmount.toLocaleString()}`, badge: 'IAS 16 §16(a)' },
+        { label: `Trade Discount (${discountPctLabel})`, value: `-${functionalCurrency} ${tradeDiscountAmount.toLocaleString()}`, badge: 'IAS 16 §16(a)' },
         { label: 'Net Capitalized Cost', value: `${functionalCurrency} ${netAssetCost.toLocaleString()}`, badge: 'Asset Cost' },
-        { label: 'Input GST (9% Claimable)', value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
+        { label: `Input GST (${gstPctLabel} Claimable)`, value: `${functionalCurrency} ${inputGst.toLocaleString()}`, badge: 'Tax Receivable' },
         { label: 'Total Invoice Payable', value: `${functionalCurrency} ${grossInvoice.toLocaleString()}`, badge: 'Gross Payable' },
         { label: 'Immediate Bank Payment', value: `${functionalCurrency} ${immediateCash.toLocaleString()}`, badge: 'Bank Outflow' },
-        { label: 'Trade Payables (Credit Terms)', value: `${functionalCurrency} ${creditBalance.toLocaleString()}`, badge: 'Liability', highlight: !hasSettlement },
-        ...(hasSettlement ? [{ label: 'Settlement Status', value: `Settled in Full (${functionalCurrency} ${creditBalance.toLocaleString()})`, badge: 'Discharged' }] : [])
+        { label: 'Trade Payables (Credit Terms)', value: `${functionalCurrency} ${normalizedCreditBalance.toLocaleString()}`, badge: 'Liability', highlight: !hasSettlement },
+        ...(hasSettlement ? [{ label: 'Settlement Status', value: `Settled in Full (${functionalCurrency} ${normalizedCreditBalance.toLocaleString()})`, badge: 'Discharged' }] : [])
       ],
       isComplete: true,
       missingFields: []

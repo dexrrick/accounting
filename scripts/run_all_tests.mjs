@@ -15,6 +15,7 @@ const testSuites = [
   { name: 'Development Live Routing Regressions', file: 'test_development_live_routing.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Malformed Tax Response Safety', file: 'test_malformed_tax_response.mjs', layer: 'provider-resilience', tier: 'smoke' },
   { name: 'Double-Entry Reliability & Journal Integrity', file: 'test_double_entry_reliability.mjs', layer: 'accounting-invariants', tier: 'smoke' },
+  { name: 'Step 1 PPE, Trade Discount & Integrity Validation', file: 'test_step1_ppe_discount_integrity.mjs', layer: 'accounting-invariants', tier: 'smoke' },
   { name: 'AI Semantic Extraction & Schema Validation Gate', file: 'test_ai_semantic_extraction.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Semantic Question Understanding & Guarded Routing', file: 'test_semantic_question_understanding.mjs', layer: 'input-understanding', tier: 'smoke' },
   { name: 'Statutory Review Topic Routing', file: 'test_statutory_review_topic_routing_20261028.mjs', layer: 'input-understanding', tier: 'smoke' },

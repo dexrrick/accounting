@@ -2841,7 +2841,7 @@ try {
     totalDebit: amount, totalCredit: amount, isBalanced: true, citations: [], rationalePoints: [], authorityStatus
   });
   const proposalScenario = {
-    scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'Proposal', transactionTitle: 'Proposed payroll', amount: 72000,
+    scenarioType: 'PAYROLL_CPF_SALARY', rawQuery: 'Proposal for USD 72,000 payroll', transactionTitle: 'Proposed payroll', amount: 72000,
     functionalCurrency: 'USD', transactionCurrency: 'USD', isComplete: true, missingFields: [],
     assumptions: [{ id: 'assumption-usd', field: 'currency', assumedValue: 'USD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
     directGroups: [
@@ -2850,7 +2850,7 @@ try {
     ]
   };
   const deterministicScenario = {
-    ...proposalScenario, rawQuery: 'Confirmed payroll', transactionTitle: 'Confirmed payroll', amount: 60000, functionalCurrency: 'SGD', transactionCurrency: 'SGD',
+    ...proposalScenario, rawQuery: 'Confirmed payroll of SGD 60,000', transactionTitle: 'Confirmed payroll', amount: 60000, functionalCurrency: 'SGD', transactionCurrency: 'SGD',
     assumptions: [{ id: 'assumption-sgd', field: 'currency', assumedValue: 'SGD', basisOrRationale: 'User-provided scenario', materiality: 'LOW' }],
     directGroups: [makeGroup('collision', 'Committed payroll entry', 'DETERMINISTIC', 60000)]
   };

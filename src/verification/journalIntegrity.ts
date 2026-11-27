@@ -115,13 +115,114 @@ function getMandatoryCategory(accountName: string): AccountCategory | undefined 
   return undefined;
 }
 
+export interface ValidateJournalGroupsOptions {
+  rawQuery?: string;
+  hasPriorContextAmount?: boolean;
+  hasImageEvidence?: boolean;
+  evidenceTexts?: string[];
+}
+
+const CURRENCY_PREFIXED_AMOUNT_REGEX = /\b(?:sgd|usd|eur|gbp|aud|myr|rmb|cny|jpy|hkd|s\$|us\$|\$)\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|bn|thousand|million|billion))?\b|\$\s*\d[\d,]*(?:\.\d+)?(?:\s*(?:k|m|bn|thousand|million|billion))?/i;
+const ABBREVIATED_AMOUNT_REGEX = /\b\d[\d,]*(?:\.\d+)?\s*(?:k|m|bn|thousand|million|billion|cents?)\b/i;
+const SPELLED_CURRENCY_AMOUNT_REGEX = /\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(?:[\s-]+(?:and|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*\s+(?:dollars?|cents?|sgd|usd|eur|gbp)\b/i;
+
+function stripNonMonetaryTokens(text: string): string {
+  return text
+    // ISO and slash/dash dates: 2026-07-01, 01/08/2026, 01-08-2026
+    .replace(/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/g, ' ')
+    .replace(/\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b/g, ' ')
+    // Month-name dates: 15 May 2026, May 15, 2026, September 2026, 15th May
+    .replace(/\b(?:\d{1,2}(?:st|nd|rd|th)?\s+)?(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+\d{1,2}(?:st|nd|rd|th)?,?)?(?:\s+\d{4})?\b/gi, ' ')
+    // Reference / invoice / receipt / PO / GL / standard / section numbers
+    .replace(/\b(?:sfrs\(i\)|frs|ias|ifrs)\s*\d+(?:-\d+)?(?:\s*(?:§|para(?:graph)?|p\.?)\s*\d+(?:\.\d+)*)?\b/gi, ' ')
+    .replace(/\b(?:section|sec\.?|s\.?|regulation|reg\.?|schedule|sched\.?|article|art\.?|paragraph|para\.?)\s*\d+[a-z0-9()./-]*\b/gi, ' ')
+    .replace(/\b(?:inv(?:oice)?|receipt|rcpt|ref(?:erence)?|po|gl|acct|account|doc|voucher|cheque|check|no\.?|#)\s*[:#-]?\s*[a-z]*\d+[a-z0-9-]*\b/gi, ' ')
+    .replace(/\b[a-z]{1,6}-\d[\d-]*\b/gi, ' ')
+    // Percentages
+    .replace(/\b\d+(?:\.\d+)?\s*%/g, ' ')
+    .replace(/\b\d+(?:\.\d+)?\s*percent\b/gi, ' ')
+    // Ages and durations
+    .replace(/\b(?:age\s*\d+|aged\s*\d+|\d+\s*-?\s*year(?:s)?[\s-]*old)\b/gi, ' ')
+    .replace(/\b\d+(?:\.\d+)?\s*-?\s*(?:years?|yrs?|months?|mos?|weeks?|wks?|days?|hours?|hrs?)\b/gi, ' ')
+    // Share/unit counts (e.g., "100 shares", "300 apple shares")
+    .replace(/\b\d[\d,]*(?:\.\d+)?\s+(?:[a-z]+\s+)?shares?\b/gi, ' ')
+    // Standalone 4-digit years (1900-2099)
+    .replace(/\b(?:19|20)\d{2}\b/g, ' ');
+}
+
+/**
+ * Returns true when `text` contains genuine monetary evidence rather than only
+ * dates, years, percentages, ages, durations, or reference/section numbers.
+ */
+export function hasMonetaryEvidence(text: string): boolean {
+  if (!text || typeof text !== 'string') return false;
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+
+  if (
+    CURRENCY_PREFIXED_AMOUNT_REGEX.test(trimmed) ||
+    ABBREVIATED_AMOUNT_REGEX.test(trimmed) ||
+    SPELLED_CURRENCY_AMOUNT_REGEX.test(trimmed)
+  ) {
+    return true;
+  }
+
+  const stripped = stripNonMonetaryTokens(trimmed);
+  return /\b\d[\d,]*(?:\.\d+)?\b/.test(stripped);
+}
+
+function hasPositiveNumericValue(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Returns true when verified image or extracted evidence supplies at least one
+ * finite positive monetary figure.
+ */
+export function hasVerifiedNumericImageEvidence(imageEvidence?: unknown, extractedEvidence?: unknown): boolean {
+  if (Array.isArray(imageEvidence)) {
+    for (const item of imageEvidence) {
+      if (!item || typeof item !== 'object') continue;
+      const record = item as { fields?: unknown; journalLines?: unknown };
+      if (Array.isArray(record.fields)) {
+        for (const field of record.fields) {
+          if (field && typeof field === 'object' && hasPositiveNumericValue((field as { value?: unknown }).value)) {
+            return true;
+          }
+        }
+      }
+      if (Array.isArray(record.journalLines)) {
+        for (const line of record.journalLines) {
+          if (!line || typeof line !== 'object') continue;
+          const jl = line as { debit?: unknown; credit?: unknown };
+          if (hasPositiveNumericValue(jl.debit) || hasPositiveNumericValue(jl.credit)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+
+  if (Array.isArray(extractedEvidence)) {
+    for (const item of extractedEvidence) {
+      if (!item || typeof item !== 'object') continue;
+      const ev = item as { source?: unknown; value?: unknown };
+      if (ev.source === 'image' && hasPositiveNumericValue(ev.value)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 /**
  * Deterministically validates journal entry groups against exact double-entry,
  * integer-cent precision, account classification, and unstated amount invariants.
  */
 export function validateJournalGroups(
   groups: JournalEntryGroup[],
-  options?: { rawQuery?: string; hasPriorContextAmount?: boolean }
+  options?: ValidateJournalGroupsOptions
 ): JournalIntegrityResult {
   const issues: JournalIntegrityIssue[] = [];
 
@@ -290,10 +391,10 @@ export function validateJournalGroups(
   }
 
   // Rule 6: Unstated amount check
-  if (options?.rawQuery && !options?.hasPriorContextAmount) {
-    const hasDigit = /\d/.test(options.rawQuery);
-    const hasNumberWord = /\b(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand|million)\b/i.test(options.rawQuery);
-    if (!hasDigit && !hasNumberWord) {
+  if (options?.rawQuery && !options?.hasPriorContextAmount && !options?.hasImageEvidence) {
+    const hasQueryMonetary = hasMonetaryEvidence(options.rawQuery);
+    const hasEvidenceMonetary = (options.evidenceTexts || []).some(hasMonetaryEvidence);
+    if (!hasQueryMonetary && !hasEvidenceMonetary) {
       const hasNonHypotheticalAmount = groups.some(
         g => !g.isHypothetical && (g.totalDebit > 0 || (g.lines && g.lines.some(l => l.debit > 0)))
       );

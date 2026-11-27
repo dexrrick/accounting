@@ -1,16 +1,69 @@
 import type { AccountingScenarioState, AccountingStandard } from '../types/accounting';
 import { calculateDoubleEntries } from '../engine/accountingEngine';
-import { validateJournalGroups } from '../verification/journalIntegrity';
+import { hasVerifiedNumericImageEvidence, validateJournalGroups } from '../verification/journalIntegrity';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { isSingleMonthlySalaryAmendment, resolveFactAmendment } from './factAmendmentService';
 import { isJournalDisplayRequest } from './conversationBoundary';
+
+export interface JournalValidationContext {
+  rawQuery?: string;
+  evidenceTexts?: string[];
+  hasPriorContextAmount?: boolean;
+}
+
+/** Returns true when a scenario carries verified positive numeric evidence from an attached image. */
+export function hasVerifiedImageMonetaryEvidence(scenario?: AccountingScenarioState | null): boolean {
+  if (!scenario) return false;
+  return hasVerifiedNumericImageEvidence(scenario.imageEvidence, scenario.evidence);
+}
+
+function hasVerifiedPriorMonetaryFacts(scenario: AccountingScenarioState | null | undefined): boolean {
+  if (!scenario) return false;
+  if (typeof scenario.amount === 'number' && Number.isFinite(scenario.amount) && scenario.amount > 0) {
+    return true;
+  }
+  const priorGroups = scenario.committedDirectGroups?.length
+    ? scenario.committedDirectGroups
+    : scenario.directGroups || [];
+  if (
+    priorGroups.some(group => typeof group.totalDebit === 'number' && Number.isFinite(group.totalDebit) && group.totalDebit > 0) &&
+    validateJournalGroups(priorGroups).isValid
+  ) {
+    return true;
+  }
+  return hasVerifiedImageMonetaryEvidence(scenario);
+}
+
+/**
+ * Returns true only when `prior` exists, carries verified monetary facts,
+ * and `candidate` continues the same transaction rather than an unrelated topic.
+ */
+export function hasSameTransactionPriorMonetaryEvidence(
+  prior: AccountingScenarioState | null | undefined,
+  candidate: AccountingScenarioState
+): boolean {
+  if (!prior || !hasVerifiedPriorMonetaryFacts(prior)) return false;
+  if (prior.transactionId && candidate.transactionId && prior.transactionId === candidate.transactionId) {
+    return true;
+  }
+  if (candidate.scenarioType === 'UNIVERSAL') {
+    return true;
+  }
+  return Boolean(
+    prior.scenarioType &&
+    candidate.scenarioType &&
+    prior.scenarioType !== 'UNRECOGNIZED' &&
+    prior.scenarioType === candidate.scenarioType
+  );
+}
 
 /** Keep the last complete, balanced journal available while an advisory answer is displayed. */
 export function updateCommittedJournalScenario(
   previous: AccountingScenarioState | null,
   candidate: AccountingScenarioState | null,
   standard: AccountingStandard,
-  resetPrevious = false
+  resetPrevious = false,
+  validationContext?: JournalValidationContext
 ): AccountingScenarioState | null {
   const priorScenario = resetPrevious ? null : previous;
   if (!candidate || !candidate.isComplete || candidate.isHypothetical) return priorScenario;
@@ -21,7 +74,21 @@ export function updateCommittedJournalScenario(
       outputGroups.some(group => group.isHypothetical || group.authorityStatus !== 'DETERMINISTIC')) return priorScenario;
 
   const groups = outputGroups;
-  if (groups.length === 0 || !validateJournalGroups(groups).isValid) return priorScenario;
+  const effectiveRawQuery = validationContext?.rawQuery ?? candidate.rawQuery;
+  const sameTransactionPrior = !resetPrevious && hasSameTransactionPriorMonetaryEvidence(priorScenario, candidate);
+  const hasImageEvidence = hasVerifiedImageMonetaryEvidence(candidate) ||
+    (!resetPrevious && hasVerifiedImageMonetaryEvidence(priorScenario) && sameTransactionPrior);
+  const hasPriorContextAmount = Boolean(
+    validationContext?.hasPriorContextAmount ||
+    sameTransactionPrior
+  );
+  const integrity = validateJournalGroups(groups, {
+    rawQuery: effectiveRawQuery,
+    hasPriorContextAmount,
+    hasImageEvidence,
+    evidenceTexts: resetPrevious ? undefined : validationContext?.evidenceTexts
+  });
+  if (groups.length === 0 || !integrity.isValid) return priorScenario;
   return {
     ...candidate,
     directGroups: groups,
@@ -34,11 +101,21 @@ export function updateCommittedJournalScenario(
 /** Returns a complete, valid current result that is still proposed or conditional. */
 export function getDisplayableUncommittedJournalGroups(
   candidate: AccountingScenarioState | null,
-  standard: AccountingStandard
+  standard: AccountingStandard,
+  validationContext?: JournalValidationContext
 ) {
   if (!candidate?.isComplete || candidate.isHypothetical) return [];
   const groups = calculateDoubleEntries(candidate, standard).groups;
-  if (groups.length === 0 || groups.some(group => group.isHypothetical) || !validateJournalGroups(groups).isValid) return [];
+  const effectiveRawQuery = validationContext?.rawQuery ?? candidate.rawQuery;
+  const hasImageEvidence = hasVerifiedImageMonetaryEvidence(candidate);
+  const hasPriorContextAmount = Boolean(validationContext?.hasPriorContextAmount);
+  const integrity = validateJournalGroups(groups, {
+    rawQuery: effectiveRawQuery,
+    hasPriorContextAmount,
+    hasImageEvidence,
+    evidenceTexts: validationContext?.evidenceTexts
+  });
+  if (groups.length === 0 || groups.some(group => group.isHypothetical) || !integrity.isValid) return [];
   return groups.some(group => group.authorityStatus === 'AI_PROPOSED' || group.authorityStatus === 'CONDITIONAL') ? groups : [];
 }
 
