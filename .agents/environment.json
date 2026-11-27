@@ -1,0 +1,3 @@
+{
+  "install": "if [ \"$(git rev-parse --is-shallow-repository 2>/dev/null || echo false)\" = \"true\" ]; then git fetch --unshallow; fi && npm ci --no-audit --no-fund && npm run preflight"
+}
