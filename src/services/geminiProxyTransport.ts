@@ -6,9 +6,11 @@
 export async function fetchGemini(
   url: string,
   apiKey: string,
-  init: RequestInit
+  init: RequestInit,
+  requestTimeoutMs?: number
 ): Promise<Response> {
-  if (!apiKey.startsWith('proxy:')) return fetch(url, init);
+  const headers = new Headers(init.headers);
+  if (!apiKey.startsWith('proxy:')) return fetch(url, { ...init, headers });
 
   const accessToken = apiKey.slice('proxy:'.length);
   if (accessToken.length < 20 || accessToken.length > 256) {
@@ -21,9 +23,9 @@ export async function fetchGemini(
     throw new Error('Unsupported Gemini proxy destination.');
   }
 
-  const headers = new Headers(init.headers);
   headers.delete('x-goog-api-key');
   headers.set('x-gemini-proxy-token', accessToken);
+  if (requestTimeoutMs !== undefined) headers.set('x-gemini-request-timeout-ms', String(requestTimeoutMs));
   return fetch(`/api/gemini${target.pathname}${target.search}`, {
     ...init,
     credentials: 'same-origin',

@@ -7,6 +7,7 @@ import { defaultSourceVersioningManager } from '../standards/sourceVersioning';
 import { classifyQuestion } from '../classification/questionClassifier';
 import { buildGroundedReasoningContext, type GroundedReasoningContext } from './groundingContextBuilder';
 import { executeStructuredLlmCall } from './aiTransport';
+import { getRequestTimeoutMs } from './requestDeadline';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { createRequestCompletenessContext } from './requestCompleteness';
 import { defaultTargetDateResolver, TargetDateResolver } from '../retrieval/targetDateResolver';
@@ -479,6 +480,7 @@ export interface AiFirstAdvisoryDependencies {
   buildContext?: typeof buildGroundedReasoningContext;
   call?: typeof executeStructuredLlmCall;
   onGroundedContext?: (context: GroundedReasoningContext) => void;
+  signal?: AbortSignal;
 }
 
 export async function generateAiFirstAdvisory(
@@ -497,7 +499,9 @@ export async function generateAiFirstAdvisory(
     questionUnderstanding,
     requestCompletenessContext,
     localOnly: true,
-    authorityLevelDiscovery: false
+    authorityLevelDiscovery: false,
+    signal: dependencies.signal,
+    fetchOptions: dependencies.signal ? { signal: dependencies.signal } : undefined
   });
   const targetDateResolution = defaultTargetDateResolver.resolveAuthorityEvidenceDate(query, TargetDateResolver.CURRENT_SYSTEM_DATE);
   const admitted = safeSourceRecords(context);
@@ -512,6 +516,8 @@ export async function generateAiFirstAdvisory(
   const raw = await call(userContext, ADVISORY_SYSTEM, provider, {
     jsonMode: true,
     temperature: 0.2,
+    timeoutMs: dependencies.signal ? getRequestTimeoutMs(dependencies.signal, 45_000) : 45_000,
+    signal: dependencies.signal,
     model: typeof provider === 'object'
       ? provider.activeProvider === 'azure' ? provider.azure.deploymentName : provider.activeProvider === 'openai' ? provider.openai.model : provider.gemini.model
       : undefined

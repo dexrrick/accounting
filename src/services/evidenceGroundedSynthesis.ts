@@ -18,6 +18,7 @@ import type { IrasApplicationConclusion } from '../engine/irasApplicationEvaluat
 import { validateJournalGroups } from '../verification/journalIntegrity';
 import { renderIrasEvidenceResponse } from './irasEvidencePolicy';
 import { executeStructuredLlmCall } from './aiTransport';
+import { getRequestTimeoutMs } from './requestDeadline';
 import { repairAndParseAIJson } from '../utils/jsonRepair';
 import { buildAdvisoryConversation, classifyAdvisoryFailure, estimateAdvisoryTokens, hasConfiguredProvider, normalizeAdvisoryText } from './aiFirstAdvisory';
 import type { AdvisoryConversation } from './aiFirstAdvisory';
@@ -75,6 +76,7 @@ export interface GroundedSynthesisResult {
 
 export interface GroundedSynthesisDependencies {
   call?: typeof executeStructuredLlmCall;
+  signal?: AbortSignal;
 }
 
 interface EvidencePassage {
@@ -1816,7 +1818,10 @@ async function callForJson(
   diagnostics.calls += 1;
   diagnostics.attempts += 1;
   try {
-    raw = await call(prompt, system, provider, { jsonMode: true, temperature: 0.2, model: providerModel(provider) });
+    raw = await call(prompt, system, provider, {
+      jsonMode: true, temperature: 0.2, model: providerModel(provider), signal: dependencies.signal,
+      timeoutMs: dependencies.signal ? getRequestTimeoutMs(dependencies.signal, 45_000) : 45_000
+    });
   } catch (error) {
     throw providerSafeError(stage, error);
   } finally {

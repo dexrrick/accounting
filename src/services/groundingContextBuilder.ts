@@ -17,6 +17,7 @@ import { getCoverageTopicsByIds, SINGAPORE_COVERAGE_REGISTRY, SINGAPORE_DOMAIN_T
 import type { ISourceRetriever, SourceRetrievalQuery } from '../retrieval/sourceRetriever';
 import { defaultAdvancedSourceRetriever } from '../retrieval/advancedSourceRetriever';
 import { defaultControlledWebRetriever, type ControlledFetchOptions, type ControlledFetchResult, type ControlledWebRetriever } from '../retrieval/controlledWebRetriever';
+import { getRequestTimeoutMs, throwIfRequestAborted } from './requestDeadline';
 import { defaultCitationVerifier } from '../verification/citationVerifier';
 import { appendStatutorySourceFooter, getSafeOfficialUrl } from '../utils/statutoryLinkResolver';
 import { formatSingaporeDate } from '../utils/dateUtils';
@@ -404,7 +405,7 @@ export interface OfficialSourceDiscoveryRequest {
 
 /** Trusted official-domain search adapter. Candidate URLs are always fetched and validated before use. */
 export interface OfficialSourceDiscoveryAdapter {
-  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  discoverOfficialSourceCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   /** Status-only transport trace for sitemap/robots fetches; never evidence. */
   getLastFetchTrace?(): Array<{ topicId: string; status: string }>;
@@ -412,7 +413,7 @@ export interface OfficialSourceDiscoveryAdapter {
 
 /** Search returns candidate URLs only; every candidate is independently fetched and validated. */
 export interface OfficialDomainSearchAdapter {
-  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest): Promise<string[]>;
+  searchOfficialDomainCandidates(request: OfficialSourceDiscoveryRequest, signal?: AbortSignal): Promise<string[]>;
   getCandidateTitle?(url: string): string | undefined;
   getCandidateQueryVariant?(url: string): 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3' | undefined;
   getLastSearchTrace?(): Array<{ variant: 'FULL_QUERY' | 'TOPIC_HINT_1' | 'TOPIC_HINT_2' | 'TOPIC_HINT_3'; candidateUrls: string[]; status: 'RESULTS' | 'NO_CANDIDATES'; reason?: string }>;
@@ -443,6 +444,7 @@ export interface MappedFallbackOptions {
   evidenceScope?: AuthorityEvidenceScope;
   /** Validated issue-local IRAS rule intent; the original user query remains unchanged. */
   authorityIssue?: GroundedReasoningContext['authorityIssue'];
+  signal?: AbortSignal;
 }
 
 function topicMatchesEvidenceScope(topic: SingaporeCoverageTopic, scope?: AuthorityEvidenceScope): boolean {
@@ -1749,6 +1751,7 @@ export async function resolveMappedOfficialSourceFallback(
   retriever: ISourceRetriever,
   options: MappedFallbackOptions = {}
 ): Promise<{ records: AuthoritativeSourceRecord[]; trace: SourceMapFallbackTrace; provisionalTopics: MappedCoverageTopic[]; documentContexts?: AuthorityAdmittedDocumentContext[] }> {
+  throwIfRequestAborted(options.signal);
   const webRetriever = options.webRetriever || defaultControlledWebRetriever;
   const discoveryAdapter = options.discoveryAdapter || getDefaultDiscoveryAdapter(webRetriever, options.fetchOptions);
   const scopedTopicIds = options.evidenceScope
@@ -1908,6 +1911,7 @@ export async function resolveMappedOfficialSourceFallback(
     discoverySourceUrl?: string,
     discoveryMetadata?: ReturnType<typeof practicalExpansionDiscoveryPointers>[number]
   ): Promise<AuthoritativeSourceRecord | undefined> => {
+    throwIfRequestAborted(options.signal);
     const trustedDiscoveryMetadata = discoveryMetadata &&
       practicalExpansionDiscoveryPointers().some(pointer => pointer === discoveryMetadata &&
         pointer.url === candidateUrl && pointer.authority === topic.authorities[0])
@@ -1990,6 +1994,7 @@ export async function resolveMappedOfficialSourceFallback(
       if ((topic.id === 'mas-regulatory-reporting' && [MAS_VCFM_TOOLKIT_URL, lfmcToolkitUrl].includes(candidateUrl)) || knowledgePdf) {
         const isLfmc = candidateUrl === lfmcToolkitUrl;
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
         retainFetchedHtmlContext(candidateUrl, document);
         if (document.status === 'SUCCESS') {
           const extraction = await extractOfficialDocumentFromRetrieved({
@@ -2002,12 +2007,14 @@ export async function resolveMappedOfficialSourceFallback(
               topicTerms: knowledgePdf ? knowledgePdf.contentTerms || getTopicContentTerms(topic) : isLfmc ? ['quarterly financial returns', 'principal place of business'] : ['annual declaration', 'Form 25A'], minimumTopicTermMatches: 1
             }
           }, document);
+          throwIfRequestAborted(options.signal);
           if (extraction.status === 'SUCCESS') {
             const vcfmBranchApprovalTopic = topic.id === 'mas-vcfm-branch-approval' && candidateUrl === MAS_VCFM_TOOLKIT_URL;
             const vcfmBranchApprovalQuote = vcfmBranchApprovalTopic && scopedCoverageSubject && extraction.record.documentHash
               ? await selectNativeVcfmBranchApprovalQuote(document, extraction.record.documentHash,
                 query, scopedCoverageSubject, candidateUrl)
               : undefined;
+            throwIfRequestAborted(options.signal);
             if (vcfmBranchApprovalTopic && !vcfmBranchApprovalQuote) {
               result = { ...document, status: 'TOPIC_MISMATCH', topicMatched: false, titleMatched: false,
                 contentMatched: false, error: 'The retained VCFM PDF did not yield complete, exact row 2 branch-approval evidence.' };
@@ -2063,6 +2070,7 @@ export async function resolveMappedOfficialSourceFallback(
         // topic validator. The raw response hash, final URL, and retrieval
         // metadata remain attached to the fetched document.
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
         retainFetchedHtmlContext(candidateUrl, document);
         const rawTitle = document.content?.match(/<title\b[^>]*>([\s\S]*?)<\/title\s*>/i)?.[1];
         const nativeTitle = rawTitle ? cleanHtmlText(rawTitle).replace(/\s+/g, ' ').trim() : '';
@@ -2107,6 +2115,7 @@ export async function resolveMappedOfficialSourceFallback(
         // a complete, contradiction-checked rule from visible native markup;
         // then run the usual identity/body validation on those exact passages.
         const document = await webRetriever.fetchOfficialDocument(candidateUrl, options.fetchOptions);
+        throwIfRequestAborted(options.signal);
         retainFetchedHtmlContext(candidateUrl, document);
         const quotes = document.status === 'SUCCESS' && document.content
           ? selectPracticalExpansionQuotes({ ...expansionRequest, sourceText: document.content }) : [];
@@ -2131,6 +2140,7 @@ export async function resolveMappedOfficialSourceFallback(
           ...options.fetchOptions,
           topicValidation: expectation
         });
+        throwIfRequestAborted(options.signal);
         retainFetchedHtmlContext(candidateUrl, result);
       }
       if (result.status === 'SUCCESS' && result.content) successfulPageFetches.set(candidateUrl, result);
@@ -2561,6 +2571,7 @@ export async function resolveMappedOfficialSourceFallback(
   const sitemapTopics = (): MappedCoverageTopic[] =>
     !registeredCoverageAdequate() ? unresolvedRegisteredTopics() : [];
   const discoverSitemapForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    throwIfRequestAborted(options.signal);
     const work = topicWork.find(item => item.topic.id === topic.id);
     // Discovered pages have no reviewed period-specific validity metadata.
     if (work?.historicalStatutoryQuery) return;
@@ -2596,14 +2607,17 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       sitemapStageAttempted = true;
       discoveredCandidates = await discoveryAdapter.discoverOfficialSourceCandidates(
-        cloneOfficialSourceDiscoveryRequest(discoveryRequest)
+        cloneOfficialSourceDiscoveryRequest(discoveryRequest), options.signal
       );
+      throwIfRequestAborted(options.signal);
     } catch {
+      throwIfRequestAborted(options.signal);
       // First-party discovery is optional and fail-closed. Mapped retrieval
       // results already collected remain available if the sitemap is down.
       discoveredCandidates = [];
     }
     for (const candidateUrl of discoveredCandidates) {
+      throwIfRequestAborted(options.signal);
       if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
         attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
           discoveryStage: 'SITEMAP_DISCOVERY', error: 'Discovery candidate was not an HTTPS URL on an approved authority hostname.' });
@@ -2667,6 +2681,7 @@ export async function resolveMappedOfficialSourceFallback(
   // Stage 2: discover from official indexes for each topic that remains
   // uncovered after the complete mapped-source pass.
   for (const topic of sitemapTopics()) await discoverSitemapForTopic(topic, false);
+  throwIfRequestAborted(options.signal);
 
   // Keep the validated issue-local discovery scope independent of registered
   // topic matches. Topic evidence still passes through the ordinary admission
@@ -2753,6 +2768,7 @@ export async function resolveMappedOfficialSourceFallback(
   const sitemapCoverageAdequate = allRequiredCoverageAdequate();
 
   const discoverOnlineForTopic = async (topic: MappedCoverageTopic, isAuthorityQuery: boolean): Promise<void> => {
+    throwIfRequestAborted(options.signal);
     const work = topicWork.find(item => item.topic.id === topic.id);
     if (work?.historicalStatutoryQuery || topicCovered(topic)) return;
     const approvedHosts = discoveryHostsForTopic(topic);
@@ -2786,9 +2802,11 @@ export async function resolveMappedOfficialSourceFallback(
     try {
       onlineSearchStageAttempted = true;
       searchCandidates = await officialDomainSearchAdapter.searchOfficialDomainCandidates(
-        cloneOfficialSourceDiscoveryRequest(searchRequest)
+        cloneOfficialSourceDiscoveryRequest(searchRequest), options.signal
       );
+      throwIfRequestAborted(options.signal);
     } catch {
+      throwIfRequestAborted(options.signal);
       searchCandidates = [];
     }
     for (const searchTrace of officialDomainSearchAdapter.getLastSearchTrace?.() || []) {
@@ -2799,6 +2817,7 @@ export async function resolveMappedOfficialSourceFallback(
       }
     }
     for (const candidateUrl of searchCandidates) {
+      throwIfRequestAborted(options.signal);
       if (!isApprovedDiscoveryCandidateUrl(candidateUrl, approvedHosts)) {
         attempts.push({ topicId: topic.id, candidateUrl, fetchStatus: 'UNAUTHORIZED_DOMAIN_ACCESS', titleMatched: false, contentMatched: false,
           discoveryStage: 'OFFICIAL_DOMAIN_SEARCH', searchQueryVariant: officialDomainSearchAdapter.getCandidateQueryVariant?.(candidateUrl),
@@ -2818,6 +2837,7 @@ export async function resolveMappedOfficialSourceFallback(
       isIrasSourceUrlAreaCompatible(topic.domainId, candidateUrl, declaredSourceUrls, query) &&
       isOfficialSourceCandidateMateriallyRelevant(candidateUrl, searchRequest, officialDomainSearchAdapter.getCandidateTitle?.(candidateUrl))
     ).slice(0, 4)) {
+      throwIfRequestAborted(options.signal);
       let host = '';
       let protocol = '';
       try {
@@ -2847,8 +2867,12 @@ export async function resolveMappedOfficialSourceFallback(
       ...(!registeredCoverageAdequate() ? unresolvedRegisteredTopics() : []),
       ...provisionalTopics.filter(topic => !topicCovered(topic))
     ];
-    for (const topic of unresolved) await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
+    for (const topic of unresolved) {
+      throwIfRequestAborted(options.signal);
+      await discoverOnlineForTopic(topic, topic.id.startsWith('iras-authority-query-'));
+    }
   }
+  throwIfRequestAborted(options.signal);
 
   const anyMappedAttempt = sourceMapIds.size > 0;
   const path: SourceMapFallbackTrace['path'] = records.length > 0
@@ -3037,7 +3061,8 @@ export async function buildGroundedReasoningContext(
       initialQuestionUnderstanding = { mode: 'DETERMINISTIC_FALLBACK' };
     } else {
       requestCompletenessContext = createRequestCompletenessContext(userInput);
-      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey);
+      initialQuestionUnderstanding = await interpretSemanticQuestion(userInput, providerOrApiKey,
+        undefined, undefined, retrievalOptions.signal);
     }
   }
   requestCompletenessContext = ensureRequestCompletenessContext(userInput, requestCompletenessContext, initialQuestionUnderstanding);
@@ -3081,7 +3106,8 @@ export async function buildGroundedReasoningContext(
     relevantScenario?.functionalCurrency || 'SGD',
     'SG',
     irasPolicy ? undefined : providerOrApiKey,
-    conversationContext
+    conversationContext,
+    retrievalOptions.signal
   );
 
   // 2. Share the conflict-safe canonical routing hints with evaluation tooling.
@@ -3174,6 +3200,13 @@ export async function buildGroundedReasoningContext(
     (localQuality.status === 'INSUFFICIENT' || localQuality.uncoveredTopicIds.length > 0));
   const mappedFallback = await resolveMappedOfficialSourceFallback(fallbackTopicIds, userInput, retriever, {
     ...retrievalOptions,
+    ...(retrievalOptions.signal ? {
+      fetchOptions: {
+        ...retrievalOptions.fetchOptions,
+        signal: retrievalOptions.signal,
+        timeoutMs: getRequestTimeoutMs(retrievalOptions.signal, retrievalOptions.fetchOptions?.timeoutMs ?? 3000)
+      }
+    } : {}),
     questionUnderstanding,
     semanticDiscoveryQuery: semanticIrasContext ? semanticDiscoveryQuery : undefined,
     authorityLevelDiscovery: retrievalOptions.localOnly ? false : retrievalOptions.authorityLevelDiscovery ?? needsAuthorityFallback,
@@ -3182,6 +3215,7 @@ export async function buildGroundedReasoningContext(
         localQuality.eligibleRecords.length > 0
       : false
   });
+  throwIfRequestAborted(retrievalOptions.signal);
   const allRetrieved = [...contextualLocalRetrieved, ...mappedFallback.records];
   const evidenceQuality = irasPolicy ? applyStandaloneGstCalculationCoverage(userInput, evaluateEvidenceQuality({
     query: userInput, topicIds: evidenceTopicIds, records: allRetrieved,

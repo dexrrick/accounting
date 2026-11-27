@@ -11,6 +11,7 @@ import type {
   FollowUpEventAnalysis
 } from '../types/conversationState';
 import { formatSingaporeDate } from '../utils/dateUtils';
+import { formatFxRateEquation } from '../utils/fxRatePresentation';
 
 /**
  * Result structure returned by buildAccountingMeasurementProjection.
@@ -226,6 +227,7 @@ export function buildAccountingMeasurementProjection(params: {
   const txCurr = tx.currency;
   const funcCurr = tx.functionalCurrency!;
   const buyFx = tx.acquisitionFxRate!;
+  const buyRateEquation = formatFxRateEquation(buyFx, txCurr, funcCurr);
   const sellFx = tx.disposalFxRate;
   const totalAmt = tx.totalAmount!;
   const dispAmt = tx.disposalAmount;
@@ -286,7 +288,7 @@ export function buildAccountingMeasurementProjection(params: {
       citations: [],
       rationalePoints: [
         `Under SFRS(I) 9 §5.1.1: Financial assets designated at FVOCI are initially recognized at fair value plus transaction costs.`,
-        `Initial acquisition translated at transaction spot exchange rate (${buyFx} ${funcCurr}/${txCurr}).`
+        `Initial acquisition translated at transaction spot exchange rate (${buyRateEquation}).`
       ],
       authorityStatus: 'DETERMINISTIC'
     };
@@ -315,7 +317,7 @@ export function buildAccountingMeasurementProjection(params: {
           foreignCurrency: txCurr,
           foreignDebit: dispAmt,
           exchangeRate: sellFx,
-          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${sellFx} ${funcCurr}/${txCurr})`
+          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${formatFxRateEquation(sellFx!, txCurr, funcCurr)})`
         },
         {
           id: 'l-fvoci-sell-asset',
@@ -412,7 +414,7 @@ export function buildAccountingMeasurementProjection(params: {
       citations: [],
       rationalePoints: [
         `Under SFRS(I) 9 §5.1.1: Financial assets at FVTPL are initially recognized at fair value.`,
-        `Initial acquisition translated at spot exchange rate (${buyFx} ${funcCurr}/${txCurr}).`
+        `Initial acquisition translated at spot exchange rate (${buyRateEquation}).`
       ],
       authorityStatus: 'DETERMINISTIC'
     };
@@ -435,7 +437,7 @@ export function buildAccountingMeasurementProjection(params: {
           foreignCurrency: txCurr,
           foreignDebit: dispAmt,
           exchangeRate: sellFx,
-          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${sellFx} ${funcCurr}/${txCurr})`
+          lineExplanation: `Gross disposal proceeds translated at disposal spot rate (${formatFxRateEquation(sellFx!, txCurr, funcCurr)})`
         },
         {
           id: 'l-fvtpl-sell-asset',

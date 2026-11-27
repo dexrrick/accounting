@@ -19,6 +19,7 @@ export type ControlledFetchStatus =
 
 export interface ControlledFetchOptions {
   timeoutMs?: number;
+  signal?: AbortSignal;
   useCache?: boolean;
   ttlMs?: number;
   expectedHash?: string;
@@ -158,6 +159,11 @@ export class ControlledWebRetriever {
     url: string,
     options: ControlledFetchOptions = {}
   ): Promise<ControlledFetchResult> {
+    if (options.signal?.aborted) {
+      const error = new Error('Official source retrieval was canceled.');
+      error.name = 'AbortError';
+      throw error;
+    }
     const {
       timeoutMs = 3000,
       useCache = true,
@@ -244,6 +250,8 @@ export class ControlledWebRetriever {
     const timeoutId = setTimeout(() => {
       controller.abort();
     }, timeoutMs);
+    const onExternalAbort = () => controller.abort();
+    options.signal?.addEventListener('abort', onExternalAbort, { once: true });
 
     try {
       const headers: Record<string, string> = {
@@ -268,8 +276,6 @@ export class ControlledWebRetriever {
         redirect: 'manual', // Intercept redirects for security validation
         headers
       });
-
-      clearTimeout(timeoutId);
 
       const transportFailure = (response as OfficialSourceResponse).__officialSourceTransportFailure;
       if (transportFailure) {
@@ -533,7 +539,7 @@ export class ControlledWebRetriever {
         lastModified
       };
     } catch (err: any) {
-      clearTimeout(timeoutId);
+      if (options.signal?.aborted) throw err;
 
       if (err.name === 'AbortError' || controller.signal.aborted) {
         return {
@@ -561,6 +567,9 @@ export class ControlledWebRetriever {
         retrievedAt,
         sourceUrl: url
       };
+    } finally {
+      clearTimeout(timeoutId);
+      options.signal?.removeEventListener('abort', onExternalAbort);
     }
   }
 

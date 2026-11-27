@@ -307,7 +307,7 @@ async function executeStructuredLlmCallOnce(
     if (typeof providerOrApiKey === 'string' && providerOrApiKey.trim().length > 10) {
       const apiKey = providerOrApiKey.trim();
       const model = options.model || 'gemini-3.5-flash-lite';
-      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic);
+      return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic, timeoutMs);
     }
 
     // 2. Structured ProviderSettings
@@ -320,7 +320,7 @@ async function executeStructuredLlmCallOnce(
           throw new Error('Gemini API key is not configured or too short.');
         }
         const model = options.model || providerOrApiKey.gemini?.model || 'gemini-3.5-flash-lite';
-        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic);
+        return await callGeminiDirect(apiKey, model, prompt, systemInstruction, controller.signal, options.temperature, options.jsonMode !== false, options.responseJsonSchema, options.onGeminiErrorDiagnostic, timeoutMs);
       }
 
       if (active === 'azure') {
@@ -478,7 +478,8 @@ async function callGeminiDirect(
   temperature: number = 0.1,
   jsonMode: boolean = true,
   responseJsonSchema?: Readonly<Record<string, unknown>>,
-  onGeminiDiagnostic?: GeminiProviderDiagnosticCallback
+  onGeminiDiagnostic?: GeminiProviderDiagnosticCallback,
+  requestTimeoutMs = 45_000
 ): Promise<string> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
@@ -513,7 +514,7 @@ async function callGeminiDirect(
     },
     body: JSON.stringify(requestBody),
     signal
-  });
+  }, requestTimeoutMs);
 
   if (!res.ok) {
     if (onGeminiDiagnostic) {
