@@ -25,9 +25,9 @@ globalThis.fetch = async input => {
 };
 
 const missingDisposalRateQuery =
-  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099. What are the double entries?';
+  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2099. What are the double entries?';
 const explicitRatesQuery =
-  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 at USD/SGD spot rate of 1.31 on 15/12/2099. What are the double entries?';
+  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2099 at USD/SGD spot rate of 1.31. What are the double entries?';
 
 const explicitDirectionQuery =
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, meaning one USD equals SGD 1.30.';
@@ -73,6 +73,88 @@ const eventNamedMatchingDateQuote = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025. The acquisition USD/SGD spot rate is 1.30 on 13/11/2025.',
   null, 'SFRS_I', undefined
 );
+const parentheticalEventDateAfterQuote = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at (USD/SGD spot rate of 1.30) on 13/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const parentheticalEventDateWithDatedQuote = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at (USD/SGD spot rate of 1.30 dated 14/11/2025) on 13/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const ambiguousRateSuffixCases = [
+  {
+    query: 'We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 dated 14/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares with a USD/SGD spot rate of 1.30 on 14/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30, dated 14/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares at the USD/SGD spot rate on 14/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares at the USD/SGD spot rate dated 16/11/2025 of 1.30.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares using a conversion rate of 1.30 dated 21/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares using the quoted rate dated 22/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares using a rate of 1.30 dated 23/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares using USD/SGD dated 24/11/2025.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold 300 shares for USD 1,100 at USD/SGD spot rate of 1.32 dated 16/12/2025.',
+    dateField: 'saleDate',
+    rateField: 'saleFxRate'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold 300 shares for USD 1,100 at the USD/SGD spot rate dated 16/12/2025 of 1.32.',
+    dateField: 'saleDate',
+    rateField: 'saleFxRate'
+  }
+];
+const externalRequestsBeforeAmbiguousRateSuffixes = unexpectedExternalRequests;
+for (const testCase of ambiguousRateSuffixCases) {
+  const answer = await processAccountingQuery(testCase.query, null, 'SFRS_I', undefined);
+  assert.equal(answer.scenarioState[testCase.dateField], undefined);
+  assert.equal(answer.scenarioState[testCase.rateField], undefined);
+  assert.equal(answer.scenarioState.isComplete, false);
+  assert.equal(answer.scenarioState.directGroups?.length, 0);
+  assert.ok(answer.clarifications?.some(field => field.fieldKey === testCase.dateField));
+  assert.ok(answer.scenarioState.missingFields.some(field => field.fieldKey === testCase.dateField));
+  assert.equal(updateCommittedJournalScenario(null, answer.scenarioState, 'SFRS_I'), null);
+}
+assert.equal(unexpectedExternalRequests, externalRequestsBeforeAmbiguousRateSuffixes);
 const eventNamedMismatchedDateQuote = await processAccountingQuery(
   'We acquired USD 1,000 of Apple shares on 13/11/2025. The acquisition USD/SGD spot rate is 1.30 on 14/11/2025.',
   null, 'SFRS_I', undefined
@@ -90,7 +172,7 @@ const datedLeadingTransactionMismatch = await processAccountingQuery(
   null, 'SFRS_I', undefined
 );
 const disposalNamedMismatchedDateQuote = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2025, then sold 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025.',
   null, 'SFRS_I', undefined
 );
 const leadingDisposalDateMismatch = await processAccountingQuery(
@@ -156,7 +238,7 @@ const conflictingLabelAnswer = await processAccountingQuery(
   null, 'SFRS_I', undefined
 );
 const conflictingQuoteAfterDate = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2025, meaning one USD equals SGD 1.40.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, meaning one USD equals SGD 1.40.',
   null, 'SFRS_I', undefined
 );
 const conflictingPairLabels = await processAccountingQuery(
@@ -200,7 +282,7 @@ const conditionalAcquisitionRate = await processAccountingQuery(
   null, 'SFRS_I', undefined
 );
 const disposalBudgetPurpose = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099 at USD/SGD spot rate of 1.32 for budgeting purposes. Prepare the journal entries.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2099 at USD/SGD spot rate of 1.32 for budgeting purposes. Prepare the journal entries.',
   null, 'SFRS_I', undefined
 );
 const acquisitionNegatedRate = await processAccountingQuery(
@@ -240,15 +322,15 @@ const acquisitionCorrectedAfterRejectedRate = await processAccountingQuery(
   null, 'SFRS_I', undefined
 );
 const disposalNegatedRate = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099, not actually at USD/SGD spot rate of 1.32.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2099, not actually at USD/SGD spot rate of 1.32.',
   null, 'SFRS_I', undefined
 );
 const acquisitionInlineBudgetRate = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099 for budgeting only.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30 for budgeting only.',
   null, 'SFRS_I', undefined
 );
 const disposalNamedUnusedRate = await processAccountingQuery(
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold 300 shares for USD 1,100 on 15/12/2099. The disposal USD/SGD spot rate of 1.32 was not used.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold 300 shares for USD 1,100 on 15/12/2099. The disposal USD/SGD spot rate of 1.32 was not used.',
   null, 'SFRS_I', undefined
 );
 const rejectedRateDescriptions = [
@@ -326,6 +408,14 @@ for (const [answer, expectedRate, expectedSgd] of [
 }
 assert.match(preciseRateAnswer.scenarioState.directGroups?.[0].summary, /1 USD = SGD 1\.3004/);
 assert.match(explicitUnitsMatchReciprocalPair.scenarioState.directGroups?.[0].summary, /1 USD = SGD 1\.30/);
+assert.equal(parentheticalEventDateAfterQuote.scenarioState.purchaseDate, '13/11/2025');
+assert.equal(parentheticalEventDateAfterQuote.scenarioState.isComplete, false);
+assert.equal(parentheticalEventDateAfterQuote.scenarioState.directGroups?.length, 0);
+assert.ok(parentheticalEventDateAfterQuote.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
+assert.equal(parentheticalEventDateWithDatedQuote.scenarioState.purchaseDate, '13/11/2025');
+assert.equal(parentheticalEventDateWithDatedQuote.scenarioState.isComplete, false);
+assert.equal(parentheticalEventDateWithDatedQuote.scenarioState.directGroups?.length, 0);
+assert.ok(parentheticalEventDateWithDatedQuote.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
 for (const answer of [
   conflictingUnitQuotes, conflictingLabelAnswer, conflictingQuoteAfterDate, conflictingPairLabels,
   connectedPairRateConflict, connectedUnitRateConflict,
@@ -629,7 +719,7 @@ const contradictoryDirections = await parseAccountingQuery(
 assert.equal(contradictoryDirections.isComplete, false);
 assert.ok(contradictoryDirections.missingFields.some(field => field.fieldKey === 'purchaseFxRate'));
 for (const query of [
-  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2025, meaning one USD equals SGD 1.30.',
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30, meaning one USD equals SGD 1.30.',
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at SGD 1.30 per USD (USD/SGD spot rate of 1.30).'
 ]) {
   const scenario = await parseAccountingQuery(query);
@@ -656,7 +746,7 @@ assert.equal(missingAcquisitionDate.isComplete, false);
 assert.ok(missingAcquisitionDate.missingFields.some(field => field.fieldKey === 'purchaseDate'));
 
 const missingSaleAmount = await parseAccountingQuery(
-  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2099, then sold at 1.30 on 15/12/2099.'
+  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30, then sold at 1.30 on 15/12/2099.'
 );
 assert.equal(missingSaleAmount.isComplete, false);
 assert.equal(missingSaleAmount.saleAmountForeign, undefined);
@@ -664,12 +754,12 @@ assert.ok(missingSaleAmount.missingFields.some(field => field.fieldKey === 'sale
 assert.ok(missingSaleAmount.missingFields.some(field => field.fieldKey === 'saleFxRate'));
 
 const invalidDate = await parseAccountingQuery(
-  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 31/02/2099.'
+  'A company primary currency is SGD. It acquired USD 1,000 of Apple shares on 31/02/2099 at USD/SGD spot rate of 1.30.'
 );
 assert.equal(invalidDate.isComplete, false);
 assert.ok(invalidDate.missingFields.some(field => field.fieldKey === 'purchaseDate'));
 
-const equalRatesQuery = explicitRatesQuery.replace('1.31 on 15/12/2099', '1.30 on 15/12/2099');
+const equalRatesQuery = explicitRatesQuery.replace('spot rate of 1.31.', 'spot rate of 1.30.');
 const equalRates = await parseAccountingQuery(equalRatesQuery);
 assert.equal(equalRates.isComplete, true);
 assert.equal(equalRates.purchaseFxRate, 1.30);

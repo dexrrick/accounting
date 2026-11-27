@@ -231,7 +231,8 @@ const shareFxCurrency = String.raw`(?:USD|SGD|EUR|GBP|S\$)`;
 const shareFxAmount = String.raw`(?:(?<prefixCurrency>${shareFxCurrency})\s*(?<prefixAmount>\d+(?:\.\d+)?)|(?<suffixAmount>\d+(?:\.\d+)?)\s*(?<suffixCurrency>${shareFxCurrency}))`;
 const shareFxPair = String.raw`${shareFxCurrency}\s*\/\s*${shareFxCurrency}`;
 const shareFxDateCapture = String.raw`(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b`;
-const shareFxRatePattern = new RegExp(String.raw`\b(?:(?<leadingPair>${shareFxPair})\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>${shareFxPair})?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))`, 'gi');
+const shareFxRateLabelPattern = String.raw`\b(?:(?<leadingPair>${shareFxPair})\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))`;
+const shareFxRatePattern = new RegExp(String.raw`${shareFxRateLabelPattern}\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>${shareFxPair})?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))`, 'gi');
 const shareFxEquation = new RegExp(String.raw`(?<![\w.,$])(?:one|each|1)\s+(?<unit>${shareFxCurrency})\s*(?:equals?|is|=)\s*${shareFxAmount}(?!\w|\.\d)`, 'gi');
 const shareFxPerUnit = new RegExp(String.raw`(?<![\w.,$])${shareFxAmount}\s+per\s+(?:one\s+|1\s+)?(?<unit>${shareFxCurrency})(?!\w)`, 'gi');
 const shareFxAcquisitionAction = /\b(?:invested|bought|purchased|acquired)\b/i;
@@ -286,6 +287,21 @@ const sameShareFxRate = (a: number, b: number, relativeTolerance = Number.EPSILO
 
 function findShareFxRateMatches(text: string): RegExpExecArray[] {
   return [...text.matchAll(shareFxRatePattern)];
+}
+
+function findShareFxEvidenceSpans(text: string): Array<{ start: number; end: number }> {
+  const evidenceMatches = [
+    ...text.matchAll(new RegExp(shareFxRateLabelPattern, 'gi')),
+    ...text.matchAll(/\b(?:rates?|quotes?)\b/gi),
+    ...text.matchAll(new RegExp(shareFxPair, 'gi')),
+    ...text.matchAll(shareFxEquation),
+    ...text.matchAll(shareFxPerUnit)
+  ];
+  return evidenceMatches.map(match => ({
+    start: match.index!,
+    end: match.index! + match[0].length
+  }))
+    .sort((first, second) => first.start - second.start || second.end - first.end);
 }
 
 function isStandaloneShareFxMeaning(text: string): boolean {
@@ -610,7 +626,7 @@ function readInitialShareFxRate(
   if (quote?.rate === null || quote?.rate === undefined || !hasMismatchedShareFxEvidenceDate(eventScope, transactionDate)) {
     return quote;
   }
-  return { ...quote, rate: null, eventDateMismatch: true };
+  return { ...quote, rate: null, eventDateMismatch: transactionDate !== undefined };
 }
 
 function addShareFxEventDisambiguation(scenario: AccountingScenarioState, ambiguousRateFields: string[] = []): AccountingScenarioState {
@@ -3238,9 +3254,21 @@ export async function parseAccountingQuery(
       : undefined;
     if (leadingEventDate) return leadingEventDate;
 
-    const textAfterAction = splitShareFxSentences(text.slice(actionMatch.index + actionMatch[0].length))[0] || '';
-    const dateAfterAction = textAfterAction.match(new RegExp(`\\b(?:on|dated)\\s+${shareFxDateCapture}`, 'i'));
-    return makeShareFxDate(dateAfterAction);
+    const sentence = actionSentence?.sentence || splitShareFxSentences(text.slice(actionMatch.index + actionMatch[0].length))[0] || '';
+    const sentenceActionIndex = actionSentence ? actionMatch.index - actionSentence.start : 0;
+    const firstEvidence = findShareFxEvidenceSpans(sentence)[0];
+    const dateMatches = [...sentence.matchAll(new RegExp(`\\b(?:on|dated)\\s+${shareFxDateCapture}`, 'gi'))];
+    const transactionDate = dateMatches.find(dateMatch => {
+      const dateIndex = dateMatch.index ?? -1;
+      if (dateIndex <= sentenceActionIndex + actionMatch[0].length) return false;
+      if (!firstEvidence || dateIndex < firstEvidence.start) return true;
+      const openParen = sentence.lastIndexOf('(', firstEvidence.start);
+      const closeParen = sentence.indexOf(')', firstEvidence.end);
+      return openParen >= 0 && !sentence.slice(openParen + 1, firstEvidence.start).trim() &&
+        closeParen >= firstEvidence.end && closeParen < dateIndex &&
+        /^[\s,]*$/.test(sentence.slice(closeParen + 1, dateIndex));
+    });
+    return makeShareFxDate(transactionDate ?? null);
   };
   const purchaseDateFact = parseEventDate(purchaseEventText, shareFxAcquisitionAction);
   const saleDateFact = saleActionMatch
