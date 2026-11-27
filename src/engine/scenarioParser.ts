@@ -783,7 +783,7 @@ export async function parseAccountingQuery(
 
   // Pronouns occur in many commercial transactions (for example, "his own
   // company"). They are payroll evidence only when paired with payroll terms.
-  const hasNamedPayrollPersonnel = /\b(staff|employee|worker|person)\b/i.test(q);
+  const hasNamedPayrollPersonnel = /\b(staff|employee|worker|person|singaporean|singapore\s+citizen|permanent\s+resident|spr|ep\s+holder|s[\s-]+pass|work\s+permit|foreigner|expatriate|expat)\b/i.test(q);
   const hasPronounInPayrollContext = /\b(he|she|his|her)\b/i.test(q) &&
     /\b(earning|earns|salary|wages?|payroll|cpf)\b/i.test(q);
   const hasPayrollPersonnel = hasNamedPayrollPersonnel || hasPronounInPayrollContext;
@@ -821,7 +821,7 @@ export async function parseAccountingQuery(
       requestsIndependentFinalSalary ||
       (!(hasMixedFinalPayTopic || hasUnownedCurrencyFinalPayRequest) &&
         establishedRemunerationAmount !== undefined && (
-          (queryRemunerationAmount !== undefined && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat'))) ||
+          (queryRemunerationAmount !== undefined && (hasPayrollPersonnel || q.includes('cpf') || q.includes('last day') || q.includes('prorat') || q.includes('payroll'))) ||
           (!hasAcquisitionClause && !hasNonRemunerationOutlayClause && hasPayrollPersonnel && hasPayrollCalcIntent && (q.includes('salary') || q.includes('cpf'))) ||
           // A correction such as "I mean 10,000 a month" inherits the payroll
           // context rather than being routed to the statutory-advisory fallback.
@@ -913,26 +913,183 @@ export async function parseAccountingQuery(
       };
     }
 
-    let employeeAge = 32;
-    const priorAge = currentScenario?.keyParameters
-      ?.find(p => p.label === 'Employee Status')?.value.match(/Age\s+(\d{1,2})/i);
-    if (priorAge?.[1]) employeeAge = parseInt(priorAge[1], 10);
-    const ageMatch = query.match(/(\d{1,2})\s*(?:years\s*old|yo|y\/o|yrs\s*old)/i) ||
-      query.match(/(?:age|aged)\s*[:=]?\s*(\d{1,2})/i);
-    if (ageMatch) {
-      const parsedAge = parseInt(ageMatch[1] || ageMatch[2], 10);
-      if (parsedAge >= 15 && parsedAge <= 99) employeeAge = parsedAge;
+    const makeIncompletePayroll = (
+      title: string,
+      missingFields: MissingFieldInfo[],
+      extra?: Partial<AccountingScenarioState>
+    ): AccountingScenarioState => ({
+      ...(currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? currentScenario : {}),
+      scenarioType: 'PAYROLL_CPF_SALARY',
+      authorityStatus: 'CONDITIONAL',
+      queryIntent: 'TRANSACTION',
+      primaryDomain: 'CPF_BOARD',
+      rawQuery: query,
+      transactionTitle: title,
+      functionalCurrency,
+      transactionCurrency: functionalCurrency,
+      amount: baseSalary,
+      directGroups: [],
+      projectedGroups: undefined,
+      committedDirectGroups: currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
+        ? (currentScenario.committedDirectGroups?.length
+            ? currentScenario.committedDirectGroups
+            : (currentScenario.directGroups || []).filter(group => !group.isHypothetical))
+        : undefined,
+      isComplete: false,
+      missingFields,
+      ...extra
+    });
+
+    // -----------------------------------------------------------------------
+    // 1. Citizenship / Residency Status (NO silent default to Singapore Citizen)
+    // -----------------------------------------------------------------------
+    const isExplicitForeignWorker = /\b(?:foreign(?:er)?|ep\s+holder|employment\s+pass|s[\s-]+pass|work\s+permit|wp\s+holder|non-citizen|expatriate|expat|non-resident|entrepass|pep\s+holder)\b/i.test(query);
+    const isFirstOrSecondYearPr = /\b(?:1st|first|2nd|second)[\s-]*year\s*(?:s?pr|permanent\s+resident)\b|\b(?:s?pr|permanent\s+resident)\s*\(?\s*(?:1st|first|2nd|second)\s*year\b/i.test(query);
+    const isThirdYearPlusPr = /\b(?:3rd|third)[\s-]*(?:year(?:\s+onward(?:s)?)?|yr)\s*(?:s?pr|permanent\s+resident)\b|\b(?:s?pr|permanent\s+resident)\s*\(?\s*(?:3rd|third)\s*year/i.test(query);
+    const isSingaporeCitizenOrPr3Query = isThirdYearPlusPr ||
+      /\b(?:singapore\s+citizen|singaporean)\b/i.test(query) ||
+      (/\bsc\b/i.test(query) && /\b(?:employee|staff|worker|salary|payroll|cpf)\b/i.test(query)) ||
+      /(?<!non-)\bcitizen\b/i.test(query);
+    const mentionsPrWithoutThirdYear = !isThirdYearPlusPr && !isFirstOrSecondYearPr &&
+      /\b(?:permanent\s+resident|spr|pr)\b/i.test(query);
+
+    if (isFirstOrSecondYearPr || mentionsPrWithoutThirdYear) {
+      return makeIncompletePayroll('Payroll Calculation Requires Confirmed SPR Year & CPF Rate Table', [{
+        fieldKey: 'prRateBasis',
+        fieldName: 'Permanent Resident year and CPF rate election',
+        prompt: 'Please confirm whether the employee is a 1st-year, 2nd-year, or 3rd-year-onward Singapore Permanent Resident (SPR), and for 1st/2nd-year SPRs whether graduated rates or a CPF Board-approved higher-rate election (full employer / full or graduated employee) applies.',
+        whyNeeded: 'CPF contribution rates for 1st- and 2nd-year SPRs differ materially from full Singapore Citizen / 3rd-year-onward SPR rates.'
+      }]);
     }
 
-    const isExplicitNonCitizen = q.includes('foreign') || q.includes('ep holder') || q.includes('s pass') || q.includes('work permit') || q.includes('non-citizen');
-    const isSingaporean = !isExplicitNonCitizen;
+    let citizenshipStatus: 'SC_OR_PR3' | 'FOREIGN_WORKER' | null = null;
+    if (isExplicitForeignWorker && isSingaporeCitizenOrPr3Query) {
+      return makeIncompletePayroll('Payroll Calculation (Conflicting Residency Status)', [{
+        fieldKey: 'citizenshipStatus',
+        fieldName: 'Employee citizenship / residency status',
+        prompt: 'The query mentions both Singapore Citizen / PR and Foreign Worker status. Please confirm the employee’s residency status.',
+        whyNeeded: 'CPF applicability depends on whether the employee is a Singapore Citizen/PR or a CPF-exempt foreign work-pass holder.'
+      }]);
+    } else if (isExplicitForeignWorker) {
+      citizenshipStatus = 'FOREIGN_WORKER';
+    } else if (isSingaporeCitizenOrPr3Query) {
+      citizenshipStatus = 'SC_OR_PR3';
+    } else if (currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY') {
+      const priorStatusVal = currentScenario.keyParameters?.find(p => p.label === 'Employee Status')?.value || '';
+      if (/Foreign Worker/i.test(priorStatusVal)) {
+        citizenshipStatus = 'FOREIGN_WORKER';
+      } else if (/Singapore Citizen|3rd-year\+\s*SPR/i.test(priorStatusVal)) {
+        citizenshipStatus = 'SC_OR_PR3';
+      }
+    }
+
+    if (!citizenshipStatus) {
+      return makeIncompletePayroll('Payroll Calculation Requires Employee Citizenship / Residency Status', [{
+        fieldKey: 'citizenshipStatus',
+        fieldName: 'Employee citizenship / residency status',
+        prompt: 'Is the employee a Singapore Citizen, a Singapore Permanent Resident (1st, 2nd, or 3rd-year+), or a foreign worker (e.g., EP / S Pass / Work Permit)?',
+        whyNeeded: 'Statutory CPF applicability and rates depend on citizenship/residency status; foreign work-pass holders are exempt from CPF.'
+      }]);
+    }
+    const isSingaporean = citizenshipStatus === 'SC_OR_PR3';
+
+    // -----------------------------------------------------------------------
+    // 2. Employee Age / Age Band (NO silent default to 32)
+    // -----------------------------------------------------------------------
+    type CpfAgeBandKey = '55_AND_BELOW' | 'ABOVE_55_TO_60' | 'ABOVE_60_TO_65' | 'ABOVE_65_TO_70' | 'ABOVE_70';
+    const ageBandLabels: Record<CpfAgeBandKey, string> = {
+      '55_AND_BELOW': '55 and below',
+      'ABOVE_55_TO_60': 'above 55 to 60',
+      'ABOVE_60_TO_65': 'above 60 to 65',
+      'ABOVE_65_TO_70': 'above 65 to 70',
+      'ABOVE_70': 'above 70'
+    };
+
+    const rawAgeNumMatch =
+      query.match(/(\d{1,3})\s*[-–]?\s*(?:years?[-–\s]?old|yrs?[-–\s]?old|y\/o|yo)\b/i) ||
+      query.match(/(?:age|aged)\s*[:=]?\s*(\d{1,3})\b/i);
+    let employeeAge: number | undefined;
+    let employeeAgeBand: CpfAgeBandKey | undefined;
+
+    if (rawAgeNumMatch?.[1]) {
+      const parsedAge = parseInt(rawAgeNumMatch[1], 10);
+      if (parsedAge < 15 || parsedAge > 99) {
+        return makeIncompletePayroll('Payroll Calculation (Invalid Employee Age)', [{
+          fieldKey: 'employeeAge',
+          fieldName: 'Valid employee age',
+          prompt: `Employee age "${parsedAge}" is outside the valid working-age range (15 to 99). Please confirm the employee’s actual age or CPF age band.`,
+          whyNeeded: 'CPF contribution rates depend on a valid employee age or age band.'
+        }]);
+      }
+      employeeAge = parsedAge;
+    }
+
+    if (employeeAge === undefined) {
+      if (/\b(?:below\s+55|under\s+55|55\s+(?:and|or)\s+below)\b|<=\s*55\b/i.test(query)) {
+        employeeAgeBand = '55_AND_BELOW';
+      } else if (/\b(?:above\s+55\s+to\s+60|56\s*(?:to|-|–)\s*60)\b/i.test(query)) {
+        employeeAgeBand = 'ABOVE_55_TO_60';
+      } else if (/\b(?:above\s+60\s+to\s+65|61\s*(?:to|-|–)\s*65)\b/i.test(query)) {
+        employeeAgeBand = 'ABOVE_60_TO_65';
+      } else if (/\b(?:above\s+65\s+to\s+70|66\s*(?:to|-|–)\s*70)\b/i.test(query)) {
+        employeeAgeBand = 'ABOVE_65_TO_70';
+      } else if (/\b(?:above\s+70|over\s+70)\b/i.test(query)) {
+        employeeAgeBand = 'ABOVE_70';
+      }
+    }
+
+    if (employeeAge === undefined && employeeAgeBand === undefined && currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY') {
+      const priorStatusVal = currentScenario.keyParameters?.find(p => p.label === 'Employee Status')?.value || '';
+      const priorAgeMatch = priorStatusVal.match(/Age\s+(\d{1,2})/i);
+      if (priorAgeMatch?.[1]) {
+        const parsedPriorAge = parseInt(priorAgeMatch[1], 10);
+        if (parsedPriorAge >= 15 && parsedPriorAge <= 99) employeeAge = parsedPriorAge;
+      } else if (/Age Band:\s*55 and below/i.test(priorStatusVal)) {
+        employeeAgeBand = '55_AND_BELOW';
+      } else if (/Age Band:\s*above 55 to 60/i.test(priorStatusVal)) {
+        employeeAgeBand = 'ABOVE_55_TO_60';
+      } else if (/Age Band:\s*above 60 to 65/i.test(priorStatusVal)) {
+        employeeAgeBand = 'ABOVE_60_TO_65';
+      } else if (/Age Band:\s*above 65 to 70/i.test(priorStatusVal)) {
+        employeeAgeBand = 'ABOVE_65_TO_70';
+      } else if (/Age Band:\s*above 70/i.test(priorStatusVal)) {
+        employeeAgeBand = 'ABOVE_70';
+      }
+    }
+
+    if (employeeAge !== undefined && employeeAgeBand === undefined) {
+      if (employeeAge <= 55) employeeAgeBand = '55_AND_BELOW';
+      else if (employeeAge <= 60) employeeAgeBand = 'ABOVE_55_TO_60';
+      else if (employeeAge <= 65) employeeAgeBand = 'ABOVE_60_TO_65';
+      else if (employeeAge <= 70) employeeAgeBand = 'ABOVE_65_TO_70';
+      else employeeAgeBand = 'ABOVE_70';
+    }
+
+    if (isSingaporean && employeeAge === undefined && employeeAgeBand === undefined) {
+      return makeIncompletePayroll('Payroll Calculation Requires Employee Age or CPF Age Band', [{
+        fieldKey: 'employeeAge',
+        fieldName: 'Employee age or CPF age band',
+        prompt: 'What is the employee’s age (or CPF age band: 55 and below, above 55 to 60, above 60 to 65, above 65 to 70, or above 70)?',
+        whyNeeded: 'CPF employee and employer contribution rates depend on the employee’s age band.'
+      }]);
+    }
+
+    // -----------------------------------------------------------------------
+    // 3. Pay Period / Contribution Year (NO silent default to Sep 2026)
+    // -----------------------------------------------------------------------
+    const monthNamesLookup: Record<string, number> = {
+      jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
+      may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
+      september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
+    };
+    const monthNamesLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
     let lastDay: number | null = null;
     let lastMonth: number | null = null;
     let lastYear: number | null = null;
 
     const dmyMatch = query.match(/(?:last\s*day(?:\s*is)?|resigned\s*(?:on)?|effective|ended\s*(?:on)?|until|to)\s*[:=]?\s*(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/i) ||
-      query.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      query.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
 
     if (dmyMatch) {
       lastDay = parseInt(dmyMatch[1], 10);
@@ -941,17 +1098,23 @@ export async function parseAccountingQuery(
     }
 
     if (!lastDay) {
-      const monthNames: Record<string, number> = {
-        jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4,
-        may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9,
-        september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12
-      };
-      const wordMatch = query.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s+(\d{4}))?/i);
+      const isoDateMatch = query.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
+      if (isoDateMatch) {
+        lastYear = parseInt(isoDateMatch[1], 10);
+        lastMonth = parseInt(isoDateMatch[2], 10);
+        lastDay = parseInt(isoDateMatch[3], 10);
+      }
+    }
+
+    if (!lastDay) {
+      const wordMatch = query.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(?:of\s+)?(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:\s*,?\s*(\d{4}))?\b/i) ||
+        query.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*(\d{4}))?\b/i);
       if (wordMatch) {
-        lastDay = parseInt(wordMatch[1], 10);
-        const mStr = wordMatch[2].toLowerCase();
-        lastMonth = monthNames[mStr] || 9;
-        lastYear = wordMatch[3] ? parseInt(wordMatch[3], 10) : 2026;
+        const firstIsDay = /^\d/.test(wordMatch[1]);
+        lastDay = parseInt(firstIsDay ? wordMatch[1] : wordMatch[2], 10);
+        const mStr = (firstIsDay ? wordMatch[2] : wordMatch[1]).toLowerCase();
+        lastMonth = monthNamesLookup[mStr] || null;
+        lastYear = wordMatch[3] ? parseInt(wordMatch[3], 10) : null;
       }
     }
 
@@ -972,42 +1135,83 @@ export async function parseAccountingQuery(
     }
 
     if (!lastMonth) {
-      const monthMap: Record<string, number> = {
-        january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
-        july: 7, august: 8, september: 9, october: 10, november: 11, december: 12
-      };
-      for (const [mName, mNum] of Object.entries(monthMap)) {
-        if (q.includes(mName)) {
-          lastMonth = mNum;
-          break;
+      const ymMatch = query.match(/\b(20\d{2})-(0[1-9]|1[0-2])\b/);
+      if (ymMatch) {
+        lastYear = parseInt(ymMatch[1], 10);
+        lastMonth = parseInt(ymMatch[2], 10);
+      }
+    }
+
+    if (!lastMonth) {
+      const monthYearMatch = query.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b(?:\s+(?:of\s+)?(20\d{2}))?/i);
+      if (monthYearMatch) {
+        const mStr = monthYearMatch[1].toLowerCase();
+        // Avoid treating modal verb "may" as May unless paired with a year or "in/for May"
+        const isMayModal = mStr === 'may' && !monthYearMatch[2] && !/\b(?:in|for|of|month(?:\s+of)?)\s+may\b/i.test(query);
+        if (!isMayModal && monthNamesLookup[mStr]) {
+          lastMonth = monthNamesLookup[mStr];
+          if (monthYearMatch[2] && !lastYear) lastYear = parseInt(monthYearMatch[2], 10);
         }
       }
     }
 
     if (!lastYear) {
-      const yearMatch = query.match(/\b(202[4-9]|203\d)\b/);
-      lastYear = yearMatch ? parseInt(yearMatch[1], 10) : 2026;
-    }
-    if (!lastMonth) {
-      lastMonth = 9; // default September
+      const yearMatch = query.match(/\b(20[1-3]\d)\b/);
+      if (yearMatch) lastYear = parseInt(yearMatch[1], 10);
     }
 
-    // A supplied calendar date must be valid.  Never silently reassign an
-    // invalid resignation date to a different payroll period.
-    if (lastYear !== null && lastDay !== null && (lastMonth < 1 || lastMonth > 12 || lastDay < 1 || lastDay > new Date(lastYear, lastMonth, 0).getDate())) {
-      return {
-        ...(currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY' ? currentScenario : {}),
-        scenarioType: 'PAYROLL_CPF_SALARY', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION', primaryDomain: 'CPF_BOARD',
-        rawQuery: query, transactionTitle: 'Payroll Calculation (Invalid Resignation Date)', functionalCurrency, transactionCurrency: functionalCurrency,
-        amount: baseSalary, isComplete: false, directGroups: [], projectedGroups: undefined,
-        committedDirectGroups: currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY'
-          ? (currentScenario.committedDirectGroups?.length ? currentScenario.committedDirectGroups : (currentScenario.directGroups || []).filter(group => !group.isHypothetical))
-          : undefined,
-        missingFields: [{ fieldKey: 'resignationDate', fieldName: 'Valid Resignation Date', prompt: 'Please provide a valid resignation date (DD/MM/YYYY).', whyNeeded: 'Accurate payroll proration requires a valid calendar date.' }]
-      };
+    // Inherit pay period from currentScenario only on follow-ups where no new period/year was given
+    if (!lastYear && currentScenario?.scenarioType === 'PAYROLL_CPF_SALARY') {
+      const priorPeriodVal = currentScenario.keyParameters?.find(p => p.label === 'Salary Period')?.value || '';
+      const priorYearMatch = priorPeriodVal.match(/\b(20\d{2})\b/);
+      if (priorYearMatch?.[1]) {
+        lastYear = parseInt(priorYearMatch[1], 10);
+      }
+      if (!lastMonth) {
+        for (let mIdx = 0; mIdx < monthNamesLong.length; mIdx++) {
+          if (priorPeriodVal.toLowerCase().includes(monthNamesLong[mIdx].toLowerCase())) {
+            lastMonth = mIdx + 1;
+            break;
+          }
+        }
+      }
     }
 
-    const totalDaysInMonth = new Date(lastYear, lastMonth, 0).getDate();
+    // A supplied calendar date must be valid. Never silently reassign an invalid date.
+    if (lastYear !== null && lastDay !== null && (lastMonth === null || lastMonth < 1 || lastMonth > 12 || lastDay < 1 || lastDay > new Date(lastYear, lastMonth, 0).getDate())) {
+      return makeIncompletePayroll('Payroll Calculation (Invalid Resignation Date)', [{
+        fieldKey: 'resignationDate',
+        fieldName: 'Valid Resignation Date',
+        prompt: 'Please provide a valid resignation date (DD/MM/YYYY).',
+        whyNeeded: 'Accurate payroll proration requires a valid calendar date.'
+      }]);
+    }
+    if (lastDay !== null && lastYear === null) {
+      return makeIncompletePayroll('Payroll Calculation Requires Payroll Year', [{
+        fieldKey: 'payPeriod',
+        fieldName: 'Payroll year',
+        prompt: 'Please confirm the calendar year for this payroll date (e.g., 2026).',
+        whyNeeded: 'Both proration working days and statutory CPF contribution tables depend on the calendar year.'
+      }]);
+    }
+
+    if (isSingaporean && lastYear === null) {
+      return makeIncompletePayroll('Payroll Calculation Requires Payroll Month and Year', [{
+        fieldKey: 'payPeriod',
+        fieldName: 'Payroll month and year',
+        prompt: 'Which payroll month and year (pay period, e.g., September 2026) does this salary apply to?',
+        whyNeeded: 'CPF Board rate schedules and Ordinary Wage ceilings are effective-dated by calendar year (the deterministic CPF table applies from 1 January 2026).'
+      }]);
+    }
+
+    if (isSingaporean && lastYear !== 2026) {
+      return makeIncompletePayroll(`Payroll Calculation Requires 2026 Effective-Dated Confirmation (${lastYear} Stated)`, [{
+        fieldKey: 'effectiveCpfYear',
+        fieldName: 'CPF rate table effective year',
+        prompt: `The deterministic CPF Board contribution table in this engine applies specifically to 2026 payroll (effective from 1 January 2026, OW ceiling SGD 8,000), and must not be silently applied to ${lastYear}. Please confirm if this calculation is for 2026 or consult CPF Board's ${lastYear} schedule.`,
+        whyNeeded: `CPF contribution rates and Ordinary Wage ceilings differ across calendar years (e.g., 2025 vs 2026 vs 2027).`
+      }]);
+    }
 
     const getWorkingDays = (y: number, m: number, start: number, end: number): number => {
       let count = 0;
@@ -1021,66 +1225,105 @@ export async function parseAccountingQuery(
       return count;
     };
 
-    const totalWorkingDays = getWorkingDays(lastYear, lastMonth, 1, totalDaysInMonth);
-    const isProrated = lastDay !== null && lastDay < totalDaysInMonth;
-    const workingDaysWorked = isProrated ? getWorkingDays(lastYear, lastMonth, 1, lastDay!) : totalWorkingDays;
+    const hasCalendarMonth = lastYear !== null && lastMonth !== null;
+    const totalDaysInMonth = hasCalendarMonth ? new Date(lastYear!, lastMonth!, 0).getDate() : 0;
+    const totalWorkingDays = hasCalendarMonth ? getWorkingDays(lastYear!, lastMonth!, 1, totalDaysInMonth) : 0;
+    const isProrated = hasCalendarMonth && lastDay !== null && lastDay < totalDaysInMonth;
+    const workingDaysWorked = isProrated ? getWorkingDays(lastYear!, lastMonth!, 1, lastDay!) : totalWorkingDays;
 
     // MOM Employment Act §22: (Monthly basic salary / Total working days in month) * Working days worked
-    const grossSalary = isProrated
-      ? Math.round((baseSalary / totalWorkingDays) * workingDaysWorked * 100) / 100
-      : baseSalary;
+    const grossSalaryCents = isProrated
+      ? Math.round((baseSalary * 100 * workingDaysWorked) / totalWorkingDays)
+      : Math.round(baseSalary * 100);
+    const grossSalary = grossSalaryCents / 100;
 
-    // 2026 CPF Contribution Schedules (OW ceiling SGD 8,000)
+    // -----------------------------------------------------------------------
+    // 4. CPF Board Effective-Dated 2026 Rates (OW ceiling SGD 8,000)
+    // -----------------------------------------------------------------------
     const owCeiling = 8000;
-    const eligibleOw = Math.min(grossSalary, owCeiling);
+    const eligibleOwCents = Math.min(grossSalaryCents, owCeiling * 100);
+    const eligibleOw = eligibleOwCents / 100;
 
-    let employeeRate = 0.20;
-    let employerRate = 0.17;
+    const cpfRatesByBand: Record<CpfAgeBandKey, { employeeBps: number; employerBps: number; lowerWageEmployeeRampBps: number }> = {
+      '55_AND_BELOW': { employeeBps: 2000, employerBps: 1700, lowerWageEmployeeRampBps: 6000 },
+      'ABOVE_55_TO_60': { employeeBps: 1800, employerBps: 1600, lowerWageEmployeeRampBps: 5400 },
+      'ABOVE_60_TO_65': { employeeBps: 1250, employerBps: 1250, lowerWageEmployeeRampBps: 3750 },
+      'ABOVE_65_TO_70': { employeeBps: 750, employerBps: 900, lowerWageEmployeeRampBps: 2250 },
+      'ABOVE_70': { employeeBps: 500, employerBps: 750, lowerWageEmployeeRampBps: 1500 }
+    };
 
-    if (employeeAge <= 55) {
-      employeeRate = 0.20;
-      employerRate = 0.17;
-    } else if (employeeAge <= 60) {
-      // 2026 CPF Board full-rate table: above 55 to 60 = employee 18%, employer 16%.
-      employeeRate = 0.18;
-      employerRate = 0.16;
-    } else if (employeeAge <= 65) {
-      employeeRate = 0.115;
-      employerRate = 0.12;
-    } else if (employeeAge <= 70) {
-      employeeRate = 0.075;
-      employerRate = 0.09;
-    } else {
-      employeeRate = 0.05;
-      employerRate = 0.075;
+    const bandRates = isSingaporean && employeeAgeBand
+      ? cpfRatesByBand[employeeAgeBand]
+      : { employeeBps: 0, employerBps: 0, lowerWageEmployeeRampBps: 0 };
+
+    const employeeBps = bandRates.employeeBps;
+    const employerBps = bandRates.employerBps;
+    const totalBps = employeeBps + employerBps;
+    const formatPct = (bps: number) => `${Number((bps / 100).toFixed(2))}%`;
+
+    let employeeCpf = 0;
+    let totalCpf = 0;
+    let employerCpf = 0;
+    let rawEmployeeCpf = 0;
+
+    if (isSingaporean) {
+      if (eligibleOw <= 50) {
+        employeeCpf = 0;
+        totalCpf = 0;
+        employerCpf = 0;
+      } else if (eligibleOw <= 500) {
+        employeeCpf = 0;
+        totalCpf = Math.round((eligibleOw * employerBps) / 10000);
+        employerCpf = totalCpf;
+      } else if (eligibleOw <= 750) {
+        rawEmployeeCpf = ((eligibleOw - 500) * bandRates.lowerWageEmployeeRampBps) / 10000;
+        employeeCpf = Math.floor(rawEmployeeCpf);
+        totalCpf = Math.round((eligibleOw * employerBps + (eligibleOw - 500) * bandRates.lowerWageEmployeeRampBps) / 10000);
+        employerCpf = totalCpf - employeeCpf;
+      } else {
+        rawEmployeeCpf = (eligibleOw * employeeBps) / 10000;
+        employeeCpf = Math.floor(rawEmployeeCpf);
+        totalCpf = Math.round((eligibleOw * totalBps) / 10000);
+        employerCpf = totalCpf - employeeCpf;
+      }
     }
 
-    if (!isSingaporean) {
-      employeeRate = 0;
-      employerRate = 0;
-    }
+    const employeeCpfCents = employeeCpf * 100;
+    const employerCpfCents = employerCpf * 100;
+    const totalCpfCents = totalCpf * 100;
 
-    // CPF Act §7 Statutory Rounding:
-    // Employee share: Cents are discarded
-    const rawEmployeeCpf = eligibleOw * employeeRate;
-    const employeeCpf = Math.floor(rawEmployeeCpf);
-    // Total contribution: Rounded to nearest whole dollar
-    const totalCpf = Math.round(eligibleOw * (employeeRate + employerRate));
-    // Employer share: Difference between total and employee share
-    const employerCpf = totalCpf - employeeCpf;
-
-    // Net take-home pay
-    const netSalary = Math.round((grossSalary - employeeCpf) * 100) / 100;
+    // Net take-home pay in integer cents
+    const netSalaryCents = grossSalaryCents - employeeCpfCents;
+    const netSalary = netSalaryCents / 100;
 
     // Skills Development Levy (SDL): 0.25%, min $2, max $11.25
-    const rawSdl = grossSalary * 0.0025;
-    const sdl = Math.min(11.25, Math.max(2.00, Math.round(rawSdl * 100) / 100));
+    const sdlCents = grossSalaryCents > 0
+      ? Math.min(1125, Math.max(200, Math.round(grossSalaryCents * 0.0025)))
+      : 0;
+    const sdl = sdlCents / 100;
 
-    const monthNamesLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const monthName = monthNamesLong[lastMonth - 1];
-    const eventDate = isProrated
-      ? `${String(lastDay).padStart(2, '0')} ${monthName.slice(0, 3)} ${lastYear}`
-      : `${totalDaysInMonth} ${monthName.slice(0, 3)} ${lastYear}`;
+    const monthName = hasCalendarMonth ? monthNamesLong[lastMonth! - 1] : undefined;
+    const eventDate = hasCalendarMonth
+      ? (isProrated
+          ? `${String(lastDay).padStart(2, '0')}/${String(lastMonth).padStart(2, '0')}/${lastYear}`
+          : `${String(totalDaysInMonth).padStart(2, '0')}/${String(lastMonth).padStart(2, '0')}/${lastYear}`)
+      : (lastYear !== null ? `${lastYear} (Monthly)` : 'Monthly Payroll');
+
+    const salaryPeriodValue = hasCalendarMonth
+      ? `${monthName} ${lastYear}${isProrated ? ` (Last Day: ${eventDate})` : ' (Full Month)'}`
+      : (lastYear !== null ? `${lastYear} (Full Month)` : 'Full Month (Period Not Stated)');
+
+    const employeeStatusValue = isSingaporean
+      ? (employeeAge !== undefined
+          ? `Singapore Citizen / 3rd-year+ SPR, Age ${employeeAge} (${ageBandLabels[employeeAgeBand!]})`
+          : `Singapore Citizen / 3rd-year+ SPR, Age Band: ${ageBandLabels[employeeAgeBand!]}`)
+      : (employeeAge !== undefined
+          ? `Foreign Worker (CPF Exempt), Age ${employeeAge}`
+          : 'Foreign Worker (CPF Exempt)');
+
+    const ageDesc = employeeAge !== undefined
+      ? `age ${employeeAge}`
+      : (employeeAgeBand ? `age band ${ageBandLabels[employeeAgeBand]}` : 'foreign worker');
 
     const lines: JournalLine[] = [
       {
@@ -1090,95 +1333,141 @@ export async function parseAccountingQuery(
         category: 'EXPENSE',
         debit: grossSalary,
         credit: 0,
-        lineExplanation: isProrated
+        lineExplanation: isProrated && monthName
           ? `Gross prorated salary for ${workingDaysWorked}/${totalWorkingDays} working days in ${monthName} ${lastYear} under MOM Employment Act §22.`
-          : `Full monthly basic salary for ${monthName} ${lastYear} under SFRS(I) 1-1 §28.`
-      },
-      {
+          : `Full monthly basic salary${monthName ? ` for ${monthName} ${lastYear}` : (lastYear ? ` for ${lastYear}` : '')} under SFRS(I) 1-1 §28.`
+      }
+    ];
+
+    if (employerCpfCents > 0) {
+      lines.push({
         id: 'line-payroll-employer-cpf',
         accountCode: '5020',
         accountName: 'Employer CPF Contribution (Operating Expense)',
         category: 'EXPENSE',
         debit: employerCpf,
         credit: 0,
-        lineExplanation: `Mandatory employer CPF contribution (${(employerRate * 100).toFixed(1)}% for age ${employeeAge}) under CPF Act §7. 100% tax-deductible under ITA §14(1)(e).`
-      },
-      {
+        lineExplanation: `Mandatory employer CPF contribution (${formatPct(employerBps)} for ${ageDesc}) under CPF Act §7. 100% tax-deductible under ITA §14(1)(e).`
+      });
+    }
+
+    if (totalCpfCents > 0) {
+      lines.push({
         id: 'line-payroll-cpf-payable',
         accountCode: '2050',
         accountName: 'CPF Payable to CPF Board (Current Liability)',
         category: 'LIABILITY',
         debit: 0,
         credit: totalCpf,
-        lineExplanation: `Total mandatory CPF payable (Employee $${employeeCpf} + Employer $${employerCpf}) due by 14th of following month to CPF Board.`
-      },
-      {
-        id: 'line-payroll-net-salary-payable',
-        accountCode: '2060',
-        accountName: 'Net Salaries Payable / Staff Clearing (Current Liability)',
-        category: 'LIABILITY',
-        debit: 0,
-        credit: netSalary,
-        lineExplanation: `Net take-home salary payable to employee after deducting employee CPF share ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - $${employeeCpf.toFixed(2)}).`
-      },
-      {
-        id: 'line-payroll-sdl-expense',
-        accountCode: '5030',
-        accountName: 'Skills Development Levy (Operating Expense)',
-        category: 'EXPENSE',
-        debit: sdl,
-        credit: 0,
-        lineExplanation: `Employer Skills Development Levy accrued at 0.25% of monthly wages, subject to the statutory minimum and maximum.`
-      },
-      {
-        id: 'line-payroll-sdl-payable',
-        accountCode: '2055',
-        accountName: 'Skills Development Levy Payable',
-        category: 'LIABILITY',
-        debit: 0,
-        credit: sdl,
-        lineExplanation: `SDL payable with the monthly CPF submission.`
-      }
-    ];
+        lineExplanation: `Total mandatory CPF payable (Employee $${employeeCpf.toLocaleString()} + Employer $${employerCpf.toLocaleString()}) due by 14th of following month to CPF Board.`
+      });
+    }
 
-    const totalDebit = Math.round((grossSalary + employerCpf + sdl) * 100) / 100;
-    const totalCredit = Math.round((totalCpf + netSalary + sdl) * 100) / 100;
+    lines.push({
+      id: 'line-payroll-net-salary-payable',
+      accountCode: '2060',
+      accountName: 'Net Salaries Payable / Staff Clearing (Current Liability)',
+      category: 'LIABILITY',
+      debit: 0,
+      credit: netSalary,
+      lineExplanation: isSingaporean && employeeCpf > 0
+        ? `Net take-home salary payable to employee after deducting employee CPF share ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - $${employeeCpf.toFixed(2)}).`
+        : `Net take-home salary payable to employee ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}, no employee CPF deduction).`
+    });
+
+    if (sdlCents > 0) {
+      lines.push(
+        {
+          id: 'line-payroll-sdl-expense',
+          accountCode: '5030',
+          accountName: 'Skills Development Levy (Operating Expense)',
+          category: 'EXPENSE',
+          debit: sdl,
+          credit: 0,
+          lineExplanation: `Employer Skills Development Levy accrued at 0.25% of monthly wages, subject to the statutory minimum ($2.00) and maximum ($11.25).`
+        },
+        {
+          id: 'line-payroll-sdl-payable',
+          accountCode: '2055',
+          accountName: 'Skills Development Levy Payable',
+          category: 'LIABILITY',
+          debit: 0,
+          credit: sdl,
+          lineExplanation: `SDL payable with the monthly CPF/SDL submission.`
+        }
+      );
+    }
+
+    const totalDebitCents = lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+    const totalCreditCents = lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+    const totalDebit = totalDebitCents / 100;
+    const totalCredit = totalCreditCents / 100;
+    const isBalanced = totalDebitCents > 0 && totalDebitCents === totalCreditCents;
 
     const citations = [
-      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY),
-      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
-      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_WAGE_CEILINGS_2026),
-      convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY),
+      ...(isProrated ? [convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY)] : []),
+      ...(isSingaporean ? [
+        convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
+        convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_WAGE_CEILINGS_2026),
+        convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY)
+      ] : []),
       convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC21_SALARY_TIMELINES),
       convertToCitation(SINGAPORE_STATUTORY_REPOSITORY.CPF_SDL_SKILLS_DEVELOPMENT_LEVY)
     ];
 
     const advisories = [
-      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY),
-      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
-      convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY)
+      ...(isProrated ? [convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.MOM_SEC22_PRORATED_SALARY)] : []),
+      ...(isSingaporean ? [
+        convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPFA_SEC7_FIRST_SCHEDULE),
+        convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPF_EMPLOYER_TAX_DEDUCTIBILITY)
+      ] : [convertToAdvisory(SINGAPORE_STATUTORY_REPOSITORY.CPF_SDL_SKILLS_DEVELOPMENT_LEVY)])
     ];
+
+    const empPctLabel = formatPct(employeeBps);
+    const erPctLabel = formatPct(employerBps);
+    const totPctLabel = formatPct(totalBps);
 
     const keyParams: TransactionFact[] = [
       { label: 'Basic Monthly Salary', value: `${functionalCurrency} ${baseSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Base Rate' },
-      { label: 'Employee Status', value: `${isSingaporean ? 'Singapore Citizen / PR' : 'Foreign Worker'}, Age ${employeeAge}`, badge: 'Eligibility' },
-      { label: 'Salary Period', value: `${monthName} ${lastYear}${isProrated ? ` (Last Day: ${eventDate})` : ' (Full Month)'}`, badge: 'Period' },
-      { label: 'Working Days (Mon-Fri)', value: `${workingDaysWorked} / ${totalWorkingDays} days (${isProrated ? 'Prorated' : 'Full'})`, badge: 'MOM §22', highlight: isProrated },
-      { label: 'Gross Prorated Salary', value: `${functionalCurrency} ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Gross Pay', highlight: true },
-      { label: 'Employee CPF (20%, cents dropped)', value: `${functionalCurrency} ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Deduction' },
-      { label: 'Employer CPF (17%, dollar rounded)', value: `${functionalCurrency} ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Employer Cost' },
-      { label: 'Total CPF to CPF Board (37%)', value: `${functionalCurrency} ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Liability', highlight: true },
+      { label: 'Employee Status', value: employeeStatusValue, badge: 'Eligibility' },
+      { label: 'Salary Period', value: salaryPeriodValue, badge: 'Period' },
+      ...(hasCalendarMonth ? [{ label: 'Working Days (Mon-Fri)', value: `${workingDaysWorked} / ${totalWorkingDays} days (${isProrated ? 'Prorated' : 'Full'})`, badge: 'MOM §22', highlight: isProrated }] : []),
+      { label: isProrated ? 'Gross Prorated Salary' : 'Gross Monthly Salary', value: `${functionalCurrency} ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Gross Pay', highlight: true },
+      ...(isSingaporean ? [
+        { label: `Employee CPF (${empPctLabel}, cents dropped)`, value: `${functionalCurrency} ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Deduction' },
+        { label: `Employer CPF (${erPctLabel}, dollar rounded)`, value: `${functionalCurrency} ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Employer Cost' },
+        { label: `Total CPF to CPF Board (${totPctLabel})`, value: `${functionalCurrency} ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Liability', highlight: true }
+      ] : [
+        { label: 'CPF Applicability', value: 'Exempt (Foreign Worker — 0%)', badge: 'CPF Exempt' }
+      ]),
       { label: 'Net Take-Home Pay', value: `${functionalCurrency} ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'Disbursement', highlight: true },
       { label: 'Skills Development Levy (SDL)', value: `${functionalCurrency} ${sdl.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, badge: 'SSG Levy' },
-      { label: 'Tax Deductibility', value: '100% Allowable (§14(1)(e))', badge: 'IRAS Deductible' }
+      { label: 'Tax Deductibility', value: isSingaporean ? '100% Allowable (§14(1) & §14(1)(e))' : '100% Allowable (§14(1))', badge: 'IRAS Deductible' }
     ];
 
     const title = isProrated
       ? `Payroll & Prorated Salary Accrual (${eventDate} - Last Day of Service)`
-      : `Monthly Payroll & Statutory CPF Accrual (${eventDate})`;
+      : (isSingaporean
+          ? `Monthly Payroll & Statutory CPF Accrual (${eventDate})`
+          : `Monthly Payroll & SDL Accrual (${eventDate})`);
+    const periodPhrase = monthName ? ` for ${monthName} ${lastYear}` : (lastYear ? ` for ${lastYear}` : '');
     const summary = isProrated
-      ? `Prorated salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} for ${workingDaysWorked}/${totalWorkingDays} working days worked in ${monthName} ${lastYear} under MOM Employment Act §22, with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}).`
-      : `Monthly salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} with CPF contributions (Employee: SGD ${employeeCpf}, Employer: SGD ${employerCpf}) for ${monthName} ${lastYear}.`;
+      ? `Prorated salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} for ${workingDaysWorked}/${totalWorkingDays} working days worked in ${monthName} ${lastYear} under MOM Employment Act §22${isSingaporean ? `, with 2026 CPF contributions (Employee ${empPctLabel}: SGD ${employeeCpf}, Employer ${erPctLabel}: SGD ${employerCpf}, Total ${totPctLabel}: SGD ${totalCpf})` : ' (Foreign worker — CPF exempt)'} and SDL of SGD ${sdl.toFixed(2)}.`
+      : `Monthly salary of SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}${isSingaporean ? ` with 2026 CPF contributions (Employee ${empPctLabel}: SGD ${employeeCpf}, Employer ${erPctLabel}: SGD ${employerCpf}, Total ${totPctLabel}: SGD ${totalCpf})` : ' (Foreign worker — CPF exempt)'} and SDL of SGD ${sdl.toFixed(2)}${periodPhrase}.`;
+
+    const rationalePoints: string[] = [
+      ...(isProrated && monthName ? [`Under MOM Employment Act §22: Gross prorated salary = (SGD ${baseSalary.toLocaleString()} / ${totalWorkingDays} working days) * ${workingDaysWorked} days worked = SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`] : []),
+      ...(isSingaporean ? [
+        `Under CPF Act §7 (2026 schedule, ${ageDesc}, OW ceiling SGD 8,000): Employee CPF share (${empPctLabel}) is SGD ${employeeCpf}. Cents ($${Math.max(0, rawEmployeeCpf - employeeCpf).toFixed(2)}) are discarded per statute.`,
+        `Under CPF Act §7: Employer CPF share (${erPctLabel}) is SGD ${employerCpf}. Total CPF contribution (${totPctLabel}: SGD ${totalCpf}) is rounded to the nearest dollar.`
+      ] : [
+        `Foreign work-pass holder: Exempt from mandatory CPF contributions under the Central Provident Fund Act 1953 (Employer 0%, Employee 0%; zero-value CPF lines omitted).`
+      ]),
+      `Net Take-Home Salary = Gross Salary ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })})${isSingaporean ? ` - Employee CPF ($${employeeCpf})` : ''} = SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
+      `Skills Development Levy (SDL): 0.25% of gross wages subject to SGD 2.00 min / SGD 11.25 max = SGD ${sdl.toFixed(2)} (Dr SDL Expense 5030 / Cr SDL Payable 2055).`,
+      ...(isSingaporean ? [`Under Section 14(1)(e) of the Income Tax Act 1947: Mandatory employer CPF ($${employerCpf}) is 100% tax-deductible.`] : [`Under Section 14(1) of the Income Tax Act 1947: Gross staff salary ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and SDL ($${sdl.toFixed(2)}) are tax-deductible.`]),
+      `Total Debits (SGD ${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == Total Credits (SGD ${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) ${isBalanced ? '✓ Balanced' : '✗ Imbalanced'}.`
+    ];
 
     const payrollState: AccountingScenarioState = {
       scenarioType: 'PAYROLL_CPF_SALARY',
@@ -1190,11 +1479,21 @@ export async function parseAccountingQuery(
       functionalCurrency,
       transactionCurrency: functionalCurrency,
       amount: grossSalary,
-      accountingTreatmentSummary: `Recognize staff salary expense ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and employer CPF expense ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) in P&L under SFRS(I) 1-1 §28. Outstanding net salary ($${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and total CPF liability ($${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) are credited to current liabilities.`,
-      singaporeTaxTreatmentSummary: `Gross staff salaries and mandatory employer CPF contributions ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) are 100% tax-deductible for the employer under Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947. SDL ($${sdl.toLocaleString(undefined, { minimumFractionDigits: 2 })}) is also tax-deductible.`,
-      regulatoryMandatesSummary: `MOM Employment Act §21(2) mandates full payment of all outstanding salary on the employee's last day of employment. CPF Act §7 mandates payment of CPF contributions to CPF Board by the 14th of the following month.`,
-      effectiveDateOrTiming: `2026 CPF Ordinary Wage monthly ceiling of SGD 8,000 active (effective 1 Jan 2026). Employment Act 1968 active.`,
-      uncertaintyDisclaimer: 'Grounded in Singapore Employment Act §22 proration formula and 2026 CPF Board contribution schedules. Standard 5-day work week (Monday to Friday) assumed unless company employment contract stipulates alternate work days.',
+      accountingTreatmentSummary: `Recognize staff salary expense ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })})${employerCpf > 0 ? `, employer CPF expense ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })})` : ''}, and SDL expense ($${sdl.toFixed(2)}) in P&L under SFRS(I) 1-1 §28. Outstanding net salary ($${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })})${totalCpf > 0 ? `, total CPF liability ($${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })})` : ''}, and SDL payable ($${sdl.toFixed(2)}) are credited to current liabilities.`,
+      singaporeTaxTreatmentSummary: isSingaporean
+        ? `Gross staff salaries ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and mandatory employer CPF contributions ($${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}) are 100% tax-deductible for the employer under Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947. SDL ($${sdl.toFixed(2)}) is also tax-deductible.`
+        : `Gross staff salaries ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) and Skills Development Levy ($${sdl.toFixed(2)}) are tax-deductible operating expenses under Section 14(1) of the Income Tax Act 1947. Foreign workers are exempt from CPF.`,
+      regulatoryMandatesSummary: isSingaporean
+        ? `MOM Employment Act §21(2) mandates timely payment of outstanding salary (on last day for employer termination or with notice). CPF Act §7 mandates payment of CPF and SDL contributions to CPF Board by the 14th of the following month.`
+        : `MOM Employment Act §21 mandates timely salary payment. Skills Development Levy Act 1979 requires monthly SDL remittance for all employees rendering services in Singapore, including foreign work-pass holders.`,
+      effectiveDateOrTiming: isSingaporean
+        ? `2026 CPF Board rate table and Ordinary Wage monthly ceiling of SGD 8,000 active (effective 1 Jan 2026).`
+        : `Skills Development Levy Act 1979 active (0.25%, min SGD 2.00, max SGD 11.25).`,
+      uncertaintyDisclaimer: isProrated
+        ? 'Grounded in Singapore Employment Act §22 proration formula and 2026 CPF Board contribution schedules. Standard 5-day work week (Monday to Friday) assumed unless employment contract stipulates alternate work days.'
+        : (isSingaporean
+            ? 'Grounded in 2026 CPF Board contribution schedules (effective 1 January 2026) and Skills Development Levy Act 1979.'
+            : 'Grounded in Skills Development Levy Act 1979; employee is CPF-exempt as a foreign work-pass holder.'),
       statutoryAdvisory: advisories,
       keyParameters: keyParams,
       directGroups: [
@@ -1206,17 +1505,10 @@ export async function parseAccountingQuery(
           lines,
           totalDebit,
           totalCredit,
-          isBalanced: Math.abs(totalDebit - totalCredit) < 0.01,
+          isBalanced,
           citations,
           authorityStatus: 'DETERMINISTIC',
-          rationalePoints: [
-            `Under MOM Employment Act §22: Gross prorated salary = (SGD ${baseSalary.toLocaleString()} / ${totalWorkingDays} working days) * ${workingDaysWorked} days worked = SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
-            `Under CPF Act §7: Employee CPF share (20%) is SGD ${employeeCpf}. Cents ($${(rawEmployeeCpf - employeeCpf).toFixed(2)}) are discarded per statute.`,
-            `Under CPF Act §7: Employer CPF share (17%) is SGD ${employerCpf}. Total CPF contribution (SGD ${totalCpf}) is rounded to nearest dollar.`,
-            `Net Take-Home Salary = Gross Salary ($${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}) - Employee CPF ($${employeeCpf}) = SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
-            `Under Section 14(1)(e) of the Income Tax Act 1947: Mandatory employer CPF ($${employerCpf}) is 100% tax-deductible.`,
-            `Total Debits (SGD ${totalDebit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) == Total Credits (SGD ${totalCredit.toLocaleString(undefined, { minimumFractionDigits: 2 })}) \u2713 Balanced.`
-          ]
+          rationalePoints
         }
       ],
       isComplete: true,

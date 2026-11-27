@@ -4,7 +4,7 @@ import { parseAccountingQuery } from '../../src/engine/scenarioParser.ts';
 console.log('=== RUNNING PAYROLL FOLLOW-UP CORRECTION SUITE ===\n');
 
 const initial = await parseAccountingQuery(
-  "I have staff is 60 years old Singaporean earning 10k a month what's the double entry for all salary related journal"
+  "I have staff is 60 years old Singaporean earning 10k a month for September 2026 what's the double entry for all salary related journal"
 );
 
 assert.equal(initial.scenarioType, 'PAYROLL_CPF_SALARY');

@@ -1480,9 +1480,14 @@ async function processAccountingQueryCore(
       });
     }
   }
+  const isAdvisoryFactDiscoveryQuestion = !outputJournalRequested &&
+    !/\b(?:prepare|show|post|record|book|create|generate)\b[^.!?;]{0,40}\b(?:journal|double\s+entr(?:y|ies)|entries)\b/i.test(journalIntentQuery) &&
+    /\b(?:what|which)\s+(?:cpf\s+(?:contribution\s+)?rates?|employee\s+facts?|facts?|rules?)\b/i.test(userInput) &&
+    /\b(?:still\s+need\s+to\s+be\s+confirmed|need(?:ed)?\s+before\s+calculat|apply\s+to\s+(?:the|our)\s+employee)\b/i.test(userInput);
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
       !hasExplicitUnresolvedSaleJournal &&
+      !isAdvisoryFactDiscoveryQuestion &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
@@ -1501,11 +1506,20 @@ async function processAccountingQueryCore(
   if (activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.isComplete &&
+      deterministicScenario.directGroups?.length &&
       /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    const payrollIntegrity = validateJournalGroups(deterministicScenario.directGroups, {
+      rawQuery: userInput,
+      hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario),
+      hasImageEvidence: hasVerifiedImageMonetaryEvidence(deterministicScenario) || hasVerifiedImageMonetaryEvidence(activeScenario),
+      evidenceTexts: relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+    });
+    if (payrollIntegrity.isValid) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    }
   }
 
   // Multi-workstream compliance was independently resolved above. Keep the
@@ -1948,51 +1962,92 @@ export function renderStructuredOfflineResponse(
   }
 
   // 3.5. PAYROLL, PRORATED SALARY & STATUTORY CPF (MOM EA §22 & CPF ACT §7)
-  if (parsed.scenarioType === 'PAYROLL_CPF_SALARY' && parsed.directGroups) {
-    const grp = parsed.projectedGroups?.[0] || parsed.directGroups[0];
+  if (parsed.scenarioType === 'PAYROLL_CPF_SALARY') {
+    const grp = parsed.projectedGroups?.[0] || parsed.directGroups?.[0];
+    if (!parsed.isComplete || !grp || !grp.lines?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the employee salary, citizenship/residency status, age (if CPF applies), and payroll period before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+
     const grossLine = grp.lines.find(l => l.accountCode === '5010');
     const employerCpfLine = grp.lines.find(l => l.accountCode === '5020');
     const cpfPayableLine = grp.lines.find(l => l.accountCode === '2050');
     const netSalaryLine = grp.lines.find(l => l.accountCode === '2060');
+    const sdlExpenseLine = grp.lines.find(l => l.accountCode === '5030');
 
     const grossSalary = grossLine?.debit || 0;
     const employerCpf = employerCpfLine?.debit || 0;
     const totalCpf = cpfPayableLine?.credit || 0;
     const netSalary = netSalaryLine?.credit || 0;
-    const employeeCpf = totalCpf - employerCpf;
+    const employeeCpf = Math.max(0, totalCpf - employerCpf);
+    const sdlAmount = sdlExpenseLine?.debit || 0;
 
-    const baseSalaryParam = parsed.keyParameters?.find(p => p.label.includes('Basic Monthly Salary'))?.value || `SGD ${grossSalary.toLocaleString()}`;
-    const workingDaysParam = parsed.keyParameters?.find(p => p.label.includes('Working Days'))?.value || '22 / 22 days';
-    const sdlParam = parsed.keyParameters?.find(p => p.label.includes('Skills Development Levy'))?.value || 'SGD 4.36';
+    const findParam = (fragment: string) => parsed.keyParameters?.find(p => p.label.includes(fragment));
+    const baseSalaryParam = findParam('Basic Monthly Salary')?.value || `${currency} ${fmt2(grossSalary)}`;
+    const statusParam = findParam('Employee Status')?.value;
+    const periodParam = findParam('Salary Period')?.value;
+    const workingDaysParam = findParam('Working Days')?.value;
+    const employeeCpfParam = findParam('Employee CPF');
+    const employerCpfParam = findParam('Employer CPF');
+    const totalCpfParam = findParam('Total CPF');
+    const cpfExemptParam = findParam('CPF Applicability');
+    const sdlParam = findParam('Skills Development Levy')?.value || `${currency} ${fmt2(sdlAmount)}`;
 
-    let replyText = `### Statutory Payroll & CPF Assessment: ${parsed.transactionTitle}\n\n` +
-      `**Governing Authorities**: **MOM, CPF Board & IRAS** | **Legislation**: **Employment Act 1968 §22** & **Central Provident Fund Act 1953 §7 / First Schedule**\n\n` +
+    const isProrated = Boolean(workingDaysParam && /\bProrated\b/i.test(workingDaysParam));
+    const isCpfExempt = Boolean(cpfExemptParam) || (totalCpf === 0 && employerCpf === 0 && employeeCpf === 0);
+
+    const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+    const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+    const grpBalanced = totalDrCents > 0 && totalDrCents === totalCrCents;
+    const lineBullets = grp.lines
+      .map(l => {
+        const side = l.debit > 0 ? 'Debit' : 'Credit';
+        const amt = l.debit > 0 ? l.debit : l.credit;
+        return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+      })
+      .join('\n');
+
+    let replyText = `### Statutory Payroll & ${isCpfExempt ? 'SDL' : 'CPF'} Assessment: ${parsed.transactionTitle}\n\n` +
+      `**Governing Authorities**: **${isCpfExempt ? 'MOM, SSG/CPF Board & IRAS' : 'MOM, CPF Board & IRAS'}** | **Legislation**: **Employment Act 1968**, **Skills Development Levy Act 1979**${isCpfExempt ? '' : ' & **Central Provident Fund Act 1953 §7 / First Schedule**'}\n\n` +
       `---\n\n` +
-      `#### 1. Statutory Proration & Entitlement (MOM Employment Act §22)\n` +
+      `#### 1. Payroll Basis & Salary Computation${isProrated ? ' (MOM Employment Act §22)' : ''}\n` +
       `* **Contracted Basic Monthly Salary**: **${baseSalaryParam}**\n` +
-      `* **Statutory Working Days (Mon–Fri)**: **${workingDaysParam}**\n` +
-      `* **MOM Incomplete Month Formula**:\n` +
-      `  $$\\text{Gross Salary Payable} = \\frac{\\text{Monthly Basic Rate of Pay}}{\\text{Total Working Days in Month}} \\times \\text{Actual Working Days Worked}$$\n` +
-      `* **Gross Prorated Salary Payable**: $\\mathbf{SGD\\ ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n\n` +
+      `${statusParam ? `* **Employee Status**: **${statusParam}**\n` : ''}` +
+      `${periodParam ? `* **Salary Period**: **${periodParam}**\n` : ''}` +
+      `${workingDaysParam ? `* **Statutory Working Days (Mon–Fri)**: **${workingDaysParam}**\n` : ''}` +
+      `${isProrated ? `* **MOM Incomplete Month Formula**:\n  $$\\text{Gross Salary Payable} = \\frac{\\text{Monthly Basic Rate of Pay}}{\\text{Total Working Days in Month}} \\times \\text{Actual Working Days Worked}$$\n` : ''}` +
+      `* **${isProrated ? 'Gross Prorated Salary Payable' : 'Gross Monthly Salary Payable'}**: **${currency} ${fmt2(grossSalary)}**\n\n` +
       `---\n\n` +
-      `#### 2. Statutory CPF & Net Salary Breakdown (CPF Act 1953 & 2026 Ceilings)\n` +
-      `* **Gross Salary Subject to CPF (Ordinary Wage)**: **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Within 2026 OW ceiling of SGD 8,000)*\n` +
-      `* **Employee CPF Contribution (20%)**: $\\mathbf{SGD\\ ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Cents discarded per CPF Act §7)*\n` +
-      `* **Employer CPF Contribution (17%)**: $\\mathbf{SGD\\ ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Total rounded to dollar)*\n` +
-      `* **Total CPF Payable to CPF Board (37%)**: $\\mathbf{SGD\\ ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n` +
-      `* **Net Take-Home Salary Payable to Staff**: $\\mathbf{SGD\\ ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Gross SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - Employee CPF SGD ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })})*\n` +
-      `* **Skills Development Levy (SDL)**: **${sdlParam}** *(0.25% of gross remuneration payable by employer)*\n\n` +
+      `#### 2. Statutory CPF, SDL & Net Salary Breakdown\n`;
+
+    if (isCpfExempt) {
+      replyText += `* **CPF Applicability**: **${cpfExemptParam?.value || 'Exempt (Foreign Worker — 0%)'}**\n`;
+    } else {
+      const empLabel = employeeCpfParam?.label || 'Employee CPF';
+      const erLabel = employerCpfParam?.label || 'Employer CPF';
+      const totLabel = totalCpfParam?.label || 'Total CPF to CPF Board';
+      replyText += `* **Gross Salary Subject to CPF (Ordinary Wage)**: **${currency} ${fmt2(grossSalary)}** *(${grossSalary > 8000 ? 'Capped at 2026 OW ceiling of SGD 8,000' : 'Within 2026 OW ceiling of SGD 8,000'})*\n` +
+        `* **${empLabel}**: **${currency} ${fmt2(employeeCpf)}** *(Statutory Rule: Cents discarded per CPF Act §7)*\n` +
+        `* **${erLabel}**: **${currency} ${fmt2(employerCpf)}** *(Statutory Rule: Total rounded to nearest dollar)*\n` +
+        `* **${totLabel}**: **${currency} ${fmt2(totalCpf)}**\n`;
+    }
+
+    replyText += `* **Net Take-Home Salary Payable to Staff**: **${currency} ${fmt2(netSalary)}**${!isCpfExempt && employeeCpf > 0 ? ` *(Gross ${currency} ${fmt2(grossSalary)} - Employee CPF ${currency} ${fmt2(employeeCpf)})*` : ''}\n` +
+      `* **Skills Development Levy (SDL)**: **${sdlParam}** *(0.25% of monthly wages, min SGD 2.00, max SGD 11.25)*\n\n` +
       `---\n\n` +
-      `#### 3. Singapore Tax Deductibility & MOM Compliance (IRAS & MOM)\n` +
-      `* **100% Tax Deductibility**: Under **Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947**, staff salaries (**SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) and mandatory employer CPF (**SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) are fully tax-deductible expenses in Form C-S.\n` +
-      `* **Disbursement Timeline**: Under **Section 21(2) of the Employment Act 1968**, all outstanding salary must be disbursed to the employee on their last day of employment.\n\n` +
+      `#### 3. Singapore Tax Deductibility & Statutory Compliance (IRAS & MOM)\n` +
+      `* **Tax Deductibility**: Under **Section 14(1)${!isCpfExempt ? ' and Section 14(1)(e)' : ''} of the Income Tax Act 1947**, staff salaries (**${currency} ${fmt2(grossSalary)}**)${!isCpfExempt && employerCpf > 0 ? `, mandatory employer CPF (**${currency} ${fmt2(employerCpf)}**)` : ''}, and SDL (**${currency} ${fmt2(sdlAmount)}**) are allowable business deductions.\n` +
+      `* **Payment & Filing Timelines**: Under the **Employment Act 1968**, salary must be paid within statutory timelines; ${isCpfExempt ? 'SDL' : 'CPF and SDL'} must be remitted to CPF Board by the 14th of the following month.\n\n` +
       `---\n\n` +
-      `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
-      `* **Debit**: **Staff Salaries & Wages (P&L - Operating Expense)** — **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Debit**: **Employer CPF Contribution (P&L - Operating Expense)** — **SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **CPF Payable to CPF Board (Current Liability)** — **SGD ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Net Salaries Payable / Staff Clearing (Current Liability)** — **SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
-      `**Balance Check**: $\\text{Total Debits (SGD } ${(grossSalary + employerCpf).toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${(totalCpf + netSalary).toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
+      `### ${grp.title} (${grp.eventDate})\n\n` +
+      `${lineBullets}\n\n` +
+      `**Balance Check**: ${currency} ${fmt2(totalDrCents / 100)} == ${currency} ${fmt2(totalCrCents / 100)} ${grpBalanced ? '✓ Balanced' : '✗ Imbalanced'}`;
 
     return {
       messageText: finalizeMessage(replyText, parsed),

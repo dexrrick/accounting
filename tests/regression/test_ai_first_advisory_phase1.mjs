@@ -1849,23 +1849,33 @@ for (const call of calls) {
         expectedSalary,
         `genuine remuneration query preserves salary ${expectedSalary}: ${positiveRemunerationQuery}`
       );
-      assert.equal(parsedPositiveRemuneration.isComplete, true);
-      assert.equal(parsedPositiveRemuneration.directGroups.length, 1);
-      assert.equal(parsedPositiveRemuneration.directGroups[0]?.isBalanced, true);
+      assert.equal(parsedPositiveRemuneration.isComplete, false,
+        `remuneration query without employee/period details must not fabricate CPF: ${positiveRemunerationQuery}`);
+      assert.equal(parsedPositiveRemuneration.directGroups.length, 0);
+      assert.ok(parsedPositiveRemuneration.missingFields.length > 0);
+    }
+
+    for (const [completeRemunerationQuery, expectedSalary] of [
+      ['We paid SGD 5,000 for staff salary in September 2026 to our Singapore citizen aged 35.', 5000],
+      ['Our payroll administration staff (Singapore citizen aged 35) earns SGD 4,000 a month in September 2026. How much CPF?', 4000]
+    ]) {
+      const parsedCompleteRemuneration = await parseAccountingQuery(completeRemunerationQuery);
+      assert.equal(parsedCompleteRemuneration.scenarioType, 'PAYROLL_CPF_SALARY');
+      assert.equal(parsedCompleteRemuneration.amount, expectedSalary);
+      assert.equal(parsedCompleteRemuneration.isComplete, true);
+      assert.equal(parsedCompleteRemuneration.directGroups.length, 1);
+      assert.equal(parsedCompleteRemuneration.directGroups[0]?.isBalanced, true);
       assert.equal(
-        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === expectedSalary),
-        true,
-        `genuine remuneration debits Staff Salaries & Wages (5010) for ${expectedSalary}: ${positiveRemunerationQuery}`
+        parsedCompleteRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === expectedSalary),
+        true
       );
       assert.equal(
-        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
-        true,
-        `genuine remuneration includes credit to CPF Payable (2050): ${positiveRemunerationQuery}`
+        parsedCompleteRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
+        true
       );
       assert.equal(
-        parsedPositiveRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
-        true,
-        `genuine remuneration includes credit to Net Salaries Payable (2060): ${positiveRemunerationQuery}`
+        parsedCompleteRemuneration.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
+        true
       );
     }
 
@@ -1943,23 +1953,36 @@ for (const call of calls) {
         5000,
         `mixed salary and processing fee query uses genuine salary 5000 rather than 1000 or 6000: ${mixedSalaryAndProcessingFeeQuery}`
       );
+      assert.equal(parsedMixedSalaryAndFee.isComplete, false,
+        `mixed salary/fee query without employee details fails closed: ${mixedSalaryAndProcessingFeeQuery}`);
+      assert.equal(parsedMixedSalaryAndFee.directGroups.length, 0);
+      assert.ok(parsedMixedSalaryAndFee.missingFields.length > 0);
+    }
+
+    for (const completeMixedSalaryAndProcessingFeeQuery of [
+      'We paid SGD 1,000 for staff salary processing fees and SGD 5,000 for staff salary in September 2026 for a Singapore citizen aged 35. How much CPF?',
+      'We paid SGD 1,000 for staff salary processing fees. Our employee (Singapore citizen aged 35) earns SGD 5,000 per month in September 2026. How much CPF?'
+    ]) {
+      const parsedMixedSalaryAndFee = await parseAccountingQuery(completeMixedSalaryAndProcessingFeeQuery);
+      assert.equal(parsedMixedSalaryAndFee.scenarioType, 'PAYROLL_CPF_SALARY');
+      assert.equal(parsedMixedSalaryAndFee.amount, 5000);
       assert.equal(parsedMixedSalaryAndFee.isComplete, true);
       assert.equal(parsedMixedSalaryAndFee.directGroups.length, 1);
       assert.equal(parsedMixedSalaryAndFee.directGroups[0]?.isBalanced, true);
       assert.equal(
         parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '5010' && line.debit === 5000),
         true,
-        `mixed salary and processing fee query debits Staff Salaries & Wages (5010) for 5000: ${mixedSalaryAndProcessingFeeQuery}`
+        `mixed salary and processing fee query debits Staff Salaries & Wages (5010) for 5000: ${completeMixedSalaryAndProcessingFeeQuery}`
       );
       assert.equal(
         parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '2050' && line.credit > 0),
         true,
-        `mixed salary and processing fee query includes credit to CPF Payable (2050): ${mixedSalaryAndProcessingFeeQuery}`
+        `mixed salary and processing fee query includes credit to CPF Payable (2050): ${completeMixedSalaryAndProcessingFeeQuery}`
       );
       assert.equal(
         parsedMixedSalaryAndFee.directGroups[0]?.lines.some(line => line.accountCode === '2060' && line.credit > 0),
         true,
-        `mixed salary and processing fee query includes credit to Net Salaries Payable (2060): ${mixedSalaryAndProcessingFeeQuery}`
+        `mixed salary and processing fee query includes credit to Net Salaries Payable (2060): ${completeMixedSalaryAndProcessingFeeQuery}`
       );
     }
 
