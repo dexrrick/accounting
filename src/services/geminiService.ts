@@ -2241,18 +2241,36 @@ export function renderStructuredOfflineResponse(
 
   // 8. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
   if (parsed.scenarioType === 'LEASE_IFRS16' && !parsed.isComplete) {
-    return { messageText: '### Lease facts required\\n\\n' + parsed.missingFields.map(field => field.prompt).join('\\n'), scenarioState: parsed, clarifications: parsed.missingFields };
+    return {
+      messageText: '### Lease facts required\n\n' + parsed.missingFields.map(field => field.prompt).join('\n'),
+      scenarioState: parsed,
+      clarifications: parsed.missingFields
+    };
   }
   if (parsed.scenarioType === 'LEASE_IFRS16') {
     const journal = calculateDoubleEntries(parsed, standard).groups;
-    const details = journal.map(group =>
-      '**' + group.title + '**\\n' +
-      group.lines.map(line => (line.debit > 0 ? 'Dr ' : 'Cr ') + line.accountName +
-        ': ' + parsed.functionalCurrency + ' ' + (line.debit || line.credit).toFixed(2)).join('\\n')
-    ).join('\\n\\n');
+    if (journal.length === 0) {
+      return {
+        messageText: '### Lease facts required\n\nPlease confirm the lease term, monthly lease payment, and incremental borrowing rate so the lease schedule can be calculated.',
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const details = journal.map(group => {
+      const drCents = group.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const crCents = group.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const balanced = drCents > 0 && drCents === crCents;
+      const lineItems = group.lines.map(line =>
+        `* **${line.debit > 0 ? 'Debit' : 'Credit'}**: **${line.accountName}** — **${currency} ${fmt2(line.debit > 0 ? line.debit : line.credit)}**`
+      ).join('\n');
+      return `#### ${group.title} (${group.eventDate})\n${lineItems}\n\n**Balance Check**: ${currency} ${fmt2(drCents / 100)} == ${currency} ${fmt2(crCents / 100)} ${balanced ? '✓ Balanced' : '✗ Imbalanced'}`;
+    }).join('\n\n---\n\n');
     return {
-      messageText: '### Lease accounting (' + std16 + ')\\n\\n' + details +
-        '\\n\\nReview the calculated journal and confirm the contractual payment timing and discount rate.',
+      messageText: finalizeMessage(
+        `### Lease accounting (${std16})\n\n${details}\n\nReview the calculated journal and confirm the contractual payment timing and discount rate.`,
+        parsed
+      ),
       scenarioState: { ...parsed, directGroups: journal }
     };
   }

@@ -127,19 +127,52 @@ export function calculateDoubleEntries(
   // SCENARIO 2: LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
   // =========================================================================
   else if (scenario.scenarioType === 'LEASE_IFRS16') {
-    if (!scenario.isComplete || !scenario.leaseTermMonths || !scenario.leasePaymentMonthly) {
+    if (
+      !scenario.isComplete ||
+      !scenario.leaseTermMonths ||
+      scenario.leaseTermMonths <= 0 ||
+      !scenario.leasePaymentMonthly ||
+      scenario.leasePaymentMonthly <= 0 ||
+      scenario.leaseDiscountRateAnnual === undefined ||
+      scenario.leaseDiscountRateAnnual < 0
+    ) {
       return { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: func } };
     }
-    const termYears = scenario.leaseTermYears ?? 3;
-    const termMonths = scenario.leaseTermMonths ?? termYears * 12;
-    const monthlyRent = scenario.leasePaymentMonthly ?? 3000;
-    const annualRate = (scenario.leaseDiscountRateAnnual ?? 5.0) / 100;
+    const termMonths = scenario.leaseTermMonths;
+    const termYears = scenario.leaseTermYears && scenario.leaseTermYears > 0
+      ? scenario.leaseTermYears
+      : Math.round((termMonths / 12) * 10) / 10;
+    const monthlyRent = scenario.leasePaymentMonthly;
+    const annualRate = scenario.leaseDiscountRateAnnual / 100;
     const monthlyRate = annualRate / 12;
-    const commDate = scenario.leaseCommencementDate || '2026-01-01';
 
-    if (termYears <= 0 || termMonths <= 0) {
-      return { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: func } };
-    }
+    const computeMonth1EndIso = (isoDate: string): string | undefined => {
+      const m = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return undefined;
+      const y = parseInt(m[1], 10);
+      const mo = parseInt(m[2], 10);
+      const d = parseInt(m[3], 10);
+      const start = new Date(Date.UTC(y, mo - 1, d));
+      if (start.getUTCFullYear() !== y || start.getUTCMonth() + 1 !== mo || start.getUTCDate() !== d) {
+        return undefined;
+      }
+      let endUtc: Date;
+      if (d === 1) {
+        // 1st of month -> last day of the same month (e.g. 2026-07-01 -> 2026-07-31)
+        endUtc = new Date(Date.UTC(y, mo, 0));
+      } else {
+        // Mid-month commencement -> same day next month (clamped to target month length) minus 1 day
+        const nextMonthLastDay = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+        const clampedDay = Math.min(d, nextMonthLastDay);
+        endUtc = new Date(Date.UTC(y, mo, clampedDay - 1));
+      }
+      return endUtc.toISOString().slice(0, 10);
+    };
+
+    const commDateIso = scenario.leaseCommencementDate?.trim() || undefined;
+    const month1EndIso = commDateIso ? computeMonth1EndIso(commDateIso) : undefined;
+    const inceptionEventDate = commDateIso ? formatSingaporeDate(commDateIso) : 'Commencement Date';
+    const month1EventDate = month1EndIso ? formatSingaporeDate(month1EndIso) : 'End of Month 1';
 
     let pvLiability = 0;
     if (monthlyRate > 0) {
@@ -147,7 +180,17 @@ export function calculateDoubleEntries(
     } else {
       pvLiability = monthlyRent * termMonths;
     }
-    pvLiability = Math.round(pvLiability * 100) / 100;
+    const pvLiabilityCents = Math.round(pvLiability * 100);
+    pvLiability = pvLiabilityCents / 100;
+
+    const monthlyRentCents = Math.round(monthlyRent * 100);
+    const interestM1Cents = Math.round(pvLiabilityCents * monthlyRate);
+    const principalM1Cents = monthlyRentCents - interestM1Cents;
+    if (pvLiabilityCents <= 0 || principalM1Cents < 0) {
+      return { groups: [], financialImpact: { totalAssetsDelta: 0, totalLiabilitiesDelta: 0, totalEquityDelta: 0, pnlImpact: 0, ociImpact: 0, functionalCurrency: func } };
+    }
+    const interestM1 = interestM1Cents / 100;
+    const principalM1 = principalM1Cents / 100;
 
     // Inception
     const inceptionLines: JournalLine[] = [
@@ -158,7 +201,7 @@ export function calculateDoubleEntries(
         category: 'ASSET',
         debit: pvLiability,
         credit: 0,
-        lineExplanation: `Capitalization of right-of-use asset measured at initial present value of ${termMonths} monthly lease payments of ${func} ${monthlyRent.toLocaleString()} discounted at ${((annualRate)*100).toFixed(1)}% p.a.`
+        lineExplanation: `Capitalization of right-of-use asset measured at initial present value of ${termMonths} monthly lease payments of ${func} ${monthlyRent.toLocaleString()} discounted at ${(annualRate * 100).toFixed(1)}% p.a.`
       },
       {
         id: 'line-lease-liab',
@@ -173,7 +216,7 @@ export function calculateDoubleEntries(
 
     groups.push({
       id: 'grp-lease-inception',
-      eventDate: formatSingaporeDate(commDate),
+      eventDate: inceptionEventDate,
       title: 'Initial Recognition of Lease (Commencement Date)',
       summary: `Inception of ${termYears}-year lease (${termMonths} months @ ${func} ${monthlyRent.toLocaleString()}/mo), PV: ${func} ${pvLiability.toLocaleString()}`,
       lines: inceptionLines,
@@ -186,16 +229,14 @@ export function calculateDoubleEntries(
       ],
       rationalePoints: [
         `Under ${stdPrefix16} §22: At commencement date, lessee recognizes a right-of-use asset and a lease liability on balance sheet.`,
-        `Under ${stdPrefix16} §26: The lease liability is measured at present value of future payments discounted using the lessee's IBR (${((annualRate)*100).toFixed(1)}% p.a.).`
+        `Under ${stdPrefix16} §26: The lease liability is measured at present value of future payments discounted using the lessee's IBR (${(annualRate * 100).toFixed(1)}% p.a.).`
       ]
     });
 
-    // Month 1 Payment
-    const interestM1 = Math.round((pvLiability * monthlyRate) * 100) / 100;
-    const principalM1 = Math.round((monthlyRent - interestM1) * 100) / 100;
-
-    const paymentLines: JournalLine[] = [
-      {
+    // Month 1 Payment (omit zero-value interest/principal lines, e.g. 0% IBR)
+    const paymentLines: JournalLine[] = [];
+    if (principalM1Cents > 0) {
+      paymentLines.push({
         id: 'line-lease-pay-liab',
         accountCode: '2600',
         accountName: 'Lease Liability (Principal Portion)',
@@ -203,8 +244,10 @@ export function calculateDoubleEntries(
         debit: principalM1,
         credit: 0,
         lineExplanation: `Reduction in lease liability principal balance.`
-      },
-      {
+      });
+    }
+    if (interestM1Cents > 0) {
+      paymentLines.push({
         id: 'line-lease-pay-interest',
         accountCode: '6200',
         accountName: 'Finance Costs / Lease Interest Expense (P&L)',
@@ -212,27 +255,31 @@ export function calculateDoubleEntries(
         debit: interestM1,
         credit: 0,
         lineExplanation: `Interest expense accrued on opening lease liability at monthly rate of ${(monthlyRate * 100).toFixed(3)}%.`
-      },
-      {
-        id: 'line-lease-pay-bank',
-        accountCode: '1010',
-        accountName: 'Cash / Bank',
-        category: 'ASSET',
-        debit: 0,
-        credit: monthlyRent,
-        lineExplanation: `Monthly contractual rental payment.`
-      }
-    ];
+      });
+    }
+    paymentLines.push({
+      id: 'line-lease-pay-bank',
+      accountCode: '1010',
+      accountName: 'Cash / Bank',
+      category: 'ASSET',
+      debit: 0,
+      credit: monthlyRentCents / 100,
+      lineExplanation: `Monthly contractual rental payment.`
+    });
 
+    const payDrCents = paymentLines.reduce((sum, l) => sum + Math.round(l.debit * 100), 0);
+    const payCrCents = paymentLines.reduce((sum, l) => sum + Math.round(l.credit * 100), 0);
     groups.push({
       id: 'grp-lease-payment-m1',
-      eventDate: formatSingaporeDate('2026-01-31'),
+      eventDate: month1EventDate,
       title: 'First Month Lease Payment & Interest Expense',
-      summary: `Payment of ${func} ${monthlyRent.toLocaleString()} (Principal: ${func} ${principalM1.toLocaleString()}, Interest: ${func} ${interestM1.toLocaleString()})`,
+      summary: interestM1Cents > 0
+        ? `Payment of ${func} ${monthlyRent.toLocaleString()} (Principal: ${func} ${principalM1.toLocaleString()}, Interest: ${func} ${interestM1.toLocaleString()})`
+        : `Payment of ${func} ${monthlyRent.toLocaleString()} (Principal: ${func} ${principalM1.toLocaleString()}, Interest: ${func} 0.00 at 0% IBR)`,
       lines: paymentLines,
-      totalDebit: monthlyRent,
-      totalCredit: monthlyRent,
-      isBalanced: true,
+      totalDebit: payDrCents / 100,
+      totalCredit: payCrCents / 100,
+      isBalanced: payDrCents > 0 && payDrCents === payCrCents,
       citations: [
         getCitation('IFRS16_SUBSEQUENT_MEASUREMENT', standard)
       ],
@@ -242,7 +289,8 @@ export function calculateDoubleEntries(
     });
 
     // Depreciation
-    const monthlyDepr = Math.round((pvLiability / termMonths) * 100) / 100;
+    const monthlyDeprCents = Math.round(pvLiabilityCents / termMonths);
+    const monthlyDepr = monthlyDeprCents / 100;
     const deprLines: JournalLine[] = [
       {
         id: 'line-lease-depr-exp',
@@ -266,13 +314,13 @@ export function calculateDoubleEntries(
 
     groups.push({
       id: 'grp-lease-depr-m1',
-      eventDate: formatSingaporeDate('2026-01-31'),
+      eventDate: month1EventDate,
       title: 'First Month ROU Asset Depreciation',
       summary: `Straight-line depreciation of ${func} ${monthlyDepr.toLocaleString()} per month`,
       lines: deprLines,
       totalDebit: monthlyDepr,
       totalCredit: monthlyDepr,
-      isBalanced: true,
+      isBalanced: monthlyDeprCents > 0,
       citations: [
         getCitation('IFRS16_SUBSEQUENT_MEASUREMENT', standard)
       ],

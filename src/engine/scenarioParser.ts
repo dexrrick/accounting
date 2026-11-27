@@ -3278,7 +3278,7 @@ export async function parseAccountingQuery(
       termMonths = parseInt(monthTermMatch[1], 10);
       termYears = Math.round(termMonths / 12 * 10) / 10;
     }
-    if (!yearMatch && !monthTermMatch) {
+    if ((!yearMatch && !monthTermMatch) || termMonths <= 0) {
       return {
         scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
         primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
@@ -3308,8 +3308,30 @@ export async function parseAccountingQuery(
       };
     }
 
+    const parsedDates = extractAllExplicitDates(query);
+    if (parsedDates.some(d => d.formatted === 'INVALID')) {
+      return {
+        scenarioType: 'LEASE_IFRS16', authorityStatus: 'CONDITIONAL', queryIntent: 'TRANSACTION',
+        primaryDomain: 'ACCOUNTING_SFRS', rawQuery: query,
+        transactionTitle: 'Lease commencement date invalid', functionalCurrency,
+        transactionCurrency: functionalCurrency, directGroups: [], isComplete: false,
+        missingFields: [{ fieldKey: 'leaseCommencementDate', fieldName: 'Valid lease commencement date',
+          prompt: 'The stated lease commencement date is not a valid calendar date. Please provide a valid date (DD/MM/YYYY).',
+          whyNeeded: 'Lease inception and Month 1 payment/depreciation dates require a valid calendar date.' }]
+      };
+    }
+    const explicitCommDate = parsedDates[0];
+    let leaseCommencementDate: string | undefined = explicitCommDate
+      ? `${explicitCommDate.year}-${String(explicitCommDate.month).padStart(2, '0')}-${String(explicitCommDate.day).padStart(2, '0')}`
+      : undefined;
+    if (!leaseCommencementDate && currentScenario?.scenarioType === 'LEASE_IFRS16' && currentScenario.leaseCommencementDate) {
+      leaseCommencementDate = currentScenario.leaseCommencementDate;
+    }
+
     let discountRateAnnual = 5.0;
-    const rateMatch = query.match(/(?:discount\s*rate|ibr|interest|rate)\s*(?:of|is|at)?\s*(\d+(?:\.\d+)?)\s*%/i);
+    const rateMatch =
+      query.match(/(?:discount\s*rate|ibr|incremental\s+borrowing\s+rate|interest(?:\s+rate)?|rate)\s*(?:of|is|at)?\s*(\d+(?:\.\d+)?)\s*%/i) ||
+      query.match(/(\d+(?:\.\d+)?)\s*%\s*(?:p\.a\.|per\s+annum)?\s*(?:discount\s*rate|ibr|incremental\s+borrowing\s+rate|interest(?:\s+rate)?|rate)/i);
     let rateAssumed = true;
     if (rateMatch && rateMatch[1]) {
       discountRateAnnual = parseFloat(rateMatch[1]);
@@ -3340,15 +3362,18 @@ export async function parseAccountingQuery(
       accountingTreatmentSummary: `Under SFRS(I) 16 §22-§26, capitalize a Right-of-Use (ROU) Asset and corresponding Lease Liability measured at the present value of ${termMonths} monthly payments of ${functionalCurrency} ${monthlyRent.toLocaleString()} discounted at incremental borrowing rate (${discountRateAnnual}% p.a.). Subsequent payments are apportioned between finance charge (interest) and liability principal reduction (§36). Straight-line depreciation of ROU asset is recognized in P&L (§31).`,
       singaporeTaxTreatmentSummary: `Accounting depreciation and lease finance expense are non-deductible and added back in tax computation. Actual contractual rental paid during the basis period is claimed as a tax deduction under Section 14(1) of the Income Tax Act 1947.`,
       regulatoryMandatesSummary: 'Tenancy agreements must be registered via IRAS e-Stamping under the Stamp Duties Act 1929.',
-      effectiveDateOrTiming: 'SFRS(I) 16 standard active.',
+      effectiveDateOrTiming: leaseCommencementDate
+        ? `Lease commencement date ${formatSingaporeDate(leaseCommencementDate)}; SFRS(I) 16 standard active.`
+        : 'SFRS(I) 16 standard active.',
       assetName: `Leased Property (${termYears}-Year Agreement)`,
-      purchaseDate: '2026-01-01',
+      purchaseDate: leaseCommencementDate,
       leaseTermYears: termYears,
       leaseTermMonths: termMonths,
       leasePaymentMonthly: monthlyRent,
       leaseDiscountRateAnnual: discountRateAnnual,
-      leaseCommencementDate: '2026-01-01',
+      leaseCommencementDate,
       keyParameters: [
+        ...(leaseCommencementDate ? [{ label: 'Commencement Date', value: formatSingaporeDate(leaseCommencementDate), badge: 'Stated Fact' }] : []),
         { label: 'Monthly Rent', value: `${functionalCurrency} ${monthlyRent.toLocaleString()}`, badge: 'Stated Fact' },
         { label: 'Lease Term', value: `${termYears} Years (${termMonths} Months)`, badge: 'Stated Fact' },
         {
