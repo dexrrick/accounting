@@ -230,11 +230,42 @@ function buildGstRegistrationMeasurementBasisScenario(query: string): Accounting
 const shareFxCurrency = String.raw`(?:USD|SGD|EUR|GBP|S\$)`;
 const shareFxAmount = String.raw`(?:(?<prefixCurrency>${shareFxCurrency})\s*(?<prefixAmount>\d+(?:\.\d+)?)|(?<suffixAmount>\d+(?:\.\d+)?)\s*(?<suffixCurrency>${shareFxCurrency}))`;
 const shareFxPair = String.raw`${shareFxCurrency}\s*\/\s*${shareFxCurrency}`;
+const shareFxDateCapture = String.raw`(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})\b`;
 const shareFxRatePattern = new RegExp(String.raw`\b(?:(?<leadingPair>${shareFxPair})\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>${shareFxPair})?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))`, 'gi');
 const shareFxEquation = new RegExp(String.raw`(?<![\w.,$])(?:one|each|1)\s+(?<unit>${shareFxCurrency})\s*(?:equals?|is|=)\s*${shareFxAmount}(?!\w|\.\d)`, 'gi');
 const shareFxPerUnit = new RegExp(String.raw`(?<![\w.,$])${shareFxAmount}\s+per\s+(?:one\s+|1\s+)?(?<unit>${shareFxCurrency})(?!\w)`, 'gi');
 const shareFxAcquisitionAction = /\b(?:invested|bought|purchased|acquired)\b/i;
 const shareFxDisposalAction = /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i;
+
+function makeShareFxDate(match: RegExpMatchArray | null): { display: string; iso: string } | undefined {
+  if (!match) return undefined;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
+  return {
+    display: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`,
+    iso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  };
+}
+
+function hasMismatchedShareFxEvidenceDate(
+  eventScope: string,
+  transactionDate: { display: string; iso: string } | undefined
+): boolean {
+  return splitShareFxSentences(eventScope).some(sentence => {
+    const hasRateEvidence = findShareFxRateMatches(sentence).length > 0 ||
+      [...sentence.matchAll(shareFxEquation), ...sentence.matchAll(shareFxPerUnit)].length > 0;
+    if (!hasRateEvidence) return false;
+
+    const explicitDates = [...sentence.matchAll(new RegExp(`\\b(?:on|dated)\\s+${shareFxDateCapture}`, 'gi'))];
+    return explicitDates.some(dateMatch => {
+      const evidenceDate = makeShareFxDate(dateMatch);
+      return !transactionDate || !evidenceDate || evidenceDate.iso !== transactionDate.iso;
+    });
+  });
+}
 
 function normalizeShareFxCurrency(currency: string): string {
   return currency.replace(/\s/g, '').toUpperCase().replace('S$', 'SGD');
@@ -307,6 +338,15 @@ function hasAffirmativeShareFxActor(sentence: string, actionIndex: number): bool
   const hasSequentialSubjectEllipsis = /^[\s,;]*(?:(?:and\s+)?(?:then|subsequently|afterwards))\s*$/i.test(actorText);
   const actor = actorText.replace(/^[\s,;]*(?:(?:and\s+)?(?:then|subsequently|afterwards)\s+)?/i, '').trim();
   return hasSequentialSubjectEllipsis || /^(?:we|i|it|they|the company|a company|company|the entity|an entity|entity|our company|the company then|the company subsequently|the company afterwards)$/i.test(actor);
+}
+
+function getAffirmativeLeadingShareFxDate(
+  sentence: string,
+  actionIndex: number
+): { display: string; iso: string } | undefined {
+  if (!hasAffirmativeShareFxActor(sentence, actionIndex)) return undefined;
+  const date = sentence.match(new RegExp(`^\\s*(?:on|dated)\\s+${shareFxDateCapture}\\s*,?\\s*`, 'i'));
+  return makeShareFxDate(date);
 }
 
 function isAffirmativeShareFxEventSentence(sentence: string, actionPattern: RegExp, quoteStart: number): boolean {
@@ -550,8 +590,9 @@ function readInitialShareFxRate(
   text: string,
   actionPattern: RegExp,
   functionalCurrency: string,
-  transactionCurrency: string
-): { rate: number | null; start: number; end: number; eventScopeAmbiguous?: boolean } | undefined {
+  transactionCurrency: string,
+  transactionDate?: { display: string; iso: string }
+): { rate: number | null; start: number; end: number; eventScopeAmbiguous?: boolean; eventDateMismatch?: boolean } | undefined {
   const eventScope = getShareFxEventScope(text, actionPattern);
   if (!eventScope) return undefined;
   const eventStats = getAffirmativeShareFxEventStats(eventScope, actionPattern);
@@ -565,7 +606,11 @@ function readInitialShareFxRate(
   if (firstRatePosition !== undefined && firstRatePosition < eventStats.firstActionPosition) {
     return { rate: null, start: 0, end: eventScope.length };
   }
-  return readClosedPositiveShareFxRate(eventScope, actionPattern, functionalCurrency, transactionCurrency);
+  const quote = readClosedPositiveShareFxRate(eventScope, actionPattern, functionalCurrency, transactionCurrency);
+  if (quote?.rate === null || quote?.rate === undefined || !hasMismatchedShareFxEvidenceDate(eventScope, transactionDate)) {
+    return quote;
+  }
+  return { ...quote, rate: null, eventDateMismatch: true };
 }
 
 function addShareFxEventDisambiguation(scenario: AccountingScenarioState, ambiguousRateFields: string[] = []): AccountingScenarioState {
@@ -642,6 +687,11 @@ function resolvePendingShareFxRate(query: string, scenario?: AccountingScenarioS
 
 function findShareFxEventStart(text: string, actionIndex: number): number {
   const prefix = text.slice(0, actionIndex);
+  const actionSentence = splitShareFxSentencesWithOffsets(text).find(({ sentence, start }) =>
+    actionIndex >= start && actionIndex < start + sentence.length &&
+    getAffirmativeLeadingShareFxDate(sentence, actionIndex - start) !== undefined
+  );
+  if (actionSentence) return actionSentence.start;
   const actorBoundary = /(?:,\s*|\s+)(?:(?:and\s+)?(?:then|subsequently|afterwards)\s+)?(?:(?:(?:the|a)\s+)?(?:company|entity)|we|they|it)\s*$/i.exec(prefix);
   if (actorBoundary) return actorBoundary.index;
   const ellipticalBoundary = /(?:,\s*|\s+)(?:and\s+)?(?:then|subsequently|afterwards)\s*$/i.exec(prefix);
@@ -3174,36 +3224,23 @@ export async function parseAccountingQuery(
   const sellForMatch = saleEventText.match(/(?:sold|disposed|derecognised|sale)\s*(?:(?:all|the)?\s*[\d,]*\s*(?:apple\s*)?shares\s*)?(?:(?:for|with proceeds of|amounting to)\s*(?:usd|\$)?|at\s*(?:usd|\$))\s*([\d,]+(?:\.\d+)?)\s*(k|m|million|thousand)?/i);
   const saleAmountForeign = toAmount(sellForMatch);
 
-  const dateRegex = /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/;
-  const makeEventDate = (match: RegExpMatchArray | null): { display: string; iso: string } | undefined => {
-    if (!match) return undefined;
-    const day = Number(match[1]);
-    const month = Number(match[2]);
-    const year = Number(match[3]);
-    const date = new Date(Date.UTC(year, month - 1, day));
-    if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return undefined;
-    return {
-      display: `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`,
-      iso: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    };
-  };
   const parseEventDate = (text: string, actionPattern: RegExp): { display: string; iso: string } | undefined => {
     const actionMatch = actionPattern.exec(text);
     if (!actionMatch) return undefined;
 
-    const textAfterAction = text.slice(actionMatch.index + actionMatch[0].length)
-      .split(/(?<=[!?])\s+|(?<=\.)\s+(?=[A-Z])/, 1)[0];
-    const dateAfterAction = textAfterAction.match(new RegExp(`\\b(?:on|dated)\\s+${dateRegex.source}`, 'i'));
-    if (dateAfterAction) return makeEventDate(dateAfterAction);
+    // A date attached before the event actor has a clearer transaction-date
+    // boundary than a later date that may belong to the quoted FX evidence.
+    const actionSentence = splitShareFxSentencesWithOffsets(text).find(({ sentence, start }) =>
+      actionMatch.index >= start && actionMatch.index < start + sentence.length
+    );
+    const leadingEventDate = actionSentence
+      ? getAffirmativeLeadingShareFxDate(actionSentence.sentence, actionMatch.index - actionSentence.start)
+      : undefined;
+    if (leadingEventDate) return leadingEventDate;
 
-    // Support a transaction date placed immediately before the event verb, while
-    // excluding unrelated dates such as a reporting date in an earlier sentence.
-    const textBeforeAction = text.slice(0, actionMatch.index);
-    const dateBeforeAction = textBeforeAction.match(new RegExp(
-      `\\bon\\s+${dateRegex.source}\\s*,?\\s*(?:(?:the\\s+)?(?:company|entity)|it|we|they)\\s*$`,
-      'i'
-    ));
-    return makeEventDate(dateBeforeAction);
+    const textAfterAction = splitShareFxSentences(text.slice(actionMatch.index + actionMatch[0].length))[0] || '';
+    const dateAfterAction = textAfterAction.match(new RegExp(`\\b(?:on|dated)\\s+${shareFxDateCapture}`, 'i'));
+    return makeShareFxDate(dateAfterAction);
   };
   const purchaseDateFact = parseEventDate(purchaseEventText, shareFxAcquisitionAction);
   const saleDateFact = saleActionMatch
@@ -3217,14 +3254,18 @@ export async function parseAccountingQuery(
     purchaseEventText,
     shareFxAcquisitionAction,
     functionalCurrency,
-    transactionCurrency
+    transactionCurrency,
+    purchaseDateFact
   );
   const saleQuote = sameCurrency || !saleActionMatch ? undefined : readInitialShareFxRate(
     saleEventText,
     shareFxDisposalAction,
     functionalCurrency,
-    transactionCurrency
+    transactionCurrency,
+    saleDateFact
   );
+  const purchaseRateDateMismatch = purchaseQuote?.eventDateMismatch === true;
+  const saleRateDateMismatch = saleQuote?.eventDateMismatch === true;
   let purchaseFxRate = sameCurrency ? 1 : purchaseQuote?.rate ?? undefined;
   let saleFxRate = sameCurrency && saleActionMatch ? 1 : saleQuote?.rate ?? undefined;
   const fxSources: string[] = [];
@@ -3276,7 +3317,9 @@ export async function parseAccountingQuery(
     missingFields.push({ fieldKey: 'purchaseDate', fieldName: 'Acquisition date', prompt: 'What was the acquisition date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the journal and its spot-rate basis.' });
   }
   if (purchaseFxRate === undefined) {
-    const prompt = purchaseQuote?.rate === null
+    const prompt = purchaseRateDateMismatch
+      ? `The stated acquisition rate date does not match the acquisition date (${purchaseDate ?? 'not provided'}). Please provide the spot rate that applied on the acquisition date as the amount in ${functionalCurrency} for one ${transactionCurrency}.`
+      : purchaseQuote?.rate === null
       ? acquisitionEvidenceQuote
         ? `Please confirm whether “${acquisitionEvidenceQuote}” was the rate that actually applied to the acquisition. State the amount in ${functionalCurrency} for one ${transactionCurrency} if it was, or provide the actual acquisition-date rate if it was not.`
         : `Please confirm the acquisition spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.`
@@ -3291,7 +3334,9 @@ export async function parseAccountingQuery(
       missingFields.push({ fieldKey: 'saleDate', fieldName: 'Disposal date', prompt: 'What was the disposal date (DD/MM/YYYY)?', whyNeeded: 'A transaction date is required for the disposal journal and its spot-rate basis.' });
     }
     if (saleFxRate === undefined) {
-      const prompt = saleQuote?.rate === null
+      const prompt = saleRateDateMismatch
+        ? `The stated disposal rate date does not match the disposal date (${saleDate ?? 'not provided'}). Please provide the spot rate that applied on the disposal date as the amount in ${functionalCurrency} for one ${transactionCurrency}.`
+        : saleQuote?.rate === null
         ? disposalEvidenceQuote
           ? `Please confirm whether “${disposalEvidenceQuote}” was the rate that actually applied to the disposal. State the amount in ${functionalCurrency} for one ${transactionCurrency} if it was, or provide the actual disposal-date rate if it was not.`
           : `Please confirm the disposal spot rate as the amount in ${functionalCurrency} for one ${transactionCurrency}.`

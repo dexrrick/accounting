@@ -69,6 +69,72 @@ const eventNamedAdjacentQuote = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099. The acquisition USD/SGD spot rate is 1.30.',
   null, 'SFRS_I', undefined
 );
+const eventNamedMatchingDateQuote = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025. The acquisition USD/SGD spot rate is 1.30 on 13/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const eventNamedMismatchedDateQuote = await processAccountingQuery(
+  'We acquired USD 1,000 of Apple shares on 13/11/2025. The acquisition USD/SGD spot rate is 1.30 on 14/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const lowercaseRateDateWithoutTransactionDate = await processAccountingQuery(
+  'We acquired USD 1,000 of Apple shares. the acquisition USD/SGD spot rate is 1.30 on 14/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const leadingTransactionDateMismatchedQuote = await processAccountingQuery(
+  'On 13/11/2025, I acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const datedLeadingTransactionMismatch = await processAccountingQuery(
+  'Dated 13/11/2025, we acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025.',
+  null, 'SFRS_I', undefined
+);
+const disposalNamedMismatchedDateQuote = await processAccountingQuery(
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 13/11/2025, then sold 300 shares for USD 1,100 on 15/12/2025. The disposal USD/SGD spot rate is 1.32 on 16/12/2025.',
+  null, 'SFRS_I', undefined
+);
+const leadingDisposalDateMismatch = await processAccountingQuery(
+  'We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. On 15/12/2025, we sold 300 shares for USD 1,100 at USD/SGD spot rate of 1.32 on 16/12/2025.',
+  null, 'SFRS_I', undefined
+);
+const leadingDateActorCases = [
+  {
+    query: 'On 13/11/2025, our company acquired USD 1,000 of Apple shares at USD/SGD spot rate of 1.30 on 14/11/2025.',
+    reply: 'The acquisition USD/SGD spot rate is 1.30.',
+    dateField: 'purchaseDate',
+    rateField: 'purchaseFxRate',
+    eventId: 'grp-purchase',
+    date: '13/11/2025'
+  },
+  {
+    query: 'We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. On 15/12/2025, our company sold 300 shares for USD 1,100 at USD/SGD spot rate of 1.32 on 16/12/2025.',
+    reply: 'The disposal USD/SGD spot rate is 1.32.',
+    dateField: 'saleDate',
+    rateField: 'saleFxRate',
+    eventId: 'grp-disposal',
+    date: '15/12/2025'
+  }
+];
+for (const testCase of leadingDateActorCases) {
+  const pending = await processAccountingQuery(testCase.query, null, 'SFRS_I', undefined);
+  assert.equal(pending.scenarioState[testCase.dateField], testCase.date);
+  assert.equal(pending.scenarioState[testCase.rateField], undefined);
+  assert.equal(pending.scenarioState.isComplete, false);
+  assert.equal(pending.scenarioState.directGroups?.length, 0);
+  const corrected = await parseAccountingQuery(testCase.reply, pending.scenarioState);
+  assert.equal(corrected.isComplete, true);
+  assert.equal(corrected[testCase.dateField], testCase.date);
+  assert.equal(corrected.directGroups?.find(group => group.id === testCase.eventId)?.eventDate, testCase.date);
+}
+const correctedLeadingAcquisitionRate = await parseAccountingQuery(
+  'The acquisition USD/SGD spot rate is 1.30.', leadingTransactionDateMismatchedQuote.scenarioState
+);
+const correctedLeadingDisposalRate = await parseAccountingQuery(
+  'The disposal USD/SGD spot rate is 1.32.', leadingDisposalDateMismatch.scenarioState
+);
+const rateReplyWithoutTransactionDate = await parseAccountingQuery(
+  'The acquisition USD/SGD spot rate is 1.30.', lowercaseRateDateWithoutTransactionDate.scenarioState
+);
 const eventRateWithArticle = await processAccountingQuery(
   'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at the USD/SGD spot rate of 1.30.',
   null, 'SFRS_I', undefined
@@ -245,6 +311,7 @@ for (const [answer, expectedRate, expectedSgd] of [
   [explicitUnitsMatchOppositeQuote, 1.25, 1250],
   [explicitUnitsClarifyUnlabelledQuote, 1.30, 1300],
   [eventNamedAdjacentQuote, 1.30, 1300],
+  [eventNamedMatchingDateQuote, 1.30, 1300],
   [eventRateWithArticle, 1.30, 1300],
   [acquisitionCommaRate, 1.30, 1300],
   [acquisitionParentheticalRate, 1.30, 1300],
@@ -267,12 +334,53 @@ for (const answer of [
   acquisitionCorrectedAfterRejectedRate, actualRateWithRejectedComparison, actualRateWithOpposedComparison,
   retrospectiveBudgetQualifier, budgetingPurposeQualifier, laterBudgetQualifier, earlierBudgetScope,
   conditionalAcquisitionRate,
+  eventNamedMismatchedDateQuote,
+  leadingTransactionDateMismatchedQuote,
+  datedLeadingTransactionMismatch,
   acquisitionInlineBudgetRate, ...rejectedRateAnswers
 ]) {
   assert.equal(answer.scenarioState.isComplete, false);
   assert.ok(answer.clarifications?.some(field => field.fieldKey === 'purchaseFxRate'));
   assert.equal(answer.scenarioState.directGroups?.length, 0);
 }
+assert.ok(eventNamedMismatchedDateQuote.scenarioState.missingFields.some(field =>
+  field.fieldKey === 'purchaseFxRate' && /date does not match.*13\/11\/2025/i.test(field.prompt)
+));
+assert.equal(eventNamedMismatchedDateQuote.scenarioState.purchaseFxRate, undefined);
+assert.equal(lowercaseRateDateWithoutTransactionDate.scenarioState.purchaseDate, undefined);
+assert.equal(lowercaseRateDateWithoutTransactionDate.scenarioState.purchaseFxRate, undefined);
+assert.ok(lowercaseRateDateWithoutTransactionDate.scenarioState.missingFields.some(field => field.fieldKey === 'purchaseDate'));
+assert.equal(rateReplyWithoutTransactionDate.isComplete, false);
+assert.equal(rateReplyWithoutTransactionDate.directGroups?.length, 0);
+assert.ok(rateReplyWithoutTransactionDate.missingFields.some(field => field.fieldKey === 'purchaseDate'));
+assert.equal(leadingTransactionDateMismatchedQuote.scenarioState.purchaseDate, '13/11/2025');
+assert.equal(leadingTransactionDateMismatchedQuote.scenarioState.purchaseFxRate, undefined);
+assert.ok(leadingTransactionDateMismatchedQuote.scenarioState.missingFields.some(field =>
+  field.fieldKey === 'purchaseFxRate' && /date does not match.*13\/11\/2025/i.test(field.prompt)
+));
+assert.equal(datedLeadingTransactionMismatch.scenarioState.purchaseDate, '13/11/2025');
+assert.equal(datedLeadingTransactionMismatch.scenarioState.purchaseFxRate, undefined);
+assert.equal(correctedLeadingAcquisitionRate.isComplete, true);
+assert.equal(correctedLeadingAcquisitionRate.purchaseDate, '13/11/2025');
+assert.equal(correctedLeadingAcquisitionRate.purchaseFxRate, 1.30);
+assert.equal(correctedLeadingAcquisitionRate.directGroups?.[0].eventDate, '13/11/2025');
+assert.ok(disposalNamedMismatchedDateQuote.scenarioState.missingFields.some(field =>
+  field.fieldKey === 'saleFxRate' && /date does not match.*15\/12\/2025/i.test(field.prompt)
+));
+assert.equal(disposalNamedMismatchedDateQuote.scenarioState.saleFxRate, undefined);
+assert.equal(disposalNamedMismatchedDateQuote.scenarioState.isComplete, false);
+assert.equal(disposalNamedMismatchedDateQuote.scenarioState.directGroups?.length, 0);
+assert.equal(leadingDisposalDateMismatch.scenarioState.saleDate, '15/12/2025');
+assert.equal(leadingDisposalDateMismatch.scenarioState.saleFxRate, undefined);
+assert.ok(leadingDisposalDateMismatch.scenarioState.missingFields.some(field =>
+  field.fieldKey === 'saleFxRate' && /date does not match.*15\/12\/2025/i.test(field.prompt)
+));
+assert.equal(leadingDisposalDateMismatch.scenarioState.isComplete, false);
+assert.equal(leadingDisposalDateMismatch.scenarioState.directGroups?.length, 0);
+assert.equal(correctedLeadingDisposalRate.isComplete, true);
+assert.equal(correctedLeadingDisposalRate.saleDate, '15/12/2025');
+assert.equal(correctedLeadingDisposalRate.saleFxRate, 1.32);
+assert.equal(correctedLeadingDisposalRate.directGroups?.find(group => group.id === 'grp-disposal')?.eventDate, '15/12/2025');
 assert.equal(rateBeforeAcquisitionEvent.scenarioState.isComplete, false,
   'A standalone unit equation preceding the transaction must not be assigned to it.');
 assert.equal(rateBeforeAcquisitionEvent.scenarioState.directGroups?.length, 0);
