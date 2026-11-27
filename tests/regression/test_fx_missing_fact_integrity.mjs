@@ -642,7 +642,7 @@ async function runMockFxSemanticQuery(query, evidenceText, options = {}) {
   try {
     const response = await processAccountingQuery(
       query,
-      null,
+      options.currentScenario || null,
       'SFRS_I',
       fxProviderSettings,
       undefined,
@@ -704,6 +704,39 @@ const capturedFxAcquisitionCommit = updateCommittedJournalScenario(
 assert.deepEqual(capturedFxAcquisitionCommit?.committedDirectGroups?.[0].lines.map(line =>
   [line.accountCode, line.debit, line.credit]), [['1210', 1300, 0], ['1010', 0, 1300]]);
 
+// The live capture retained the rendered answer and request facts, but not the
+// raw semantic model reply. Reconstruct its confirmed failure shape: one
+// accounting journal issue plus an unassigned taxonomy residual.
+const capturedMissingDisposalDateQuery =
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. We sold all 300 shares for USD 1,100 at a USD/SGD spot rate of 1.31 dated 16/12/2025. Prepare the journal entries.';
+const capturedMissingDisposalDate = await runMockFxSemanticQuery(capturedMissingDisposalDateQuery, '', {
+  eventText: capturedMissingDisposalDateQuery,
+  currentScenario: capturedFxAcquisitionCommit,
+  chatHistory: buildAnalysisConversationHistory([
+    { id: 'captured-fx-acquisition', sender: 'user', text: capturedFxAcquisitionQuery, timestamp: '2026-11-27T06:32:00.000Z' },
+    { id: 'captured-fx-disposal-clarification', sender: 'user', text: capturedMissingDisposalDateQuery, timestamp: '2026-11-27T07:36:17.000Z' }
+  ], 'captured-fx-disposal-clarification'),
+  outputPreference: { journal: true, statutory: false }
+});
+assert.equal(capturedMissingDisposalDate.semanticCalls, 1);
+assert.equal(capturedMissingDisposalDate.eventExtractionCalls, 1);
+assert.equal(capturedMissingDisposalDate.response.providerStatus, undefined,
+  'the reconstructed semantic and event provider responses both succeed');
+assert.equal(capturedMissingDisposalDate.authorityWorkstreams.length, 0,
+  'a journal clarification with only an unassigned taxonomy residual must not launch statutory evidence workstreams');
+assert.equal(capturedMissingDisposalDate.response.scenarioState.directGroups?.length || 0, 0);
+assert.equal(capturedMissingDisposalDate.response.scenarioState.missingFields?.some(field => field.fieldKey === 'saleDate'), true);
+assert.match(capturedMissingDisposalDate.response.messageText,
+  /^### Clarification Required for Double Entry\r?\n\r?\nWhat was the disposal date \(DD\/MM\/YYYY\)\?/);
+assert.equal(capturedMissingDisposalDate.response.scenarioState.saleDate, undefined);
+assert.equal(capturedMissingDisposalDate.response.scenarioState.saleFxRate, undefined);
+assert.equal(capturedMissingDisposalDate.response.scenarioState.authorityEvidencePresentation, undefined);
+const retainedFxAcquisition = updateCommittedJournalScenario(
+  capturedFxAcquisitionCommit, capturedMissingDisposalDate.response.scenarioState, 'SFRS_I'
+);
+assert.deepEqual(retainedFxAcquisition?.committedDirectGroups?.[0].lines.map(line =>
+  [line.accountCode, line.debit, line.credit]), [['1210', 1300, 0], ['1010', 0, 1300]]);
+
 const explicitShareTaxQuery =
   'What Singapore corporate income tax treatment applies to gains when a Singapore company sells foreign shares?';
 const explicitShareTaxSubject = 'Singapore corporate income tax treatment of foreign share sale gains';
@@ -727,6 +760,35 @@ assert.ok(explicitShareTaxAdvice.groundedContexts.some(context => context.classi
 assert.equal(explicitShareTaxAdvice.response.scenarioState.directGroups?.length, 0);
 assert.doesNotMatch(explicitShareTaxAdvice.response.messageText, /no capital gains tax|17% corporate income tax/,
   'unavailable mocked IRAS evidence does not yield an unsupported tax assertion');
+
+const mixedFxAndTaxQuery =
+  'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2025 at USD/SGD spot rate of 1.30. Prepare the journal entries. Separately, what Singapore corporate income tax treatment applies to a gain if the company later sells those foreign shares?';
+const mixedFxAndTaxAdvice = await runMockFxSemanticQuery(mixedFxAndTaxQuery, '', {
+  semanticReply: {
+    ...accountingSemanticInterpretation,
+    domain: 'ACCOUNTING',
+    authorityCandidates: ['ACCOUNTING_STANDARDS', 'IRAS'],
+    primarySubject: 'foreign equity investment journal and Singapore corporate income tax treatment of foreign share sale gains',
+    concepts: [
+      { concept: 'foreign equity journal entries', role: 'PRIMARY' },
+      { concept: 'Singapore corporate income tax treatment of foreign share sale gains', role: 'PRIMARY' }
+    ],
+    issues: [
+      accountingSemanticInterpretation.issues[0],
+      { subject: 'Singapore corporate income tax treatment of foreign share sale gains', population: 'COMPANY',
+        domain: 'IRAS_INCOME_TAX', governingAuthorities: ['IRAS'], contextualAuthorities: [], operation: 'EXPLAIN_RULE',
+        mappedTopicIds: [], evidenceRequirement: 'AUTHORITATIVE_SOURCE_AND_CASE_FACTS', confidence: 0.95 }
+    ]
+  },
+  outputPreference: { journal: true, statutory: true }
+});
+assert.ok(mixedFxAndTaxAdvice.authorityWorkstreams.some(result =>
+  result.workstreams.some(workstream => workstream.authority === 'IRAS')),
+  'an independently requested tax issue in a mixed journal question still reaches IRAS evidence routing');
+assert.ok(mixedFxAndTaxAdvice.response.scenarioState.authorityEvidencePresentation,
+  'mixed requests retain the evidence presentation for their explicitly requested statutory issue');
+assert.doesNotMatch(mixedFxAndTaxAdvice.response.messageText, /no capital gains tax|17% corporate income tax/,
+  'mixed requests do not synthesize unsupported tax conclusions when evidence is unavailable');
 
 const cleanLocalProofQuery = 'Our functional currency is SGD. We acquired USD 1,000 of Apple shares on 13/11/2099 at USD/SGD spot rate of 1.30. Prepare the journal entries.';
 const ambiguousAssessmentOnCleanProof = await runMockFxSemanticQuery(cleanLocalProofQuery, '', {
