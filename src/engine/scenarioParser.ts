@@ -225,65 +225,206 @@ function buildGstRegistrationMeasurementBasisScenario(query: string): Accounting
   };
 }
 
-const shareFxRatePattern = /\b(?:(?<leadingPair>sgd\s*\/\s*usd|usd\s*\/\s*sgd)\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>sgd\s*\/\s*usd|usd\s*\/\s*sgd)?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))/i;
-const shareFxCurrency = String.raw`USD|SGD|EUR|GBP|S\$`;
+const shareFxCurrency = String.raw`(?:USD|SGD|EUR|GBP|S\$)`;
 const shareFxAmount = String.raw`(?:(?<prefixCurrency>${shareFxCurrency})\s*(?<prefixAmount>\d+(?:\.\d+)?)|(?<suffixAmount>\d+(?:\.\d+)?)\s*(?<suffixCurrency>${shareFxCurrency}))`;
+const shareFxPair = String.raw`${shareFxCurrency}\s*\/\s*${shareFxCurrency}`;
+const shareFxRatePattern = new RegExp(String.raw`\b(?:(?<leadingPair>${shareFxPair})\s*(?:(?:spot|fx)\s+)?(?:exchange\s+)?rate|(?:(?:spot|fx|exchange)\s+rate))\s*(?:(?:of|is|for|in)\s+)?(?<trailingPair>${shareFxPair})?\s*(?:(?:of|is|:|=)\s*)?(?<rate>\d+(?:\.\d+)?)(?!\d|\.\d)(?!\s*(?:%|percent\b))`, 'gi');
 const shareFxEquation = new RegExp(String.raw`(?<![\w.,$])(?:one|each|1)\s+(?<unit>${shareFxCurrency})\s*(?:equals?|is|=)\s*${shareFxAmount}(?!\w|\.\d)`, 'gi');
 const shareFxPerUnit = new RegExp(String.raw`(?<![\w.,$])${shareFxAmount}\s+per\s+(?:one\s+|1\s+)?(?<unit>${shareFxCurrency})(?!\w)`, 'gi');
 
+function normalizeShareFxCurrency(currency: string): string {
+  return currency.replace(/\s/g, '').toUpperCase().replace('S$', 'SGD');
+}
+
 function normalizeShareFxMeaning(match: RegExpMatchArray, functionalCurrency: string, transactionCurrency: string): number | null {
   const { unit, prefixCurrency, suffixCurrency, prefixAmount, suffixAmount } = match.groups!;
-  const unitCurrency = unit.toUpperCase().replace('S$', 'SGD');
-  const amountCurrency = (prefixCurrency ?? suffixCurrency).toUpperCase().replace('S$', 'SGD');
+  const unitCurrency = normalizeShareFxCurrency(unit);
+  const amountCurrency = normalizeShareFxCurrency(prefixCurrency ?? suffixCurrency);
   const amount = Number(prefixAmount ?? suffixAmount);
   const rate = unitCurrency === transactionCurrency && amountCurrency === functionalCurrency ? amount
     : unitCurrency === functionalCurrency && amountCurrency === transactionCurrency ? 1 / amount : null;
   return rate !== null && Number.isFinite(rate) && rate > 0 ? rate : null;
 }
 
-const sameShareFxRate = (a: number, b: number) => Number.isFinite(b) &&
-  Math.abs(a - b) <= Number.EPSILON * Math.max(a, b);
+const sameShareFxRate = (a: number, b: number, relativeTolerance = Number.EPSILON) => Number.isFinite(b) &&
+  Math.abs(a - b) <= relativeTolerance * Math.max(a, b);
 
-function readShareFxRate(text: string, functionalCurrency: string, transactionCurrency: string, isRateReply = false) {
-  const quote = shareFxRatePattern.exec(text);
-  if (!quote && !isRateReply) return undefined;
-  let end = quote ? quote.index + quote[0].length : 0;
-  const quotedRate = quote?.groups ? Number(quote.groups.rate) : undefined;
-  const pair = (quote?.groups?.leadingPair || quote?.groups?.trailingPair || '').replace(/\s/g, '').toUpperCase();
-  // Keep rate evidence within its event sentence, including either side of
-  // the pair label and any transaction date between the label and the units.
-  const sentenceBreaks = isRateReply ? [] : [...text.matchAll(/(?<=[.!?])\s+(?=[A-Z])/g)];
-  const sentenceStart = sentenceBreaks.findLast(match => match.index < quote!.index);
-  const sentenceEnd = sentenceBreaks.find(match => match.index >= end);
-  const scope = text.slice(sentenceStart ? sentenceStart.index + sentenceStart[0].length : 0, sentenceEnd?.index);
-  const meanings = [...scope.matchAll(shareFxEquation), ...scope.matchAll(shareFxPerUnit)]
+function findShareFxRateMatches(text: string): RegExpExecArray[] {
+  return [...text.matchAll(shareFxRatePattern)];
+}
+
+function isStandaloneShareFxMeaning(text: string): boolean {
+  const sentence = text.trim().replace(/[.!?]+$/, '').trim();
+  if (!sentence) return false;
+  const patterns = [shareFxEquation, shareFxPerUnit].map(pattern => new RegExp(`^(?:${pattern.source})`, 'i'));
+  let position = 0;
+  let matchedMeanings = 0;
+  while (position < sentence.length) {
+    const separator = matchedMeanings === 0
+      ? /^\s*/.exec(sentence.slice(position))
+      : /^(?:\s*,?\s*(?:and|but)\s+|\s*,\s*)/i.exec(sentence.slice(position));
+    if (!separator) return false;
+    position += separator[0].length;
+    const meaning = patterns.map(pattern => pattern.exec(sentence.slice(position))).find(Boolean);
+    if (!meaning) return false;
+    position += meaning[0].length;
+    matchedMeanings += 1;
+  }
+  return matchedMeanings > 0;
+}
+
+function isEventNamedShareFxQuote(text: string, actionPattern: RegExp): boolean {
+  const isAcquisition = /invested|bought|purchased|acquired/i.test(actionPattern.source);
+  const eventName = isAcquisition ? /^(?:the\s+)?(?:acquisition|purchase)\b/i : /^(?:the\s+)?(?:disposal|sale)\b/i;
+  return eventName.test(text.trim()) && findShareFxRateMatches(text).length > 0;
+}
+
+function getShareFxEventScope(text: string, actionPattern: RegExp): string {
+  const action = actionPattern.exec(text);
+  if (!action) return '';
+  const sentenceBreaks = [...text.matchAll(/(?<=[.!?])\s+/g)];
+  const sentenceStart = sentenceBreaks.findLast(match => match.index < action.index);
+  const sentenceEnd = sentenceBreaks.find(match => match.index >= action.index);
+  const start = sentenceStart ? sentenceStart.index + sentenceStart[0].length : 0;
+  const end = sentenceEnd?.index ?? text.length;
+  const eventSentence = text.slice(start, end);
+  if (!sentenceEnd) return eventSentence;
+
+  const nextStart = sentenceEnd.index + sentenceEnd[0].length;
+  const nextEnd = sentenceBreaks.find(match => match.index >= nextStart)?.index ?? text.length;
+  const adjacentSentence = text.slice(nextStart, nextEnd);
+  return isStandaloneShareFxMeaning(adjacentSentence) || isEventNamedShareFxQuote(adjacentSentence, actionPattern)
+    ? `${eventSentence} ${adjacentSentence}`
+    : eventSentence;
+}
+
+function getOwnedInitialShareFxText(eventScope: string): string {
+  const owned: string[] = [];
+  const sentences = eventScope.split(/(?<=[.!?])\s+/);
+  const meanings = [shareFxEquation, shareFxPerUnit];
+  for (const sentence of sentences) {
+    const quotes = findShareFxRateMatches(sentence);
+    if (quotes.length > 0) owned.push(...quotes.map(quote => quote[0]));
+    if (isStandaloneShareFxMeaning(sentence)) {
+      owned.push(sentence);
+      continue;
+    }
+
+    const sentenceMeanings = meanings.flatMap(pattern => [...sentence.matchAll(pattern)])
+      .sort((first, second) => first.index - second.index);
+    let lastOwnedMeaningEnd: number | undefined;
+    for (const meaning of sentenceMeanings) {
+      const previousQuote = quotes.filter(quote => quote.index + quote[0].length <= meaning.index).at(-1);
+      const precedingText = previousQuote
+        ? sentence.slice(previousQuote.index + previousQuote[0].length, meaning.index)
+        : sentence.slice(0, meaning.index);
+      const attachedToEvent = /\b(?:at|using|with)\s*$/i.test(precedingText);
+      const quoteExplanationLead = precedingText.replace(
+        /^\s*,?\s*(?:on|dated)\s+\d{1,2}[/-]\d{1,2}[/-]\d{4}\s*,?\s*/i,
+        ''
+      );
+      const explainsQuote = previousQuote !== undefined &&
+        /^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(quoteExplanationLead);
+      const continuesOwnedMeaning = lastOwnedMeaningEnd !== undefined &&
+        /^\s*(?:,?\s*(?:and|but)\s+|,\s*)$/i.test(sentence.slice(lastOwnedMeaningEnd, meaning.index));
+      if (attachedToEvent || explainsQuote || continuesOwnedMeaning) {
+        owned.push(meaning[0]);
+        lastOwnedMeaningEnd = meaning.index + meaning[0].length;
+      }
+    }
+  }
+  return owned.join(' ');
+}
+
+function readShareFxRate(
+  text: string,
+  functionalCurrency: string,
+  transactionCurrency: string,
+  isRateReply = false
+) {
+  const quotes = findShareFxRateMatches(text);
+  let end = quotes[0] ? quotes[0].index + quotes[0][0].length : 0;
+  const meanings = [...text.matchAll(shareFxEquation), ...text.matchAll(shareFxPerUnit)]
     .sort((first, second) => first.index - second.index);
+  let explicitRate: number | undefined;
   let statedRate: number | undefined;
-  let conflicting = Boolean(pair && (functionalCurrency !== 'SGD' || transactionCurrency !== 'USD'));
+  let conflicting = false;
   for (const meaning of meanings) {
     if (isRateReply) {
       if (meaning.index < end) continue;
-      const lead = scope.slice(end, meaning.index);
-      if (!/^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(lead)) break;
+      const lead = text.slice(end, meaning.index);
+      const startsAReply = quotes.length === 0 && explicitRate === undefined && statedRate === undefined;
+      const ownedLead = startsAReply
+        ? /^\s*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(lead)
+        : /^\s*(?:(?:[,.;()]|\band\b|\bbut\b)\s*)*(?:(?:meaning\b|where\b|i\.e\.)\s*)?$/i.test(lead);
+      if (!ownedLead) break;
       end = meaning.index + meaning[0].length;
     }
     const rate = normalizeShareFxMeaning(meaning, functionalCurrency, transactionCurrency);
-    if (rate === null || (statedRate !== undefined && !sameShareFxRate(statedRate, rate)) ||
-        (quotedRate !== undefined && (!Number.isFinite(quotedRate) ||
-          (!sameShareFxRate(quotedRate, rate) && !sameShareFxRate(quotedRate, 1 / rate))))) {
+    if (rate === null || (explicitRate !== undefined && !sameShareFxRate(explicitRate, rate))) {
       conflicting = true;
     } else {
+      explicitRate = rate;
       statedRate = rate;
     }
   }
 
-  if (!quote && end === 0) return undefined;
-  const rate = statedRate ?? (pair === 'USD/SGD' && quotedRate !== undefined ? 1 / quotedRate : quotedRate);
+  if (meanings.length === 0 && quotes.length === 0) return undefined;
+  for (const quote of quotes) {
+    const quotedRate = Number(quote.groups?.rate);
+    const pairTexts = [quote.groups?.leadingPair, quote.groups?.trailingPair].filter((pair): pair is string => !!pair);
+    const pairs = pairTexts.map(pairText => pairText.split('/').map(normalizeShareFxCurrency));
+    if (pairs.some(pair => pair.length !== 2 || pair[0] !== pairs[0][0] || pair[1] !== pairs[0][1])) {
+      conflicting = true;
+      continue;
+    }
+    const pair = pairs[0] ?? [];
+    const pairMatchesScenario = pair.length === 2 && (
+      (pair[0] === transactionCurrency && pair[1] === functionalCurrency) ||
+      (pair[0] === functionalCurrency && pair[1] === transactionCurrency)
+    );
+    if ((!pairMatchesScenario && !(pair.length === 0 && explicitRate !== undefined)) ||
+        !Number.isFinite(quotedRate) || quotedRate <= 0) {
+      conflicting = true;
+      continue;
+    }
+
+    if (explicitRate !== undefined) {
+      // Unit statements control the conversion direction. The labeled pair
+      // still needs to agree numerically in one of its two stated directions.
+      if (!sameShareFxRate(explicitRate, quotedRate) &&
+          !sameShareFxRate(explicitRate, 1 / quotedRate, 1e-9)) {
+        conflicting = true;
+      }
+    } else {
+      const normalizedRate = pair.length === 2 && pair[0] === transactionCurrency
+        ? quotedRate
+        : pair.length === 2 && pair[0] === functionalCurrency ? 1 / quotedRate : undefined;
+      if (normalizedRate === undefined || (statedRate !== undefined && !sameShareFxRate(statedRate, normalizedRate))) {
+        conflicting = true;
+      } else {
+        statedRate = normalizedRate;
+      }
+    }
+  }
+
+  const rate = explicitRate ?? statedRate;
   return {
-    start: quote?.index ?? 0,
+    start: quotes[0]?.index ?? meanings[0]?.index ?? 0,
     end,
     rate: !conflicting && rate !== undefined && Number.isFinite(rate) && rate > 0 ? rate : null
   };
+}
+
+function readInitialShareFxRate(
+  text: string,
+  actionPattern: RegExp,
+  functionalCurrency: string,
+  transactionCurrency: string
+) {
+  const eventScope = getShareFxEventScope(text, actionPattern);
+  const ownedFxText = getOwnedInitialShareFxText(eventScope);
+  return readShareFxRate(ownedFxText, functionalCurrency, transactionCurrency);
 }
 
 function resolvePendingShareFxRate(query: string, scenario?: AccountingScenarioState | null): AccountingScenarioState | undefined {
@@ -2895,8 +3036,18 @@ export async function parseAccountingQuery(
   const saleDate = saleDateFact?.display;
 
   const sameCurrency = functionalCurrency === transactionCurrency;
-  const purchaseQuote = sameCurrency ? undefined : readShareFxRate(purchaseEventText, functionalCurrency, transactionCurrency);
-  const saleQuote = sameCurrency || !saleActionMatch ? undefined : readShareFxRate(saleEventText, functionalCurrency, transactionCurrency);
+  const purchaseQuote = sameCurrency ? undefined : readInitialShareFxRate(
+    purchaseEventText,
+    /\b(?:invested|bought|purchased|acquired)\b/i,
+    functionalCurrency,
+    transactionCurrency
+  );
+  const saleQuote = sameCurrency || !saleActionMatch ? undefined : readInitialShareFxRate(
+    saleEventText,
+    /\b(?:sold|sell|selling|disposed|disposal|derecognised|derecognition|sale)\b/i,
+    functionalCurrency,
+    transactionCurrency
+  );
   let purchaseFxRate = sameCurrency ? 1 : purchaseQuote?.rate ?? undefined;
   let saleFxRate = sameCurrency && saleActionMatch ? 1 : saleQuote?.rate ?? undefined;
   const fxSources: string[] = [];

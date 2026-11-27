@@ -3054,6 +3054,9 @@ try {
       if (query === 'What did you say about the deadline?') {
         return { messageText: 'The follow-up answer.', scenarioState: emptyScenario };
       }
+      if (query === 'What journal entry should I prepare?') {
+        return { messageText: 'No current transaction was supplied.', scenarioState: emptyScenario };
+      }
       if (/^(?:show|where is) the double entry$/i.test(query.trim())) {
         const proposal = args[8];
       if (proposal) {
@@ -3417,15 +3420,38 @@ try {
 
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();
+  await appUi.chatProps.onSendMessage(rentQuestion);
+  appUi = renderApp();
+  await appUi.chatProps.onSendMessage('SGD 1000');
+  appUi = renderApp();
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'the prior rent journal is committed before the service selects a successful advisory boundary');
   await appUi.chatProps.onSendMessage('What are annual filing deadlines?');
   appUi = renderApp();
-  assert.equal(appCalls.at(-1)[5]?.some(message => message.text === 'What are annual filing deadlines?'), true,
-    `the standalone statutory question is sent to the service (${appUi.inputProps.scenario?.transactionTitle}; ${appUi.chatProps.messages.at(-1)?.text})`);
+  const annualFilingHistory = Array.from(appCalls.at(-1)[5] || [], message => message.text);
+  assert.ok(annualFilingHistory.includes(rentQuestion) && annualFilingHistory.includes('SGD 1000'),
+    'the service-selected statutory boundary changes after a request that still carries the rent analysis');
   await appUi.chatProps.onSendMessage('What did you say about the deadline?');
   appUi = renderApp();
   assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
     'What are annual filing deadlines?', 'The statutory answer is shown here.', 'What did you say about the deadline?'
   ], 'the App persists the service-selected statutory boundary for the next contextual follow-up');
+  await appUi.chatProps.onSendMessage('What journal entry should I prepare?');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1].scenarioType, emptyScenario.scenarioType,
+    'a generic journal request after a successful boundary keeps the current empty advisory scenario');
+  assert.deepEqual(appCalls.at(-1)[1].directGroups, [],
+    'a generic journal request after a successful boundary does not receive the earlier rent journal');
+  assert.deepEqual(Array.from(appCalls.at(-1)[5], message => message.text), [
+    'What are annual filing deadlines?', 'The statutory answer is shown here.', 'What did you say about the deadline?',
+    'The follow-up answer.', 'What journal entry should I prepare?'
+  ], 'a journal request after a successful boundary receives only the current analysis history');
+  await appUi.chatProps.onSendMessage('show the double entry');
+  appUi = renderApp();
+  assert.equal(appCalls.at(-1)[1].directGroups[0].totalDebit, 1000,
+    'the earlier committed rent journal remains available for explicit recall after a successful boundary');
+  assert.equal(appUi.journalProps.groups[0].totalDebit, 1000,
+    'explicit journal recall displays the earlier committed rent journal');
 
   appUi.inputProps.onResetToDefaults();
   appUi = renderApp();

@@ -164,16 +164,19 @@ export const App: React.FC = () => {
         throw cancellationError;
       }
 
+      const responseBoundaryMessageId = response.conversationBoundaryMessageId || requestBoundaryMessageId;
+      const responseChangedBoundary = responseBoundaryMessageId !== requestBoundaryMessageId;
+      if (response.conversationBoundaryMessageId) setAnalysisStartMessageId(response.conversationBoundaryMessageId);
+      if (responseChangedBoundary) {
+        retainedCommittedJournalRef.current = committedJournalScenario;
+      }
+
       if (response.providerStatus === 'FAILED' || response.advisoryFailureStatus) {
-        const failedAnalysisBoundary = response.conversationBoundaryMessageId || requestBoundaryMessageId;
-        const boundaryChanged = failedAnalysisBoundary !== requestBoundaryMessageId;
-        if (response.conversationBoundaryMessageId) setAnalysisStartMessageId(response.conversationBoundaryMessageId);
-        if (boundaryChanged) {
-          retainedCommittedJournalRef.current = committedJournalScenario;
+        if (responseChangedBoundary) {
           setScenario(null);
           if (committedJournalScenario) setActiveTab('entries');
         }
-        const failureScenario = boundaryChanged ? null : requestScenario;
+        const failureScenario = responseChangedBoundary ? null : requestScenario;
         setMessages((prev) => [...prev, {
           id: `asst-${Date.now()}`, sender: 'assistant', timestamp: getSingaporeTimestamp(),
           text: response.messageText,
@@ -193,9 +196,7 @@ export const App: React.FC = () => {
         ...response.scenarioState,
         officialAnswerLinks: response.scenarioState.officialAnswerLinks || extractOfficialAnswerLinks(response.messageText)
       };
-      if (response.conversationBoundaryMessageId) {
-        setAnalysisStartMessageId(response.conversationBoundaryMessageId);
-      } else if (options?.startNewScenario) {
+      if (!response.conversationBoundaryMessageId && options?.startNewScenario) {
         setAnalysisStartMessageId(userMsg.id);
       }
       if (!isJournalRecall) {

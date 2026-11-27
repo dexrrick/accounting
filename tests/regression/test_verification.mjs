@@ -6,7 +6,7 @@ console.log("=== RUNNING EXTENSIVE MULTI-SCENARIO VERIFICATION ===");
 // -------------------------------------------------------------
 // TEST 1: User's Apple Shares Scenario with Explicit FX Gain Double Entry
 // -------------------------------------------------------------
-const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at SGD/USD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at SGD/USD spot rate of 1.36. what's the double entries";
+const applePrompt = "a company primary currency is SGD, it invested USD300k into 300 apple shares on 13/11/2026 at USD/SGD spot rate of 1.34, subsequently the company sold 300 shares for USD400k on 15/12/2026 at USD/SGD spot rate of 1.36. what's the double entries";
 
 const parsedApple = await parseAccountingQuery(applePrompt);
 console.log("\n[TEST 1] Apple Shares Parsing & Double Entry:");
