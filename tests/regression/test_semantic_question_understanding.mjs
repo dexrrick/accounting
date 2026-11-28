@@ -2258,7 +2258,7 @@ let momProductionPrompt;
 let momProductionSystem;
 let momProductionWorkstreams;
 const fetchBeforeMomContextTest = globalThis.fetch;
-const payrollQueryForJournalState = 'currently the company has one singaporean employees earning 60k a month he is 60 years old show me the relevant double entries';
+const payrollQueryForJournalState = 'currently the company has one singaporean employees earning 60k a month he is 60 years old for September 2026 show me the relevant double entries';
 const existingPayrollScenario = await parseAccountingQuery(payrollQueryForJournalState);
 const initialJournalSnapshot = updateCommittedJournalScenario(null, existingPayrollScenario, 'SFRS_I');
 assert.ok(initialJournalSnapshot, 'the initial payroll scenario produces a validated journal snapshot');

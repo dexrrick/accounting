@@ -1124,6 +1124,14 @@ export function assembleDeterministicResponse(
     projectedMeasurementBasis: resolvedProjectedBasis,
     underlyingTransaction: resolvedUnderlyingTx,
     classification: (resolvedProjectedBasis || resolvedActualBasis) as any,
+    ...(deterministicScenario?.scenarioType === 'LEASE_IFRS16' ? {
+      purchaseDate: deterministicScenario.purchaseDate,
+      leaseTermYears: deterministicScenario.leaseTermYears,
+      leaseTermMonths: deterministicScenario.leaseTermMonths,
+      leasePaymentMonthly: deterministicScenario.leasePaymentMonthly,
+      leaseDiscountRateAnnual: deterministicScenario.leaseDiscountRateAnnual,
+      leaseCommencementDate: deterministicScenario.leaseCommencementDate
+    } : {}),
     isComplete: !hasPendingValuation && missingFacts.length === 0 && retrievedEvidenceScope.length > 0,
     missingFields: []
   };

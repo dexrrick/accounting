@@ -32,7 +32,11 @@ import {
   isJournalDisplayRequest,
   startsNewAccountingScenario
 } from './conversationBoundary';
-import { getDisplayableUncommittedJournalGroups } from './committedJournal';
+import {
+  getDisplayableUncommittedJournalGroups,
+  hasSameTransactionPriorMonetaryEvidence,
+  hasVerifiedImageMonetaryEvidence
+} from './committedJournal';
 import { answerShareStructureQuery } from '../engine/shareTransferQuery';
 import { createRequestDeadline, getRequestTimeoutMs, raceRequestWithAbort, throwIfRequestAborted } from './requestDeadline';
 import { normaliseAiEventSequence, resolveEventSequence } from '../engine/eventSequence';
@@ -1111,11 +1115,14 @@ async function processAccountingQueryCore(
     amendmentResolution.amendments?.length === 1 &&
     amendmentResolution.amendments[0].field === 'monthlySalary' &&
     isSingleMonthlySalaryAmendment(userInput);
-  const isFactualClarificationReply = Boolean(activeScenario?.missingFields?.length) &&
+  const isFactualClarificationReply = Boolean(
+      activeScenario?.missingFields?.length ||
+      (activeScenario?.authorityStatus === 'CONDITIONAL' && activeScenario?.assumptions?.length)
+    ) &&
     !/[?]/.test(userInput) &&
     !/\b(?:what|when|which|how|why|who|where|explain|describe|outline|actually|instead)\b/i.test(userInput) &&
     (/^\s*(?:(?:sgd|usd|eur|s\$|\$)\s*)?[\d,]+(?:\.\d+)?\s*$/i.test(userInput) ||
-      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
+      /^\s*(?:he|she|they|it|i|we|(?:the|our|this)\s+(?:employee|worker|company|business|input\s+gst|gst))\b[\s\S]*\b(?:is|are|was|were|has|have|earns?|receives?|started|aged)\b/i.test(userInput));
   const retainConversationContext = isContextualFollowUp ||
     (!explicitNewQuestion && (isPayrollSalaryAmendment || isFactualClarificationReply));
   const isBasicBookkeepingTransaction = !hasImages &&
@@ -1163,15 +1170,27 @@ async function processAccountingQueryCore(
   // This final gate is independent of the AI provider's own guardrails.
   // Metadata or a model assertion of balance cannot authorize a journal.
   const validateJournalResponse = (response: GeminiResponse): GeminiResponse => {
-    if (hasImages) return response;
     const groups = response.scenarioState.directGroups || [];
     if (groups.length === 0) return response;
-    if (!journalRequested && Boolean(deterministicScenario?.directGroups?.length)) {
-      return response;
-    }
+    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(
+      activeScenario,
+      response.scenarioState,
+      userInput
+    );
+    const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
+    const hasImageEvidence =
+      hasVerifiedImageMonetaryEvidence(response.scenarioState) ||
+      (canUseActiveTurnHistory && hasVerifiedImageMonetaryEvidence(activeScenario));
+    const evidenceTexts = canUseActiveTurnHistory
+      ? relevantChatHistory
+          .filter(message => message.sender === 'user')
+          .map(message => message.text)
+      : undefined;
     const integrity = validateJournalGroups(groups, {
       rawQuery: userInput,
-      hasPriorContextAmount: Boolean(activeScenario?.amount || activeScenario?.directGroups?.length || activeScenario?.committedDirectGroups?.length)
+      hasPriorContextAmount,
+      hasImageEvidence,
+      evidenceTexts
     });
     if (integrity.isValid) return response;
 
@@ -1359,7 +1378,7 @@ async function processAccountingQueryCore(
   const standaloneIrasQuestion = usesIrasEvidencePolicy(classification, userInput) &&
     !classification.accountingAnalysisRequired && !classification.journalEntryRequired &&
     (!questionUnderstanding.interpretation || questionUnderstanding.interpretation.requestedOperation !== 'PREPARE_JOURNAL') &&
-    !isContextualFollowUp;
+    !retainConversationContext;
   if (standaloneIrasQuestion) {
     activeScenario = null;
     amendmentResolution = resolveFactAmendment(userInput, null);
@@ -1485,14 +1504,56 @@ async function processAccountingQueryCore(
   // A complete deterministic journal wins. Otherwise permit the existing AI
   // pipeline to attempt a proposal, but never invent missing recognized facts.
   if (journalRequested && !hasImages) {
-    const groups = deterministicScenario.directGroups || [];
-    const grounded = groups.length > 0 && groups.every(g =>
-      g.isBalanced && g.lines.length >= 2 && g.totalDebit > 0 && g.totalDebit === g.totalCredit);
+    const calculatedDeterministicGroups = !deterministicScenario.directGroups?.length &&
+      deterministicScenario.isComplete &&
+      deterministicScenario.authorityStatus === 'DETERMINISTIC' &&
+      deterministicScenario.scenarioType === 'LEASE_IFRS16'
+      ? calculateDoubleEntries(deterministicScenario, standard).groups
+      : [];
+    const groups = deterministicScenario.directGroups?.length
+      ? deterministicScenario.directGroups
+      : calculatedDeterministicGroups;
+    const hasPriorContextAmount = hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario, userInput);
+    const canUseActiveTurnHistory = !activeScenario || !activeScenario.isComplete || hasPriorContextAmount;
+    const integrity = groups.length > 0
+      ? validateJournalGroups(groups, {
+          rawQuery: userInput,
+          hasPriorContextAmount,
+          hasImageEvidence:
+            hasVerifiedImageMonetaryEvidence(deterministicScenario) ||
+            (canUseActiveTurnHistory && hasVerifiedImageMonetaryEvidence(activeScenario)),
+          evidenceTexts: canUseActiveTurnHistory
+            ? relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+            : undefined
+        })
+      : { isValid: false, issues: [] };
+    const grounded = deterministicScenario.isComplete && groups.length > 0 && integrity.isValid;
     if (grounded) {
+      const groundedScenario = deterministicScenario.directGroups?.length
+        ? deterministicScenario
+        : { ...deterministicScenario, directGroups: groups };
       profiler.recordFirstVisibleResponse();
       profiler.setTokenCounts(0, 0, 0);
       profiler.logSummary();
-      return attachAmendmentProvenance(await governedOfflineResponse(deterministicScenario));
+      return attachAmendmentProvenance(await governedOfflineResponse(groundedScenario));
+    }
+    if (groups.length > 0 && !integrity.isValid) {
+      const validationClarification: MissingFieldInfo = {
+        fieldKey: 'journalValidation',
+        fieldName: 'Transaction details',
+        prompt: integrity.issues[0]?.message || 'The transaction details could not be validated into a balanced journal entry. Please confirm the figures.',
+        whyNeeded: 'Only validated, balanced double-entry journals may be emitted.'
+      };
+      return attachAmendmentProvenance({
+        messageText: `### Clarification Required for Double Entry\n\n${validationClarification.prompt}`,
+        scenarioState: {
+          ...deterministicScenario,
+          directGroups: [],
+          isComplete: false,
+          missingFields: [validationClarification]
+        },
+        clarifications: [validationClarification]
+      });
     }
     if (deterministicScenario.scenarioType === 'UNRECOGNIZED' &&
         !providerOrApiKey && /\b(?:unspecified|unknown) transaction\b/i.test(userInput)) {
@@ -1517,9 +1578,14 @@ async function processAccountingQueryCore(
       });
     }
   }
+  const isAdvisoryFactDiscoveryQuestion = !outputJournalRequested &&
+    !/\b(?:prepare|show|post|record|book|create|generate)\b[^.!?;]{0,40}\b(?:journal|double\s+entr(?:y|ies)|entries)\b/i.test(journalIntentQuery) &&
+    /\b(?:what|which)\s+(?:cpf\s+(?:contribution\s+)?rates?|employee\s+facts?|facts?|rules?)\b/i.test(userInput) &&
+    /\b(?:still\s+need\s+to\s+be\s+confirmed|need(?:ed)?\s+before\s+calculat|apply\s+to\s+(?:the|our)\s+employee)\b/i.test(userInput);
   if (!hasImages && deterministicScenario.scenarioType !== 'UNRECOGNIZED' &&
       !deterministicScenario.isComplete && materialClarification &&
       !hasExplicitUnresolvedSaleJournal &&
+      !isAdvisoryFactDiscoveryQuestion &&
       (!deterministicScenario.directGroups || deterministicScenario.directGroups.length === 0)) {
     profiler.recordFirstVisibleResponse();
     profiler.setTokenCounts(0, 0, 0);
@@ -1538,11 +1604,20 @@ async function processAccountingQueryCore(
   if (activeScenario?.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.scenarioType === 'PAYROLL_CPF_SALARY' &&
       deterministicScenario.isComplete &&
+      deterministicScenario.directGroups?.length &&
       /\b(resign(?:ed|ation)?|pro[ -]?rat(?:e|ed|ion)|last\s+day|incomplete\s+month)\b/i.test(userInput)) {
-    profiler.recordFirstVisibleResponse();
-    profiler.setTokenCounts(0, 0, 0);
-    profiler.logSummary();
-    return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    const payrollIntegrity = validateJournalGroups(deterministicScenario.directGroups, {
+      rawQuery: userInput,
+      hasPriorContextAmount: hasSameTransactionPriorMonetaryEvidence(activeScenario, deterministicScenario, userInput),
+      hasImageEvidence: hasVerifiedImageMonetaryEvidence(deterministicScenario) || hasVerifiedImageMonetaryEvidence(activeScenario),
+      evidenceTexts: relevantChatHistory.filter(message => message.sender === 'user').map(message => message.text)
+    });
+    if (payrollIntegrity.isValid) {
+      profiler.recordFirstVisibleResponse();
+      profiler.setTokenCounts(0, 0, 0);
+      profiler.logSummary();
+      return attachAmendmentProvenance(renderStructuredOfflineResponse(deterministicScenario, standard));
+    }
   }
 
   // Multi-workstream compliance was independently resolved above. Keep the
@@ -1570,7 +1645,9 @@ async function processAccountingQueryCore(
   // model has already manufactured a tax answer. Local knowledge remains first.
   if (groundedContext.evidenceQuality) {
     const quality = groundedContext.evidenceQuality;
-    const accountingRequested = groundedContext.classification.accountingAnalysisRequired || groundedContext.classification.journalEntryRequired;
+    const accountingRequested = groundedContext.classification.accountingAnalysisRequired ||
+      groundedContext.classification.journalEntryRequired ||
+      isFactualClarificationReply;
     const localCoversQuestion = quality.eligibleRecords.length > 0 && quality.uncoveredTopicIds.length === 0 &&
       quality.eligibleRecords.every(record => record.provenance !== 'LIVE_EXTERNAL');
     if (!accountingRequested && (localCoversQuestion || quality.status === 'INSUFFICIENT')) {
@@ -1996,51 +2073,92 @@ export function renderStructuredOfflineResponse(
   }
 
   // 3.5. PAYROLL, PRORATED SALARY & STATUTORY CPF (MOM EA §22 & CPF ACT §7)
-  if (parsed.scenarioType === 'PAYROLL_CPF_SALARY' && parsed.directGroups) {
-    const grp = parsed.projectedGroups?.[0] || parsed.directGroups[0];
+  if (parsed.scenarioType === 'PAYROLL_CPF_SALARY') {
+    const grp = parsed.projectedGroups?.[0] || parsed.directGroups?.[0];
+    if (!parsed.isComplete || !grp || !grp.lines?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the employee salary, citizenship/residency status, age (if CPF applies), and payroll period before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+
     const grossLine = grp.lines.find(l => l.accountCode === '5010');
     const employerCpfLine = grp.lines.find(l => l.accountCode === '5020');
     const cpfPayableLine = grp.lines.find(l => l.accountCode === '2050');
     const netSalaryLine = grp.lines.find(l => l.accountCode === '2060');
+    const sdlExpenseLine = grp.lines.find(l => l.accountCode === '5030');
 
     const grossSalary = grossLine?.debit || 0;
     const employerCpf = employerCpfLine?.debit || 0;
     const totalCpf = cpfPayableLine?.credit || 0;
     const netSalary = netSalaryLine?.credit || 0;
-    const employeeCpf = totalCpf - employerCpf;
+    const employeeCpf = Math.max(0, totalCpf - employerCpf);
+    const sdlAmount = sdlExpenseLine?.debit || 0;
 
-    const baseSalaryParam = parsed.keyParameters?.find(p => p.label.includes('Basic Monthly Salary'))?.value || `SGD ${grossSalary.toLocaleString()}`;
-    const workingDaysParam = parsed.keyParameters?.find(p => p.label.includes('Working Days'))?.value || '22 / 22 days';
-    const sdlParam = parsed.keyParameters?.find(p => p.label.includes('Skills Development Levy'))?.value || 'SGD 4.36';
+    const findParam = (fragment: string) => parsed.keyParameters?.find(p => p.label.includes(fragment));
+    const baseSalaryParam = findParam('Basic Monthly Salary')?.value || `${currency} ${fmt2(grossSalary)}`;
+    const statusParam = findParam('Employee Status')?.value;
+    const periodParam = findParam('Salary Period')?.value;
+    const workingDaysParam = findParam('Working Days')?.value;
+    const employeeCpfParam = findParam('Employee CPF');
+    const employerCpfParam = findParam('Employer CPF');
+    const totalCpfParam = findParam('Total CPF');
+    const cpfExemptParam = findParam('CPF Applicability');
+    const sdlParam = findParam('Skills Development Levy')?.value || `${currency} ${fmt2(sdlAmount)}`;
 
-    let replyText = `### Statutory Payroll & CPF Assessment: ${parsed.transactionTitle}\n\n` +
-      `**Governing Authorities**: **MOM, CPF Board & IRAS** | **Legislation**: **Employment Act 1968 §22** & **Central Provident Fund Act 1953 §7 / First Schedule**\n\n` +
+    const isProrated = Boolean(workingDaysParam && /\bProrated\b/i.test(workingDaysParam));
+    const isCpfExempt = Boolean(cpfExemptParam) || Boolean(statusParam && /Foreign Worker/i.test(statusParam));
+
+    const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+    const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+    const grpBalanced = totalDrCents > 0 && totalDrCents === totalCrCents;
+    const lineBullets = grp.lines
+      .map(l => {
+        const side = l.debit > 0 ? 'Debit' : 'Credit';
+        const amt = l.debit > 0 ? l.debit : l.credit;
+        return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+      })
+      .join('\n');
+
+    let replyText = `### Statutory Payroll & ${isCpfExempt ? 'SDL' : 'CPF'} Assessment: ${parsed.transactionTitle}\n\n` +
+      `**Governing Authorities**: **${isCpfExempt ? 'MOM, SSG/CPF Board & IRAS' : 'MOM, CPF Board & IRAS'}** | **Legislation**: **Employment Act 1968**, **Skills Development Levy Act 1979**${isCpfExempt ? '' : ' & **Central Provident Fund Act 1953 §7 / First Schedule**'}\n\n` +
       `---\n\n` +
-      `#### 1. Statutory Proration & Entitlement (MOM Employment Act §22)\n` +
+      `#### 1. Payroll Basis & Salary Computation${isProrated ? ' (MOM Employment Act §22)' : ''}\n` +
       `* **Contracted Basic Monthly Salary**: **${baseSalaryParam}**\n` +
-      `* **Statutory Working Days (Mon–Fri)**: **${workingDaysParam}**\n` +
-      `* **MOM Incomplete Month Formula**:\n` +
-      `  $$\\text{Gross Salary Payable} = \\frac{\\text{Monthly Basic Rate of Pay}}{\\text{Total Working Days in Month}} \\times \\text{Actual Working Days Worked}$$\n` +
-      `* **Gross Prorated Salary Payable**: $\\mathbf{SGD\\ ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n\n` +
+      `${statusParam ? `* **Employee Status**: **${statusParam}**\n` : ''}` +
+      `${periodParam ? `* **Salary Period**: **${periodParam}**\n` : ''}` +
+      `${workingDaysParam ? `* **Statutory Working Days (Mon–Fri)**: **${workingDaysParam}**\n` : ''}` +
+      `${isProrated ? `* **MOM Incomplete Month Formula**:\n  $$\\text{Gross Salary Payable} = \\frac{\\text{Monthly Basic Rate of Pay}}{\\text{Total Working Days in Month}} \\times \\text{Actual Working Days Worked}$$\n` : ''}` +
+      `* **${isProrated ? 'Gross Prorated Salary Payable' : 'Gross Monthly Salary Payable'}**: **${currency} ${fmt2(grossSalary)}**\n\n` +
       `---\n\n` +
-      `#### 2. Statutory CPF & Net Salary Breakdown (CPF Act 1953 & 2026 Ceilings)\n` +
-      `* **Gross Salary Subject to CPF (Ordinary Wage)**: **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Within 2026 OW ceiling of SGD 8,000)*\n` +
-      `* **Employee CPF Contribution (20%)**: $\\mathbf{SGD\\ ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Cents discarded per CPF Act §7)*\n` +
-      `* **Employer CPF Contribution (17%)**: $\\mathbf{SGD\\ ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Statutory Rule: Total rounded to dollar)*\n` +
-      `* **Total CPF Payable to CPF Board (37%)**: $\\mathbf{SGD\\ ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n` +
-      `* **Net Take-Home Salary Payable to Staff**: $\\mathbf{SGD\\ ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$ *(Gross SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })} - Employee CPF SGD ${employeeCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })})*\n` +
-      `* **Skills Development Levy (SDL)**: **${sdlParam}** *(0.25% of gross remuneration payable by employer)*\n\n` +
+      `#### 2. Statutory CPF, SDL & Net Salary Breakdown\n`;
+
+    if (isCpfExempt) {
+      replyText += `* **CPF Applicability**: **${cpfExemptParam?.value || 'Exempt (Foreign Worker — 0%)'}**\n`;
+    } else {
+      const empLabel = employeeCpfParam?.label || 'Employee CPF';
+      const erLabel = employerCpfParam?.label || 'Employer CPF';
+      const totLabel = totalCpfParam?.label || 'Total CPF to CPF Board';
+      replyText += `* **Gross Salary Subject to CPF (Ordinary Wage)**: **${currency} ${fmt2(grossSalary)}** *(${grossSalary > 8000 ? 'Capped at 2026 OW ceiling of SGD 8,000' : 'Within 2026 OW ceiling of SGD 8,000'})*\n` +
+        `* **${empLabel}**: **${currency} ${fmt2(employeeCpf)}** *(Statutory Rule: Cents discarded per CPF Act §7)*\n` +
+        `* **${erLabel}**: **${currency} ${fmt2(employerCpf)}** *(Statutory Rule: Total rounded to nearest dollar)*\n` +
+        `* **${totLabel}**: **${currency} ${fmt2(totalCpf)}**\n`;
+    }
+
+    replyText += `* **Net Take-Home Salary Payable to Staff**: **${currency} ${fmt2(netSalary)}**${!isCpfExempt && employeeCpf > 0 ? ` *(Gross ${currency} ${fmt2(grossSalary)} - Employee CPF ${currency} ${fmt2(employeeCpf)})*` : ''}\n` +
+      `* **Skills Development Levy (SDL)**: **${sdlParam}** *(0.25% of monthly wages, min SGD 2.00, max SGD 11.25)*\n\n` +
       `---\n\n` +
-      `#### 3. Singapore Tax Deductibility & MOM Compliance (IRAS & MOM)\n` +
-      `* **100% Tax Deductibility**: Under **Section 14(1) and Section 14(1)(e) of the Income Tax Act 1947**, staff salaries (**SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) and mandatory employer CPF (**SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**) are fully tax-deductible expenses in Form C-S.\n` +
-      `* **Disbursement Timeline**: Under **Section 21(2) of the Employment Act 1968**, all outstanding salary must be disbursed to the employee on their last day of employment.\n\n` +
+      `#### 3. Singapore Tax Deductibility & Statutory Compliance (IRAS & MOM)\n` +
+      `* **Tax Deductibility**: Under **Section 14(1)${!isCpfExempt ? ' and Section 14(1)(e)' : ''} of the Income Tax Act 1947**, staff salaries (**${currency} ${fmt2(grossSalary)}**)${!isCpfExempt && employerCpf > 0 ? `, mandatory employer CPF (**${currency} ${fmt2(employerCpf)}**)` : ''}, and SDL (**${currency} ${fmt2(sdlAmount)}**) are allowable business deductions.\n` +
+      `* **Payment & Filing Timelines**: Under the **Employment Act 1968**, salary must be paid within statutory timelines; ${isCpfExempt ? 'SDL' : 'CPF and SDL'} must be remitted to CPF Board by the 14th of the following month.\n\n` +
       `---\n\n` +
-      `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
-      `* **Debit**: **Staff Salaries & Wages (P&L - Operating Expense)** — **SGD ${grossSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Debit**: **Employer CPF Contribution (P&L - Operating Expense)** — **SGD ${employerCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **CPF Payable to CPF Board (Current Liability)** — **SGD ${totalCpf.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Net Salaries Payable / Staff Clearing (Current Liability)** — **SGD ${netSalary.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
-      `**Balance Check**: $\\text{Total Debits (SGD } ${(grossSalary + employerCpf).toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${(totalCpf + netSalary).toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
+      `### ${grp.title} (${grp.eventDate})\n\n` +
+      `${lineBullets}\n\n` +
+      `**Balance Check**: ${currency} ${fmt2(totalDrCents / 100)} == ${currency} ${fmt2(totalCrCents / 100)} ${grpBalanced ? '✓ Balanced' : '✗ Imbalanced'}`;
 
     return {
       messageText: finalizeMessage(replyText, parsed),
@@ -2076,57 +2194,111 @@ export function renderStructuredOfflineResponse(
   }
 
   // 5. ASSET PURCHASE WITH TRADE DISCOUNT, GST, CASH & CREDIT TERMS
-  if (parsed.scenarioType === 'ASSET_PURCHASE_DISCOUNT' && parsed.directGroups) {
+  if (parsed.scenarioType === 'ASSET_PURCHASE_DISCOUNT') {
+    if (!parsed.isComplete || !parsed.directGroups?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the asset list price, discount, GST, and payment terms before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
     const grp = parsed.directGroups[0];
-    const equipLine = grp.lines.find(l => l.category === 'ASSET' && l.debit > 0 && l.accountCode === '1500');
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const equipLine = grp.lines.find(l => l.accountCode === '1500');
     const gstLine = grp.lines.find(l => l.accountCode === '1190');
     const bankLine = grp.lines.find(l => l.accountCode === '1010');
     const payableLine = grp.lines.find(l => l.accountCode === '2010');
 
-    const costVal = equipLine?.debit || 18000;
-    const gstVal = gstLine?.debit || 1620;
-    const bankVal = bankLine?.credit || 5000;
-    const payableVal = payableLine?.credit || 14620;
+    const assetName = equipLine?.accountName.replace(/\s*-\s*Cost.*$/i, '') || 'Equipment';
+    const costVal = equipLine?.debit ?? 0;
+    const gstVal = gstLine?.debit ?? 0;
+    const bankVal = bankLine?.credit ?? 0;
+    const payableVal = payableLine?.credit ?? 0;
+    const grossVal = Math.round((costVal + gstVal) * 100) / 100;
 
     const listPriceParam = parsed.keyParameters?.find(p => p.label.includes('List Price'));
     const discountParam = parsed.keyParameters?.find(p => p.label.includes('Trade Discount'));
-    const listPriceStr = listPriceParam?.value || 'SGD 20,000.00';
-    const discountLabel = discountParam?.label || 'Trade Discount (10%)';
-    const discountValStr = discountParam?.value || '-SGD 2,000.00';
+    const gstParam = parsed.keyParameters?.find(p => p.label.includes('Input GST'));
+    const gstRateLabel = gstParam?.label.match(/(\d+(?:\.\d+)?%)/)?.[1] ?? '0%';
+    const isNonRecoverableGst = Boolean(gstParam?.label.includes('Non-Recoverable'));
+    const isConditionalGst = Boolean(parsed.authorityStatus === 'CONDITIONAL' || gstParam?.label.includes('Conditional'));
 
-    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a)) & Singapore GST Act\n\n` +
-      `Here is the single compound journal entry on **${grp.eventDate}** to record the purchase of office equipment:\n\n` +
+    const totalDrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+    const totalCrCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+    const grpBalanced = totalDrCents > 0 && totalDrCents === totalCrCents;
+    const lineBullets = grp.lines
+      .map(l => {
+        const side = l.debit > 0 ? 'Debit' : 'Credit';
+        const amt = l.debit > 0 ? l.debit : l.credit;
+        return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+      })
+      .join('\n');
+
+    const conditionalCallout = isConditionalGst && parsed.uncertaintyDisclaimer
+      ? `> ⚠️ **Conditional Journal (Input GST Recoverability Unconfirmed)**: ${parsed.uncertaintyDisclaimer}\n\n`
+      : '';
+
+    const gstSection = gstVal > 0
+      ? (isConditionalGst
+          ? `#### 2. Conditional Input GST (Subject to IRAS Recovery Conditions) & Invoice Total\n` +
+            `* **Conditional Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}** *(shown as recoverable on a conditional basis; if non-recoverable, capitalise into asset cost under ${std16Name} §16(a))*\n` +
+            `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+          : `#### 2. Recoverable Input GST & Invoice Total\n` +
+            `* **Recoverable Input GST (${gstRateLabel})**: **${currency} ${fmt2(gstVal)}**\n` +
+            `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`)
+      : isNonRecoverableGst
+        ? `#### 2. Non-Recoverable Input GST & Invoice Total\n` +
+          `* **Non-Recoverable Input GST (${gstRateLabel})**: **${gstParam?.value ?? `${currency} 0.00`}** *(capitalised into asset cost under ${std16Name} §16(a); no GST Input Tax Receivable is recognised)*\n` +
+          `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`
+        : `#### 2. GST & Invoice Total\n` +
+          `* **Input GST (${gstRateLabel})**: **${currency} 0.00**\n` +
+          `* **Total Gross Invoice**: **${currency} ${fmt2(grossVal)}**\n\n`;
+
+    let replyText = `### Under ${std16Name} (*Property, Plant and Equipment* §16(a))${gstVal > 0 || isNonRecoverableGst ? ' & Singapore GST Act' : ''}\n\n` +
+      conditionalCallout +
+      `Here is the ${isConditionalGst ? 'conditional ' : ''}journal entry on **${grp.eventDate}** to record the purchase of **${assetName}**:\n\n` +
       `---\n\n` +
       `#### 1. Asset Capitalization & Trade Discount Deduction (${std16Name} §16(a))\n` +
-      `* **List Price**: **${listPriceStr}** (exclusive of 9% GST)\n` +
-      `* **Less ${discountLabel}**: $\\mathbf{${discountValStr}}$\n` +
-      `* **Net Initial Cost Recognized**:\n` +
-      `  $$\\text{Asset Cost} = \\mathbf{SGD\\ ${costVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n` +
-      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price. Trade discounts are **never** recorded as a separate ledger line in accounting).* \n\n` +
+      `${listPriceParam ? `* **${listPriceParam.label}**: **${listPriceParam.value}**\n` : ''}` +
+      `${discountParam ? `* **Less ${discountParam.label}**: **${discountParam.value}**\n` : ''}` +
+      `* **Initial Capitalized Asset Cost**: **${currency} ${fmt2(costVal)}**\n` +
+      `  *(Statutory Rule: Under ${std16Name} §16(a), trade discounts are deducted directly from the list price and are never recorded as separate ledger lines${isNonRecoverableGst ? '; non-recoverable purchase taxes are included in asset cost' : ''}.)*\n\n` +
       `---\n\n` +
-      `#### 2. Singapore 9% Recoverable Input GST (IRAS)\n` +
-      `* Under IRAS guidelines, 9% GST is levied on the **discounted selling price**:\n` +
-      `  $$\\text{Input GST (9\\%)} = \\text{SGD } ${costVal.toLocaleString()} \\times 9\\% = \\mathbf{SGD\\ ${gstVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n` +
-      `* **Total Gross Invoice Payable**: $\\text{SGD } ${costVal.toLocaleString()} + \\text{SGD } ${gstVal.toLocaleString()} = \\mathbf{SGD\\ ${(costVal + gstVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}}$\n\n` +
+      gstSection +
       `---\n\n` +
       `#### 3. Settlement Breakdown\n` +
-      `* **Immediate Bank Transfer**: **SGD ${bankVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Remaining Balance on Credit Terms (Trade Payables)**:\n` +
-      `  $$\\text{Trade Payables} = ${(costVal + gstVal).toLocaleString()} - ${bankVal.toLocaleString()} = \\mathbf{SGD\\ ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}}$$\n\n` +
+      `* **Immediate Bank Transfer**: **${currency} ${fmt2(bankVal)}**\n` +
+      `* **Initial Balance on Credit Terms (Trade Payables)**: **${currency} ${fmt2(payableVal)}**\n\n` +
       `---\n\n` +
-      `### Single Compound Journal Entry (${grp.eventDate})\n\n` +
-      `* **Debit**: **Office Equipment - Cost (Non-Current Asset)** — **SGD ${costVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Debit**: **GST Input Tax (IRAS 9% Claimable Receivable)** — **SGD ${gstVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Cash at Bank (Current Asset)** — **SGD ${bankVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n` +
-      `* **Credit**: **Trade Payables / Other Payables (Current Liability)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}**\n\n` +
-      `**Balance Check**: $\\text{Total Debits (SGD } ${(costVal + gstVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}) == \\text{Total Credits (SGD } ${(bankVal + payableVal).toLocaleString(undefined, { minimumFractionDigits: 2 })}) \\quad \\checkmark\\ \\mathbf{Balanced}$`;
+      `### ${grp.title} (${grp.eventDate})\n\n` +
+      `${lineBullets}\n\n` +
+      `**Balance Check**: ${currency} ${fmt2(totalDrCents / 100)} == ${currency} ${fmt2(totalCrCents / 100)} ${grpBalanced ? '✓ Balanced' : '✗ Imbalanced'}`;
 
-    if (parsed.directGroups.length > 1) {
-      const grp2 = parsed.directGroups[1];
-      replyText += `\n\n---\n\n### Subsequent Event: ${grp2.title} (${grp2.eventDate})\n\n` +
-        `* **Debit**: **Trade Payables (Current Liability)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Derecognition of liability)*\n` +
-        `* **Credit**: **Cash at Bank (Current Asset)** — **SGD ${payableVal.toLocaleString(undefined, { minimumFractionDigits: 2 })}** *(Cash outflow)*\n\n` +
-        `*(Under ${std9} §3.3.1, the financial liability is extinguished upon full settlement).*`;
+    let runningRemainingPayableCents = Math.round(payableVal * 100);
+    for (let i = 1; i < parsed.directGroups.length; i++) {
+      const nextGrp = parsed.directGroups[i];
+      const nDrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const nCrCents = nextGrp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const nBalanced = nDrCents > 0 && nDrCents === nCrCents;
+      const settledPayableCents = nextGrp.lines
+        .filter(l => l.accountCode === '2010')
+        .reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      runningRemainingPayableCents = Math.max(0, runningRemainingPayableCents - settledPayableCents);
+      const nLines = nextGrp.lines
+        .map(l => {
+          const side = l.debit > 0 ? 'Debit' : 'Credit';
+          const amt = l.debit > 0 ? l.debit : l.credit;
+          return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+        })
+        .join('\n');
+      const settlementFootnote = runningRemainingPayableCents > 0
+        ? `*(Under ${std9} §3.3.1, only the settled portion of ${currency} ${fmt2(settledPayableCents / 100)} is derecognised; remaining Trade Payables balance is **${currency} ${fmt2(runningRemainingPayableCents / 100)}**).*`
+        : `*(Under ${std9} §3.3.1, the financial liability is extinguished upon full settlement).*`;
+      replyText += `\n\n---\n\n### Subsequent Event: ${nextGrp.title} (${nextGrp.eventDate})\n\n${nLines}\n\n` +
+        `**Balance Check**: ${currency} ${fmt2(nDrCents / 100)} == ${currency} ${fmt2(nCrCents / 100)} ${nBalanced ? '✓ Balanced' : '✗ Imbalanced'}\n\n` +
+        settlementFootnote;
     }
 
     return {
@@ -2136,43 +2308,49 @@ export function renderStructuredOfflineResponse(
   }
 
   // 6. PPE MACHINERY ACQUISITION WITH TRADE-IN, GST, DEPRECIATION & LOAN
-  if (parsed.scenarioType === 'PPE_IAS16' && parsed.directGroups) {
+  if (parsed.scenarioType === 'PPE_IAS16') {
+    if (!parsed.isComplete || !parsed.directGroups?.length) {
+      const prompt = parsed.missingFields?.[0]?.prompt || 'Please provide the missing machinery, depreciation, trade-in, and settlement details before preparing the journal.';
+      return {
+        messageText: finalizeMessage(`### Clarification Required\n\n${prompt}`, parsed),
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const primaryDate = parsed.directGroups[0]?.eventDate || '';
+    const isConditionalPpe = parsed.authorityStatus === 'CONDITIONAL' && Boolean(parsed.uncertaintyDisclaimer);
+    const factRows = (parsed.keyParameters || [])
+      .map(param => `* **${param.label}**: **${param.value}**`)
+      .join('\n');
+
+    const groupSections = parsed.directGroups.map((grp, idx) => {
+      const drCents = grp.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const crCents = grp.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const balanced = drCents > 0 && drCents === crCents;
+      const lineBullets = grp.lines
+        .map(l => {
+          const side = l.debit > 0 ? 'Debit' : 'Credit';
+          const amt = l.debit > 0 ? l.debit : l.credit;
+          return `* **${side}**: **${l.accountName}** — **${currency} ${fmt2(amt)}**`;
+        })
+        .join('\n');
+      return `#### ${idx + 1}. ${grp.title} (${grp.eventDate})\n` +
+        `${grp.summary}\n\n` +
+        `${lineBullets}\n\n` +
+        `**Balance Check**: ${currency} ${fmt2(drCents / 100)} == ${currency} ${fmt2(crCents / 100)} ${balanced ? '✓ Balanced' : '✗ Imbalanced'}`;
+    }).join('\n\n---\n\n');
+
+    const ppeConditionalCallout = isConditionalPpe
+      ? `> ⚠️ **Conditional Journal (Input GST Recoverability Unconfirmed)**: ${parsed.uncertaintyDisclaimer}\n\n`
+      : '';
+
     const replyText = `### Under ${std16Name} (*Property, Plant and Equipment*), Singapore GST Act, & ${std9} (*Financial Instruments*)\n\n` +
-      `Here is the complete statutory accounting schedule and double entries on **1 April 2026** for your machinery purchase, trade-in derecognition, and equipment loan:\n\n` +
-      `---\n\n` +
-      `#### 1. Depreciation Catch-Up Schedule (1 Jan 2026 – 31 Mar 2026)\n` +
-      `* Under **${std16Name} §55**, depreciation ceases at the date of derecognition. Therefore, depreciation for Jan–Mar 2026 (3 months) must be recognized **prior to disposal**:\n` +
-      `  $$\\text{Catch-up Depreciation} = \\text{SGD } 50,000 \\times 20\\% \\times \\frac{3}{12} = \\mathbf{SGD\\ 2,500.00}$$\n` +
-      `* **Total Accumulated Depreciation at 1 April 2026**:\n` +
-      `  $$\\text{SGD } 20,000 \\text{ (2024–2025)} + \\text{SGD } 2,500 \\text{ (Jan–Mar 2026)} = \\mathbf{SGD\\ 22,500.00}$$\n` +
-      `* **Carrying Amount / Net Book Value (NBV) at Disposal**:\n` +
-      `  $$\\text{SGD } 50,000 - \\text{SGD } 22,500 = \\mathbf{SGD\\ 27,500.00}$$\n\n` +
-      `---\n\n` +
-      `#### 2. Trade-in Valuation & Singapore 9% GST Breakdown (IRAS)\n` +
-      `* Under the Singapore GST Act, a trade-in constitutes a taxable supply (disposal of business asset):\n` +
-      `  * **Agreed Trade-in Value (Gross)**: **SGD 21,800.00** (inclusive of 9% GST)\n` +
-      `  * **Net Trade-in Consideration**: $\\text{SGD } 21,800 / 1.09 = \\mathbf{SGD\\ 20,000.00}$\n` +
-      `  * **Output GST Payable to IRAS (9%)**: $\\text{SGD } 21,800 - 20,000 = \\mathbf{SGD\\ 1,800.00}$\n` +
-      `* **Loss on Disposal Recognized in P&L (${std16Name} §68 & §71)**:\n` +
-      `  $$\\text{Loss on Disposal} = \\text{Carrying Amount } (\\text{SGD } 27,500) - \\text{Net Consideration } (\\text{SGD } 20,000) = \\mathbf{SGD\\ 7,500.00}$$\n\n` +
-      `---\n\n` +
-      `#### 3. New Machinery Cost & Equipment Loan Funding\n` +
-      `* **New Machine Cost (${std16Name} §16)**: **SGD 100,000.00** (capitalized net of recoverable tax)\n` +
-      `* **Input GST (9% Claimable Receivable)**: **SGD 9,000.00** $\\rightarrow$ Total invoice: **SGD 109,000.00**\n` +
-      `* **Less Trade-in credit**: SGD 21,800.00\n` +
-      `* **Less Bank cash paid**: SGD 30,000.00\n` +
-      `* **Remaining Balance Funded via Equipment Loan**:\n` +
-      `  $$\\text{Loan Principal} = 109,000 - 21,800 - 30,000 = \\mathbf{SGD\\ 57,200.00}$$\n` +
-      `* **2-Year 5% p.a. Flat Interest**:\n` +
-      `  $$\\text{Unexpired Loan Interest} = 57,200 \\times 5\\% \\times 2 = \\mathbf{SGD\\ 5,720.00}$$\n` +
-      `* **Gross Equipment Loan Payable**: $57,200 + 5,720 = \\mathbf{SGD\\ 62,920.00}$\n` +
-      `  *(The SGD 5,720 unexpired interest is recorded upfront as a contra-liability account, so the net loan obligation on initial recognition is exactly SGD 57,200 under ${std9})*.\n\n` +
-      `---\n\n` +
-      `### Summary of Double Entries (1 April 2026)\n` +
-      `1. **Catch-up Depreciation**: Dr. Depreciation Expense SGD 2,500 | Cr. Accumulated Depreciation SGD 2,500\n` +
-      `2. **Disposal of Old Machine**: Dr. Acc. Depr SGD 22,500 | Dr. Loss on Disposal SGD 7,500 | Dr. Vendor Clearing SGD 21,800 || Cr. Machinery Cost SGD 50,000 | Cr. GST Output Tax SGD 1,800\n` +
-      `3. **Acquisition & Financing**: Dr. Machinery Cost SGD 100,000 | Dr. GST Input Tax SGD 9,000 | Dr. Unexpired Loan Interest SGD 5,720 || Cr. Vendor Clearing SGD 21,800 | Cr. Cash at Bank SGD 30,000 | Cr. Equipment Loan Payable SGD 62,920\n\n` +
-      `Review the **Double Entry Journal** tab for the full verified ledger table with citations!`;
+      ppeConditionalCallout +
+      `Here is the ${isConditionalPpe ? 'conditional ' : ''}statutory accounting breakdown and double-entry schedule${primaryDate ? ` on **${primaryDate}**` : ''}:\n\n` +
+      `${factRows ? `#### Key Figures\n${factRows}\n\n---\n\n` : ''}` +
+      `${groupSections}`;
 
     return {
       messageText: finalizeMessage(replyText, parsed),
@@ -2209,18 +2387,36 @@ export function renderStructuredOfflineResponse(
 
   // 8. LEASE ACCOUNTING (IFRS 16 / SFRS(I) 16)
   if (parsed.scenarioType === 'LEASE_IFRS16' && !parsed.isComplete) {
-    return { messageText: '### Lease facts required\\n\\n' + parsed.missingFields.map(field => field.prompt).join('\\n'), scenarioState: parsed, clarifications: parsed.missingFields };
+    return {
+      messageText: '### Lease facts required\n\n' + parsed.missingFields.map(field => field.prompt).join('\n'),
+      scenarioState: parsed,
+      clarifications: parsed.missingFields
+    };
   }
   if (parsed.scenarioType === 'LEASE_IFRS16') {
     const journal = calculateDoubleEntries(parsed, standard).groups;
-    const details = journal.map(group =>
-      '**' + group.title + '**\\n' +
-      group.lines.map(line => (line.debit > 0 ? 'Dr ' : 'Cr ') + line.accountName +
-        ': ' + parsed.functionalCurrency + ' ' + (line.debit || line.credit).toFixed(2)).join('\\n')
-    ).join('\\n\\n');
+    if (journal.length === 0) {
+      return {
+        messageText: '### Lease facts required\n\nPlease confirm the lease term, monthly lease payment, and incremental borrowing rate so the lease schedule can be calculated.',
+        scenarioState: { ...parsed, directGroups: [], isComplete: false }
+      };
+    }
+    const fmt2 = (val: number) => val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const currency = parsed.functionalCurrency || 'SGD';
+    const details = journal.map(group => {
+      const drCents = group.lines.reduce((sum, l) => sum + Math.round((l.debit || 0) * 100), 0);
+      const crCents = group.lines.reduce((sum, l) => sum + Math.round((l.credit || 0) * 100), 0);
+      const balanced = drCents > 0 && drCents === crCents;
+      const lineItems = group.lines.map(line =>
+        `* **${line.debit > 0 ? 'Debit' : 'Credit'}**: **${line.accountName}** — **${currency} ${fmt2(line.debit > 0 ? line.debit : line.credit)}**`
+      ).join('\n');
+      return `#### ${group.title} (${group.eventDate})\n${lineItems}\n\n**Balance Check**: ${currency} ${fmt2(drCents / 100)} == ${currency} ${fmt2(crCents / 100)} ${balanced ? '✓ Balanced' : '✗ Imbalanced'}`;
+    }).join('\n\n---\n\n');
     return {
-      messageText: '### Lease accounting (' + std16 + ')\\n\\n' + details +
-        '\\n\\nReview the calculated journal and confirm the contractual payment timing and discount rate.',
+      messageText: finalizeMessage(
+        `### Lease accounting (${std16})\n\n${details}\n\nReview the calculated journal and confirm the contractual payment timing and discount rate.`,
+        parsed
+      ),
       scenarioState: { ...parsed, directGroups: journal }
     };
   }

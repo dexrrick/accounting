@@ -202,7 +202,16 @@ export const App: React.FC = () => {
       if (!isJournalRecall) {
         setScenario(answerState);
         setCommittedJournalScenario(previous => updateCommittedJournalScenario(
-          previous, answerState, standard, options?.startNewScenario
+          previous,
+          answerState,
+          standard,
+          options?.startNewScenario,
+          {
+            rawQuery: text,
+            evidenceTexts: relevantChatHistory
+              .filter(message => message.sender === 'user')
+              .map(message => message.text)
+          }
         ));
       }
 

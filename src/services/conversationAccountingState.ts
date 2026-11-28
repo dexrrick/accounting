@@ -776,6 +776,9 @@ export function calculateAccountingDelta(
   }
 
   const targetBalance = resolution.targetBalance;
+  if (eventAnalysis.settlementAmount !== undefined && eventAnalysis.settlementAmount <= 0) {
+    return null;
+  }
   const settlementAmount = Math.round(
     (eventAnalysis.settlementAmount !== undefined && eventAnalysis.settlementAmount > 0
       ? eventAnalysis.settlementAmount

@@ -11,7 +11,7 @@ import { createChatPreview, extractOfficialAnswerLinks } from '../../src/utils/c
 import { InputHandlerPanel } from '../../src/components/InputHandlerPanel.tsx';
 import { ComplianceRationale } from '../../src/components/ComplianceRationale.tsx';
 
-const initialQuery = 'currently the company has one singaporean employees earning 60k a month he is 60 years old show me the relevant double entries';
+const initialQuery = 'currently the company has one singaporean employees earning 60k a month he is 60 years old for September 2026 show me the relevant double entries';
 const resignationQuery = 'what if the employee resigned on 15/10/2026 what will be his pro-rated payroll and CPF';
 const initial = await parseAccountingQuery(initialQuery);
 assert.equal(initial.scenarioType, 'PAYROLL_CPF_SALARY');

@@ -55,7 +55,7 @@ async function runSideQuestTests() {
   passed++;
 
   // 1C. Invariant: Professional accounting interpretation/judgment required PREVENTS fast-path
-  const qTradeDiscount = 'Purchase of office equipment list price SGD 20,000 with 10% trade discount, 9% GST, paid 5,000 cash and balance on 30-day credit.';
+  const qTradeDiscount = 'A GST-registered company purchases office equipment list price SGD 20,000 (exclusive of 9% GST) with 10% trade discount, paid 5,000 cash and balance on 30-day credit.';
   const tdDeterministic = await parseAccountingQuery(qTradeDiscount);
   const tdContext = await buildGroundedReasoningContext(qTradeDiscount);
   const tdEval = evaluateFastPathEligibility(qTradeDiscount, tdDeterministic, tdContext);
